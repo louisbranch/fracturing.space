@@ -3,60 +3,73 @@ package aifakes
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // AgentStore is an in-memory AI agent repository fake.
 type AgentStore struct {
-	Agents map[string]storage.AgentRecord
+	Agents map[string]agent.Agent
 }
 
 // NewAgentStore creates an initialized agent fake.
 func NewAgentStore() *AgentStore {
-	return &AgentStore{Agents: make(map[string]storage.AgentRecord)}
+	return &AgentStore{Agents: make(map[string]agent.Agent)}
 }
 
-// PutAgent stores an agent record.
-func (s *AgentStore) PutAgent(_ context.Context, record storage.AgentRecord) error {
+// PutAgent stores an agent.
+func (s *AgentStore) PutAgent(_ context.Context, a agent.Agent) error {
 	for id, existing := range s.Agents {
-		if id == record.ID {
+		if id == a.ID {
 			continue
 		}
-		if !sameNormalizedOwner(record.OwnerUserID, existing.OwnerUserID) {
+		if !sameNormalizedOwner(a.OwnerUserID, existing.OwnerUserID) {
 			continue
 		}
-		if normalizedLabel(record.Label) == normalizedLabel(existing.Label) {
+		if normalizedLabel(a.Label) == normalizedLabel(existing.Label) {
 			return storage.ErrConflict
 		}
 	}
-	s.Agents[record.ID] = record
+	s.Agents[a.ID] = a
 	return nil
 }
 
 // GetAgent returns an agent by ID.
-func (s *AgentStore) GetAgent(_ context.Context, agentID string) (storage.AgentRecord, error) {
-	rec, ok := s.Agents[agentID]
+func (s *AgentStore) GetAgent(_ context.Context, agentID string) (agent.Agent, error) {
+	a, ok := s.Agents[agentID]
 	if !ok {
-		return storage.AgentRecord{}, storage.ErrNotFound
+		return agent.Agent{}, storage.ErrNotFound
 	}
-	return rec, nil
+	return a, nil
 }
 
 // ListAgentsByOwner lists agents for an owner.
-func (s *AgentStore) ListAgentsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (storage.AgentPage, error) {
-	items := make([]storage.AgentRecord, 0)
-	for _, rec := range s.Agents {
-		if rec.OwnerUserID == ownerUserID {
-			items = append(items, rec)
+func (s *AgentStore) ListAgentsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (agent.Page, error) {
+	items := make([]agent.Agent, 0)
+	for _, a := range s.Agents {
+		if a.OwnerUserID == ownerUserID {
+			items = append(items, a)
 		}
 	}
-	return storage.AgentPage{Agents: items}, nil
+	return agent.Page{Agents: items}, nil
+}
+
+// ListAccessibleAgents returns all agents the user can invoke (owned + shared).
+// This fake returns all owned agents; shared access is not modeled.
+func (s *AgentStore) ListAccessibleAgents(_ context.Context, userID string, _ int, _ string) (agent.Page, error) {
+	items := make([]agent.Agent, 0)
+	for _, a := range s.Agents {
+		if a.OwnerUserID == userID {
+			items = append(items, a)
+		}
+	}
+	return agent.Page{Agents: items}, nil
 }
 
 // DeleteAgent removes an owned agent.
 func (s *AgentStore) DeleteAgent(_ context.Context, ownerUserID string, agentID string) error {
-	rec, ok := s.Agents[agentID]
-	if !ok || rec.OwnerUserID != ownerUserID {
+	a, ok := s.Agents[agentID]
+	if !ok || a.OwnerUserID != ownerUserID {
 		return storage.ErrNotFound
 	}
 	delete(s.Agents, agentID)

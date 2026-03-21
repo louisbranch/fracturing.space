@@ -2,8 +2,8 @@ package memorydoc
 
 import "strings"
 
-// SectionRead returns the trimmed body of the first ## heading that matches
-// heading case-insensitively. If no match is found it returns ("", false).
+// SectionRead returns the body of the first ## heading that matches heading
+// case-insensitively. If no match is found it returns ("", false).
 func SectionRead(content, heading string) (string, bool) {
 	heading = strings.TrimSpace(heading)
 	if heading == "" {
@@ -11,7 +11,7 @@ func SectionRead(content, heading string) (string, bool) {
 	}
 	for _, sec := range parseH2Sections(content) {
 		if strings.EqualFold(sec.heading, heading) {
-			return strings.TrimSpace(sec.body), true
+			return sec.body, true
 		}
 	}
 	return "", false
@@ -106,7 +106,7 @@ func parseH2Line(line string) (string, bool) {
 	if !strings.HasPrefix(trimmed, "## ") {
 		return "", false
 	}
-	heading := strings.TrimSpace(trimmed[3:])
+	heading := trimmed[3:]
 	if heading == "" {
 		return "", false
 	}

@@ -12,8 +12,19 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
+
+// Page is a paginated result of provider grants.
+type Page struct {
+	ProviderGrants []ProviderGrant
+	NextPageToken  string
+}
+
+// Filter narrows owner-scoped provider-grant listing.
+type Filter struct {
+	Provider provider.Provider
+	Status   Status
+}
 
 // Status represents provider grant lifecycle state.
 type Status string
@@ -160,11 +171,10 @@ func Revoke(grant ProviderGrant, now func() time.Time) (ProviderGrant, error) {
 	if now == nil {
 		now = time.Now
 	}
-	grant.ID = strings.TrimSpace(grant.ID)
 	if grant.ID == "" {
 		return ProviderGrant{}, ErrEmptyID
 	}
-	if strings.TrimSpace(grant.OwnerUserID) == "" {
+	if grant.OwnerUserID == "" {
 		return ProviderGrant{}, ErrEmptyOwnerUserID
 	}
 
@@ -177,11 +187,9 @@ func Revoke(grant ProviderGrant, now func() time.Time) (ProviderGrant, error) {
 
 // RecordRefreshSuccess applies one successful token refresh result.
 func RecordRefreshSuccess(grant ProviderGrant, tokenCiphertext string, expiresAt *time.Time, refreshedAt time.Time) (ProviderGrant, error) {
-	grant.ID = strings.TrimSpace(grant.ID)
 	if grant.ID == "" {
 		return ProviderGrant{}, ErrEmptyID
 	}
-	grant.OwnerUserID = strings.TrimSpace(grant.OwnerUserID)
 	if grant.OwnerUserID == "" {
 		return ProviderGrant{}, ErrEmptyOwnerUserID
 	}
@@ -202,11 +210,9 @@ func RecordRefreshSuccess(grant ProviderGrant, tokenCiphertext string, expiresAt
 
 // RecordRefreshFailure marks the grant unusable until another refresh succeeds.
 func RecordRefreshFailure(grant ProviderGrant, refreshError string, refreshedAt time.Time) (ProviderGrant, error) {
-	grant.ID = strings.TrimSpace(grant.ID)
 	if grant.ID == "" {
 		return ProviderGrant{}, ErrEmptyID
 	}
-	grant.OwnerUserID = strings.TrimSpace(grant.OwnerUserID)
 	if grant.OwnerUserID == "" {
 		return ProviderGrant{}, ErrEmptyOwnerUserID
 	}
@@ -239,39 +245,6 @@ func ParseStatus(raw string) Status {
 	}
 }
 
-// FromRecord reconstructs a domain provider grant from a storage record for
-// lifecycle and usability checks.
-func FromRecord(record storage.ProviderGrantRecord) ProviderGrant {
-	normalizedProvider, _ := provider.Normalize(record.Provider)
-	return ProviderGrant{
-		ID:               record.ID,
-		OwnerUserID:      record.OwnerUserID,
-		Provider:         normalizedProvider,
-		GrantedScopes:    record.GrantedScopes,
-		TokenCiphertext:  record.TokenCiphertext,
-		RefreshSupported: record.RefreshSupported,
-		Status:           ParseStatus(record.Status),
-		LastRefreshError: record.LastRefreshError,
-		CreatedAt:        record.CreatedAt,
-		UpdatedAt:        record.UpdatedAt,
-		RevokedAt:        record.RevokedAt,
-		ExpiresAt:        record.ExpiresAt,
-		RefreshedAt:      record.LastRefreshedAt,
-	}
-}
-
-// ApplyLifecycle writes domain-owned lifecycle changes back into the persisted
-// provider-grant record.
-func ApplyLifecycle(record *storage.ProviderGrantRecord, value ProviderGrant) {
-	record.TokenCiphertext = value.TokenCiphertext
-	record.Status = string(value.Status)
-	record.LastRefreshError = value.LastRefreshError
-	record.UpdatedAt = value.UpdatedAt
-	record.RevokedAt = value.RevokedAt
-	record.ExpiresAt = value.ExpiresAt
-	record.LastRefreshedAt = value.RefreshedAt
-}
-
 // IsActive reports whether the grant is ready for use.
 func (s Status) IsActive() bool {
 	return ParseStatus(string(s)) == StatusActive
@@ -302,7 +275,7 @@ func (g ProviderGrant) ShouldRefresh(now time.Time, window time.Duration) bool {
 // IsUsableBy reports whether the grant is active, owned by the caller, and
 // matches the requested provider when one is supplied.
 func (g ProviderGrant) IsUsableBy(ownerUserID string, requestedProvider provider.Provider) bool {
-	if strings.TrimSpace(g.OwnerUserID) != strings.TrimSpace(ownerUserID) {
+	if g.OwnerUserID != ownerUserID {
 		return false
 	}
 	if !g.Status.IsActive() {

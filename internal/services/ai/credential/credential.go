@@ -13,7 +13,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // Status represents credential lifecycle state.
@@ -43,13 +42,22 @@ type Credential struct {
 	OwnerUserID string
 	Provider    provider.Provider
 	Label       string
-	// Secret is plaintext in the domain model; the service/storage boundary is
-	// responsible for encryption before persistence.
-	Secret    string
-	Status    Status
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	RevokedAt *time.Time
+	// Secret is plaintext in the domain model; populated during creation only.
+	// The service layer encrypts it before persistence.
+	Secret string
+	// SecretCiphertext carries the encrypted secret at the storage boundary.
+	// Populated by the service layer on writes and by the storage layer on reads.
+	SecretCiphertext string
+	Status           Status
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	RevokedAt        *time.Time
+}
+
+// Page is a paged set of credentials.
+type Page struct {
+	Credentials   []Credential
+	NextPageToken string
 }
 
 // CreateInput contains user-provided fields needed to create a credential.
@@ -124,11 +132,9 @@ func Revoke(input Credential, now func() time.Time) (Credential, error) {
 	if now == nil {
 		now = time.Now
 	}
-	input.ID = strings.TrimSpace(input.ID)
 	if input.ID == "" {
 		return Credential{}, ErrEmptyID
 	}
-	input.OwnerUserID = strings.TrimSpace(input.OwnerUserID)
 	if input.OwnerUserID == "" {
 		return Credential{}, ErrEmptyOwnerUserID
 	}
@@ -162,34 +168,10 @@ func (s Status) IsRevoked() bool {
 	return ParseStatus(string(s)) == StatusRevoked
 }
 
-// FromRecord reconstructs a domain credential from a storage record for
-// lifecycle and usability checks.
-func FromRecord(record storage.CredentialRecord) Credential {
-	normalizedProvider, _ := provider.Normalize(record.Provider)
-	return Credential{
-		ID:          record.ID,
-		OwnerUserID: record.OwnerUserID,
-		Provider:    normalizedProvider,
-		Label:       record.Label,
-		Status:      ParseStatus(record.Status),
-		CreatedAt:   record.CreatedAt,
-		UpdatedAt:   record.UpdatedAt,
-		RevokedAt:   record.RevokedAt,
-	}
-}
-
-// ApplyLifecycle writes domain-owned lifecycle fields back into the persisted
-// record without reopening storage ownership of ciphertext handling.
-func ApplyLifecycle(record *storage.CredentialRecord, value Credential) {
-	record.Status = string(value.Status)
-	record.UpdatedAt = value.UpdatedAt
-	record.RevokedAt = value.RevokedAt
-}
-
 // IsUsableBy reports whether the credential is active, owned by the caller, and
 // matches the requested provider when one is supplied.
 func (c Credential) IsUsableBy(ownerUserID string, requestedProvider provider.Provider) bool {
-	if strings.TrimSpace(c.OwnerUserID) != strings.TrimSpace(ownerUserID) {
+	if c.OwnerUserID != ownerUserID {
 		return false
 	}
 	if !c.Status.IsActive() {

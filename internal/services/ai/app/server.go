@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
@@ -22,10 +22,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	orchdaggerheart "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
+	svcpkg "github.com/louisbranch/fracturing.space/internal/services/ai/service"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -49,6 +51,7 @@ type Server struct {
 	health     *health.Server
 	store      *aisqlite.Store
 	gameMc     *platformgrpc.ManagedConn
+	logger     *slog.Logger
 	closeOnce  sync.Once
 }
 
@@ -132,13 +135,16 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		SkillsLoader:  instructionLoader,
 		DefaultSystem: campaigncontext.DaggerheartSystem,
 	})
-	systemReferenceHandlers := aiservice.NewSystemReferenceHandlers(nil)
+	var referenceCorpus *referencecorpus.Corpus
 	if strings.TrimSpace(cfg.DaggerheartReferenceRoot) != "" {
-		systemReferenceHandlers = aiservice.NewSystemReferenceHandlers(referencecorpus.New(cfg.DaggerheartReferenceRoot))
+		referenceCorpus = referencecorpus.New(cfg.DaggerheartReferenceRoot)
 	}
+	systemReferenceHandlers := aiservice.NewSystemReferenceHandlers(referenceCorpus)
 
-	gameMc, gameClients := dialGameService(ctx, cfg.GameAddr)
-	handlers := buildHandlers(handlerDeps{
+	logger := slog.Default().With("service", "ai")
+
+	gameMc, gameClients := dialGameService(ctx, cfg.GameAddr, logger)
+	handlers, err := buildHandlers(handlerDeps{
 		store:                      store,
 		sealer:                     sealer,
 		cfg:                        cfg,
@@ -147,11 +153,18 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		providerToolAdapters:       providerToolAdapters,
 		providerModelAdapters:      providerModelAdapters,
 		campaignArtifactManager:    campaignArtifactManager,
+		referenceCorpus:            referenceCorpus,
 		systemReferenceHandlers:    systemReferenceHandlers,
 		instructionLoader:          instructionLoader,
 		gameClients:                gameClients,
 		gameMc:                     gameMc,
 	})
+	if err != nil {
+		_ = listener.Close()
+		_ = store.Close()
+		closeManagedConn(gameMc, "game", logger)
+		return nil, fmt.Errorf("build handlers: %w", err)
+	}
 
 	healthServer := health.NewServer()
 	registerServices(grpcServer, healthServer, handlers)
@@ -162,6 +175,7 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		health:     healthServer,
 		store:      store,
 		gameMc:     gameMc,
+		logger:     logger,
 	}, nil
 }
 
@@ -172,7 +186,7 @@ type gameServiceClients struct {
 	authorization gamev1.AuthorizationServiceClient
 }
 
-func dialGameService(ctx context.Context, gameAddr string) (*platformgrpc.ManagedConn, gameServiceClients) {
+func dialGameService(ctx context.Context, gameAddr string, logger *slog.Logger) (*platformgrpc.ManagedConn, gameServiceClients) {
 	gameAddr = strings.TrimSpace(gameAddr)
 	if gameAddr == "" {
 		return nil, gameServiceClients{}
@@ -181,7 +195,7 @@ func dialGameService(ctx context.Context, gameAddr string) (*platformgrpc.Manage
 		Name: "game",
 		Addr: gameAddr,
 		Mode: platformgrpc.ModeOptional,
-		Logf: log.Printf,
+		Logf: slogPrintf(logger),
 		DialOpts: append(
 			platformgrpc.LenientDialOptions(),
 			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
@@ -189,7 +203,7 @@ func dialGameService(ctx context.Context, gameAddr string) (*platformgrpc.Manage
 		),
 	})
 	if err != nil {
-		log.Printf("ai: game managed conn unavailable; agent usage guard disabled: %v", err)
+		logger.Warn("game managed conn unavailable; agent usage guard disabled", "error", err)
 		return nil, gameServiceClients{}
 	}
 	return mc, gameServiceClients{
@@ -208,6 +222,7 @@ type handlerDeps struct {
 	providerToolAdapters       map[provider.Provider]orchestration.Provider
 	providerModelAdapters      map[provider.Provider]provider.ModelAdapter
 	campaignArtifactManager    *campaigncontext.Manager
+	referenceCorpus            *referencecorpus.Corpus
 	systemReferenceHandlers    *aiservice.SystemReferenceHandlers
 	instructionLoader          *instructionset.Loader
 	gameClients                gameServiceClients
@@ -226,41 +241,104 @@ type serviceHandlers struct {
 	accessRequests        *aiservice.AccessRequestHandlers
 }
 
-func buildHandlers(d handlerDeps) serviceHandlers {
-	credentialHandlers := aiservice.NewCredentialHandlers(aiservice.CredentialHandlersConfig{
-		CredentialStore:      d.store,
-		AgentStore:           d.store,
-		GameCampaignAIClient: d.gameClients.campaignAI,
-		Sealer:               d.sealer,
+func buildHandlers(d handlerDeps) (serviceHandlers, error) {
+	usageGuard := svcpkg.NewUsageGuard(d.store, d.gameClients.campaignAI)
+	credentialService, err := svcpkg.NewCredentialService(svcpkg.CredentialServiceConfig{
+		CredentialStore: d.store,
+		Sealer:          d.sealer,
+		UsageGuard:      usageGuard,
 	})
-	campaignArtifactHandlers := aiservice.NewCampaignArtifactHandlers(aiservice.CampaignArtifactHandlersConfig{
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("credential service: %w", err)
+	}
+	credentialHandlers, err := aiservice.NewCredentialHandlers(aiservice.CredentialHandlersConfig{
+		CredentialService: credentialService,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("credential handlers: %w", err)
+	}
+	campaignArtifactHandlers, err := aiservice.NewCampaignArtifactHandlers(aiservice.CampaignArtifactHandlersConfig{
 		Manager:                  d.campaignArtifactManager,
 		AuthorizationClient:      d.gameClients.authorization,
 		InternalServiceAllowlist: d.cfg.InternalServiceAllowlist,
 	})
-	providerGrantHandlers := aiservice.NewProviderGrantHandlers(aiservice.ProviderGrantHandlersConfig{
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("campaign artifact handlers: %w", err)
+	}
+	providerGrantService, err := svcpkg.NewProviderGrantService(svcpkg.ProviderGrantServiceConfig{
 		ProviderGrantStore:    d.store,
 		ConnectSessionStore:   d.store,
-		AgentStore:            d.store,
-		GameCampaignAIClient:  d.gameClients.campaignAI,
 		Sealer:                d.sealer,
 		ProviderOAuthAdapters: d.providerOAuthAdapters,
+		UsageGuard:            usageGuard,
 	})
-	accessRequestHandlers := aiservice.NewAccessRequestHandlers(aiservice.AccessRequestHandlersConfig{
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("provider grant service: %w", err)
+	}
+	providerGrantHandlers, err := aiservice.NewProviderGrantHandlers(aiservice.ProviderGrantHandlersConfig{
+		ProviderGrantService: providerGrantService,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("provider grant handlers: %w", err)
+	}
+	accessRequestService, err := svcpkg.NewAccessRequestService(svcpkg.AccessRequestServiceConfig{
 		AgentStore:         d.store,
 		AccessRequestStore: d.store,
 		AuditEventStore:    d.store,
 	})
-	agentHandlers := aiservice.NewAgentHandlers(aiservice.AgentHandlersConfig{
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("access request service: %w", err)
+	}
+	accessRequestHandlers, err := aiservice.NewAccessRequestHandlers(aiservice.AccessRequestHandlersConfig{
+		AccessRequestService: accessRequestService,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("access request handlers: %w", err)
+	}
+	authTokenResolver := svcpkg.NewAuthTokenResolver(svcpkg.AuthTokenResolverConfig{
 		CredentialStore:       d.store,
-		AgentStore:            d.store,
 		ProviderGrantStore:    d.store,
-		AccessRequestStore:    d.store,
 		ProviderOAuthAdapters: d.providerOAuthAdapters,
-		ProviderModelAdapters: d.providerModelAdapters,
-		GameCampaignAIClient:  d.gameClients.campaignAI,
 		Sealer:                d.sealer,
 	})
+	accessibleAgentResolver := svcpkg.NewAccessibleAgentResolver(d.store, d.store)
+
+	agentService, err := svcpkg.NewAgentService(svcpkg.AgentServiceConfig{
+		CredentialStore:         d.store,
+		AgentStore:              d.store,
+		ProviderGrantStore:      d.store,
+		AccessRequestStore:      d.store,
+		ProviderModelAdapters:   d.providerModelAdapters,
+		AuthTokenResolver:       authTokenResolver,
+		AccessibleAgentResolver: accessibleAgentResolver,
+		UsageGuard:              usageGuard,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("agent service: %w", err)
+	}
+	agentHandlers, err := aiservice.NewAgentHandlers(aiservice.AgentHandlersConfig{
+		AgentService: agentService,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("agent handlers: %w", err)
+	}
+
+	invocationService, err := svcpkg.NewInvocationService(svcpkg.InvocationServiceConfig{
+		AgentStore:                 d.store,
+		AuditEventStore:            d.store,
+		AccessibleAgentResolver:    accessibleAgentResolver,
+		AuthTokenResolver:          authTokenResolver,
+		ProviderInvocationAdapters: d.providerInvocationAdapters,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("invocation service: %w", err)
+	}
+	invocationHandlers, err := aiservice.NewInvocationHandlers(aiservice.InvocationHandlersConfig{
+		InvocationService: invocationService,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("invocation handlers: %w", err)
+	}
 
 	var campaignTurnRunner orchestration.CampaignTurnRunner
 	if d.gameMc != nil {
@@ -274,8 +352,8 @@ func buildHandlers(d handlerDeps) serviceHandlers {
 			Session:     gamev1.NewSessionServiceClient(gameConn),
 			Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
 			Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
-			Artifact:    artifactClientAdapter{server: campaignArtifactHandlers},
-			Reference:   referenceClientAdapter{server: d.systemReferenceHandlers},
+			Artifact:    d.campaignArtifactManager,
+			Reference:   d.referenceCorpus,
 		})
 		promptBuilder := buildPromptBuilder(d.instructionLoader)
 		runnerCfg := d.cfg.campaignTurnRunnerConfig(dialer)
@@ -284,28 +362,24 @@ func buildHandlers(d handlerDeps) serviceHandlers {
 		campaignTurnRunner = orchestration.NewRunner(runnerCfg)
 	}
 
-	campaignOrchestrationHandlers := aiservice.NewCampaignOrchestrationHandlers(aiservice.CampaignOrchestrationHandlersConfig{
+	campaignOrchestrationService, err := svcpkg.NewCampaignOrchestrationService(svcpkg.CampaignOrchestrationServiceConfig{
 		AgentStore:              d.store,
-		CredentialStore:         d.store,
-		ProviderGrantStore:      d.store,
 		CampaignArtifactManager: d.campaignArtifactManager,
 		GameCampaignAIClient:    d.gameClients.campaignAI,
-		ProviderOAuthAdapters:   d.providerOAuthAdapters,
 		ProviderToolAdapters:    d.providerToolAdapters,
 		CampaignTurnRunner:      campaignTurnRunner,
 		SessionGrantConfig:      d.cfg.SessionGrantConfig,
-		Sealer:                  d.sealer,
+		AuthTokenResolver:       authTokenResolver,
 	})
-	invocationHandlers := aiservice.NewInvocationHandlers(aiservice.InvocationHandlersConfig{
-		CredentialStore:            d.store,
-		AgentStore:                 d.store,
-		ProviderGrantStore:         d.store,
-		AccessRequestStore:         d.store,
-		AuditEventStore:            d.store,
-		ProviderOAuthAdapters:      d.providerOAuthAdapters,
-		ProviderInvocationAdapters: d.providerInvocationAdapters,
-		Sealer:                     d.sealer,
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("campaign orchestration service: %w", err)
+	}
+	campaignOrchestrationHandlers, err := aiservice.NewCampaignOrchestrationHandlers(aiservice.CampaignOrchestrationHandlersConfig{
+		CampaignOrchestrationService: campaignOrchestrationService,
 	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("campaign orchestration handlers: %w", err)
+	}
 
 	return serviceHandlers{
 		credentials:           credentialHandlers,
@@ -316,7 +390,7 @@ func buildHandlers(d handlerDeps) serviceHandlers {
 		systemReferences:      d.systemReferenceHandlers,
 		providerGrants:        providerGrantHandlers,
 		accessRequests:        accessRequestHandlers,
-	}
+	}, nil
 }
 
 func registerServices(grpcServer *grpc.Server, healthServer *health.Server, h serviceHandlers) {
@@ -368,7 +442,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 	defer s.Close()
 
-	log.Printf("ai server listening at %v", s.listener.Addr())
+	s.logger.Info("server listening", "addr", s.listener.Addr())
 	serveErr := make(chan error, 1)
 	go func() {
 		serveErr <- s.grpcServer.Serve(s.listener)
@@ -411,15 +485,15 @@ func (s *Server) Close() {
 		}
 		if s.listener != nil {
 			if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
-				log.Printf("close ai listener: %v", err)
+				s.logger.Warn("close listener", "error", err)
 			}
 		}
 		if s.store != nil {
 			if err := s.store.Close(); err != nil {
-				log.Printf("close ai store: %v", err)
+				s.logger.Warn("close store", "error", err)
 			}
 		}
-		closeManagedConn(s.gameMc, "game")
+		closeManagedConn(s.gameMc, "game", s.logger)
 	})
 }
 
@@ -465,7 +539,7 @@ func buildPromptContextSources() *orchestration.ContextSourceRegistry {
 	for _, src := range orchestration.CoreContextSources() {
 		reg.Register(src)
 	}
-	for _, src := range orchestration.DaggerheartContextSources() {
+	for _, src := range orchdaggerheart.ContextSources() {
 		reg.Register(src)
 	}
 	return reg
@@ -487,14 +561,14 @@ func loadPromptInstructions(loader *instructionset.Loader) orchestration.PromptI
 	var instructions orchestration.PromptInstructions
 	skills, err := loader.LoadSkills(campaigncontext.DaggerheartSystem)
 	if err != nil {
-		log.Printf("ai: load skills instructions: %v (using inline fallback)", err)
+		slog.Default().Warn("load skills instructions; using inline fallback", "error", err)
 	} else {
 		instructions.Skills = skills
 	}
 
 	interaction, err := loader.LoadCoreInteraction()
 	if err != nil {
-		log.Printf("ai: load interaction instructions: %v (using inline fallback)", err)
+		slog.Default().Warn("load interaction instructions; using inline fallback", "error", err)
 	} else {
 		instructions.InteractionContract = interaction
 	}
@@ -502,11 +576,19 @@ func loadPromptInstructions(loader *instructionset.Loader) orchestration.PromptI
 	return instructions
 }
 
-func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string, logger *slog.Logger) {
 	if mc == nil {
 		return
 	}
 	if err := mc.Close(); err != nil {
-		log.Printf("close ai %s managed conn: %v", name, err)
+		logger.Warn("close managed conn", "conn", name, "error", err)
+	}
+}
+
+// slogPrintf adapts an slog.Logger to the func(string, ...any) callback
+// signature used by platformgrpc.ManagedConnConfig.Logf.
+func slogPrintf(logger *slog.Logger) func(string, ...any) {
+	return func(format string, args ...any) {
+		logger.Info(fmt.Sprintf(format, args...))
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 func TestRevokeCredential(t *testing.T) {
@@ -101,41 +100,37 @@ func TestStatusHelpers(t *testing.T) {
 	}
 }
 
-func TestFromRecordAndApplyLifecycle(t *testing.T) {
+func TestCredentialSecretCiphertextCarriedThrough(t *testing.T) {
 	createdAt := time.Date(2026, 3, 18, 21, 0, 0, 0, time.UTC)
-	record := storage.CredentialRecord{
+	cred := Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "primary",
 		SecretCiphertext: "sealed",
-		Status:           "active",
+		Status:           StatusActive,
 		CreatedAt:        createdAt,
 		UpdatedAt:        createdAt,
 	}
 
-	cred := FromRecord(record)
-	if cred.ID != "cred-1" {
-		t.Fatalf("ID = %q, want %q", cred.ID, "cred-1")
-	}
-	if cred.Provider != provider.OpenAI {
-		t.Fatalf("Provider = %q, want %q", cred.Provider, provider.OpenAI)
+	if cred.SecretCiphertext != "sealed" {
+		t.Fatalf("SecretCiphertext = %q, want %q", cred.SecretCiphertext, "sealed")
 	}
 	if cred.Status != StatusActive {
 		t.Fatalf("Status = %q, want %q", cred.Status, StatusActive)
 	}
 
 	revokedAt := createdAt.Add(5 * time.Minute)
-	cred.Status = StatusRevoked
-	cred.UpdatedAt = revokedAt
-	cred.RevokedAt = &revokedAt
-
-	ApplyLifecycle(&record, cred)
-	if record.Status != "revoked" {
-		t.Fatalf("record.Status = %q, want %q", record.Status, "revoked")
+	revoked, err := Revoke(cred, func() time.Time { return revokedAt })
+	if err != nil {
+		t.Fatalf("Revoke error = %v", err)
 	}
-	if record.RevokedAt == nil || !record.RevokedAt.Equal(revokedAt) {
-		t.Fatalf("record.RevokedAt = %v, want %v", record.RevokedAt, revokedAt)
+	if revoked.Status != StatusRevoked {
+		t.Fatalf("Status = %q, want %q", revoked.Status, StatusRevoked)
+	}
+	// Ciphertext preserved through revocation.
+	if revoked.SecretCiphertext != "sealed" {
+		t.Fatalf("SecretCiphertext = %q, want %q", revoked.SecretCiphertext, "sealed")
 	}
 }
 

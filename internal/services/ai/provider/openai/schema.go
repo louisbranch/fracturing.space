@@ -22,7 +22,7 @@ func openAIToolSchema(schema any) map[string]any {
 // additionalProperties: false and a required array listing all properties,
 // as mandated by OpenAI strict mode.
 func enforceStrictSchema(node map[string]any) {
-	if strings.TrimSpace(stringValue(node["type"])) == "" {
+	if stringValue(node["type"]) == "" {
 		node["type"] = "object"
 	}
 	if strings.EqualFold(stringValue(node["type"]), "object") {

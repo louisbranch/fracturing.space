@@ -120,7 +120,7 @@ func TestPromptBuilderMergesContextSourceSections(t *testing.T) {
 
 	reg := fullSourceRegistry()
 	reg.Register(ContextSourceFunc(func(_ context.Context, _ Session, _ PromptInput) (BriefContribution, error) {
-		return sectionContribution(BriefSection{
+		return SectionContribution(BriefSection{
 			ID:       "custom_source",
 			Priority: 250,
 			Label:    "Custom Source",
@@ -144,22 +144,6 @@ func TestPromptBuilderMergesContextSourceSections(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Extra context from a game system.") {
 		t.Fatalf("prompt missing context source section")
-	}
-}
-
-func TestDegradedPromptBuilderIncludesDaggerheartContextSources(t *testing.T) {
-	sess := &fakeSession{resources: baseSessionResources("gm-1", "scene-1")}
-	sess.resources["campaign://camp-1/artifacts/memory.md"] = ""
-
-	prompt, err := newDegradedPromptBuilder().Build(context.Background(), sess, PromptInput{
-		CampaignID: "camp-1",
-		SessionID:  "sess-1",
-	})
-	if err != nil {
-		t.Fatalf("Build() error = %v", err)
-	}
-	if !strings.Contains(prompt, "Daggerheart duality rules") {
-		t.Fatalf("prompt missing Daggerheart context: %q", prompt)
 	}
 }
 
@@ -209,14 +193,12 @@ func TestBriefPromptRendererUsesExplicitClosingInstruction(t *testing.T) {
 	}
 }
 
-// fullSourceRegistry builds a registry with the canonical prompt context
-// sources for tests that construct a PromptBuilder via NewPromptBuilder.
+// fullSourceRegistry builds a registry with the core prompt context sources
+// for tests that construct a PromptBuilder via NewPromptBuilder. Game-system
+// sources (e.g. Daggerheart) are tested in their own subpackages.
 func fullSourceRegistry() *ContextSourceRegistry {
 	reg := NewContextSourceRegistry()
 	for _, src := range CoreContextSources() {
-		reg.Register(src)
-	}
-	for _, src := range DaggerheartContextSources() {
 		reg.Register(src)
 	}
 	return reg

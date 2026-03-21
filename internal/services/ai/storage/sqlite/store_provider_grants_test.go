@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 )
 
 func TestPutGetProviderGrantRoundTrip(t *testing.T) {
@@ -13,14 +14,14 @@ func TestPutGetProviderGrantRoundTrip(t *testing.T) {
 	now := time.Date(2026, 2, 15, 23, 25, 0, 0, time.UTC)
 	expiresAt := now.Add(time.Hour)
 
-	input := storage.ProviderGrantRecord{
+	input := providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		GrantedScopes:    []string{"responses.read", "responses.write"},
 		TokenCiphertext:  "enc:grant-token",
 		RefreshSupported: true,
-		Status:           "active",
+		Status:           providergrant.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 		ExpiresAt:        &expiresAt,
@@ -35,6 +36,12 @@ func TestPutGetProviderGrantRoundTrip(t *testing.T) {
 	}
 	if got.ID != input.ID || got.OwnerUserID != input.OwnerUserID || got.TokenCiphertext != input.TokenCiphertext {
 		t.Fatalf("unexpected provider grant: %+v", got)
+	}
+	if got.Provider != provider.OpenAI {
+		t.Fatalf("provider = %q, want %q", got.Provider, provider.OpenAI)
+	}
+	if got.Status != providergrant.StatusActive {
+		t.Fatalf("status = %q, want %q", got.Status, providergrant.StatusActive)
 	}
 	if len(got.GrantedScopes) != 2 {
 		t.Fatalf("granted_scopes len = %d, want 2", len(got.GrantedScopes))
@@ -51,17 +58,17 @@ func TestListProviderGrantsByOwner(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 15, 23, 25, 0, 0, time.UTC)
 
-	for _, rec := range []storage.ProviderGrantRecord{
-		{ID: "grant-1", OwnerUserID: "user-1", Provider: "openai", GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:1", Status: "active", CreatedAt: now, UpdatedAt: now},
-		{ID: "grant-2", OwnerUserID: "user-1", Provider: "openai", GrantedScopes: []string{"responses.write"}, TokenCiphertext: "enc:2", Status: "active", CreatedAt: now, UpdatedAt: now},
-		{ID: "grant-3", OwnerUserID: "user-2", Provider: "openai", GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:3", Status: "active", CreatedAt: now, UpdatedAt: now},
+	for _, grant := range []providergrant.ProviderGrant{
+		{ID: "grant-1", OwnerUserID: "user-1", Provider: provider.OpenAI, GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:1", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "grant-2", OwnerUserID: "user-1", Provider: provider.OpenAI, GrantedScopes: []string{"responses.write"}, TokenCiphertext: "enc:2", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "grant-3", OwnerUserID: "user-2", Provider: provider.OpenAI, GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:3", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
 	} {
-		if err := store.PutProviderGrant(context.Background(), rec); err != nil {
-			t.Fatalf("put provider grant %s: %v", rec.ID, err)
+		if err := store.PutProviderGrant(context.Background(), grant); err != nil {
+			t.Fatalf("put provider grant %s: %v", grant.ID, err)
 		}
 	}
 
-	page, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 10, "", storage.ProviderGrantFilter{})
+	page, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 10, "", providergrant.Filter{})
 	if err != nil {
 		t.Fatalf("list provider grants: %v", err)
 	}
@@ -73,19 +80,19 @@ func TestListProviderGrantsByOwner(t *testing.T) {
 func TestListProviderGrantsByOwnerWithFilters(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 2, 1, 0, 0, time.UTC)
-	for _, rec := range []storage.ProviderGrantRecord{
-		{ID: "grant-1", OwnerUserID: "user-1", Provider: "openai", GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:1", Status: "active", CreatedAt: now, UpdatedAt: now},
-		{ID: "grant-2", OwnerUserID: "user-1", Provider: "other", GrantedScopes: []string{"responses.write"}, TokenCiphertext: "enc:2", Status: "active", CreatedAt: now, UpdatedAt: now},
-		{ID: "grant-3", OwnerUserID: "user-1", Provider: "openai", GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:3", Status: "revoked", CreatedAt: now, UpdatedAt: now},
-		{ID: "grant-4", OwnerUserID: "user-2", Provider: "openai", GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:4", Status: "revoked", CreatedAt: now, UpdatedAt: now},
+	for _, grant := range []providergrant.ProviderGrant{
+		{ID: "grant-1", OwnerUserID: "user-1", Provider: provider.OpenAI, GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:1", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "grant-2", OwnerUserID: "user-1", Provider: "other", GrantedScopes: []string{"responses.write"}, TokenCiphertext: "enc:2", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "grant-3", OwnerUserID: "user-1", Provider: provider.OpenAI, GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:3", Status: providergrant.StatusRevoked, CreatedAt: now, UpdatedAt: now},
+		{ID: "grant-4", OwnerUserID: "user-2", Provider: provider.OpenAI, GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:4", Status: providergrant.StatusRevoked, CreatedAt: now, UpdatedAt: now},
 	} {
-		if err := store.PutProviderGrant(context.Background(), rec); err != nil {
-			t.Fatalf("put provider grant %s: %v", rec.ID, err)
+		if err := store.PutProviderGrant(context.Background(), grant); err != nil {
+			t.Fatalf("put provider grant %s: %v", grant.ID, err)
 		}
 	}
 
-	providerOnly, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 10, "", storage.ProviderGrantFilter{
-		Provider: "openai",
+	providerOnly, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 10, "", providergrant.Filter{
+		Provider: provider.OpenAI,
 	})
 	if err != nil {
 		t.Fatalf("list provider-filtered grants: %v", err)
@@ -94,8 +101,8 @@ func TestListProviderGrantsByOwnerWithFilters(t *testing.T) {
 		t.Fatalf("provider-filtered len = %d, want 2", len(providerOnly.ProviderGrants))
 	}
 
-	statusOnly, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 10, "", storage.ProviderGrantFilter{
-		Status: "revoked",
+	statusOnly, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 10, "", providergrant.Filter{
+		Status: providergrant.StatusRevoked,
 	})
 	if err != nil {
 		t.Fatalf("list status-filtered grants: %v", err)
@@ -113,14 +120,14 @@ func TestPutProviderGrantUpsertPersistsLifecycleFields(t *testing.T) {
 	now := time.Date(2026, 2, 15, 23, 50, 0, 0, time.UTC)
 	expiresAt := now.Add(time.Hour)
 
-	if err := store.PutProviderGrant(context.Background(), storage.ProviderGrantRecord{
+	if err := store.PutProviderGrant(context.Background(), providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		GrantedScopes:    []string{"responses.read"},
 		TokenCiphertext:  "enc:old",
 		RefreshSupported: true,
-		Status:           "active",
+		Status:           providergrant.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 		ExpiresAt:        &expiresAt,
@@ -130,18 +137,18 @@ func TestPutProviderGrantUpsertPersistsLifecycleFields(t *testing.T) {
 
 	refreshedAt := now.Add(10 * time.Minute)
 	newExpiresAt := refreshedAt.Add(2 * time.Hour)
-	if err := store.PutProviderGrant(context.Background(), storage.ProviderGrantRecord{
+	if err := store.PutProviderGrant(context.Background(), providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		GrantedScopes:    []string{"responses.read"},
 		TokenCiphertext:  "enc:new",
 		RefreshSupported: true,
-		Status:           "active",
+		Status:           providergrant.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        refreshedAt,
 		ExpiresAt:        &newExpiresAt,
-		LastRefreshedAt:  &refreshedAt,
+		RefreshedAt:      &refreshedAt,
 	}); err != nil {
 		t.Fatalf("put updated provider grant: %v", err)
 	}
@@ -153,8 +160,8 @@ func TestPutProviderGrantUpsertPersistsLifecycleFields(t *testing.T) {
 	if got.TokenCiphertext != "enc:new" {
 		t.Fatalf("token_ciphertext = %q, want %q", got.TokenCiphertext, "enc:new")
 	}
-	if got.LastRefreshedAt == nil || !got.LastRefreshedAt.Equal(refreshedAt) {
-		t.Fatalf("last_refreshed_at = %v, want %v", got.LastRefreshedAt, refreshedAt)
+	if got.RefreshedAt == nil || !got.RefreshedAt.Equal(refreshedAt) {
+		t.Fatalf("refreshed_at = %v, want %v", got.RefreshedAt, refreshedAt)
 	}
 	if got.ExpiresAt == nil || !got.ExpiresAt.Equal(newExpiresAt) {
 		t.Fatalf("expires_at = %v, want %v", got.ExpiresAt, newExpiresAt)

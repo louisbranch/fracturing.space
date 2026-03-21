@@ -28,7 +28,6 @@ func newCampaignContextValidator(client gamev1.AuthorizationServiceClient, allow
 }
 
 func (v campaignContextValidator) validateCampaignContext(ctx context.Context, campaignID string, action gamev1.AuthorizationAction) error {
-	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return status.Error(codes.InvalidArgument, "campaign_id is required")
 	}

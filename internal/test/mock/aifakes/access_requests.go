@@ -2,14 +2,14 @@ package aifakes
 
 import (
 	"context"
-	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // AccessRequestStore is an in-memory access-request repository fake.
 type AccessRequestStore struct {
-	AccessRequests map[string]storage.AccessRequestRecord
+	AccessRequests map[string]accessrequest.AccessRequest
 
 	ListAccessRequestsByRequesterErr   error
 	ListAccessRequestsByRequesterCalls int
@@ -18,127 +18,123 @@ type AccessRequestStore struct {
 
 // NewAccessRequestStore creates an initialized access-request fake.
 func NewAccessRequestStore() *AccessRequestStore {
-	return &AccessRequestStore{AccessRequests: make(map[string]storage.AccessRequestRecord)}
+	return &AccessRequestStore{AccessRequests: make(map[string]accessrequest.AccessRequest)}
 }
 
-// PutAccessRequest stores an access request record.
-func (s *AccessRequestStore) PutAccessRequest(_ context.Context, record storage.AccessRequestRecord) error {
-	s.AccessRequests[record.ID] = record
+// PutAccessRequest stores an access request.
+func (s *AccessRequestStore) PutAccessRequest(_ context.Context, request accessrequest.AccessRequest) error {
+	s.AccessRequests[request.ID] = request
 	return nil
 }
 
 // GetAccessRequest returns an access request by ID.
-func (s *AccessRequestStore) GetAccessRequest(_ context.Context, accessRequestID string) (storage.AccessRequestRecord, error) {
+func (s *AccessRequestStore) GetAccessRequest(_ context.Context, accessRequestID string) (accessrequest.AccessRequest, error) {
 	rec, ok := s.AccessRequests[accessRequestID]
 	if !ok {
-		return storage.AccessRequestRecord{}, storage.ErrNotFound
+		return accessrequest.AccessRequest{}, storage.ErrNotFound
 	}
 	return rec, nil
 }
 
 // ListAccessRequestsByRequester lists requester-owned access requests.
-func (s *AccessRequestStore) ListAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (storage.AccessRequestPage, error) {
+func (s *AccessRequestStore) ListAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (accessrequest.Page, error) {
 	s.ListAccessRequestsByRequesterCalls++
 	if s.ListAccessRequestsByRequesterErr != nil {
-		return storage.AccessRequestPage{}, s.ListAccessRequestsByRequesterErr
+		return accessrequest.Page{}, s.ListAccessRequestsByRequesterErr
 	}
-	items := make([]storage.AccessRequestRecord, 0)
-	for _, rec := range s.AccessRequests {
-		if rec.RequesterUserID == requesterUserID {
-			items = append(items, rec)
+	items := make([]accessrequest.AccessRequest, 0)
+	for _, ar := range s.AccessRequests {
+		if ar.RequesterUserID == requesterUserID {
+			items = append(items, ar)
 		}
 	}
-	return storage.AccessRequestPage{AccessRequests: items}, nil
+	return accessrequest.Page{AccessRequests: items}, nil
 }
 
 // GetApprovedInvokeAccessByRequesterForAgent returns a matching approved invoke record.
-func (s *AccessRequestStore) GetApprovedInvokeAccessByRequesterForAgent(_ context.Context, requesterUserID string, ownerUserID string, agentID string) (storage.AccessRequestRecord, error) {
+func (s *AccessRequestStore) GetApprovedInvokeAccessByRequesterForAgent(_ context.Context, requesterUserID string, ownerUserID string, agentID string) (accessrequest.AccessRequest, error) {
 	s.GetApprovedInvokeAccessCalls++
-	requesterUserID = strings.TrimSpace(requesterUserID)
-	ownerUserID = strings.TrimSpace(ownerUserID)
-	agentID = strings.TrimSpace(agentID)
-	for _, rec := range s.AccessRequests {
-		if strings.TrimSpace(rec.RequesterUserID) != requesterUserID {
+	for _, ar := range s.AccessRequests {
+		if ar.RequesterUserID != requesterUserID {
 			continue
 		}
-		if strings.TrimSpace(rec.OwnerUserID) != ownerUserID {
+		if ar.OwnerUserID != ownerUserID {
 			continue
 		}
-		if strings.TrimSpace(rec.AgentID) != agentID {
+		if ar.AgentID != agentID {
 			continue
 		}
-		if strings.ToLower(strings.TrimSpace(rec.Scope)) != "invoke" {
+		if ar.Scope != accessrequest.ScopeInvoke {
 			continue
 		}
-		if strings.ToLower(strings.TrimSpace(rec.Status)) != "approved" {
+		if ar.Status != accessrequest.StatusApproved {
 			continue
 		}
-		return rec, nil
+		return ar, nil
 	}
-	return storage.AccessRequestRecord{}, storage.ErrNotFound
+	return accessrequest.AccessRequest{}, storage.ErrNotFound
 }
 
 // ListApprovedInvokeAccessRequestsByRequester returns approved invoke requests for requester.
-func (s *AccessRequestStore) ListApprovedInvokeAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (storage.AccessRequestPage, error) {
-	requesterUserID = strings.TrimSpace(requesterUserID)
-	items := make([]storage.AccessRequestRecord, 0)
-	for _, rec := range s.AccessRequests {
-		if strings.TrimSpace(rec.RequesterUserID) != requesterUserID {
+func (s *AccessRequestStore) ListApprovedInvokeAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (accessrequest.Page, error) {
+	items := make([]accessrequest.AccessRequest, 0)
+	for _, ar := range s.AccessRequests {
+		if ar.RequesterUserID != requesterUserID {
 			continue
 		}
-		if strings.ToLower(strings.TrimSpace(rec.Scope)) != "invoke" {
+		if ar.Scope != accessrequest.ScopeInvoke {
 			continue
 		}
-		if strings.ToLower(strings.TrimSpace(rec.Status)) != "approved" {
+		if ar.Status != accessrequest.StatusApproved {
 			continue
 		}
-		items = append(items, rec)
+		items = append(items, ar)
 	}
-	return storage.AccessRequestPage{AccessRequests: items}, nil
+	return accessrequest.Page{AccessRequests: items}, nil
 }
 
 // ListAccessRequestsByOwner lists owner-owned access requests.
-func (s *AccessRequestStore) ListAccessRequestsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (storage.AccessRequestPage, error) {
-	items := make([]storage.AccessRequestRecord, 0)
-	for _, rec := range s.AccessRequests {
-		if rec.OwnerUserID == ownerUserID {
-			items = append(items, rec)
+func (s *AccessRequestStore) ListAccessRequestsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (accessrequest.Page, error) {
+	items := make([]accessrequest.AccessRequest, 0)
+	for _, ar := range s.AccessRequests {
+		if ar.OwnerUserID == ownerUserID {
+			items = append(items, ar)
 		}
 	}
-	return storage.AccessRequestPage{AccessRequests: items}, nil
+	return accessrequest.Page{AccessRequests: items}, nil
 }
 
 // ReviewAccessRequest transitions a pending request to a reviewed status.
-func (s *AccessRequestStore) ReviewAccessRequest(_ context.Context, input storage.ReviewAccessRequestInput) error {
-	rec, ok := s.AccessRequests[input.AccessRequestID]
-	if !ok || rec.OwnerUserID != input.OwnerUserID {
+func (s *AccessRequestStore) ReviewAccessRequest(_ context.Context, reviewed accessrequest.AccessRequest) error {
+	existing, ok := s.AccessRequests[reviewed.ID]
+	if !ok || existing.OwnerUserID != reviewed.OwnerUserID {
 		return storage.ErrNotFound
 	}
-	if rec.Status != "pending" {
+	if existing.Status != accessrequest.StatusPending {
 		return storage.ErrConflict
 	}
-	rec.Status = input.Status
-	rec.ReviewerUserID = input.ReviewerUserID
-	rec.ReviewNote = input.ReviewNote
-	rec.UpdatedAt = input.ReviewedAt
-	rec.ReviewedAt = &input.ReviewedAt
-	s.AccessRequests[input.AccessRequestID] = rec
+	existing.Status = reviewed.Status
+	existing.ReviewerUserID = reviewed.ReviewerUserID
+	existing.ReviewNote = reviewed.ReviewNote
+	existing.UpdatedAt = reviewed.UpdatedAt
+	existing.ReviewedAt = reviewed.ReviewedAt
+	s.AccessRequests[reviewed.ID] = existing
 	return nil
 }
 
 // RevokeAccessRequest transitions an approved request to a revoked status.
-func (s *AccessRequestStore) RevokeAccessRequest(_ context.Context, input storage.RevokeAccessRequestInput) error {
-	rec, ok := s.AccessRequests[input.AccessRequestID]
-	if !ok || rec.OwnerUserID != input.OwnerUserID {
+func (s *AccessRequestStore) RevokeAccessRequest(_ context.Context, revoked accessrequest.AccessRequest) error {
+	existing, ok := s.AccessRequests[revoked.ID]
+	if !ok || existing.OwnerUserID != revoked.OwnerUserID {
 		return storage.ErrNotFound
 	}
-	if rec.Status != "approved" {
+	if existing.Status != accessrequest.StatusApproved {
 		return storage.ErrConflict
 	}
-	rec.Status = input.Status
-	rec.ReviewerUserID = input.ReviewerUserID
-	rec.ReviewNote = input.ReviewNote
-	rec.UpdatedAt = input.RevokedAt
-	s.AccessRequests[input.AccessRequestID] = rec
+	existing.Status = revoked.Status
+	existing.ReviewerUserID = revoked.ReviewerUserID
+	existing.ReviewNote = revoked.ReviewNote
+	existing.UpdatedAt = revoked.UpdatedAt
+	s.AccessRequests[revoked.ID] = existing
 	return nil
 }

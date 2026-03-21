@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -19,8 +18,6 @@ func (s *Store) PutCampaignArtifact(ctx context.Context, record storage.Campaign
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	record.CampaignID = strings.TrimSpace(record.CampaignID)
-	record.Path = strings.TrimSpace(record.Path)
 	if record.CampaignID == "" {
 		return fmt.Errorf("campaign id is required")
 	}
@@ -58,8 +55,6 @@ func (s *Store) GetCampaignArtifact(ctx context.Context, campaignID string, path
 	if s == nil || s.sqlDB == nil {
 		return storage.CampaignArtifactRecord{}, fmt.Errorf("storage is not configured")
 	}
-	campaignID = strings.TrimSpace(campaignID)
-	path = strings.TrimSpace(path)
 	if campaignID == "" {
 		return storage.CampaignArtifactRecord{}, fmt.Errorf("campaign id is required")
 	}
@@ -104,7 +99,6 @@ func (s *Store) ListCampaignArtifacts(ctx context.Context, campaignID string) ([
 	if s == nil || s.sqlDB == nil {
 		return nil, fmt.Errorf("storage is not configured")
 	}
-	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return nil, fmt.Errorf("campaign id is required")
 	}

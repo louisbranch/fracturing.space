@@ -2,7 +2,6 @@ package gametools
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
@@ -27,13 +26,13 @@ func outgoingContext(ctx context.Context, sc SessionContext) (context.Context, c
 
 	ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.RequestIDHeader, requestID)
 	if sc.CampaignID != "" {
-		ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.CampaignIDHeader, strings.TrimSpace(sc.CampaignID))
+		ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.CampaignIDHeader, sc.CampaignID)
 	}
 	if sc.SessionID != "" {
-		ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.SessionIDHeader, strings.TrimSpace(sc.SessionID))
+		ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.SessionIDHeader, sc.SessionID)
 	}
 	if sc.ParticipantID != "" {
-		ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.ParticipantIDHeader, strings.TrimSpace(sc.ParticipantID))
+		ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.ParticipantIDHeader, sc.ParticipantID)
 	}
 
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {

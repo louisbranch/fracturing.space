@@ -26,7 +26,7 @@ func (h *SystemReferenceHandlers) SearchSystemReference(ctx context.Context, in 
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "search system reference request is required")
 	}
-	if h == nil || h.systemReferenceCorpus == nil {
+	if h.systemReferenceCorpus == nil {
 		return nil, status.Error(codes.FailedPrecondition, "system reference corpus is unavailable")
 	}
 	results, err := h.systemReferenceCorpus.Search(ctx, in.GetSystem(), in.GetQuery(), int(in.GetMaxResults()))
@@ -45,7 +45,7 @@ func (h *SystemReferenceHandlers) ReadSystemReferenceDocument(ctx context.Contex
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "read system reference request is required")
 	}
-	if h == nil || h.systemReferenceCorpus == nil {
+	if h.systemReferenceCorpus == nil {
 		return nil, status.Error(codes.FailedPrecondition, "system reference corpus is unavailable")
 	}
 	document, err := h.systemReferenceCorpus.Read(ctx, in.GetSystem(), in.GetDocumentId())

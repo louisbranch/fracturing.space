@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -13,13 +15,13 @@ func TestPutGetCredentialRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 15, 22, 45, 0, 0, time.UTC)
 
-	input := storage.CredentialRecord{
+	input := credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:abc",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -34,19 +36,25 @@ func TestPutGetCredentialRoundTrip(t *testing.T) {
 	if got.ID != input.ID || got.OwnerUserID != input.OwnerUserID || got.SecretCiphertext != input.SecretCiphertext {
 		t.Fatalf("unexpected credential: %+v", got)
 	}
+	if got.Provider != provider.OpenAI {
+		t.Fatalf("Provider = %q, want %q", got.Provider, provider.OpenAI)
+	}
+	if got.Status != credential.StatusActive {
+		t.Fatalf("Status = %q, want %q", got.Status, credential.StatusActive)
+	}
 }
 
 func TestListCredentialsByOwner(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 15, 22, 45, 0, 0, time.UTC)
 
-	for _, rec := range []storage.CredentialRecord{
-		{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", SecretCiphertext: "enc:1", Status: "active", CreatedAt: now, UpdatedAt: now},
-		{ID: "cred-2", OwnerUserID: "user-1", Provider: "openai", Label: "B", SecretCiphertext: "enc:2", Status: "active", CreatedAt: now, UpdatedAt: now},
-		{ID: "cred-3", OwnerUserID: "user-2", Provider: "openai", Label: "C", SecretCiphertext: "enc:3", Status: "active", CreatedAt: now, UpdatedAt: now},
+	for _, c := range []credential.Credential{
+		{ID: "cred-1", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "A", SecretCiphertext: "enc:1", Status: credential.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "cred-2", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "B", SecretCiphertext: "enc:2", Status: credential.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "cred-3", OwnerUserID: "user-2", Provider: provider.OpenAI, Label: "C", SecretCiphertext: "enc:3", Status: credential.StatusActive, CreatedAt: now, UpdatedAt: now},
 	} {
-		if err := store.PutCredential(context.Background(), rec); err != nil {
-			t.Fatalf("put credential %s: %v", rec.ID, err)
+		if err := store.PutCredential(context.Background(), c); err != nil {
+			t.Fatalf("put credential %s: %v", c.ID, err)
 		}
 	}
 
@@ -64,26 +72,26 @@ func TestPutCredentialUpsertPersistsRevocationLifecycle(t *testing.T) {
 	now := time.Date(2026, 2, 15, 22, 45, 0, 0, time.UTC)
 	revokedAt := now.Add(time.Minute)
 
-	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+	if err := store.PutCredential(context.Background(), credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "A",
 		SecretCiphertext: "enc:1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}); err != nil {
 		t.Fatalf("put credential: %v", err)
 	}
 
-	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+	if err := store.PutCredential(context.Background(), credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "A",
 		SecretCiphertext: "enc:1",
-		Status:           "revoked",
+		Status:           credential.StatusRevoked,
 		CreatedAt:        now,
 		UpdatedAt:        revokedAt,
 		RevokedAt:        &revokedAt,
@@ -95,8 +103,8 @@ func TestPutCredentialUpsertPersistsRevocationLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get credential: %v", err)
 	}
-	if got.Status != "revoked" {
-		t.Fatalf("status = %q, want %q", got.Status, "revoked")
+	if got.Status != credential.StatusRevoked {
+		t.Fatalf("status = %q, want %q", got.Status, credential.StatusRevoked)
 	}
 	if got.RevokedAt == nil || !got.RevokedAt.Equal(revokedAt) {
 		t.Fatalf("revoked_at = %v, want %v", got.RevokedAt, revokedAt)
@@ -107,26 +115,26 @@ func TestPutCredentialRejectsDuplicateActiveLabelForOwner(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 1, 0, 0, 0, time.UTC)
 
-	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+	if err := store.PutCredential(context.Background(), credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Primary",
 		SecretCiphertext: "enc:1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}); err != nil {
 		t.Fatalf("put first credential: %v", err)
 	}
 
-	err := store.PutCredential(context.Background(), storage.CredentialRecord{
+	err := store.PutCredential(context.Background(), credential.Credential{
 		ID:               "cred-2",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            " primary ",
 		SecretCiphertext: "enc:2",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now.Add(time.Minute),
 		UpdatedAt:        now.Add(time.Minute),
 	})
@@ -139,26 +147,26 @@ func TestPutCredentialAllowsReuseAfterRevocation(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 1, 5, 0, 0, time.UTC)
 
-	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+	if err := store.PutCredential(context.Background(), credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Primary",
 		SecretCiphertext: "enc:1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}); err != nil {
 		t.Fatalf("put first credential: %v", err)
 	}
 	revokedAt := now.Add(time.Minute)
-	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+	if err := store.PutCredential(context.Background(), credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Primary",
 		SecretCiphertext: "enc:1",
-		Status:           "revoked",
+		Status:           credential.StatusRevoked,
 		CreatedAt:        now,
 		UpdatedAt:        revokedAt,
 		RevokedAt:        &revokedAt,
@@ -166,13 +174,13 @@ func TestPutCredentialAllowsReuseAfterRevocation(t *testing.T) {
 		t.Fatalf("put revoked credential: %v", err)
 	}
 
-	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+	if err := store.PutCredential(context.Background(), credential.Credential{
 		ID:               "cred-2",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            " primary ",
 		SecretCiphertext: "enc:2",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now.Add(2 * time.Minute),
 		UpdatedAt:        now.Add(2 * time.Minute),
 	}); err != nil {
@@ -184,30 +192,30 @@ func TestPutCredentialAllowsSameLabelAcrossOwners(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 1, 10, 0, 0, time.UTC)
 
-	for _, rec := range []storage.CredentialRecord{
+	for _, c := range []credential.Credential{
 		{
 			ID:               "cred-1",
 			OwnerUserID:      "user-1",
-			Provider:         "openai",
+			Provider:         provider.OpenAI,
 			Label:            "Primary",
 			SecretCiphertext: "enc:1",
-			Status:           "active",
+			Status:           credential.StatusActive,
 			CreatedAt:        now,
 			UpdatedAt:        now,
 		},
 		{
 			ID:               "cred-2",
 			OwnerUserID:      "user-2",
-			Provider:         "openai",
+			Provider:         provider.OpenAI,
 			Label:            " primary ",
 			SecretCiphertext: "enc:2",
-			Status:           "active",
+			Status:           credential.StatusActive,
 			CreatedAt:        now,
 			UpdatedAt:        now,
 		},
 	} {
-		if err := store.PutCredential(context.Background(), rec); err != nil {
-			t.Fatalf("put credential %s: %v", rec.ID, err)
+		if err := store.PutCredential(context.Background(), c); err != nil {
+			t.Fatalf("put credential %s: %v", c.ID, err)
 		}
 	}
 }

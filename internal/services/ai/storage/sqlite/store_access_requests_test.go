@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -14,14 +15,14 @@ func TestPutGetAccessRequestRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 0, 55, 0, 0, time.UTC)
 
-	input := storage.AccessRequestRecord{
+	input := accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "user-2",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
+		Scope:           accessrequest.ScopeInvoke,
 		RequestNote:     "please allow",
-		Status:          "pending",
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
@@ -42,10 +43,10 @@ func TestListAccessRequestsByRequesterAndOwner(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 0, 56, 0, 0, time.UTC)
 
-	records := []storage.AccessRequestRecord{
-		{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "user-2", AgentID: "agent-1", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "user-3", AgentID: "agent-2", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-3", RequesterUserID: "user-4", OwnerUserID: "user-2", AgentID: "agent-3", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now},
+	records := []accessrequest.AccessRequest{
+		{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "user-2", AgentID: "agent-1", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusPending, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "user-3", AgentID: "agent-2", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusPending, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-3", RequesterUserID: "user-4", OwnerUserID: "user-2", AgentID: "agent-3", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusPending, CreatedAt: now, UpdatedAt: now},
 	}
 	for _, record := range records {
 		if err := store.PutAccessRequest(context.Background(), record); err != nil {
@@ -74,12 +75,12 @@ func TestGetApprovedInvokeAccessByRequesterForAgent(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 1, 5, 0, 0, time.UTC)
 
-	records := []storage.AccessRequestRecord{
-		{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-3", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-2", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-4", RequesterUserID: "user-1", OwnerUserID: "owner-2", AgentID: "agent-1", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-5", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: "observe", Status: "approved", CreatedAt: now, UpdatedAt: now},
+	records := []accessrequest.AccessRequest{
+		{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusPending, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-3", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-2", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-4", RequesterUserID: "user-1", OwnerUserID: "owner-2", AgentID: "agent-1", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-5", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: accessrequest.Scope("observe"), Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
 	}
 	for _, record := range records {
 		if err := store.PutAccessRequest(context.Background(), record); err != nil {
@@ -105,12 +106,12 @@ func TestListApprovedInvokeAccessRequestsByRequester(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 1, 6, 0, 0, time.UTC)
 
-	records := []storage.AccessRequestRecord{
-		{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-2", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-3", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-3", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-4", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-4", Scope: "observe", Status: "approved", CreatedAt: now, UpdatedAt: now},
-		{ID: "request-5", RequesterUserID: "user-2", OwnerUserID: "owner-1", AgentID: "agent-5", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now},
+	records := []accessrequest.AccessRequest{
+		{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-2", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-3", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-3", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusPending, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-4", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-4", Scope: accessrequest.Scope("observe"), Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
+		{ID: "request-5", RequesterUserID: "user-2", OwnerUserID: "owner-1", AgentID: "agent-5", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now},
 	}
 	for _, record := range records {
 		if err := store.PutAccessRequest(context.Background(), record); err != nil {
@@ -148,14 +149,14 @@ func TestReviewAccessRequest(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 0, 57, 0, 0, time.UTC)
 
-	if err := store.PutAccessRequest(context.Background(), storage.AccessRequestRecord{
+	if err := store.PutAccessRequest(context.Background(), accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "user-2",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
+		Scope:           accessrequest.ScopeInvoke,
 		RequestNote:     "please allow",
-		Status:          "pending",
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}); err != nil {
@@ -163,13 +164,13 @@ func TestReviewAccessRequest(t *testing.T) {
 	}
 
 	reviewedAt := now.Add(time.Minute)
-	if err := store.ReviewAccessRequest(context.Background(), storage.ReviewAccessRequestInput{
-		OwnerUserID:     "user-2",
-		AccessRequestID: "request-1",
-		Status:          "approved",
-		ReviewerUserID:  "user-2",
-		ReviewNote:      "approved",
-		ReviewedAt:      reviewedAt,
+	if err := store.ReviewAccessRequest(context.Background(), accessrequest.AccessRequest{
+		ID:             "request-1",
+		OwnerUserID:    "user-2",
+		Status:         accessrequest.StatusApproved,
+		ReviewerUserID: "user-2",
+		ReviewNote:     "approved",
+		ReviewedAt:     &reviewedAt,
 	}); err != nil {
 		t.Fatalf("review access request: %v", err)
 	}
@@ -178,8 +179,8 @@ func TestReviewAccessRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get access request: %v", err)
 	}
-	if got.Status != "approved" {
-		t.Fatalf("status = %q, want %q", got.Status, "approved")
+	if got.Status != accessrequest.StatusApproved {
+		t.Fatalf("status = %q, want %q", got.Status, accessrequest.StatusApproved)
 	}
 	if got.ReviewerUserID != "user-2" {
 		t.Fatalf("reviewer_user_id = %q, want %q", got.ReviewerUserID, "user-2")
@@ -193,13 +194,13 @@ func TestReviewAccessRequestRejectsNonPending(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 0, 58, 0, 0, time.UTC)
 
-	if err := store.PutAccessRequest(context.Background(), storage.AccessRequestRecord{
+	if err := store.PutAccessRequest(context.Background(), accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "user-2",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "denied",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusDenied,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 		ReviewerUserID:  "user-2",
@@ -209,13 +210,14 @@ func TestReviewAccessRequestRejectsNonPending(t *testing.T) {
 		t.Fatalf("put access request: %v", err)
 	}
 
-	err := store.ReviewAccessRequest(context.Background(), storage.ReviewAccessRequestInput{
-		OwnerUserID:     "user-2",
-		AccessRequestID: "request-1",
-		Status:          "approved",
-		ReviewerUserID:  "user-2",
-		ReviewNote:      "retry",
-		ReviewedAt:      now.Add(time.Minute),
+	reviewedAt := now.Add(time.Minute)
+	err := store.ReviewAccessRequest(context.Background(), accessrequest.AccessRequest{
+		ID:             "request-1",
+		OwnerUserID:    "user-2",
+		Status:         accessrequest.StatusApproved,
+		ReviewerUserID: "user-2",
+		ReviewNote:     "retry",
+		ReviewedAt:     &reviewedAt,
 	})
 	if !errors.Is(err, storage.ErrConflict) {
 		t.Fatalf("review error = %v, want %v", err, storage.ErrConflict)
@@ -226,26 +228,27 @@ func TestReviewAccessRequestRejectsReviewerMismatch(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 0, 58, 0, 0, time.UTC)
 
-	if err := store.PutAccessRequest(context.Background(), storage.AccessRequestRecord{
+	if err := store.PutAccessRequest(context.Background(), accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "user-2",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}); err != nil {
 		t.Fatalf("put access request: %v", err)
 	}
 
-	err := store.ReviewAccessRequest(context.Background(), storage.ReviewAccessRequestInput{
-		OwnerUserID:     "user-2",
-		AccessRequestID: "request-1",
-		Status:          "approved",
-		ReviewerUserID:  "user-3",
-		ReviewNote:      "retry",
-		ReviewedAt:      now.Add(time.Minute),
+	reviewedAt := now.Add(time.Minute)
+	err := store.ReviewAccessRequest(context.Background(), accessrequest.AccessRequest{
+		ID:             "request-1",
+		OwnerUserID:    "user-2",
+		Status:         accessrequest.StatusApproved,
+		ReviewerUserID: "user-3",
+		ReviewNote:     "retry",
+		ReviewedAt:     &reviewedAt,
 	})
 	if err == nil {
 		t.Fatal("expected review error for reviewer mismatch")
@@ -259,13 +262,13 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 3, 0, 0, 0, time.UTC)
 
-	if err := store.PutAccessRequest(context.Background(), storage.AccessRequestRecord{
+	if err := store.PutAccessRequest(context.Background(), accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Minute),
 		ReviewerUserID:  "owner-1",
@@ -276,13 +279,13 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 	}
 
 	revokedAt := now
-	if err := store.RevokeAccessRequest(context.Background(), storage.RevokeAccessRequestInput{
-		OwnerUserID:     "owner-1",
-		AccessRequestID: "request-1",
-		Status:          "revoked",
-		ReviewerUserID:  "owner-1",
-		ReviewNote:      "removed",
-		RevokedAt:       revokedAt,
+	if err := store.RevokeAccessRequest(context.Background(), accessrequest.AccessRequest{
+		ID:             "request-1",
+		OwnerUserID:    "owner-1",
+		Status:         accessrequest.StatusRevoked,
+		ReviewerUserID: "owner-1",
+		ReviewNote:     "removed",
+		UpdatedAt:      revokedAt,
 	}); err != nil {
 		t.Fatalf("revoke access request: %v", err)
 	}
@@ -291,8 +294,8 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get access request: %v", err)
 	}
-	if got.Status != "revoked" {
-		t.Fatalf("status = %q, want %q", got.Status, "revoked")
+	if got.Status != accessrequest.StatusRevoked {
+		t.Fatalf("status = %q, want %q", got.Status, accessrequest.StatusRevoked)
 	}
 	if got.ReviewerUserID != "owner-1" {
 		t.Fatalf("reviewer_user_id = %q, want %q", got.ReviewerUserID, "owner-1")
@@ -304,13 +307,13 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 		t.Fatalf("updated_at = %v, want %v", got.UpdatedAt, revokedAt)
 	}
 
-	if err := store.RevokeAccessRequest(context.Background(), storage.RevokeAccessRequestInput{
-		OwnerUserID:     "owner-1",
-		AccessRequestID: "request-1",
-		Status:          "revoked",
-		ReviewerUserID:  "owner-1",
-		ReviewNote:      "again",
-		RevokedAt:       revokedAt.Add(time.Minute),
+	if err := store.RevokeAccessRequest(context.Background(), accessrequest.AccessRequest{
+		ID:             "request-1",
+		OwnerUserID:    "owner-1",
+		Status:         accessrequest.StatusRevoked,
+		ReviewerUserID: "owner-1",
+		ReviewNote:     "again",
+		UpdatedAt:      revokedAt.Add(time.Minute),
 	}); !errors.Is(err, storage.ErrConflict) {
 		t.Fatalf("second revoke error = %v, want %v", err, storage.ErrConflict)
 	}
@@ -320,13 +323,13 @@ func TestRevokeAccessRequestRejectsReviewerMismatch(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 3, 0, 0, 0, time.UTC)
 
-	if err := store.PutAccessRequest(context.Background(), storage.AccessRequestRecord{
+	if err := store.PutAccessRequest(context.Background(), accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Minute),
 		ReviewerUserID:  "owner-1",
@@ -336,13 +339,13 @@ func TestRevokeAccessRequestRejectsReviewerMismatch(t *testing.T) {
 		t.Fatalf("put access request: %v", err)
 	}
 
-	err := store.RevokeAccessRequest(context.Background(), storage.RevokeAccessRequestInput{
-		OwnerUserID:     "owner-1",
-		AccessRequestID: "request-1",
-		Status:          "revoked",
-		ReviewerUserID:  "owner-2",
-		ReviewNote:      "removed",
-		RevokedAt:       now,
+	err := store.RevokeAccessRequest(context.Background(), accessrequest.AccessRequest{
+		ID:             "request-1",
+		OwnerUserID:    "owner-1",
+		Status:         accessrequest.StatusRevoked,
+		ReviewerUserID: "owner-2",
+		ReviewNote:     "removed",
+		UpdatedAt:      now,
 	})
 	if err == nil {
 		t.Fatal("expected revoke error for reviewer mismatch")

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/memorydoc"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
@@ -44,17 +43,15 @@ func (s *DirectSession) memorySectionRead(ctx context.Context, argsJSON []byte) 
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Artifact == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("artifact manager is not configured")
+	}
 
-	resp, err := s.clients.Artifact.GetCampaignArtifact(callCtx, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       campaigncontext.MemoryArtifactPath,
-	})
+	record, err := s.clients.Artifact.GetArtifact(ctx, campaignID, campaigncontext.MemoryArtifactPath)
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("get memory artifact: %w", err)
 	}
-	body, found := memorydoc.SectionRead(resp.GetArtifact().GetContent(), input.Heading)
+	body, found := memorydoc.SectionRead(record.Content, input.Heading)
 	return toolResultJSON(memorySectionResult{
 		CampaignID: campaignID,
 		Heading:    input.Heading,
@@ -72,24 +69,18 @@ func (s *DirectSession) memorySectionUpdate(ctx context.Context, argsJSON []byte
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Artifact == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("artifact manager is not configured")
+	}
 
-	resp, err := s.clients.Artifact.GetCampaignArtifact(callCtx, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       campaigncontext.MemoryArtifactPath,
-	})
+	record, err := s.clients.Artifact.GetArtifact(ctx, campaignID, campaigncontext.MemoryArtifactPath)
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("get memory artifact: %w", err)
 	}
 
-	merged := memorydoc.SectionUpdate(resp.GetArtifact().GetContent(), input.Heading, input.Content)
+	merged := memorydoc.SectionUpdate(record.Content, input.Heading, input.Content)
 
-	if _, err := s.clients.Artifact.UpsertCampaignArtifact(callCtx, &aiv1.UpsertCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       campaigncontext.MemoryArtifactPath,
-		Content:    merged,
-	}); err != nil {
+	if _, err := s.clients.Artifact.UpsertArtifact(ctx, campaignID, campaigncontext.MemoryArtifactPath, merged); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("upsert memory artifact: %w", err)
 	}
 

@@ -17,25 +17,25 @@ func (s *Store) PutAuditEvent(ctx context.Context, record storage.AuditEventReco
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if strings.TrimSpace(record.EventName) == "" {
+	if record.EventName == "" {
 		return fmt.Errorf("event name is required")
 	}
-	if strings.TrimSpace(record.ActorUserID) == "" {
+	if record.ActorUserID == "" {
 		return fmt.Errorf("actor user id is required")
 	}
-	if strings.TrimSpace(record.OwnerUserID) == "" {
+	if record.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	if strings.TrimSpace(record.RequesterUserID) == "" {
+	if record.RequesterUserID == "" {
 		return fmt.Errorf("requester user id is required")
 	}
-	if strings.TrimSpace(record.AgentID) == "" {
+	if record.AgentID == "" {
 		return fmt.Errorf("agent id is required")
 	}
-	if strings.TrimSpace(record.AccessRequestID) == "" {
+	if record.AccessRequestID == "" {
 		return fmt.Errorf("access request id is required")
 	}
-	if strings.TrimSpace(record.Outcome) == "" {
+	if record.Outcome == "" {
 		return fmt.Errorf("outcome is required")
 	}
 	if record.CreatedAt.IsZero() {
@@ -47,13 +47,13 @@ INSERT INTO ai_audit_events (
 	event_name, actor_user_id, owner_user_id, requester_user_id, agent_id, access_request_id, outcome, created_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `,
-		strings.TrimSpace(record.EventName),
-		strings.TrimSpace(record.ActorUserID),
-		strings.TrimSpace(record.OwnerUserID),
-		strings.TrimSpace(record.RequesterUserID),
-		strings.TrimSpace(record.AgentID),
-		strings.TrimSpace(record.AccessRequestID),
-		strings.TrimSpace(record.Outcome),
+		record.EventName,
+		record.ActorUserID,
+		record.OwnerUserID,
+		record.RequesterUserID,
+		record.AgentID,
+		record.AccessRequestID,
+		record.Outcome,
 		sqliteutil.ToMillis(record.CreatedAt),
 	)
 	if err != nil {
@@ -70,15 +70,14 @@ func (s *Store) ListAuditEventsByOwner(ctx context.Context, ownerUserID string, 
 	if s == nil || s.sqlDB == nil {
 		return storage.AuditEventPage{}, fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
 	if ownerUserID == "" {
 		return storage.AuditEventPage{}, fmt.Errorf("owner user id is required")
 	}
 	if pageSize <= 0 {
 		return storage.AuditEventPage{}, fmt.Errorf("page size must be greater than zero")
 	}
-	eventName := strings.TrimSpace(filter.EventName)
-	agentID := strings.TrimSpace(filter.AgentID)
+	eventName := filter.EventName
+	agentID := filter.AgentID
 
 	var (
 		createdAfterMillis  *int64
@@ -97,7 +96,6 @@ func (s *Store) ListAuditEventsByOwner(ctx context.Context, ownerUserID string, 
 	}
 
 	limit := pageSize + 1
-	pageToken = strings.TrimSpace(pageToken)
 	whereParts := []string{"owner_user_id = ?"}
 	args := []any{ownerUserID}
 	if eventName != "" {

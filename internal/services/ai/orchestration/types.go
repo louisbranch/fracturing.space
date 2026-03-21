@@ -34,6 +34,23 @@ type PromptBuilder interface {
 	Build(ctx context.Context, sess Session, input PromptInput) (string, error)
 }
 
+// SessionBriefCollector gathers the typed session brief used for one prompt.
+type SessionBriefCollector interface {
+	CollectBrief(ctx context.Context, sess Session, input PromptInput) (SessionBrief, error)
+}
+
+// PromptRenderer renders one prompt from a collected brief plus prompt input.
+type PromptRenderer interface {
+	Render(brief SessionBrief, input PromptInput) string
+}
+
+// ContextSource contributes to the typed session brief used for prompt
+// assembly. Game systems implement this interface to inject system-specific
+// context alongside the core campaign context.
+type ContextSource interface {
+	Collect(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error)
+}
+
 // Provider executes one provider step in the campaign-turn tool loop.
 type Provider interface {
 	Run(ctx context.Context, input ProviderInput) (ProviderOutput, error)

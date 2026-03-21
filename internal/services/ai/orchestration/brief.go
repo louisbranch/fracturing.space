@@ -47,18 +47,17 @@ func (a BriefAssembler) Assemble(sections []BriefSection) string {
 
 	var b strings.Builder
 	for i, s := range sorted {
-		content := strings.TrimSpace(s.Content)
-		if content == "" {
+		if strings.TrimSpace(s.Content) == "" {
 			continue
 		}
 		if i > 0 {
 			b.WriteString("\n\n")
 		}
-		if label := strings.TrimSpace(s.Label); label != "" {
-			b.WriteString(label)
+		if s.Label != "" {
+			b.WriteString(s.Label)
 			b.WriteString(":\n")
 		}
-		b.WriteString(content)
+		b.WriteString(s.Content)
 	}
 	return b.String()
 }

@@ -99,15 +99,15 @@ func (c *Corpus) Search(ctx context.Context, system, query string, maxResults in
 			score: score,
 			result: SearchResult{
 				System:     supportedSystem,
-				DocumentID: strings.TrimSpace(entry.ID),
-				Title:      strings.TrimSpace(entry.Title),
-				Kind:       strings.TrimSpace(entry.Kind),
-				Path:       strings.TrimSpace(entry.Path),
+				DocumentID: entry.ID,
+				Title:      entry.Title,
+				Kind:       entry.Kind,
+				Path:       entry.Path,
 				Aliases:    append([]string(nil), entry.Aliases...),
 				Snippet:    metadataSnippet(entry),
 			},
 		})
-		seen[strings.TrimSpace(entry.ID)] = struct{}{}
+		seen[entry.ID] = struct{}{}
 	}
 	sort.SliceStable(scored, func(i, j int) bool {
 		if scored[i].score != scored[j].score {
@@ -131,7 +131,7 @@ func (c *Corpus) Search(ctx context.Context, system, query string, maxResults in
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		if _, ok := seen[strings.TrimSpace(entry.ID)]; ok {
+		if _, ok := seen[entry.ID]; ok {
 			continue
 		}
 		content, err := c.readEntryContent(entry)
@@ -144,10 +144,10 @@ func (c *Corpus) Search(ctx context.Context, system, query string, maxResults in
 		}
 		results = append(results, SearchResult{
 			System:     supportedSystem,
-			DocumentID: strings.TrimSpace(entry.ID),
-			Title:      strings.TrimSpace(entry.Title),
-			Kind:       strings.TrimSpace(entry.Kind),
-			Path:       strings.TrimSpace(entry.Path),
+			DocumentID: entry.ID,
+			Title:      entry.Title,
+			Kind:       entry.Kind,
+			Path:       entry.Path,
 			Aliases:    append([]string(nil), entry.Aliases...),
 			Snippet:    contentSnippet(content, queryLower),
 		})
@@ -175,7 +175,7 @@ func (c *Corpus) Read(ctx context.Context, system, documentID string) (Document,
 		if err := ctx.Err(); err != nil {
 			return Document{}, err
 		}
-		if strings.TrimSpace(entry.ID) != documentID && strings.TrimSpace(entry.Path) != documentID {
+		if entry.ID != documentID && entry.Path != documentID {
 			continue
 		}
 		content, err := c.readEntryContent(entry)
@@ -184,10 +184,10 @@ func (c *Corpus) Read(ctx context.Context, system, documentID string) (Document,
 		}
 		return Document{
 			System:     supportedSystem,
-			DocumentID: strings.TrimSpace(entry.ID),
-			Title:      strings.TrimSpace(entry.Title),
-			Kind:       strings.TrimSpace(entry.Kind),
-			Path:       strings.TrimSpace(entry.Path),
+			DocumentID: entry.ID,
+			Title:      entry.Title,
+			Kind:       entry.Kind,
+			Path:       entry.Path,
 			Aliases:    append([]string(nil), entry.Aliases...),
 			Content:    content,
 		}, nil
@@ -227,7 +227,7 @@ func (c *Corpus) readEntryContent(entry indexEntry) (string, error) {
 		return "", fmt.Errorf("reference root is not configured")
 	}
 	cleanRoot := filepath.Clean(root)
-	cleanPath := filepath.Clean(filepath.Join(cleanRoot, filepath.FromSlash(strings.TrimSpace(entry.Path))))
+	cleanPath := filepath.Clean(filepath.Join(cleanRoot, filepath.FromSlash(entry.Path)))
 	if !strings.HasPrefix(cleanPath, cleanRoot+string(os.PathSeparator)) && cleanPath != cleanRoot {
 		return "", fmt.Errorf("reference path %q escapes root", entry.Path)
 	}

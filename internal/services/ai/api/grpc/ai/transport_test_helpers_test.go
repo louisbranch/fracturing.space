@@ -2,15 +2,21 @@ package ai
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
+	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/aifakes"
@@ -30,6 +36,61 @@ type fakeStore struct {
 	*aifakes.ProviderConnectSessionStore
 	*aifakes.CampaignArtifactStore
 	*aifakes.AuditEventStore
+}
+
+// ListAccessibleAgents overrides the embedded AgentStore method to include
+// agents reachable via approved invoke access requests.
+func (s *fakeStore) ListAccessibleAgents(_ context.Context, userID string, pageSize int, pageToken string) (agent.Page, error) {
+	seen := make(map[string]struct{})
+	items := make([]agent.Agent, 0)
+
+	// Owned agents.
+	for _, rec := range s.Agents {
+		if rec.OwnerUserID == userID {
+			items = append(items, rec)
+			seen[rec.ID] = struct{}{}
+		}
+	}
+
+	// Shared agents via approved invoke access requests.
+	for _, ar := range s.AccessRequests {
+		if ar.RequesterUserID != userID || ar.Scope != "invoke" || ar.Status != "approved" {
+			continue
+		}
+		if _, ok := seen[ar.AgentID]; ok {
+			continue
+		}
+		a, ok := s.Agents[ar.AgentID]
+		if !ok || a.OwnerUserID != ar.OwnerUserID {
+			continue
+		}
+		items = append(items, a)
+		seen[ar.AgentID] = struct{}{}
+	}
+
+	// Sort by ID for deterministic pagination.
+	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
+
+	// Apply keyset pagination.
+	start := 0
+	if pageToken != "" {
+		for i, rec := range items {
+			if rec.ID > pageToken {
+				start = i
+				break
+			}
+			if i == len(items)-1 {
+				start = len(items)
+			}
+		}
+	}
+	items = items[start:]
+
+	if pageSize > 0 && len(items) > pageSize {
+		nextToken := items[pageSize-1].ID
+		return agent.Page{Agents: items[:pageSize], NextPageToken: nextToken}, nil
+	}
+	return agent.Page{Agents: items}, nil
 }
 
 type fakeCampaignAIAuthStateClient struct {
@@ -212,163 +273,390 @@ func (f *fakeProviderToolAdapter) Run(_ context.Context, input orchestration.Pro
 	return f.runResult, nil
 }
 
-func newTestInvocationHandlers(store *fakeStore) *InvocationHandlers {
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	adapter := &fakeProviderInvocationAdapter{}
-	svc.providerInvocationAdapters[provider.OpenAI] = adapter
-	return svc
+// --- Agent handler test helpers ---
+
+type agentTestOpts struct {
+	clock                service.Clock
+	idGenerator          service.IDGenerator
+	oauthAdapters        map[provider.Provider]provider.OAuthAdapter
+	modelAdapters        map[provider.Provider]provider.ModelAdapter
+	gameCampaignAIClient gamev1.CampaignAIServiceClient
 }
 
-func newTestAgentHandlers(store *fakeStore) *AgentHandlers {
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
-	adapter := &fakeProviderInvocationAdapter{}
-	svc.providerModelAdapters[provider.OpenAI] = adapter
-	return svc
+func newAgentHandlersWithStores(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer) *AgentHandlers {
+	t.Helper()
+	return newAgentHandlersWithOpts(t, credentialStore, agentStore, sealer, agentTestOpts{})
 }
 
-func newCredentialHandlersWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *CredentialHandlers {
-	return NewCredentialHandlers(CredentialHandlersConfig{
-		CredentialStore: credentialStore,
-		AgentStore:      agentStore,
-		Sealer:          sealer,
-	})
-}
+func newAgentHandlersWithOpts(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer, opts agentTestOpts) *AgentHandlers {
+	t.Helper()
 
-func newProviderGrantHandlersWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *ProviderGrantHandlers {
-	cfg := ProviderGrantHandlersConfig{
-		AgentStore: agentStore,
-		Sealer:     sealer,
-		ProviderOAuthAdapters: map[provider.Provider]provider.OAuthAdapter{
+	oauthAdapters := opts.oauthAdapters
+	if oauthAdapters == nil {
+		oauthAdapters = map[provider.Provider]provider.OAuthAdapter{
 			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
-		},
+		}
 	}
+	modelAdapters := opts.modelAdapters
+	if modelAdapters == nil {
+		modelAdapters = map[provider.Provider]provider.ModelAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{},
+		}
+	}
+
+	var providerGrantStore storage.ProviderGrantStore
 	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
-		cfg.ProviderGrantStore = store
+		providerGrantStore = store
 	}
-	if cfg.ProviderGrantStore == nil {
+	if providerGrantStore == nil {
 		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
-			cfg.ProviderGrantStore = store
+			providerGrantStore = store
 		}
 	}
-	if store, ok := credentialStore.(storage.ProviderConnectSessionStore); ok {
-		cfg.ConnectSessionStore = store
+	var accessRequestStore storage.AccessRequestStore
+	if store, ok := credentialStore.(storage.AccessRequestStore); ok {
+		accessRequestStore = store
 	}
-	if cfg.ConnectSessionStore == nil {
-		if store, ok := agentStore.(storage.ProviderConnectSessionStore); ok {
-			cfg.ConnectSessionStore = store
+	if accessRequestStore == nil {
+		if store, ok := agentStore.(storage.AccessRequestStore); ok {
+			accessRequestStore = store
 		}
 	}
-	return NewProviderGrantHandlers(cfg)
+
+	authTokenResolver := service.NewAuthTokenResolver(service.AuthTokenResolverConfig{
+		CredentialStore:       credentialStore,
+		ProviderGrantStore:    providerGrantStore,
+		ProviderOAuthAdapters: oauthAdapters,
+		Sealer:                sealer,
+		Clock:                 opts.clock,
+	})
+	accessibleAgentResolver := service.NewAccessibleAgentResolver(agentStore, accessRequestStore)
+
+	var usageGuard *service.UsageGuard
+	if opts.gameCampaignAIClient != nil {
+		usageGuard = service.NewUsageGuard(agentStore, opts.gameCampaignAIClient)
+	}
+
+	agentSvc, err := service.NewAgentService(service.AgentServiceConfig{
+		CredentialStore:         credentialStore,
+		AgentStore:              agentStore,
+		ProviderGrantStore:      providerGrantStore,
+		AccessRequestStore:      accessRequestStore,
+		ProviderModelAdapters:   modelAdapters,
+		AuthTokenResolver:       authTokenResolver,
+		AccessibleAgentResolver: accessibleAgentResolver,
+		UsageGuard:              usageGuard,
+		Clock:                   opts.clock,
+		IDGenerator:             opts.idGenerator,
+	})
+	if err != nil {
+		t.Fatalf("NewAgentService: %v", err)
+	}
+	h, err := NewAgentHandlers(AgentHandlersConfig{
+		AgentService: agentSvc,
+	})
+	if err != nil {
+		t.Fatalf("NewAgentHandlers: %v", err)
+	}
+	return h
 }
 
-func newAccessRequestHandlersWithStores(agentStore storage.AgentStore, accessRequestStore storage.AccessRequestStore, auditEventStore storage.AuditEventStore) *AccessRequestHandlers {
-	return NewAccessRequestHandlers(AccessRequestHandlersConfig{
+func newTestAgentHandlers(t *testing.T, store *fakeStore) *AgentHandlers {
+	t.Helper()
+	return newAgentHandlersWithStores(t, store, store, &fakeSealer{})
+}
+
+// --- Invocation handler test helpers ---
+
+type invocationTestOpts struct {
+	clock              service.Clock
+	oauthAdapters      map[provider.Provider]provider.OAuthAdapter
+	invocationAdapters map[provider.Provider]provider.InvocationAdapter
+}
+
+func newInvocationHandlersWithStores(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer) *InvocationHandlers {
+	t.Helper()
+	return newInvocationHandlersWithOpts(t, credentialStore, agentStore, sealer, invocationTestOpts{})
+}
+
+func newInvocationHandlersWithOpts(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer, opts invocationTestOpts) *InvocationHandlers {
+	t.Helper()
+
+	oauthAdapters := opts.oauthAdapters
+	if oauthAdapters == nil {
+		oauthAdapters = map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
+		}
+	}
+	invocationAdapters := opts.invocationAdapters
+	if invocationAdapters == nil {
+		invocationAdapters = map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{},
+		}
+	}
+
+	var providerGrantStore storage.ProviderGrantStore
+	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
+		providerGrantStore = store
+	}
+	if providerGrantStore == nil {
+		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
+			providerGrantStore = store
+		}
+	}
+	var accessRequestStore storage.AccessRequestStore
+	if store, ok := credentialStore.(storage.AccessRequestStore); ok {
+		accessRequestStore = store
+	}
+	if accessRequestStore == nil {
+		if store, ok := agentStore.(storage.AccessRequestStore); ok {
+			accessRequestStore = store
+		}
+	}
+	var auditEventStore storage.AuditEventStore
+	if store, ok := credentialStore.(storage.AuditEventStore); ok {
+		auditEventStore = store
+	}
+	if auditEventStore == nil {
+		if store, ok := agentStore.(storage.AuditEventStore); ok {
+			auditEventStore = store
+		}
+	}
+
+	authTokenResolver := service.NewAuthTokenResolver(service.AuthTokenResolverConfig{
+		CredentialStore:       credentialStore,
+		ProviderGrantStore:    providerGrantStore,
+		ProviderOAuthAdapters: oauthAdapters,
+		Sealer:                sealer,
+		Clock:                 opts.clock,
+	})
+	accessibleAgentResolver := service.NewAccessibleAgentResolver(agentStore, accessRequestStore)
+
+	invocationSvc, err := service.NewInvocationService(service.InvocationServiceConfig{
+		AgentStore:                 agentStore,
+		AuditEventStore:            auditEventStore,
+		AccessibleAgentResolver:    accessibleAgentResolver,
+		AuthTokenResolver:          authTokenResolver,
+		ProviderInvocationAdapters: invocationAdapters,
+		Clock:                      opts.clock,
+	})
+	if err != nil {
+		t.Fatalf("NewInvocationService: %v", err)
+	}
+	h, err := NewInvocationHandlers(InvocationHandlersConfig{
+		InvocationService: invocationSvc,
+	})
+	if err != nil {
+		t.Fatalf("NewInvocationHandlers: %v", err)
+	}
+	return h
+}
+
+// --- Campaign orchestration handler test helpers ---
+
+type campaignOrchestrationTestOpts struct {
+	clock                service.Clock
+	oauthAdapters        map[provider.Provider]provider.OAuthAdapter
+	toolAdapters         map[provider.Provider]orchestration.Provider
+	campaignTurnRunner   orchestration.CampaignTurnRunner
+	sessionGrantConfig   *aisessiongrant.Config
+	gameCampaignAIClient gamev1.CampaignAIServiceClient
+}
+
+func newCampaignOrchestrationHandlersWithOpts(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer, opts campaignOrchestrationTestOpts) *CampaignOrchestrationHandlers {
+	t.Helper()
+
+	oauthAdapters := opts.oauthAdapters
+	if oauthAdapters == nil {
+		oauthAdapters = map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
+		}
+	}
+	toolAdapters := opts.toolAdapters
+	if toolAdapters == nil {
+		toolAdapters = map[provider.Provider]orchestration.Provider{
+			provider.OpenAI: &fakeProviderToolAdapter{},
+		}
+	}
+
+	var providerGrantStore storage.ProviderGrantStore
+	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
+		providerGrantStore = store
+	}
+	if providerGrantStore == nil {
+		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
+			providerGrantStore = store
+		}
+	}
+
+	authTokenResolver := service.NewAuthTokenResolver(service.AuthTokenResolverConfig{
+		CredentialStore:       credentialStore,
+		ProviderGrantStore:    providerGrantStore,
+		ProviderOAuthAdapters: oauthAdapters,
+		Sealer:                sealer,
+		Clock:                 opts.clock,
+	})
+
+	orchestrationSvc, err := service.NewCampaignOrchestrationService(service.CampaignOrchestrationServiceConfig{
+		AgentStore:           agentStore,
+		GameCampaignAIClient: opts.gameCampaignAIClient,
+		ProviderToolAdapters: toolAdapters,
+		CampaignTurnRunner:   opts.campaignTurnRunner,
+		SessionGrantConfig:   opts.sessionGrantConfig,
+		AuthTokenResolver:    authTokenResolver,
+	})
+	if err != nil {
+		t.Fatalf("NewCampaignOrchestrationService: %v", err)
+	}
+	h, err := NewCampaignOrchestrationHandlers(CampaignOrchestrationHandlersConfig{
+		CampaignOrchestrationService: orchestrationSvc,
+	})
+	if err != nil {
+		t.Fatalf("NewCampaignOrchestrationHandlers: %v", err)
+	}
+	return h
+}
+
+// --- Credential handler test helpers ---
+
+func newCredentialHandlersWithStores(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer) *CredentialHandlers {
+	t.Helper()
+	return newCredentialHandlersWithOpts(t, credentialStore, agentStore, sealer, nil, nil, nil)
+}
+
+func newCredentialHandlersWithOpts(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer, clock service.Clock, idGen service.IDGenerator, usageGuard *service.UsageGuard) *CredentialHandlers {
+	t.Helper()
+	if usageGuard == nil {
+		usageGuard = service.NewUsageGuard(agentStore, nil)
+	}
+	credSvc, err := service.NewCredentialService(service.CredentialServiceConfig{
+		CredentialStore: credentialStore,
+		Sealer:          sealer,
+		UsageGuard:      usageGuard,
+		Clock:           clock,
+		IDGenerator:     idGen,
+	})
+	if err != nil {
+		t.Fatalf("NewCredentialService: %v", err)
+	}
+	h, err := NewCredentialHandlers(CredentialHandlersConfig{
+		CredentialService: credSvc,
+	})
+	if err != nil {
+		t.Fatalf("NewCredentialHandlers: %v", err)
+	}
+	return h
+}
+
+// --- Provider grant handler test helpers ---
+
+// providerGrantTestHandlers bundles the service and handler so tests can
+// configure clock/ID generator on the service while calling RPC methods on
+// the handler.
+type providerGrantTestHandlers struct {
+	*ProviderGrantHandlers
+	svc *service.ProviderGrantService
+}
+
+type providerGrantTestOpts struct {
+	clock                 service.Clock
+	idGenerator           service.IDGenerator
+	codeVerifierGenerator service.CodeVerifierGenerator
+	oauthAdapters         map[provider.Provider]provider.OAuthAdapter
+	usageGuard            *service.UsageGuard
+}
+
+func newProviderGrantHandlersWithStores(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer) *providerGrantTestHandlers {
+	t.Helper()
+	return newProviderGrantHandlersWithOpts(t, credentialStore, agentStore, sealer, providerGrantTestOpts{})
+}
+
+func newProviderGrantHandlersWithOpts(t *testing.T, credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer secret.Sealer, opts providerGrantTestOpts) *providerGrantTestHandlers {
+	t.Helper()
+
+	var providerGrantStore storage.ProviderGrantStore
+	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
+		providerGrantStore = store
+	}
+	if providerGrantStore == nil {
+		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
+			providerGrantStore = store
+		}
+	}
+	var connectSessionStore storage.ProviderConnectSessionStore
+	if store, ok := credentialStore.(storage.ProviderConnectSessionStore); ok {
+		connectSessionStore = store
+	}
+	if connectSessionStore == nil {
+		if store, ok := agentStore.(storage.ProviderConnectSessionStore); ok {
+			connectSessionStore = store
+		}
+	}
+
+	oauthAdapters := opts.oauthAdapters
+	if oauthAdapters == nil {
+		oauthAdapters = map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
+		}
+	}
+	usageGuard := opts.usageGuard
+	if usageGuard == nil {
+		usageGuard = service.NewUsageGuard(agentStore, nil)
+	}
+
+	svc, err := service.NewProviderGrantService(service.ProviderGrantServiceConfig{
+		ProviderGrantStore:    providerGrantStore,
+		ConnectSessionStore:   connectSessionStore,
+		Sealer:                sealer,
+		ProviderOAuthAdapters: oauthAdapters,
+		UsageGuard:            usageGuard,
+		Clock:                 opts.clock,
+		IDGenerator:           opts.idGenerator,
+		CodeVerifierGenerator: opts.codeVerifierGenerator,
+	})
+	if err != nil {
+		t.Fatalf("NewProviderGrantService: %v", err)
+	}
+	h, err := NewProviderGrantHandlers(ProviderGrantHandlersConfig{
+		ProviderGrantService: svc,
+	})
+	if err != nil {
+		t.Fatalf("NewProviderGrantHandlers: %v", err)
+	}
+	return &providerGrantTestHandlers{ProviderGrantHandlers: h, svc: svc}
+}
+
+// --- Access request handler test helpers ---
+
+// accessRequestTestHandlers bundles the service and handler so tests can
+// configure clock/ID generator on the service while calling RPC methods on
+// the handler.
+type accessRequestTestHandlers struct {
+	*AccessRequestHandlers
+	svc *service.AccessRequestService
+}
+
+func newAccessRequestHandlersWithStores(t *testing.T, agentStore storage.AgentStore, accessRequestStore storage.AccessRequestStore, auditEventStore storage.AuditEventStore) *accessRequestTestHandlers {
+	t.Helper()
+	svc, err := service.NewAccessRequestService(service.AccessRequestServiceConfig{
 		AgentStore:         agentStore,
 		AccessRequestStore: accessRequestStore,
 		AuditEventStore:    auditEventStore,
 	})
+	if err != nil {
+		t.Fatalf("NewAccessRequestService: %v", err)
+	}
+	h, err := NewAccessRequestHandlers(AccessRequestHandlersConfig{
+		AccessRequestService: svc,
+	})
+	if err != nil {
+		t.Fatalf("NewAccessRequestHandlers: %v", err)
+	}
+	return &accessRequestTestHandlers{AccessRequestHandlers: h, svc: svc}
 }
 
-func newAgentHandlersConfigWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) AgentHandlersConfig {
-	cfg := AgentHandlersConfig{
-		CredentialStore: credentialStore,
-		AgentStore:      agentStore,
-		Sealer:          sealer,
-		ProviderOAuthAdapters: map[provider.Provider]provider.OAuthAdapter{
-			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
-		},
-		ProviderModelAdapters: map[provider.Provider]provider.ModelAdapter{
-			provider.OpenAI: &fakeProviderInvocationAdapter{},
-		},
-	}
-	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
-		cfg.ProviderGrantStore = store
-	}
-	if cfg.ProviderGrantStore == nil {
-		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
-			cfg.ProviderGrantStore = store
-		}
-	}
-	if store, ok := credentialStore.(storage.AccessRequestStore); ok {
-		cfg.AccessRequestStore = store
-	}
-	if cfg.AccessRequestStore == nil {
-		if store, ok := agentStore.(storage.AccessRequestStore); ok {
-			cfg.AccessRequestStore = store
-		}
-	}
-	return cfg
-}
+// --- Common test helpers ---
 
-func newAgentHandlersWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *AgentHandlers {
-	return NewAgentHandlers(newAgentHandlersConfigWithStores(credentialStore, agentStore, sealer))
-}
-
-func newCampaignOrchestrationHandlersConfigWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) CampaignOrchestrationHandlersConfig {
-	cfg := CampaignOrchestrationHandlersConfig{
-		AgentStore:      agentStore,
-		CredentialStore: credentialStore,
-		Sealer:          sealer,
-		ProviderOAuthAdapters: map[provider.Provider]provider.OAuthAdapter{
-			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
-		},
-		ProviderToolAdapters: map[provider.Provider]orchestration.Provider{
-			provider.OpenAI: &fakeProviderToolAdapter{},
-		},
-	}
-	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
-		cfg.ProviderGrantStore = store
-	}
-	if cfg.ProviderGrantStore == nil {
-		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
-			cfg.ProviderGrantStore = store
-		}
-	}
-	return cfg
-}
-
-func newInvocationHandlersWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *InvocationHandlers {
-	return NewInvocationHandlers(newInvocationHandlersConfigWithStores(credentialStore, agentStore, sealer))
-}
-
-func newInvocationHandlersConfigWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) InvocationHandlersConfig {
-	cfg := InvocationHandlersConfig{
-		CredentialStore: credentialStore,
-		AgentStore:      agentStore,
-		Sealer:          sealer,
-		ProviderOAuthAdapters: map[provider.Provider]provider.OAuthAdapter{
-			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
-		},
-		ProviderInvocationAdapters: map[provider.Provider]provider.InvocationAdapter{
-			provider.OpenAI: &fakeProviderInvocationAdapter{},
-		},
-	}
-	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
-		cfg.ProviderGrantStore = store
-	}
-	if cfg.ProviderGrantStore == nil {
-		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
-			cfg.ProviderGrantStore = store
-		}
-	}
-	if store, ok := credentialStore.(storage.AccessRequestStore); ok {
-		cfg.AccessRequestStore = store
-	}
-	if cfg.AccessRequestStore == nil {
-		if store, ok := agentStore.(storage.AccessRequestStore); ok {
-			cfg.AccessRequestStore = store
-		}
-	}
-	if store, ok := credentialStore.(storage.AuditEventStore); ok {
-		cfg.AuditEventStore = store
-	}
-	if cfg.AuditEventStore == nil {
-		if store, ok := agentStore.(storage.AuditEventStore); ok {
-			cfg.AuditEventStore = store
-		}
-	}
-	return cfg
-}
 func ptrTime(value time.Time) *time.Time {
 	return &value
 }
@@ -407,6 +695,12 @@ func assertStatusCode(t *testing.T, err error, want codes.Code) {
 	if st.Code() != want {
 		t.Fatalf("expected status %v, got %v", want, st.Code())
 	}
+}
+
+// pkceCodeChallengeS256 computes the S256 code challenge for test assertions.
+func pkceCodeChallengeS256(codeVerifier string) string {
+	sum := sha256.Sum256([]byte(codeVerifier))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
 func assertStatusReason(t *testing.T, err error, want apperrors.Code) {

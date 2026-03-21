@@ -3,19 +3,20 @@ package ai
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
 
 func TestStartProviderConnectRequiresUserID(t *testing.T) {
-	svc := newProviderGrantHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.StartProviderConnect(context.Background(), &aiv1.StartProviderConnectRequest{
 		Provider: aiv1.Provider_PROVIDER_OPENAI,
 	})
@@ -25,23 +26,26 @@ func TestStartProviderConnectRequiresUserID(t *testing.T) {
 func TestStartProviderConnectUsesS256CodeChallenge(t *testing.T) {
 	store := newFakeStore()
 	oauthAdapter := &fakeProviderOAuthAdapter{}
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerOAuthAdapters[provider.OpenAI] = oauthAdapter
 
 	idValues := []string{"session-1", "state-1"}
-	svc.idGenerator = func() (string, error) {
-		if len(idValues) == 0 {
-			return "", errors.New("unexpected id call")
-		}
-		value := idValues[0]
-		idValues = idValues[1:]
-		return value, nil
-	}
-
 	codeVerifier := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~"
-	svc.codeVerifierGenerator = func() (string, error) {
-		return codeVerifier, nil
-	}
+
+	svc := newProviderGrantHandlersWithOpts(t, store, store, &fakeSealer{}, providerGrantTestOpts{
+		oauthAdapters: map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: oauthAdapter,
+		},
+		idGenerator: func() (string, error) {
+			if len(idValues) == 0 {
+				return "", errors.New("unexpected id call")
+			}
+			value := idValues[0]
+			idValues = idValues[1:]
+			return value, nil
+		},
+		codeVerifierGenerator: func() (string, error) {
+			return codeVerifier, nil
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.StartProviderConnect(ctx, &aiv1.StartProviderConnectRequest{
@@ -68,18 +72,19 @@ func TestStartProviderConnectUsesS256CodeChallenge(t *testing.T) {
 
 func TestFinishProviderConnectCreatesProviderGrant(t *testing.T) {
 	store := newFakeStore()
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 30, 0, 0, time.UTC) }
 
 	idValues := []string{"session-1", "state-1", "grant-1"}
-	svc.idGenerator = func() (string, error) {
-		if len(idValues) == 0 {
-			return "", errors.New("unexpected id call")
-		}
-		value := idValues[0]
-		idValues = idValues[1:]
-		return value, nil
-	}
+	svc := newProviderGrantHandlersWithOpts(t, store, store, &fakeSealer{}, providerGrantTestOpts{
+		clock: func() time.Time { return time.Date(2026, 2, 15, 23, 30, 0, 0, time.UTC) },
+		idGenerator: func() (string, error) {
+			if len(idValues) == 0 {
+				return "", errors.New("unexpected id call")
+			}
+			value := idValues[0]
+			idValues = idValues[1:]
+			return value, nil
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	startResp, err := svc.StartProviderConnect(ctx, &aiv1.StartProviderConnectRequest{
@@ -109,18 +114,19 @@ func TestFinishProviderConnectCreatesProviderGrant(t *testing.T) {
 
 func TestFinishProviderConnectDoesNotSealRawAuthorizationCode(t *testing.T) {
 	store := newFakeStore()
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 30, 0, 0, time.UTC) }
 
 	idValues := []string{"session-1", "state-1", "grant-1"}
-	svc.idGenerator = func() (string, error) {
-		if len(idValues) == 0 {
-			return "", errors.New("unexpected id call")
-		}
-		value := idValues[0]
-		idValues = idValues[1:]
-		return value, nil
-	}
+	svc := newProviderGrantHandlersWithOpts(t, store, store, &fakeSealer{}, providerGrantTestOpts{
+		clock: func() time.Time { return time.Date(2026, 2, 15, 23, 30, 0, 0, time.UTC) },
+		idGenerator: func() (string, error) {
+			if len(idValues) == 0 {
+				return "", errors.New("unexpected id call")
+			}
+			value := idValues[0]
+			idValues = idValues[1:]
+			return value, nil
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	startResp, err := svc.StartProviderConnect(ctx, &aiv1.StartProviderConnectRequest{
@@ -147,20 +153,23 @@ func TestFinishProviderConnectDoesNotSealRawAuthorizationCode(t *testing.T) {
 
 func TestFinishProviderConnectKeepsSessionPendingOnExchangeFailure(t *testing.T) {
 	store := newFakeStore()
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerOAuthAdapters[provider.OpenAI] = &fakeProviderOAuthAdapter{
-		exchangeErr: errors.New("exchange failed"),
-	}
 
 	idValues := []string{"session-1", "state-1"}
-	svc.idGenerator = func() (string, error) {
-		if len(idValues) == 0 {
-			return "", errors.New("unexpected id call")
-		}
-		value := idValues[0]
-		idValues = idValues[1:]
-		return value, nil
-	}
+	svc := newProviderGrantHandlersWithOpts(t, store, store, &fakeSealer{}, providerGrantTestOpts{
+		oauthAdapters: map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: &fakeProviderOAuthAdapter{
+				exchangeErr: errors.New("exchange failed"),
+			},
+		},
+		idGenerator: func() (string, error) {
+			if len(idValues) == 0 {
+				return "", errors.New("unexpected id call")
+			}
+			value := idValues[0]
+			idValues = idValues[1:]
+			return value, nil
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	startResp, err := svc.StartProviderConnect(ctx, &aiv1.StartProviderConnectRequest{
@@ -186,28 +195,28 @@ func TestFinishProviderConnectKeepsSessionPendingOnExchangeFailure(t *testing.T)
 
 func TestListProviderGrantsReturnsOwnerRecords(t *testing.T) {
 	store := newFakeStore()
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:1",
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
-	store.ProviderGrants["grant-2"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-2"] = providergrant.ProviderGrant{
 		ID:              "grant-2",
 		OwnerUserID:     "user-2",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:2",
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderGrants(ctx, &aiv1.ListProviderGrantsRequest{PageSize: 10})
 	if err != nil {
@@ -224,38 +233,38 @@ func TestListProviderGrantsReturnsOwnerRecords(t *testing.T) {
 func TestListProviderGrantsFiltersByProvider(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 0, 0, 0, time.UTC)
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:1",
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.ProviderGrants["grant-2"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-2"] = providergrant.ProviderGrant{
 		ID:              "grant-2",
 		OwnerUserID:     "user-1",
-		Provider:        "other",
+		Provider:        provider.Provider("other"),
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:2",
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.ProviderGrants["grant-3"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-3"] = providergrant.ProviderGrant{
 		ID:              "grant-3",
 		OwnerUserID:     "user-2",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:3",
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderGrants(ctx, &aiv1.ListProviderGrantsRequest{
 		PageSize: 10,
@@ -275,38 +284,38 @@ func TestListProviderGrantsFiltersByProvider(t *testing.T) {
 func TestListProviderGrantsFiltersByStatus(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 0, 0, 0, time.UTC)
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:1",
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.ProviderGrants["grant-2"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-2"] = providergrant.ProviderGrant{
 		ID:              "grant-2",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:2",
-		Status:          "revoked",
+		Status:          providergrant.StatusRevoked,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.ProviderGrants["grant-3"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-3"] = providergrant.ProviderGrant{
 		ID:              "grant-3",
 		OwnerUserID:     "user-2",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:3",
-		Status:          "revoked",
+		Status:          providergrant.StatusRevoked,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderGrants(ctx, &aiv1.ListProviderGrantsRequest{
 		PageSize: 10,
@@ -325,21 +334,24 @@ func TestListProviderGrantsFiltersByStatus(t *testing.T) {
 
 func TestRevokeProviderGrant(t *testing.T) {
 	store := newFakeStore()
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
 	adapter := &fakeProviderOAuthAdapter{}
-	svc.providerOAuthAdapters[provider.OpenAI] = adapter
-	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 31, 0, 0, time.UTC) }
+	svc := newProviderGrantHandlersWithOpts(t, store, store, &fakeSealer{}, providerGrantTestOpts{
+		oauthAdapters: map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: adapter,
+		},
+		clock: func() time.Time { return time.Date(2026, 2, 15, 23, 31, 0, 0, time.UTC) },
+	})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	resp, err := svc.RevokeProviderGrant(ctx, &aiv1.RevokeProviderGrantRequest{ProviderGrantId: "grant-1"})
@@ -357,32 +369,33 @@ func TestRevokeProviderGrant(t *testing.T) {
 func TestRevokeProviderGrantFailsWhenReferencedAgentIsBoundToActiveCampaigns(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		ProviderGrantID: "grant-1",
-		Status:          "active",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.ProviderGrantAuthReference("grant-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
-	svc.usageGuard.gameCampaignAIClient = &fakeCampaignAIAuthStateClient{
-		usageByAgent: map[string]int32{"agent-1": 1},
-	}
+	svc := newProviderGrantHandlersWithOpts(t, store, store, &fakeSealer{}, providerGrantTestOpts{
+		usageGuard: service.NewUsageGuard(store, &fakeCampaignAIAuthStateClient{
+			usageByAgent: map[string]int32{"agent-1": 1},
+		}),
+	})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	_, err := svc.RevokeProviderGrant(ctx, &aiv1.RevokeProviderGrantRequest{ProviderGrantId: "grant-1"})
@@ -393,94 +406,22 @@ func TestRevokeProviderGrantFailsWhenReferencedAgentIsBoundToActiveCampaigns(t *
 	}
 }
 
-func TestRefreshProviderGrantSuccessUpdatesStoredToken(t *testing.T) {
-	store := newFakeStore()
-	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
-		ID:               "grant-1",
-		OwnerUserID:      "user-1",
-		Provider:         "openai",
-		GrantedScopes:    []string{"responses.read"},
-		TokenCiphertext:  `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		RefreshSupported: true,
-		Status:           "active",
-		CreatedAt:        now.Add(-time.Hour),
-		UpdatedAt:        now.Add(-time.Hour),
-	}
-
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return now }
-	adapter := &fakeProviderOAuthAdapter{
-		refreshResult: provider.TokenExchangeResult{
-			TokenPlaintext:   `{"access_token":"at-2","refresh_token":"rt-2"}`,
-			RefreshSupported: true,
-			ExpiresAt:        ptrTime(now.Add(time.Hour)),
-		},
-	}
-	svc.providerOAuthAdapters[provider.OpenAI] = adapter
-
-	got, err := svc.authTokenResolverForRuntime().refreshProviderGrant(context.Background(), "user-1", "grant-1")
-	if err != nil {
-		t.Fatalf("refresh provider grant: %v", err)
-	}
-	if adapter.lastRefreshToken != "rt-1" {
-		t.Fatalf("refresh token = %q, want %q", adapter.lastRefreshToken, "rt-1")
-	}
-	if got.TokenCiphertext != `enc:{"access_token":"at-2","refresh_token":"rt-2"}` {
-		t.Fatalf("token ciphertext = %q", got.TokenCiphertext)
-	}
-	if got.LastRefreshedAt == nil || !got.LastRefreshedAt.Equal(now) {
-		t.Fatalf("last_refreshed_at = %v, want %v", got.LastRefreshedAt, now)
-	}
-}
-
-func TestRefreshProviderGrantMarksRefreshFailed(t *testing.T) {
-	store := newFakeStore()
-	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
-		ID:               "grant-1",
-		OwnerUserID:      "user-1",
-		Provider:         "openai",
-		GrantedScopes:    []string{"responses.read"},
-		TokenCiphertext:  `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		RefreshSupported: true,
-		Status:           "active",
-		CreatedAt:        now.Add(-time.Hour),
-		UpdatedAt:        now.Add(-time.Hour),
-	}
-
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return now }
-	adapter := &fakeProviderOAuthAdapter{refreshErr: errors.New("provider timeout")}
-	svc.providerOAuthAdapters[provider.OpenAI] = adapter
-
-	if _, err := svc.authTokenResolverForRuntime().refreshProviderGrant(context.Background(), "user-1", "grant-1"); err == nil {
-		t.Fatal("expected refresh error")
-	}
-	updated := store.ProviderGrants["grant-1"]
-	if updated.Status != "refresh_failed" {
-		t.Fatalf("status = %q, want %q", updated.Status, "refresh_failed")
-	}
-	if strings.TrimSpace(updated.LastRefreshError) == "" {
-		t.Fatal("expected last_refresh_error to be set")
-	}
-}
-
 func TestFinishProviderConnectAcrossServiceInstances(t *testing.T) {
 	store := newFakeStore()
 	sealer := &fakeSealer{}
 
-	svcStart := newProviderGrantHandlersWithStores(store, store, sealer)
-	svcStart.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 40, 0, 0, time.UTC) }
 	idValuesStart := []string{"session-1", "state-1"}
-	svcStart.idGenerator = func() (string, error) {
-		if len(idValuesStart) == 0 {
-			return "", errors.New("unexpected id call")
-		}
-		value := idValuesStart[0]
-		idValuesStart = idValuesStart[1:]
-		return value, nil
-	}
+	svcStart := newProviderGrantHandlersWithOpts(t, store, store, sealer, providerGrantTestOpts{
+		clock: func() time.Time { return time.Date(2026, 2, 15, 23, 40, 0, 0, time.UTC) },
+		idGenerator: func() (string, error) {
+			if len(idValuesStart) == 0 {
+				return "", errors.New("unexpected id call")
+			}
+			value := idValuesStart[0]
+			idValuesStart = idValuesStart[1:]
+			return value, nil
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	startResp, err := svcStart.StartProviderConnect(ctx, &aiv1.StartProviderConnectRequest{
@@ -491,9 +432,10 @@ func TestFinishProviderConnectAcrossServiceInstances(t *testing.T) {
 		t.Fatalf("start provider connect: %v", err)
 	}
 
-	svcFinish := newProviderGrantHandlersWithStores(store, store, sealer)
-	svcFinish.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 41, 0, 0, time.UTC) }
-	svcFinish.idGenerator = func() (string, error) { return "grant-1", nil }
+	svcFinish := newProviderGrantHandlersWithOpts(t, store, store, sealer, providerGrantTestOpts{
+		clock:       func() time.Time { return time.Date(2026, 2, 15, 23, 41, 0, 0, time.UTC) },
+		idGenerator: func() (string, error) { return "grant-1", nil },
+	})
 
 	finishResp, err := svcFinish.FinishProviderConnect(ctx, &aiv1.FinishProviderConnectRequest{
 		ConnectSessionId:  startResp.GetConnectSessionId(),

@@ -31,6 +31,7 @@ check sequence.
 | --- | --- |
 | Change process startup, runtime config, or service registration | `internal/cmd/ai/`, `internal/services/ai/app/` |
 | Change gRPC handler seams, auth checks, or proto mapping | `internal/services/ai/api/grpc/ai/` |
+| Change use-case orchestration, auth token resolution, access control, or usage guards | `internal/services/ai/service/` |
 | Change agent, credential, provider-grant, or access-request domain rules | `internal/services/ai/agent/`, `internal/services/ai/credential/`, `internal/services/ai/providergrant/`, `internal/services/ai/accessrequest/` |
 | Change provider identity or provider-reported usage contracts | `internal/services/ai/provider/` |
 | Change OpenAI OAuth, invocation, model listing, Responses API translation, or strict-schema policy | `internal/services/ai/provider/openai/` |
@@ -57,14 +58,16 @@ canonical vocabulary for:
 1. `internal/services/ai/app/`
    Why: the composition root shows which handlers, provider adapters, and orchestration policies are actually live.
 2. `internal/services/ai/api/grpc/ai/`
-   Why: transport owns request validation, authorization, and protobuf mapping into the internal seams.
-3. `internal/services/ai/agent/`, `internal/services/ai/credential/`, `internal/services/ai/providergrant/`, and `internal/services/ai/accessrequest/`
+   Why: transport owns request validation, authorization, and protobuf mapping. Handlers are thin wrappers over service methods.
+3. `internal/services/ai/service/`
+   Why: use-case orchestration — auth token resolution, access control, usage guards, and audit. This is where business logic lives.
+4. `internal/services/ai/agent/`, `internal/services/ai/credential/`, `internal/services/ai/providergrant/`, and `internal/services/ai/accessrequest/`
    Why: the durable lifecycle rules now live in the owning domain packages, including typed auth references and provider-grant refresh transitions.
-4. `internal/services/ai/orchestration/`, `internal/services/ai/orchestration/gametools/`, and `internal/services/ai/provider/openai/`
+5. `internal/services/ai/orchestration/`, `internal/services/ai/orchestration/gametools/`, and `internal/services/ai/provider/openai/`
    Why: campaign-turn execution is split between orchestration-owned prompt/tool/runtime policy, concrete game-tool execution, and provider-specific HTTP/OAuth/model behavior outside the transport package.
-5. `internal/services/ai/campaigncontext/` plus `instructionset/`, `memorydoc/`, and `referencecorpus/`
+6. `internal/services/ai/campaigncontext/` plus `instructionset/`, `memorydoc/`, and `referencecorpus/`
    Why: artifact defaults, instruction loading, writable memory structure, and read-only reference corpus logic are now separate packages with different ownership.
-6. `internal/services/ai/storage/` and `internal/services/ai/storage/sqlite/`
+7. `internal/services/ai/storage/` and `internal/services/ai/storage/sqlite/`
    Why: auth-reference persistence, refresh state, and artifact durability live here, with sqlite coverage now split by aggregate instead of one omnibus test file.
 
 ## Where to add tests
@@ -72,6 +75,7 @@ canonical vocabulary for:
 | If you changed... | Put tests here first | Why |
 | --- | --- | --- |
 | Domain/provider identity or status behavior | package-local `*_test.go` next to the owning package under `internal/services/ai/` | Durable invariants belong with the owning package, not in transport regression hubs. |
+| Service-layer use-case logic, auth resolution, or access control | `internal/services/ai/service/*_test.go` | Business logic tests belong with the service layer, not in transport handler tests. |
 | gRPC request validation, authz, or protobuf mapping | handler-family tests under `internal/services/ai/api/grpc/ai/` plus `transport_test_helpers_test.go` | Transport seams should assert behavior where the public contract is assembled without collapsing every RPC family into one regression hub. |
 | Provider adapter request/response translation | `internal/services/ai/provider/openai/*_test.go` and package-local `provider/*_test.go` | Keep provider HTTP/Responses API behavior outside transport tests and assert shared provider vocabulary at the provider seam directly. |
 | Campaign-turn loop, prompt assembly, timeout, or usage aggregation | `internal/services/ai/orchestration/*_test.go` | Orchestration has its own seam and should carry its own runtime coverage. |
@@ -92,6 +96,7 @@ Add these when applicable:
 
 ## Related docs
 
+- [AI service architecture](../architecture/platform/ai-service-architecture.md)
 - [AI service lifecycle terms](ai-service-lifecycle-terms.md)
 - [Campaign AI agent system](../architecture/platform/campaign-ai-agent-system.md)
 - [Campaign AI orchestration](../architecture/platform/campaign-ai-orchestration.md)

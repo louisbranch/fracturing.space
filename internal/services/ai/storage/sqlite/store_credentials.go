@@ -5,43 +5,43 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
-// PutCredential persists a credential record.
-func (s *Store) PutCredential(ctx context.Context, record storage.CredentialRecord) error {
+// PutCredential persists a credential.
+func (s *Store) PutCredential(ctx context.Context, c credential.Credential) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if strings.TrimSpace(record.ID) == "" {
+	if c.ID == "" {
 		return fmt.Errorf("credential id is required")
 	}
-	if strings.TrimSpace(record.OwnerUserID) == "" {
+	if c.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	if strings.TrimSpace(record.Provider) == "" {
+	if c.Provider == "" {
 		return fmt.Errorf("provider is required")
 	}
-	if strings.TrimSpace(record.Label) == "" {
+	if c.Label == "" {
 		return fmt.Errorf("label is required")
 	}
-	if strings.TrimSpace(record.SecretCiphertext) == "" {
+	if c.SecretCiphertext == "" {
 		return fmt.Errorf("secret ciphertext is required")
 	}
-	// SecretCiphertext is expected to already be sealed by the service layer.
-	if strings.TrimSpace(record.Status) == "" {
+	if c.Status == "" {
 		return fmt.Errorf("status is required")
 	}
 
 	var revokedAt sql.NullInt64
-	if record.RevokedAt != nil {
-		revokedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.RevokedAt), Valid: true}
+	if c.RevokedAt != nil {
+		revokedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*c.RevokedAt), Valid: true}
 	}
 
 	_, err := s.sqlDB.ExecContext(ctx, `
@@ -57,14 +57,14 @@ ON CONFLICT(id) DO UPDATE SET
 	updated_at = excluded.updated_at,
 	revoked_at = excluded.revoked_at
 `,
-		record.ID,
-		record.OwnerUserID,
-		record.Provider,
-		record.Label,
-		record.SecretCiphertext,
-		record.Status,
-		sqliteutil.ToMillis(record.CreatedAt),
-		sqliteutil.ToMillis(record.UpdatedAt),
+		c.ID,
+		c.OwnerUserID,
+		string(c.Provider),
+		c.Label,
+		c.SecretCiphertext,
+		string(c.Status),
+		sqliteutil.ToMillis(c.CreatedAt),
+		sqliteutil.ToMillis(c.UpdatedAt),
 		revokedAt,
 	)
 	if err != nil {
@@ -76,17 +76,16 @@ ON CONFLICT(id) DO UPDATE SET
 	return nil
 }
 
-// GetCredential fetches a credential record by ID.
-func (s *Store) GetCredential(ctx context.Context, credentialID string) (storage.CredentialRecord, error) {
+// GetCredential fetches a credential by ID.
+func (s *Store) GetCredential(ctx context.Context, credentialID string) (credential.Credential, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.CredentialRecord{}, err
+		return credential.Credential{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.CredentialRecord{}, fmt.Errorf("storage is not configured")
+		return credential.Credential{}, fmt.Errorf("storage is not configured")
 	}
-	credentialID = strings.TrimSpace(credentialID)
 	if credentialID == "" {
-		return storage.CredentialRecord{}, fmt.Errorf("credential id is required")
+		return credential.Credential{}, fmt.Errorf("credential id is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -95,30 +94,29 @@ FROM ai_credentials
 WHERE id = ?
 `, credentialID)
 
-	rec, err := scanCredentialRecord(row)
+	c, err := scanCredential(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.CredentialRecord{}, storage.ErrNotFound
+			return credential.Credential{}, storage.ErrNotFound
 		}
-		return storage.CredentialRecord{}, fmt.Errorf("get credential: %w", err)
+		return credential.Credential{}, fmt.Errorf("get credential: %w", err)
 	}
-	return rec, nil
+	return c, nil
 }
 
-// ListCredentialsByOwner returns a page of credential records for one owner.
-func (s *Store) ListCredentialsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (storage.CredentialPage, error) {
+// ListCredentialsByOwner returns a page of credentials for one owner.
+func (s *Store) ListCredentialsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (credential.Page, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.CredentialPage{}, err
+		return credential.Page{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.CredentialPage{}, fmt.Errorf("storage is not configured")
+		return credential.Page{}, fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
 	if ownerUserID == "" {
-		return storage.CredentialPage{}, fmt.Errorf("owner user id is required")
+		return credential.Page{}, fmt.Errorf("owner user id is required")
 	}
 	if pageSize <= 0 {
-		return storage.CredentialPage{}, fmt.Errorf("page size must be greater than zero")
+		return credential.Page{}, fmt.Errorf("page size must be greater than zero")
 	}
 
 	limit := pageSize + 1
@@ -126,7 +124,7 @@ func (s *Store) ListCredentialsByOwner(ctx context.Context, ownerUserID string, 
 		rows *sql.Rows
 		err  error
 	)
-	if strings.TrimSpace(pageToken) == "" {
+	if pageToken == "" {
 		rows, err = s.sqlDB.QueryContext(ctx, `
 SELECT id, owner_user_id, provider, label, secret_ciphertext, status, created_at, updated_at, revoked_at
 FROM ai_credentials
@@ -141,23 +139,23 @@ FROM ai_credentials
 WHERE owner_user_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
-`, ownerUserID, strings.TrimSpace(pageToken), limit)
+`, ownerUserID, pageToken, limit)
 	}
 	if err != nil {
-		return storage.CredentialPage{}, fmt.Errorf("list credentials: %w", err)
+		return credential.Page{}, fmt.Errorf("list credentials: %w", err)
 	}
 	defer rows.Close()
 
-	page := storage.CredentialPage{Credentials: make([]storage.CredentialRecord, 0, pageSize)}
+	page := credential.Page{Credentials: make([]credential.Credential, 0, pageSize)}
 	for rows.Next() {
-		rec, err := scanCredentialRecord(rows)
+		c, err := scanCredential(rows)
 		if err != nil {
-			return storage.CredentialPage{}, fmt.Errorf("scan credential row: %w", err)
+			return credential.Page{}, fmt.Errorf("scan credential row: %w", err)
 		}
-		page.Credentials = append(page.Credentials, rec)
+		page.Credentials = append(page.Credentials, c)
 	}
 	if err := rows.Err(); err != nil {
-		return storage.CredentialPage{}, fmt.Errorf("iterate credential rows: %w", err)
+		return credential.Page{}, fmt.Errorf("iterate credential rows: %w", err)
 	}
 
 	if len(page.Credentials) > pageSize {
@@ -166,30 +164,38 @@ LIMIT ?
 	}
 	return page, nil
 }
-func scanCredentialRecord(scanner interface{ Scan(...any) error }) (storage.CredentialRecord, error) {
-	var rec storage.CredentialRecord
-	var createdAt int64
-	var updatedAt int64
-	var revokedAt sql.NullInt64
-	if err := scanner.Scan(
-		&rec.ID,
-		&rec.OwnerUserID,
-		&rec.Provider,
-		&rec.Label,
-		&rec.SecretCiphertext,
-		&rec.Status,
+
+// scanCredential reads one credential row into a domain credential.
+func scanCredential(s scanner) (credential.Credential, error) {
+	var (
+		c           credential.Credential
+		providerStr string
+		statusStr   string
+		createdAt   int64
+		updatedAt   int64
+		revokedAt   sql.NullInt64
+	)
+	if err := s.Scan(
+		&c.ID,
+		&c.OwnerUserID,
+		&providerStr,
+		&c.Label,
+		&c.SecretCiphertext,
+		&statusStr,
 		&createdAt,
 		&updatedAt,
 		&revokedAt,
 	); err != nil {
-		return storage.CredentialRecord{}, err
+		return credential.Credential{}, err
 	}
 
-	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
-	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+	c.Provider, _ = provider.Normalize(providerStr)
+	c.Status = credential.ParseStatus(statusStr)
+	c.CreatedAt = sqliteutil.FromMillis(createdAt)
+	c.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if revokedAt.Valid {
 		value := sqliteutil.FromMillis(revokedAt.Int64)
-		rec.RevokedAt = &value
+		c.RevokedAt = &value
 	}
-	return rec, nil
+	return c, nil
 }

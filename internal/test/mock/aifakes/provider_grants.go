@@ -4,50 +4,49 @@ import (
 	"context"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // ProviderGrantStore is an in-memory provider-grant repository fake.
 type ProviderGrantStore struct {
-	ProviderGrants map[string]storage.ProviderGrantRecord
+	ProviderGrants map[string]providergrant.ProviderGrant
 }
 
 // NewProviderGrantStore creates an initialized provider-grant fake.
 func NewProviderGrantStore() *ProviderGrantStore {
-	return &ProviderGrantStore{ProviderGrants: make(map[string]storage.ProviderGrantRecord)}
+	return &ProviderGrantStore{ProviderGrants: make(map[string]providergrant.ProviderGrant)}
 }
 
-// PutProviderGrant stores a provider grant record.
-func (s *ProviderGrantStore) PutProviderGrant(_ context.Context, record storage.ProviderGrantRecord) error {
-	s.ProviderGrants[record.ID] = record
+// PutProviderGrant stores a provider grant.
+func (s *ProviderGrantStore) PutProviderGrant(_ context.Context, grant providergrant.ProviderGrant) error {
+	s.ProviderGrants[grant.ID] = grant
 	return nil
 }
 
 // GetProviderGrant returns a provider grant by ID.
-func (s *ProviderGrantStore) GetProviderGrant(_ context.Context, providerGrantID string) (storage.ProviderGrantRecord, error) {
-	rec, ok := s.ProviderGrants[providerGrantID]
+func (s *ProviderGrantStore) GetProviderGrant(_ context.Context, providerGrantID string) (providergrant.ProviderGrant, error) {
+	grant, ok := s.ProviderGrants[providerGrantID]
 	if !ok {
-		return storage.ProviderGrantRecord{}, storage.ErrNotFound
+		return providergrant.ProviderGrant{}, storage.ErrNotFound
 	}
-	return rec, nil
+	return grant, nil
 }
 
 // ListProviderGrantsByOwner lists provider grants for an owner.
-func (s *ProviderGrantStore) ListProviderGrantsByOwner(_ context.Context, ownerUserID string, _ int, _ string, filter storage.ProviderGrantFilter) (storage.ProviderGrantPage, error) {
-	providerID := strings.ToLower(strings.TrimSpace(filter.Provider))
-	status := strings.ToLower(strings.TrimSpace(filter.Status))
-	items := make([]storage.ProviderGrantRecord, 0)
-	for _, rec := range s.ProviderGrants {
-		if rec.OwnerUserID != ownerUserID {
+func (s *ProviderGrantStore) ListProviderGrantsByOwner(_ context.Context, ownerUserID string, _ int, _ string, filter providergrant.Filter) (providergrant.Page, error) {
+	items := make([]providergrant.ProviderGrant, 0)
+	for _, grant := range s.ProviderGrants {
+		if grant.OwnerUserID != ownerUserID {
 			continue
 		}
-		if providerID != "" && !strings.EqualFold(strings.TrimSpace(rec.Provider), providerID) {
+		if filter.Provider != "" && !strings.EqualFold(string(grant.Provider), string(filter.Provider)) {
 			continue
 		}
-		if status != "" && !strings.EqualFold(strings.TrimSpace(rec.Status), status) {
+		if filter.Status != "" && !strings.EqualFold(string(grant.Status), string(filter.Status)) {
 			continue
 		}
-		items = append(items, rec)
+		items = append(items, grant)
 	}
-	return storage.ProviderGrantPage{ProviderGrants: items}, nil
+	return providergrant.Page{ProviderGrants: items}, nil
 }

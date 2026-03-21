@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // --- Input types ---
@@ -55,16 +54,17 @@ func (s *DirectSession) artifactList(ctx context.Context, argsJSON []byte) (orch
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Artifact == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("artifact manager is not configured")
+	}
 
-	resp, err := s.clients.Artifact.ListCampaignArtifacts(callCtx, &aiv1.ListCampaignArtifactsRequest{CampaignId: campaignID})
+	records, err := s.clients.Artifact.ListArtifacts(ctx, campaignID)
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign artifact list failed: %w", err)
 	}
 	result := artifactListResult{CampaignID: campaignID}
-	for _, a := range resp.GetArtifacts() {
-		result.Artifacts = append(result.Artifacts, artifactFromProto(a, false))
+	for _, r := range records {
+		result.Artifacts = append(result.Artifacts, artifactFromRecord(r, false))
 	}
 	return toolResultJSON(result)
 }
@@ -78,17 +78,15 @@ func (s *DirectSession) artifactGet(ctx context.Context, argsJSON []byte) (orche
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Artifact == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("artifact manager is not configured")
+	}
 
-	resp, err := s.clients.Artifact.GetCampaignArtifact(callCtx, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       input.Path,
-	})
+	record, err := s.clients.Artifact.GetArtifact(ctx, campaignID, input.Path)
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign artifact get failed: %w", err)
 	}
-	return toolResultJSON(artifactFromProto(resp.GetArtifact(), true))
+	return toolResultJSON(artifactFromRecord(record, true))
 }
 
 func (s *DirectSession) artifactUpsert(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
@@ -100,40 +98,34 @@ func (s *DirectSession) artifactUpsert(ctx context.Context, argsJSON []byte) (or
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Artifact == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("artifact manager is not configured")
+	}
 
-	resp, err := s.clients.Artifact.UpsertCampaignArtifact(callCtx, &aiv1.UpsertCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       input.Path,
-		Content:    input.Content,
-	})
+	record, err := s.clients.Artifact.UpsertArtifact(ctx, campaignID, input.Path, input.Content)
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign artifact upsert failed: %w", err)
 	}
-	return toolResultJSON(artifactFromProto(resp.GetArtifact(), true))
+	return toolResultJSON(artifactFromRecord(record, true))
 }
 
-func artifactFromProto(a *aiv1.CampaignArtifact, includeContent bool) artifactResult {
-	if a == nil {
-		return artifactResult{}
-	}
-	r := artifactResult{
-		CampaignID: a.GetCampaignId(),
-		Path:       a.GetPath(),
-		ReadOnly:   a.GetReadOnly(),
-		CreatedAt:  formatArtifactTimestamp(a.GetCreatedAt()),
-		UpdatedAt:  formatArtifactTimestamp(a.GetUpdatedAt()),
+func artifactFromRecord(r storage.CampaignArtifactRecord, includeContent bool) artifactResult {
+	result := artifactResult{
+		CampaignID: r.CampaignID,
+		Path:       r.Path,
+		ReadOnly:   r.ReadOnly,
+		CreatedAt:  formatArtifactTime(r.CreatedAt),
+		UpdatedAt:  formatArtifactTime(r.UpdatedAt),
 	}
 	if includeContent {
-		r.Content = a.GetContent()
+		result.Content = r.Content
 	}
-	return r
+	return result
 }
 
-func formatArtifactTimestamp(ts *timestamppb.Timestamp) string {
-	if ts == nil {
+func formatArtifactTime(t time.Time) string {
+	if t.IsZero() {
 		return ""
 	}
-	return ts.AsTime().UTC().Format(time.RFC3339)
+	return t.UTC().Format(time.RFC3339)
 }

@@ -14,7 +14,7 @@ import (
 
 func TestCampaignArtifactHandlersRoundTrip(t *testing.T) {
 	store := aifakes.NewCampaignArtifactStore()
-	svc := NewCampaignArtifactHandlers(CampaignArtifactHandlersConfig{
+	svc, err := NewCampaignArtifactHandlers(CampaignArtifactHandlersConfig{
 		Manager: campaigncontext.NewManager(campaigncontext.ManagerConfig{
 			Store: store,
 			Clock: func() time.Time {
@@ -23,6 +23,9 @@ func TestCampaignArtifactHandlersRoundTrip(t *testing.T) {
 		}),
 		AuthorizationClient: &fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}},
 	})
+	if err != nil {
+		t.Fatalf("NewCampaignArtifactHandlers: %v", err)
+	}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	ensureResp, err := svc.EnsureCampaignArtifacts(ctx, &aiv1.EnsureCampaignArtifactsRequest{

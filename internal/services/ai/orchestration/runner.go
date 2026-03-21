@@ -85,26 +85,26 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		recordSpanError(span, err)
 		return Result{}, err
 	}
-	if strings.TrimSpace(input.CampaignID) == "" || strings.TrimSpace(input.SessionID) == "" || strings.TrimSpace(input.ParticipantID) == "" {
+	if input.CampaignID == "" || input.SessionID == "" || input.ParticipantID == "" {
 		err := errInvalidInput("campaign, session, and participant are required")
 		recordSpanError(span, err)
 		return Result{}, err
 	}
-	if strings.TrimSpace(input.Model) == "" {
+	if input.Model == "" {
 		err := errInvalidInput("model is required")
 		recordSpanError(span, err)
 		return Result{}, err
 	}
-	if strings.TrimSpace(input.CredentialSecret) == "" {
+	if input.CredentialSecret == "" {
 		err := errInvalidInput("credential secret is required")
 		recordSpanError(span, err)
 		return Result{}, err
 	}
 	span.SetAttributes(
-		attribute.String("ai.orchestration.campaign_id", strings.TrimSpace(input.CampaignID)),
-		attribute.String("ai.orchestration.session_id", strings.TrimSpace(input.SessionID)),
-		attribute.String("ai.orchestration.participant_id", strings.TrimSpace(input.ParticipantID)),
-		attribute.String("ai.orchestration.model", strings.TrimSpace(input.Model)),
+		attribute.String("ai.orchestration.campaign_id", input.CampaignID),
+		attribute.String("ai.orchestration.session_id", input.SessionID),
+		attribute.String("ai.orchestration.participant_id", input.ParticipantID),
+		attribute.String("ai.orchestration.model", input.Model),
 		attribute.Int("ai.orchestration.max_steps", r.max),
 		attribute.Int64("ai.orchestration.turn_timeout_ms", r.turnTimeout.Milliseconds()),
 		attribute.Int("ai.orchestration.tool_result_max_bytes", r.toolResultMaxBytes),
@@ -173,7 +173,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		stepCtx, stepSpan := tracer.Start(ctx, "ai.orchestration.provider_step")
 		stepSpan.SetAttributes(
 			attribute.Int("ai.orchestration.step_index", i+1),
-			attribute.Bool("ai.orchestration.has_followup_prompt", strings.TrimSpace(followUpPrompt) != ""),
+			attribute.Bool("ai.orchestration.has_followup_prompt", followUpPrompt != ""),
 			attribute.Int("ai.orchestration.result_count", len(results)),
 		)
 		step, err := input.Provider.Run(stepCtx, ProviderInput{
@@ -195,16 +195,16 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 			return Result{}, err
 		}
 		stepSpan.SetAttributes(
-			attribute.String("ai.orchestration.conversation_id", strings.TrimSpace(step.ConversationID)),
+			attribute.String("ai.orchestration.conversation_id", step.ConversationID),
 			attribute.Int("ai.orchestration.tool_call_count", len(step.ToolCalls)),
-			attribute.Bool("ai.orchestration.has_output_text", strings.TrimSpace(step.OutputText) != ""),
+			attribute.Bool("ai.orchestration.has_output_text", step.OutputText != ""),
 		)
 		stepSpan.End()
-		convo = strings.TrimSpace(step.ConversationID)
+		convo = step.ConversationID
 		usage = usage.Add(step.Usage)
 		followUpPrompt = ""
 		if len(step.ToolCalls) == 0 {
-			text := strings.TrimSpace(step.OutputText)
+			text := step.OutputText
 			if text == "" {
 				err := errExecution(fmt.Errorf("provider returned no tool calls or output"))
 				recordSpanError(span, err)
@@ -239,10 +239,10 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 
 		results = make([]ProviderToolResult, 0, len(step.ToolCalls))
 		for _, call := range step.ToolCalls {
-			if _, ok := allowedToolNames[strings.TrimSpace(call.Name)]; !ok {
+			if _, ok := allowedToolNames[call.Name]; !ok {
 				results = append(results, ProviderToolResult{
 					CallID:  call.CallID,
-					Output:  fmt.Sprintf("tool %q is not allowed for campaign orchestration", strings.TrimSpace(call.Name)),
+					Output:  fmt.Sprintf("tool %q is not allowed for campaign orchestration", call.Name),
 					IsError: true,
 				})
 				continue
@@ -286,7 +286,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 			if truncated {
 				span.AddEvent("ai.orchestration.tool_result_truncated",
 					trace.WithAttributes(
-						attribute.String("ai.orchestration.tool_name", strings.TrimSpace(call.Name)),
+						attribute.String("ai.orchestration.tool_name", call.Name),
 						attribute.Int("ai.orchestration.tool_result_max_bytes", r.toolResultMaxBytes),
 					),
 				)
@@ -299,7 +299,6 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 }
 
 func buildCommitReminder(text string) string {
-	text = strings.TrimSpace(text)
 	var b strings.Builder
 	b.WriteString("You returned narration without calling interaction_scene_gm_output_commit.\n")
 	b.WriteString("Convert that draft into an authoritative tool call before returning final text.\n")
@@ -341,7 +340,6 @@ func truncateToolResultOutput(text string, maxBytes int) (string, bool) {
 const toolResultBudgetSuffix = "\n\n[truncated by AI orchestration tool-result budget]"
 
 func decodeArgs(raw string) (any, error) {
-	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return map[string]any{}, nil
 	}

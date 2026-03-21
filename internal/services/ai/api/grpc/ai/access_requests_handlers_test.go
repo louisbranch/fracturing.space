@@ -6,7 +6,9 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
@@ -14,24 +16,24 @@ import (
 func TestCreateAccessRequestSuccess(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 5, 0, 0, time.UTC)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "owner-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now.Add(-time.Hour),
-		UpdatedAt:    now.Add(-time.Hour),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "owner-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now.Add(-time.Hour),
+		UpdatedAt:     now.Add(-time.Hour),
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
-	svc.clock = func() time.Time { return now }
-	svc.idGenerator = func() (string, error) { return "request-1", nil }
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
+	th.svc.SetClock(func() time.Time { return now })
+	th.svc.SetIDGenerator(func() (string, error) { return "request-1", nil })
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
-	resp, err := svc.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
+	resp, err := th.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
 		AgentId:     "agent-1",
 		Scope:       "invoke",
 		RequestNote: "please allow",
@@ -50,24 +52,24 @@ func TestCreateAccessRequestSuccess(t *testing.T) {
 func TestCreateAccessRequestWritesAuditEvent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 5, 0, 0, time.UTC)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "owner-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now.Add(-time.Hour),
-		UpdatedAt:    now.Add(-time.Hour),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "owner-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now.Add(-time.Hour),
+		UpdatedAt:     now.Add(-time.Hour),
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
-	svc.clock = func() time.Time { return now }
-	svc.idGenerator = func() (string, error) { return "request-1", nil }
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
+	th.svc.SetClock(func() time.Time { return now })
+	th.svc.SetIDGenerator(func() (string, error) { return "request-1", nil })
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
-	if _, err := svc.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
+	if _, err := th.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
 		AgentId:     "agent-1",
 		Scope:       "invoke",
 		RequestNote: "please allow",
@@ -85,21 +87,21 @@ func TestCreateAccessRequestWritesAuditEvent(t *testing.T) {
 func TestCreateAccessRequestRejectsOwnAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
-	_, err := svc.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
+	_, err := th.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
 		AgentId: "agent-1",
 		Scope:   "invoke",
 	})
@@ -109,21 +111,21 @@ func TestCreateAccessRequestRejectsOwnAgent(t *testing.T) {
 func TestCreateAccessRequestRejectsUnsupportedScope(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "owner-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "owner-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
-	_, err := svc.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
+	_, err := th.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
 		AgentId: "agent-1",
 		Scope:   "admin",
 	})
@@ -133,14 +135,14 @@ func TestCreateAccessRequestRejectsUnsupportedScope(t *testing.T) {
 func TestListAccessRequestsByRole(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now}
-	store.AccessRequests["request-2"] = storage.AccessRequestRecord{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-2", AgentID: "agent-2", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now}
-	store.AccessRequests["request-3"] = storage.AccessRequestRecord{ID: "request-3", RequesterUserID: "user-3", OwnerUserID: "owner-1", AgentID: "agent-3", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now}
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusPending, CreatedAt: now, UpdatedAt: now}
+	store.AccessRequests["request-2"] = accessrequest.AccessRequest{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-2", AgentID: "agent-2", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusPending, CreatedAt: now, UpdatedAt: now}
+	store.AccessRequests["request-3"] = accessrequest.AccessRequest{ID: "request-3", RequesterUserID: "user-3", OwnerUserID: "owner-1", AgentID: "agent-3", Scope: accessrequest.ScopeInvoke, Status: accessrequest.StatusApproved, CreatedAt: now, UpdatedAt: now}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 
 	requesterCtx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
-	requesterResp, err := svc.ListAccessRequests(requesterCtx, &aiv1.ListAccessRequestsRequest{
+	requesterResp, err := th.ListAccessRequests(requesterCtx, &aiv1.ListAccessRequestsRequest{
 		Role: aiv1.AccessRequestRole_ACCESS_REQUEST_ROLE_REQUESTER,
 	})
 	if err != nil {
@@ -151,7 +153,7 @@ func TestListAccessRequestsByRole(t *testing.T) {
 	}
 
 	ownerCtx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	ownerResp, err := svc.ListAccessRequests(ownerCtx, &aiv1.ListAccessRequestsRequest{
+	ownerResp, err := th.ListAccessRequests(ownerCtx, &aiv1.ListAccessRequestsRequest{
 		Role: aiv1.AccessRequestRole_ACCESS_REQUEST_ROLE_OWNER,
 	})
 	if err != nil {
@@ -165,21 +167,21 @@ func TestListAccessRequestsByRole(t *testing.T) {
 func TestReviewAccessRequestByOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 7, 0, 0, time.UTC)
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
-	svc.clock = func() time.Time { return now }
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
+	th.svc.SetClock(func() time.Time { return now })
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	resp, err := svc.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
+	resp, err := th.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
 		AccessRequestId: "request-1",
 		Decision:        aiv1.AccessRequestDecision_ACCESS_REQUEST_DECISION_APPROVE,
 		ReviewNote:      "approved",
@@ -195,21 +197,21 @@ func TestReviewAccessRequestByOwner(t *testing.T) {
 func TestReviewAccessRequestWritesAuditEvent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 7, 0, 0, time.UTC)
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
-	svc.clock = func() time.Time { return now }
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
+	th.svc.SetClock(func() time.Time { return now })
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	if _, err := svc.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
+	if _, err := th.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
 		AccessRequestId: "request-1",
 		Decision:        aiv1.AccessRequestDecision_ACCESS_REQUEST_DECISION_APPROVE,
 		ReviewNote:      "approved",
@@ -227,20 +229,20 @@ func TestReviewAccessRequestWritesAuditEvent(t *testing.T) {
 func TestReviewAccessRequestRejectsNonOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-2"))
-	_, err := svc.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
+	_, err := th.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
 		AccessRequestId: "request-1",
 		Decision:        aiv1.AccessRequestDecision_ACCESS_REQUEST_DECISION_DENY,
 		ReviewNote:      "no",
@@ -251,13 +253,13 @@ func TestReviewAccessRequestRejectsNonOwner(t *testing.T) {
 func TestRevokeAccessRequestByOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 9, 0, 0, time.UTC)
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Minute),
 		ReviewerUserID:  "owner-1",
@@ -265,10 +267,10 @@ func TestRevokeAccessRequestByOwner(t *testing.T) {
 		ReviewedAt:      ptrTime(now.Add(-time.Minute)),
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
-	svc.clock = func() time.Time { return now }
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
+	th.svc.SetClock(func() time.Time { return now })
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	resp, err := svc.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
+	resp, err := th.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
 		AccessRequestId: "request-1",
 		RevokeNote:      "removed",
 	})
@@ -289,20 +291,20 @@ func TestRevokeAccessRequestByOwner(t *testing.T) {
 func TestRevokeAccessRequestRejectsNonOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-2"))
-	_, err := svc.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
+	_, err := th.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
 		AccessRequestId: "request-1",
 		RevokeNote:      "no",
 	})
@@ -312,20 +314,20 @@ func TestRevokeAccessRequestRejectsNonOwner(t *testing.T) {
 func TestRevokeAccessRequestRejectsNonApproved(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	_, err := svc.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
+	_, err := th.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
 		AccessRequestId: "request-1",
 		RevokeNote:      "not approved",
 	})

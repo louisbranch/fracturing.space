@@ -29,7 +29,7 @@ func currentContextSource(ctx context.Context, sess Session, _ PromptInput) (Bri
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read mcp context: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return SectionContribution(BriefSection{
 		ID:       "current_context",
 		Priority: 200,
 		Label:    "Current context",
@@ -38,12 +38,11 @@ func currentContextSource(ctx context.Context, sess Session, _ PromptInput) (Bri
 }
 
 func campaignContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	campaign, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s", campaignID))
+	campaign, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s", input.CampaignID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read campaign: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return SectionContribution(BriefSection{
 		ID:       "campaign",
 		Priority: 200,
 		Label:    "Campaign",
@@ -52,12 +51,11 @@ func campaignContextSource(ctx context.Context, sess Session, input PromptInput)
 }
 
 func participantsContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	participants, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/participants", campaignID))
+	participants, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/participants", input.CampaignID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read participants: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return SectionContribution(BriefSection{
 		ID:       "participants",
 		Priority: 300,
 		Label:    "Participants",
@@ -66,12 +64,11 @@ func participantsContextSource(ctx context.Context, sess Session, input PromptIn
 }
 
 func charactersContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	characters, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/characters", campaignID))
+	characters, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/characters", input.CampaignID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read characters: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return SectionContribution(BriefSection{
 		ID:       "characters",
 		Priority: 300,
 		Label:    "Characters",
@@ -80,12 +77,11 @@ func charactersContextSource(ctx context.Context, sess Session, input PromptInpu
 }
 
 func sessionsContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	sessions, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions", campaignID))
+	sessions, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions", input.CampaignID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read sessions: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return SectionContribution(BriefSection{
 		ID:       "sessions",
 		Priority: 300,
 		Label:    "Sessions",
@@ -94,13 +90,11 @@ func sessionsContextSource(ctx context.Context, sess Session, input PromptInput)
 }
 
 func scenesContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	sessionID := strings.TrimSpace(input.SessionID)
-	scenes, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions/%s/scenes", campaignID, sessionID))
+	scenes, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions/%s/scenes", input.CampaignID, input.SessionID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read scenes: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return SectionContribution(BriefSection{
 		ID:       "scenes",
 		Priority: 300,
 		Label:    "Scenes",
@@ -109,42 +103,39 @@ func scenesContextSource(ctx context.Context, sess Session, input PromptInput) (
 }
 
 func storyContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	story, err := readOptionalResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/story.md", campaignID))
+	story, err := readOptionalResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/story.md", input.CampaignID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read story artifact: %w", err)
 	}
-	if text := strings.TrimSpace(story); text != "" {
-		return sectionContribution(BriefSection{
+	if strings.TrimSpace(story) != "" {
+		return SectionContribution(BriefSection{
 			ID:       "story",
 			Priority: 300,
 			Label:    "story.md",
-			Content:  text,
+			Content:  story,
 		}), nil
 	}
 	return BriefContribution{}, nil
 }
 
 func memoryContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	memory, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/artifacts/memory.md", campaignID))
+	memory, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/artifacts/memory.md", input.CampaignID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read memory artifact: %w", err)
 	}
-	if text := strings.TrimSpace(memory); text != "" {
-		return sectionContribution(BriefSection{
+	if strings.TrimSpace(memory) != "" {
+		return SectionContribution(BriefSection{
 			ID:       "memory",
 			Priority: 400,
 			Label:    "memory.md",
-			Content:  text,
+			Content:  memory,
 		}), nil
 	}
 	return BriefContribution{}, nil
 }
 
 func interactionStateContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	interaction, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/interaction", campaignID))
+	interaction, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/interaction", input.CampaignID))
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("read interaction state: %w", err)
 	}
@@ -163,7 +154,8 @@ func interactionStateContextSource(ctx context.Context, sess Session, input Prom
 	}, nil
 }
 
-func sectionContribution(section BriefSection) BriefContribution {
+// SectionContribution wraps a single BriefSection as a BriefContribution.
+func SectionContribution(section BriefSection) BriefContribution {
 	return BriefContribution{Sections: []BriefSection{section}}
 }
 

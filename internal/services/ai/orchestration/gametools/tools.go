@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 )
@@ -385,14 +384,13 @@ func newProductionToolRegistry() productionToolRegistry {
 
 	byName := make(map[string]productionToolDefinition, len(definitions))
 	for i, definition := range definitions {
-		name := strings.TrimSpace(definition.Tool.Name)
+		name := definition.Tool.Name
 		if name == "" {
 			panic("gametools: production tool name is required")
 		}
 		if definition.Execute == nil {
 			panic(fmt.Sprintf("gametools: production tool %q is missing an executor", name))
 		}
-		definition.Tool.Name = name
 		definitions[i] = definition
 		if _, exists := byName[name]; exists {
 			panic(fmt.Sprintf("gametools: duplicate production tool %q", name))
@@ -415,7 +413,7 @@ func (r productionToolRegistry) tools() []orchestration.Tool {
 }
 
 func (r productionToolRegistry) lookup(name string) (productionToolDefinition, bool) {
-	definition, ok := r.byName[strings.TrimSpace(name)]
+	definition, ok := r.byName[name]
 	return definition, ok
 }
 

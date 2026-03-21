@@ -23,14 +23,12 @@ type defaultPromptBuilder struct {
 }
 
 // newDegradedPromptBuilder creates an explicit degraded-mode prompt builder
-// with the canonical context-source registry but no pre-loaded instruction
-// content.
+// with core context sources but no game-system-specific sources or pre-loaded
+// instruction content. Production callers should inject a fully configured
+// PromptBuilder via RunnerConfig.
 func newDegradedPromptBuilder() PromptBuilder {
 	reg := NewContextSourceRegistry()
 	for _, src := range CoreContextSources() {
-		reg.Register(src)
-	}
-	for _, src := range DaggerheartContextSources() {
 		reg.Register(src)
 	}
 	return NewPromptBuilder(PromptBuilderConfig{

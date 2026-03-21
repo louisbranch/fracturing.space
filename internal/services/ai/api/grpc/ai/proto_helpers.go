@@ -66,8 +66,8 @@ func usageToProto(value provider.Usage) *aiv1.Usage {
 	}
 }
 
-func credentialStatusToProto(value string) aiv1.CredentialStatus {
-	switch credential.ParseStatus(value) {
+func credentialStatusToProto(value credential.Status) aiv1.CredentialStatus {
+	switch value {
 	case credential.StatusActive:
 		return aiv1.CredentialStatus_CREDENTIAL_STATUS_ACTIVE
 	case credential.StatusRevoked:
@@ -77,17 +77,15 @@ func credentialStatusToProto(value string) aiv1.CredentialStatus {
 	}
 }
 
-func agentStatusToProto(value string) aiv1.AgentStatus {
-	switch agent.ParseStatus(value) {
-	case agent.StatusActive:
+func agentStatusToProto(value agent.Status) aiv1.AgentStatus {
+	if value.IsActive() {
 		return aiv1.AgentStatus_AGENT_STATUS_ACTIVE
-	default:
-		return aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED
 	}
+	return aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED
 }
 
-func providerGrantStatusToProto(value string) aiv1.ProviderGrantStatus {
-	switch providergrant.ParseStatus(value) {
+func providerGrantStatusToProto(value providergrant.Status) aiv1.ProviderGrantStatus {
+	switch value {
 	case providergrant.StatusActive:
 		return aiv1.ProviderGrantStatus_PROVIDER_GRANT_STATUS_ACTIVE
 	case providergrant.StatusRevoked:
@@ -101,8 +99,8 @@ func providerGrantStatusToProto(value string) aiv1.ProviderGrantStatus {
 	}
 }
 
-func accessRequestStatusToProto(value string) aiv1.AccessRequestStatus {
-	switch accessrequest.ParseStatus(value) {
+func accessRequestStatusToProto(value accessrequest.Status) aiv1.AccessRequestStatus {
+	switch value {
 	case accessrequest.StatusPending:
 		return aiv1.AccessRequestStatus_ACCESS_REQUEST_STATUS_PENDING
 	case accessrequest.StatusApproved:
@@ -127,60 +125,60 @@ func accessRequestDecisionFromProto(value aiv1.AccessRequestDecision) (accessreq
 	}
 }
 
-func credentialToProto(record storage.CredentialRecord) *aiv1.Credential {
+func credentialToProto(c credential.Credential) *aiv1.Credential {
 	// Intentionally omits SecretCiphertext to avoid exposing encrypted credential
 	// material over read APIs.
 	proto := &aiv1.Credential{
-		Id:          record.ID,
-		OwnerUserId: record.OwnerUserID,
-		Provider:    providerToProto(record.Provider),
-		Label:       record.Label,
-		Status:      credentialStatusToProto(record.Status),
-		CreatedAt:   timestamppb.New(record.CreatedAt),
-		UpdatedAt:   timestamppb.New(record.UpdatedAt),
+		Id:          c.ID,
+		OwnerUserId: c.OwnerUserID,
+		Provider:    providerToProto(string(c.Provider)),
+		Label:       c.Label,
+		Status:      credentialStatusToProto(c.Status),
+		CreatedAt:   timestamppb.New(c.CreatedAt),
+		UpdatedAt:   timestamppb.New(c.UpdatedAt),
 	}
-	if record.RevokedAt != nil {
-		proto.RevokedAt = timestamppb.New(*record.RevokedAt)
+	if c.RevokedAt != nil {
+		proto.RevokedAt = timestamppb.New(*c.RevokedAt)
 	}
 	return proto
 }
 
-func agentToProto(record storage.AgentRecord) *aiv1.Agent {
+func agentToProto(a agent.Agent) *aiv1.Agent {
 	return &aiv1.Agent{
-		Id:              record.ID,
-		OwnerUserId:     record.OwnerUserID,
-		Label:           record.Label,
-		Instructions:    record.Instructions,
-		Provider:        providerToProto(record.Provider),
-		Model:           record.Model,
-		CredentialId:    record.CredentialID,
-		ProviderGrantId: record.ProviderGrantID,
-		Status:          agentStatusToProto(record.Status),
-		CreatedAt:       timestamppb.New(record.CreatedAt),
-		UpdatedAt:       timestamppb.New(record.UpdatedAt),
+		Id:              a.ID,
+		OwnerUserId:     a.OwnerUserID,
+		Label:           a.Label,
+		Instructions:    a.Instructions,
+		Provider:        providerToProto(string(a.Provider)),
+		Model:           a.Model,
+		CredentialId:    a.AuthReference.CredentialID(),
+		ProviderGrantId: a.AuthReference.ProviderGrantID(),
+		Status:          agentStatusToProto(a.Status),
+		CreatedAt:       timestamppb.New(a.CreatedAt),
+		UpdatedAt:       timestamppb.New(a.UpdatedAt),
 	}
 }
 
-func providerGrantToProto(record storage.ProviderGrantRecord) *aiv1.ProviderGrant {
+func providerGrantToProto(grant providergrant.ProviderGrant) *aiv1.ProviderGrant {
 	proto := &aiv1.ProviderGrant{
-		Id:               record.ID,
-		OwnerUserId:      record.OwnerUserID,
-		Provider:         providerToProto(record.Provider),
-		GrantedScopes:    append([]string(nil), record.GrantedScopes...),
-		RefreshSupported: record.RefreshSupported,
-		Status:           providerGrantStatusToProto(record.Status),
-		LastRefreshError: record.LastRefreshError,
-		CreatedAt:        timestamppb.New(record.CreatedAt),
-		UpdatedAt:        timestamppb.New(record.UpdatedAt),
+		Id:               grant.ID,
+		OwnerUserId:      grant.OwnerUserID,
+		Provider:         providerToProto(string(grant.Provider)),
+		GrantedScopes:    append([]string(nil), grant.GrantedScopes...),
+		RefreshSupported: grant.RefreshSupported,
+		Status:           providerGrantStatusToProto(grant.Status),
+		LastRefreshError: grant.LastRefreshError,
+		CreatedAt:        timestamppb.New(grant.CreatedAt),
+		UpdatedAt:        timestamppb.New(grant.UpdatedAt),
 	}
-	if record.RevokedAt != nil {
-		proto.RevokedAt = timestamppb.New(*record.RevokedAt)
+	if grant.RevokedAt != nil {
+		proto.RevokedAt = timestamppb.New(*grant.RevokedAt)
 	}
-	if record.ExpiresAt != nil {
-		proto.ExpiresAt = timestamppb.New(*record.ExpiresAt)
+	if grant.ExpiresAt != nil {
+		proto.ExpiresAt = timestamppb.New(*grant.ExpiresAt)
 	}
-	if record.LastRefreshedAt != nil {
-		proto.LastRefreshedAt = timestamppb.New(*record.LastRefreshedAt)
+	if grant.RefreshedAt != nil {
+		proto.LastRefreshedAt = timestamppb.New(*grant.RefreshedAt)
 	}
 	return proto
 }
@@ -220,22 +218,22 @@ func referenceDocumentToProto(document referencecorpus.Document) *aiv1.SystemRef
 	}
 }
 
-func accessRequestToProto(record storage.AccessRequestRecord) *aiv1.AccessRequest {
+func accessRequestToProto(ar accessrequest.AccessRequest) *aiv1.AccessRequest {
 	proto := &aiv1.AccessRequest{
-		Id:              record.ID,
-		RequesterUserId: record.RequesterUserID,
-		OwnerUserId:     record.OwnerUserID,
-		AgentId:         record.AgentID,
-		Scope:           record.Scope,
-		RequestNote:     record.RequestNote,
-		Status:          accessRequestStatusToProto(record.Status),
-		ReviewerUserId:  record.ReviewerUserID,
-		ReviewNote:      record.ReviewNote,
-		CreatedAt:       timestamppb.New(record.CreatedAt),
-		UpdatedAt:       timestamppb.New(record.UpdatedAt),
+		Id:              ar.ID,
+		RequesterUserId: ar.RequesterUserID,
+		OwnerUserId:     ar.OwnerUserID,
+		AgentId:         ar.AgentID,
+		Scope:           string(ar.Scope),
+		RequestNote:     ar.RequestNote,
+		Status:          accessRequestStatusToProto(ar.Status),
+		ReviewerUserId:  ar.ReviewerUserID,
+		ReviewNote:      ar.ReviewNote,
+		CreatedAt:       timestamppb.New(ar.CreatedAt),
+		UpdatedAt:       timestamppb.New(ar.UpdatedAt),
 	}
-	if record.ReviewedAt != nil {
-		proto.ReviewedAt = timestamppb.New(*record.ReviewedAt)
+	if ar.ReviewedAt != nil {
+		proto.ReviewedAt = timestamppb.New(*ar.ReviewedAt)
 	}
 	return proto
 }
