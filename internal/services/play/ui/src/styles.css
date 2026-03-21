@@ -44,6 +44,12 @@
 }
 
 @layer components {
+  .play-density-hud {
+    --spacing: 0.2rem;
+    --size-field: 0.2rem;
+    --size-selector: 0.2rem;
+  }
+
   .preview-shell {
     @apply mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6 lg:px-8;
   }

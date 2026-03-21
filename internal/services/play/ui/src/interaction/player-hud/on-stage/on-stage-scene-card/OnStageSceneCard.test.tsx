@@ -24,5 +24,6 @@ describe("OnStageSceneCard", () => {
     expect(screen.getByText("Latest GM Output")).toBeInTheDocument();
     expect(screen.getByText("Current Frame")).toBeInTheDocument();
     expect(screen.getByText("Acting Now")).toBeInTheDocument();
+    expect(screen.getByText("Aria")).toBeInTheDocument();
   });
 });

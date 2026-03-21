@@ -71,7 +71,7 @@ export function ParticipantPortraitRail({
   return (
     <aside
       aria-label={ariaLabel}
-      className="flex w-28 shrink-0 flex-col items-center gap-4 border-l border-base-300/70 bg-base-200/25 px-3 py-4"
+      className="flex w-24 shrink-0 flex-col items-center gap-3 border-l border-base-300/70 bg-base-200/25 px-2 py-3"
     >
       {participants.map((participant) => {
         const status = statusDisplay(participant.status);
@@ -83,10 +83,10 @@ export function ParticipantPortraitRail({
           <div
             key={participant.id}
             aria-label={`${participant.name}: ${status.label}`}
-            className="flex flex-col items-center gap-2"
+            className="flex flex-col items-center gap-1.5"
           >
             <div
-              className={`relative aspect-[2/3] w-16 ${
+              className={`relative aspect-[2/3] w-14 ${
                 isViewer ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100" : ""
               }`}
             >
@@ -126,7 +126,7 @@ export function ParticipantPortraitRail({
                 </span>
               </span>
             </div>
-            <div className="text-center text-[11px] leading-tight text-base-content/70">
+            <div className="text-center text-[10px] leading-tight text-base-content/70">
               <div className="font-medium text-base-content">{participant.name}</div>
               {secondaryLabel ? (
                 <div className="uppercase tracking-wide">{secondaryLabel}</div>

@@ -10,9 +10,9 @@ const tabs: { id: HUDNavbarTab; label: string; icon: typeof Drama; tooltip: stri
 
 export function HUDNavbar({ activeTab, onTabChange, tabsWithUpdates }: HUDNavbarProps) {
   return (
-    <nav aria-label="Player HUD navigation" className="navbar bg-base-100 shadow-sm">
+    <nav aria-label="Player HUD navigation" className="navbar min-h-0 bg-base-100 px-2 py-1 shadow-sm">
       <div className="navbar-start" />
-      <div className="navbar-center gap-2">
+      <div className="navbar-center gap-1.5">
         {tabs.map(({ id, label, icon: Icon, tooltip }) => {
           const active = activeTab === id;
           const updateCount = !active ? tabsWithUpdates?.get(id) : undefined;
@@ -25,12 +25,12 @@ export function HUDNavbar({ activeTab, onTabChange, tabsWithUpdates }: HUDNavbar
               )}
               <button
                 type="button"
-                className={`btn ${active ? "btn-primary btn-soft" : "btn-ghost"}`}
+                className={`btn btn-sm gap-1.5 ${active ? "btn-primary btn-soft" : "btn-ghost"}`}
                 aria-current={active ? "page" : undefined}
                 onClick={() => onTabChange(id)}
               >
-                <Icon size={20} />
-                <span className="text-xs">{label}</span>
+                <Icon size={18} />
+                <span className="text-[0.68rem]">{label}</span>
               </button>
             </div>
           );

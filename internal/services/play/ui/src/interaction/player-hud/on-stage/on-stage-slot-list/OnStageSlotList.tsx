@@ -16,8 +16,8 @@ export function OnStageSlotList({
 
   if (orderedParticipantIDs.length === 0) {
     return (
-      <section aria-label={ariaLabel} className="border-t border-base-300/70 px-4 py-4">
-        <div className="rounded-box border border-dashed border-base-300/70 bg-base-200/30 px-4 py-6 text-center text-sm text-base-content/55">
+      <section aria-label={ariaLabel} className="border-t border-base-300/70 px-3 py-3">
+        <div className="rounded-box border border-dashed border-base-300/70 bg-base-200/30 px-3 py-4 text-center text-sm text-base-content/55">
           No active player slots yet.
         </div>
       </section>
@@ -25,7 +25,7 @@ export function OnStageSlotList({
   }
 
   return (
-    <section aria-label={ariaLabel} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
+    <section aria-label={ariaLabel} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3">
       {orderedParticipantIDs.map((participantId) => {
         const participant = participantMap.get(participantId);
         if (!participant) {

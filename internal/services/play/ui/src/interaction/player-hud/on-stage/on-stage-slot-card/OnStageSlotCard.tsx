@@ -45,12 +45,12 @@ export function OnStageSlotCard({ slot, participant, isViewer }: OnStageSlotCard
   return (
     <article
       aria-label={`On-stage slot by ${participant.name}`}
-      className={`rounded-box border border-base-300/70 bg-base-100/90 p-4 shadow-sm ${
+      className={`rounded-box border border-base-300/70 bg-base-100/90 p-3 shadow-sm ${
         isViewer ? "ring-2 ring-primary/70 ring-offset-2 ring-offset-base-100" : ""
       }`}
     >
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
+      <header className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <OnStageCharacterAvatarStack characters={characters} />
           <div className="min-w-0 flex items-center gap-2 text-sm text-base-content">
             <h3 className="min-w-0 font-semibold">{participant.name}</h3>
@@ -64,8 +64,8 @@ export function OnStageSlotCard({ slot, participant, isViewer }: OnStageSlotCard
         </div>
       </header>
 
-      <div className="mt-3 space-y-3">
-        <div className="flex items-end justify-between gap-3">
+      <div className="mt-2.5 space-y-2.5">
+        <div className="flex items-end justify-between gap-2">
           <p className={`text-sm leading-relaxed ${body ? "text-base-content/85" : "italic text-base-content/55"}`}>
             {body || "No committed post yet."}
           </p>
@@ -77,7 +77,7 @@ export function OnStageSlotCard({ slot, participant, isViewer }: OnStageSlotCard
         </div>
 
         {slot.reviewReason ? (
-          <section className="rounded-box border border-warning/30 bg-warning/10 px-3 py-2" aria-label="Revision request">
+          <section className="rounded-box border border-warning/30 bg-warning/10 px-2.5 py-2" aria-label="Revision request">
             <div className="text-xs font-semibold uppercase tracking-wide text-base-content/60">
               Revision Request
             </div>
