@@ -46,6 +46,11 @@ func TestDependencyBindersWireRootBundle(t *testing.T) {
 	if bundle.Modules.Campaigns.CampaignClient == nil {
 		t.Fatal("Modules.Campaigns.CampaignClient = nil, want client")
 	}
+
+	BindInviteDependency(&bundle, conn)
+	if bundle.Modules.Campaigns.InviteClient == nil {
+		t.Fatal("Modules.Campaigns.InviteClient = nil, want client")
+	}
 	if bundle.Modules.Invite.InviteClient == nil {
 		t.Fatal("Modules.Invite.InviteClient = nil, want client")
 	}
@@ -102,6 +107,8 @@ func TestDependencyBindersIgnoreNilInputs(t *testing.T) {
 	BindUserHubDependency(&bundle, nil)
 	BindNotificationsDependency(nil, conn)
 	BindNotificationsDependency(&bundle, nil)
+	BindInviteDependency(nil, conn)
+	BindInviteDependency(&bundle, nil)
 	BindStatusDependency(nil, conn)
 	BindStatusDependency(&bundle, nil)
 }
@@ -110,14 +117,15 @@ func TestStartupDependencyDescriptorsExposeStableBindings(t *testing.T) {
 	t.Parallel()
 
 	descriptors := StartupDependencyDescriptors()
-	if len(descriptors) != 8 {
-		t.Fatalf("descriptor count = %d, want 8", len(descriptors))
+	if len(descriptors) != 9 {
+		t.Fatalf("descriptor count = %d, want 9", len(descriptors))
 	}
 
 	for _, name := range []string{
 		DependencyNameAuth,
 		DependencyNameSocial,
 		DependencyNameGame,
+		DependencyNameInvite,
 		DependencyNameAI,
 		DependencyNameDiscovery,
 		DependencyNameUserHub,
@@ -186,6 +194,7 @@ func TestValidateRequiredDependencyBundleAcceptsBootstrappedRequiredDependencies
 	BindAuthDependency(&bundle, conn)
 	BindSocialDependency(&bundle, conn)
 	BindGameDependency(&bundle, conn)
+	BindInviteDependency(&bundle, conn)
 
 	if err := validateRequiredDependencyBundle(&bundle); err != nil {
 		t.Fatalf("validateRequiredDependencyBundle() error = %v", err)
@@ -226,11 +235,12 @@ func TestValidateRequiredDependencyBundleReportsAllMissingDependencies(t *testin
 	if !errors.As(err, &validationErr) {
 		t.Fatalf("validateRequiredDependencyBundle() error type = %T, want StartupDependencyValidationError", err)
 	}
-	if len(validationErr.Issues) != 2 {
-		t.Fatalf("validation issue count = %d, want 2", len(validationErr.Issues))
+	if len(validationErr.Issues) != 3 {
+		t.Fatalf("validation issue count = %d, want 3", len(validationErr.Issues))
 	}
 	gotSocial := false
 	gotGame := false
+	gotInvite := false
 	for _, issue := range validationErr.Issues {
 		switch issue.Name {
 		case DependencyNameSocial:
@@ -243,6 +253,11 @@ func TestValidateRequiredDependencyBundleReportsAllMissingDependencies(t *testin
 			if !containsAll(strings.Join(issue.Missing, ","), []string{"modules.campaigns.campaign", "modules.campaigns.participant"}) {
 				t.Fatalf("game issue missing = %v, want campaign and participant client", issue.Missing)
 			}
+		case DependencyNameInvite:
+			gotInvite = true
+			if !containsAll(strings.Join(issue.Missing, ","), []string{"modules.campaigns.invite", "modules.invite.invite"}) {
+				t.Fatalf("invite issue missing = %v, want modules.campaigns.invite and modules.invite.invite", issue.Missing)
+			}
 		}
 	}
 	if !gotSocial {
@@ -250,6 +265,9 @@ func TestValidateRequiredDependencyBundleReportsAllMissingDependencies(t *testin
 	}
 	if !gotGame {
 		t.Fatalf("validation issues = %#v, want game issue", validationErr.Issues)
+	}
+	if !gotInvite {
+		t.Fatalf("validation issues = %#v, want invite issue", validationErr.Issues)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"context"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"google.golang.org/grpc"
 )
 
@@ -24,8 +25,8 @@ type participantCreator interface {
 
 // inviteManager is the subset of InviteServiceClient used by Generator.
 type inviteManager interface {
-	CreateInvite(ctx context.Context, in *statev1.CreateInviteRequest, opts ...grpc.CallOption) (*statev1.CreateInviteResponse, error)
-	ClaimInvite(ctx context.Context, in *statev1.ClaimInviteRequest, opts ...grpc.CallOption) (*statev1.ClaimInviteResponse, error)
+	CreateInvite(ctx context.Context, in *invitev1.CreateInviteRequest, opts ...grpc.CallOption) (*invitev1.CreateInviteResponse, error)
+	ClaimInvite(ctx context.Context, in *invitev1.ClaimInviteRequest, opts ...grpc.CallOption) (*invitev1.ClaimInviteResponse, error)
 }
 
 // characterCreator is the subset of CharacterServiceClient used by Generator.

@@ -34,7 +34,6 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 
 	campaignClient := statev1.NewCampaignServiceClient(conn)
 	characterClient := statev1.NewCharacterServiceClient(conn)
-	inviteClient := statev1.NewInviteServiceClient(conn)
 	snapshotClient := statev1.NewSnapshotServiceClient(conn)
 	sessionClient := statev1.NewSessionServiceClient(conn)
 	participantClient := statev1.NewParticipantServiceClient(conn)
@@ -106,11 +105,8 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	})
 	assertActiveSessionLockError(t, err, startResp.GetSession().GetId())
 
-	_, err = inviteClient.CreateInvite(participantCtx, &statev1.CreateInviteRequest{
-		CampaignId:    createResp.Campaign.Id,
-		ParticipantId: ownerID,
-	})
-	assertActiveSessionLockError(t, err, startResp.GetSession().GetId())
+	// Invite creation is handled by the standalone invite service and is not
+	// gated by the game session lock.
 
 	_, err = characterClient.CreateCharacter(participantCtx, &statev1.CreateCharacterRequest{
 		CampaignId: createResp.Campaign.Id,

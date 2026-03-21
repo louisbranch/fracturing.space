@@ -197,7 +197,6 @@ func TestFoldHandledTypes_MatchActualFoldCases(t *testing.T) {
 		{"action", "action", true},
 		{"participant", "participant", false},
 		{"character", "character", false},
-		{"invite", "invite", false},
 	}
 
 	for _, tt := range tests {
@@ -283,11 +282,9 @@ func TestFoldAndProjectionFiles_Exist(t *testing.T) {
 		filepath.Join(root, "domain", "action", "fold.go"),
 		filepath.Join(root, "domain", "participant", "fold.go"),
 		filepath.Join(root, "domain", "character", "fold.go"),
-		filepath.Join(root, "domain", "invite", "fold.go"),
 		filepath.Join(root, "projection", "apply_campaign.go"),
 		filepath.Join(root, "projection", "apply_participant.go"),
 		filepath.Join(root, "projection", "apply_character.go"),
-		filepath.Join(root, "projection", "apply_invite.go"),
 		filepath.Join(root, "projection", "apply_session.go"),
 	}
 	for _, f := range files {

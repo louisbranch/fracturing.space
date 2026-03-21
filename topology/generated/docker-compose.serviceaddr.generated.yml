@@ -7,6 +7,7 @@ x-fracturing-space-serviceaddr:
   auth_http_addr: auth:8084
   discovery_grpc_addr: discovery:8091
   game_grpc_addr: game:8082
+  invite_grpc_addr: invite:8095
   jaeger_http_addr: jaeger:16686
   notifications_grpc_addr: notifications:8088
   play_http_addr: play:8094

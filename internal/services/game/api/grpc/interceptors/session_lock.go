@@ -33,9 +33,6 @@ var blockedMethodCommandTypes = map[string]command.Type{
 	campaignv1.ParticipantService_UpdateParticipant_FullMethodName: commandids.ParticipantUpdate,
 	campaignv1.ParticipantService_DeleteParticipant_FullMethodName: commandids.ParticipantLeave,
 
-	campaignv1.InviteService_CreateInvite_FullMethodName: commandids.InviteCreate,
-	campaignv1.InviteService_ClaimInvite_FullMethodName:  commandids.InviteClaim,
-
 	campaignv1.CharacterService_CreateCharacter_FullMethodName:                commandids.CharacterCreate,
 	campaignv1.CharacterService_UpdateCharacter_FullMethodName:                commandids.CharacterUpdate,
 	campaignv1.CharacterService_DeleteCharacter_FullMethodName:                commandids.CharacterDelete,

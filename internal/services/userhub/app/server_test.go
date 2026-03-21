@@ -16,6 +16,7 @@ func validRuntimeConfig() RuntimeConfig {
 	return RuntimeConfig{
 		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
 	}
@@ -48,6 +49,7 @@ func TestRunRequiresGameAddress(t *testing.T) {
 
 	err := Run(context.Background(), RuntimeConfig{
 		AuthAddr:          "auth:8083",
+		InviteAddr:        "invite:8095",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
 	})
@@ -74,12 +76,27 @@ func TestRunRequiresContext(t *testing.T) {
 	}
 }
 
+func TestRunRequiresInviteAddress(t *testing.T) {
+	t.Parallel()
+
+	err := Run(context.Background(), RuntimeConfig{
+		AuthAddr:          "auth:8083",
+		GameAddr:          "game:8082",
+		SocialAddr:        "social:8090",
+		NotificationsAddr: "notifications:8088",
+	})
+	if err == nil || !strings.Contains(err.Error(), "invite address is required") {
+		t.Fatalf("Run error = %v, want invite address validation", err)
+	}
+}
+
 func TestRunRequiresSocialAddress(t *testing.T) {
 	t.Parallel()
 
 	err := Run(context.Background(), RuntimeConfig{
 		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		NotificationsAddr: "notifications:8088",
 	})
 	if err == nil || !strings.Contains(err.Error(), "social address is required") {
@@ -93,6 +110,7 @@ func TestRunRequiresNotificationsAddress(t *testing.T) {
 	err := Run(context.Background(), RuntimeConfig{
 		AuthAddr:   "auth:8083",
 		GameAddr:   "game:8082",
+		InviteAddr: "invite:8095",
 		SocialAddr: "social:8090",
 	})
 	if err == nil || !strings.Contains(err.Error(), "notifications address is required") {
@@ -108,6 +126,7 @@ func TestNewAndServeLifecycle(t *testing.T) {
 		Port:              port,
 		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
 	})
@@ -143,6 +162,7 @@ func TestServeRequiresContext(t *testing.T) {
 		Port:              freeTCPPort(t),
 		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
 	})

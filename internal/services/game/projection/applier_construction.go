@@ -28,11 +28,6 @@ type CharacterStores struct {
 	Character storage.CharacterStore
 }
 
-// InviteStores groups invite projection dependencies.
-type InviteStores struct {
-	Invite storage.InviteStore
-}
-
 // SessionStores groups session and session-interaction projection dependencies.
 type SessionStores struct {
 	Session            storage.SessionStore
@@ -63,7 +58,6 @@ type StoreGroups struct {
 	CampaignStores
 	ParticipantStores
 	CharacterStores
-	InviteStores
 	SessionStores
 	SceneStores
 	SupportStores
@@ -94,9 +88,6 @@ func StoreGroupsFromBundle(bundle StoreBundle) StoreGroups {
 		},
 		CharacterStores: CharacterStores{
 			Character: bundle,
-		},
-		InviteStores: InviteStores{
-			Invite: bundle,
 		},
 		SessionStores: SessionStores{
 			Session:            bundle,
@@ -185,7 +176,6 @@ func NewBoundApplier(config BoundApplierConfig) Applier {
 		Character:          config.Stores.Character,
 		CampaignFork:       config.Stores.CampaignFork,
 		ClaimIndex:         config.Stores.ClaimIndex,
-		Invite:             config.Stores.Invite,
 		Participant:        config.Stores.Participant,
 		Session:            config.Stores.Session,
 		SessionGate:        config.Stores.SessionGate,

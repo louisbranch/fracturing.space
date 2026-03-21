@@ -13,6 +13,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -199,11 +200,11 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 		Name:   "Session One",
 		Status: statev1.SessionStatus_SESSION_ACTIVE,
 	}}}}
-	inviteClient := &contractInviteClient{listResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
+	inviteClient := &contractInviteClient{listResp: &invitev1.ListInvitesResponse{Invites: []*invitev1.Invite{{
 		Id:              "inv-1",
 		ParticipantId:   "p1",
 		RecipientUserId: "user-2",
-		Status:          statev1.InviteStatus_PENDING,
+		Status:          invitev1.InviteStatus_PENDING,
 	}}}}
 
 	gateway := GRPCGateway{
@@ -1095,19 +1096,19 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_STATUS_UNSPECIFIED); got != "Unspecified" {
 		t.Fatalf("sessionStatusLabel(unspecified) = %q", got)
 	}
-	if got := inviteStatusLabel(statev1.InviteStatus_CLAIMED); got != "Claimed" {
+	if got := inviteStatusLabel(invitev1.InviteStatus_CLAIMED); got != "Claimed" {
 		t.Fatalf("inviteStatusLabel() = %q", got)
 	}
-	if got := inviteStatusLabel(statev1.InviteStatus_DECLINED); got != "Declined" {
+	if got := inviteStatusLabel(invitev1.InviteStatus_DECLINED); got != "Declined" {
 		t.Fatalf("inviteStatusLabel(declined) = %q", got)
 	}
-	if got := inviteStatusLabel(statev1.InviteStatus_PENDING); got != "Pending" {
+	if got := inviteStatusLabel(invitev1.InviteStatus_PENDING); got != "Pending" {
 		t.Fatalf("inviteStatusLabel(pending) = %q", got)
 	}
-	if got := inviteStatusLabel(statev1.InviteStatus_REVOKED); got != "Revoked" {
+	if got := inviteStatusLabel(invitev1.InviteStatus_REVOKED); got != "Revoked" {
 		t.Fatalf("inviteStatusLabel(revoked) = %q", got)
 	}
-	if got := inviteStatusLabel(statev1.InviteStatus_INVITE_STATUS_UNSPECIFIED); got != "Unspecified" {
+	if got := inviteStatusLabel(invitev1.InviteStatus_INVITE_STATUS_UNSPECIFIED); got != "Unspecified" {
 		t.Fatalf("inviteStatusLabel(unspecified) = %q", got)
 	}
 	if got := timestampString(nil); got != "" {
@@ -1241,10 +1242,10 @@ func TestCampaignInvitesHydratesRecipientUsernamesOncePerUniqueUser(t *testing.T
 		},
 	}
 	gateway := inviteReadGateway{read: InviteReadDeps{
-		Invite: &contractInviteClient{listResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{
-			{Id: "inv-1", ParticipantId: "p1", RecipientUserId: "user-2", Status: statev1.InviteStatus_PENDING},
-			{Id: "inv-2", ParticipantId: "p2", RecipientUserId: "user-2", Status: statev1.InviteStatus_PENDING},
-			{Id: "inv-3", ParticipantId: "p3", RecipientUserId: "user-3", Status: statev1.InviteStatus_PENDING},
+		Invite: &contractInviteClient{listResp: &invitev1.ListInvitesResponse{Invites: []*invitev1.Invite{
+			{Id: "inv-1", ParticipantId: "p1", RecipientUserId: "user-2", Status: invitev1.InviteStatus_PENDING},
+			{Id: "inv-2", ParticipantId: "p2", RecipientUserId: "user-2", Status: invitev1.InviteStatus_PENDING},
+			{Id: "inv-3", ParticipantId: "p3", RecipientUserId: "user-3", Status: invitev1.InviteStatus_PENDING},
 		}}},
 		Participant: &contractParticipantClient{listResp: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{
 			{Id: "p1", Name: "Seat One"},
@@ -1285,8 +1286,8 @@ func TestCampaignInvitesFallsBackWhenRecipientLookupFails(t *testing.T) {
 	t.Parallel()
 
 	gateway := inviteReadGateway{read: InviteReadDeps{
-		Invite: &contractInviteClient{listResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{
-			{Id: "inv-1", ParticipantId: "p1", RecipientUserId: "user-2", Status: statev1.InviteStatus_PENDING},
+		Invite: &contractInviteClient{listResp: &invitev1.ListInvitesResponse{Invites: []*invitev1.Invite{
+			{Id: "inv-1", ParticipantId: "p1", RecipientUserId: "user-2", Status: invitev1.InviteStatus_PENDING},
 		}}},
 		Participant: &contractParticipantClient{listResp: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{
 			{Id: "p1", Name: "Seat One"},
@@ -1520,56 +1521,36 @@ func (c *contractSessionClient) EndSession(context.Context, *statev1.EndSessionR
 }
 
 type contractInviteClient struct {
-	listResp   *statev1.ListInvitesResponse
+	listResp   *invitev1.ListInvitesResponse
 	listErr    error
 	createErr  error
-	claimErr   error
-	declineErr error
 	revokeErr  error
-	lastCreate *statev1.CreateInviteRequest
+	lastCreate *invitev1.CreateInviteRequest
 }
 
-func (c *contractInviteClient) ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error) {
+func (c *contractInviteClient) ListInvites(context.Context, *invitev1.ListInvitesRequest, ...grpc.CallOption) (*invitev1.ListInvitesResponse, error) {
 	if c.listErr != nil {
 		return nil, c.listErr
 	}
 	if c.listResp != nil {
 		return c.listResp, nil
 	}
-	return &statev1.ListInvitesResponse{}, nil
+	return &invitev1.ListInvitesResponse{}, nil
 }
 
-func (c *contractInviteClient) GetPublicInvite(context.Context, *statev1.GetPublicInviteRequest, ...grpc.CallOption) (*statev1.GetPublicInviteResponse, error) {
-	return &statev1.GetPublicInviteResponse{Invite: &statev1.Invite{}}, nil
-}
-
-func (c *contractInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
+func (c *contractInviteClient) CreateInvite(_ context.Context, req *invitev1.CreateInviteRequest, _ ...grpc.CallOption) (*invitev1.CreateInviteResponse, error) {
 	c.lastCreate = req
 	if c.createErr != nil {
 		return nil, c.createErr
 	}
-	return &statev1.CreateInviteResponse{}, nil
+	return &invitev1.CreateInviteResponse{}, nil
 }
 
-func (c *contractInviteClient) ClaimInvite(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
-	if c.claimErr != nil {
-		return nil, c.claimErr
-	}
-	return &statev1.ClaimInviteResponse{}, nil
-}
-
-func (c *contractInviteClient) DeclineInvite(context.Context, *statev1.DeclineInviteRequest, ...grpc.CallOption) (*statev1.DeclineInviteResponse, error) {
-	if c.declineErr != nil {
-		return nil, c.declineErr
-	}
-	return &statev1.DeclineInviteResponse{}, nil
-}
-
-func (c *contractInviteClient) RevokeInvite(context.Context, *statev1.RevokeInviteRequest, ...grpc.CallOption) (*statev1.RevokeInviteResponse, error) {
+func (c *contractInviteClient) RevokeInvite(context.Context, *invitev1.RevokeInviteRequest, ...grpc.CallOption) (*invitev1.RevokeInviteResponse, error) {
 	if c.revokeErr != nil {
 		return nil, c.revokeErr
 	}
-	return &statev1.RevokeInviteResponse{}, nil
+	return &invitev1.RevokeInviteResponse{}, nil
 }
 
 type contractAuthorizationClient struct {

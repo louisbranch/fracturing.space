@@ -5,6 +5,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpc "google.golang.org/grpc"
@@ -58,8 +59,15 @@ func BindGameDependency(deps *Dependencies, conn *grpc.ClientConn) {
 	deps.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
 	deps.DaggerheartAssetClient = daggerheartv1.NewDaggerheartAssetServiceClient(conn)
 	deps.SessionClient = statev1.NewSessionServiceClient(conn)
-	deps.InviteClient = statev1.NewInviteServiceClient(conn)
 	deps.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)
+}
+
+// BindInviteDependency wires invite-service clients into the campaigns dependency set.
+func BindInviteDependency(deps *Dependencies, conn *grpc.ClientConn) {
+	if deps == nil || conn == nil {
+		return
+	}
+	deps.InviteClient = invitev1.NewInviteServiceClient(conn)
 }
 
 // BindDiscoveryDependency wires discovery-backed clients into the campaigns dependency set.

@@ -6,7 +6,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
@@ -106,42 +105,6 @@ type ParticipantStore interface {
 // ParticipantPage describes a page of participant records.
 type ParticipantPage struct {
 	Participants  []ParticipantRecord
-	NextPageToken string
-}
-
-// InviteRecord captures invite state used for invitation lifecycle and UX decisions.
-type InviteRecord struct {
-	ID                     string
-	CampaignID             string
-	ParticipantID          string
-	RecipientUserID        string
-	Status                 invite.Status
-	CreatedByParticipantID string
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-}
-
-// InviteReader provides read-only access to invite projections.
-type InviteReader interface {
-	// GetInvite retrieves an invite by ID. Returns ErrNotFound if the invite does not exist.
-	GetInvite(ctx context.Context, inviteID string) (InviteRecord, error)
-	ListInvites(ctx context.Context, campaignID string, recipientUserID string, status invite.Status, pageSize int, pageToken string) (InvitePage, error)
-	ListPendingInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (InvitePage, error)
-	ListPendingInvitesForRecipient(ctx context.Context, userID string, pageSize int, pageToken string) (InvitePage, error)
-}
-
-// InviteStore owns invite lifecycle read data (created/claimed/revoked flows).
-// Projection handlers use the full interface; read-only consumers should prefer
-// InviteReader.
-type InviteStore interface {
-	InviteReader
-	PutInvite(ctx context.Context, inv InviteRecord) error
-	UpdateInviteStatus(ctx context.Context, inviteID string, status invite.Status, updatedAt time.Time) error
-}
-
-// InvitePage describes a page of invites.
-type InvitePage struct {
-	Invites       []InviteRecord
 	NextPageToken string
 }
 

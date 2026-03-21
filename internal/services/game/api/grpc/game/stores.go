@@ -25,7 +25,6 @@ type ProjectionStores struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	ClaimIndex         storage.ClaimIndexStore
-	Invite             storage.InviteStore
 	Character          storage.CharacterStore
 	Session            storage.SessionStore
 	SessionGate        storage.SessionGateStore

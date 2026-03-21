@@ -7,8 +7,8 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
-	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -18,7 +18,7 @@ import (
 func TestInviteCreatedNotificationHandler_HandleCreatesRecipientIntent(t *testing.T) {
 	notifications := &fakeNotificationClient{}
 	handler := NewInviteCreatedNotificationHandler(
-		&fakeInviteReader{invite: &gamev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", RecipientUserId: "user-2", CreatedByParticipantId: "owner-1"}},
+		&fakeInviteReader{invite: &invitev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", RecipientUserId: "user-2", CreatedByParticipantId: "owner-1"}},
 		&fakeCampaignReader{campaign: &gamev1.Campaign{Id: "campaign-1", Name: "Campaign Name"}},
 		&fakeParticipantReader{participants: map[string]*gamev1.Participant{
 			"campaign-1/seat-1":  {Id: "seat-1", CampaignId: "campaign-1", Name: "Seat Name"},
@@ -39,8 +39,8 @@ func TestInviteCreatedNotificationHandler_HandleCreatesRecipientIntent(t *testin
 	if req.GetRecipientUserId() != "user-2" {
 		t.Fatalf("recipient user id = %q, want %q", req.GetRecipientUserId(), "user-2")
 	}
-	if req.GetMessageType() != gameintegration.InviteNotificationCreatedMessageType {
-		t.Fatalf("message type = %q, want %q", req.GetMessageType(), gameintegration.InviteNotificationCreatedMessageType)
+	if req.GetMessageType() != InviteNotificationCreatedMessageType {
+		t.Fatalf("message type = %q, want %q", req.GetMessageType(), InviteNotificationCreatedMessageType)
 	}
 	var payload notificationpayload.InAppPayload
 	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
@@ -72,7 +72,7 @@ func TestInviteCreatedNotificationHandler_HandleCreatesRecipientIntent(t *testin
 func TestInviteAcceptedNotificationHandler_HandleCreatesInviterIntent(t *testing.T) {
 	notifications := &fakeNotificationClient{}
 	handler := NewInviteAcceptedNotificationHandler(
-		&fakeInviteReader{invite: &gamev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", CreatedByParticipantId: "owner-1"}},
+		&fakeInviteReader{invite: &invitev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", CreatedByParticipantId: "owner-1"}},
 		&fakeCampaignReader{campaign: &gamev1.Campaign{Id: "campaign-1", Name: "Campaign Name"}},
 		&fakeParticipantReader{participants: map[string]*gamev1.Participant{
 			"campaign-1/seat-1":  {Id: "seat-1", CampaignId: "campaign-1", Name: "Seat Name"},
@@ -93,8 +93,8 @@ func TestInviteAcceptedNotificationHandler_HandleCreatesInviterIntent(t *testing
 	if req.GetRecipientUserId() != "user-1" {
 		t.Fatalf("recipient user id = %q, want %q", req.GetRecipientUserId(), "user-1")
 	}
-	if req.GetMessageType() != gameintegration.InviteNotificationAcceptedMessageType {
-		t.Fatalf("message type = %q, want %q", req.GetMessageType(), gameintegration.InviteNotificationAcceptedMessageType)
+	if req.GetMessageType() != InviteNotificationAcceptedMessageType {
+		t.Fatalf("message type = %q, want %q", req.GetMessageType(), InviteNotificationAcceptedMessageType)
 	}
 	var payload notificationpayload.InAppPayload
 	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
@@ -111,7 +111,7 @@ func TestInviteAcceptedNotificationHandler_HandleCreatesInviterIntent(t *testing
 func TestInviteDeclinedNotificationHandler_HandleCreatesInviterIntent(t *testing.T) {
 	notifications := &fakeNotificationClient{}
 	handler := NewInviteDeclinedNotificationHandler(
-		&fakeInviteReader{invite: &gamev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", CreatedByParticipantId: "owner-1"}},
+		&fakeInviteReader{invite: &invitev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", CreatedByParticipantId: "owner-1"}},
 		&fakeCampaignReader{campaign: &gamev1.Campaign{Id: "campaign-1", Name: "Campaign Name"}},
 		&fakeParticipantReader{participants: map[string]*gamev1.Participant{
 			"campaign-1/seat-1":  {Id: "seat-1", CampaignId: "campaign-1", Name: "Seat Name"},
@@ -132,8 +132,8 @@ func TestInviteDeclinedNotificationHandler_HandleCreatesInviterIntent(t *testing
 	if req.GetRecipientUserId() != "user-1" {
 		t.Fatalf("recipient user id = %q, want %q", req.GetRecipientUserId(), "user-1")
 	}
-	if req.GetMessageType() != gameintegration.InviteNotificationDeclinedMessageType {
-		t.Fatalf("message type = %q, want %q", req.GetMessageType(), gameintegration.InviteNotificationDeclinedMessageType)
+	if req.GetMessageType() != InviteNotificationDeclinedMessageType {
+		t.Fatalf("message type = %q, want %q", req.GetMessageType(), InviteNotificationDeclinedMessageType)
 	}
 	var payload notificationpayload.InAppPayload
 	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
@@ -156,7 +156,7 @@ func TestInviteDeclinedNotificationHandler_HandleCreatesInviterIntent(t *testing
 func TestInviteAcceptedNotificationHandler_HandleRetriesOnCreatorLookupFailure(t *testing.T) {
 	notifications := &fakeNotificationClient{}
 	handler := NewInviteAcceptedNotificationHandler(
-		&fakeInviteReader{invite: &gamev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", CreatedByParticipantId: "owner-1"}},
+		&fakeInviteReader{invite: &invitev1.Invite{Id: "invite-1", CampaignId: "campaign-1", ParticipantId: "seat-1", CreatedByParticipantId: "owner-1"}},
 		&fakeCampaignReader{campaign: &gamev1.Campaign{Id: "campaign-1", Name: "Campaign Name"}},
 		&fakeParticipantReader{
 			participants: map[string]*gamev1.Participant{
@@ -189,11 +189,11 @@ func (e outboxEventStub) GetPayloadJson() string { return e.payloadJSON }
 func (e outboxEventStub) GetAttemptCount() int32 { return 0 }
 
 type fakeInviteReader struct {
-	invite *gamev1.Invite
+	invite *invitev1.Invite
 }
 
-func (f *fakeInviteReader) GetInvite(context.Context, *gamev1.GetInviteRequest, ...grpc.CallOption) (*gamev1.GetInviteResponse, error) {
-	return &gamev1.GetInviteResponse{Invite: f.invite}, nil
+func (f *fakeInviteReader) GetInvite(context.Context, *invitev1.GetInviteRequest, ...grpc.CallOption) (*invitev1.GetInviteResponse, error) {
+	return &invitev1.GetInviteResponse{Invite: f.invite}, nil
 }
 
 type fakeCampaignReader struct {

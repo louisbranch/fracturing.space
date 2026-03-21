@@ -31,7 +31,6 @@ const (
 	storeCampaign storeRequirement = 1 << iota
 	storeCharacter
 	storeCampaignFork
-	storeInvite
 	storeParticipant
 	storeSession
 	storeSessionGate
@@ -101,7 +100,6 @@ func buildCoreRouter() *CoreRouter {
 	registerCampaignProjectionHandlers(r)
 	registerParticipantProjectionHandlers(r)
 	registerCharacterProjectionHandlers(r)
-	registerInviteProjectionHandlers(r)
 	registerSessionProjectionHandlers(r)
 	registerSceneProjectionHandlers(r)
 
@@ -132,7 +130,6 @@ var storeChecks = []storeCheck{
 	{storeCampaign, "campaign", func(a Applier) bool { return a.Campaign == nil }},
 	{storeCharacter, "character", func(a Applier) bool { return a.Character == nil }},
 	{storeCampaignFork, "campaign fork", func(a Applier) bool { return a.CampaignFork == nil }},
-	{storeInvite, "invite", func(a Applier) bool { return a.Invite == nil }},
 	{storeParticipant, "participant", func(a Applier) bool { return a.Participant == nil }},
 	{storeSession, "session", func(a Applier) bool { return a.Session == nil }},
 	{storeSessionGate, "session gate", func(a Applier) bool { return a.SessionGate == nil }},

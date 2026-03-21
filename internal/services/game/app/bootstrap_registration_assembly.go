@@ -49,7 +49,6 @@ func buildRegistrationAssemblies(sources registrationAssemblySources) registrati
 			sessionInteraction: sources.domainState.projectionStores.SessionInteraction,
 			sceneInteraction:   sources.domainState.projectionStores.SceneInteraction,
 			systemStores:       sources.domainState.systemStores,
-			inviteStore:        sources.domainState.projectionStores.Invite,
 			claimIndexStore:    sources.domainState.projectionStores.ClaimIndex,
 			eventStore:         sources.domainState.infrastructureStores.Event,
 			contentStore:       sources.domainState.contentStores.DaggerheartContent,

@@ -2,121 +2,26 @@ package integrationoutbox_test
 
 import (
 	"context"
-	"encoding/json"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/integrationoutbox"
 )
 
-func TestEnqueueForEvent_InviteCreatedCreatesWorkerEvent(t *testing.T) {
-	store, root := openTestIntegrationOutboxStore(t)
-	now := time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC)
-	payloadJSON, err := json.Marshal(invite.CreatePayload{
-		InviteID:               ids.InviteID("invite-1"),
-		ParticipantID:          ids.ParticipantID("seat-1"),
-		RecipientUserID:        ids.UserID("user-2"),
-		CreatedByParticipantID: ids.ParticipantID("owner-1"),
-		Status:                 string(invite.StatusPending),
-	})
-	if err != nil {
-		t.Fatalf("marshal payload: %v", err)
-	}
-
-	tx, err := root.DB().BeginTx(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("begin tx: %v", err)
-	}
-	defer tx.Rollback()
-
-	err = integrationoutbox.EnqueueForEvent(context.Background(), tx, event.Event{
-		CampaignID:  ids.CampaignID("campaign-1"),
-		Type:        invite.EventTypeCreated,
-		Timestamp:   now,
-		EntityID:    "invite-1",
-		PayloadJSON: payloadJSON,
-	})
-	if err != nil {
-		t.Fatalf("enqueue for event: %v", err)
-	}
-	if err := tx.Commit(); err != nil {
-		t.Fatalf("commit tx: %v", err)
-	}
-
-	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 1, now, time.Minute)
-	if err != nil {
-		t.Fatalf("lease integration outbox events: %v", err)
-	}
-	if len(leased) != 1 {
-		t.Fatalf("leased len = %d, want 1", len(leased))
-	}
-	if leased[0].EventType != gameintegration.InviteNotificationCreatedOutboxEventType {
-		t.Fatalf("event type = %q, want %q", leased[0].EventType, gameintegration.InviteNotificationCreatedOutboxEventType)
-	}
-	if leased[0].DedupeKey != gameintegration.InviteCreatedNotificationDedupeKey("invite-1") {
-		t.Fatalf("dedupe key = %q, want %q", leased[0].DedupeKey, gameintegration.InviteCreatedNotificationDedupeKey("invite-1"))
-	}
-}
-
-func TestEnqueueForEvent_UntargetedInviteCreatedSkipsOutbox(t *testing.T) {
-	store, root := openTestIntegrationOutboxStore(t)
-	payloadJSON, err := json.Marshal(invite.CreatePayload{
-		InviteID:               ids.InviteID("invite-1"),
-		ParticipantID:          ids.ParticipantID("seat-1"),
-		CreatedByParticipantID: ids.ParticipantID("owner-1"),
-		Status:                 string(invite.StatusPending),
-	})
-	if err != nil {
-		t.Fatalf("marshal payload: %v", err)
-	}
-
-	tx, err := root.DB().BeginTx(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("begin tx: %v", err)
-	}
-	defer tx.Rollback()
-
-	err = integrationoutbox.EnqueueForEvent(context.Background(), tx, event.Event{
-		CampaignID:  ids.CampaignID("campaign-1"),
-		Type:        invite.EventTypeCreated,
-		Timestamp:   time.Date(2026, 3, 9, 12, 5, 0, 0, time.UTC),
-		EntityID:    "invite-1",
-		PayloadJSON: payloadJSON,
-	})
-	if err != nil {
-		t.Fatalf("enqueue for event: %v", err)
-	}
-	if err := tx.Commit(); err != nil {
-		t.Fatalf("commit tx: %v", err)
-	}
-
-	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 1, time.Date(2026, 3, 9, 12, 5, 0, 0, time.UTC), time.Minute)
-	if err != nil {
-		t.Fatalf("lease integration outbox events: %v", err)
-	}
-	if len(leased) != 0 {
-		t.Fatalf("leased len = %d, want 0", len(leased))
-	}
-}
-
 func TestIntegrationOutbox_LeaseRetryAndSucceed(t *testing.T) {
 	store, _ := openTestIntegrationOutboxStore(t)
 	now := time.Date(2026, 3, 9, 12, 10, 0, 0, time.UTC)
 	err := store.EnqueueIntegrationOutboxEvent(context.Background(), storage.IntegrationOutboxEvent{
 		ID:            "evt-1",
-		EventType:     gameintegration.InviteNotificationClaimedOutboxEventType,
-		PayloadJSON:   `{"invite_id":"invite-1","user_id":"user-2"}`,
-		DedupeKey:     gameintegration.InviteAcceptedNotificationDedupeKey("invite-1"),
+		EventType:     "test.outbox_event",
+		PayloadJSON:   `{"key":"value"}`,
+		DedupeKey:     "test-dedupe-evt-1",
 		Status:        storage.IntegrationOutboxStatusPending,
 		AttemptCount:  0,
 		NextAttemptAt: now,
@@ -181,9 +86,9 @@ func TestIntegrationOutbox_LeaseAndMarkDead(t *testing.T) {
 	now := time.Date(2026, 3, 9, 12, 20, 0, 0, time.UTC)
 	err := store.EnqueueIntegrationOutboxEvent(context.Background(), storage.IntegrationOutboxEvent{
 		ID:            "evt-dead",
-		EventType:     gameintegration.InviteNotificationDeclinedOutboxEventType,
-		PayloadJSON:   `{"invite_id":"invite-1","user_id":"user-2"}`,
-		DedupeKey:     gameintegration.InviteDeclinedNotificationDedupeKey("invite-1"),
+		EventType:     "test.dead_event",
+		PayloadJSON:   `{"key":"value"}`,
+		DedupeKey:     "test-dedupe-evt-dead",
 		Status:        storage.IntegrationOutboxStatusPending,
 		AttemptCount:  0,
 		NextAttemptAt: now,

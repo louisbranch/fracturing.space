@@ -177,6 +177,7 @@ services:
         condition: service_started
     environment:
       FRACTURING_SPACE_WORKER_PORT: 8089
+      FRACTURING_SPACE_WORKER_INVITE_ADDR: invite:8095
       FRACTURING_SPACE_WORKER_SOCIAL_ADDR: social:8090
       FRACTURING_SPACE_WORKER_DB_PATH: /data/worker.db
       FRACTURING_SPACE_WORKER_CONSUMER: ${FRACTURING_SPACE_WORKER_CONSUMER:-worker-onboarding}
@@ -215,6 +216,35 @@ services:
       - internal
     restart: unless-stopped
 
+  invite:
+    build:
+      context: .
+      target: invite
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.0}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/invite:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+      game:
+        condition: service_started
+      auth:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_INVITE_PORT: 8095
+      FRACTURING_SPACE_INVITE_DB_PATH: /data/invite.db
+      FRACTURING_SPACE_INVITE_GAME_ADDR: game:8082
+      FRACTURING_SPACE_INVITE_AUTH_ADDR: auth:8083
+      FRACTURING_SPACE_JOIN_GRANT_ISSUER: ${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}
+      FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
+      FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY: ${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-DMPt2bezEVpUVJOabrX7YIaRLOITnATcwKUY6ofEhlQ}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
   userhub:
     build:
       context: .
@@ -225,6 +255,8 @@ services:
     depends_on:
       game:
         condition: service_started
+      invite:
+        condition: service_started
       social:
         condition: service_started
       notifications:
@@ -232,6 +264,7 @@ services:
     environment:
       FRACTURING_SPACE_USERHUB_PORT: 8092
       FRACTURING_SPACE_USERHUB_GAME_ADDR: game:8082
+      FRACTURING_SPACE_USERHUB_INVITE_ADDR: invite:8095
       FRACTURING_SPACE_USERHUB_SOCIAL_ADDR: social:8090
       FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR: notifications:8088
       FRACTURING_SPACE_USERHUB_STATUS_ADDR: status:8093
@@ -278,12 +311,14 @@ services:
       - auth
       - social
       - game
+      - invite
       - ai
       - notifications
     environment:
       FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8080
       FRACTURING_SPACE_WEB_AUTH_BASE_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
       FRACTURING_SPACE_SOCIAL_ADDR: social:8090
+      FRACTURING_SPACE_INVITE_ADDR: invite:8095
       FRACTURING_SPACE_NOTIFICATIONS_ADDR: notifications:8088
       FRACTURING_SPACE_STATUS_ADDR: status:8093
       FRACTURING_SPACE_WEB_DIAL_TIMEOUT: ${FRACTURING_SPACE_WEB_DIAL_TIMEOUT:-2s}

@@ -25,8 +25,6 @@ type Applier struct {
 	CampaignFork storage.CampaignForkStore
 	// ClaimIndex writes/reads participant-user claim mappings.
 	ClaimIndex storage.ClaimIndexStore
-	// Invite writes invite read models.
-	Invite storage.InviteStore
 	// Participant writes participant read models.
 	Participant storage.ParticipantStore
 	// Session writes session metadata read models.

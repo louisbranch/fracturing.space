@@ -7,7 +7,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
@@ -132,66 +131,6 @@ func TestIntegrationOutboxEventsForEventRejectsInvalidAIGMSourcePayload(t *testi
 	})
 	if err == nil {
 		t.Fatal("expected error")
-	}
-}
-
-func TestIntegrationOutboxEventsForEventBuildsInviteOutcomeNotifications(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name          string
-		evt           event.Event
-		wantEventType string
-		wantDedupeKey string
-	}{
-		{
-			name: "claimed",
-			evt: event.Event{
-				CampaignID: ids.CampaignID("camp-1"),
-				Type:       invite.EventTypeClaimed,
-				Timestamp:  time.Date(2026, 3, 12, 20, 0, 0, 0, time.UTC),
-				EntityID:   "invite-1",
-				PayloadJSON: mustJSON(t, invite.ClaimPayload{
-					InviteID: ids.InviteID("invite-1"),
-					UserID:   ids.UserID("user-2"),
-				}),
-			},
-			wantEventType: gameintegration.InviteNotificationClaimedOutboxEventType,
-			wantDedupeKey: gameintegration.InviteAcceptedNotificationDedupeKey("invite-1"),
-		},
-		{
-			name: "declined",
-			evt: event.Event{
-				CampaignID: ids.CampaignID("camp-1"),
-				Type:       invite.EventTypeDeclined,
-				Timestamp:  time.Date(2026, 3, 12, 20, 0, 0, 0, time.UTC),
-				EntityID:   "invite-1",
-				PayloadJSON: mustJSON(t, invite.DeclinePayload{
-					InviteID: ids.InviteID("invite-1"),
-					UserID:   ids.UserID("user-2"),
-				}),
-			},
-			wantEventType: gameintegration.InviteNotificationDeclinedOutboxEventType,
-			wantDedupeKey: gameintegration.InviteDeclinedNotificationDedupeKey("invite-1"),
-		},
-	}
-
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			outboxEvents, err := integrationOutboxEventsForEvent(tc.evt)
-			if err != nil {
-				t.Fatalf("integrationOutboxEventsForEvent error = %v", err)
-			}
-			if len(outboxEvents) != 1 {
-				t.Fatalf("outbox events = %d, want 1", len(outboxEvents))
-			}
-			if outboxEvents[0].EventType != tc.wantEventType || outboxEvents[0].DedupeKey != tc.wantDedupeKey {
-				t.Fatalf("outbox event = %#v", outboxEvents[0])
-			}
-		})
 	}
 }
 

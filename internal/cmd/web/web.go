@@ -22,6 +22,7 @@ type Config struct {
 	AuthAddr            string `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	SocialAddr          string `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
 	GameAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"`
+	InviteAddr          string `env:"FRACTURING_SPACE_INVITE_ADDR"`
 	AIAddr              string `env:"FRACTURING_SPACE_AI_ADDR"`
 	DiscoveryAddr       string `env:"FRACTURING_SPACE_DISCOVERY_ADDR"`
 	NotificationsAddr   string `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`

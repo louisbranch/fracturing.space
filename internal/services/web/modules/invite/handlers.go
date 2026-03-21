@@ -8,6 +8,7 @@ import (
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
@@ -76,6 +77,7 @@ func (h handlers) handleAccept(w http.ResponseWriter, r *http.Request, inviteID 
 		return
 	}
 	h.sync.InviteChanged(r.Context(), result.UserIDs, result.CampaignID)
+	flash.Write(w, r, flash.NoticeSuccess("web.invite.notice_joined_campaign"))
 	http.Redirect(w, r, routepath.AppCampaign(result.CampaignID), http.StatusSeeOther)
 }
 

@@ -29,6 +29,7 @@ func TestNormalizeRuntimeConfigDefaults(t *testing.T) {
 		AuthAddr:          "auth:8083",
 		AIAddr:            "ai:8087",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		NotificationsAddr: "notifications:8088",
 		SocialAddr:        "social:8090",
 	})
@@ -48,6 +49,7 @@ func TestNewRuntimeRequiresContext(t *testing.T) {
 		AuthAddr:          "auth:8083",
 		AIAddr:            "ai:8087",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		NotificationsAddr: "notifications:8088",
 		SocialAddr:        "social:8090",
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
@@ -62,6 +64,7 @@ func TestRunRequiresContext(t *testing.T) {
 		AuthAddr:          "auth:8083",
 		AIAddr:            "ai:8087",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		NotificationsAddr: "notifications:8088",
 		SocialAddr:        "social:8090",
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
@@ -80,7 +83,9 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 		{
 			name: "missing auth",
 			cfg: RuntimeConfig{
+				AIAddr:            "ai:8087",
 				GameAddr:          "game:8082",
+				InviteAddr:        "invite:8095",
 				NotificationsAddr: "notifications:8088",
 				SocialAddr:        "social:8090",
 			},
@@ -91,6 +96,7 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 			cfg: RuntimeConfig{
 				AuthAddr:          "auth:8083",
 				GameAddr:          "game:8082",
+				InviteAddr:        "invite:8095",
 				NotificationsAddr: "notifications:8088",
 				SocialAddr:        "social:8090",
 			},
@@ -101,10 +107,22 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 			cfg: RuntimeConfig{
 				AuthAddr:          "auth:8083",
 				AIAddr:            "ai:8087",
+				InviteAddr:        "invite:8095",
 				NotificationsAddr: "notifications:8088",
 				SocialAddr:        "social:8090",
 			},
 			wantErr: "game address is required",
+		},
+		{
+			name: "missing invite",
+			cfg: RuntimeConfig{
+				AuthAddr:          "auth:8083",
+				AIAddr:            "ai:8087",
+				GameAddr:          "game:8082",
+				NotificationsAddr: "notifications:8088",
+				SocialAddr:        "social:8090",
+			},
+			wantErr: "invite address is required",
 		},
 		{
 			name: "missing notifications",
@@ -112,6 +130,7 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 				AuthAddr:   "auth:8083",
 				AIAddr:     "ai:8087",
 				GameAddr:   "game:8082",
+				InviteAddr: "invite:8095",
 				SocialAddr: "social:8090",
 			},
 			wantErr: "notifications address is required",
@@ -122,6 +141,7 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 				AuthAddr:          "auth:8083",
 				AIAddr:            "ai:8087",
 				GameAddr:          "game:8082",
+				InviteAddr:        "invite:8095",
 				NotificationsAddr: "notifications:8088",
 			},
 			wantErr: "social address is required",
@@ -188,7 +208,11 @@ func (lifecycleSocialServer) SyncDirectoryUser(context.Context, *socialv1.SyncDi
 	return &socialv1.SyncDirectoryUserResponse{}, nil
 }
 
-func startLifecycleDependencyServers(t *testing.T) (string, string, string, string, string) {
+type lifecycleDependencyAddrs struct {
+	auth, ai, game, invite, notifications, social string
+}
+
+func startLifecycleDependencyServers(t *testing.T) lifecycleDependencyAddrs {
 	t.Helper()
 
 	startServer := func(register func(*grpc.Server), label string) string {
@@ -209,29 +233,32 @@ func startLifecycleDependencyServers(t *testing.T) (string, string, string, stri
 		return listener.Addr().String()
 	}
 
-	authAddr := startServer(func(server *grpc.Server) {
-		authv1.RegisterAuthServiceServer(server, lifecycleAuthServer{})
-	}, "auth")
-	aiAddr := startServer(func(server *grpc.Server) {}, "ai")
-	socialAddr := startServer(func(server *grpc.Server) {
-		socialv1.RegisterSocialServiceServer(server, lifecycleSocialServer{})
-	}, "social")
-	gameAddr := startServer(func(server *grpc.Server) {}, "game")
-	notificationsAddr := startServer(func(server *grpc.Server) {}, "notifications")
-	return authAddr, aiAddr, gameAddr, notificationsAddr, socialAddr
+	return lifecycleDependencyAddrs{
+		auth: startServer(func(server *grpc.Server) {
+			authv1.RegisterAuthServiceServer(server, lifecycleAuthServer{})
+		}, "auth"),
+		ai: startServer(func(server *grpc.Server) {}, "ai"),
+		social: startServer(func(server *grpc.Server) {
+			socialv1.RegisterSocialServiceServer(server, lifecycleSocialServer{})
+		}, "social"),
+		game:          startServer(func(server *grpc.Server) {}, "game"),
+		invite:        startServer(func(server *grpc.Server) {}, "invite"),
+		notifications: startServer(func(server *grpc.Server) {}, "notifications"),
+	}
 }
 
 func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 	stubManagedConn(t)
-	authAddr, aiAddr, gameAddr, notificationsAddr, socialAddr := startLifecycleDependencyServers(t)
+	addrs := startLifecycleDependencyServers(t)
 
 	srv, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
-		AuthAddr:          authAddr,
-		AIAddr:            aiAddr,
-		GameAddr:          gameAddr,
-		NotificationsAddr: notificationsAddr,
-		SocialAddr:        socialAddr,
+		AuthAddr:          addrs.auth,
+		AIAddr:            addrs.ai,
+		GameAddr:          addrs.game,
+		InviteAddr:        addrs.invite,
+		NotificationsAddr: addrs.notifications,
+		SocialAddr:        addrs.social,
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err != nil {
@@ -246,15 +273,16 @@ func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 
 func TestNewRuntime_UsesOptionalManagedConnsForGameAndNotifications(t *testing.T) {
 	modes := recordManagedConnModes(t)
-	authAddr, _, _, _, socialAddr := startLifecycleDependencyServers(t)
+	addrs := startLifecycleDependencyServers(t)
 
 	srv, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
-		AuthAddr:          authAddr,
+		AuthAddr:          addrs.auth,
 		AIAddr:            "127.0.0.1:3",
 		GameAddr:          "127.0.0.1:1",
+		InviteAddr:        "127.0.0.1:4",
 		NotificationsAddr: "127.0.0.1:2",
-		SocialAddr:        socialAddr,
+		SocialAddr:        addrs.social,
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err != nil {
@@ -266,6 +294,7 @@ func TestNewRuntime_UsesOptionalManagedConnsForGameAndNotifications(t *testing.T
 	assertManagedConnMode(t, modes, "social", platformgrpc.ModeRequired)
 	assertManagedConnMode(t, modes, "ai", platformgrpc.ModeOptional)
 	assertManagedConnMode(t, modes, "game", platformgrpc.ModeOptional)
+	assertManagedConnMode(t, modes, "invite", platformgrpc.ModeOptional)
 	assertManagedConnMode(t, modes, "notifications", platformgrpc.ModeOptional)
 }
 
@@ -312,15 +341,16 @@ func TestRuntimeServeStopsOnContextCancellation(t *testing.T) {
 
 func TestRuntimeServeRequiresContext(t *testing.T) {
 	stubManagedConn(t)
-	authAddr, aiAddr, gameAddr, notificationsAddr, socialAddr := startLifecycleDependencyServers(t)
+	addrs := startLifecycleDependencyServers(t)
 
 	runtime, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
-		AuthAddr:          authAddr,
-		AIAddr:            aiAddr,
-		GameAddr:          gameAddr,
-		NotificationsAddr: notificationsAddr,
-		SocialAddr:        socialAddr,
+		AuthAddr:          addrs.auth,
+		AIAddr:            addrs.ai,
+		GameAddr:          addrs.game,
+		InviteAddr:        addrs.invite,
+		NotificationsAddr: addrs.notifications,
+		SocialAddr:        addrs.social,
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err != nil {

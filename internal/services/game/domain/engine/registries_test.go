@@ -81,8 +81,8 @@ func (m syntheticModule) CharacterReady(any, character.State) (bool, string) {
 
 func TestCoreDomains_AllRegistered(t *testing.T) {
 	domains := CoreDomains()
-	if len(domains) != 8 {
-		t.Fatalf("CoreDomains() = %d, want 8", len(domains))
+	if len(domains) != 6 {
+		t.Fatalf("CoreDomains() = %d, want 6", len(domains))
 	}
 	seen := make(map[string]bool)
 	for _, d := range domains {
@@ -166,36 +166,6 @@ func TestBuildRegistries_RegistersCoreAndSystem(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("validate system event: %v", err)
-	}
-}
-
-func TestBuildRegistries_RegistersInvite(t *testing.T) {
-	registries, err := BuildRegistries()
-	if err != nil {
-		t.Fatalf("build registries: %v", err)
-	}
-
-	_, err = registries.Commands.ValidateForDecision(command.Command{
-		CampaignID:  "camp-1",
-		Type:        command.Type("invite.create"),
-		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1"}`),
-	})
-	if err != nil {
-		t.Fatalf("validate invite command: %v", err)
-	}
-
-	_, err = registries.Events.ValidateForAppend(event.Event{
-		CampaignID:  "camp-1",
-		Type:        event.Type("invite.created"),
-		Timestamp:   time.Unix(0, 0).UTC(),
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "invite",
-		EntityID:    "inv-1",
-		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","status":"pending"}`),
-	})
-	if err != nil {
-		t.Fatalf("validate invite event: %v", err)
 	}
 }
 

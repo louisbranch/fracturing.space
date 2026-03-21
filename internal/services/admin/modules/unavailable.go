@@ -5,6 +5,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"google.golang.org/grpc"
@@ -43,7 +44,7 @@ func (input *BuildInput) ensureClients() {
 		input.ParticipantClient = statev1.NewParticipantServiceClient(conn)
 	}
 	if input.InviteClient == nil {
-		input.InviteClient = statev1.NewInviteServiceClient(conn)
+		input.InviteClient = invitev1.NewInviteServiceClient(conn)
 	}
 	if input.SessionClient == nil {
 		input.SessionClient = statev1.NewSessionServiceClient(conn)

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -162,30 +161,6 @@ func (f *fakeProjectionStore) GetParticipantClaim(context.Context, string, strin
 }
 
 func (f *fakeProjectionStore) DeleteParticipantClaim(context.Context, string, string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (f *fakeProjectionStore) PutInvite(context.Context, storage.InviteRecord) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (f *fakeProjectionStore) GetInvite(context.Context, string) (storage.InviteRecord, error) {
-	return storage.InviteRecord{}, fmt.Errorf("not implemented")
-}
-
-func (f *fakeProjectionStore) ListInvites(context.Context, string, string, invite.Status, int, string) (storage.InvitePage, error) {
-	return storage.InvitePage{}, fmt.Errorf("not implemented")
-}
-
-func (f *fakeProjectionStore) ListPendingInvites(context.Context, string, int, string) (storage.InvitePage, error) {
-	return storage.InvitePage{}, fmt.Errorf("not implemented")
-}
-
-func (f *fakeProjectionStore) ListPendingInvitesForRecipient(context.Context, string, int, string) (storage.InvitePage, error) {
-	return storage.InvitePage{}, fmt.Errorf("not implemented")
-}
-
-func (f *fakeProjectionStore) UpdateInviteStatus(context.Context, string, invite.Status, time.Time) error {
 	return fmt.Errorf("not implemented")
 }
 

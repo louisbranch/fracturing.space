@@ -18,6 +18,7 @@ type Config struct {
 	AuthAddr          string        `env:"FRACTURING_SPACE_WORKER_AUTH_ADDR"`
 	AIAddr            string        `env:"FRACTURING_SPACE_WORKER_AI_ADDR"`
 	GameAddr          string        `env:"FRACTURING_SPACE_WORKER_GAME_ADDR"`
+	InviteAddr        string        `env:"FRACTURING_SPACE_WORKER_INVITE_ADDR"`
 	NotificationsAddr string        `env:"FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR"`
 	SocialAddr        string        `env:"FRACTURING_SPACE_WORKER_SOCIAL_ADDR"`
 	DBPath            string        `env:"FRACTURING_SPACE_WORKER_DB_PATH" envDefault:"data/worker.db"`
@@ -39,6 +40,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
 	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
 	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
+	cfg.InviteAddr = serviceaddr.OrDefaultGRPCAddr(cfg.InviteAddr, serviceaddr.ServiceInvite)
 	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
 	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
 	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
@@ -46,6 +48,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "The auth gRPC server address")
 	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "The ai gRPC server address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "The game gRPC server address")
+	fs.StringVar(&cfg.InviteAddr, "invite-addr", cfg.InviteAddr, "The invite gRPC server address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "The notifications gRPC server address")
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "The social gRPC server address")
 	fs.StringVar(&cfg.DBPath, "db-path", cfg.DBPath, "The worker SQLite database path")
@@ -82,6 +85,7 @@ func Run(ctx context.Context, cfg Config) error {
 			AuthAddr:          cfg.AuthAddr,
 			AIAddr:            cfg.AIAddr,
 			GameAddr:          cfg.GameAddr,
+			InviteAddr:        cfg.InviteAddr,
 			NotificationsAddr: cfg.NotificationsAddr,
 			SocialAddr:        cfg.SocialAddr,
 			DBPath:            cfg.DBPath,

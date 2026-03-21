@@ -9,11 +9,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/invitetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -146,13 +144,6 @@ func TestEnumConversions(t *testing.T) {
 		t.Fatal("expected unspecified campaign access")
 	}
 
-	if invitetransport.InviteStatusToProto(invite.StatusPending) != campaignv1.InviteStatus_PENDING {
-		t.Fatal("expected pending invite status")
-	}
-	if invitetransport.InviteStatusFromProto(campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED) != invite.StatusUnspecified {
-		t.Fatal("expected unspecified invite status")
-	}
-
 	if charactertransport.KindToProto(character.KindNPC) != campaignv1.CharacterKind_NPC {
 		t.Fatal("expected NPC character kind")
 	}
@@ -193,48 +184,6 @@ func TestCharacterToProtoParticipantID(t *testing.T) {
 	}
 }
 
-func TestInviteStatusToProto(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  invite.Status
-		expect campaignv1.InviteStatus
-	}{
-		{"pending", invite.StatusPending, campaignv1.InviteStatus_PENDING},
-		{"claimed", invite.StatusClaimed, campaignv1.InviteStatus_CLAIMED},
-		{"revoked", invite.StatusRevoked, campaignv1.InviteStatus_REVOKED},
-		{"unspecified", invite.StatusUnspecified, campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED},
-		{"unknown", invite.Status("unknown"), campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := invitetransport.InviteStatusToProto(tt.input); got != tt.expect {
-				t.Fatalf("got %v, want %v", got, tt.expect)
-			}
-		})
-	}
-}
-
-func TestInviteStatusFromProto(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  campaignv1.InviteStatus
-		expect invite.Status
-	}{
-		{"pending", campaignv1.InviteStatus_PENDING, invite.StatusPending},
-		{"claimed", campaignv1.InviteStatus_CLAIMED, invite.StatusClaimed},
-		{"revoked", campaignv1.InviteStatus_REVOKED, invite.StatusRevoked},
-		{"unspecified", campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED, invite.StatusUnspecified},
-		{"unknown", campaignv1.InviteStatus(99), invite.StatusUnspecified},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := invitetransport.InviteStatusFromProto(tt.input); got != tt.expect {
-				t.Fatalf("got %v, want %v", got, tt.expect)
-			}
-		})
-	}
-}
-
 func TestStructToMap(t *testing.T) {
 	if got := handler.StructToMap(nil); got != nil {
 		t.Fatalf("expected nil for nil input, got %v", got)
@@ -268,31 +217,6 @@ func TestValidateStructPayload(t *testing.T) {
 	}
 	if err := handler.ValidateStructPayload(map[string]any{}); err != nil {
 		t.Fatalf("unexpected error for empty map: %v", err)
-	}
-}
-
-func TestInviteToProto(t *testing.T) {
-	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
-	updated := created.Add(time.Hour)
-
-	inv := invitetransport.InviteToProto(storage.InviteRecord{
-		ID:                     "inv-1",
-		CampaignID:             "camp-1",
-		ParticipantID:          "part-1",
-		RecipientUserID:        "user-2",
-		Status:                 invite.StatusClaimed,
-		CreatedByParticipantID: "part-gm",
-		CreatedAt:              created,
-		UpdatedAt:              updated,
-	})
-	if inv.GetId() != "inv-1" {
-		t.Fatalf("expected inv-1, got %v", inv.GetId())
-	}
-	if inv.GetStatus() != campaignv1.InviteStatus_CLAIMED {
-		t.Fatalf("expected claimed, got %v", inv.GetStatus())
-	}
-	if inv.GetRecipientUserId() != "user-2" {
-		t.Fatalf("expected user-2, got %v", inv.GetRecipientUserId())
 	}
 }
 

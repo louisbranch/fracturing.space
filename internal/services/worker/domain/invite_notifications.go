@@ -8,10 +8,10 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
-	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	"google.golang.org/grpc"
@@ -19,8 +19,46 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Invite outbox event types emitted by the invite service's integration outbox.
+const (
+	InviteNotificationCreatedOutboxEventType  = "invite.invite.created.v1"
+	InviteNotificationClaimedOutboxEventType  = "invite.invite.claimed.v1"
+	InviteNotificationDeclinedOutboxEventType = "invite.invite.declined.v1"
+)
+
+// Invite notification message types sent to the notification service.
+const (
+	InviteNotificationCreatedMessageType  = "campaign.invite.created.v1"
+	InviteNotificationAcceptedMessageType = "campaign.invite.accepted.v1"
+	InviteNotificationDeclinedMessageType = "campaign.invite.declined.v1"
+)
+
+// InviteNotificationOutboxPayload is the durable worker-facing integration
+// payload emitted from invite-domain events.
+type InviteNotificationOutboxPayload struct {
+	InviteID         string `json:"invite_id"`
+	CampaignID       string `json:"campaign_id"`
+	RecipientUserID  string `json:"recipient_user_id,omitempty"`
+	NotificationKind string `json:"notification_kind"`
+}
+
+// InviteCreatedNotificationDedupeKey returns a dedupe key for invite-created notifications.
+func InviteCreatedNotificationDedupeKey(inviteID string) string {
+	return "invite:" + inviteID + ":created"
+}
+
+// InviteAcceptedNotificationDedupeKey returns a dedupe key for invite-accepted notifications.
+func InviteAcceptedNotificationDedupeKey(inviteID string) string {
+	return "invite:" + inviteID + ":accepted"
+}
+
+// InviteDeclinedNotificationDedupeKey returns a dedupe key for invite-declined notifications.
+func InviteDeclinedNotificationDedupeKey(inviteID string) string {
+	return "invite:" + inviteID + ":declined"
+}
+
 type workerInviteClient interface {
-	GetInvite(ctx context.Context, in *gamev1.GetInviteRequest, opts ...grpc.CallOption) (*gamev1.GetInviteResponse, error)
+	GetInvite(ctx context.Context, in *invitev1.GetInviteRequest, opts ...grpc.CallOption) (*invitev1.GetInviteResponse, error)
 }
 
 type workerCampaignClient interface {
@@ -88,14 +126,14 @@ func (h *InviteCreatedNotificationHandler) Handle(ctx context.Context, event Out
 	return h.createNotification(
 		ctx,
 		recipientUserID,
-		gameintegration.InviteNotificationCreatedMessageType,
+		InviteNotificationCreatedMessageType,
 		inviteCreatedMessagePayload(
 			invitation.GetId(),
 			campaignRecord.GetName(),
 			participantRecord.GetName(),
 			inviterUsername,
 		),
-		gameintegration.InviteCreatedNotificationDedupeKey(invitation.GetId()),
+		InviteCreatedNotificationDedupeKey(invitation.GetId()),
 	)
 }
 
@@ -117,7 +155,7 @@ func NewInviteAcceptedNotificationHandler(
 	auth workerAuthClient,
 	notifications workerNotificationClient,
 ) *InviteOutcomeNotificationHandler {
-	return newInviteOutcomeNotificationHandler(invites, campaigns, participants, auth, notifications, gameintegration.InviteNotificationAcceptedMessageType, "accepted")
+	return newInviteOutcomeNotificationHandler(invites, campaigns, participants, auth, notifications, InviteNotificationAcceptedMessageType, "accepted")
 }
 
 // NewInviteDeclinedNotificationHandler creates the invite-declined handler.
@@ -128,7 +166,7 @@ func NewInviteDeclinedNotificationHandler(
 	auth workerAuthClient,
 	notifications workerNotificationClient,
 ) *InviteOutcomeNotificationHandler {
-	return newInviteOutcomeNotificationHandler(invites, campaigns, participants, auth, notifications, gameintegration.InviteNotificationDeclinedMessageType, "declined")
+	return newInviteOutcomeNotificationHandler(invites, campaigns, participants, auth, notifications, InviteNotificationDeclinedMessageType, "declined")
 }
 
 func newInviteOutcomeNotificationHandler(
@@ -181,9 +219,9 @@ func (h *InviteOutcomeNotificationHandler) Handle(ctx context.Context, event Out
 		return nil
 	}
 	recipientUsername, _ := h.lookupUsername(ctx, recipientUserID)
-	dedupeKey := gameintegration.InviteAcceptedNotificationDedupeKey(invitation.GetId())
+	dedupeKey := InviteAcceptedNotificationDedupeKey(invitation.GetId())
 	if h.dedupeSuffix == "declined" {
-		dedupeKey = gameintegration.InviteDeclinedNotificationDedupeKey(invitation.GetId())
+		dedupeKey = InviteDeclinedNotificationDedupeKey(invitation.GetId())
 	}
 	return h.createNotification(
 		ctx,
@@ -194,11 +232,11 @@ func (h *InviteOutcomeNotificationHandler) Handle(ctx context.Context, event Out
 	)
 }
 
-func (h *InviteCreatedNotificationHandler) loadInviteContext(ctx context.Context, inviteID string) (*gamev1.Invite, *gamev1.Campaign, *gamev1.Participant, error) {
+func (h *InviteCreatedNotificationHandler) loadInviteContext(ctx context.Context, inviteID string) (*invitev1.Invite, *gamev1.Campaign, *gamev1.Participant, error) {
 	return loadInviteNotificationContext(ctx, h.invites, h.campaigns, h.participants, inviteID)
 }
 
-func (h *InviteOutcomeNotificationHandler) loadInviteContext(ctx context.Context, inviteID string) (*gamev1.Invite, *gamev1.Campaign, *gamev1.Participant, error) {
+func (h *InviteOutcomeNotificationHandler) loadInviteContext(ctx context.Context, inviteID string) (*invitev1.Invite, *gamev1.Campaign, *gamev1.Participant, error) {
 	return loadInviteNotificationContext(ctx, h.invites, h.campaigns, h.participants, inviteID)
 }
 
@@ -208,9 +246,8 @@ func loadInviteNotificationContext(
 	campaigns workerCampaignClient,
 	participants workerParticipantClient,
 	inviteID string,
-) (*gamev1.Invite, *gamev1.Campaign, *gamev1.Participant, error) {
-	callCtx := workerGameReadContext(ctx)
-	inviteResp, err := invites.GetInvite(callCtx, &gamev1.GetInviteRequest{InviteId: inviteID})
+) (*invitev1.Invite, *gamev1.Campaign, *gamev1.Participant, error) {
+	inviteResp, err := invites.GetInvite(serviceContext(ctx), &invitev1.GetInviteRequest{InviteId: inviteID})
 	if err != nil {
 		return nil, nil, nil, classifyGameReadError("load invite", err)
 	}
@@ -219,6 +256,7 @@ func loadInviteNotificationContext(
 	}
 	invitation := inviteResp.GetInvite()
 
+	callCtx := workerGameReadContext(ctx)
 	campaignResp, err := campaigns.GetCampaign(callCtx, &gamev1.GetCampaignRequest{CampaignId: invitation.GetCampaignId()})
 	if err != nil {
 		return nil, nil, nil, classifyGameReadError("load campaign", err)
@@ -358,7 +396,7 @@ func inviteOutcomeMessagePayload(messageType, campaignID, campaignName, particip
 	body := platformi18n.NewCopyRef("notification.campaign_invite.updated.body")
 	title := platformi18n.NewCopyRef("notification.campaign_invite.updated.title")
 	switch strings.TrimSpace(messageType) {
-	case gameintegration.InviteNotificationAcceptedMessageType:
+	case InviteNotificationAcceptedMessageType:
 		title = platformi18n.NewCopyRef("notification.campaign_invite.accepted.title")
 		if recipient != "" && participantName != "" && campaignName != "" {
 			body = platformi18n.NewCopyRef(
@@ -370,7 +408,7 @@ func inviteOutcomeMessagePayload(messageType, campaignID, campaignName, particip
 		} else {
 			body = platformi18n.NewCopyRef("notification.campaign_invite.accepted.body")
 		}
-	case gameintegration.InviteNotificationDeclinedMessageType:
+	case InviteNotificationDeclinedMessageType:
 		title = platformi18n.NewCopyRef("notification.campaign_invite.declined.title")
 		if recipient != "" && participantName != "" && campaignName != "" {
 			body = platformi18n.NewCopyRef(
@@ -414,42 +452,42 @@ func inviteFacts(campaignName, participantName, inviterUsername string) []notifi
 	return facts
 }
 
-func decodeInviteCreatedPayload(event OutboxEvent) (gameintegration.InviteNotificationOutboxPayload, error) {
+func decodeInviteCreatedPayload(event OutboxEvent) (InviteNotificationOutboxPayload, error) {
 	if event == nil {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("event is required")
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("event is required")
 	}
-	var payload gameintegration.InviteNotificationOutboxPayload
+	var payload InviteNotificationOutboxPayload
 	if err := json.Unmarshal([]byte(event.GetPayloadJson()), &payload); err != nil {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("decode invite created payload: %w", err)
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("decode invite created payload: %w", err)
 	}
 	payload.InviteID = strings.TrimSpace(payload.InviteID)
 	payload.CampaignID = strings.TrimSpace(payload.CampaignID)
 	payload.RecipientUserID = strings.TrimSpace(payload.RecipientUserID)
 	if payload.InviteID == "" {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("invite_id is required in invite created payload")
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("invite_id is required in invite created payload")
 	}
 	if payload.CampaignID == "" {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("campaign_id is required in invite created payload")
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("campaign_id is required in invite created payload")
 	}
 	return payload, nil
 }
 
-func decodeInviteOutcomePayload(event OutboxEvent) (gameintegration.InviteNotificationOutboxPayload, error) {
+func decodeInviteOutcomePayload(event OutboxEvent) (InviteNotificationOutboxPayload, error) {
 	if event == nil {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("event is required")
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("event is required")
 	}
-	var payload gameintegration.InviteNotificationOutboxPayload
+	var payload InviteNotificationOutboxPayload
 	if err := json.Unmarshal([]byte(event.GetPayloadJson()), &payload); err != nil {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("decode invite outcome payload: %w", err)
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("decode invite outcome payload: %w", err)
 	}
 	payload.InviteID = strings.TrimSpace(payload.InviteID)
 	payload.CampaignID = strings.TrimSpace(payload.CampaignID)
 	payload.RecipientUserID = strings.TrimSpace(payload.RecipientUserID)
 	if payload.InviteID == "" {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("invite_id is required in invite outcome payload")
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("invite_id is required in invite outcome payload")
 	}
 	if payload.CampaignID == "" {
-		return gameintegration.InviteNotificationOutboxPayload{}, fmt.Errorf("campaign_id is required in invite outcome payload")
+		return InviteNotificationOutboxPayload{}, fmt.Errorf("campaign_id is required in invite outcome payload")
 	}
 	return payload, nil
 }

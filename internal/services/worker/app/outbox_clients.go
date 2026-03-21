@@ -7,6 +7,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
@@ -157,5 +158,76 @@ func gameAckOutcome(outcome workerdomain.AckOutcome) (gamev1.IntegrationOutboxAc
 		return gamev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD, nil
 	default:
 		return gamev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_UNSPECIFIED, fmt.Errorf("unknown ack outcome %q", outcome.String())
+	}
+}
+
+type inviteIntegrationOutboxClient interface {
+	LeaseIntegrationOutboxEvents(ctx context.Context, in *invitev1.LeaseIntegrationOutboxEventsRequest, opts ...grpc.CallOption) (*invitev1.LeaseIntegrationOutboxEventsResponse, error)
+	AckIntegrationOutboxEvent(ctx context.Context, in *invitev1.AckIntegrationOutboxEventRequest, opts ...grpc.CallOption) (*invitev1.AckIntegrationOutboxEventResponse, error)
+}
+
+type inviteOutboxClientAdapter struct {
+	client inviteIntegrationOutboxClient
+}
+
+func newInviteOutboxClientAdapter(client inviteIntegrationOutboxClient) OutboxClient {
+	if client == nil {
+		return nil
+	}
+	return inviteOutboxClientAdapter{client: client}
+}
+
+func (a inviteOutboxClientAdapter) Lease(ctx context.Context, req LeaseRequest) ([]workerdomain.OutboxEvent, error) {
+	resp, err := a.client.LeaseIntegrationOutboxEvents(serviceContext(ctx), &invitev1.LeaseIntegrationOutboxEventsRequest{
+		Consumer:   req.Consumer,
+		Limit:      int32(req.Limit),
+		LeaseTtlMs: int64(req.LeaseTTL / time.Millisecond),
+		Now:        timestamppb.New(req.Now),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return inviteEventsToOutboxEvents(resp.GetEvents()), nil
+}
+
+func (a inviteOutboxClientAdapter) Ack(ctx context.Context, req AckRequest) error {
+	outcome, err := inviteAckOutcome(req.Outcome)
+	if err != nil {
+		return err
+	}
+	ackReq := &invitev1.AckIntegrationOutboxEventRequest{
+		EventId:   req.EventID,
+		Consumer:  req.Consumer,
+		Outcome:   outcome,
+		LastError: req.LastError,
+	}
+	if req.Outcome == workerdomain.AckOutcomeRetry {
+		ackReq.NextAttemptAt = timestamppb.New(req.NextAttemptAt)
+	}
+	_, err = a.client.AckIntegrationOutboxEvent(serviceContext(ctx), ackReq)
+	return err
+}
+
+func inviteEventsToOutboxEvents(events []*invitev1.IntegrationOutboxEvent) []workerdomain.OutboxEvent {
+	out := make([]workerdomain.OutboxEvent, 0, len(events))
+	for _, event := range events {
+		if event == nil {
+			continue
+		}
+		out = append(out, event)
+	}
+	return out
+}
+
+func inviteAckOutcome(outcome workerdomain.AckOutcome) (invitev1.IntegrationOutboxAckOutcome, error) {
+	switch outcome {
+	case workerdomain.AckOutcomeSucceeded:
+		return invitev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED, nil
+	case workerdomain.AckOutcomeRetry:
+		return invitev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY, nil
+	case workerdomain.AckOutcomeDead:
+		return invitev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD, nil
+	default:
+		return invitev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_UNSPECIFIED, fmt.Errorf("unknown ack outcome %q", outcome.String())
 	}
 }

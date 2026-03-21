@@ -19,6 +19,7 @@ type Config struct {
 	AuthAddr          string        `env:"FRACTURING_SPACE_USERHUB_AUTH_ADDR"`
 	GameAddr          string        `env:"FRACTURING_SPACE_USERHUB_GAME_ADDR"`
 	SocialAddr        string        `env:"FRACTURING_SPACE_USERHUB_SOCIAL_ADDR"`
+	InviteAddr        string        `env:"FRACTURING_SPACE_USERHUB_INVITE_ADDR"`
 	NotificationsAddr string        `env:"FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR"`
 	StatusAddr        string        `env:"FRACTURING_SPACE_USERHUB_STATUS_ADDR"`
 	CacheFreshTTL     time.Duration `env:"FRACTURING_SPACE_USERHUB_CACHE_FRESH_TTL" envDefault:"15s"`
@@ -37,6 +38,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
 	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
 	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
+	cfg.InviteAddr = serviceaddr.OrDefaultGRPCAddr(cfg.InviteAddr, serviceaddr.ServiceInvite)
 	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
 	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
@@ -44,6 +46,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "The auth gRPC server address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "The game gRPC server address")
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "The social gRPC server address")
+	fs.StringVar(&cfg.InviteAddr, "invite-addr", cfg.InviteAddr, "The invite gRPC server address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "The notifications gRPC server address")
 	fs.DurationVar(&cfg.CacheFreshTTL, "cache-fresh-ttl", cfg.CacheFreshTTL, "The fresh dashboard cache TTL")
 	fs.DurationVar(&cfg.CacheStaleTTL, "cache-stale-ttl", cfg.CacheStaleTTL, "The stale dashboard fallback TTL")
@@ -61,6 +64,7 @@ func Run(ctx context.Context, cfg Config) error {
 			Port:              cfg.Port,
 			AuthAddr:          cfg.AuthAddr,
 			GameAddr:          cfg.GameAddr,
+			InviteAddr:        cfg.InviteAddr,
 			SocialAddr:        cfg.SocialAddr,
 			NotificationsAddr: cfg.NotificationsAddr,
 			StatusAddr:        cfg.StatusAddr,

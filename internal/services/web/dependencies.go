@@ -50,6 +50,14 @@ func BindGameDependency(bundle *DependencyBundle, conn *grpc.ClientConn) {
 	modules.BindGameDependency(&bundle.Modules, conn)
 }
 
+// BindInviteDependency wires invite-service clients into the web dependency bundle.
+func BindInviteDependency(bundle *DependencyBundle, conn *grpc.ClientConn) {
+	if bundle == nil || conn == nil {
+		return
+	}
+	modules.BindInviteDependency(&bundle.Modules, conn)
+}
+
 // BindAIDependency wires AI-backed clients into the web dependency bundle.
 func BindAIDependency(bundle *DependencyBundle, conn *grpc.ClientConn) {
 	if bundle == nil || conn == nil {

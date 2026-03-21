@@ -48,7 +48,6 @@ func (s ProjectionStores) requirements() []dependencyRequirement {
 		{name: "Campaign", configured: s.Campaign != nil},
 		{name: "Participant", configured: s.Participant != nil},
 		{name: "ClaimIndex", configured: s.ClaimIndex != nil},
-		{name: "Invite", configured: s.Invite != nil},
 		{name: "Character", configured: s.Character != nil},
 		{name: "Session", configured: s.Session != nil},
 		{name: "SessionGate", configured: s.SessionGate != nil},

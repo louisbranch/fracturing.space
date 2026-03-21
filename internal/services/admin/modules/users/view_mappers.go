@@ -2,7 +2,7 @@ package users
 
 import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"golang.org/x/text/message"
@@ -44,13 +44,13 @@ func buildUserDetail(user *authv1.User) *templates.UserDetail {
 	}
 }
 
-func formatInviteStatus(status statev1.InviteStatus, loc *message.Printer) (string, string) {
+func formatInviteStatus(status invitev1.InviteStatus, loc *message.Printer) (string, string) {
 	switch status {
-	case statev1.InviteStatus_PENDING:
+	case invitev1.InviteStatus_PENDING:
 		return loc.Sprintf("label.invite_pending"), "warning"
-	case statev1.InviteStatus_CLAIMED:
+	case invitev1.InviteStatus_CLAIMED:
 		return loc.Sprintf("label.invite_claimed"), "success"
-	case statev1.InviteStatus_REVOKED:
+	case invitev1.InviteStatus_REVOKED:
 		return loc.Sprintf("label.invite_revoked"), "error"
 	default:
 		return loc.Sprintf("label.unspecified"), "secondary"

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
@@ -192,10 +193,10 @@ func classifyMethodKind(fullMethod string) string {
 		campaignv1.EventService_ListTimelineEntries_FullMethodName,
 		campaignv1.ForkService_GetLineage_FullMethodName,
 		campaignv1.ForkService_ListForks_FullMethodName,
-		campaignv1.InviteService_GetInvite_FullMethodName,
-		campaignv1.InviteService_ListInvites_FullMethodName,
-		campaignv1.InviteService_ListPendingInvites_FullMethodName,
-		campaignv1.InviteService_ListPendingInvitesForUser_FullMethodName,
+		invitev1.InviteService_GetInvite_FullMethodName,
+		invitev1.InviteService_ListInvites_FullMethodName,
+		invitev1.InviteService_ListPendingInvites_FullMethodName,
+		invitev1.InviteService_ListPendingInvitesForUser_FullMethodName,
 		campaignv1.SystemService_ListGameSystems_FullMethodName,
 		campaignv1.SystemService_GetGameSystem_FullMethodName,
 		campaignv1.StatisticsService_GetGameStatistics_FullMethodName,

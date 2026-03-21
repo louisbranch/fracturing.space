@@ -6,8 +6,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/inviteclaimworkflow"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -75,26 +73,6 @@ func CoreDomains() []CoreDomain {
 			DeciderHandledCommands: participant.DeciderHandledCommands,
 			ProjectionHandledTypes: participant.ProjectionHandledTypes,
 			RejectionCodes:         participant.RejectionCodes,
-		},
-		{
-			name:                   "invite",
-			RegisterCommands:       invite.RegisterCommands,
-			RegisterEvents:         invite.RegisterEvents,
-			EmittableEventTypes:    invite.EmittableEventTypes,
-			FoldHandledTypes:       invite.FoldHandledTypes,
-			DeciderHandledCommands: invite.DeciderHandledCommands,
-			ProjectionHandledTypes: invite.ProjectionHandledTypes,
-			RejectionCodes:         invite.RejectionCodes,
-		},
-		{
-			name:                   "inviteclaimworkflow",
-			RegisterCommands:       inviteclaimworkflow.RegisterCommands,
-			RegisterEvents:         inviteclaimworkflow.RegisterEvents,
-			EmittableEventTypes:    inviteclaimworkflow.EmittableEventTypes,
-			FoldHandledTypes:       inviteclaimworkflow.FoldHandledTypes,
-			DeciderHandledCommands: inviteclaimworkflow.DeciderHandledCommands,
-			ProjectionHandledTypes: inviteclaimworkflow.ProjectionHandledTypes,
-			RejectionCodes:         inviteclaimworkflow.RejectionCodes,
 		},
 		{
 			name:                   "character",

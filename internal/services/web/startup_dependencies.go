@@ -95,6 +95,8 @@ const (
 	DependencyNameUserHub = "userhub"
 	// DependencyNameNotifications identifies the notifications backend dependency.
 	DependencyNameNotifications = "notifications"
+	// DependencyNameInvite identifies the invite backend dependency.
+	DependencyNameInvite = "invite"
 	// DependencyNameStatus identifies the status backend dependency.
 	DependencyNameStatus = "status"
 )
@@ -163,13 +165,30 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 					fieldCheck{name: "modules.campaigns.participant", configured: bundle.Modules.Campaigns.ParticipantClient != nil},
 					fieldCheck{name: "modules.campaigns.character", configured: bundle.Modules.Campaigns.CharacterClient != nil},
 					fieldCheck{name: "modules.campaigns.session", configured: bundle.Modules.Campaigns.SessionClient != nil},
-					fieldCheck{name: "modules.campaigns.invite", configured: bundle.Modules.Campaigns.InviteClient != nil},
 					fieldCheck{name: "modules.campaigns.authorization", configured: bundle.Modules.Campaigns.AuthorizationClient != nil},
 					fieldCheck{name: "modules.campaigns.daggerheart-content", configured: bundle.Modules.Campaigns.DaggerheartContentClient != nil},
 					fieldCheck{name: "modules.campaigns.daggerheart-asset", configured: bundle.Modules.Campaigns.DaggerheartAssetClient != nil},
 					fieldCheck{name: "modules.campaigns.fork", configured: bundle.Modules.Campaigns.ForkClient != nil},
-					fieldCheck{name: "modules.invite.invite", configured: bundle.Modules.Invite.InviteClient != nil},
 					fieldCheck{name: "modules.dashboard-sync.game-events", configured: bundle.Modules.DashboardSync.GameEventClient != nil},
+				),
+			)
+		},
+	},
+	{
+		Name:               DependencyNameInvite,
+		Policy:             StartupDependencyRequired,
+		Capability:         "web.invite.integration",
+		Surfaces:           []string{"campaigns", "invite"},
+		DefaultGRPCService: serviceaddr.ServiceInvite,
+		Bind:               BindInviteDependency,
+		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
+			return dependencyValidationIssue(
+				DependencyNameInvite,
+				"web.invite.integration",
+				[]string{"campaigns", "invite"},
+				requireDependencyFields(
+					fieldCheck{name: "modules.campaigns.invite", configured: bundle.Modules.Campaigns.InviteClient != nil},
+					fieldCheck{name: "modules.invite.invite", configured: bundle.Modules.Invite.InviteClient != nil},
 				),
 			)
 		},

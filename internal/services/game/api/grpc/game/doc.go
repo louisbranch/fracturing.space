@@ -7,7 +7,6 @@
 //	campaigntransport/        campaign governance and AI binding
 //	participanttransport/     roster and social profile lifecycle
 //	charactertransport/       character CRUD and profile management
-//	invitetransport/          invite lifecycle, claim, revoke
 //	sessiontransport/         session lifecycle, gates, spotlight, communication
 //	scenetransport/           scene CRUD, character membership
 //	forktransport/            campaign fork management

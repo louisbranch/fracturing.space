@@ -101,6 +101,10 @@ func (f *fakeParticipantClient) GetParticipant(context.Context, *gamev1.GetParti
 	return nil, unimplemented("GetParticipant")
 }
 
+func (f *fakeParticipantClient) BindParticipant(context.Context, *gamev1.BindParticipantRequest, ...grpc.CallOption) (*gamev1.BindParticipantResponse, error) {
+	return nil, unimplemented("BindParticipant")
+}
+
 type fakeInteractionClient struct {
 	getState            func(context.Context, *gamev1.GetInteractionStateRequest, ...grpc.CallOption) (*gamev1.GetInteractionStateResponse, error)
 	setActiveScene      func(context.Context, *gamev1.ActivateSceneRequest, ...grpc.CallOption) (*gamev1.ActivateSceneResponse, error)

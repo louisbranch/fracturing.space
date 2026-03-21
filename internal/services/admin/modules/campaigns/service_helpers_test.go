@@ -9,6 +9,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
@@ -40,11 +41,11 @@ func TestCampaignHelpersFormatters(t *testing.T) {
 		t.Fatalf("formatSessionStatus(unspecified) = %q", got)
 	}
 
-	label, variant := formatInviteStatus(statev1.InviteStatus_PENDING, loc)
+	label, variant := formatInviteStatus(invitev1.InviteStatus_PENDING, loc)
 	if label != loc.Sprintf("label.invite_pending") || variant != "warning" {
 		t.Fatalf("formatInviteStatus(pending) = (%q,%q)", label, variant)
 	}
-	label, variant = formatInviteStatus(statev1.InviteStatus_INVITE_STATUS_UNSPECIFIED, loc)
+	label, variant = formatInviteStatus(invitev1.InviteStatus_INVITE_STATUS_UNSPECIFIED, loc)
 	if label != loc.Sprintf("label.unspecified") || variant != "secondary" {
 		t.Fatalf("formatInviteStatus(unspecified) = (%q,%q)", label, variant)
 	}
@@ -198,20 +199,20 @@ func TestCampaignHelpersBuilders(t *testing.T) {
 		t.Fatalf("buildCharacterSheet() unexpected sheet: %#v", sheet)
 	}
 
-	inviteRows := buildInviteRows([]*statev1.Invite{
+	inviteRows := buildInviteRows([]*invitev1.Invite{
 		{
 			Id:              "inv-1",
 			CampaignId:      "camp-1",
 			ParticipantId:   "p-1",
 			RecipientUserId: "u-1",
-			Status:          statev1.InviteStatus_CLAIMED,
+			Status:          invitev1.InviteStatus_CLAIMED,
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		},
 		{
 			Id:            "inv-2",
 			ParticipantId: "missing",
-			Status:        statev1.InviteStatus_REVOKED,
+			Status:        invitev1.InviteStatus_REVOKED,
 		},
 	}, map[string]string{"p-1": "Alice"}, map[string]string{"u-1": "Bob"}, loc)
 	if len(inviteRows) != 2 || inviteRows[0].Participant != "Alice" || inviteRows[0].Recipient != "Bob" {

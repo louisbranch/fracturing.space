@@ -34,6 +34,10 @@ func TestGameEndToEnd(t *testing.T) {
 	})
 
 	t.Run("mutation event guardrails", func(t *testing.T) {
-		runMutationEventGuardrailTests(t, newSuite(t, "mutation-guardrails"), fixture.grpcAddr, fixture.authAddr)
+		runMutationEventGuardrailTests(t, newSuite(t, "mutation-guardrails"), fixture.grpcAddr)
+	})
+
+	t.Run("invite lifecycle", func(t *testing.T) {
+		runInviteLifecycleTests(t, fixture)
 	})
 }

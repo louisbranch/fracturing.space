@@ -12,8 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/inviteclaimworkflow"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
@@ -148,17 +146,6 @@ func participantRoute(_ coreCommandRouter, current aggregate.State, cmd command.
 	return participant.Decide(participantStateFor(cmd, current), cmd, now)
 }
 
-// inviteRoute resolves the target invite snapshot and routes accordingly.
-func inviteRoute(_ coreCommandRouter, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
-	return invite.Decide(inviteStateFor(cmd, current), cmd, now)
-}
-
-// inviteClaimWorkflowRoute handles the intentional cross-aggregate invite claim
-// workflow that binds a participant and claims the invite atomically.
-func inviteClaimWorkflowRoute(_ coreCommandRouter, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
-	return inviteclaimworkflow.Decide(current, cmd, now)
-}
-
 // characterRoute resolves the target character snapshot and routes accordingly.
 func characterRoute(_ coreCommandRouter, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return character.Decide(characterStateFor(cmd, current), cmd, now)
@@ -209,12 +196,6 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		participant.CommandTypeBind:                  participantRoute,
 		participant.CommandTypeUnbind:                participantRoute,
 		participant.CommandTypeSeatReassign:          participantRoute,
-		invite.CommandTypeCreate:                     inviteRoute,
-		inviteclaimworkflow.CommandTypeClaimBind:     inviteClaimWorkflowRoute,
-		invite.CommandTypeClaim:                      inviteRoute,
-		invite.CommandTypeDecline:                    inviteRoute,
-		invite.CommandTypeRevoke:                     inviteRoute,
-		invite.CommandTypeUpdate:                     inviteRoute,
 		character.CommandTypeCreate:                  characterRoute,
 		character.CommandTypeUpdate:                  characterRoute,
 		character.CommandTypeDelete:                  characterRoute,
@@ -297,16 +278,4 @@ func characterStateFor(cmd command.Command, current aggregate.State) character.S
 		return character.State{}
 	}
 	return current.Characters[ids.CharacterID(id)]
-}
-
-// inviteStateFor loads the target invite from command metadata.
-func inviteStateFor(cmd command.Command, current aggregate.State) invite.State {
-	if current.Invites == nil {
-		return invite.State{}
-	}
-	id := strings.TrimSpace(cmd.EntityID)
-	if id == "" {
-		return invite.State{}
-	}
-	return current.Invites[ids.InviteID(id)]
 }

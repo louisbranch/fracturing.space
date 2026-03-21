@@ -6,6 +6,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"golang.org/x/text/message"
@@ -107,7 +108,7 @@ func buildCharacterSheet(campaignID string, campaignName string, character *stat
 	}
 }
 
-func buildInviteRows(invites []*statev1.Invite, participantNames map[string]string, recipientNames map[string]string, loc *message.Printer) []templates.InviteRow {
+func buildInviteRows(invites []*invitev1.Invite, participantNames map[string]string, recipientNames map[string]string, loc *message.Printer) []templates.InviteRow {
 	rows := make([]templates.InviteRow, 0, len(invites))
 	for _, inv := range invites {
 		if inv == nil {
@@ -232,13 +233,13 @@ func formatSessionStatus(status statev1.SessionStatus, loc *message.Printer) str
 	}
 }
 
-func formatInviteStatus(status statev1.InviteStatus, loc *message.Printer) (string, string) {
+func formatInviteStatus(status invitev1.InviteStatus, loc *message.Printer) (string, string) {
 	switch status {
-	case statev1.InviteStatus_PENDING:
+	case invitev1.InviteStatus_PENDING:
 		return loc.Sprintf("label.invite_pending"), "warning"
-	case statev1.InviteStatus_CLAIMED:
+	case invitev1.InviteStatus_CLAIMED:
 		return loc.Sprintf("label.invite_claimed"), "success"
-	case statev1.InviteStatus_REVOKED:
+	case invitev1.InviteStatus_REVOKED:
 		return loc.Sprintf("label.invite_revoked"), "error"
 	default:
 		return loc.Sprintf("label.unspecified"), "secondary"

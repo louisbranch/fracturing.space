@@ -56,6 +56,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleDetail handles this route in the module transport layer.
+// Viewing a notification detail marks it as read automatically.
 func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificationID string) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
@@ -64,7 +65,8 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificat
 		h.WriteError(w, r, err)
 		return
 	}
-	item, err := h.service.GetNotification(ctx, userID, notificationID)
+	// Open marks the notification as read and returns the updated summary.
+	item, err := h.service.OpenNotification(ctx, userID, notificationID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

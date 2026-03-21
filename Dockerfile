@@ -88,6 +88,10 @@ FROM base AS build-status
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/status ./cmd/status
 
+FROM base AS build-invite
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/invite ./cmd/invite
+
 FROM base AS build-userhub
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/userhub ./cmd/userhub
@@ -201,6 +205,16 @@ COPY --from=build-status /out/status /app/status
 EXPOSE 8093
 
 ENTRYPOINT ["/app/status"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS invite
+
+WORKDIR /app
+
+COPY --from=build-invite /out/invite /app/invite
+
+EXPOSE 8095
+
+ENTRYPOINT ["/app/invite"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS userhub
 

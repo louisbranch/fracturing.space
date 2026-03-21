@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
@@ -35,17 +35,17 @@ func TestGetPublicInviteMapsResponse(t *testing.T) {
 
 	gateway := GRPCGateway{
 		Invites: &inviteClientStub{
-			publicResp: &gamev1.GetPublicInviteResponse{
-				Invite: &gamev1.Invite{
+			publicResp: &invitev1.GetPublicInviteResponse{
+				Invite: &invitev1.Invite{
 					Id:              "inv-1",
 					CampaignId:      "camp-1",
 					ParticipantId:   "part-1",
 					RecipientUserId: "user-1",
-					Status:          gamev1.InviteStatus_DECLINED,
+					Status:          invitev1.InviteStatus_DECLINED,
 				},
-				Campaign:      &gamev1.PublicInviteCampaign{Name: "Skyfall", Status: gamev1.CampaignStatus_ACTIVE},
-				Participant:   &gamev1.Participant{Name: "Scout"},
-				CreatedByUser: &authv1.User{Id: "creator-1", Username: "gm"},
+				Campaign:      &invitev1.InviteCampaignSummary{Name: "Skyfall", Status: "ACTIVE"},
+				Participant:   &invitev1.InviteParticipantSummary{Name: "Scout"},
+				CreatedByUser: &invitev1.InviteUserSummary{Id: "creator-1", Username: "gm"},
 			},
 		},
 		Auth: &authClientStub{},
@@ -162,39 +162,39 @@ func TestDeclineInviteSendsUserContext(t *testing.T) {
 }
 
 type inviteClientStub struct {
-	publicResp  *gamev1.GetPublicInviteResponse
+	publicResp  *invitev1.GetPublicInviteResponse
 	publicErr   error
 	claimErr    error
 	declineErr  error
 	claimCtx    context.Context
 	declineCtx  context.Context
-	lastClaim   *gamev1.ClaimInviteRequest
-	lastDecline *gamev1.DeclineInviteRequest
+	lastClaim   *invitev1.ClaimInviteRequest
+	lastDecline *invitev1.DeclineInviteRequest
 }
 
-func (s inviteClientStub) GetPublicInvite(context.Context, *gamev1.GetPublicInviteRequest, ...grpc.CallOption) (*gamev1.GetPublicInviteResponse, error) {
+func (s inviteClientStub) GetPublicInvite(context.Context, *invitev1.GetPublicInviteRequest, ...grpc.CallOption) (*invitev1.GetPublicInviteResponse, error) {
 	if s.publicErr != nil {
 		return nil, s.publicErr
 	}
 	return s.publicResp, nil
 }
 
-func (s *inviteClientStub) ClaimInvite(ctx context.Context, req *gamev1.ClaimInviteRequest, _ ...grpc.CallOption) (*gamev1.ClaimInviteResponse, error) {
+func (s *inviteClientStub) ClaimInvite(ctx context.Context, req *invitev1.ClaimInviteRequest, _ ...grpc.CallOption) (*invitev1.ClaimInviteResponse, error) {
 	s.claimCtx = ctx
 	s.lastClaim = req
 	if s.claimErr != nil {
 		return nil, s.claimErr
 	}
-	return &gamev1.ClaimInviteResponse{}, nil
+	return &invitev1.ClaimInviteResponse{}, nil
 }
 
-func (s *inviteClientStub) DeclineInvite(ctx context.Context, req *gamev1.DeclineInviteRequest, _ ...grpc.CallOption) (*gamev1.DeclineInviteResponse, error) {
+func (s *inviteClientStub) DeclineInvite(ctx context.Context, req *invitev1.DeclineInviteRequest, _ ...grpc.CallOption) (*invitev1.DeclineInviteResponse, error) {
 	s.declineCtx = ctx
 	s.lastDecline = req
 	if s.declineErr != nil {
 		return nil, s.declineErr
 	}
-	return &gamev1.DeclineInviteResponse{}, nil
+	return &invitev1.DeclineInviteResponse{}, nil
 }
 
 type authClientStub struct {

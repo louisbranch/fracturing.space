@@ -113,11 +113,6 @@
       "description": "Fork lineage value objects and constructor logic."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/invite",
-      "floor": 98.4,
-      "description": "Invite lifecycle and grant-validation path."
-    },
-    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/journal",
       "floor": 93.1,
       "description": "Journal append/list ordering and hash-chain guarantees."

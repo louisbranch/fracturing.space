@@ -142,6 +142,7 @@ func newDefaultGRPCServer(bundle *storageBundle, srvEnv serverEnv) *grpc.Server 
 			"/game.v1.CampaignAIOrchestrationService/",
 			campaignv1.EventService_AppendEvent_FullMethodName,
 			"/game.v1.IntegrationService/",
+			campaignv1.ParticipantService_BindParticipant_FullMethodName,
 		},
 		AllowedServiceIDs: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
 	}

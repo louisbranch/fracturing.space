@@ -54,9 +54,6 @@ func TestNewState_MapsInitialized(t *testing.T) {
 	if s.Characters == nil {
 		t.Fatal("Characters map is nil")
 	}
-	if s.Invites == nil {
-		t.Fatal("Invites map is nil")
-	}
 	if s.Scenes == nil {
 		t.Fatal("Scenes map is nil")
 	}

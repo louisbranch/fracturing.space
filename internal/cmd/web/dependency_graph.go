@@ -165,6 +165,8 @@ func dependencyAddressField(name string) func(*Config) *string {
 		return func(cfg *Config) *string { return &cfg.SocialAddr }
 	case web.DependencyNameGame:
 		return func(cfg *Config) *string { return &cfg.GameAddr }
+	case web.DependencyNameInvite:
+		return func(cfg *Config) *string { return &cfg.InviteAddr }
 	case web.DependencyNameAI:
 		return func(cfg *Config) *string { return &cfg.AIAddr }
 	case web.DependencyNameDiscovery:

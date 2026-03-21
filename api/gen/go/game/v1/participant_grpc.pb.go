@@ -25,6 +25,7 @@ const (
 	ParticipantService_DeleteParticipant_FullMethodName = "/game.v1.ParticipantService/DeleteParticipant"
 	ParticipantService_ListParticipants_FullMethodName  = "/game.v1.ParticipantService/ListParticipants"
 	ParticipantService_GetParticipant_FullMethodName    = "/game.v1.ParticipantService/GetParticipant"
+	ParticipantService_BindParticipant_FullMethodName   = "/game.v1.ParticipantService/BindParticipant"
 )
 
 // ParticipantServiceClient is the client API for ParticipantService service.
@@ -43,6 +44,10 @@ type ParticipantServiceClient interface {
 	ListParticipants(ctx context.Context, in *ListParticipantsRequest, opts ...grpc.CallOption) (*ListParticipantsResponse, error)
 	// Get a participant by campaign ID and participant ID.
 	GetParticipant(ctx context.Context, in *GetParticipantRequest, opts ...grpc.CallOption) (*GetParticipantResponse, error)
+	// Bind a user to an unoccupied participant seat.
+	// Internal-only: caller must have verified authorization (e.g. join grant).
+	// Enforces: seat is active, not AI, not already bound, one user per campaign.
+	BindParticipant(ctx context.Context, in *BindParticipantRequest, opts ...grpc.CallOption) (*BindParticipantResponse, error)
 }
 
 type participantServiceClient struct {
@@ -103,6 +108,16 @@ func (c *participantServiceClient) GetParticipant(ctx context.Context, in *GetPa
 	return out, nil
 }
 
+func (c *participantServiceClient) BindParticipant(ctx context.Context, in *BindParticipantRequest, opts ...grpc.CallOption) (*BindParticipantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BindParticipantResponse)
+	err := c.cc.Invoke(ctx, ParticipantService_BindParticipant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ParticipantServiceServer is the server API for ParticipantService service.
 // All implementations must embed UnimplementedParticipantServiceServer
 // for forward compatibility.
@@ -119,6 +134,10 @@ type ParticipantServiceServer interface {
 	ListParticipants(context.Context, *ListParticipantsRequest) (*ListParticipantsResponse, error)
 	// Get a participant by campaign ID and participant ID.
 	GetParticipant(context.Context, *GetParticipantRequest) (*GetParticipantResponse, error)
+	// Bind a user to an unoccupied participant seat.
+	// Internal-only: caller must have verified authorization (e.g. join grant).
+	// Enforces: seat is active, not AI, not already bound, one user per campaign.
+	BindParticipant(context.Context, *BindParticipantRequest) (*BindParticipantResponse, error)
 	mustEmbedUnimplementedParticipantServiceServer()
 }
 
@@ -143,6 +162,9 @@ func (UnimplementedParticipantServiceServer) ListParticipants(context.Context, *
 }
 func (UnimplementedParticipantServiceServer) GetParticipant(context.Context, *GetParticipantRequest) (*GetParticipantResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetParticipant not implemented")
+}
+func (UnimplementedParticipantServiceServer) BindParticipant(context.Context, *BindParticipantRequest) (*BindParticipantResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BindParticipant not implemented")
 }
 func (UnimplementedParticipantServiceServer) mustEmbedUnimplementedParticipantServiceServer() {}
 func (UnimplementedParticipantServiceServer) testEmbeddedByValue()                            {}
@@ -255,6 +277,24 @@ func _ParticipantService_GetParticipant_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ParticipantService_BindParticipant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BindParticipantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ParticipantServiceServer).BindParticipant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ParticipantService_BindParticipant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ParticipantServiceServer).BindParticipant(ctx, req.(*BindParticipantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ParticipantService_ServiceDesc is the grpc.ServiceDesc for ParticipantService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -281,6 +321,10 @@ var ParticipantService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetParticipant",
 			Handler:    _ParticipantService_GetParticipant_Handler,
+		},
+		{
+			MethodName: "BindParticipant",
+			Handler:    _ParticipantService_BindParticipant_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

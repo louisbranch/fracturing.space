@@ -7,6 +7,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -42,17 +43,17 @@ func (g *grpcAuthGateway) GetUserIdentity(ctx context.Context, userID string) (d
 	return domain.UserIdentity{Username: strings.TrimSpace(resp.GetUser().GetUsername())}, nil
 }
 
-// grpcGameGateway adapts game.v1 clients to domain game gateway behavior.
+// grpcGameGateway adapts game.v1 and invite.v1 clients to domain game gateway behavior.
 type grpcGameGateway struct {
 	campaigns gamev1.CampaignServiceClient
-	invites   gamev1.InviteServiceClient
+	invites   invitev1.InviteServiceClient
 	sessions  gamev1.SessionServiceClient
 }
 
 // newGRPCGameGateway constructs a game gateway from gRPC clients.
 func newGRPCGameGateway(
 	campaigns gamev1.CampaignServiceClient,
-	invites gamev1.InviteServiceClient,
+	invites invitev1.InviteServiceClient,
 	sessions gamev1.SessionServiceClient,
 ) *grpcGameGateway {
 	return &grpcGameGateway{
@@ -167,7 +168,7 @@ func (g *grpcGameGateway) ListPendingInvitePreviews(ctx context.Context, userID 
 		return domain.InvitePage{}, errors.New("game invite client is not configured")
 	}
 	callCtx := grpcauthctx.WithUserID(ctx, userID)
-	resp, err := g.invites.ListPendingInvitesForUser(callCtx, &gamev1.ListPendingInvitesForUserRequest{PageSize: int32(limit)})
+	resp, err := g.invites.ListPendingInvitesForUser(callCtx, &invitev1.ListPendingInvitesForUserRequest{PageSize: int32(limit)})
 	if err != nil {
 		return domain.InvitePage{}, err
 	}
