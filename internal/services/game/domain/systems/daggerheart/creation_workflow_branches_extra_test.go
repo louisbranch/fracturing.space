@@ -3,11 +3,13 @@ package daggerheart
 import (
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 )
 
 func TestEvaluateCreationReadiness_ErrorBranches(t *testing.T) {
-	ready, reason := EvaluateCreationReadiness(CharacterProfile{
+	ready, reason := EvaluateCreationReadiness(daggerheartstate.CharacterProfile{
 		Level:           0,
 		HpMax:           -1,
 		StressMax:       0,
@@ -29,12 +31,12 @@ func TestEvaluateCreationReadiness_ErrorBranches(t *testing.T) {
 func TestHasStartingEquipment_Branches(t *testing.T) {
 	tests := []struct {
 		name    string
-		profile CreationProfile
+		profile daggerheartstate.CreationProfile
 		want    bool
 	}{
 		{
 			name: "missing weapons",
-			profile: CreationProfile{
+			profile: daggerheartstate.CreationProfile{
 				StartingArmorID:      "armor-1",
 				StartingPotionItemID: StartingPotionMinorHealthID,
 			},
@@ -42,7 +44,7 @@ func TestHasStartingEquipment_Branches(t *testing.T) {
 		},
 		{
 			name: "blank weapon id",
-			profile: CreationProfile{
+			profile: daggerheartstate.CreationProfile{
 				StartingWeaponIDs:    []string{"weapon-1", " "},
 				StartingArmorID:      "armor-1",
 				StartingPotionItemID: StartingPotionMinorHealthID,
@@ -51,7 +53,7 @@ func TestHasStartingEquipment_Branches(t *testing.T) {
 		},
 		{
 			name: "blank armor",
-			profile: CreationProfile{
+			profile: daggerheartstate.CreationProfile{
 				StartingWeaponIDs:    []string{"weapon-1"},
 				StartingArmorID:      " ",
 				StartingPotionItemID: StartingPotionMinorHealthID,
@@ -60,7 +62,7 @@ func TestHasStartingEquipment_Branches(t *testing.T) {
 		},
 		{
 			name: "invalid potion",
-			profile: CreationProfile{
+			profile: daggerheartstate.CreationProfile{
 				StartingWeaponIDs:    []string{"weapon-1"},
 				StartingArmorID:      "armor-1",
 				StartingPotionItemID: "not-starting-potion",
@@ -69,7 +71,7 @@ func TestHasStartingEquipment_Branches(t *testing.T) {
 		},
 		{
 			name: "valid",
-			profile: CreationProfile{
+			profile: daggerheartstate.CreationProfile{
 				StartingWeaponIDs:    []string{"weapon-1"},
 				StartingArmorID:      "armor-1",
 				StartingPotionItemID: StartingPotionMinorStaminaID,

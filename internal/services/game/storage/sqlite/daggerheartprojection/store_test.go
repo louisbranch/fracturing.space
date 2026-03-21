@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -27,15 +27,15 @@ func standardProjectionConditions(codes ...string) []projectionstore.Daggerheart
 }
 
 func projectionConditionsEqual(got, want []projectionstore.DaggerheartConditionState) bool {
-	return daggerheart.ConditionStatesEqual(projectionToDomainConditions(got), projectionToDomainConditions(want))
+	return rules.ConditionStatesEqual(projectionToDomainConditions(got), projectionToDomainConditions(want))
 }
 
-func projectionToDomainConditions(states []projectionstore.DaggerheartConditionState) []daggerheart.ConditionState {
-	result := make([]daggerheart.ConditionState, 0, len(states))
+func projectionToDomainConditions(states []projectionstore.DaggerheartConditionState) []rules.ConditionState {
+	result := make([]rules.ConditionState, 0, len(states))
 	for _, state := range states {
-		result = append(result, daggerheart.ConditionState{
+		result = append(result, rules.ConditionState{
 			ID:       state.ID,
-			Class:    daggerheart.ConditionClass(state.Class),
+			Class:    rules.ConditionClass(state.Class),
 			Standard: state.Standard,
 			Code:     state.Code,
 			Label:    state.Label,

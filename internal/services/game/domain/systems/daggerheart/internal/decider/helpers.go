@@ -5,38 +5,38 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 // ── Snapshot lookup helpers ────────────────────────────────────────────
 
-func snapshotCharacterState(snapshot snapstate.SnapshotState, characterID ids.CharacterID) (snapstate.CharacterState, bool) {
+func snapshotCharacterState(snapshot daggerheartstate.SnapshotState, characterID ids.CharacterID) (daggerheartstate.CharacterState, bool) {
 	trimmed := ids.CharacterID(strings.TrimSpace(characterID.String()))
 	if trimmed == "" {
-		return snapstate.CharacterState{}, false
+		return daggerheartstate.CharacterState{}, false
 	}
 	character, ok := snapshot.CharacterStates[trimmed]
 	if !ok {
-		return snapstate.CharacterState{}, false
+		return daggerheartstate.CharacterState{}, false
 	}
 	character.CharacterID = trimmed.String()
 	character.CampaignID = snapshot.CampaignID.String()
 	if character.LifeState == "" {
-		character.LifeState = snapstate.LifeStateAlive
+		character.LifeState = daggerheartstate.LifeStateAlive
 	}
 	return character, true
 }
 
-func snapshotAdversaryState(snapshot snapstate.SnapshotState, adversaryID ids.AdversaryID) (snapstate.AdversaryState, bool) {
+func snapshotAdversaryState(snapshot daggerheartstate.SnapshotState, adversaryID ids.AdversaryID) (daggerheartstate.AdversaryState, bool) {
 	trimmed := ids.AdversaryID(strings.TrimSpace(adversaryID.String()))
 	if trimmed == "" {
-		return snapstate.AdversaryState{}, false
+		return daggerheartstate.AdversaryState{}, false
 	}
 	adversary, ok := snapshot.AdversaryStates[trimmed]
 	if !ok {
-		return snapstate.AdversaryState{}, false
+		return daggerheartstate.AdversaryState{}, false
 	}
 	adversary.AdversaryID = trimmed
 	adversary.CampaignID = snapshot.CampaignID
@@ -45,7 +45,7 @@ func snapshotAdversaryState(snapshot snapstate.SnapshotState, adversaryID ids.Ad
 
 // ── State mutation detection ───────────────────────────────────────────
 
-func isCharacterStatePatchNoMutation(snapshot snapstate.SnapshotState, p payload.CharacterStatePatchPayload) bool {
+func isCharacterStatePatchNoMutation(snapshot daggerheartstate.SnapshotState, p payload.CharacterStatePatchPayload) bool {
 	character, hasCharacter := snapshotCharacterState(snapshot, p.CharacterID)
 	if !hasCharacter {
 		return false
@@ -89,7 +89,7 @@ func isCharacterStatePatchNoMutation(snapshot snapstate.SnapshotState, p payload
 	return true
 }
 
-func normalizedClassStatePtr(value *snapstate.CharacterClassState) *snapstate.CharacterClassState {
+func normalizedClassStatePtr(value *daggerheartstate.CharacterClassState) *daggerheartstate.CharacterClassState {
 	if value == nil {
 		return nil
 	}

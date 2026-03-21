@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -102,7 +103,7 @@ func companionSheetFromInput(ctx context.Context, content contentstore.Daggerhea
 		seen[experienceID] = struct{}{}
 		experiences = append(experiences, projectionstore.DaggerheartCompanionExperience{
 			ExperienceID: experienceID,
-			Modifier:     daggerheart.CompanionSheetExperienceModifier,
+			Modifier:     daggerheartstate.CompanionSheetExperienceModifier,
 		})
 	}
 
@@ -114,11 +115,11 @@ func companionSheetFromInput(ctx context.Context, content contentstore.Daggerhea
 	return &projectionstore.DaggerheartCompanionSheet{
 		AnimalKind:        strings.TrimSpace(input.GetAnimalKind()),
 		Name:              strings.TrimSpace(input.GetName()),
-		Evasion:           daggerheart.CompanionSheetDefaultEvasion,
+		Evasion:           daggerheartstate.CompanionSheetDefaultEvasion,
 		Experiences:       experiences,
 		AttackDescription: strings.TrimSpace(input.GetAttackDescription()),
-		AttackRange:       daggerheart.CompanionSheetDefaultAttackRange,
-		DamageDieSides:    daggerheart.CompanionSheetDefaultDamageDieSides,
+		AttackRange:       daggerheartstate.CompanionSheetDefaultAttackRange,
+		DamageDieSides:    daggerheartstate.CompanionSheetDefaultDamageDieSides,
 		DamageType:        damageType,
 	}, nil
 }

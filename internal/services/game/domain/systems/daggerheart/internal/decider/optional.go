@@ -7,8 +7,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 // ── Gold/Currency ───────────────────────────────────────────────────────
@@ -21,11 +21,11 @@ const (
 	rejectionCodeGoldInvalid = "GOLD_INVALID"
 )
 
-func decideGoldUpdate(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideGoldUpdate(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeGoldUpdated, "character",
 		func(p *payload.GoldUpdatePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(_ snapstate.SnapshotState, _ bool, p *payload.GoldUpdatePayload, _ func() time.Time) *command.Rejection {
+		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.GoldUpdatePayload, _ func() time.Time) *command.Rejection {
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.Reason = strings.TrimSpace(p.Reason)
 
@@ -43,7 +43,7 @@ func decideGoldUpdate(snapshotState snapstate.SnapshotState, hasSnapshot bool, c
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.GoldUpdatePayload) payload.GoldUpdatedPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.GoldUpdatePayload) payload.GoldUpdatedPayload {
 			return payload.GoldUpdatedPayload{
 				CharacterID: p.CharacterID,
 				Handfuls:    p.HandfulsAfter,
@@ -114,11 +114,11 @@ const (
 	rejectionCodeConsumableInvalid = "CONSUMABLE_INVALID"
 )
 
-func decideConsumableUse(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideConsumableUse(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeConsumableUsed, "character",
 		func(p *payload.ConsumableUsePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(_ snapstate.SnapshotState, _ bool, p *payload.ConsumableUsePayload, _ func() time.Time) *command.Rejection {
+		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.ConsumableUsePayload, _ func() time.Time) *command.Rejection {
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.ConsumableID = strings.TrimSpace(p.ConsumableID)
 			if p.QuantityBefore <= 0 {
@@ -129,7 +129,7 @@ func decideConsumableUse(snapshotState snapstate.SnapshotState, hasSnapshot bool
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.ConsumableUsePayload) payload.ConsumableUsedPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.ConsumableUsePayload) payload.ConsumableUsedPayload {
 			return payload.ConsumableUsedPayload{
 				CharacterID:  p.CharacterID,
 				ConsumableID: p.ConsumableID,
@@ -139,11 +139,11 @@ func decideConsumableUse(snapshotState snapstate.SnapshotState, hasSnapshot bool
 		now)
 }
 
-func decideConsumableAcquire(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideConsumableAcquire(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeConsumableAcquired, "character",
 		func(p *payload.ConsumableAcquirePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(_ snapstate.SnapshotState, _ bool, p *payload.ConsumableAcquirePayload, _ func() time.Time) *command.Rejection {
+		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.ConsumableAcquirePayload, _ func() time.Time) *command.Rejection {
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.ConsumableID = strings.TrimSpace(p.ConsumableID)
 			if p.QuantityAfter < 1 || p.QuantityAfter > consumableStackMax {
@@ -154,7 +154,7 @@ func decideConsumableAcquire(snapshotState snapstate.SnapshotState, hasSnapshot 
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.ConsumableAcquirePayload) payload.ConsumableAcquiredPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.ConsumableAcquirePayload) payload.ConsumableAcquiredPayload {
 			return payload.ConsumableAcquiredPayload{
 				CharacterID:  p.CharacterID,
 				ConsumableID: p.ConsumableID,

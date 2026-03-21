@@ -8,8 +8,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/damagetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func mustDamageAppliedPayloadJSON(t *testing.T, characterID string, damage *pb.DaggerheartDamageRequest, profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState) []byte {
@@ -23,7 +24,7 @@ func mustDamageAppliedPayloadJSON(t *testing.T, characterID string, damage *pb.D
 	hpAfter := result.HPAfter
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := workflowtransport.NormalizeTargets(damage.GetSourceCharacterIds())
-	payload := daggerheart.DamageAppliedPayload{
+	payload := daggerheartpayload.DamageAppliedPayload{
 		CharacterID:        ids.CharacterID(characterID),
 		Hp:                 &hpAfter,
 		Armor:              &armorAfter,
@@ -52,24 +53,24 @@ func mustDamageAppliedPayloadJSON(t *testing.T, characterID string, damage *pb.D
 func mustConditionChangedJSON(t *testing.T, characterID string, conditions []string, added []string) []byte {
 	t.Helper()
 
-	conditionStates := make([]daggerheart.ConditionState, 0, len(conditions))
+	conditionStates := make([]rules.ConditionState, 0, len(conditions))
 	for _, code := range conditions {
-		state, err := daggerheart.StandardConditionState(code)
+		state, err := rules.StandardConditionState(code)
 		if err != nil {
 			t.Fatalf("standard condition state %q: %v", code, err)
 		}
 		conditionStates = append(conditionStates, state)
 	}
-	addedStates := make([]daggerheart.ConditionState, 0, len(added))
+	addedStates := make([]rules.ConditionState, 0, len(added))
 	for _, code := range added {
-		state, err := daggerheart.StandardConditionState(code)
+		state, err := rules.StandardConditionState(code)
 		if err != nil {
 			t.Fatalf("standard added condition state %q: %v", code, err)
 		}
 		addedStates = append(addedStates, state)
 	}
 
-	payload := daggerheart.ConditionChangedPayload{
+	payload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: ids.CharacterID(characterID),
 		Conditions:  conditionStates,
 		Added:       addedStates,
@@ -84,7 +85,7 @@ func mustConditionChangedJSON(t *testing.T, characterID string, conditions []str
 func mustCharacterStatePatchedJSON(t *testing.T, characterID string, lifeState string) []byte {
 	t.Helper()
 
-	payload := daggerheart.CharacterStatePatchedPayload{
+	payload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: ids.CharacterID(characterID),
 		LifeState:   &lifeState,
 	}

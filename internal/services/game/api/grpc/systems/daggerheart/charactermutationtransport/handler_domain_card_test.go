@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func TestHandlerAcquireDomainCardDefaultsDestination(t *testing.T) {
-	var payload daggerheart.DomainCardAcquirePayload
+	var payload daggerheartpayload.DomainCardAcquirePayload
 	handler := newTestHandler(Dependencies{
 		ExecuteCharacterCommand: func(_ context.Context, in CharacterCommandInput) error {
 			if err := json.Unmarshal(in.PayloadJSON, &payload); err != nil {

@@ -103,8 +103,8 @@ and projection hooks for a particular game system (e.g. Daggerheart).
 
 | Package | Role |
 |---------|------|
-| `bridge/manifest/` | System descriptor registry — declares modules, adapters, and projection stores |
-| `bridge/daggerheart/` | Reference implementation for the Daggerheart system |
+| `systems/manifest/` | System descriptor registry — declares modules, adapters, and projection stores |
+| `systems/daggerheart/` | Reference implementation for the Daggerheart system |
 
 See the [game systems guide](../systems/game-systems.md) for the full
 contributor workflow.
@@ -124,7 +124,7 @@ easier to generalize later than to disentangle.
 ## Dependency Rules
 
 - `core/` imports only `platform/errors` (no other upward imports).
-- `domain/` imports `core/` and `platform/` but never `bridge/` or
+- `domain/` imports `core/` and `platform/` but never `systems/` or
   `storage/`.
 - `domain/systems/` imports `domain/` and `core/` but never `storage/`
   directly — descriptor-owned adapter builders may extract system stores from

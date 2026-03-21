@@ -7,27 +7,27 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/reducer"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 // LevelUpApplier applies level-up progression to a character profile.
-type LevelUpApplier func(*snapstate.CharacterProfile, payload.LevelUpAppliedPayload)
+type LevelUpApplier func(*daggerheartstate.CharacterProfile, payload.LevelUpAppliedPayload)
 
 // Folder folds Daggerheart system events into snapshot state.
 type Folder struct {
 	// Router is exported so root-package tests can verify registration
 	// consistency via the type alias.
-	Router       *module.FoldRouter[*snapstate.SnapshotState]
+	Router       *module.FoldRouter[*daggerheartstate.SnapshotState]
 	applyLevelUp LevelUpApplier
 }
 
 // NewFolder creates a Folder with all fold handlers registered.
 func NewFolder(applyLevelUp LevelUpApplier) *Folder {
 	f := &Folder{applyLevelUp: applyLevelUp}
-	router := module.NewFoldRouter(snapstate.AssertSnapshotState)
+	router := module.NewFoldRouter(daggerheartstate.AssertSnapshotState)
 	f.registerFoldHandlers(router)
 	f.Router = router
 	return f
@@ -42,7 +42,7 @@ func (f *Folder) FoldHandledTypes() []event.Type {
 // FoldRouter after ensuring the snapshot CampaignID is populated from the
 // event envelope — required because the first fold may receive nil state.
 func (f *Folder) Fold(state any, evt event.Event) (any, error) {
-	s, err := snapstate.AssertSnapshotState(state)
+	s, err := daggerheartstate.AssertSnapshotState(state)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (f *Folder) Fold(state any, evt event.Event) (any, error) {
 }
 
 // registerFoldHandlers registers all Daggerheart fold handlers on the router.
-func (f *Folder) registerFoldHandlers(r *module.FoldRouter[*snapstate.SnapshotState]) {
+func (f *Folder) registerFoldHandlers(r *module.FoldRouter[*daggerheartstate.SnapshotState]) {
 	module.HandleFold(r, payload.EventTypeGMFearChanged, f.foldGMFearChanged)
 	module.HandleFold(r, payload.EventTypeCharacterProfileReplaced, f.foldCharacterProfileReplaced)
 	module.HandleFold(r, payload.EventTypeCharacterProfileDeleted, f.foldCharacterProfileDeleted)
@@ -88,15 +88,15 @@ func (f *Folder) registerFoldHandlers(r *module.FoldRouter[*snapstate.SnapshotSt
 	module.HandleFold(r, payload.EventTypeStatModifierChanged, f.foldStatModifierChanged)
 }
 
-func (f *Folder) foldGMFearChanged(state *snapstate.SnapshotState, p payload.GMFearChangedPayload) error {
-	if p.Value < snapstate.GMFearMin || p.Value > snapstate.GMFearMax {
-		return fmt.Errorf("gm fear value must be in range %d..%d", snapstate.GMFearMin, snapstate.GMFearMax)
+func (f *Folder) foldGMFearChanged(state *daggerheartstate.SnapshotState, p payload.GMFearChangedPayload) error {
+	if p.Value < daggerheartstate.GMFearMin || p.Value > daggerheartstate.GMFearMax {
+		return fmt.Errorf("gm fear value must be in range %d..%d", daggerheartstate.GMFearMin, daggerheartstate.GMFearMax)
 	}
 	state.GMFear = p.Value
 	return nil
 }
 
-func (f *Folder) foldCharacterProfileReplaced(state *snapstate.SnapshotState, p snapstate.CharacterProfileReplacedPayload) error {
+func (f *Folder) foldCharacterProfileReplaced(state *daggerheartstate.SnapshotState, p daggerheartstate.CharacterProfileReplacedPayload) error {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return nil
@@ -104,26 +104,26 @@ func (f *Folder) foldCharacterProfileReplaced(state *snapstate.SnapshotState, p 
 	profile := p.Profile.Normalized()
 	state.CharacterProfiles[characterID] = profile
 	if _, exists := state.CharacterStates[characterID]; !exists {
-		state.CharacterStates[characterID] = snapstate.CharacterState{
+		state.CharacterStates[characterID] = daggerheartstate.CharacterState{
 			CampaignID:  strings.TrimSpace(string(state.CampaignID)),
 			CharacterID: strings.TrimSpace(string(characterID)),
 			HP:          profile.HpMax,
-			Hope:        snapstate.HopeDefault,
-			HopeMax:     snapstate.HopeMaxDefault,
-			Stress:      snapstate.StressDefault,
+			Hope:        daggerheartstate.HopeDefault,
+			HopeMax:     daggerheartstate.HopeMaxDefault,
+			Stress:      daggerheartstate.StressDefault,
 			Armor:       profile.ArmorMax,
-			LifeState:   snapstate.LifeStateAlive,
+			LifeState:   daggerheartstate.LifeStateAlive,
 		}
 	}
 	if profile.CompanionSheet != nil {
-		state.CharacterCompanions[characterID] = snapstate.CharacterCompanionState{Status: snapstate.CompanionStatusPresent}
+		state.CharacterCompanions[characterID] = daggerheartstate.CharacterCompanionState{Status: daggerheartstate.CompanionStatusPresent}
 	} else {
 		delete(state.CharacterCompanions, characterID)
 	}
 	return nil
 }
 
-func (f *Folder) foldCharacterProfileDeleted(state *snapstate.SnapshotState, p snapstate.CharacterProfileDeletedPayload) error {
+func (f *Folder) foldCharacterProfileDeleted(state *daggerheartstate.SnapshotState, p daggerheartstate.CharacterProfileDeletedPayload) error {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return nil
@@ -133,68 +133,68 @@ func (f *Folder) foldCharacterProfileDeleted(state *snapstate.SnapshotState, p s
 	return nil
 }
 
-func (f *Folder) foldCharacterStatePatched(state *snapstate.SnapshotState, p payload.CharacterStatePatchedPayload) error {
+func (f *Folder) foldCharacterStatePatched(state *daggerheartstate.SnapshotState, p payload.CharacterStatePatchedPayload) error {
 	applyCharacterStatePatched(state, p)
 	return nil
 }
 
-func (f *Folder) foldBeastformTransformed(state *snapstate.SnapshotState, p payload.BeastformTransformedPayload) error {
+func (f *Folder) foldBeastformTransformed(state *daggerheartstate.SnapshotState, p payload.BeastformTransformedPayload) error {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return nil
 	}
-	nextClassState := snapstate.CharacterClassState{}
+	nextClassState := daggerheartstate.CharacterClassState{}
 	if current, ok := state.CharacterClassStates[characterID]; ok {
 		nextClassState = current
 	}
-	nextClassState = snapstate.WithActiveBeastform(nextClassState, p.ActiveBeastform)
+	nextClassState = daggerheartstate.WithActiveBeastform(nextClassState, p.ActiveBeastform)
 	applyStatePatch(state, p.CharacterID, nil, p.Hope, nil, p.Stress, nil, nil, &nextClassState, nil, nil)
 	return nil
 }
 
-func (f *Folder) foldBeastformDropped(state *snapstate.SnapshotState, p payload.BeastformDroppedPayload) error {
+func (f *Folder) foldBeastformDropped(state *daggerheartstate.SnapshotState, p payload.BeastformDroppedPayload) error {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return nil
 	}
-	nextClassState := snapstate.CharacterClassState{}
+	nextClassState := daggerheartstate.CharacterClassState{}
 	if current, ok := state.CharacterClassStates[characterID]; ok {
 		nextClassState = current
 	}
-	nextClassState = snapstate.WithActiveBeastform(nextClassState, nil)
+	nextClassState = daggerheartstate.WithActiveBeastform(nextClassState, nil)
 	applyStatePatch(state, p.CharacterID, nil, nil, nil, nil, nil, nil, &nextClassState, nil, nil)
 	return nil
 }
 
-func (f *Folder) foldCompanionExperienceBegun(state *snapstate.SnapshotState, p payload.CompanionExperienceBegunPayload) error {
+func (f *Folder) foldCompanionExperienceBegun(state *daggerheartstate.SnapshotState, p payload.CompanionExperienceBegunPayload) error {
 	applyStatePatch(state, p.CharacterID, nil, nil, nil, nil, nil, nil, nil, nil, p.CompanionState)
 	return nil
 }
 
-func (f *Folder) foldCompanionReturned(state *snapstate.SnapshotState, p payload.CompanionReturnedPayload) error {
+func (f *Folder) foldCompanionReturned(state *daggerheartstate.SnapshotState, p payload.CompanionReturnedPayload) error {
 	applyStatePatch(state, p.CharacterID, nil, nil, nil, p.Stress, nil, nil, nil, nil, p.CompanionState)
 	return nil
 }
 
-func (f *Folder) foldConditionChanged(state *snapstate.SnapshotState, p payload.ConditionChangedPayload) error {
+func (f *Folder) foldConditionChanged(state *daggerheartstate.SnapshotState, p payload.ConditionChangedPayload) error {
 	applyCharacterConditionsChanged(state, p)
 	return nil
 }
 
-func (f *Folder) foldLoadoutSwapped(state *snapstate.SnapshotState, p payload.LoadoutSwappedPayload) error {
+func (f *Folder) foldLoadoutSwapped(state *daggerheartstate.SnapshotState, p payload.LoadoutSwappedPayload) error {
 	applyCharacterLoadoutSwapped(state, p)
 	return nil
 }
 
-func (f *Folder) foldCharacterTemporaryArmorApplied(state *snapstate.SnapshotState, p payload.CharacterTemporaryArmorAppliedPayload) error {
+func (f *Folder) foldCharacterTemporaryArmorApplied(state *daggerheartstate.SnapshotState, p payload.CharacterTemporaryArmorAppliedPayload) error {
 	applyCharacterTemporaryArmorApplied(state, p)
 	return nil
 }
 
-func (f *Folder) foldRestTaken(state *snapstate.SnapshotState, p payload.RestTakenPayload) error {
+func (f *Folder) foldRestTaken(state *daggerheartstate.SnapshotState, p payload.RestTakenPayload) error {
 	state.GMFear = p.GMFear
-	if state.GMFear < snapstate.GMFearMin || state.GMFear > snapstate.GMFearMax {
-		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", snapstate.GMFearMin, snapstate.GMFearMax)
+	if state.GMFear < daggerheartstate.GMFearMin || state.GMFear > daggerheartstate.GMFearMax {
+		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", daggerheartstate.GMFearMin, daggerheartstate.GMFearMax)
 	}
 	for _, participantID := range p.Participants {
 		if p.RefreshRest || p.RefreshLongRest {
@@ -205,8 +205,8 @@ func (f *Folder) foldRestTaken(state *snapstate.SnapshotState, p payload.RestTak
 	return nil
 }
 
-func (f *Folder) foldCountdownCreated(state *snapstate.SnapshotState, p payload.CountdownCreatedPayload) error {
-	applyCountdownUpsert(state, p.CountdownID, func(cs *snapstate.CountdownState) {
+func (f *Folder) foldCountdownCreated(state *daggerheartstate.SnapshotState, p payload.CountdownCreatedPayload) error {
+	applyCountdownUpsert(state, p.CountdownID, func(cs *daggerheartstate.CountdownState) {
 		cs.Name = p.Name
 		cs.Kind = p.Kind
 		cs.Current = p.Current
@@ -220,8 +220,8 @@ func (f *Folder) foldCountdownCreated(state *snapstate.SnapshotState, p payload.
 	return nil
 }
 
-func (f *Folder) foldCountdownUpdated(state *snapstate.SnapshotState, p payload.CountdownUpdatedPayload) error {
-	applyCountdownUpsert(state, p.CountdownID, func(cs *snapstate.CountdownState) {
+func (f *Folder) foldCountdownUpdated(state *daggerheartstate.SnapshotState, p payload.CountdownUpdatedPayload) error {
+	applyCountdownUpsert(state, p.CountdownID, func(cs *daggerheartstate.CountdownState) {
 		cs.Current = p.Value
 		if p.Looped {
 			cs.Looping = true
@@ -230,22 +230,22 @@ func (f *Folder) foldCountdownUpdated(state *snapstate.SnapshotState, p payload.
 	return nil
 }
 
-func (f *Folder) foldCountdownDeleted(state *snapstate.SnapshotState, p payload.CountdownDeletedPayload) error {
+func (f *Folder) foldCountdownDeleted(state *daggerheartstate.SnapshotState, p payload.CountdownDeletedPayload) error {
 	deleteCountdownState(state, p.CountdownID)
 	return nil
 }
 
-func (f *Folder) foldDamageApplied(state *snapstate.SnapshotState, p payload.DamageAppliedPayload) error {
+func (f *Folder) foldDamageApplied(state *daggerheartstate.SnapshotState, p payload.DamageAppliedPayload) error {
 	applyDamageApplied(state, p.CharacterID, p.Hp, p.Stress, p.Armor)
 	return nil
 }
 
-func (f *Folder) foldAdversaryDamageApplied(state *snapstate.SnapshotState, p payload.AdversaryDamageAppliedPayload) error {
+func (f *Folder) foldAdversaryDamageApplied(state *daggerheartstate.SnapshotState, p payload.AdversaryDamageAppliedPayload) error {
 	applyAdversaryDamage(state, p.AdversaryID, p.Hp, p.Armor)
 	return nil
 }
 
-func (f *Folder) foldDowntimeMoveApplied(state *snapstate.SnapshotState, p payload.DowntimeMoveAppliedPayload) error {
+func (f *Folder) foldDowntimeMoveApplied(state *daggerheartstate.SnapshotState, p payload.DowntimeMoveAppliedPayload) error {
 	targetID := p.TargetCharacterID
 	if strings.TrimSpace(targetID.String()) == "" {
 		targetID = p.ActorCharacterID
@@ -257,32 +257,32 @@ func (f *Folder) foldDowntimeMoveApplied(state *snapstate.SnapshotState, p paylo
 	return nil
 }
 
-func (f *Folder) foldAdversaryConditionChanged(state *snapstate.SnapshotState, p payload.AdversaryConditionChangedPayload) error {
+func (f *Folder) foldAdversaryConditionChanged(state *daggerheartstate.SnapshotState, p payload.AdversaryConditionChangedPayload) error {
 	applyAdversaryConditionsChanged(state, p.AdversaryID, p.Conditions)
 	return nil
 }
 
-func (f *Folder) foldAdversaryCreated(state *snapstate.SnapshotState, p payload.AdversaryCreatePayload) error {
+func (f *Folder) foldAdversaryCreated(state *daggerheartstate.SnapshotState, p payload.AdversaryCreatePayload) error {
 	applyAdversaryCreated(state, p)
 	return nil
 }
 
-func (f *Folder) foldAdversaryUpdated(state *snapstate.SnapshotState, p payload.AdversaryUpdatePayload) error {
+func (f *Folder) foldAdversaryUpdated(state *daggerheartstate.SnapshotState, p payload.AdversaryUpdatePayload) error {
 	applyAdversaryUpdated(state, p)
 	return nil
 }
 
-func (f *Folder) foldAdversaryDeleted(state *snapstate.SnapshotState, p payload.AdversaryDeletedPayload) error {
+func (f *Folder) foldAdversaryDeleted(state *daggerheartstate.SnapshotState, p payload.AdversaryDeletedPayload) error {
 	delete(state.AdversaryStates, ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String())))
 	return nil
 }
 
-func (f *Folder) foldEnvironmentEntityCreated(state *snapstate.SnapshotState, p payload.EnvironmentEntityCreatedPayload) error {
+func (f *Folder) foldEnvironmentEntityCreated(state *daggerheartstate.SnapshotState, p payload.EnvironmentEntityCreatedPayload) error {
 	environmentEntityID := ids.EnvironmentEntityID(strings.TrimSpace(p.EnvironmentEntityID.String()))
 	if environmentEntityID == "" {
 		return nil
 	}
-	state.EnvironmentStates[environmentEntityID] = snapstate.EnvironmentEntityState{
+	state.EnvironmentStates[environmentEntityID] = daggerheartstate.EnvironmentEntityState{
 		CampaignID:          state.CampaignID,
 		EnvironmentEntityID: environmentEntityID,
 		EnvironmentID:       strings.TrimSpace(p.EnvironmentID),
@@ -297,16 +297,16 @@ func (f *Folder) foldEnvironmentEntityCreated(state *snapstate.SnapshotState, p 
 	return nil
 }
 
-func (f *Folder) foldEnvironmentEntityUpdated(state *snapstate.SnapshotState, p payload.EnvironmentEntityUpdatedPayload) error {
+func (f *Folder) foldEnvironmentEntityUpdated(state *daggerheartstate.SnapshotState, p payload.EnvironmentEntityUpdatedPayload) error {
 	return f.foldEnvironmentEntityCreated(state, payload.EnvironmentEntityCreatedPayload(p))
 }
 
-func (f *Folder) foldEnvironmentEntityDeleted(state *snapstate.SnapshotState, p payload.EnvironmentEntityDeletedPayload) error {
+func (f *Folder) foldEnvironmentEntityDeleted(state *daggerheartstate.SnapshotState, p payload.EnvironmentEntityDeletedPayload) error {
 	delete(state.EnvironmentStates, ids.EnvironmentEntityID(strings.TrimSpace(p.EnvironmentEntityID.String())))
 	return nil
 }
 
-func (f *Folder) foldLevelUpApplied(state *snapstate.SnapshotState, p payload.LevelUpAppliedPayload) error {
+func (f *Folder) foldLevelUpApplied(state *daggerheartstate.SnapshotState, p payload.LevelUpAppliedPayload) error {
 	touchCharacter(state, p.CharacterID)
 	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))]; ok {
 		f.applyLevelUp(&profile, p)
@@ -315,7 +315,7 @@ func (f *Folder) foldLevelUpApplied(state *snapstate.SnapshotState, p payload.Le
 	return nil
 }
 
-func (f *Folder) foldGoldUpdated(state *snapstate.SnapshotState, p payload.GoldUpdatedPayload) error {
+func (f *Folder) foldGoldUpdated(state *daggerheartstate.SnapshotState, p payload.GoldUpdatedPayload) error {
 	touchCharacter(state, p.CharacterID)
 	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))]; ok {
 		profile.GoldHandfuls = p.Handfuls
@@ -326,16 +326,16 @@ func (f *Folder) foldGoldUpdated(state *snapstate.SnapshotState, p payload.GoldU
 	return nil
 }
 
-func (f *Folder) foldDomainCardAcquired(state *snapstate.SnapshotState, p payload.DomainCardAcquiredPayload) error {
+func (f *Folder) foldDomainCardAcquired(state *daggerheartstate.SnapshotState, p payload.DomainCardAcquiredPayload) error {
 	touchCharacter(state, p.CharacterID)
 	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))]; ok {
-		profile.DomainCardIDs = snapstate.AppendUnique(profile.DomainCardIDs, p.CardID)
+		profile.DomainCardIDs = daggerheartstate.AppendUnique(profile.DomainCardIDs, p.CardID)
 		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))] = profile
 	}
 	return nil
 }
 
-func (f *Folder) foldEquipmentSwapped(state *snapstate.SnapshotState, p payload.EquipmentSwappedPayload) error {
+func (f *Folder) foldEquipmentSwapped(state *daggerheartstate.SnapshotState, p payload.EquipmentSwappedPayload) error {
 	touchCharacter(state, p.CharacterID)
 	if strings.TrimSpace(p.ItemType) == "armor" {
 		characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
@@ -394,17 +394,17 @@ func (f *Folder) foldEquipmentSwapped(state *snapstate.SnapshotState, p payload.
 	return nil
 }
 
-func (f *Folder) foldConsumableUsed(state *snapstate.SnapshotState, p payload.ConsumableUsedPayload) error {
+func (f *Folder) foldConsumableUsed(state *daggerheartstate.SnapshotState, p payload.ConsumableUsedPayload) error {
 	touchCharacter(state, p.CharacterID)
 	return nil
 }
 
-func (f *Folder) foldConsumableAcquired(state *snapstate.SnapshotState, p payload.ConsumableAcquiredPayload) error {
+func (f *Folder) foldConsumableAcquired(state *daggerheartstate.SnapshotState, p payload.ConsumableAcquiredPayload) error {
 	touchCharacter(state, p.CharacterID)
 	return nil
 }
 
-func (f *Folder) foldStatModifierChanged(state *snapstate.SnapshotState, p payload.StatModifierChangedPayload) error {
+func (f *Folder) foldStatModifierChanged(state *daggerheartstate.SnapshotState, p payload.StatModifierChangedPayload) error {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return nil
@@ -415,7 +415,7 @@ func (f *Folder) foldStatModifierChanged(state *snapstate.SnapshotState, p paylo
 
 // --- helpers ---
 
-func touchCharacter(state *snapstate.SnapshotState, rawID ids.CharacterID) {
+func touchCharacter(state *daggerheartstate.SnapshotState, rawID ids.CharacterID) {
 	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
 	if characterID == "" {
 		return
@@ -426,11 +426,11 @@ func touchCharacter(state *snapstate.SnapshotState, rawID ids.CharacterID) {
 	state.CharacterStates[characterID] = cs
 }
 
-func applyCharacterStatePatched(state *snapstate.SnapshotState, p payload.CharacterStatePatchedPayload) {
+func applyCharacterStatePatched(state *daggerheartstate.SnapshotState, p payload.CharacterStatePatchedPayload) {
 	applyStatePatch(state, p.CharacterID, p.HP, p.Hope, p.HopeMax, p.Stress, p.Armor, p.LifeState, p.ClassState, p.SubclassState, nil)
 }
 
-func applyStatePatch(state *snapstate.SnapshotState, characterID ids.CharacterID, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *snapstate.CharacterClassState, subclassStateAfter *snapstate.CharacterSubclassState, companionStateAfter *snapstate.CharacterCompanionState) {
+func applyStatePatch(state *daggerheartstate.SnapshotState, characterID ids.CharacterID, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *daggerheartstate.CharacterClassState, subclassStateAfter *daggerheartstate.CharacterSubclassState, companionStateAfter *daggerheartstate.CharacterCompanionState) {
 	characterID = ids.CharacterID(strings.TrimSpace(characterID.String()))
 	if characterID == "" {
 		return
@@ -468,7 +468,7 @@ func applyStatePatch(state *snapstate.SnapshotState, characterID ids.CharacterID
 	}
 }
 
-func applyCharacterConditionsChanged(state *snapstate.SnapshotState, p payload.ConditionChangedPayload) {
+func applyCharacterConditionsChanged(state *daggerheartstate.SnapshotState, p payload.ConditionChangedPayload) {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return
@@ -480,7 +480,7 @@ func applyCharacterConditionsChanged(state *snapstate.SnapshotState, p payload.C
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyCharacterLoadoutSwapped(state *snapstate.SnapshotState, p payload.LoadoutSwappedPayload) {
+func applyCharacterLoadoutSwapped(state *daggerheartstate.SnapshotState, p payload.LoadoutSwappedPayload) {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return
@@ -492,7 +492,7 @@ func applyCharacterLoadoutSwapped(state *snapstate.SnapshotState, p payload.Load
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyCharacterTemporaryArmorApplied(state *snapstate.SnapshotState, p payload.CharacterTemporaryArmorAppliedPayload) {
+func applyCharacterTemporaryArmorApplied(state *daggerheartstate.SnapshotState, p payload.CharacterTemporaryArmorAppliedPayload) {
 	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 	if characterID == "" {
 		return
@@ -509,7 +509,7 @@ func applyCharacterTemporaryArmorApplied(state *snapstate.SnapshotState, p paylo
 	state.CharacterStates[characterID] = characterState
 }
 
-func clearRestTemporaryArmor(state *snapstate.SnapshotState, rawID string, clearShortRest bool, clearLongRest bool) {
+func clearRestTemporaryArmor(state *daggerheartstate.SnapshotState, rawID string, clearShortRest bool, clearLongRest bool) {
 	characterID := ids.CharacterID(strings.TrimSpace(rawID))
 	if characterID == "" {
 		return
@@ -521,7 +521,7 @@ func clearRestTemporaryArmor(state *snapstate.SnapshotState, rawID string, clear
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyCountdownUpsert(state *snapstate.SnapshotState, countdownID ids.CountdownID, mutate func(*snapstate.CountdownState)) {
+func applyCountdownUpsert(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID, mutate func(*daggerheartstate.CountdownState)) {
 	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
 	if trimmed == "" {
 		return
@@ -535,7 +535,7 @@ func applyCountdownUpsert(state *snapstate.SnapshotState, countdownID ids.Countd
 	state.CountdownStates[trimmed] = countdownState
 }
 
-func deleteCountdownState(state *snapstate.SnapshotState, countdownID ids.CountdownID) {
+func deleteCountdownState(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID) {
 	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
 	if trimmed == "" {
 		return
@@ -543,7 +543,7 @@ func deleteCountdownState(state *snapstate.SnapshotState, countdownID ids.Countd
 	delete(state.CountdownStates, trimmed)
 }
 
-func applyDamageApplied(state *snapstate.SnapshotState, rawID ids.CharacterID, hpAfter, stressAfter, armorAfter *int) {
+func applyDamageApplied(state *daggerheartstate.SnapshotState, rawID ids.CharacterID, hpAfter, stressAfter, armorAfter *int) {
 	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
 	if characterID == "" {
 		return
@@ -558,7 +558,7 @@ func applyDamageApplied(state *snapstate.SnapshotState, rawID ids.CharacterID, h
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyAdversaryDamage(state *snapstate.SnapshotState, rawID ids.AdversaryID, hpAfter, armorAfter *int) {
+func applyAdversaryDamage(state *daggerheartstate.SnapshotState, rawID ids.AdversaryID, hpAfter, armorAfter *int) {
 	adversaryID := ids.AdversaryID(strings.TrimSpace(rawID.String()))
 	if adversaryID == "" {
 		return
@@ -575,7 +575,7 @@ func applyAdversaryDamage(state *snapstate.SnapshotState, rawID ids.AdversaryID,
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
-func applyAdversaryCreated(state *snapstate.SnapshotState, p payload.AdversaryCreatePayload) {
+func applyAdversaryCreated(state *daggerheartstate.SnapshotState, p payload.AdversaryCreatePayload) {
 	adversaryID := ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
 	if adversaryID == "" {
 		return
@@ -604,7 +604,7 @@ func applyAdversaryCreated(state *snapstate.SnapshotState, p payload.AdversaryCr
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
-func applyAdversaryUpdated(state *snapstate.SnapshotState, p payload.AdversaryUpdatePayload) {
+func applyAdversaryUpdated(state *daggerheartstate.SnapshotState, p payload.AdversaryUpdatePayload) {
 	adversaryID := ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
 	if adversaryID == "" {
 		return
@@ -633,7 +633,7 @@ func applyAdversaryUpdated(state *snapstate.SnapshotState, p payload.AdversaryUp
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
-func clearRestStatModifiers(state *snapstate.SnapshotState, rawID ids.CharacterID, clearShortRest, clearLongRest bool) {
+func clearRestStatModifiers(state *daggerheartstate.SnapshotState, rawID ids.CharacterID, clearShortRest, clearLongRest bool) {
 	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
 	if characterID == "" {
 		return
@@ -651,7 +651,7 @@ func clearRestStatModifiers(state *snapstate.SnapshotState, rawID ids.CharacterI
 	state.CharacterStatModifiers[characterID] = modifiers
 }
 
-func applyAdversaryConditionsChanged(state *snapstate.SnapshotState, rawID ids.AdversaryID, after []rules.ConditionState) {
+func applyAdversaryConditionsChanged(state *daggerheartstate.SnapshotState, rawID ids.AdversaryID, after []rules.ConditionState) {
 	adversaryID := ids.AdversaryID(strings.TrimSpace(rawID.String()))
 	if adversaryID == "" {
 		return

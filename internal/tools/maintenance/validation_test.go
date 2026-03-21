@@ -8,6 +8,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func testEventRegistry(t *testing.T) *event.Registry {
@@ -42,7 +44,7 @@ func TestIsSnapshotEvent(t *testing.T) {
 
 func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 	registry := testEventRegistry(t)
-	makeEvent := func(payload daggerheart.CharacterStatePatchedPayload) event.Event {
+	makeEvent := func(payload daggerheartpayload.CharacterStatePatchedPayload) event.Event {
 		data, _ := json.Marshal(payload)
 		return event.Event{
 			CampaignID:    "camp-1",
@@ -58,7 +60,7 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		hpAfter := 4
-		evt := makeEvent(daggerheart.CharacterStatePatchedPayload{
+		evt := makeEvent(daggerheartpayload.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
 			HP:          &hpAfter,
 		})
@@ -68,7 +70,7 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 	})
 
 	t.Run("missing character id", func(t *testing.T) {
-		evt := makeEvent(daggerheart.CharacterStatePatchedPayload{})
+		evt := makeEvent(daggerheartpayload.CharacterStatePatchedPayload{})
 		if err := validateSnapshotEvent(registry, evt); err == nil {
 			t.Error("expected error for missing character id")
 		}
@@ -93,7 +95,7 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 
 func TestValidateSnapshotEvent_GMFearChanged(t *testing.T) {
 	registry := testEventRegistry(t)
-	makeEvent := func(payload daggerheart.GMFearChangedPayload) event.Event {
+	makeEvent := func(payload daggerheartpayload.GMFearChangedPayload) event.Event {
 		data, _ := json.Marshal(payload)
 		return event.Event{
 			CampaignID:    "camp-1",
@@ -108,14 +110,14 @@ func TestValidateSnapshotEvent_GMFearChanged(t *testing.T) {
 	}
 
 	t.Run("valid", func(t *testing.T) {
-		evt := makeEvent(daggerheart.GMFearChangedPayload{Value: 3})
+		evt := makeEvent(daggerheartpayload.GMFearChangedPayload{Value: 3})
 		if err := validateSnapshotEvent(registry, evt); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
 
 	t.Run("out of range", func(t *testing.T) {
-		evt := makeEvent(daggerheart.GMFearChangedPayload{Value: daggerheart.GMFearMax + 1})
+		evt := makeEvent(daggerheartpayload.GMFearChangedPayload{Value: daggerheartstate.GMFearMax + 1})
 		if err := validateSnapshotEvent(registry, evt); err == nil {
 			t.Error("expected error for out of range fear")
 		}

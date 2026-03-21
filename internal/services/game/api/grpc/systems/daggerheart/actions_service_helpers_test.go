@@ -13,8 +13,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/metadata"
 )
@@ -77,10 +78,10 @@ func newActionTestService() *DaggerheartService {
 		CharacterID: "char-1",
 		Hp:          6,
 		Hope:        2,
-		HopeMax:     daggerheart.HopeMax,
+		HopeMax:     mechanics.HopeMax,
 		Stress:      3,
 		Armor:       0,
-		LifeState:   daggerheart.LifeStateAlive,
+		LifeState:   daggerheartstate.LifeStateAlive,
 	}
 	dhStore.Profiles["camp-1:char-2"] = projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "camp-1",
@@ -94,10 +95,10 @@ func newActionTestService() *DaggerheartService {
 		CharacterID: "char-2",
 		Hp:          8,
 		Hope:        3,
-		HopeMax:     daggerheart.HopeMax,
+		HopeMax:     mechanics.HopeMax,
 		Stress:      1,
 		Armor:       0,
-		LifeState:   daggerheart.LifeStateAlive,
+		LifeState:   daggerheartstate.LifeStateAlive,
 	}
 
 	sessStore := newFakeSessionStore()

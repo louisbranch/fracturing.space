@@ -3,19 +3,21 @@ package daggerheart
 import (
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 )
 
 func TestCharacterHeritageValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		input   CharacterHeritage
+		input   daggerheartstate.CharacterHeritage
 		wantErr bool
 	}{
-		{name: "empty heritage allowed", input: CharacterHeritage{}},
+		{name: "empty heritage allowed", input: daggerheartstate.CharacterHeritage{}},
 		{
 			name: "single ancestry valid",
-			input: CharacterHeritage{
+			input: daggerheartstate.CharacterHeritage{
 				FirstFeatureAncestryID:  "heritage.human",
 				FirstFeatureID:          "feature.human-high-stamina",
 				SecondFeatureAncestryID: "heritage.human",
@@ -25,7 +27,7 @@ func TestCharacterHeritageValidate(t *testing.T) {
 		},
 		{
 			name: "missing first feature rejected",
-			input: CharacterHeritage{
+			input: daggerheartstate.CharacterHeritage{
 				SecondFeatureAncestryID: "heritage.human",
 				SecondFeatureID:         "feature.human-adaptable",
 				CommunityID:             "heritage.highborne",
@@ -34,7 +36,7 @@ func TestCharacterHeritageValidate(t *testing.T) {
 		},
 		{
 			name: "missing second feature rejected",
-			input: CharacterHeritage{
+			input: daggerheartstate.CharacterHeritage{
 				FirstFeatureAncestryID: "heritage.human",
 				FirstFeatureID:         "feature.human-high-stamina",
 				CommunityID:            "heritage.highborne",
@@ -43,7 +45,7 @@ func TestCharacterHeritageValidate(t *testing.T) {
 		},
 		{
 			name: "missing community rejected",
-			input: CharacterHeritage{
+			input: daggerheartstate.CharacterHeritage{
 				FirstFeatureAncestryID:  "heritage.human",
 				FirstFeatureID:          "feature.human-high-stamina",
 				SecondFeatureAncestryID: "heritage.human",
@@ -53,7 +55,7 @@ func TestCharacterHeritageValidate(t *testing.T) {
 		},
 		{
 			name: "mixed ancestry valid without label",
-			input: CharacterHeritage{
+			input: daggerheartstate.CharacterHeritage{
 				FirstFeatureAncestryID:  "heritage.faerie",
 				FirstFeatureID:          "feature.faerie-luckbender",
 				SecondFeatureAncestryID: "heritage.human",
@@ -63,7 +65,7 @@ func TestCharacterHeritageValidate(t *testing.T) {
 		},
 		{
 			name: "single ancestry rejects ancestry label",
-			input: CharacterHeritage{
+			input: daggerheartstate.CharacterHeritage{
 				AncestryLabel:           "Human Variant",
 				FirstFeatureAncestryID:  "heritage.human",
 				FirstFeatureID:          "feature.human-high-stamina",
@@ -88,15 +90,15 @@ func TestCharacterHeritageValidate(t *testing.T) {
 func TestCharacterProfileNormalized_NormalizesCompanionDefaults(t *testing.T) {
 	profile := validCharacterProfile()
 	profile.Level = 0
-	profile.CompanionSheet = &CharacterCompanionSheet{
+	profile.CompanionSheet = &daggerheartstate.CharacterCompanionSheet{
 		AnimalKind: "wolf",
 		Name:       "Ash",
-		Experiences: []CharacterCompanionExperience{
+		Experiences: []daggerheartstate.CharacterCompanionExperience{
 			{ExperienceID: " companion-experience.tracking  ", Modifier: 9},
 			{ExperienceID: "companion-experience.guarding", Modifier: -3},
 		},
 		AttackDescription: "Savage bite",
-		DamageType:        CompanionDamageTypePhysical,
+		DamageType:        daggerheartstate.CompanionDamageTypePhysical,
 	}
 
 	normalized := profile.Normalized()
@@ -106,20 +108,20 @@ func TestCharacterProfileNormalized_NormalizesCompanionDefaults(t *testing.T) {
 	if normalized.CompanionSheet == nil {
 		t.Fatal("normalized companion sheet = nil")
 	}
-	if normalized.CompanionSheet.Evasion != CompanionSheetDefaultEvasion {
-		t.Fatalf("normalized companion evasion = %d, want %d", normalized.CompanionSheet.Evasion, CompanionSheetDefaultEvasion)
+	if normalized.CompanionSheet.Evasion != daggerheartstate.CompanionSheetDefaultEvasion {
+		t.Fatalf("normalized companion evasion = %d, want %d", normalized.CompanionSheet.Evasion, daggerheartstate.CompanionSheetDefaultEvasion)
 	}
-	if normalized.CompanionSheet.AttackRange != CompanionSheetDefaultAttackRange {
-		t.Fatalf("normalized companion range = %q, want %q", normalized.CompanionSheet.AttackRange, CompanionSheetDefaultAttackRange)
+	if normalized.CompanionSheet.AttackRange != daggerheartstate.CompanionSheetDefaultAttackRange {
+		t.Fatalf("normalized companion range = %q, want %q", normalized.CompanionSheet.AttackRange, daggerheartstate.CompanionSheetDefaultAttackRange)
 	}
-	if normalized.CompanionSheet.DamageDieSides != CompanionSheetDefaultDamageDieSides {
-		t.Fatalf("normalized companion damage die = %d, want %d", normalized.CompanionSheet.DamageDieSides, CompanionSheetDefaultDamageDieSides)
+	if normalized.CompanionSheet.DamageDieSides != daggerheartstate.CompanionSheetDefaultDamageDieSides {
+		t.Fatalf("normalized companion damage die = %d, want %d", normalized.CompanionSheet.DamageDieSides, daggerheartstate.CompanionSheetDefaultDamageDieSides)
 	}
 	if normalized.CompanionSheet.Experiences[0].ExperienceID != "companion-experience.tracking" {
 		t.Fatalf("normalized first companion experience = %q, want %q", normalized.CompanionSheet.Experiences[0].ExperienceID, "companion-experience.tracking")
 	}
-	if normalized.CompanionSheet.Experiences[0].Modifier != CompanionSheetExperienceModifier {
-		t.Fatalf("normalized first companion experience modifier = %d, want %d", normalized.CompanionSheet.Experiences[0].Modifier, CompanionSheetExperienceModifier)
+	if normalized.CompanionSheet.Experiences[0].Modifier != daggerheartstate.CompanionSheetExperienceModifier {
+		t.Fatalf("normalized first companion experience modifier = %d, want %d", normalized.CompanionSheet.Experiences[0].Modifier, daggerheartstate.CompanionSheetExperienceModifier)
 	}
 	if err := normalized.CompanionSheet.Validate(); err != nil {
 		t.Fatalf("normalized companion validate: %v", err)
@@ -127,81 +129,81 @@ func TestCharacterProfileNormalized_NormalizesCompanionDefaults(t *testing.T) {
 }
 
 func TestCharacterCompanionSheetValidate_RejectedShapes(t *testing.T) {
-	base := CharacterCompanionSheet{
+	base := daggerheartstate.CharacterCompanionSheet{
 		AnimalKind: "wolf",
 		Name:       "Ash",
-		Experiences: []CharacterCompanionExperience{
-			{ExperienceID: "companion-experience.tracking", Modifier: CompanionSheetExperienceModifier},
-			{ExperienceID: "companion-experience.guarding", Modifier: CompanionSheetExperienceModifier},
+		Experiences: []daggerheartstate.CharacterCompanionExperience{
+			{ExperienceID: "companion-experience.tracking", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
+			{ExperienceID: "companion-experience.guarding", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
 		},
 		AttackDescription: "Savage bite",
-		Evasion:           CompanionSheetDefaultEvasion,
-		AttackRange:       CompanionSheetDefaultAttackRange,
-		DamageDieSides:    CompanionSheetDefaultDamageDieSides,
-		DamageType:        CompanionDamageTypePhysical,
+		Evasion:           daggerheartstate.CompanionSheetDefaultEvasion,
+		AttackRange:       daggerheartstate.CompanionSheetDefaultAttackRange,
+		DamageDieSides:    daggerheartstate.CompanionSheetDefaultDamageDieSides,
+		DamageType:        daggerheartstate.CompanionDamageTypePhysical,
 	}
 
 	tests := []struct {
 		name   string
-		mutate func(*CharacterCompanionSheet)
+		mutate func(*daggerheartstate.CharacterCompanionSheet)
 	}{
 		{
 			name: "missing animal kind",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.AnimalKind = ""
 			},
 		},
 		{
 			name: "missing name",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.Name = ""
 			},
 		},
 		{
 			name: "wrong experience count",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.Experiences = sheet.Experiences[:1]
 			},
 		},
 		{
 			name: "blank experience id",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.Experiences[0].ExperienceID = ""
 			},
 		},
 		{
 			name: "wrong experience modifier",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.Experiences[0].Modifier = 1
 			},
 		},
 		{
 			name: "missing attack description",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.AttackDescription = ""
 			},
 		},
 		{
 			name: "wrong evasion",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.Evasion = 9
 			},
 		},
 		{
 			name: "wrong attack range",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.AttackRange = "far"
 			},
 		},
 		{
 			name: "wrong damage die",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.DamageDieSides = 8
 			},
 		},
 		{
 			name: "wrong damage type",
-			mutate: func(sheet *CharacterCompanionSheet) {
+			mutate: func(sheet *daggerheartstate.CharacterCompanionSheet) {
 				sheet.DamageType = "void"
 			},
 		},
@@ -210,7 +212,7 @@ func TestCharacterCompanionSheetValidate_RejectedShapes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sheet := base
-			sheet.Experiences = append([]CharacterCompanionExperience(nil), base.Experiences...)
+			sheet.Experiences = append([]daggerheartstate.CharacterCompanionExperience(nil), base.Experiences...)
 			tt.mutate(&sheet)
 			if err := sheet.Validate(); err == nil {
 				t.Fatal("expected validation error")
@@ -218,7 +220,7 @@ func TestCharacterCompanionSheetValidate_RejectedShapes(t *testing.T) {
 		})
 	}
 
-	base.DamageType = CompanionDamageTypeMagic
+	base.DamageType = daggerheartstate.CompanionDamageTypeMagic
 	if err := base.Validate(); err != nil {
 		t.Fatalf("magic companion Validate() error = %v, want nil", err)
 	}
@@ -235,7 +237,7 @@ func TestCharacterProfileValidate_CompanionRequirements(t *testing.T) {
 
 	t.Run("missing required companion rejected", func(t *testing.T) {
 		profile := validCharacterProfile()
-		profile.SubclassCreationRequirements = []string{SubclassCreationRequirementCompanionSheet}
+		profile.SubclassCreationRequirements = []string{daggerheartstate.SubclassCreationRequirementCompanionSheet}
 		profile.CompanionSheet = nil
 		if err := profile.Validate(); err == nil {
 			t.Fatal("expected missing companion error")
@@ -244,11 +246,11 @@ func TestCharacterProfileValidate_CompanionRequirements(t *testing.T) {
 
 	t.Run("invalid companion rejected", func(t *testing.T) {
 		profile := validCharacterProfile()
-		profile.SubclassCreationRequirements = []string{SubclassCreationRequirementCompanionSheet}
-		profile.CompanionSheet = &CharacterCompanionSheet{
+		profile.SubclassCreationRequirements = []string{daggerheartstate.SubclassCreationRequirementCompanionSheet}
+		profile.CompanionSheet = &daggerheartstate.CharacterCompanionSheet{
 			AnimalKind:        "wolf",
 			Name:              "Ash",
-			Experiences:       []CharacterCompanionExperience{{ExperienceID: "companion-experience.tracking", Modifier: 2}},
+			Experiences:       []daggerheartstate.CharacterCompanionExperience{{ExperienceID: "companion-experience.tracking", Modifier: 2}},
 			AttackDescription: "Savage bite",
 			DamageType:        "void",
 		}
@@ -259,19 +261,19 @@ func TestCharacterProfileValidate_CompanionRequirements(t *testing.T) {
 
 	t.Run("valid companion accepted", func(t *testing.T) {
 		profile := validCharacterProfile()
-		profile.SubclassCreationRequirements = []string{SubclassCreationRequirementCompanionSheet}
-		profile.CompanionSheet = &CharacterCompanionSheet{
+		profile.SubclassCreationRequirements = []string{daggerheartstate.SubclassCreationRequirementCompanionSheet}
+		profile.CompanionSheet = &daggerheartstate.CharacterCompanionSheet{
 			AnimalKind: "wolf",
 			Name:       "Ash",
-			Experiences: []CharacterCompanionExperience{
-				{ExperienceID: "companion-experience.tracking", Modifier: CompanionSheetExperienceModifier},
-				{ExperienceID: "companion-experience.guarding", Modifier: CompanionSheetExperienceModifier},
+			Experiences: []daggerheartstate.CharacterCompanionExperience{
+				{ExperienceID: "companion-experience.tracking", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
+				{ExperienceID: "companion-experience.guarding", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
 			},
 			AttackDescription: "Savage bite",
-			Evasion:           CompanionSheetDefaultEvasion,
-			AttackRange:       CompanionSheetDefaultAttackRange,
-			DamageDieSides:    CompanionSheetDefaultDamageDieSides,
-			DamageType:        CompanionDamageTypePhysical,
+			Evasion:           daggerheartstate.CompanionSheetDefaultEvasion,
+			AttackRange:       daggerheartstate.CompanionSheetDefaultAttackRange,
+			DamageDieSides:    daggerheartstate.CompanionSheetDefaultDamageDieSides,
+			DamageType:        daggerheartstate.CompanionDamageTypePhysical,
 		}
 		if err := profile.Validate(); err != nil {
 			t.Fatalf("Validate() error = %v, want nil", err)
@@ -281,19 +283,19 @@ func TestCharacterProfileValidate_CompanionRequirements(t *testing.T) {
 
 func TestCharacterProfileStorageAndCreationProfile_PreserveStructuredFields(t *testing.T) {
 	profile := validCharacterProfile()
-	profile.SubclassCreationRequirements = []string{SubclassCreationRequirementCompanionSheet}
-	profile.CompanionSheet = &CharacterCompanionSheet{
+	profile.SubclassCreationRequirements = []string{daggerheartstate.SubclassCreationRequirementCompanionSheet}
+	profile.CompanionSheet = &daggerheartstate.CharacterCompanionSheet{
 		AnimalKind: "wolf",
 		Name:       "Ash",
-		Experiences: []CharacterCompanionExperience{
-			{ExperienceID: "companion-experience.tracking", Modifier: CompanionSheetExperienceModifier},
-			{ExperienceID: "companion-experience.guarding", Modifier: CompanionSheetExperienceModifier},
+		Experiences: []daggerheartstate.CharacterCompanionExperience{
+			{ExperienceID: "companion-experience.tracking", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
+			{ExperienceID: "companion-experience.guarding", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
 		},
 		AttackDescription: "Savage bite",
-		Evasion:           CompanionSheetDefaultEvasion,
-		AttackRange:       CompanionSheetDefaultAttackRange,
-		DamageDieSides:    CompanionSheetDefaultDamageDieSides,
-		DamageType:        CompanionDamageTypeMagic,
+		Evasion:           daggerheartstate.CompanionSheetDefaultEvasion,
+		AttackRange:       daggerheartstate.CompanionSheetDefaultAttackRange,
+		DamageDieSides:    daggerheartstate.CompanionSheetDefaultDamageDieSides,
+		DamageType:        daggerheartstate.CompanionDamageTypeMagic,
 	}
 
 	storageProfile := profile.ToStorage(" camp-1 ", " char-1 ")
@@ -303,12 +305,12 @@ func TestCharacterProfileStorageAndCreationProfile_PreserveStructuredFields(t *t
 	if len(storageProfile.SubclassCreationRequirements) != 1 {
 		t.Fatalf("storage subclass requirements = %v, want one requirement", storageProfile.SubclassCreationRequirements)
 	}
-	if storageProfile.CompanionSheet == nil || storageProfile.CompanionSheet.DamageType != CompanionDamageTypeMagic {
+	if storageProfile.CompanionSheet == nil || storageProfile.CompanionSheet.DamageType != daggerheartstate.CompanionDamageTypeMagic {
 		t.Fatalf("storage companion = %+v, want magic companion", storageProfile.CompanionSheet)
 	}
 
-	roundTrip := CharacterProfileFromStorage(storageProfile)
-	if len(roundTrip.SubclassCreationRequirements) != 1 || roundTrip.SubclassCreationRequirements[0] != SubclassCreationRequirementCompanionSheet {
+	roundTrip := daggerheartstate.CharacterProfileFromStorage(storageProfile)
+	if len(roundTrip.SubclassCreationRequirements) != 1 || roundTrip.SubclassCreationRequirements[0] != daggerheartstate.SubclassCreationRequirementCompanionSheet {
 		t.Fatalf("round-trip subclass requirements = %v", roundTrip.SubclassCreationRequirements)
 	}
 	if roundTrip.CompanionSheet == nil || roundTrip.CompanionSheet.Name != "Ash" {
@@ -319,14 +321,14 @@ func TestCharacterProfileStorageAndCreationProfile_PreserveStructuredFields(t *t
 	if len(creation.SubclassCreationRequirements) != 1 {
 		t.Fatalf("creation subclass requirements = %v, want one requirement", creation.SubclassCreationRequirements)
 	}
-	if creation.CompanionSheet == nil || creation.CompanionSheet.Evasion != CompanionSheetDefaultEvasion {
+	if creation.CompanionSheet == nil || creation.CompanionSheet.Evasion != daggerheartstate.CompanionSheetDefaultEvasion {
 		t.Fatalf("creation companion = %+v, want normalized companion", creation.CompanionSheet)
 	}
 }
 
 func TestEvaluateCreationReadiness_RequiresCompanionForSubclass(t *testing.T) {
 	profile := validCharacterProfile()
-	profile.SubclassCreationRequirements = []string{SubclassCreationRequirementCompanionSheet}
+	profile.SubclassCreationRequirements = []string{daggerheartstate.SubclassCreationRequirementCompanionSheet}
 	profile.CompanionSheet = nil
 
 	ready, reason := EvaluateCreationReadiness(profile)
@@ -337,18 +339,18 @@ func TestEvaluateCreationReadiness_RequiresCompanionForSubclass(t *testing.T) {
 		t.Fatalf("reason = %q, want %q", reason, "class and subclass selection is required")
 	}
 
-	profile.CompanionSheet = &CharacterCompanionSheet{
+	profile.CompanionSheet = &daggerheartstate.CharacterCompanionSheet{
 		AnimalKind: "wolf",
 		Name:       "Ash",
-		Experiences: []CharacterCompanionExperience{
-			{ExperienceID: "companion-experience.tracking", Modifier: CompanionSheetExperienceModifier},
-			{ExperienceID: "companion-experience.guarding", Modifier: CompanionSheetExperienceModifier},
+		Experiences: []daggerheartstate.CharacterCompanionExperience{
+			{ExperienceID: "companion-experience.tracking", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
+			{ExperienceID: "companion-experience.guarding", Modifier: daggerheartstate.CompanionSheetExperienceModifier},
 		},
 		AttackDescription: "Savage bite",
-		Evasion:           CompanionSheetDefaultEvasion,
-		AttackRange:       CompanionSheetDefaultAttackRange,
-		DamageDieSides:    CompanionSheetDefaultDamageDieSides,
-		DamageType:        CompanionDamageTypePhysical,
+		Evasion:           daggerheartstate.CompanionSheetDefaultEvasion,
+		AttackRange:       daggerheartstate.CompanionSheetDefaultAttackRange,
+		DamageDieSides:    daggerheartstate.CompanionSheetDefaultDamageDieSides,
+		DamageType:        daggerheartstate.CompanionDamageTypePhysical,
 	}
 
 	ready, reason = EvaluateCreationReadiness(profile)
@@ -357,8 +359,8 @@ func TestEvaluateCreationReadiness_RequiresCompanionForSubclass(t *testing.T) {
 	}
 }
 
-func validCharacterProfile() CharacterProfile {
-	return CharacterProfile{
+func validCharacterProfile() daggerheartstate.CharacterProfile {
+	return daggerheartstate.CharacterProfile{
 		Level:           1,
 		HpMax:           6,
 		StressMax:       6,
@@ -374,13 +376,13 @@ func validCharacterProfile() CharacterProfile {
 		Instinct:        0,
 		Presence:        0,
 		Knowledge:       -1,
-		Experiences: []CharacterProfileExperience{
+		Experiences: []daggerheartstate.CharacterProfileExperience{
 			{Name: "Tactics", Modifier: 2},
 			{Name: "Patrol Routes", Modifier: 2},
 		},
 		ClassID:    "class.guardian",
 		SubclassID: "subclass.stalwart",
-		Heritage: CharacterHeritage{
+		Heritage: daggerheartstate.CharacterHeritage{
 			FirstFeatureAncestryID:  "heritage.human",
 			FirstFeatureID:          "feature.human-high-stamina",
 			SecondFeatureAncestryID: "heritage.human",

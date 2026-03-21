@@ -97,7 +97,7 @@ func newInviteApplicationWithDependencies(
 
 // defaultApplier builds a minimal projection.Applier from Deps fields so
 // callers that do not supply a pre-built Applier get reasonable defaults.
-// This mirrors the behavior of the former Stores.Applier() construction.
+// This mirrors the former root package applier construction.
 func defaultApplier(deps Deps) projection.Applier {
 	return projection.Applier{
 		Campaign:    deps.Campaign,

@@ -20,7 +20,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
 )
 
 type fakeOutboxInspector struct {
@@ -332,11 +332,11 @@ func TestRunOutboxReportModeNoCampaignIDs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build keyring: %v", err)
 	}
-	eventStore, err := storagesqlite.OpenEvents(
+	eventStore, err := sqliteeventjournal.Open(
 		eventsPath,
 		keyring,
 		testEventRegistry(t),
-		storagesqlite.WithProjectionApplyOutboxEnabled(true),
+		sqliteeventjournal.WithProjectionApplyOutboxEnabled(true),
 	)
 	if err != nil {
 		t.Fatalf("open events store: %v", err)
@@ -446,11 +446,11 @@ func TestRunOutboxRequeueModeRequeuesDeadRow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build keyring: %v", err)
 	}
-	eventStore, err := storagesqlite.OpenEvents(
+	eventStore, err := sqliteeventjournal.Open(
 		eventsPath,
 		keyring,
 		testEventRegistry(t),
-		storagesqlite.WithProjectionApplyOutboxEnabled(true),
+		sqliteeventjournal.WithProjectionApplyOutboxEnabled(true),
 	)
 	if err != nil {
 		t.Fatalf("open events store: %v", err)
@@ -516,11 +516,11 @@ func TestRunOutboxRequeueDeadModeRequeuesRows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build keyring: %v", err)
 	}
-	eventStore, err := storagesqlite.OpenEvents(
+	eventStore, err := sqliteeventjournal.Open(
 		eventsPath,
 		keyring,
 		testEventRegistry(t),
-		storagesqlite.WithProjectionApplyOutboxEnabled(true),
+		sqliteeventjournal.WithProjectionApplyOutboxEnabled(true),
 	)
 	if err != nil {
 		t.Fatalf("open events store: %v", err)

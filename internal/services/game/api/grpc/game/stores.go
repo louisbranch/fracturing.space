@@ -5,9 +5,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -15,13 +14,15 @@ import (
 // game transport. This package keeps its explicit Daggerheart dependency
 // because snapshot and profile reads are part of the product surface, not the
 // manifest extension platform.
-type SystemStores struct {
-	Daggerheart projectionstore.Store
-}
+type SystemStores = systemmanifest.ProjectionStores
 
-// Stores groups all campaign-related storage interfaces for service injection.
-type Stores struct {
-	// Core projection stores — used by the projection applier for core events.
+// WritePath exposes the root transport write-path contract without forcing
+// startup callers to import the grpc/internal package directly.
+type WritePath = domainwriteexec.WritePath
+
+// ProjectionStores groups the core projection-backed read models used by the
+// root game transport and projection applier.
+type ProjectionStores struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	ClaimIndex         storage.ClaimIndexStore
@@ -37,33 +38,28 @@ type Stores struct {
 	SceneSpotlight     storage.SceneSpotlightStore
 	SceneInteraction   storage.SceneInteractionStore
 	CampaignFork       storage.CampaignForkStore
+}
 
-	// SystemStores groups system-specific projection stores used by the core
-	// game transport and projection applier.
-	SystemStores SystemStores
-
-	// Infrastructure stores — event journal, snapshots, audit.
+// InfrastructureStores groups non-projection stores used by root transport
+// infrastructure and projection application.
+type InfrastructureStores struct {
 	Event      storage.EventStore
 	Watermarks storage.ProjectionWatermarkStore
 	Audit      storage.AuditEventStore
 	Statistics storage.StatisticsStore
 	Snapshot   storage.SnapshotStore
+}
 
-	// System content stores — read-only content used by gRPC handlers.
+// ContentStores groups read-only content and external service clients consumed
+// by the root game transport.
+type ContentStores struct {
 	DaggerheartContent contentstore.DaggerheartContentReadStore
 	Social             socialv1.SocialServiceClient
+}
 
-	// Write groups the domain executor, runtime controls, and audit store
-	// used by the write path. It satisfies domainwriteexec.Deps so handlers
-	// can pass it directly to handler.ExecuteAndApplyDomainCommand.
+// RuntimeStores groups runtime-owned collaborators used by the write path.
+type RuntimeStores struct {
 	Write domainwriteexec.WritePath
-
-	// Events is the event registry used for intent filtering and applier
-	// construction at request time.
-	Events *event.Registry
-
-	// adapters is built eagerly during Validate and cached for Applier.
-	adapters adapterRegistry
 }
 
 // ProjectionStoreBundle is the projection dependency contract for game gRPC
@@ -81,17 +77,32 @@ type ProjectionStoreBundle interface {
 	storage.SceneInteractionStore
 }
 
-// StoresFromProjectionConfig configures NewStoresFromProjection.
-type StoresFromProjectionConfig struct {
+// StoresProjectionConfig groups the projection-backed contracts used to build
+// the root game transport projection concern.
+type StoresProjectionConfig struct {
 	ProjectionStore ProjectionStoreBundle
 	SystemStores    SystemStores
-	EventStore      storage.EventStore
-	AuditStore      storage.AuditEventStore
-	ContentStore    contentstore.DaggerheartContentReadStore
-	SocialClient    socialv1.SocialServiceClient
-	Domain          handler.Domain
-	WriteRuntime    *domainwrite.Runtime
-	Events          *event.Registry
+}
+
+// StoresInfrastructureConfig groups infrastructure stores that are not part of
+// the projection bundle and must be wired explicitly by startup.
+type StoresInfrastructureConfig struct {
+	EventStore storage.EventStore
+	AuditStore storage.AuditEventStore
+}
+
+// StoresContentConfig groups read-only external content and service clients
+// consumed by the root game transport.
+type StoresContentConfig struct {
+	ContentStore contentstore.DaggerheartContentReadStore
+	SocialClient socialv1.SocialServiceClient
+}
+
+// StoresRuntimeConfig groups write-path collaborators consumed by the root game
+// transport.
+type StoresRuntimeConfig struct {
+	Domain       handler.Domain
+	WriteRuntime *domainwrite.Runtime
 }
 
 // NewWriteRuntime creates a new write-path runtime for use by service startup.

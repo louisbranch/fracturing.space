@@ -23,6 +23,16 @@ type namedSystemModuleRegistrationStep struct {
 	run  systemModuleRegistrationStep
 }
 
+// registrySystemModuleRegistrar owns the module-scoped registration phase and
+// its module-local contract checks.
+type registrySystemModuleRegistrar struct{}
+
+// Register loads each system module into the shared registries and validates
+// the command/event types newly introduced by that module.
+func (registrySystemModuleRegistrar) Register(bootstrap registryBootstrap) error {
+	return bootstrap.registerSystemModules()
+}
+
 // registerSystemModules executes the module registration phase and validates
 // new system-owned command/event types against namespace and emit declarations.
 func (b registryBootstrap) registerSystemModules() error {

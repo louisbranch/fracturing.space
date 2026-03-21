@@ -12,6 +12,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -48,7 +50,7 @@ func TestResolveBlazeOfGlory_CharacterAlreadyDead(t *testing.T) {
 	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
-		LifeState:   daggerheart.LifeStateDead,
+		LifeState:   mechanics.LifeStateDead,
 	}
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
@@ -73,7 +75,7 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
-		LifeState:   daggerheart.LifeStateBlazeOfGlory,
+		LifeState:   mechanics.LifeStateBlazeOfGlory,
 	}
 	charStore := svc.stores.Character.(*fakeCharacterStore)
 	charStore.Characters["camp-1:char-1"] = storage.CharacterRecord{
@@ -82,10 +84,10 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 		Name:       "Hero",
 		Kind:       character.KindPC,
 	}
-	payload := daggerheart.CharacterStatePatchedPayload{
+	payload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		LifeState: func() *string {
-			l := daggerheart.LifeStateDead
+			l := mechanics.LifeStateDead
 			return &l
 		}(),
 	}
@@ -150,7 +152,7 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
-		LifeState:   daggerheart.LifeStateBlazeOfGlory,
+		LifeState:   mechanics.LifeStateBlazeOfGlory,
 	}
 	charStore := svc.stores.Character.(*fakeCharacterStore)
 	charStore.Characters["camp-1:char-1"] = storage.CharacterRecord{
@@ -160,10 +162,10 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 		Kind:       character.KindPC,
 	}
 
-	payload := daggerheart.CharacterStatePatchedPayload{
+	payload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		LifeState: func() *string {
-			l := daggerheart.LifeStateDead
+			l := mechanics.LifeStateDead
 			return &l
 		}(),
 	}

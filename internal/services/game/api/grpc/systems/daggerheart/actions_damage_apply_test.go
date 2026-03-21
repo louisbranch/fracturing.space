@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc/codes"
 )
 
@@ -293,7 +294,7 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 	if last.Type != event.Type("sys.daggerheart.damage_applied") {
 		t.Fatalf("last event type = %s, want %s", last.Type, event.Type("sys.daggerheart.damage_applied"))
 	}
-	var parsedPayload daggerheart.DamageAppliedPayload
+	var parsedPayload daggerheartpayload.DamageAppliedPayload
 	if err := json.Unmarshal(last.PayloadJSON, &parsedPayload); err != nil {
 		t.Fatalf("decode damage payload: %v", err)
 	}

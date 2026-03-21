@@ -13,7 +13,7 @@ import (
 )
 
 // PolicyDeps holds the focused store subset needed for authorization policy
-// enforcement. Entity applications embed this instead of the full Stores struct.
+// enforcement. Entity applications embed this instead of a root transport bag.
 type PolicyDeps struct {
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore

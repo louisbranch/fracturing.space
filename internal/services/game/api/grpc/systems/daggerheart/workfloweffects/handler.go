@@ -12,7 +12,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/countdowns"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -77,10 +80,10 @@ func (h *Handler) AdvanceBreathCountdown(ctx context.Context, campaignID, sessio
 			CampaignId:  campaignID,
 			SessionId:   sessionID,
 			CountdownId: countdownID,
-			Name:        daggerheart.BreathCountdownName,
+			Name:        countdowns.BreathCountdownName,
 			Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE,
-			Current:     daggerheart.BreathCountdownInitial,
-			Max:         daggerheart.BreathCountdownMax,
+			Current:     countdowns.BreathCountdownInitial,
+			Max:         countdowns.BreathCountdownMax,
 			Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
 			Looping:     false,
 		})
@@ -89,7 +92,7 @@ func (h *Handler) AdvanceBreathCountdown(ctx context.Context, campaignID, sessio
 		}
 	}
 
-	advance := daggerheart.ResolveBreathCountdownAdvance(failed)
+	advance := countdowns.ResolveBreathCountdownAdvance(failed)
 	return h.deps.UpdateCountdown(ctx, &pb.DaggerheartUpdateCountdownRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
@@ -120,11 +123,11 @@ func (h *Handler) buildStressVulnerableConditionEffect(
 		return nil, nil
 	}
 
-	normalized, err := daggerheart.NormalizeConditionStates(projectionConditionsToDomain(conditions))
+	normalized, err := rules.NormalizeConditionStates(projectionConditionsToDomain(conditions))
 	if err != nil {
 		return nil, grpcerror.Internal("invalid stored conditions", err)
 	}
-	hasVulnerable := daggerheart.HasConditionCode(normalized, daggerheart.ConditionVulnerable)
+	hasVulnerable := rules.HasConditionCode(normalized, rules.ConditionVulnerable)
 	if shouldAdd && hasVulnerable {
 		return nil, nil
 	}
@@ -132,29 +135,29 @@ func (h *Handler) buildStressVulnerableConditionEffect(
 		return nil, nil
 	}
 
-	afterSet := make(map[string]daggerheart.ConditionState, len(normalized)+1)
+	afterSet := make(map[string]rules.ConditionState, len(normalized)+1)
 	for _, value := range normalized {
 		afterSet[value.ID] = value
 	}
 	if shouldAdd {
-		vulnerable, err := daggerheart.StandardConditionState(daggerheart.ConditionVulnerable)
+		vulnerable, err := rules.StandardConditionState(rules.ConditionVulnerable)
 		if err != nil {
 			return nil, grpcerror.Internal("build vulnerable condition", err)
 		}
 		afterSet[vulnerable.ID] = vulnerable
 	}
 	if shouldRemove {
-		delete(afterSet, daggerheart.ConditionVulnerable)
+		delete(afterSet, rules.ConditionVulnerable)
 	}
-	afterList := make([]daggerheart.ConditionState, 0, len(afterSet))
+	afterList := make([]rules.ConditionState, 0, len(afterSet))
 	for _, value := range afterSet {
 		afterList = append(afterList, value)
 	}
-	after, err := daggerheart.NormalizeConditionStates(afterList)
+	after, err := rules.NormalizeConditionStates(afterList)
 	if err != nil {
 		return nil, grpcerror.Internal("invalid condition set", err)
 	}
-	added, removed := daggerheart.DiffConditionStates(normalized, after)
+	added, removed := rules.DiffConditionStates(normalized, after)
 	if len(added) == 0 && len(removed) == 0 {
 		return nil, nil
 	}
@@ -178,7 +181,7 @@ func (h *Handler) buildStressVulnerableConditionEffect(
 		}
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.ConditionChangePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.ConditionChangePayload{
 		CharacterID:      ids.CharacterID(characterID),
 		ConditionsBefore: normalized,
 		ConditionsAfter:  after,
@@ -199,19 +202,19 @@ func (h *Handler) buildStressVulnerableConditionEffect(
 	}, nil
 }
 
-func projectionConditionsToDomain(values []projectionstore.DaggerheartConditionState) []daggerheart.ConditionState {
+func projectionConditionsToDomain(values []projectionstore.DaggerheartConditionState) []rules.ConditionState {
 	if len(values) == 0 {
 		return nil
 	}
-	items := make([]daggerheart.ConditionState, 0, len(values))
+	items := make([]rules.ConditionState, 0, len(values))
 	for _, value := range values {
-		triggers := make([]daggerheart.ConditionClearTrigger, 0, len(value.ClearTriggers))
+		triggers := make([]rules.ConditionClearTrigger, 0, len(value.ClearTriggers))
 		for _, trigger := range value.ClearTriggers {
-			triggers = append(triggers, daggerheart.ConditionClearTrigger(trigger))
+			triggers = append(triggers, rules.ConditionClearTrigger(trigger))
 		}
-		items = append(items, daggerheart.ConditionState{
+		items = append(items, rules.ConditionState{
 			ID:            value.ID,
-			Class:         daggerheart.ConditionClass(value.Class),
+			Class:         rules.ConditionClass(value.Class),
 			Standard:      value.Standard,
 			Code:          value.Code,
 			Label:         value.Label,

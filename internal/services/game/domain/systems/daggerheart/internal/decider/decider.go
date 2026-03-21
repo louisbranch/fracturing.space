@@ -5,7 +5,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 // ── Command type constants ─────────────────────────────────────────────
@@ -92,7 +92,7 @@ func NewDecider(handledCommands []command.Type) Decider {
 	return Decider{handledCommands: handledCommands}
 }
 
-type decisionHandler func(snapstate.SnapshotState, bool, command.Command, func() time.Time) command.Decision
+type decisionHandler func(daggerheartstate.SnapshotState, bool, command.Command, func() time.Time) command.Decision
 
 var decisionHandlers = map[command.Type]decisionHandler{
 	commandTypeGMMoveApply:                  decideGMMoveApply,
@@ -142,7 +142,7 @@ func (d Decider) DeciderHandledCommands() []command.Type {
 
 // Decide returns the decision for a system command against current state.
 func (d Decider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
-	snapshotState, hasSnapshot := snapstate.SnapshotOrDefault(state)
+	snapshotState, hasSnapshot := daggerheartstate.SnapshotOrDefault(state)
 	handler, ok := decisionHandlers[cmd.Type]
 	if !ok {
 		return command.Reject(command.Rejection{
@@ -156,15 +156,15 @@ func (d Decider) Decide(state any, cmd command.Command, now func() time.Time) co
 func wrapDecisionWithoutState(
 	handler func(command.Command, func() time.Time) command.Decision,
 ) decisionHandler {
-	return func(_ snapstate.SnapshotState, _ bool, cmd command.Command, now func() time.Time) command.Decision {
+	return func(_ daggerheartstate.SnapshotState, _ bool, cmd command.Command, now func() time.Time) command.Decision {
 		return handler(cmd, now)
 	}
 }
 
 func wrapDecisionWithStateNoSnapshotFlag(
-	handler func(snapstate.SnapshotState, command.Command, func() time.Time) command.Decision,
+	handler func(daggerheartstate.SnapshotState, command.Command, func() time.Time) command.Decision,
 ) decisionHandler {
-	return func(snapshotState snapstate.SnapshotState, _ bool, cmd command.Command, now func() time.Time) command.Decision {
+	return func(snapshotState daggerheartstate.SnapshotState, _ bool, cmd command.Command, now func() time.Time) command.Decision {
 		return handler(snapshotState, cmd, now)
 	}
 }

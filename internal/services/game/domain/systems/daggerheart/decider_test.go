@@ -5,9 +5,16 @@ import (
 	"testing"
 	"time"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
@@ -22,7 +29,7 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":4,"reason":"  doom "}`),
 	}
 
-	decision := Decider{}.Decide(SnapshotState{GMFear: 2}, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(daggerheartstate.SnapshotState{GMFear: 2}, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -56,7 +63,7 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 		t.Fatalf("actor id = %s, want %s", evt.ActorID, "gm-1")
 	}
 
-	var payload GMFearChangedPayload
+	var payload daggerheartpayload.GMFearChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -80,15 +87,15 @@ func TestDecideGMFearSet_RejectsLegacyActionType(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":4}`),
 	}
 
-	decision := Decider{}.Decide(SnapshotState{GMFear: 2}, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(daggerheartstate.SnapshotState{GMFear: 2}, cmd, func() time.Time { return now })
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeCommandTypeUnsupported {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCommandTypeUnsupported)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeCommandTypeUnsupported {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeCommandTypeUnsupported)
 	}
 }
 
@@ -103,31 +110,31 @@ func TestDecideUnsupportedCommandRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{}`),
 	}
 
-	decision := Decider{}.Decide(SnapshotState{}, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(daggerheartstate.SnapshotState{}, cmd, func() time.Time { return now })
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeCommandTypeUnsupported {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCommandTypeUnsupported)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeCommandTypeUnsupported {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeCommandTypeUnsupported)
 	}
 }
 
 func TestDaggerheartDecisionHandlers_CoversHandledCommands(t *testing.T) {
-	handled := NewDecider(commandTypesFromDefinitions()).DeciderHandledCommands()
-	if len(handled) != len(daggerheartDecisionHandlers) {
-		t.Fatalf("handled command count = %d, decision handler count = %d", len(handled), len(daggerheartDecisionHandlers))
+	handled := daggerheartdecider.NewDecider(commandTypesFromDefinitions()).DeciderHandledCommands()
+	if len(handled) != len(daggerheartdecider.DecisionHandlers) {
+		t.Fatalf("handled command count = %d, decision handler count = %d", len(handled), len(daggerheartdecider.DecisionHandlers))
 	}
 	handledSet := make(map[command.Type]struct{}, len(handled))
 	for _, typ := range handled {
 		handledSet[typ] = struct{}{}
-		if _, ok := daggerheartDecisionHandlers[typ]; !ok {
+		if _, ok := daggerheartdecider.DecisionHandlers[typ]; !ok {
 			t.Fatalf("missing decision handler for command type %s", typ)
 		}
 	}
-	for typ := range daggerheartDecisionHandlers {
+	for typ := range daggerheartdecider.DecisionHandlers {
 		if _, ok := handledSet[typ]; !ok {
 			t.Fatalf("decision handler registered for unsupported command type %s", typ)
 		}
@@ -141,7 +148,7 @@ func TestDecideRegisteredCommandsDoNotReturnEmptyDecision(t *testing.T) {
 		if actorType == "" {
 			actorType = command.ActorTypeSystem
 		}
-		decision := Decider{}.Decide(SnapshotState{}, command.Command{
+		decision := daggerheartdecider.Decider{}.Decide(daggerheartstate.SnapshotState{}, command.Command{
 			CampaignID:    "camp-1",
 			Type:          tc.typ,
 			ActorType:     actorType,
@@ -165,20 +172,20 @@ func TestDecideGMFearSet_MissingAfterRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"reason":""}`),
 	}
 
-	decision := Decider{}.Decide(SnapshotState{}, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(daggerheartstate.SnapshotState{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeGMFearAfterRequired {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeGMFearAfterRequired)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeGMFearAfterRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeGMFearAfterRequired)
 	}
 }
 
 func TestDecideGMFearSet_AfterOutOfRangeRejected(t *testing.T) {
-	after := GMFearMax + 1
+	after := daggerheartstate.GMFearMax + 1
 	cmd := command.Command{
 		CampaignID:    "camp-1",
 		Type:          command.Type("sys.daggerheart.gm_fear.set"),
@@ -187,17 +194,17 @@ func TestDecideGMFearSet_AfterOutOfRangeRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":13}`),
 	}
 
-	decision := Decider{}.Decide(SnapshotState{}, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(daggerheartstate.SnapshotState{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeGMFearOutOfRange {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeGMFearOutOfRange)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeGMFearOutOfRange {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeGMFearOutOfRange)
 	}
-	if after <= GMFearMax {
+	if after <= daggerheartstate.GMFearMax {
 		t.Fatalf("expected out of range after, got %d", after)
 	}
 }
@@ -213,21 +220,21 @@ func TestDecideGMFearSet_UnchangedStateRejected(t *testing.T) {
 	}
 
 	// The aggregate applier extracts system-specific state before calling
-	// RouteCommand, so the decider receives SnapshotState directly.
-	state := SnapshotState{
+	// RouteCommand, so the decider receives daggerheartstate.SnapshotState directly.
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
 		GMFear:     4,
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeGMFearUnchanged {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeGMFearUnchanged)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeGMFearUnchanged {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeGMFearUnchanged)
 	}
 }
 
@@ -244,7 +251,7 @@ func TestDecideCharacterStatePatch_EmitsCharacterStatePatched(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":6,"hp_after":5}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -272,7 +279,7 @@ func TestDecideCharacterStatePatch_EmitsCharacterStatePatched(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload CharacterStatePatchedPayload
+	var payload daggerheartpayload.CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -296,19 +303,19 @@ func TestDecideCharacterStatePatch_UnchangedStateRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":5,"hp_after":6}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", HP: 6},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeCharacterStatePatchNoMutation {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCharacterStatePatchNoMutation)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeCharacterStatePatchNoMutation {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeCharacterStatePatchNoMutation)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -328,7 +335,7 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["vulnerable"],"conditions_after":["hidden"],"added":["hidden"],"removed":["vulnerable"]}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -350,20 +357,20 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload ConditionChangedPayload
+	var payload daggerheartpayload.ConditionChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 	if payload.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
 	}
-	if len(payload.Conditions) != 1 || payload.Conditions[0].Code != ConditionHidden {
+	if len(payload.Conditions) != 1 || payload.Conditions[0].Code != rules.ConditionHidden {
 		t.Fatalf("conditions after = %v, want [hidden]", payload.Conditions)
 	}
-	if len(payload.Added) != 1 || payload.Added[0].Code != ConditionHidden {
+	if len(payload.Added) != 1 || payload.Added[0].Code != rules.ConditionHidden {
 		t.Fatalf("added = %v, want [hidden]", payload.Added)
 	}
-	if len(payload.Removed) != 1 || payload.Removed[0].Code != ConditionVulnerable {
+	if len(payload.Removed) != 1 || payload.Removed[0].Code != rules.ConditionVulnerable {
 		t.Fatalf("removed = %v, want [vulnerable]", payload.Removed)
 	}
 }
@@ -380,19 +387,19 @@ func TestDecideConditionChange_UnchangedStateRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["vulnerable"],"conditions_after":["vulnerable"],"added":[],"removed":[]}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Conditions: []string{"vulnerable"}},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeConditionChangeNoMutation {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeConditionChangeNoMutation)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeConditionChangeNoMutation {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeConditionChangeNoMutation)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -411,19 +418,19 @@ func TestDecideConditionChange_RemoveMissingConditionRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden","vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Conditions: []string{"hidden"}},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeConditionChangeRemoveMissing {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeConditionChangeRemoveMissing)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeConditionChangeRemoveMissing {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeConditionChangeRemoveMissing)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -443,7 +450,7 @@ func TestDecideHopeSpend_EmitsCharacterStatePatched(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","amount":1,"before":2,"after":1,"source":"experience"}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -471,7 +478,7 @@ func TestDecideHopeSpend_EmitsCharacterStatePatched(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload CharacterStatePatchedPayload
+	var payload daggerheartpayload.CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -496,7 +503,7 @@ func TestDecideHopeSpend_PropagatesSourceToEvent(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","amount":1,"before":2,"after":1,"source":"experience"}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(decision.Events))
 	}
@@ -525,7 +532,7 @@ func TestDecideStressSpend_PropagatesSourceToEvent(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","amount":1,"before":3,"after":2,"source":"loadout_swap"}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(decision.Events))
 	}
@@ -554,7 +561,7 @@ func TestDecideStressSpend_EmitsCharacterStatePatched(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","amount":1,"before":3,"after":2,"source":"loadout_swap"}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -582,7 +589,7 @@ func TestDecideStressSpend_EmitsCharacterStatePatched(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload CharacterStatePatchedPayload
+	var payload daggerheartpayload.CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -607,7 +614,7 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active","recall_cost":1,"stress_before":3,"stress_after":2}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -635,7 +642,7 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload LoadoutSwappedPayload
+	var payload daggerheartpayload.LoadoutSwappedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -672,7 +679,7 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 		PayloadJSON:   []byte(`{"rest_type":"short","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":0,"short_rests_after":1,"refresh_rest":true,"refresh_long_rest":false}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -744,7 +751,7 @@ func TestDecideRestTake_WithLongTermCountdown_EmitsCountdownUpdated(t *testing.T
 		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -780,19 +787,19 @@ func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.
 		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]CountdownState{
+		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeCountdownBeforeMismatch {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownBeforeMismatch)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeCountdownBeforeMismatch {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeCountdownBeforeMismatch)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -811,19 +818,19 @@ func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]CountdownState{
+		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeCountdownUpdateNoMutation {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownUpdateNoMutation)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeCountdownUpdateNoMutation {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeCountdownUpdateNoMutation)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -843,7 +850,7 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":6,"hp_after":3,"damage_type":"physical","marks":1}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -871,7 +878,7 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload DamageAppliedPayload
+	var payload daggerheartpayload.DamageAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -898,9 +905,9 @@ func TestDecideDamageApply_BeforeMismatchRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":6,"hp_after":3,"armor_before":2,"armor_after":1,"damage_type":"physical","marks":1}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {
 				CharacterID: "char-1",
 				HP:          5,
@@ -909,7 +916,7 @@ func TestDecideDamageApply_BeforeMismatchRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -933,7 +940,7 @@ func TestDecideDamageApply_RejectsMultipleArmorSlotsSpent(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":10,"hp_after":8,"armor_before":2,"armor_after":0,"damage_type":"physical","armor_spent":2,"marks":2}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -958,7 +965,7 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 		PayloadJSON:   []byte(`{"adversary_id":"adv-1","hp_before":8,"hp_after":3,"damage_type":"physical"}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -986,7 +993,7 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload AdversaryDamageAppliedPayload
+	var payload daggerheartpayload.AdversaryDamageAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -1013,9 +1020,9 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"adversary_id":"adv-1","hp_before":8,"hp_after":3,"armor_before":1,"armor_after":0,"damage_type":"physical"}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1",
 				HP:          7,
@@ -1024,7 +1031,7 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -1049,7 +1056,7 @@ func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 		PayloadJSON:   []byte(`{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1091,7 +1098,7 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"advance"}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1132,19 +1139,19 @@ func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]CountdownState{
+		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeCountdownUpdateNoMutation {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownUpdateNoMutation)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeCountdownUpdateNoMutation {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeCountdownUpdateNoMutation)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -1163,19 +1170,19 @@ func TestDecideCountdownUpdate_BeforeMismatchRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]CountdownState{
+		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeCountdownBeforeMismatch {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownBeforeMismatch)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeCountdownBeforeMismatch {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeCountdownBeforeMismatch)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -1195,7 +1202,7 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 		PayloadJSON:   []byte(`{"countdown_id":"cd-1","reason":"cleanup"}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1237,7 +1244,7 @@ func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testin
 		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":["vulnerable"],"conditions_after":["hidden"],"added":["hidden"],"removed":["vulnerable"]}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1265,14 +1272,14 @@ func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testin
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload AdversaryConditionChangedPayload
+	var payload daggerheartpayload.AdversaryConditionChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 	if payload.AdversaryID != "adv-1" {
 		t.Fatalf("adversary id = %s, want %s", payload.AdversaryID, "adv-1")
 	}
-	if len(payload.Conditions) != 1 || payload.Conditions[0].Code != ConditionHidden {
+	if len(payload.Conditions) != 1 || payload.Conditions[0].Code != rules.ConditionHidden {
 		t.Fatalf("conditions_after = %v, want [hidden]", payload.Conditions)
 	}
 }
@@ -1289,19 +1296,19 @@ func TestDecideAdversaryConditionChange_UnchangedStateRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"],"added":[],"removed":[]}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeAdversaryConditionNoMutation {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeAdversaryConditionNoMutation)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeAdversaryConditionNoMutation {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeAdversaryConditionNoMutation)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -1320,19 +1327,19 @@ func TestDecideAdversaryConditionChange_RemoveMissingConditionRejected(t *testin
 		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden","vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeAdversaryConditionRemoveMissing {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeAdversaryConditionRemoveMissing)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeAdversaryConditionRemoveMissing {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeAdversaryConditionRemoveMissing)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -1351,7 +1358,7 @@ func TestDecideAdversaryCreate_EmitsAdversaryCreated(t *testing.T) {
 		PayloadJSON:   []byte(`{"adversary_id":"adv-1","name":"  Goblin ","kind":"bruiser","session_id":"sess-1","notes":" note ","hp":6,"hp_max":6,"stress":2,"stress_max":2,"evasion":1,"major_threshold":2,"severe_threshold":3,"armor":1}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1409,9 +1416,9 @@ func TestDecideAdversaryCreate_UnchangedStateRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"adversary_id":"adv-1","name":"  Goblin ","kind":"bruiser","session_id":"sess-1","notes":" note ","hp":6,"hp_max":6,"stress":2,"stress_max":2,"evasion":1,"major_threshold":2,"severe_threshold":3,"armor":1}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1", Name: "Goblin", Kind: "bruiser", SessionID: "sess-1", Notes: "note",
 				HP: 6, HPMax: 6, Stress: 2, StressMax: 2, Evasion: 1, Major: 2, Severe: 3, Armor: 1,
@@ -1419,12 +1426,12 @@ func TestDecideAdversaryCreate_UnchangedStateRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeAdversaryCreateNoMutation {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeAdversaryCreateNoMutation)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeAdversaryCreateNoMutation {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeAdversaryCreateNoMutation)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -1443,7 +1450,7 @@ func TestDecideAdversaryUpdate_EmitsAdversaryUpdated(t *testing.T) {
 		PayloadJSON:   []byte(`{"adversary_id":"adv-2","name":"  Ogre ","kind":"elite","session_id":"sess-2","notes":" updated ","hp":10,"hp_max":10,"stress":3,"stress_max":3,"evasion":2,"major_threshold":3,"severe_threshold":4,"armor":2}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1496,7 +1503,7 @@ func TestDecideAdversaryDelete_EmitsAdversaryDeleted(t *testing.T) {
 		PayloadJSON:   []byte(`{"adversary_id":"adv-3","reason":" removed "}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1537,7 +1544,7 @@ func TestDecideMultiTargetDamageApply_EmitsMultipleDamageApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          commandTypeMultiTargetDamageApply,
+		Type:          daggerheartdecider.CommandTypeMultiTargetDamageApply,
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1548,7 +1555,7 @@ func TestDecideMultiTargetDamageApply_EmitsMultipleDamageApplied(t *testing.T) {
 		]}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d: %v", len(decision.Rejections), decision.Rejections)
 	}
@@ -1559,8 +1566,8 @@ func TestDecideMultiTargetDamageApply_EmitsMultipleDamageApplied(t *testing.T) {
 	targets := []string{"char-1", "char-2", "char-3"}
 	for i, target := range targets {
 		evt := decision.Events[i]
-		if evt.Type != EventTypeDamageApplied {
-			t.Errorf("event[%d].Type = %s, want %s", i, evt.Type, EventTypeDamageApplied)
+		if evt.Type != daggerheartpayload.EventTypeDamageApplied {
+			t.Errorf("event[%d].Type = %s, want %s", i, evt.Type, daggerheartpayload.EventTypeDamageApplied)
 		}
 		if evt.EntityType != "character" {
 			t.Errorf("event[%d].EntityType = %s, want character", i, evt.EntityType)
@@ -1585,14 +1592,14 @@ func TestDecideMultiTargetDamageApply_EmitsMultipleDamageApplied(t *testing.T) {
 func TestDecideMultiTargetDamageApply_RejectsEmptyTargets(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          commandTypeMultiTargetDamageApply,
+		Type:          daggerheartdecider.CommandTypeMultiTargetDamageApply,
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   []byte(`{"targets":[]}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -1607,7 +1614,7 @@ func TestDecideMultiTargetDamageApply_RejectsEmptyTargets(t *testing.T) {
 func TestDecideMultiTargetDamageApply_BeforeMismatchRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          commandTypeMultiTargetDamageApply,
+		Type:          daggerheartdecider.CommandTypeMultiTargetDamageApply,
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1617,22 +1624,22 @@ func TestDecideMultiTargetDamageApply_BeforeMismatchRejected(t *testing.T) {
 		]}`),
 	}
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {CharacterID: "char-1", HP: 10, Armor: 0},
 			"char-2": {CharacterID: "char-2", HP: 999, Armor: 0}, // mismatch
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, time.Now)
+	decision := daggerheartdecider.Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeDamageBeforeMismatch {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeDamageBeforeMismatch)
+	if decision.Rejections[0].Code != daggerheartdecider.RejectionCodeDamageBeforeMismatch {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, daggerheartdecider.RejectionCodeDamageBeforeMismatch)
 	}
 }

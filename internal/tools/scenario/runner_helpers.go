@@ -15,8 +15,9 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/coreevent"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -1465,34 +1466,34 @@ func (r *Runner) applyAdversaryDamage(
 	severeThreshold := int(before.GetSevereThreshold())
 
 	amount := int(damageRoll.GetTotal())
-	resistance := daggerheart.ResistanceProfile{
+	resistance := rules.ResistanceProfile{
 		ResistPhysical: optionalBool(args, "resist_physical", false),
 		ResistMagic:    optionalBool(args, "resist_magic", false),
 		ImmunePhysical: optionalBool(args, "immune_physical", false),
 		ImmuneMagic:    optionalBool(args, "immune_magic", false),
 	}
-	adjusted := daggerheart.ApplyResistance(amount, damageTypesForArgs(args), resistance)
+	adjusted := rules.ApplyResistance(amount, damageTypesForArgs(args), resistance)
 	if adjusted <= 0 {
 		return false, nil
 	}
-	options := daggerheart.DamageOptions{EnableMassiveDamage: optionalBool(args, "massive_damage", false)}
+	options := rules.DamageOptions{EnableMassiveDamage: optionalBool(args, "massive_damage", false)}
 
-	result, err := daggerheart.EvaluateDamage(adjusted, majorThreshold, severeThreshold, options)
+	result, err := rules.EvaluateDamage(adjusted, majorThreshold, severeThreshold, options)
 	if err != nil {
 		return false, fmt.Errorf("adversary damage: %w", err)
 	}
 	result = downgradeDamageResult(result, optionalInt(args, "severity_downgrade", 0))
 
-	var app daggerheart.DamageApplication
+	var app rules.DamageApplication
 	if optionalBool(args, "direct", false) {
-		app, err = daggerheart.ApplyDamage(hpBefore, adjusted, majorThreshold, severeThreshold, options)
+		app, err = rules.ApplyDamage(hpBefore, adjusted, majorThreshold, severeThreshold, options)
 		if err != nil {
 			return false, fmt.Errorf("adversary damage: %w", err)
 		}
 		app.Result = result
-		_, app.HPAfter = daggerheart.ApplyDamageMarks(hpBefore, app.Result.Marks)
+		_, app.HPAfter = rules.ApplyDamageMarks(hpBefore, app.Result.Marks)
 	} else {
-		app = daggerheart.ApplyDamageWithArmor(hpBefore, 0, armorBefore, result, daggerheart.ArmorDamageRules{})
+		app = rules.ApplyDamageWithArmor(hpBefore, 0, armorBefore, result, rules.ArmorDamageRules{})
 	}
 	if app.HPAfter >= hpBefore && app.ArmorAfter >= armorBefore {
 		if err := r.assertf("expected damage to affect hp or armor for %s", name); err != nil {
@@ -1526,13 +1527,13 @@ func (r *Runner) applyAdversaryDamage(
 	return true, nil
 }
 
-func downgradeDamageResult(result daggerheart.DamageResult, steps int) daggerheart.DamageResult {
+func downgradeDamageResult(result rules.DamageResult, steps int) rules.DamageResult {
 	if steps <= 0 || result.Marks <= 0 {
 		return result
 	}
 	downgraded := result
 	for i := 0; i < steps && downgraded.Marks > 0; i++ {
-		if downgraded.Severity > daggerheart.DamageNone {
+		if downgraded.Severity > rules.DamageNone {
 			downgraded.Severity--
 		}
 		downgraded.Marks--
@@ -1551,25 +1552,25 @@ func parseDamageType(value string) daggerheartv1.DaggerheartDamageType {
 	}
 }
 
-func damageTypesForArgs(args map[string]any) daggerheart.DamageTypes {
+func damageTypesForArgs(args map[string]any) rules.DamageTypes {
 	switch parseDamageType(optionalString(args, "damage_type", "physical")) {
 	case daggerheartv1.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MAGIC:
-		return daggerheart.DamageTypes{Magic: true}
+		return rules.DamageTypes{Magic: true}
 	case daggerheartv1.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MIXED:
-		return daggerheart.DamageTypes{Physical: true, Magic: true}
+		return rules.DamageTypes{Physical: true, Magic: true}
 	default:
-		return daggerheart.DamageTypes{Physical: true}
+		return rules.DamageTypes{Physical: true}
 	}
 }
 
 func adjustedDamageAmount(args map[string]any, amount int32) int {
-	resistance := daggerheart.ResistanceProfile{
+	resistance := rules.ResistanceProfile{
 		ResistPhysical: optionalBool(args, "resist_physical", false),
 		ResistMagic:    optionalBool(args, "resist_magic", false),
 		ImmunePhysical: optionalBool(args, "immune_physical", false),
 		ImmuneMagic:    optionalBool(args, "immune_magic", false),
 	}
-	return daggerheart.ApplyResistance(int(amount), damageTypesForArgs(args), resistance)
+	return rules.ApplyResistance(int(amount), damageTypesForArgs(args), resistance)
 }
 
 func expectDamageEffect(args map[string]any, roll *daggerheartv1.SessionDamageRollResponse) bool {
@@ -2309,7 +2310,7 @@ func (r *Runner) assertDamageFlags(
 	if !ok {
 		return nil
 	}
-	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeDamageApplied)
+	filter := fmt.Sprintf("type = \"%s\"", daggerheartpayload.EventTypeDamageApplied)
 	if state.sessionID != "" {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
 	}
@@ -2323,7 +2324,7 @@ func (r *Runner) assertDamageFlags(
 	if err != nil {
 		return fmt.Errorf("list damage events: %w", err)
 	}
-	var payload daggerheart.DamageAppliedPayload
+	var payload daggerheartpayload.DamageAppliedPayload
 	for _, evt := range response.GetEvents() {
 		if evt.GetSeq() <= before {
 			continue

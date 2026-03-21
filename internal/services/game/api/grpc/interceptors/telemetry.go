@@ -16,14 +16,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// AuditInterceptor emits an audit event for each unary gRPC call handled by the game service.
+// AuditInterceptor emits an audit event for each unary gRPC call handled by the
+// game service according to the explicit audit runtime policy.
 //
 // All unary calls are captured to make cross-service telemetry coverage explicit
 // while preserving existing read/write classification in event attributes.
-func AuditInterceptor(store storage.AuditEventStore) grpc.UnaryServerInterceptor {
+func AuditInterceptor(policy audit.Policy) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
-		if store == nil {
+		if !policy.Enabled() {
 			return resp, err
 		}
 
@@ -55,7 +56,7 @@ func AuditInterceptor(store storage.AuditEventStore) grpc.UnaryServerInterceptor
 			spanID = sc.SpanID().String()
 		}
 
-		emitter := audit.NewEmitter(store)
+		emitter := audit.NewEmitter(policy)
 		emitErr := emitter.Emit(ctx, storage.AuditEvent{
 			EventName:    eventName,
 			Severity:     string(severity),
@@ -86,10 +87,10 @@ func AuditInterceptor(store storage.AuditEventStore) grpc.UnaryServerInterceptor
 // and trace context. Request-scoped fields (campaignID, sessionID) are not
 // available at the interceptor level for streams — only the handler has access
 // to the request message.
-func StreamAuditInterceptor(store storage.AuditEventStore) grpc.StreamServerInterceptor {
+func StreamAuditInterceptor(policy audit.Policy) grpc.StreamServerInterceptor {
 	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		err := handler(srv, stream)
-		if store == nil {
+		if !policy.Enabled() {
 			return err
 		}
 
@@ -116,7 +117,7 @@ func StreamAuditInterceptor(store storage.AuditEventStore) grpc.StreamServerInte
 			spanID = sc.SpanID().String()
 		}
 
-		emitter := audit.NewEmitter(store)
+		emitter := audit.NewEmitter(policy)
 		emitErr := emitter.Emit(ctx, storage.AuditEvent{
 			EventName:    events.GRPCStream,
 			Severity:     string(severity),

@@ -9,9 +9,9 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/conditiontransport"
-	bridgeDaggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -135,14 +135,14 @@ func loadAdversaryForSession(ctx context.Context, store DaggerheartStore, campai
 
 func normalizeAdversaryStats(input adversaryStatsInput) (adversaryStats, error) {
 	stats := adversaryStats{
-		HP:        bridgeDaggerheart.HPDefault,
-		HPMax:     bridgeDaggerheart.HPMaxDefault,
-		Stress:    bridgeDaggerheart.StressDefault,
-		StressMax: bridgeDaggerheart.StressMaxDefault,
+		HP:        daggerheartstate.HPDefault,
+		HPMax:     daggerheartstate.HPMaxDefault,
+		Stress:    daggerheartstate.StressDefault,
+		StressMax: daggerheartstate.StressMaxDefault,
 		Evasion:   defaultAdversaryEvasion,
 		Major:     defaultAdversaryMajor,
 		Severe:    defaultAdversarySevere,
-		Armor:     bridgeDaggerheart.ArmorDefault,
+		Armor:     daggerheartstate.ArmorDefault,
 	}
 	if input.Current != nil {
 		stats = adversaryStats{

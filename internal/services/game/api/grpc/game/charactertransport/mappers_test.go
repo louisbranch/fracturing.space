@@ -7,8 +7,10 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 )
@@ -65,13 +67,13 @@ func TestCharacterEnumAndDaggerheartConversions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("conditions from proto: %v", err)
 	}
-	if len(conditions) != 2 || conditions[0] != daggerheart.ConditionHidden || conditions[1] != daggerheart.ConditionVulnerable {
+	if len(conditions) != 2 || conditions[0] != rules.ConditionHidden || conditions[1] != rules.ConditionVulnerable {
 		t.Fatalf("conditions = %#v", conditions)
 	}
 	if _, err := DaggerheartConditionsFromProto([]daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_UNSPECIFIED}); err == nil {
 		t.Fatal("expected unspecified condition error")
 	}
-	if got := DaggerheartConditionsToProto([]string{daggerheart.ConditionRestrained, daggerheart.ConditionHidden}); len(got) != 2 {
+	if got := DaggerheartConditionsToProto([]string{rules.ConditionRestrained, rules.ConditionHidden}); len(got) != 2 {
 		t.Fatalf("conditions to proto = %#v", got)
 	}
 	if DaggerheartExperiencesToProto(nil) != nil {
@@ -79,16 +81,16 @@ func TestCharacterEnumAndDaggerheartConversions(t *testing.T) {
 	}
 
 	state, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS)
-	if err != nil || state != daggerheart.LifeStateUnconscious {
+	if err != nil || state != mechanics.LifeStateUnconscious {
 		t.Fatalf("life state from proto = %q err=%v", state, err)
 	}
-	if alive, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE); err != nil || alive != daggerheart.LifeStateAlive {
+	if alive, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE); err != nil || alive != daggerheartstate.LifeStateAlive {
 		t.Fatalf("alive state = %q err=%v", alive, err)
 	}
-	if blaze, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY); err != nil || blaze != daggerheart.LifeStateBlazeOfGlory {
+	if blaze, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY); err != nil || blaze != mechanics.LifeStateBlazeOfGlory {
 		t.Fatalf("blaze state = %q err=%v", blaze, err)
 	}
-	if dead, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD); err != nil || dead != daggerheart.LifeStateDead {
+	if dead, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD); err != nil || dead != mechanics.LifeStateDead {
 		t.Fatalf("dead state = %q err=%v", dead, err)
 	}
 	if _, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED); err == nil {
@@ -97,7 +99,7 @@ func TestCharacterEnumAndDaggerheartConversions(t *testing.T) {
 	if _, err := DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState(99)); err == nil {
 		t.Fatal("expected invalid life state error")
 	}
-	if DaggerheartLifeStateToProto(daggerheart.LifeStateDead) != daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD {
+	if DaggerheartLifeStateToProto(mechanics.LifeStateDead) != daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD {
 		t.Fatal("life state to proto mismatch")
 	}
 	if DaggerheartLifeStateToProto("") != daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED {
@@ -171,13 +173,13 @@ func TestDaggerheartProfileAndStateToProto(t *testing.T) {
 		Stress:  1,
 		Armor:   0,
 		Conditions: []projectionstore.DaggerheartConditionState{{
-			ID:       daggerheart.ConditionHidden,
+			ID:       rules.ConditionHidden,
 			Class:    "standard",
-			Standard: daggerheart.ConditionHidden,
-			Code:     daggerheart.ConditionHidden,
-			Label:    daggerheart.ConditionHidden,
+			Standard: rules.ConditionHidden,
+			Code:     rules.ConditionHidden,
+			Label:    rules.ConditionHidden,
 		}},
-		LifeState: daggerheart.LifeStateAlive,
+		LifeState: daggerheartstate.LifeStateAlive,
 	})
 	if state.GetDaggerheart().GetHp() != 10 || len(state.GetDaggerheart().GetConditionStates()) != 1 {
 		t.Fatalf("state = %+v", state.GetDaggerheart())

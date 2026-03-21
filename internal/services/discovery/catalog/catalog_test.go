@@ -15,9 +15,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sqlitedaggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartcontent"
 	catalogimporter "github.com/louisbranch/fracturing.space/internal/tools/importer/content/daggerheart/v1"
@@ -151,7 +151,7 @@ func TestBuiltinStarters_AreWorkflowValid(t *testing.T) {
 type starterWorkflowDeps struct {
 	content      contentstore.DaggerheartContentReadStore
 	replaceCalls int
-	savedProfile daggerheart.CharacterProfile
+	savedProfile daggerheartstate.CharacterProfile
 }
 
 func (d *starterWorkflowDeps) GetCharacterRecord(context.Context, string, string) (characterworkflow.CharacterContext, error) {
@@ -166,7 +166,7 @@ func (d *starterWorkflowDeps) SystemContent() contentstore.DaggerheartContentRea
 	return d.content
 }
 
-func (d *starterWorkflowDeps) ExecuteProfileReplace(_ context.Context, _ characterworkflow.CampaignContext, _ string, profile daggerheart.CharacterProfile) error {
+func (d *starterWorkflowDeps) ExecuteProfileReplace(_ context.Context, _ characterworkflow.CampaignContext, _ string, profile daggerheartstate.CharacterProfile) error {
 	d.replaceCalls++
 	d.savedProfile = profile
 	return nil

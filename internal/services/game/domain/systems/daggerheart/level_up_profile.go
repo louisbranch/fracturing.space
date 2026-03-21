@@ -1,8 +1,13 @@
 package daggerheart
 
-import "strings"
+import (
+	"strings"
 
-func applyLevelUpToCharacterProfile(profile *CharacterProfile, payload LevelUpAppliedPayload) {
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+)
+
+func applyLevelUpToCharacterProfile(profile *daggerheartstate.CharacterProfile, payload daggerheartpayload.LevelUpAppliedPayload) {
 	if profile == nil {
 		return
 	}
@@ -27,18 +32,18 @@ func applyLevelUpToCharacterProfile(profile *CharacterProfile, payload LevelUpAp
 			// Experience additions are content-level; no profile field change needed.
 		case "domain_card":
 			if adv.DomainCardID != "" {
-				profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, strings.TrimSpace(adv.DomainCardID))
+				profile.DomainCardIDs = daggerheartstate.AppendUnique(profile.DomainCardIDs, strings.TrimSpace(adv.DomainCardID))
 			}
 		}
 	}
 
 	for _, reward := range payload.Rewards {
 		if strings.TrimSpace(reward.Type) == "domain_card" && reward.DomainCardID != "" {
-			profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, strings.TrimSpace(reward.DomainCardID))
+			profile.DomainCardIDs = daggerheartstate.AppendUnique(profile.DomainCardIDs, strings.TrimSpace(reward.DomainCardID))
 		}
 	}
 	if len(payload.SubclassTracksAfter) > 0 {
-		profile.SubclassTracks = append([]CharacterSubclassTrack(nil), payload.SubclassTracksAfter...)
+		profile.SubclassTracks = append([]daggerheartstate.CharacterSubclassTrack(nil), payload.SubclassTracksAfter...)
 	}
 	profile.HpMax += payload.SubclassHpMaxDelta
 	profile.StressMax += payload.SubclassStressMaxDelta
@@ -47,7 +52,7 @@ func applyLevelUpToCharacterProfile(profile *CharacterProfile, payload LevelUpAp
 	profile.SevereThreshold += payload.SubclassSevereThresholdDelta
 }
 
-func applyCharacterProfileTraitIncrease(profile *CharacterProfile, trait string) {
+func applyCharacterProfileTraitIncrease(profile *daggerheartstate.CharacterProfile, trait string) {
 	switch strings.TrimSpace(trait) {
 	case "agility":
 		profile.Agility++

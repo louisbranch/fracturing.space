@@ -11,7 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -52,16 +52,16 @@ func (h *Handler) ApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevel
 		return nil, status.Error(codes.InvalidArgument, "level_after must be exactly one level higher than current level")
 	}
 
-	advancements := make([]daggerheart.LevelUpAdvancementPayload, 0, len(in.GetAdvancements()))
+	advancements := make([]daggerheartpayload.LevelUpAdvancementPayload, 0, len(in.GetAdvancements()))
 	for _, adv := range in.GetAdvancements() {
-		entry := daggerheart.LevelUpAdvancementPayload{
+		entry := daggerheartpayload.LevelUpAdvancementPayload{
 			Type:            strings.TrimSpace(adv.GetType()),
 			Trait:           strings.TrimSpace(adv.GetTrait()),
 			DomainCardID:    strings.TrimSpace(adv.GetDomainCardId()),
 			DomainCardLevel: int(adv.GetDomainCardLevel()),
 		}
 		if adv.GetMulticlass() != nil {
-			entry.Multiclass = &daggerheart.LevelUpMulticlassPayload{
+			entry.Multiclass = &daggerheartpayload.LevelUpMulticlassPayload{
 				SecondaryClassID:    strings.TrimSpace(adv.GetMulticlass().GetSecondaryClassId()),
 				SecondarySubclassID: strings.TrimSpace(adv.GetMulticlass().GetSecondarySubclassId()),
 				SpellcastTrait:      strings.TrimSpace(adv.GetMulticlass().GetSpellcastTrait()),
@@ -70,9 +70,9 @@ func (h *Handler) ApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevel
 		}
 		advancements = append(advancements, entry)
 	}
-	rewards := make([]daggerheart.LevelUpRewardPayload, 0, len(in.GetRewards()))
+	rewards := make([]daggerheartpayload.LevelUpRewardPayload, 0, len(in.GetRewards()))
 	for _, reward := range in.GetRewards() {
-		rewards = append(rewards, daggerheart.LevelUpRewardPayload{
+		rewards = append(rewards, daggerheartpayload.LevelUpRewardPayload{
 			Type:                  strings.TrimSpace(reward.GetType()),
 			DomainCardID:          strings.TrimSpace(reward.GetDomainCardId()),
 			DomainCardLevel:       int(reward.GetDomainCardLevel()),
@@ -84,7 +84,7 @@ func (h *Handler) ApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevel
 		return nil, err
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.LevelUpApplyPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.LevelUpApplyPayload{
 		CharacterID:                  ids.CharacterID(characterID),
 		LevelBefore:                  levelBefore,
 		LevelAfter:                   levelAfter,

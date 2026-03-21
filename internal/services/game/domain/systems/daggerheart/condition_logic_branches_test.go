@@ -4,13 +4,23 @@ import (
 	"strings"
 	"testing"
 
+	daggerheartfolder "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/folder"
+	daggerheartvalidator "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/validator"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestIsCharacterStatePatchNoMutation_FieldMismatchBranches(t *testing.T) {
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {
 				CharacterID: "char-1",
 				HP:          6,
@@ -18,63 +28,63 @@ func TestIsCharacterStatePatchNoMutation_FieldMismatchBranches(t *testing.T) {
 				HopeMax:     6,
 				Stress:      1,
 				Armor:       1,
-				LifeState:   LifeStateAlive,
+				LifeState:   daggerheartstate.LifeStateAlive,
 			},
 		},
 	}
 
 	tests := []struct {
 		name    string
-		payload CharacterStatePatchPayload
+		payload daggerheartpayload.CharacterStatePatchPayload
 	}{
 		{
 			name: "hp after mismatch",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID: "char-1",
 				HPAfter:     intPtr(5),
 			},
 		},
 		{
 			name: "hope after mismatch",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID: "char-1",
 				HopeAfter:   intPtr(3),
 			},
 		},
 		{
 			name: "hope max after mismatch",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID:  "char-1",
 				HopeMaxAfter: intPtr(5),
 			},
 		},
 		{
 			name: "stress after mismatch",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID: "char-1",
 				StressAfter: intPtr(2),
 			},
 		},
 		{
 			name: "armor after mismatch",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID: "char-1",
 				ArmorAfter:  intPtr(2),
 			},
 		},
 		{
 			name: "life state after mismatch",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID:    "char-1",
-				LifeStateAfter: strPtr(LifeStateDead),
+				LifeStateAfter: strPtr(mechanics.LifeStateDead),
 			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := isCharacterStatePatchNoMutation(state, tc.payload); got {
-				t.Fatalf("isCharacterStatePatchNoMutation() = true, want false for %s", tc.name)
+			if got := daggerheartdecider.IsCharacterStatePatchNoMutation(state, tc.payload); got {
+				t.Fatalf("daggerheartdecider.IsCharacterStatePatchNoMutation() = true, want false for %s", tc.name)
 			}
 		})
 	}
@@ -90,34 +100,34 @@ func TestHasMissingConditionRemovals_Branches(t *testing.T) {
 		{
 			name:    "invalid current conditions are ignored",
 			current: []string{""},
-			removed: []string{ConditionHidden},
+			removed: []string{rules.ConditionHidden},
 			want:    false,
 		},
 		{
 			name:    "invalid removed conditions are ignored",
-			current: []string{ConditionHidden},
+			current: []string{rules.ConditionHidden},
 			removed: []string{""},
 			want:    false,
 		},
 		{
 			name:    "missing removal returns true",
-			current: []string{ConditionHidden},
-			removed: []string{ConditionVulnerable},
+			current: []string{rules.ConditionHidden},
+			removed: []string{rules.ConditionVulnerable},
 			want:    true,
 		},
 		{
 			name:    "existing removal returns false",
-			current: []string{ConditionHidden, ConditionVulnerable},
-			removed: []string{ConditionHidden},
+			current: []string{rules.ConditionHidden, rules.ConditionVulnerable},
+			removed: []string{rules.ConditionHidden},
 			want:    false,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := hasMissingConditionRemovals(tc.current, tc.removed)
+			got := daggerheartdecider.HasMissingConditionRemovals(tc.current, tc.removed)
 			if got != tc.want {
-				t.Fatalf("hasMissingConditionRemovals() = %v, want %v", got, tc.want)
+				t.Fatalf("daggerheartdecider.HasMissingConditionRemovals() = %v, want %v", got, tc.want)
 			}
 		})
 	}
@@ -140,39 +150,39 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 		},
 		{
 			name:      "conditions before required when removed provided",
-			after:     []string{ConditionHidden},
-			removed:   []string{ConditionVulnerable},
+			after:     []string{rules.ConditionHidden},
+			removed:   []string{rules.ConditionVulnerable},
 			wantErr:   true,
 			errSubstr: "added must match conditions_before and conditions_after diff",
 		},
 		{
 			name:      "added mismatch with before",
-			before:    []string{ConditionHidden},
-			after:     []string{ConditionVulnerable},
-			added:     []string{ConditionHidden},
-			removed:   []string{ConditionHidden},
+			before:    []string{rules.ConditionHidden},
+			after:     []string{rules.ConditionVulnerable},
+			added:     []string{rules.ConditionHidden},
+			removed:   []string{rules.ConditionHidden},
 			wantErr:   true,
 			errSubstr: "added must match conditions_before and conditions_after diff",
 		},
 		{
 			name:      "added mismatch without before",
-			after:     []string{ConditionHidden},
-			added:     []string{ConditionVulnerable},
+			after:     []string{rules.ConditionHidden},
+			added:     []string{rules.ConditionVulnerable},
 			wantErr:   true,
 			errSubstr: "added must match conditions_before and conditions_after diff",
 		},
 		{
 			name:      "removed mismatch with before",
-			before:    []string{ConditionHidden, ConditionVulnerable},
-			after:     []string{ConditionHidden},
-			removed:   []string{ConditionHidden},
+			before:    []string{rules.ConditionHidden, rules.ConditionVulnerable},
+			after:     []string{rules.ConditionHidden},
+			removed:   []string{rules.ConditionHidden},
 			wantErr:   true,
 			errSubstr: "removed must match conditions_before and conditions_after diff",
 		},
 		{
 			name:      "no mutation with before",
-			before:    []string{ConditionHidden},
-			after:     []string{ConditionHidden},
+			before:    []string{rules.ConditionHidden},
+			after:     []string{rules.ConditionHidden},
 			wantErr:   true,
 			errSubstr: "conditions must change",
 		},
@@ -186,17 +196,17 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 		},
 		{
 			name:    "valid diff",
-			before:  []string{ConditionHidden},
-			after:   []string{ConditionVulnerable},
-			added:   []string{ConditionVulnerable},
-			removed: []string{ConditionHidden},
+			before:  []string{rules.ConditionHidden},
+			after:   []string{rules.ConditionVulnerable},
+			added:   []string{rules.ConditionVulnerable},
+			removed: []string{rules.ConditionHidden},
 			wantErr: false,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateConditionSetPayload(
+			err := daggerheartvalidator.ValidateConditionSetPayload(
 				mustConditionStates(tc.before),
 				mustConditionStates(tc.after),
 				mustConditionStates(tc.added),
@@ -218,8 +228,8 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 	}
 }
 
-func mustConditionStates(codes []string) []ConditionState {
-	out := make([]ConditionState, 0, len(codes))
+func mustConditionStates(codes []string) []rules.ConditionState {
+	out := make([]rules.ConditionState, 0, len(codes))
 	for _, code := range codes {
 		out = append(out, mustConditionState(code))
 	}
@@ -228,19 +238,19 @@ func mustConditionStates(codes []string) []ConditionState {
 
 func TestFoldGMFearChangedAndCountdownUpdate_Branches(t *testing.T) {
 	t.Run("gm fear rejects out of range", func(t *testing.T) {
-		err := foldGMFearChanged(&SnapshotState{}, GMFearChangedPayload{Value: GMFearMax + 1})
+		err := daggerheartfolder.FoldGMFearChanged(&daggerheartstate.SnapshotState{}, daggerheartpayload.GMFearChangedPayload{Value: daggerheartstate.GMFearMax + 1})
 		if err == nil || !strings.Contains(err.Error(), "gm fear value must be in range") {
 			t.Fatalf("foldGMFearChanged() error = %v, want range error", err)
 		}
 	})
 
 	t.Run("countdown update sets looping on looped payload", func(t *testing.T) {
-		state := &SnapshotState{
-			CountdownStates: map[ids.CountdownID]CountdownState{
+		state := &daggerheartstate.SnapshotState{
+			CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
 				"cd-1": {CountdownID: "cd-1", Current: 1, Looping: false},
 			},
 		}
-		if err := foldCountdownUpdated(state, CountdownUpdatedPayload{
+		if err := daggerheartfolder.FoldCountdownUpdated(state, daggerheartpayload.CountdownUpdatedPayload{
 			CountdownID: "cd-1",
 			Value:       2,
 			Looped:      true,
@@ -260,10 +270,10 @@ func TestFoldGMFearChangedAndCountdownUpdate_Branches(t *testing.T) {
 func TestHasStringFieldChange_NilBranches(t *testing.T) {
 	before := "before"
 	after := "after"
-	if hasStringFieldChange(&before, nil) {
+	if daggerheartvalidator.HasStringFieldChange(&before, nil) {
 		t.Fatal("expected nil after to be non-mutation")
 	}
-	if !hasStringFieldChange(nil, &after) {
+	if !daggerheartvalidator.HasStringFieldChange(nil, &after) {
 		t.Fatal("expected nil before with non-nil after to be mutation")
 	}
 }

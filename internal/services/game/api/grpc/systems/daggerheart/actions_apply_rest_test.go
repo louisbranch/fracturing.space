@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"google.golang.org/grpc/codes"
 )
@@ -19,7 +20,7 @@ func TestApplyRest_ShortRest_Success(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
 
-	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.RestTakenPayload{
 		RestType:    "short",
 		Interrupted: false,
 		GMFear:      0,
@@ -142,7 +143,7 @@ func TestApplyRest_LongRest_Success(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
 
-	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.RestTakenPayload{
 		RestType:    "long",
 		Interrupted: false,
 		GMFear:      0,
@@ -192,7 +193,7 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
 
-	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.RestTakenPayload{
 		RestType:    "long",
 		Interrupted: false,
 		GMFear:      0,
@@ -254,7 +255,7 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	}
 	now := testTimestamp
 
-	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.RestTakenPayload{
 		RestType:    "long",
 		Interrupted: false,
 		GMFear:      0,
@@ -305,7 +306,7 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	if domain.commands[0].Type != command.Type("sys.daggerheart.rest.take") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.rest.take")
 	}
-	var got daggerheart.RestTakePayload
+	var got daggerheartpayload.RestTakePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode rest command payload: %v", err)
 	}

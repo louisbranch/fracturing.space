@@ -10,7 +10,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
@@ -59,33 +61,33 @@ func TestUpdateCountdown_NoDeltaOrCurrent(t *testing.T) {
 func TestUpdateCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	createPayload := daggerheart.CountdownCreatedPayload{
+	createPayload := daggerheartpayload.CountdownCreatedPayload{
 		CountdownID: "cd-update",
 		Name:        "Update Test",
-		Kind:        daggerheart.CountdownKindProgress,
+		Kind:        rules.CountdownKindProgress,
 		Current:     0,
 		Max:         4,
-		Direction:   daggerheart.CountdownDirectionIncrease,
+		Direction:   rules.CountdownDirectionIncrease,
 		Looping:     false,
 	}
 	createPayloadJSON, err := json.Marshal(createPayload)
 	if err != nil {
 		t.Fatalf("encode countdown create payload: %v", err)
 	}
-	update, err := daggerheart.ApplyCountdownUpdate(daggerheart.Countdown{
+	update, err := rules.ApplyCountdownUpdate(rules.Countdown{
 		CampaignID: "camp-1",
 		ID:         "cd-update",
 		Name:       "Update Test",
-		Kind:       daggerheart.CountdownKindProgress,
+		Kind:       rules.CountdownKindProgress,
 		Current:    0,
 		Max:        4,
-		Direction:  daggerheart.CountdownDirectionIncrease,
+		Direction:  rules.CountdownDirectionIncrease,
 		Looping:    false,
 	}, 1, nil)
 	if err != nil {
 		t.Fatalf("apply countdown update: %v", err)
 	}
-	updatePayload := daggerheart.CountdownUpdatedPayload{
+	updatePayload := daggerheartpayload.CountdownUpdatedPayload{
 		CountdownID: "cd-update",
 		Value:       update.After,
 		Delta:       update.Delta,
@@ -165,26 +167,26 @@ func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
 		CampaignID:  "camp-1",
 		CountdownID: "cd-1",
 		Name:        "Update",
-		Kind:        daggerheart.CountdownKindProgress,
+		Kind:        rules.CountdownKindProgress,
 		Current:     2,
 		Max:         4,
-		Direction:   daggerheart.CountdownDirectionIncrease,
+		Direction:   rules.CountdownDirectionIncrease,
 		Looping:     false,
 	}
-	update, err := daggerheart.ApplyCountdownUpdate(daggerheart.Countdown{
+	update, err := rules.ApplyCountdownUpdate(rules.Countdown{
 		CampaignID: "camp-1",
 		ID:         "cd-1",
 		Name:       "Update",
-		Kind:       daggerheart.CountdownKindProgress,
+		Kind:       rules.CountdownKindProgress,
 		Current:    2,
 		Max:        4,
-		Direction:  daggerheart.CountdownDirectionIncrease,
+		Direction:  rules.CountdownDirectionIncrease,
 		Looping:    false,
 	}, 1, nil)
 	if err != nil {
 		t.Fatalf("apply countdown update: %v", err)
 	}
-	updatePayload := daggerheart.CountdownUpdatedPayload{
+	updatePayload := daggerheartpayload.CountdownUpdatedPayload{
 		CountdownID: "cd-1",
 		Value:       update.After,
 		Delta:       update.Delta,

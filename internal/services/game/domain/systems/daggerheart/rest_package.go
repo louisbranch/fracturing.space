@@ -5,9 +5,14 @@ import (
 	"slices"
 	"strings"
 
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/countdowns"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 const (
@@ -37,7 +42,7 @@ func TierForLevel(level int) int {
 type RestParticipantInput struct {
 	CharacterID ids.CharacterID
 	Level       int
-	State       CharacterState
+	State       daggerheartstate.CharacterState
 	Moves       []DowntimeSelection
 }
 
@@ -62,14 +67,14 @@ type RestPackageInput struct {
 	CurrentGMFear         int
 	ConsecutiveShortRests int
 	Participants          []RestParticipantInput
-	AvailableCountdowns   map[ids.CountdownID]Countdown
-	LongTermCountdown     *Countdown
+	AvailableCountdowns   map[ids.CountdownID]rules.Countdown
+	LongTermCountdown     *rules.Countdown
 }
 
 // RestPackageResult captures the canonical rest command payload plus the IDs
 // that transport should reload after the command commits.
 type RestPackageResult struct {
-	Payload             RestTakePayload
+	Payload             daggerheartpayload.RestTakePayload
 	ParticipantIDs      []ids.CharacterID
 	UpdatedCountdownIDs []ids.CountdownID
 }
@@ -101,7 +106,7 @@ func ResolveRestPackage(input RestPackageInput) (RestPackageResult, error) {
 		effectiveType = RestTypeShort
 	}
 
-	payload := RestTakePayload{
+	payload := daggerheartpayload.RestTakePayload{
 		RestType:         restTypeToPayloadString(effectiveType),
 		Interrupted:      input.Interrupted,
 		GMFearBefore:     input.CurrentGMFear,
@@ -123,7 +128,7 @@ func ResolveRestPackage(input RestPackageInput) (RestPackageResult, error) {
 		return RestPackageResult{Payload: payload, ParticipantIDs: participants}, nil
 	}
 
-	countdownStates := make(map[ids.CountdownID]Countdown, len(input.AvailableCountdowns)+1)
+	countdownStates := make(map[ids.CountdownID]rules.Countdown, len(input.AvailableCountdowns)+1)
 	for countdownID, countdown := range input.AvailableCountdowns {
 		countdownStates[countdownID] = countdown
 	}
@@ -133,7 +138,7 @@ func ResolveRestPackage(input RestPackageInput) (RestPackageResult, error) {
 	}
 
 	if outcome.AdvanceCountdown && input.LongTermCountdown != nil {
-		mutation, err := nextCountdownMutation(countdownStates, ids.CountdownID(input.LongTermCountdown.ID), 1, nil, CountdownReasonLongRest)
+		mutation, err := nextCountdownMutation(countdownStates, ids.CountdownID(input.LongTermCountdown.ID), 1, nil, countdowns.CountdownReasonLongRest)
 		if err != nil {
 			return RestPackageResult{}, err
 		}
@@ -173,9 +178,9 @@ func ResolveRestPackage(input RestPackageInput) (RestPackageResult, error) {
 	}, nil
 }
 
-func normalizeRestParticipants(inputs []RestParticipantInput) ([]ids.CharacterID, map[ids.CharacterID]*CharacterState, error) {
+func normalizeRestParticipants(inputs []RestParticipantInput) ([]ids.CharacterID, map[ids.CharacterID]*daggerheartstate.CharacterState, error) {
 	participants := make([]ids.CharacterID, 0, len(inputs))
-	states := make(map[ids.CharacterID]*CharacterState, len(inputs))
+	states := make(map[ids.CharacterID]*daggerheartstate.CharacterState, len(inputs))
 	seen := make(map[ids.CharacterID]struct{}, len(inputs))
 	for _, participant := range inputs {
 		characterID := ids.CharacterID(strings.TrimSpace(participant.CharacterID.String()))
@@ -229,19 +234,19 @@ func resolveDowntimeSelection(
 	restType RestType,
 	participant RestParticipantInput,
 	selection DowntimeSelection,
-	participantStates map[ids.CharacterID]*CharacterState,
+	participantStates map[ids.CharacterID]*daggerheartstate.CharacterState,
 	groupParticipantCounts map[string]int,
-	countdownStates map[ids.CountdownID]Countdown,
-) (DowntimeMoveAppliedPayload, *CountdownUpdatePayload, error) {
+	countdownStates map[ids.CountdownID]rules.Countdown,
+) (daggerheartpayload.DowntimeMoveAppliedPayload, *daggerheartpayload.CountdownUpdatePayload, error) {
 	move := strings.TrimSpace(strings.ToLower(selection.Move))
 	if move == "" {
-		return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("downtime move is required for %q", participant.CharacterID)
+		return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("downtime move is required for %q", participant.CharacterID)
 	}
 	if !restTypeAllowsMove(restType, move) {
-		return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("%s is not allowed during a %s rest", move, restTypeToPayloadString(restType))
+		return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("%s is not allowed during a %s rest", move, restTypeToPayloadString(restType))
 	}
 
-	payload := DowntimeMoveAppliedPayload{
+	payload := daggerheartpayload.DowntimeMoveAppliedPayload{
 		ActorCharacterID: participant.CharacterID,
 		Move:             move,
 		RestType:         restTypeToPayloadString(restType),
@@ -251,14 +256,14 @@ func resolveDowntimeSelection(
 	case DowntimeMoveTendToWounds:
 		targetID, targetState, err := resolveRestTarget(participant.CharacterID, selection.TargetCharacterID, participantStates)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		if selection.RollSeed == nil {
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("tend_to_wounds requires rng")
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("tend_to_wounds requires rng")
 		}
 		amount, err := rollDowntimeAmount(*selection.RollSeed, participant.Level)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		_, after := targetState.Heal(amount)
 		payload.TargetCharacterID = targetID
@@ -266,14 +271,14 @@ func resolveDowntimeSelection(
 	case DowntimeMoveClearStress:
 		actorState := participantStates[participant.CharacterID]
 		if actorState == nil {
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("rest participant %q state is missing", participant.CharacterID)
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("rest participant %q state is missing", participant.CharacterID)
 		}
 		if selection.RollSeed == nil {
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("clear_stress requires rng")
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("clear_stress requires rng")
 		}
 		amount, err := rollDowntimeAmount(*selection.RollSeed, participant.Level)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		actorState.SetStress(actorState.Stress - amount)
 		payload.TargetCharacterID = participant.CharacterID
@@ -281,25 +286,25 @@ func resolveDowntimeSelection(
 	case DowntimeMoveRepairArmor:
 		targetID, targetState, err := resolveRestTarget(participant.CharacterID, selection.TargetCharacterID, participantStates)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		if selection.RollSeed == nil {
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("repair_armor requires rng")
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("repair_armor requires rng")
 		}
 		amount, err := rollDowntimeAmount(*selection.RollSeed, participant.Level)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		_, after, err := targetState.GainResource(mechanics.ResourceArmor, amount)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		payload.TargetCharacterID = targetID
 		payload.Armor = &after
 	case DowntimeMovePrepare:
 		actorState := participantStates[participant.CharacterID]
 		if actorState == nil {
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("rest participant %q state is missing", participant.CharacterID)
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("rest participant %q state is missing", participant.CharacterID)
 		}
 		groupID := strings.TrimSpace(selection.GroupID)
 		hopeGain := 1
@@ -309,14 +314,14 @@ func resolveDowntimeSelection(
 		}
 		_, after, err := actorState.GainResource(mechanics.ResourceHope, hopeGain)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		payload.TargetCharacterID = participant.CharacterID
 		payload.Hope = &after
 	case DowntimeMoveTendToAllWounds:
 		targetID, targetState, err := resolveRestTarget(participant.CharacterID, selection.TargetCharacterID, participantStates)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		targetState.HP = targetState.HPMax
 		payload.TargetCharacterID = targetID
@@ -324,7 +329,7 @@ func resolveDowntimeSelection(
 	case DowntimeMoveClearAllStress:
 		actorState := participantStates[participant.CharacterID]
 		if actorState == nil {
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("rest participant %q state is missing", participant.CharacterID)
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("rest participant %q state is missing", participant.CharacterID)
 		}
 		actorState.SetStress(0)
 		payload.TargetCharacterID = participant.CharacterID
@@ -332,7 +337,7 @@ func resolveDowntimeSelection(
 	case DowntimeMoveRepairAllArmor:
 		targetID, targetState, err := resolveRestTarget(participant.CharacterID, selection.TargetCharacterID, participantStates)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		targetState.SetArmor(targetState.ArmorMax)
 		payload.TargetCharacterID = targetID
@@ -340,7 +345,7 @@ func resolveDowntimeSelection(
 	case DowntimeMoveWorkOnProject:
 		countdownID := ids.CountdownID(strings.TrimSpace(selection.CountdownID.String()))
 		if countdownID == "" {
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project requires countdown_id")
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project requires countdown_id")
 		}
 		mode := strings.TrimSpace(strings.ToLower(selection.ProjectAdvanceMode))
 		if mode == "" {
@@ -357,24 +362,24 @@ func resolveDowntimeSelection(
 			reason = "work_on_project"
 		case ProjectAdvanceModeGMSetDelta:
 			if selection.ProjectAdvanceDelta == 0 {
-				return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project gm_set_delta requires non-zero advance_delta")
+				return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project gm_set_delta requires non-zero advance_delta")
 			}
 			if strings.TrimSpace(selection.ProjectReason) == "" {
-				return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project gm_set_delta requires reason")
+				return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project gm_set_delta requires reason")
 			}
 			delta = selection.ProjectAdvanceDelta
 			reason = strings.TrimSpace(selection.ProjectReason)
 		default:
-			return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project advance mode %q is invalid", selection.ProjectAdvanceMode)
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project advance mode %q is invalid", selection.ProjectAdvanceMode)
 		}
 		mutation, err := nextCountdownMutation(countdownStates, countdownID, delta, override, reason)
 		if err != nil {
-			return DowntimeMoveAppliedPayload{}, nil, err
+			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
 		payload.CountdownID = countdownID
 		return payload, &mutation, nil
 	default:
-		return DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("downtime move %q is invalid", move)
+		return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("downtime move %q is invalid", move)
 	}
 
 	return payload, nil, nil
@@ -383,8 +388,8 @@ func resolveDowntimeSelection(
 func resolveRestTarget(
 	actorID ids.CharacterID,
 	targetID ids.CharacterID,
-	participantStates map[ids.CharacterID]*CharacterState,
-) (ids.CharacterID, *CharacterState, error) {
+	participantStates map[ids.CharacterID]*daggerheartstate.CharacterState,
+) (ids.CharacterID, *daggerheartstate.CharacterState, error) {
 	normalizedTarget := ids.CharacterID(strings.TrimSpace(targetID.String()))
 	if normalizedTarget == "" {
 		normalizedTarget = ids.CharacterID(strings.TrimSpace(actorID.String()))
@@ -424,35 +429,35 @@ func restTypeAllowsMove(restType RestType, move string) bool {
 }
 
 func nextCountdownMutation(
-	countdownStates map[ids.CountdownID]Countdown,
+	countdownStates map[ids.CountdownID]rules.Countdown,
 	countdownID ids.CountdownID,
 	delta int,
 	override *int,
 	reason string,
-) (CountdownUpdatePayload, error) {
+) (daggerheartpayload.CountdownUpdatePayload, error) {
 	current, ok := countdownStates[countdownID]
 	if !ok {
-		return CountdownUpdatePayload{}, fmt.Errorf("countdown %q is not available", countdownID)
+		return daggerheartpayload.CountdownUpdatePayload{}, fmt.Errorf("countdown %q is not available", countdownID)
 	}
-	mutation, err := ResolveCountdownMutation(CountdownMutationInput{
+	mutation, err := countdowns.ResolveCountdownMutation(countdowns.CountdownMutationInput{
 		Countdown: current,
 		Delta:     delta,
 		Override:  override,
 		Reason:    strings.TrimSpace(reason),
 	})
 	if err != nil {
-		return CountdownUpdatePayload{}, err
+		return daggerheartpayload.CountdownUpdatePayload{}, err
 	}
 	countdownStates[countdownID] = mutation.Update.Countdown
 	return mutation.Payload, nil
 }
 
 func clampGMFear(value int) int {
-	if value < GMFearMin {
-		return GMFearMin
+	if value < daggerheartstate.GMFearMin {
+		return daggerheartstate.GMFearMin
 	}
-	if value > GMFearMax {
-		return GMFearMax
+	if value > daggerheartstate.GMFearMax {
+		return daggerheartstate.GMFearMax
 	}
 	return value
 }

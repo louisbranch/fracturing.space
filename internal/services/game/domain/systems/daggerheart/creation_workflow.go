@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 const (
@@ -46,8 +47,6 @@ var creationStepKeys = []string{
 	"connections",
 }
 
-// CreationProfile is aliased from internal/snapstate via snapstate_aliases.go.
-
 // CreationStepProgress represents completion state for one creation step.
 type CreationStepProgress struct {
 	Step     int32
@@ -67,7 +66,7 @@ type CreationProgress struct {
 //
 // Steps complete strictly in order. A later step is not considered complete
 // until all earlier steps are complete, even if its own fields are present.
-func EvaluateCreationProgress(profile CreationProfile) CreationProgress {
+func EvaluateCreationProgress(profile daggerheartstate.CreationProfile) CreationProgress {
 	rawChecks := []bool{
 		hasClassAndSubclass(profile),
 		hasHeritage(profile),
@@ -167,7 +166,7 @@ func IsValidStartingPotionItemID(potionItemID string) bool {
 
 // EvaluateCreationReadiness evaluates readiness directly from a typed
 // Daggerheart character profile.
-func EvaluateCreationReadiness(profile CharacterProfile) (bool, string) {
+func EvaluateCreationReadiness(profile daggerheartstate.CharacterProfile) (bool, string) {
 	progress := EvaluateCreationProgress(profile.CreationProfile())
 	if progress.Ready {
 		return true, ""
@@ -178,35 +177,35 @@ func EvaluateCreationReadiness(profile CharacterProfile) (bool, string) {
 	return false, progress.UnmetReasons[0]
 }
 
-func hasClassAndSubclass(profile CreationProfile) bool {
+func hasClassAndSubclass(profile daggerheartstate.CreationProfile) bool {
 	if strings.TrimSpace(profile.ClassID) == "" || strings.TrimSpace(profile.SubclassID) == "" {
 		return false
 	}
-	if requiresCompanionSheet(profile.SubclassCreationRequirements) {
+	if daggerheartstate.RequiresCompanionSheet(profile.SubclassCreationRequirements) {
 		return profile.CompanionSheet != nil && profile.CompanionSheet.Validate() == nil
 	}
 	return true
 }
 
-func hasHeritage(profile CreationProfile) bool {
-	return profile.Heritage != (CharacterHeritage{}) && profile.Heritage.Validate() == nil
+func hasHeritage(profile daggerheartstate.CreationProfile) bool {
+	return profile.Heritage != (daggerheartstate.CharacterHeritage{}) && profile.Heritage.Validate() == nil
 }
 
-func hasTraitAssignment(profile CreationProfile) bool {
+func hasTraitAssignment(profile daggerheartstate.CreationProfile) bool {
 	if !profile.TraitsAssigned {
 		return false
 	}
 	return ValidateCreationTraitDistribution(profile.Traits) == nil
 }
 
-func hasRecordedDetails(profile CreationProfile) bool {
+func hasRecordedDetails(profile daggerheartstate.CreationProfile) bool {
 	if !profile.DetailsRecorded {
 		return false
 	}
 	return profile.Level > 0 && profile.HpMax > 0 && profile.StressMax > 0 && profile.Evasion > 0
 }
 
-func hasStartingEquipment(profile CreationProfile) bool {
+func hasStartingEquipment(profile daggerheartstate.CreationProfile) bool {
 	if len(profile.StartingWeaponIDs) == 0 {
 		return false
 	}

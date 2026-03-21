@@ -4,16 +4,16 @@ import (
 	"fmt"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func countdownKindFromProto(kind pb.DaggerheartCountdownKind) (string, error) {
 	switch kind {
 	case pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS:
-		return daggerheart.CountdownKindProgress, nil
+		return rules.CountdownKindProgress, nil
 	case pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE:
-		return daggerheart.CountdownKindConsequence, nil
+		return rules.CountdownKindConsequence, nil
 	case pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED:
 		return "", fmt.Errorf("countdown kind is required")
 	default:
@@ -24,9 +24,9 @@ func countdownKindFromProto(kind pb.DaggerheartCountdownKind) (string, error) {
 func countdownDirectionFromProto(direction pb.DaggerheartCountdownDirection) (string, error) {
 	switch direction {
 	case pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE:
-		return daggerheart.CountdownDirectionIncrease, nil
+		return rules.CountdownDirectionIncrease, nil
 	case pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE:
-		return daggerheart.CountdownDirectionDecrease, nil
+		return rules.CountdownDirectionDecrease, nil
 	case pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED:
 		return "", fmt.Errorf("countdown direction is required")
 	default:
@@ -36,9 +36,9 @@ func countdownDirectionFromProto(direction pb.DaggerheartCountdownDirection) (st
 
 func countdownKindToProto(kind string) pb.DaggerheartCountdownKind {
 	switch kind {
-	case daggerheart.CountdownKindProgress:
+	case rules.CountdownKindProgress:
 		return pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS
-	case daggerheart.CountdownKindConsequence:
+	case rules.CountdownKindConsequence:
 		return pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE
 	default:
 		return pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED
@@ -47,17 +47,17 @@ func countdownKindToProto(kind string) pb.DaggerheartCountdownKind {
 
 func countdownDirectionToProto(direction string) pb.DaggerheartCountdownDirection {
 	switch direction {
-	case daggerheart.CountdownDirectionIncrease:
+	case rules.CountdownDirectionIncrease:
 		return pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE
-	case daggerheart.CountdownDirectionDecrease:
+	case rules.CountdownDirectionDecrease:
 		return pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE
 	default:
 		return pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED
 	}
 }
 
-func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) daggerheart.Countdown {
-	return daggerheart.Countdown{
+func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) rules.Countdown {
+	return rules.Countdown{
 		CampaignID: countdown.CampaignID,
 		ID:         countdown.CountdownID,
 		Name:       countdown.Name,

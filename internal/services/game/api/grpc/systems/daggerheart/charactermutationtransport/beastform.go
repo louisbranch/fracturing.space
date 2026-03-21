@@ -12,8 +12,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/statetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -56,7 +57,7 @@ func (h *Handler) TransformBeastform(ctx context.Context, in *pb.DaggerheartTran
 		return nil, grpcerror.HandleDomainError(err)
 	}
 	classState := classStateFromProjection(state.ClassState)
-	payload := daggerheart.BeastformTransformPayload{
+	payload := daggerheartpayload.BeastformTransformPayload{
 		ActorCharacterID: ids.CharacterID(characterID),
 		CharacterID:      ids.CharacterID(characterID),
 		BeastformID:      beastform.ID,
@@ -82,7 +83,7 @@ func (h *Handler) TransformBeastform(ctx context.Context, in *pb.DaggerheartTran
 		payload.StressBefore = intPtr(state.Stress)
 		payload.StressAfter = intPtr(state.Stress + 1)
 	}
-	nextClassState := daggerheart.WithActiveBeastform(classState, resolvedBeastformState(beastform, evolutionTrait))
+	nextClassState := daggerheartstate.WithActiveBeastform(classState, resolvedBeastformState(beastform, evolutionTrait))
 	payload.ClassStateAfter = classStatePtr(nextClassState)
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -137,8 +138,8 @@ func (h *Handler) DropBeastform(ctx context.Context, in *pb.DaggerheartDropBeast
 	if classState.ActiveBeastform == nil {
 		return nil, status.Error(codes.FailedPrecondition, "character is not in beastform")
 	}
-	nextClassState := daggerheart.WithActiveBeastform(classState, nil)
-	payload := daggerheart.BeastformDropPayload{
+	nextClassState := daggerheartstate.WithActiveBeastform(classState, nil)
+	payload := daggerheartpayload.BeastformDropPayload{
 		ActorCharacterID: ids.CharacterID(characterID),
 		CharacterID:      ids.CharacterID(characterID),
 		BeastformID:      classState.ActiveBeastform.BeastformID,
@@ -173,7 +174,7 @@ func (h *Handler) DropBeastform(ctx context.Context, in *pb.DaggerheartDropBeast
 	}, nil
 }
 
-func resolvedBeastformState(beastform daggerheartcontent.DaggerheartBeastformEntry, evolutionTrait string) *daggerheart.CharacterActiveBeastformState {
+func resolvedBeastformState(beastform daggerheartcontent.DaggerheartBeastformEntry, evolutionTrait string) *daggerheartstate.CharacterActiveBeastformState {
 	baseTrait := strings.TrimSpace(beastform.Trait)
 	attackTrait := strings.TrimSpace(beastform.Attack.Trait)
 	if attackTrait == "" {
@@ -183,14 +184,14 @@ func resolvedBeastformState(beastform daggerheartcontent.DaggerheartBeastformEnt
 	if evolutionTrait != "" {
 		attackTrait = evolutionTrait
 	}
-	damageDice := make([]daggerheart.CharacterDamageDie, 0, len(beastform.Attack.DamageDice))
+	damageDice := make([]daggerheartstate.CharacterDamageDie, 0, len(beastform.Attack.DamageDice))
 	for _, die := range beastform.Attack.DamageDice {
-		damageDice = append(damageDice, daggerheart.CharacterDamageDie{
+		damageDice = append(damageDice, daggerheartstate.CharacterDamageDie{
 			Count: die.Count,
 			Sides: die.Sides,
 		})
 	}
-	return &daggerheart.CharacterActiveBeastformState{
+	return &daggerheartstate.CharacterActiveBeastformState{
 		BeastformID:            strings.TrimSpace(beastform.ID),
 		BaseTrait:              baseTrait,
 		AttackTrait:            attackTrait,

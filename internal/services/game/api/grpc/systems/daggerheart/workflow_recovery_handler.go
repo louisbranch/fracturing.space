@@ -72,7 +72,11 @@ func (s *DaggerheartService) recoveryHandler() *recoverytransport.Handler {
 			if err != nil {
 				return grpcerror.Internal("encode payload", err)
 			}
-			_, err = workflowwrite.ExecuteAndApply(ctx, s.stores.Write, s.stores.Applier(), command.Command{
+			applier, err := s.resolvedApplier()
+			if err != nil {
+				return grpcerror.Internal("build projection applier", err)
+			}
+			_, err = workflowwrite.ExecuteAndApply(ctx, s.stores.Write, applier, command.Command{
 				CampaignID:   ids.CampaignID(in.CampaignID),
 				Type:         commandTypeCharacterDelete,
 				ActorType:    command.ActorTypeSystem,

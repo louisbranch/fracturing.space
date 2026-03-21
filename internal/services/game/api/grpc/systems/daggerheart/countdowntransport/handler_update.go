@@ -11,7 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/countdowns"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -56,7 +56,7 @@ func (h *Handler) UpdateCountdown(ctx context.Context, in *pb.DaggerheartUpdateC
 		value := int(in.GetCurrent())
 		override = &value
 	}
-	mutation, err := daggerheart.ResolveCountdownMutation(daggerheart.CountdownMutationInput{
+	mutation, err := countdowns.ResolveCountdownMutation(countdowns.CountdownMutationInput{
 		Countdown: countdownFromStorage(storedCountdown),
 		Delta:     int(in.GetDelta()),
 		Override:  override,

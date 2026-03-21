@@ -10,6 +10,7 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -144,8 +145,8 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 		t.Fatal("expected long rest to advance countdown")
 	}
 	expectedFear := 2 + outcome.GMFearGain
-	if expectedFear > daggerheart.GMFearMax {
-		expectedFear = daggerheart.GMFearMax
+	if expectedFear > daggerheartstate.GMFearMax {
+		expectedFear = daggerheartstate.GMFearMax
 	}
 
 	sessionCtx := withSessionID(ctxWithUser, sessionID)

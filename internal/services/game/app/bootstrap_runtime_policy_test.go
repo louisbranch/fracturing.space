@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -9,19 +9,19 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 )
 
-type projectionRuntimeConfigurerFunc func(serverEnv, *gamegrpc.Stores, storage.ProjectionApplyExactlyOnceStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
+type projectionRuntimeConfigurerFunc func(serverEnv, *gamegrpc.RuntimeStores, projection.ExactlyOnceStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
 
 func (f projectionRuntimeConfigurerFunc) Configure(
 	srvEnv serverEnv,
-	stores *gamegrpc.Stores,
-	projectionStore storage.ProjectionApplyExactlyOnceStore,
+	runtimeStores *gamegrpc.RuntimeStores,
+	projectionStore projection.ExactlyOnceStore,
 	registries engine.Registries,
 	adapters *bridge.AdapterRegistry,
 ) (projectionRuntimeState, error) {
-	return f(srvEnv, stores, projectionStore, registries, adapters)
+	return f(srvEnv, runtimeStores, projectionStore, registries, adapters)
 }
 
 func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing.T) {
@@ -34,7 +34,7 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 		t.Fatalf("register projection event: %v", err)
 	}
 
-	var capturedStore storage.ProjectionApplyExactlyOnceStore
+	var capturedStore projection.ExactlyOnceStore
 	var capturedRegistry *event.Registry
 	applyCalled := false
 	applyFn := func(context.Context, event.Event) error {
@@ -43,10 +43,10 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 	}
 
 	bootstrap := newServerBootstrapWithConfig(serverBootstrapConfig{
-		projectionRuntimeConfigurer: projectionRuntimeConfigurerFunc(func(_ serverEnv, stores *gamegrpc.Stores, store storage.ProjectionApplyExactlyOnceStore, _ engine.Registries, _ *bridge.AdapterRegistry) (projectionRuntimeState, error) {
-			if stores != nil && stores.Write.Runtime != nil {
-				stores.Write.Runtime.SetInlineApplyEnabled(false)
-				stores.Write.Runtime.SetIntentFilter(projectionRegistries)
+		projectionRuntimeConfigurer: projectionRuntimeConfigurerFunc(func(_ serverEnv, runtimeStores *gamegrpc.RuntimeStores, store projection.ExactlyOnceStore, _ engine.Registries, _ *bridge.AdapterRegistry) (projectionRuntimeState, error) {
+			if runtimeStores != nil && runtimeStores.Write.Runtime != nil {
+				runtimeStores.Write.Runtime.SetInlineApplyEnabled(false)
+				runtimeStores.Write.Runtime.SetIntentFilter(projectionRegistries)
 			}
 			capturedStore = store
 			capturedRegistry = projectionRegistries
@@ -57,9 +57,8 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 		}),
 	})
 
-	var stores gamegrpc.Stores
-	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
-	state, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, &stores, nil, engine.Registries{}, nil)
+	runtimeStores := &gamegrpc.RuntimeStores{Write: gamegrpc.WritePath{Runtime: gamegrpc.NewWriteRuntime()}}
+	state, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, runtimeStores, nil, engine.Registries{}, nil)
 	if err != nil {
 		t.Fatalf("configure projection runtime: %v", err)
 	}
@@ -80,13 +79,13 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 		t.Fatal("expected projection registry built for runtime to flow to outbox apply builder")
 	}
 
-	if stores.Write.Runtime.InlineApplyEnabled() {
+	if runtimeStores.Write.Runtime.InlineApplyEnabled() {
 		t.Fatal("expected inline apply to be disabled in outbox-apply mode")
 	}
-	if !stores.Write.Runtime.ShouldApply()(event.Event{Type: event.Type("core.test_event")}) {
+	if !runtimeStores.Write.Runtime.ShouldApply()(event.Event{Type: event.Type("core.test_event")}) {
 		t.Fatal("expected runtime intent filter to allow registered projection event")
 	}
-	if stores.Write.Runtime.ShouldApply()(event.Event{Type: event.Type("core.unknown_event")}) {
+	if runtimeStores.Write.Runtime.ShouldApply()(event.Event{Type: event.Type("core.unknown_event")}) {
 		t.Fatal("expected runtime intent filter to fail closed for unknown event")
 	}
 
@@ -109,16 +108,15 @@ func TestConfigureProjectionRuntime_ReturnsResolveModeError(t *testing.T) {
 				t.Fatal("expected projection registry builder not to run after mode-resolution failure")
 				return nil, nil
 			},
-			buildProjectionApplyOutboxApply: func(storage.ProjectionApplyExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error) {
+			buildProjectionApplyOutboxApply: func(projection.ExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error) {
 				t.Fatal("expected outbox apply builder not to run after mode-resolution failure")
 				return nil, nil
 			},
 		},
 	})
 
-	var stores gamegrpc.Stores
-	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
-	_, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, &stores, nil, engine.Registries{}, nil)
+	runtimeStores := &gamegrpc.RuntimeStores{Write: gamegrpc.WritePath{Runtime: gamegrpc.NewWriteRuntime()}}
+	_, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, runtimeStores, nil, engine.Registries{}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected resolve-mode error %v, got %v", wantErr, err)
 	}
@@ -135,22 +133,21 @@ func TestConfigureProjectionRuntime_ReturnsBuildProjectionRegistriesError(t *tes
 			buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
 				return nil, wantErr
 			},
-			buildProjectionApplyOutboxApply: func(storage.ProjectionApplyExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error) {
+			buildProjectionApplyOutboxApply: func(projection.ExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error) {
 				calledBuildApply = true
 				return nil, nil
 			},
 		},
 	})
 
-	var stores gamegrpc.Stores
-	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
-	stores.Write.Runtime.SetInlineApplyEnabled(false)
+	runtimeStores := &gamegrpc.RuntimeStores{Write: gamegrpc.WritePath{Runtime: gamegrpc.NewWriteRuntime()}}
+	runtimeStores.Write.Runtime.SetInlineApplyEnabled(false)
 
-	_, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, &stores, nil, engine.Registries{}, nil)
+	_, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, runtimeStores, nil, engine.Registries{}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected registry-build error %v, got %v", wantErr, err)
 	}
-	if !stores.Write.Runtime.InlineApplyEnabled() {
+	if !runtimeStores.Write.Runtime.InlineApplyEnabled() {
 		t.Fatal("expected inline apply to be enabled in inline mode before registry-build failure")
 	}
 	if calledBuildApply {

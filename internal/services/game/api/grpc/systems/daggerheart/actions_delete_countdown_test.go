@@ -10,7 +10,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
@@ -54,13 +56,13 @@ func TestDeleteCountdown_Success(t *testing.T) {
 		CampaignID:  "camp-1",
 		CountdownID: "cd-delete",
 		Name:        "Delete Test",
-		Kind:        daggerheart.CountdownKindConsequence,
+		Kind:        rules.CountdownKindConsequence,
 		Current:     0,
 		Max:         4,
-		Direction:   daggerheart.CountdownDirectionIncrease,
+		Direction:   rules.CountdownDirectionIncrease,
 		Looping:     false,
 	}
-	deletePayload := daggerheart.CountdownDeletedPayload{CountdownID: "cd-delete"}
+	deletePayload := daggerheartpayload.CountdownDeletedPayload{CountdownID: "cd-delete"}
 	deletePayloadJSON, err := json.Marshal(deletePayload)
 	if err != nil {
 		t.Fatalf("encode countdown delete payload: %v", err)
@@ -103,13 +105,13 @@ func TestDeleteCountdown_UsesDomainEngine(t *testing.T) {
 		CampaignID:  "camp-1",
 		CountdownID: "cd-1",
 		Name:        "Cleanup",
-		Kind:        daggerheart.CountdownKindConsequence,
+		Kind:        rules.CountdownKindConsequence,
 		Current:     0,
 		Max:         4,
-		Direction:   daggerheart.CountdownDirectionIncrease,
+		Direction:   rules.CountdownDirectionIncrease,
 		Looping:     false,
 	}
-	deletePayload := daggerheart.CountdownDeletedPayload{CountdownID: "cd-1", Reason: "cleanup"}
+	deletePayload := daggerheartpayload.CountdownDeletedPayload{CountdownID: "cd-1", Reason: "cleanup"}
 	deletePayloadJSON, err := json.Marshal(deletePayload)
 	if err != nil {
 		t.Fatalf("encode countdown delete payload: %v", err)

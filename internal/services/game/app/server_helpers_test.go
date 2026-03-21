@@ -1,23 +1,22 @@
-package server
+package app
 
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -213,87 +212,47 @@ func TestEnsureDirRejectsFileParent(t *testing.T) {
 func TestOpenProjectionStore(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "projections.db")
 
-	store, err := openProjectionStore(path)
+	store, systemStores, err := openProjectionStore(path)
 	if err != nil {
 		t.Fatalf("open projection store: %v", err)
+	}
+	if systemStores.Daggerheart == nil {
+		t.Fatal("expected Daggerheart system projection store")
 	}
 	if err := store.Close(); err != nil {
 		t.Fatalf("close projection store: %v", err)
 	}
 }
 
-func TestBuildProjectionApplyOutboxApplySkipsDuplicateSeq(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "projections.db")
-	store, err := openProjectionStore(path)
-	if err != nil {
-		t.Fatalf("open projection store: %v", err)
+func TestConfigureStoresAndApplier_DoesNotInlineStoresOrApplierAssembly(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
 	}
-	t.Cleanup(func() {
-		if closeErr := store.Close(); closeErr != nil {
-			t.Fatalf("close projection store: %v", closeErr)
+	path := filepath.Join(filepath.Dir(filename), "bootstrap.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	for _, marker := range []string{
+		"gamegrpc.NewStores(gamegrpc.StoresConfig{",
+		"gamegrpc.NewProjectionStores(",
+		"gamegrpc.NewInfrastructureStores(",
+		"gamegrpc.NewContentStores(",
+		"gamegrpc.NewRuntimeStores(",
+		"projection.NewApplier(",
+		"type configuredStores struct",
+		"stores := storeState.stores",
+		"newCampaignRegistrationDeps(campaignRegistrationSources{",
+		"newSessionRegistrationDeps(sessionRegistrationSources{",
+		"newInfrastructureRegistrationDeps(infrastructureRegistrationSources{",
+		"newDaggerheartRegistrationDeps(daggerheartRegistrationSources{",
+		"buildRegistrationAssemblies(bundle, domainState, deps, systemState.systemRegistry)",
+	} {
+		if strings.Contains(source, marker) {
+			t.Fatalf("%s unexpectedly contains removed inline construction marker %q", filepath.Base(path), marker)
 		}
-	})
-
-	now := time.Date(2026, 2, 18, 20, 0, 0, 0, time.UTC)
-	if err := store.Put(context.Background(), storage.CampaignRecord{
-		ID:               "camp-outbox-exactly-once",
-		Name:             "Exactly Once",
-		Locale:           "en-US",
-		System:           bridge.SystemIDDaggerheart,
-		Status:           campaign.StatusDraft,
-		GmMode:           campaign.GmModeHuman,
-		Intent:           campaign.IntentStandard,
-		AccessPolicy:     campaign.AccessPolicyPrivate,
-		ParticipantCount: 0,
-		CharacterCount:   0,
-		CreatedAt:        now,
-		UpdatedAt:        now,
-	}); err != nil {
-		t.Fatalf("seed campaign: %v", err)
-	}
-
-	apply, err := buildProjectionApplyOutboxApply(store, nil)
-	if err != nil {
-		t.Fatalf("build projection apply: %v", err)
-	}
-	if apply == nil {
-		t.Fatal("expected projection apply callback")
-	}
-
-	payload, err := json.Marshal(participant.JoinPayload{
-		ParticipantID:  "part-apply-once",
-		Name:           "Rook",
-		Role:           "player",
-		Controller:     "human",
-		CampaignAccess: "member",
-	})
-	if err != nil {
-		t.Fatalf("marshal participant payload: %v", err)
-	}
-
-	evt := event.Event{
-		CampaignID:  "camp-outbox-exactly-once",
-		Seq:         501,
-		Type:        event.Type("participant.joined"),
-		Timestamp:   now.Add(time.Second),
-		EntityType:  "participant",
-		EntityID:    "part-apply-once",
-		PayloadJSON: payload,
-	}
-
-	if err := apply(context.Background(), evt); err != nil {
-		t.Fatalf("first projection apply: %v", err)
-	}
-	if err := apply(context.Background(), evt); err != nil {
-		t.Fatalf("duplicate projection apply: %v", err)
-	}
-
-	campaignRecord, err := store.Get(context.Background(), string(evt.CampaignID))
-	if err != nil {
-		t.Fatalf("get campaign: %v", err)
-	}
-	if campaignRecord.ParticipantCount != 1 {
-		t.Fatalf("expected participant count 1 after duplicate apply, got %d", campaignRecord.ParticipantCount)
 	}
 }
 
@@ -1235,37 +1194,38 @@ func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
 }
 
 func TestConfigureDomainEnabled_SetsDomain(t *testing.T) {
-	store := newFakeDomainEventStore()
-	stores := gamegrpc.Stores{Event: store}
+	infrastructureStores := &gamegrpc.InfrastructureStores{Event: newFakeDomainEventStore()}
+	runtimeStores := &gamegrpc.RuntimeStores{}
 
 	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
 
-	if err := configureDomain(serverEnv{DomainEnabled: true}, &stores, registries); err != nil {
+	if err := configureDomain(serverEnv{DomainEnabled: true}, infrastructureStores, runtimeStores, registries); err != nil {
 		t.Fatalf("configure domain: %v", err)
 	}
-	if stores.Write.Executor == nil {
+	if runtimeStores.Write.Executor == nil {
 		t.Fatal("expected domain to be configured")
 	}
 }
 
 func TestConfigureDomainDisabled_SetsDisabledDomain(t *testing.T) {
-	stores := gamegrpc.Stores{}
+	infrastructureStores := &gamegrpc.InfrastructureStores{}
+	runtimeStores := &gamegrpc.RuntimeStores{}
 
 	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
 
-	if err := configureDomain(serverEnv{DomainEnabled: false}, &stores, registries); err != nil {
+	if err := configureDomain(serverEnv{DomainEnabled: false}, infrastructureStores, runtimeStores, registries); err != nil {
 		t.Fatalf("configure domain: %v", err)
 	}
-	if stores.Write.Executor == nil {
+	if runtimeStores.Write.Executor == nil {
 		t.Fatal("expected disabled domain executor to be configured")
 	}
-	_, err = stores.Write.Executor.Execute(context.Background(), command.Command{})
+	_, err = runtimeStores.Write.Executor.Execute(context.Background(), command.Command{})
 	if !errors.Is(err, errDomainWritePathDisabled) {
 		t.Fatalf("disabled domain execute error = %v, want %v", err, errDomainWritePathDisabled)
 	}

@@ -13,8 +13,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -129,15 +130,15 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 	actorType event.ActorType,
 	actorID string,
 ) (projectionstore.DaggerheartCharacterState, error) {
-	normalizedBefore, err := daggerheart.NormalizeConditions(projectionConditionCodes(current.Conditions))
+	normalizedBefore, err := rules.NormalizeConditions(projectionConditionCodes(current.Conditions))
 	if err != nil {
 		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid stored conditions", err)
 	}
-	if daggerheart.ConditionsEqual(normalizedBefore, normalizedAfter) {
+	if rules.ConditionsEqual(normalizedBefore, normalizedAfter) {
 		return current, nil
 	}
 
-	added, removed := daggerheart.DiffConditions(normalizedBefore, normalizedAfter)
+	added, removed := rules.DiffConditions(normalizedBefore, normalizedAfter)
 	beforeStates, err := conditionStatesFromCodes(normalizedBefore)
 	if err != nil {
 		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid stored conditions", err)
@@ -154,7 +155,7 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 	if err != nil {
 		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid condition patch", err)
 	}
-	conditionPayload := daggerheart.ConditionChangePayload{
+	conditionPayload := daggerheartpayload.ConditionChangePayload{
 		CharacterID:      ids.CharacterID(characterID),
 		ConditionsBefore: beforeStates,
 		ConditionsAfter:  afterStates,

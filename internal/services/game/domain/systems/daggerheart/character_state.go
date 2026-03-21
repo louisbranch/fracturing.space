@@ -1,6 +1,9 @@
 package daggerheart
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+)
 
 const (
 	ResourceHope   = mechanics.ResourceHope
@@ -18,6 +21,6 @@ var (
 )
 
 // NewCharacterState creates a character state with clamped values.
-func NewCharacterState(cfg CharacterStateConfig) *CharacterState {
+func NewCharacterState(cfg CharacterStateConfig) *daggerheartstate.CharacterState {
 	return mechanics.NewCharacterState(cfg)
 }

@@ -3,11 +3,13 @@ package daggerheart
 import (
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 )
 
 func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
-	progress := EvaluateCreationProgress(CreationProfile{})
+	progress := EvaluateCreationProgress(daggerheartstate.CreationProfile{})
 	if progress.NextStep != CreationStepClassSubclass {
 		t.Fatalf("next step = %d, want %d", progress.NextStep, CreationStepClassSubclass)
 	}
@@ -15,11 +17,11 @@ func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 		t.Fatal("ready = true, want false")
 	}
 
-	progress = EvaluateCreationProgress(CreationProfile{
+	progress = EvaluateCreationProgress(daggerheartstate.CreationProfile{
 		ClassID:                      "class.guardian",
 		SubclassID:                   "subclass.stalwart",
 		SubclassCreationRequirements: nil,
-		Heritage: CharacterHeritage{
+		Heritage: daggerheartstate.CharacterHeritage{
 			FirstFeatureAncestryID:  "heritage.clank",
 			FirstFeatureID:          "heritage.clank.feature-1",
 			SecondFeatureAncestryID: "heritage.clank",
@@ -60,7 +62,7 @@ func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 }
 
 func TestEvaluateCreationReadiness_RequiresDaggerheartProfile(t *testing.T) {
-	ready, reason := EvaluateCreationReadiness(CharacterProfile{})
+	ready, reason := EvaluateCreationReadiness(daggerheartstate.CharacterProfile{})
 	if ready {
 		t.Fatal("ready = true, want false")
 	}

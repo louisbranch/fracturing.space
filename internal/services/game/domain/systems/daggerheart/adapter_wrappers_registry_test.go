@@ -4,8 +4,13 @@ import (
 	"context"
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 )
 
 func TestAdapterIdentityAndGuards(t *testing.T) {
@@ -62,7 +67,7 @@ func TestPublicWrappers_DelegateToMechanics(t *testing.T) {
 	if _, err := NormalizeDeathMove(DeathMoveAvoidDeath); err != nil {
 		t.Fatalf("NormalizeDeathMove: %v", err)
 	}
-	if _, err := NormalizeLifeState(LifeStateAlive); err != nil {
+	if _, err := NormalizeLifeState(daggerheartstate.LifeStateAlive); err != nil {
 		t.Fatalf("NormalizeLifeState: %v", err)
 	}
 
@@ -79,8 +84,8 @@ func TestPublicWrappers_DelegateToMechanics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveDeathMove: %v", err)
 	}
-	if deathOutcome.LifeState != LifeStateBlazeOfGlory {
-		t.Fatalf("death outcome life state = %q, want %q", deathOutcome.LifeState, LifeStateBlazeOfGlory)
+	if deathOutcome.LifeState != mechanics.LifeStateBlazeOfGlory {
+		t.Fatalf("death outcome life state = %q, want %q", deathOutcome.LifeState, mechanics.LifeStateBlazeOfGlory)
 	}
 
 	restOutcome, err := ResolveRestOutcome(RestState{ConsecutiveShortRests: 0}, RestTypeShort, false, 42, 3)
@@ -102,7 +107,7 @@ func TestPublicWrappers_DelegateToMechanics(t *testing.T) {
 		StressMax:   6,
 		Armor:       0,
 		ArmorMax:    2,
-		LifeState:   LifeStateAlive,
+		LifeState:   daggerheartstate.LifeStateAlive,
 	})
 	result := ApplyDowntimeMove(state, DowntimePrepare, DowntimeOptions{PrepareWithGroup: true})
 	if result.HopeAfter <= result.HopeBefore {
@@ -113,7 +118,7 @@ func TestPublicWrappers_DelegateToMechanics(t *testing.T) {
 func eventForAdapterGuard() event.Event {
 	return event.Event{
 		CampaignID:  "camp-1",
-		Type:        EventTypeGMFearChanged,
+		Type:        daggerheartpayload.EventTypeGMFearChanged,
 		PayloadJSON: []byte(`{"before":0,"after":1}`),
 	}
 }

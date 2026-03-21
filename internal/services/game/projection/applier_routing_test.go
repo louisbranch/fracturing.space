@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection/testevent"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -122,7 +123,7 @@ func TestApplySystemEvent_UsesDaggerheartAdapterForSysPrefixedEventType(t *testi
 		Adapters: registry,
 	}
 
-	payload, err := json.Marshal(daggerheartsys.GMFearChangedPayload{
+	payload, err := json.Marshal(daggerheartpayload.GMFearChangedPayload{
 		Value:  4,
 		Reason: "test",
 	})

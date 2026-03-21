@@ -15,7 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -95,7 +95,7 @@ func (h *Handler) CreateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 	if err != nil {
 		return nil, grpcerror.Internal("generate environment entity id", err)
 	}
-	payloadJSON, err := json.Marshal(daggerheart.EnvironmentEntityCreatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.EnvironmentEntityCreatePayload{
 		EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
 		EnvironmentID:       environmentID,
 		Name:                entry.Name,
@@ -191,7 +191,7 @@ func (h *Handler) UpdateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 		return nil, invalidArgument("difficulty must be greater than zero")
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.EnvironmentEntityUpdatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.EnvironmentEntityUpdatePayload{
 		EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
 		EnvironmentID:       current.EnvironmentID,
 		Name:                current.Name,
@@ -272,7 +272,7 @@ func (h *Handler) DeleteEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 		sceneID = strings.TrimSpace(in.GetSceneId())
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.EnvironmentEntityDeletePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.EnvironmentEntityDeletePayload{
 		EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
 		Reason:              strings.TrimSpace(in.GetReason()),
 	})

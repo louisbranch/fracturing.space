@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestApplyStressVulnerableCondition_NoThresholdCrossing(t *testing.T) {
@@ -49,7 +49,7 @@ func TestApplyStressVulnerableCondition_ExecutesRepair(t *testing.T) {
 		CampaignID:   "camp-1",
 		SessionID:    "sess-1",
 		CharacterID:  "char-1",
-		Conditions:   []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
+		Conditions:   []projectionstore.DaggerheartConditionState{{Standard: rules.ConditionHidden}},
 		StressBefore: 5,
 		StressAfter:  6,
 		StressMax:    6,
@@ -83,7 +83,7 @@ func TestApplyStressVulnerableCondition_SkipsWhenReplayAlreadyApplied(t *testing
 		CampaignID:   "camp-1",
 		SessionID:    "sess-1",
 		CharacterID:  "char-1",
-		Conditions:   []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
+		Conditions:   []projectionstore.DaggerheartConditionState{{Standard: rules.ConditionHidden}},
 		StressBefore: 5,
 		StressAfter:  6,
 		StressMax:    6,

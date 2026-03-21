@@ -7,9 +7,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 // StepProgress carries one creation step's completion state.
@@ -47,7 +47,7 @@ type CreationDeps interface {
 	GetCharacterRecord(ctx context.Context, campaignID, characterID string) (CharacterContext, error)
 	GetCharacterSystemProfile(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error)
 	SystemContent() contentstore.DaggerheartContentReadStore
-	ExecuteProfileReplace(ctx context.Context, campaignContext CampaignContext, characterID string, profile daggerheart.CharacterProfile) error
+	ExecuteProfileReplace(ctx context.Context, campaignContext CampaignContext, characterID string, profile daggerheartstate.CharacterProfile) error
 	ExecuteProfileDelete(ctx context.Context, campaignContext CampaignContext, characterID string) error
 	RequireReadPolicy(ctx context.Context, campaignContext CampaignContext) error
 	ProfileToProto(campaignID, characterID string, profile projectionstore.DaggerheartCharacterProfile) *campaignv1.CharacterProfile

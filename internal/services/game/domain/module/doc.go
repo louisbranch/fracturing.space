@@ -14,5 +14,5 @@
 // mapping). The two packages collaborate but own different concerns:
 //
 //   - module.Registry  — write-path module routing (commands → decider, events → projector)
-//   - bridge.AdapterRegistry — projection-side adapters for system-specific read models
+//   - systems.AdapterRegistry — projection-side adapters for system-specific read models
 package module

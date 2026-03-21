@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
@@ -24,7 +29,7 @@ func TestApplyCharacterProfileEvents_GuardsAndDelete(t *testing.T) {
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   []byte(`{`),
 	}); err == nil {
 		t.Fatal("expected decode error")
@@ -35,7 +40,7 @@ func TestApplyCharacterProfileEvents_GuardsAndDelete(t *testing.T) {
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileDeleted,
+		Type:          daggerheartpayload.EventTypeCharacterProfileDeleted,
 		PayloadJSON:   []byte(`{"character_id":"char-1"}`),
 	})
 	if err != nil {
@@ -47,9 +52,9 @@ func TestApplyCharacterProfileReplaced_PersistsValidatedProfile(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	profilePayload, err := json.Marshal(CharacterProfileReplacedPayload{
+	profilePayload, err := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: ids.CharacterID("char-1"),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -65,12 +70,12 @@ func TestApplyCharacterProfileReplaced_PersistsValidatedProfile(t *testing.T) {
 			Instinct:        0,
 			Presence:        0,
 			Knowledge:       0,
-			Experiences: []CharacterProfileExperience{
+			Experiences: []daggerheartstate.CharacterProfileExperience{
 				{Name: "Scout", Modifier: 1},
 			},
 			ClassID:    "class-1",
 			SubclassID: "sub-1",
-			Heritage: CharacterHeritage{
+			Heritage: daggerheartstate.CharacterHeritage{
 				FirstFeatureAncestryID:  "anc-1",
 				FirstFeatureID:          "anc-1.feature-1",
 				SecondFeatureAncestryID: "anc-1",
@@ -97,7 +102,7 @@ func TestApplyCharacterProfileReplaced_PersistsValidatedProfile(t *testing.T) {
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   profilePayload,
 	}); err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -121,7 +126,7 @@ func TestApplyCharacterProfileReplaced_PersistsValidatedProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get state: %v", err)
 	}
-	if state.Hp != 6 || state.Hope != HopeDefault || state.HopeMax != HopeMaxDefault || state.Stress != StressDefault || state.Armor != 2 || state.LifeState != LifeStateAlive {
+	if state.Hp != 6 || state.Hope != daggerheartstate.HopeDefault || state.HopeMax != daggerheartstate.HopeMaxDefault || state.Stress != daggerheartstate.StressDefault || state.Armor != 2 || state.LifeState != daggerheartstate.LifeStateAlive {
 		t.Fatalf("unexpected seeded state: %+v", state)
 	}
 }
@@ -130,9 +135,9 @@ func TestApplyCharacterProfileReplaced_DefaultsLevelWhenZero(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	profilePayload, err := json.Marshal(CharacterProfileReplacedPayload{
+	profilePayload, err := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: ids.CharacterID("char-1"),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           0,
 			HpMax:           6,
 			StressMax:       6,
@@ -152,7 +157,7 @@ func TestApplyCharacterProfileReplaced_DefaultsLevelWhenZero(t *testing.T) {
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   profilePayload,
 	}); err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -178,14 +183,14 @@ func TestApplyCharacterProfileReplaced_DoesNotOverwriteExistingState(t *testing.
 		HopeMax:     4,
 		Stress:      3,
 		Armor:       1,
-		LifeState:   LifeStateUnconscious,
+		LifeState:   mechanics.LifeStateUnconscious,
 	}); err != nil {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	profilePayload, err := json.Marshal(CharacterProfileReplacedPayload{
+	profilePayload, err := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: ids.CharacterID("char-1"),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -205,7 +210,7 @@ func TestApplyCharacterProfileReplaced_DoesNotOverwriteExistingState(t *testing.
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   profilePayload,
 	}); err != nil {
 		t.Fatalf("Apply: %v", err)
@@ -215,7 +220,7 @@ func TestApplyCharacterProfileReplaced_DoesNotOverwriteExistingState(t *testing.
 	if err != nil {
 		t.Fatalf("get state: %v", err)
 	}
-	if state.Hp != 2 || state.Hope != 1 || state.HopeMax != 4 || state.Stress != 3 || state.Armor != 1 || state.LifeState != LifeStateUnconscious {
+	if state.Hp != 2 || state.Hope != 1 || state.HopeMax != 4 || state.Stress != 3 || state.Armor != 1 || state.LifeState != mechanics.LifeStateUnconscious {
 		t.Fatalf("state was overwritten: %+v", state)
 	}
 }

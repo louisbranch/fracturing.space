@@ -18,16 +18,75 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+type testProjectionStoreGroups struct {
+	ProjectionStores
+	SystemStores
+	InfrastructureStores
+}
+
+func testProjectionApplierFromStores(t *testing.T, stores testProjectionStoreGroups) projection.Applier {
+	t.Helper()
+
+	adapters, err := systemmanifest.AdapterRegistry(stores.SystemStores)
+	if err != nil {
+		t.Fatalf("build adapter registry: %v", err)
+	}
+
+	return projection.NewBoundApplier(projection.BoundApplierConfig{
+		Stores: projection.StoreGroups{
+			CampaignStores: projection.CampaignStores{
+				Campaign:     stores.Campaign,
+				CampaignFork: stores.CampaignFork,
+			},
+			ParticipantStores: projection.ParticipantStores{
+				Participant: stores.Participant,
+				ClaimIndex:  stores.ClaimIndex,
+			},
+			CharacterStores: projection.CharacterStores{
+				Character: stores.Character,
+			},
+			InviteStores: projection.InviteStores{
+				Invite: stores.Invite,
+			},
+			SessionStores: projection.SessionStores{
+				Session:            stores.Session,
+				SessionGate:        stores.SessionGate,
+				SessionSpotlight:   stores.SessionSpotlight,
+				SessionInteraction: stores.SessionInteraction,
+			},
+			SceneStores: projection.SceneStores{
+				Scene:            stores.Scene,
+				SceneCharacter:   stores.SceneCharacter,
+				SceneGate:        stores.SceneGate,
+				SceneSpotlight:   stores.SceneSpotlight,
+				SceneInteraction: stores.SceneInteraction,
+			},
+			SupportStores: projection.SupportStores{
+				Watermarks: stores.Watermarks,
+			},
+		},
+		Adapters: adapters,
+	})
+}
+
+func testStoresWithProjection(projectionStores ProjectionStores) testProjectionStoreGroups {
+	return testProjectionStoreGroups{ProjectionStores: projectionStores}
+}
+
 func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign:    gametest.NewFakeCampaignStore(),
 		Participant: gametest.NewFakeParticipantStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{
@@ -108,11 +167,11 @@ func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 
 func TestStoresApplier_ApplyParticipantUpdated(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign:    gametest.NewFakeCampaignStore(),
 		Participant: gametest.NewFakeParticipantStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{
@@ -196,11 +255,11 @@ func TestStoresApplier_ApplyParticipantUpdated(t *testing.T) {
 
 func TestStoresApplier_ApplyParticipantLeft(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign:    gametest.NewFakeCampaignStore(),
 		Participant: gametest.NewFakeParticipantStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{
@@ -285,16 +344,16 @@ func TestStoresApplier_ApplyParticipantLeft(t *testing.T) {
 
 func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign:    gametest.NewFakeCampaignStore(),
 		Participant: gametest.NewFakeParticipantStore(),
 		ClaimIndex:  newFakeClaimIndexStore(),
-	}
+	})
 	registries, err := engine.BuildRegistries()
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	applier := stores.Applier()
+	applier := testProjectionApplierFromStores(t, stores)
 	applier.Events = registries.Events
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
@@ -429,11 +488,11 @@ func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 
 func TestStoresApplier_ApplyCampaignUpdatedAndSessionLifecycle(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign: gametest.NewFakeCampaignStore(),
 		Session:  gametest.NewFakeSessionStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 1, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{
@@ -546,10 +605,10 @@ func TestStoresApplier_ApplyCampaignUpdatedAndSessionLifecycle(t *testing.T) {
 
 func TestStoresApplier_ApplyCampaignUpdated_CoverAssetID(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign: gametest.NewFakeCampaignStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 1, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{
@@ -605,10 +664,10 @@ func TestStoresApplier_ApplyCampaignUpdated_CoverAssetID(t *testing.T) {
 
 func TestStoresApplier_ApplySessionGateLifecycle(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		SessionGate: gametest.NewFakeSessionGateStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 2, 0, 0, 0, time.UTC)
 
 	openPayload := session.GateOpenedPayload{
@@ -679,10 +738,10 @@ func TestStoresApplier_ApplySessionGateLifecycle(t *testing.T) {
 
 func TestStoresApplier_ApplySessionSpotlightSetAndClear(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		SessionSpotlight: gametest.NewFakeSessionSpotlightStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 3, 0, 0, 0, time.UTC)
 
 	setPayload := session.SpotlightSetPayload{SpotlightType: "character", CharacterID: "char-1"}
@@ -738,11 +797,11 @@ func TestStoresApplier_ApplySessionSpotlightSetAndClear(t *testing.T) {
 
 func TestStoresApplier_ApplyInviteLifecycle(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign: gametest.NewFakeCampaignStore(),
 		Invite:   gametest.NewFakeInviteStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 4, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{
@@ -885,11 +944,11 @@ func TestStoresApplier_ApplyInviteLifecycle(t *testing.T) {
 
 func TestStoresApplier_ApplyInviteUpdated(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign: gametest.NewFakeCampaignStore(),
 		Invite:   gametest.NewFakeInviteStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 5, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{
@@ -972,10 +1031,10 @@ func TestStoresApplier_ApplyInviteUpdated(t *testing.T) {
 
 func TestStoresApplier_ApplyCampaignForked(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		CampaignFork: gametest.NewFakeCampaignForkStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 6, 0, 0, 0, time.UTC)
 
 	forkPayload := campaign.ForkPayload{
@@ -1017,11 +1076,11 @@ func TestStoresApplier_ApplyCampaignForked(t *testing.T) {
 
 func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
+	stores := testStoresWithProjection(ProjectionStores{
 		Campaign:  gametest.NewFakeCampaignStore(),
 		Character: gametest.NewFakeCharacterStore(),
-	}
-	applier := stores.Applier()
+	})
+	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 6, 30, 0, 0, time.UTC)
 
 	campaignRecord := storage.CampaignRecord{
@@ -1130,14 +1189,15 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 
 func TestStoresApplier_ApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	ctx := context.Background()
-	stores := Stores{
-		SystemStores: SystemStores{Daggerheart: gametest.NewFakeDaggerheartStore()},
+	stores := testProjectionStoreGroups{
+		ProjectionStores: ProjectionStores{},
+		SystemStores:     SystemStores{Daggerheart: gametest.NewFakeDaggerheartStore()},
 	}
-	applier := stores.Applier()
+	applier := testProjectionApplierFromStores(t, stores)
 
-	profilePayload := daggerheart.CharacterProfileReplacedPayload{
+	profilePayload := daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: "char-1",
-		Profile: daggerheart.CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -1153,7 +1213,7 @@ func TestStoresApplier_ApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 			Instinct:        0,
 			Presence:        0,
 			Knowledge:       1,
-			Experiences: []daggerheart.CharacterProfileExperience{
+			Experiences: []daggerheartstate.CharacterProfileExperience{
 				{Name: "Scout", Modifier: 2},
 			},
 		},
@@ -1164,7 +1224,7 @@ func TestStoresApplier_ApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	}
 	if err := applier.Apply(ctx, event.Event{
 		CampaignID:    "camp-1",
-		Type:          daggerheart.EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		Timestamp:     time.Date(2026, 2, 14, 7, 0, 0, 0, time.UTC),
 		ActorType:     event.ActorTypeSystem,
 		EntityType:    "character",

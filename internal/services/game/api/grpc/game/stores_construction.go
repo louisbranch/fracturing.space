@@ -5,11 +5,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-// NewStoresFromProjection constructs Stores from a projection-oriented store
-// bundle plus runtime dependencies. This reduces startup constructor coupling
-// to individual store interfaces while preserving explicit overrides.
-func NewStoresFromProjection(config StoresFromProjectionConfig) Stores {
-	return Stores{
+// NewProjectionStores builds the root projection concern from one projection
+// bundle plus the built-in system read models that share that backend.
+func NewProjectionStores(config StoresProjectionConfig) ProjectionStores {
+	return ProjectionStores{
 		Campaign:           config.ProjectionStore,
 		Participant:        config.ProjectionStore,
 		ClaimIndex:         config.ProjectionStore,
@@ -25,33 +24,44 @@ func NewStoresFromProjection(config StoresFromProjectionConfig) Stores {
 		SceneSpotlight:     config.ProjectionStore,
 		SceneInteraction:   config.ProjectionStore,
 		CampaignFork:       config.ProjectionStore,
-		SystemStores:       config.SystemStores,
-		Event:              config.EventStore,
-		Watermarks:         config.ProjectionStore,
-		Audit:              inferAuditStore(config),
-		Statistics:         config.ProjectionStore,
-		Snapshot:           config.ProjectionStore,
-		DaggerheartContent: config.ContentStore,
-		Social:             config.SocialClient,
-		Write: domainwriteexec.WritePath{
-			Executor: config.Domain,
-			Runtime:  config.WriteRuntime,
-			Audit:    inferAuditStore(config),
-		},
-		Events: config.Events,
 	}
 }
 
-func inferAuditStore(config StoresFromProjectionConfig) storage.AuditEventStore {
-	if config.AuditStore != nil {
-		return config.AuditStore
+// NewInfrastructureStores builds the operational store concern from the exact
+// infrastructure dependencies that root transport and projection apply use.
+func NewInfrastructureStores(
+	projectionStore ProjectionStoreBundle,
+	config StoresInfrastructureConfig,
+) InfrastructureStores {
+	return InfrastructureStores{
+		Event:      config.EventStore,
+		Watermarks: projectionStore,
+		Audit:      config.AuditStore,
+		Statistics: projectionStore,
+		Snapshot:   projectionStore,
 	}
-	if config.EventStore == nil {
-		return nil
+}
+
+// NewContentStores builds the read-only content and external client concern
+// used by root transport handlers.
+func NewContentStores(config StoresContentConfig) ContentStores {
+	return ContentStores{
+		DaggerheartContent: config.ContentStore,
+		Social:             config.SocialClient,
 	}
-	inferredAuditStore, ok := config.EventStore.(storage.AuditEventStore)
-	if !ok {
-		return nil
+}
+
+// NewRuntimeStores builds the write-path runtime concern from the exact
+// executor/runtime collaborators owned by startup.
+func NewRuntimeStores(
+	config StoresRuntimeConfig,
+	auditStore storage.AuditEventStore,
+) RuntimeStores {
+	return RuntimeStores{
+		Write: domainwriteexec.WritePath{
+			Executor: config.Domain,
+			Runtime:  config.WriteRuntime,
+			Audit:    auditStore,
+		},
 	}
-	return inferredAuditStore
 }

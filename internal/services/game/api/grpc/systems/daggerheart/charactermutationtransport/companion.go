@@ -12,8 +12,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/statetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -52,11 +53,11 @@ func (h *Handler) BeginCompanionExperience(ctx context.Context, in *pb.Daggerhea
 		return nil, grpcerror.HandleDomainError(err)
 	}
 	companionState := companionStateForCharacter(profile, state)
-	if companionState.Status == daggerheart.CompanionStatusAway {
+	if companionState.Status == daggerheartstate.CompanionStatusAway {
 		return nil, status.Error(codes.FailedPrecondition, "companion is already away")
 	}
-	nextCompanionState := daggerheart.WithActiveCompanionExperience(companionState, experienceID)
-	payload := daggerheart.CompanionExperienceBeginPayload{
+	nextCompanionState := daggerheartstate.WithActiveCompanionExperience(companionState, experienceID)
+	payload := daggerheartpayload.CompanionExperienceBeginPayload{
 		ActorCharacterID:     ids.CharacterID(characterID),
 		CharacterID:          ids.CharacterID(characterID),
 		ExperienceID:         experienceID,
@@ -121,11 +122,11 @@ func (h *Handler) ReturnCompanion(ctx context.Context, in *pb.DaggerheartReturnC
 		return nil, grpcerror.HandleDomainError(err)
 	}
 	companionState := companionStateForCharacter(profile, state)
-	if companionState.Status != daggerheart.CompanionStatusAway || strings.TrimSpace(companionState.ActiveExperienceID) == "" {
+	if companionState.Status != daggerheartstate.CompanionStatusAway || strings.TrimSpace(companionState.ActiveExperienceID) == "" {
 		return nil, status.Error(codes.FailedPrecondition, "companion is not away")
 	}
-	nextCompanionState := daggerheart.WithCompanionPresent(companionState)
-	payload := daggerheart.CompanionReturnPayload{
+	nextCompanionState := daggerheartstate.WithCompanionPresent(companionState)
+	payload := daggerheartpayload.CompanionReturnPayload{
 		ActorCharacterID:     ids.CharacterID(characterID),
 		CharacterID:          ids.CharacterID(characterID),
 		Resolution:           resolution,
@@ -175,14 +176,14 @@ func profileHasCompanionExperience(profile projectionstore.DaggerheartCharacterP
 	return false
 }
 
-func companionStateForCharacter(profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState) daggerheart.CharacterCompanionState {
+func companionStateForCharacter(profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState) daggerheartstate.CharacterCompanionState {
 	if profile.CompanionSheet == nil {
-		return daggerheart.CharacterCompanionState{}
+		return daggerheartstate.CharacterCompanionState{}
 	}
 	if state.CompanionState == nil {
-		return daggerheart.CharacterCompanionState{Status: daggerheart.CompanionStatusPresent}
+		return daggerheartstate.CharacterCompanionState{Status: daggerheartstate.CompanionStatusPresent}
 	}
-	return daggerheart.CharacterCompanionState{
+	return daggerheartstate.CharacterCompanionState{
 		Status:             state.CompanionState.Status,
 		ActiveExperienceID: state.CompanionState.ActiveExperienceID,
 	}.Normalized()
@@ -199,7 +200,7 @@ func companionReturnResolutionLabel(resolution pb.DaggerheartCompanionReturnReso
 	}
 }
 
-func companionStatePtr(value daggerheart.CharacterCompanionState) *daggerheart.CharacterCompanionState {
+func companionStatePtr(value daggerheartstate.CharacterCompanionState) *daggerheartstate.CharacterCompanionState {
 	normalized := value.Normalized()
 	return &normalized
 }

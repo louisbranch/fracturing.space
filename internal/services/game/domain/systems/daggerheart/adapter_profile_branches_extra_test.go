@@ -6,6 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
@@ -20,7 +24,7 @@ func TestApplyCharacterProfileDeleted_DeleteError(t *testing.T) {
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileDeleted,
+		Type:          daggerheartpayload.EventTypeCharacterProfileDeleted,
 		PayloadJSON:   []byte(`{"character_id":"char-1"}`),
 	})
 	if err == nil || !strings.Contains(err.Error(), "delete daggerheart profile: delete profile failed") {
@@ -32,9 +36,9 @@ func TestApplyCharacterProfileReplaced_InvalidProfileValidationError(t *testing.
 	store := newFaultDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	payload, _ := json.Marshal(CharacterProfileReplacedPayload{
+	payload, _ := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: ids.CharacterID("char-1"),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           0,
 			HpMax:           -1,
 			StressMax:       0,
@@ -51,7 +55,7 @@ func TestApplyCharacterProfileReplaced_InvalidProfileValidationError(t *testing.
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   payload,
 	})
 	if err == nil {

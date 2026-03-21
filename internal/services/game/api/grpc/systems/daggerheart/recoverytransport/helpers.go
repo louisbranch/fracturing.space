@@ -13,6 +13,7 @@ import (
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,8 +57,8 @@ func resolveSeed(rng *commonv1.RngRequest, seedFunc func() (int64, error), resol
 	return seed, err
 }
 
-func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) daggerheart.Countdown {
-	return daggerheart.Countdown{
+func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) rules.Countdown {
+	return rules.Countdown{
 		CampaignID: countdown.CampaignID,
 		ID:         countdown.CountdownID,
 		Name:       countdown.Name,

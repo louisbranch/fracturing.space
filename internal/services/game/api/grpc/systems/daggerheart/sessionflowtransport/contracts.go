@@ -5,9 +5,9 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 // Dependencies groups the lower-level transport handlers the session flow layer
@@ -46,10 +46,10 @@ type CharacterStatePatchInput struct {
 	HopeAfter                           *int
 	ArmorBefore                         *int
 	ArmorAfter                          *int
-	ClassStateBefore                    *daggerheart.CharacterClassState
-	ClassStateAfter                     *daggerheart.CharacterClassState
-	SubclassStateBefore                 *daggerheart.CharacterSubclassState
-	SubclassStateAfter                  *daggerheart.CharacterSubclassState
+	ClassStateBefore                    *daggerheartstate.CharacterClassState
+	ClassStateAfter                     *daggerheartstate.CharacterClassState
+	SubclassStateBefore                 *daggerheartstate.CharacterSubclassState
+	SubclassStateAfter                  *daggerheartstate.CharacterSubclassState
 	ImpenetrableUsedThisShortRestBefore *bool
 	ImpenetrableUsedThisShortRestAfter  *bool
 }

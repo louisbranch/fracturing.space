@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
@@ -52,7 +53,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 
 	hopeBefore := state.Hope
 	hopeAfter := hopeBefore + 1
-	patchPayload := daggerheart.CharacterStatePatchedPayload{
+	patchPayload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		Hope:        &hopeAfter,
 	}

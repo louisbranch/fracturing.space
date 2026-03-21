@@ -107,7 +107,7 @@ func (s *Stores) Validate() error {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
 	}
 
-	adapters, err := systemmanifest.AdapterRegistry(s.Daggerheart)
+	adapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: s.Daggerheart})
 	if err != nil {
 		return fmt.Errorf("build adapter registry: %w", err)
 	}
@@ -155,18 +155,6 @@ func (s Stores) runtimeRequirements() []dependencyRequirement {
 	}
 }
 
-// Applier returns a projection Applier wired to the stores in this bundle.
-// Only the stores available in the Daggerheart service are mapped; fields not
-// present (for example Invite or CampaignFork) remain nil and are unused by
-// dispatch.
-func (s Stores) Applier() projection.Applier {
-	applier, err := s.TryApplier()
-	if err != nil {
-		return projection.Applier{BuildErr: err}
-	}
-	return applier
-}
-
 // TryApplier returns a projection Applier wired to the stores in this bundle.
 // If Validate was called first the cached adapter registry is used; otherwise a
 // fresh one is built on the fly.
@@ -174,19 +162,29 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 	adapters := s.adapters
 	if adapters == nil {
 		var err error
-		adapters, err = systemmanifest.AdapterRegistry(s.Daggerheart)
+		adapters, err = systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: s.Daggerheart})
 		if err != nil {
 			return projection.Applier{}, fmt.Errorf("build adapter registry: %w", err)
 		}
 	}
-	return projection.Applier{
-		Events:           s.Events,
-		Campaign:         s.Campaign,
-		Character:        s.Character,
-		Session:          s.Session,
-		SessionGate:      s.SessionGate,
-		SessionSpotlight: s.SessionSpotlight,
-		Watermarks:       s.Watermarks,
-		Adapters:         adapters,
-	}, nil
+	return projection.NewBoundApplier(projection.BoundApplierConfig{
+		Stores: projection.StoreGroups{
+			CampaignStores: projection.CampaignStores{
+				Campaign: s.Campaign,
+			},
+			CharacterStores: projection.CharacterStores{
+				Character: s.Character,
+			},
+			SessionStores: projection.SessionStores{
+				Session:          s.Session,
+				SessionGate:      s.SessionGate,
+				SessionSpotlight: s.SessionSpotlight,
+			},
+			SupportStores: projection.SupportStores{
+				Watermarks: s.Watermarks,
+			},
+		},
+		Events:   s.Events,
+		Adapters: adapters,
+	}), nil
 }

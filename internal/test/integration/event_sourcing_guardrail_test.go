@@ -257,7 +257,7 @@ func TestProjectionWriteGuardrailIgnoresAuthorizedPackages(t *testing.T) {
 	if !isProjectionWriteGuardrailIgnoredPackage("github.com/louisbranch/fracturing.space/internal/services/game/projection") {
 		t.Fatal("expected projection package to be ignored")
 	}
-	if !isProjectionWriteGuardrailIgnoredPackage("github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite") {
+	if !isProjectionWriteGuardrailIgnoredPackage("github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/coreprojection") {
 		t.Fatal("expected storage package to be ignored")
 	}
 	if isProjectionWriteGuardrailIgnoredPackage("github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game") {

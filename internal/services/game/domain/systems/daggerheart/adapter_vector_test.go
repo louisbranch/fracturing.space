@@ -9,10 +9,16 @@ import (
 	"testing"
 	"time"
 
+	daggerheartadapter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -35,38 +41,38 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 	}
 
 	sequence := []event.Type{
-		EventTypeGMFearChanged,
-		EventTypeCharacterProfileReplaced,
-		EventTypeCharacterProfileDeleted,
-		EventTypeCharacterStatePatched,
-		EventTypeBeastformTransformed,
-		EventTypeBeastformDropped,
-		EventTypeCompanionExperienceBegun,
-		EventTypeCompanionReturned,
-		EventTypeConditionChanged,
-		EventTypeLoadoutSwapped,
-		EventTypeCharacterTemporaryArmorApplied,
-		EventTypeRestTaken,
-		EventTypeDamageApplied,
-		EventTypeDowntimeMoveApplied,
-		EventTypeCountdownCreated,
-		EventTypeCountdownUpdated,
-		EventTypeCountdownDeleted,
-		EventTypeAdversaryCreated,
-		EventTypeAdversaryConditionChanged,
-		EventTypeAdversaryDamageApplied,
-		EventTypeAdversaryUpdated,
-		EventTypeAdversaryDeleted,
-		EventTypeEnvironmentEntityCreated,
-		EventTypeEnvironmentEntityUpdated,
-		EventTypeEnvironmentEntityDeleted,
-		EventTypeLevelUpApplied,
-		EventTypeGoldUpdated,
-		EventTypeDomainCardAcquired,
-		EventTypeEquipmentSwapped,
-		EventTypeConsumableUsed,
-		EventTypeConsumableAcquired,
-		EventTypeStatModifierChanged,
+		daggerheartpayload.EventTypeGMFearChanged,
+		daggerheartpayload.EventTypeCharacterProfileReplaced,
+		daggerheartpayload.EventTypeCharacterProfileDeleted,
+		daggerheartpayload.EventTypeCharacterStatePatched,
+		daggerheartpayload.EventTypeBeastformTransformed,
+		daggerheartpayload.EventTypeBeastformDropped,
+		daggerheartpayload.EventTypeCompanionExperienceBegun,
+		daggerheartpayload.EventTypeCompanionReturned,
+		daggerheartpayload.EventTypeConditionChanged,
+		daggerheartpayload.EventTypeLoadoutSwapped,
+		daggerheartpayload.EventTypeCharacterTemporaryArmorApplied,
+		daggerheartpayload.EventTypeRestTaken,
+		daggerheartpayload.EventTypeDamageApplied,
+		daggerheartpayload.EventTypeDowntimeMoveApplied,
+		daggerheartpayload.EventTypeCountdownCreated,
+		daggerheartpayload.EventTypeCountdownUpdated,
+		daggerheartpayload.EventTypeCountdownDeleted,
+		daggerheartpayload.EventTypeAdversaryCreated,
+		daggerheartpayload.EventTypeAdversaryConditionChanged,
+		daggerheartpayload.EventTypeAdversaryDamageApplied,
+		daggerheartpayload.EventTypeAdversaryUpdated,
+		daggerheartpayload.EventTypeAdversaryDeleted,
+		daggerheartpayload.EventTypeEnvironmentEntityCreated,
+		daggerheartpayload.EventTypeEnvironmentEntityUpdated,
+		daggerheartpayload.EventTypeEnvironmentEntityDeleted,
+		daggerheartpayload.EventTypeLevelUpApplied,
+		daggerheartpayload.EventTypeGoldUpdated,
+		daggerheartpayload.EventTypeDomainCardAcquired,
+		daggerheartpayload.EventTypeEquipmentSwapped,
+		daggerheartpayload.EventTypeConsumableUsed,
+		daggerheartpayload.EventTypeConsumableAcquired,
+		daggerheartpayload.EventTypeStatModifierChanged,
 	}
 	if got, want := len(sequence), countProjectionAndReplayDefinitions(); got != want {
 		t.Fatalf("event sequence = %d, projection/replay definitions = %d", got, want)
@@ -138,14 +144,14 @@ func countProjectionAndReplayDefinitions() int {
 }
 
 func daggerheartEventVectorsForParity() map[event.Type]any {
-	lifeStateAlive := LifeStateAlive
+	lifeStateAlive := daggerheartstate.LifeStateAlive
 	return map[event.Type]any{
-		EventTypeGMFearChanged: GMFearChangedPayload{
+		daggerheartpayload.EventTypeGMFearChanged: daggerheartpayload.GMFearChangedPayload{
 			Value: 2,
 		},
-		EventTypeCharacterProfileReplaced: CharacterProfileReplacedPayload{
+		daggerheartpayload.EventTypeCharacterProfileReplaced: daggerheartstate.CharacterProfileReplacedPayload{
 			CharacterID: "char-1",
-			Profile: CharacterProfile{
+			Profile: daggerheartstate.CharacterProfile{
 				Level:           1,
 				HpMax:           6,
 				StressMax:       6,
@@ -159,10 +165,10 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 				SubclassID:      "subclass.stalwart",
 			},
 		},
-		EventTypeCharacterProfileDeleted: CharacterProfileDeletedPayload{
+		daggerheartpayload.EventTypeCharacterProfileDeleted: daggerheartstate.CharacterProfileDeletedPayload{
 			CharacterID: "char-1",
 		},
-		EventTypeCharacterStatePatched: CharacterStatePatchedPayload{
+		daggerheartpayload.EventTypeCharacterStatePatched: daggerheartpayload.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
 			HP:          intPtr(6),
 			Hope:        intPtr(2),
@@ -171,18 +177,18 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			Armor:       intPtr(0),
 			LifeState:   &lifeStateAlive,
 		},
-		EventTypeBeastformTransformed: BeastformTransformedPayload{
+		daggerheartpayload.EventTypeBeastformTransformed: daggerheartpayload.BeastformTransformedPayload{
 			CharacterID: "char-1",
 			BeastformID: "beastform.wolf",
 			Stress:      intPtr(2),
-			ActiveBeastform: &CharacterActiveBeastformState{
+			ActiveBeastform: &daggerheartstate.CharacterActiveBeastformState{
 				BeastformID:  "beastform.wolf",
 				BaseTrait:    "agility",
 				AttackTrait:  "agility",
 				TraitBonus:   1,
 				EvasionBonus: 1,
 				AttackRange:  "melee",
-				DamageDice: []CharacterDamageDie{
+				DamageDice: []daggerheartstate.CharacterDamageDie{
 					{Count: 1, Sides: 8},
 				},
 				DamageBonus: 1,
@@ -190,66 +196,66 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			},
 			Source: "beastform.transform",
 		},
-		EventTypeBeastformDropped: BeastformDroppedPayload{
+		daggerheartpayload.EventTypeBeastformDropped: daggerheartpayload.BeastformDroppedPayload{
 			CharacterID: "char-1",
 			BeastformID: "beastform.wolf",
 			Source:      "beastform.drop",
 		},
-		EventTypeCompanionExperienceBegun: CompanionExperienceBegunPayload{
+		daggerheartpayload.EventTypeCompanionExperienceBegun: daggerheartpayload.CompanionExperienceBegunPayload{
 			CharacterID:  "char-1",
 			ExperienceID: "companion-experience.scout",
-			CompanionState: &CharacterCompanionState{
-				Status:             CompanionStatusAway,
+			CompanionState: &daggerheartstate.CharacterCompanionState{
+				Status:             daggerheartstate.CompanionStatusAway,
 				ActiveExperienceID: "companion-experience.scout",
 			},
 			Source: "companion.experience.begin",
 		},
-		EventTypeCompanionReturned: CompanionReturnedPayload{
+		daggerheartpayload.EventTypeCompanionReturned: daggerheartpayload.CompanionReturnedPayload{
 			CharacterID: "char-1",
 			Resolution:  "experience_completed",
 			Stress:      intPtr(0),
-			CompanionState: &CharacterCompanionState{
-				Status: CompanionStatusPresent,
+			CompanionState: &daggerheartstate.CharacterCompanionState{
+				Status: daggerheartstate.CompanionStatusPresent,
 			},
 			Source: "companion.return",
 		},
-		EventTypeConditionChanged: ConditionChangedPayload{
+		daggerheartpayload.EventTypeConditionChanged: daggerheartpayload.ConditionChangedPayload{
 			CharacterID: "char-1",
-			Conditions:  []ConditionState{mustConditionState("hidden")},
+			Conditions:  []rules.ConditionState{mustConditionState("hidden")},
 		},
-		EventTypeLoadoutSwapped: LoadoutSwappedPayload{
+		daggerheartpayload.EventTypeLoadoutSwapped: daggerheartpayload.LoadoutSwappedPayload{
 			CharacterID: "char-1",
 			CardID:      "card-1",
 			From:        "vault",
 			To:          "active",
 			Stress:      intPtr(2),
 		},
-		EventTypeCharacterTemporaryArmorApplied: CharacterTemporaryArmorAppliedPayload{
+		daggerheartpayload.EventTypeCharacterTemporaryArmorApplied: daggerheartpayload.CharacterTemporaryArmorAppliedPayload{
 			CharacterID: "char-1",
 			Source:      "ritual",
 			Duration:    "short_rest",
 			Amount:      2,
 			SourceID:    "tmp-1",
 		},
-		EventTypeRestTaken: RestTakenPayload{
+		daggerheartpayload.EventTypeRestTaken: daggerheartpayload.RestTakenPayload{
 			RestType:     "short",
 			GMFear:       3,
 			ShortRests:   1,
 			RefreshRest:  true,
 			Participants: []ids.CharacterID{"char-1"},
 		},
-		EventTypeDamageApplied: DamageAppliedPayload{
+		daggerheartpayload.EventTypeDamageApplied: daggerheartpayload.DamageAppliedPayload{
 			CharacterID: "char-1",
 			Hp:          intPtr(5),
 			Armor:       intPtr(0),
 		},
-		EventTypeDowntimeMoveApplied: DowntimeMoveAppliedPayload{
+		daggerheartpayload.EventTypeDowntimeMoveApplied: daggerheartpayload.DowntimeMoveAppliedPayload{
 			ActorCharacterID:  "char-1",
 			TargetCharacterID: "char-1",
 			Move:              "prepare",
 			Hope:              intPtr(4),
 		},
-		EventTypeCountdownCreated: CountdownCreatedPayload{
+		daggerheartpayload.EventTypeCountdownCreated: daggerheartpayload.CountdownCreatedPayload{
 			CountdownID:       "cd-1",
 			Name:              "Doom Clock",
 			Kind:              "progress",
@@ -261,16 +267,16 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			TriggerEventType:  "sys.daggerheart.damage_applied",
 			LinkedCountdownID: "",
 		},
-		EventTypeCountdownUpdated: CountdownUpdatedPayload{
+		daggerheartpayload.EventTypeCountdownUpdated: daggerheartpayload.CountdownUpdatedPayload{
 			CountdownID: "cd-1",
 			Value:       1,
 			Delta:       1,
 			Looped:      false,
 		},
-		EventTypeCountdownDeleted: CountdownDeletedPayload{
+		daggerheartpayload.EventTypeCountdownDeleted: daggerheartpayload.CountdownDeletedPayload{
 			CountdownID: "cd-1",
 		},
-		EventTypeAdversaryCreated: AdversaryCreatedPayload{
+		daggerheartpayload.EventTypeAdversaryCreated: daggerheartpayload.AdversaryCreatedPayload{
 			AdversaryID: "adv-1",
 			Name:        "Goblin",
 			Kind:        "bruiser",
@@ -285,16 +291,16 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			Severe:      4,
 			Armor:       1,
 		},
-		EventTypeAdversaryConditionChanged: AdversaryConditionChangedPayload{
+		daggerheartpayload.EventTypeAdversaryConditionChanged: daggerheartpayload.AdversaryConditionChangedPayload{
 			AdversaryID: "adv-1",
-			Conditions:  []ConditionState{mustConditionState("hidden")},
+			Conditions:  []rules.ConditionState{mustConditionState("hidden")},
 		},
-		EventTypeAdversaryDamageApplied: AdversaryDamageAppliedPayload{
+		daggerheartpayload.EventTypeAdversaryDamageApplied: daggerheartpayload.AdversaryDamageAppliedPayload{
 			AdversaryID: "adv-1",
 			Hp:          intPtr(4),
 			Armor:       intPtr(0),
 		},
-		EventTypeAdversaryUpdated: AdversaryUpdatedPayload{
+		daggerheartpayload.EventTypeAdversaryUpdated: daggerheartpayload.AdversaryUpdatedPayload{
 			AdversaryID: "adv-1",
 			Name:        "Goblin Captain",
 			Kind:        "leader",
@@ -309,10 +315,10 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			Severe:      4,
 			Armor:       1,
 		},
-		EventTypeAdversaryDeleted: AdversaryDeletedPayload{
+		daggerheartpayload.EventTypeAdversaryDeleted: daggerheartpayload.AdversaryDeletedPayload{
 			AdversaryID: "adv-1",
 		},
-		EventTypeEnvironmentEntityCreated: EnvironmentEntityCreatedPayload{
+		daggerheartpayload.EventTypeEnvironmentEntityCreated: daggerheartpayload.EnvironmentEntityCreatedPayload{
 			EnvironmentEntityID: "env-entity-1",
 			EnvironmentID:       "environment.falling-ruins",
 			Name:                "Falling Ruins",
@@ -323,7 +329,7 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			SceneID:             "scene-1",
 			Notes:               "Loose stone and dust",
 		},
-		EventTypeEnvironmentEntityUpdated: EnvironmentEntityUpdatedPayload{
+		daggerheartpayload.EventTypeEnvironmentEntityUpdated: daggerheartpayload.EnvironmentEntityUpdatedPayload{
 			EnvironmentEntityID: "env-entity-1",
 			EnvironmentID:       "environment.falling-ruins",
 			Name:                "Falling Ruins",
@@ -334,14 +340,14 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			SceneID:             "scene-2",
 			Notes:               "Collapsed toward the exit",
 		},
-		EventTypeEnvironmentEntityDeleted: EnvironmentEntityDeletedPayload{
+		daggerheartpayload.EventTypeEnvironmentEntityDeleted: daggerheartpayload.EnvironmentEntityDeletedPayload{
 			EnvironmentEntityID: "env-entity-1",
 			Reason:              "scene cleanup",
 		},
-		EventTypeLevelUpApplied: LevelUpAppliedPayload{
+		daggerheartpayload.EventTypeLevelUpApplied: daggerheartpayload.LevelUpAppliedPayload{
 			CharacterID: "char-1",
 			Level:       2,
-			Advancements: []LevelUpAdvancementPayload{
+			Advancements: []daggerheartpayload.LevelUpAdvancementPayload{
 				{Type: "add_hp_slots"},
 				{Type: "add_stress_slots"},
 			},
@@ -349,37 +355,37 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			IsTierEntry:    true,
 			ThresholdDelta: 1,
 		},
-		EventTypeGoldUpdated: GoldUpdatedPayload{
+		daggerheartpayload.EventTypeGoldUpdated: daggerheartpayload.GoldUpdatedPayload{
 			CharacterID: "char-1",
 			Handfuls:    3,
 		},
-		EventTypeDomainCardAcquired: DomainCardAcquiredPayload{
+		daggerheartpayload.EventTypeDomainCardAcquired: daggerheartpayload.DomainCardAcquiredPayload{
 			CharacterID: "char-1",
 			CardID:      "domain-card-new",
 			CardLevel:   2,
 			Destination: "vault",
 		},
-		EventTypeEquipmentSwapped: EquipmentSwappedPayload{
+		daggerheartpayload.EventTypeEquipmentSwapped: daggerheartpayload.EquipmentSwappedPayload{
 			CharacterID: "char-1",
 			ItemID:      "sword-1",
 			ItemType:    "weapon",
 			From:        "inventory",
 			To:          "active",
 		},
-		EventTypeConsumableUsed: ConsumableUsedPayload{
+		daggerheartpayload.EventTypeConsumableUsed: daggerheartpayload.ConsumableUsedPayload{
 			CharacterID:  "char-1",
 			ConsumableID: "potion-1",
 			Quantity:     1,
 		},
-		EventTypeConsumableAcquired: ConsumableAcquiredPayload{
+		daggerheartpayload.EventTypeConsumableAcquired: daggerheartpayload.ConsumableAcquiredPayload{
 			CharacterID:  "char-1",
 			ConsumableID: "scroll-1",
 			Quantity:     1,
 		},
-		EventTypeStatModifierChanged: StatModifierChangedPayload{
+		daggerheartpayload.EventTypeStatModifierChanged: daggerheartpayload.StatModifierChangedPayload{
 			CharacterID: "char-1",
-			Modifiers: []StatModifierState{
-				{ID: "mod-1", Target: StatModifierTargetEvasion, Delta: 2, Label: "Test Modifier", Source: "test"},
+			Modifiers: []rules.StatModifierState{
+				{ID: "mod-1", Target: rules.StatModifierTargetEvasion, Delta: 2, Label: "Test Modifier", Source: "test"},
 			},
 		},
 	}
@@ -601,22 +607,22 @@ func (m *parityDaggerheartStore) DeleteDaggerheartEnvironmentEntity(_ context.Co
 	return nil
 }
 
-func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState {
+func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartstate.SnapshotState {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID:              ids.CampaignID(campaignID),
-		GMFear:                  GMFearDefault,
-		CharacterProfiles:       make(map[ids.CharacterID]CharacterProfile),
-		CharacterStates:         make(map[ids.CharacterID]CharacterState),
-		CharacterClassStates:    make(map[ids.CharacterID]CharacterClassState),
-		CharacterSubclassStates: make(map[ids.CharacterID]CharacterSubclassState),
-		CharacterCompanions:     make(map[ids.CharacterID]CharacterCompanionState),
-		CharacterStatModifiers:  make(map[ids.CharacterID][]StatModifierState),
-		AdversaryStates:         make(map[ids.AdversaryID]AdversaryState),
-		EnvironmentStates:       make(map[ids.EnvironmentEntityID]EnvironmentEntityState),
-		CountdownStates:         make(map[ids.CountdownID]CountdownState),
+		GMFear:                  daggerheartstate.GMFearDefault,
+		CharacterProfiles:       make(map[ids.CharacterID]daggerheartstate.CharacterProfile),
+		CharacterStates:         make(map[ids.CharacterID]daggerheartstate.CharacterState),
+		CharacterClassStates:    make(map[ids.CharacterID]daggerheartstate.CharacterClassState),
+		CharacterSubclassStates: make(map[ids.CharacterID]daggerheartstate.CharacterSubclassState),
+		CharacterCompanions:     make(map[ids.CharacterID]daggerheartstate.CharacterCompanionState),
+		CharacterStatModifiers:  make(map[ids.CharacterID][]rules.StatModifierState),
+		AdversaryStates:         make(map[ids.AdversaryID]daggerheartstate.AdversaryState),
+		EnvironmentStates:       make(map[ids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState),
+		CountdownStates:         make(map[ids.CountdownID]daggerheartstate.CountdownState),
 	}
 	if snap, ok := m.snapshots[campaignID]; ok {
 		state.GMFear = snap.GMFear
@@ -627,7 +633,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.CharacterProfiles[ids.CharacterID(stored.CharacterID)] = CharacterProfileFromStorage(stored)
+		state.CharacterProfiles[ids.CharacterID(stored.CharacterID)] = daggerheartstate.CharacterProfileFromStorage(stored)
 	}
 	for key, stored := range m.states {
 		if !strings.HasPrefix(key, prefix) {
@@ -639,18 +645,18 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		}
 		character := projection.CharacterStateFromStorage(stored, armorMax)
 		state.CharacterStates[ids.CharacterID(character.CharacterID)] = character
-		classState := classStateFromProjection(stored.ClassState)
+		classState := daggerheartadapter.ClassStateFromProjection(stored.ClassState)
 		if !classState.IsZero() {
 			state.CharacterClassStates[ids.CharacterID(character.CharacterID)] = classState
 		}
-		if companionState := normalizedCompanionStatePtr(companionStateFromProjection(stored.CompanionState)); companionState != nil && !companionState.IsZero() {
+		if companionState := daggerheartstate.NormalizedCompanionStatePtr(daggerheartadapter.CompanionStateFromProjection(stored.CompanionState)); companionState != nil && !companionState.IsZero() {
 			state.CharacterCompanions[ids.CharacterID(character.CharacterID)] = *companionState
 		}
-		subclassState := subclassStateFromProjection(stored.SubclassState)
+		subclassState := daggerheartadapter.SubclassStateFromProjection(stored.SubclassState)
 		if subclassState != nil && !subclassState.IsZero() {
 			state.CharacterSubclassStates[ids.CharacterID(character.CharacterID)] = *subclassState
 		}
-		if mods := statModifiersFromProjection(stored.StatModifiers); len(mods) > 0 {
+		if mods := daggerheartadapter.StatModifiersFromProjection(stored.StatModifiers); len(mods) > 0 {
 			state.CharacterStatModifiers[ids.CharacterID(character.CharacterID)] = mods
 		}
 	}
@@ -658,7 +664,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.AdversaryStates[ids.AdversaryID(stored.AdversaryID)] = AdversaryState{
+		state.AdversaryStates[ids.AdversaryID(stored.AdversaryID)] = daggerheartstate.AdversaryState{
 			CampaignID:  ids.CampaignID(stored.CampaignID),
 			AdversaryID: ids.AdversaryID(stored.AdversaryID),
 			Name:        stored.Name,
@@ -680,7 +686,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.CountdownStates[ids.CountdownID(stored.CountdownID)] = CountdownState{
+		state.CountdownStates[ids.CountdownID(stored.CountdownID)] = daggerheartstate.CountdownState{
 			CampaignID:        ids.CampaignID(stored.CampaignID),
 			CountdownID:       ids.CountdownID(stored.CountdownID),
 			Name:              stored.Name,
@@ -699,7 +705,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		if !strings.HasPrefix(key, environmentPrefix) {
 			continue
 		}
-		state.EnvironmentStates[ids.EnvironmentEntityID(stored.EnvironmentEntityID)] = EnvironmentEntityState{
+		state.EnvironmentStates[ids.EnvironmentEntityID(stored.EnvironmentEntityID)] = daggerheartstate.EnvironmentEntityState{
 			CampaignID:          ids.CampaignID(stored.CampaignID),
 			EnvironmentEntityID: ids.EnvironmentEntityID(stored.EnvironmentEntityID),
 			EnvironmentID:       stored.EnvironmentID,
@@ -749,12 +755,12 @@ func cloneAdversary(adversary projectionstore.DaggerheartAdversary) projectionst
 	return out
 }
 
-func projectionConditionsToDomain(states []projectionstore.DaggerheartConditionState) []ConditionState {
-	out := make([]ConditionState, 0, len(states))
+func projectionConditionsToDomain(states []projectionstore.DaggerheartConditionState) []rules.ConditionState {
+	out := make([]rules.ConditionState, 0, len(states))
 	for _, state := range states {
-		out = append(out, ConditionState{
+		out = append(out, rules.ConditionState{
 			ID:       state.ID,
-			Class:    ConditionClass(state.Class),
+			Class:    rules.ConditionClass(state.Class),
 			Standard: state.Standard,
 			Code:     state.Code,
 			Label:    state.Label,
@@ -773,7 +779,7 @@ func projectionConditionCodes(states []projectionstore.DaggerheartConditionState
 	return out
 }
 
-func canonicalizeSnapshotForParity(state SnapshotState) SnapshotState {
+func canonicalizeSnapshotForParity(state daggerheartstate.SnapshotState) daggerheartstate.SnapshotState {
 	state.EnsureMaps()
 	for id, character := range state.CharacterStates {
 		character.HPMax = 0

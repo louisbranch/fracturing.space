@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func TestBuildDaggerheartCharacterStatePatch_DefaultsAndConditionNormalization(t *testing.T) {
@@ -25,14 +26,14 @@ func TestBuildDaggerheartCharacterStatePatch_DefaultsAndConditionNormalization(t
 	if err != nil {
 		t.Fatalf("build patch: %v", err)
 	}
-	if patch.hopeMax != daggerheart.HopeMax {
-		t.Fatalf("hopeMax = %d, want %d", patch.hopeMax, daggerheart.HopeMax)
+	if patch.hopeMax != mechanics.HopeMax {
+		t.Fatalf("hopeMax = %d, want %d", patch.hopeMax, mechanics.HopeMax)
 	}
 	if patch.stressMax != 6 {
 		t.Fatalf("stressMax = %d, want %d", patch.stressMax, 6)
 	}
-	if patch.lifeState != daggerheart.LifeStateAlive {
-		t.Fatalf("lifeState = %q, want %q", patch.lifeState, daggerheart.LifeStateAlive)
+	if patch.lifeState != daggerheartstate.LifeStateAlive {
+		t.Fatalf("lifeState = %q, want %q", patch.lifeState, daggerheartstate.LifeStateAlive)
 	}
 	if !patch.conditionPatch {
 		t.Fatal("conditionPatch = false, want true")
@@ -56,7 +57,7 @@ func TestDaggerheartCharacterStatePatchStateUnchanged_DefaultsEmptyLifeStateToAl
 		hopeMax:   6,
 		stress:    2,
 		armor:     1,
-		lifeState: daggerheart.LifeStateAlive,
+		lifeState: daggerheartstate.LifeStateAlive,
 	}
 	if !patch.stateUnchanged(current) {
 		t.Fatal("stateUnchanged = false, want true")

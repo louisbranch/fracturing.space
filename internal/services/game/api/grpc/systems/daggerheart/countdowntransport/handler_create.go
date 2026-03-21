@@ -13,7 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -76,7 +76,7 @@ func (h *Handler) CreateCountdown(ctx context.Context, in *pb.DaggerheartCreateC
 		return CreateResult{}, grpcerror.HandleDomainError(err)
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.CountdownCreatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.CountdownCreatePayload{
 		CountdownID: ids.CountdownID(countdownID),
 		Name:        name,
 		Kind:        kind,

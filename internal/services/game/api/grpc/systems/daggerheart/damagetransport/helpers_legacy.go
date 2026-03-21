@@ -3,7 +3,7 @@ package damagetransport
 import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 // containsString reports whether the slice contains the target string.
@@ -30,15 +30,15 @@ func stringsToCharacterIDs(values []string) []ids.CharacterID {
 
 // damageApplyInputFromProto maps a proto damage request into the
 // transport-agnostic domain input consumed by ResolveDamageApplication.
-func damageApplyInputFromProto(req *pb.DaggerheartDamageRequest) daggerheart.DamageApplyInput {
+func damageApplyInputFromProto(req *pb.DaggerheartDamageRequest) rules.DamageApplyInput {
 	if req == nil {
-		return daggerheart.DamageApplyInput{}
+		return rules.DamageApplyInput{}
 	}
-	input := daggerheart.DamageApplyInput{
+	input := rules.DamageApplyInput{
 		Amount:       int(req.GetAmount()),
 		Direct:       req.GetDirect(),
 		AllowMassive: req.GetMassiveDamage(),
-		Resistance: daggerheart.ResistanceProfile{
+		Resistance: rules.ResistanceProfile{
 			ResistPhysical: req.GetResistPhysical(),
 			ResistMagic:    req.GetResistMagic(),
 			ImmunePhysical: req.GetImmunePhysical(),

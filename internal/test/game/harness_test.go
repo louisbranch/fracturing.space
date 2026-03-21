@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
+	"github.com/louisbranch/fracturing.space/internal/services/game/app"
 	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 )
 
@@ -49,7 +49,7 @@ func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	grpcServer, err := server.NewWithAddr("127.0.0.1:0")
+	grpcServer, err := app.NewWithAddr("127.0.0.1:0")
 	if err != nil {
 		cancel()
 		stopAuth()

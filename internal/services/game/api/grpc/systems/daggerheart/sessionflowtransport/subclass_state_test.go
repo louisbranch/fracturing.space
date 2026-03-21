@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func TestSessionAttackFlowConsumesStoredSubclassBonuses(t *testing.T) {
@@ -57,7 +57,7 @@ func TestSessionAttackFlowConsumesStoredSubclassBonuses(t *testing.T) {
 					TranscendenceTraitBonusTarget:          "agility",
 					TranscendenceTraitBonusValue:           1,
 					TranscendenceProficiencyBonus:          1,
-					ElementalChannel:                       daggerheart.ElementalChannelAir,
+					ElementalChannel:                       daggerheartstate.ElementalChannelAir,
 				},
 			}, nil
 		},
@@ -142,7 +142,7 @@ func TestSessionReactionFlowAppliesSubclassTraitAndAirBonuses(t *testing.T) {
 					TranscendenceActive:           true,
 					TranscendenceTraitBonusTarget: "agility",
 					TranscendenceTraitBonusValue:  1,
-					ElementalChannel:              daggerheart.ElementalChannelAir,
+					ElementalChannel:              daggerheartstate.ElementalChannelAir,
 				},
 			}, nil
 		},
@@ -293,7 +293,7 @@ func TestSessionAttackFlowAppliesWaterSplashToNearbyAdversaries(t *testing.T) {
 				CampaignID:  "camp-1",
 				CharacterID: "char-1",
 				SubclassState: &projectionstore.DaggerheartSubclassState{
-					ElementalChannel: daggerheart.ElementalChannelWater,
+					ElementalChannel: daggerheartstate.ElementalChannelWater,
 				},
 			}, nil
 		},
@@ -403,7 +403,7 @@ func TestSessionAdversaryAttackFlowAppliesFireRetaliation(t *testing.T) {
 				Hp:          6,
 				Armor:       2,
 				SubclassState: &projectionstore.DaggerheartSubclassState{
-					ElementalChannel: daggerheart.ElementalChannelFire,
+					ElementalChannel: daggerheartstate.ElementalChannelFire,
 				},
 			}, nil
 		},

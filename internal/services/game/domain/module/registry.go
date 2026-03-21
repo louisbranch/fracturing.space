@@ -112,11 +112,11 @@ type CommandTyper interface {
 // canonical pattern is a package-level `assertSnapshotState(any) (*T, error)`
 // function that handles nil → zero-value initialization. See
 // [FoldRouter] for the generic dispatcher that calls this assertion
-// automatically, and bridge/daggerheart/folder.go for a reference
+// automatically, and systems/daggerheart/folder.go for a reference
 // implementation.
 //
 // NOTE: This is the write-path StateFactory (returns untyped `any`).
-// See also bridge.StateHandlerFactory (domain/systems/registry_bridge.go)
+// See also systems.StateHandlerFactory (domain/systems/registry_bridge.go)
 // which returns typed handlers (CharacterStateHandler, SnapshotStateHandler)
 // for the API bridge layer. Daggerheart only implements this module variant;
 // the bridge variant is used by the API layer to provide resource/damage

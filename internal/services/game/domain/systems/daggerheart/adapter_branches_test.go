@@ -5,14 +5,19 @@ import (
 	"strings"
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestHandleDowntimeMoveApplied_CreatesMissingCharacterState(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
-	err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
+	err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DowntimeMoveAppliedPayload{
 		ActorCharacterID:  "char-1",
 		TargetCharacterID: "char-1",
 		Move:              "prepare",
@@ -33,7 +38,7 @@ func TestHandleDowntimeMoveApplied_CreatesMissingCharacterState(t *testing.T) {
 func TestHandleCharacterTemporaryArmorApplied_CreatesMissingCharacterState(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
-	err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, CharacterTemporaryArmorAppliedPayload{
+	err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CharacterTemporaryArmorAppliedPayload{
 		CharacterID: "char-1",
 		Source:      "ritual",
 		Duration:    "short_rest",
@@ -55,9 +60,9 @@ func TestHandleConditionChanged_RejectsZeroRollSeq(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 	rollSeq := uint64(0)
-	err := adapter.HandleConditionChanged(context.Background(), event.Event{CampaignID: "camp-1"}, ConditionChangedPayload{
+	err := adapter.HandleConditionChanged(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "char-1",
-		Conditions:  []ConditionState{mustTestConditionState(t, "hidden")},
+		Conditions:  []rules.ConditionState{mustTestConditionState(t, "hidden")},
 		RollSeq:     &rollSeq,
 	})
 	if err == nil || !strings.Contains(err.Error(), "roll_seq must be positive") {
@@ -69,9 +74,9 @@ func TestHandleAdversaryConditionChanged_RejectsZeroRollSeq(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 	rollSeq := uint64(0)
-	err := adapter.HandleAdversaryConditionChanged(context.Background(), event.Event{CampaignID: "camp-1"}, AdversaryConditionChangedPayload{
+	err := adapter.HandleAdversaryConditionChanged(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.AdversaryConditionChangedPayload{
 		AdversaryID: "adv-1",
-		Conditions:  []ConditionState{mustTestConditionState(t, "hidden")},
+		Conditions:  []rules.ConditionState{mustTestConditionState(t, "hidden")},
 		RollSeq:     &rollSeq,
 	})
 	if err == nil || !strings.Contains(err.Error(), "roll_seq must be positive") {
@@ -105,7 +110,7 @@ func TestClearRestTemporaryArmor_NoStateNoError(t *testing.T) {
 func TestApplyConditionPatch_CreatesStateWhenMissing(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
-	if err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []ConditionState{mustTestConditionState(t, "hidden")}); err != nil {
+	if err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []rules.ConditionState{mustTestConditionState(t, "hidden")}); err != nil {
 		t.Fatalf("applyConditionPatch: %v", err)
 	}
 	state, err := store.GetDaggerheartCharacterState(context.Background(), "camp-1", "char-1")
@@ -117,13 +122,13 @@ func TestApplyConditionPatch_CreatesStateWhenMissing(t *testing.T) {
 	}
 }
 
-func mustTestConditionState(t *testing.T, code string) ConditionState {
+func mustTestConditionState(t *testing.T, code string) rules.ConditionState {
 	t.Helper()
 	return mustConditionState(code)
 }
 
-func mustConditionState(code string) ConditionState {
-	state, err := StandardConditionState(code)
+func mustConditionState(code string) rules.ConditionState {
+	state, err := rules.StandardConditionState(code)
 	if err != nil {
 		panic(err)
 	}
@@ -131,7 +136,7 @@ func mustConditionState(code string) ConditionState {
 }
 
 func TestApplyProfileTraitIncrease_KnownTraitsAndUnknownNoOp(t *testing.T) {
-	profile := CharacterProfile{}
+	profile := daggerheartstate.CharacterProfile{}
 	traits := []string{"agility", "strength", "finesse", "instinct", "presence", "knowledge"}
 	for _, trait := range traits {
 		applyCharacterProfileTraitIncrease(&profile, trait)
@@ -151,7 +156,7 @@ func TestHandleGoldUpdated_UpdatesExistingProfileAndSkipsMissing(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	if err := adapter.HandleGoldUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, GoldUpdatedPayload{
+	if err := adapter.HandleGoldUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.GoldUpdatedPayload{
 		CharacterID: "missing",
 		Handfuls:    1,
 		Bags:        2,
@@ -165,7 +170,7 @@ func TestHandleGoldUpdated_UpdatesExistingProfileAndSkipsMissing(t *testing.T) {
 		t.Fatalf("put profile: %v", err)
 	}
 
-	if err := adapter.HandleGoldUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, GoldUpdatedPayload{
+	if err := adapter.HandleGoldUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.GoldUpdatedPayload{
 		CharacterID: "char-1",
 		Handfuls:    4,
 		Bags:        5,
@@ -187,7 +192,7 @@ func TestHandleDomainCardAcquired_AppendsUniqueAndSkipsMissing(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	if err := adapter.HandleDomainCardAcquired(context.Background(), event.Event{CampaignID: "camp-1"}, DomainCardAcquiredPayload{
+	if err := adapter.HandleDomainCardAcquired(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DomainCardAcquiredPayload{
 		CharacterID: "missing",
 		CardID:      "card-1",
 	}); err != nil {
@@ -200,13 +205,13 @@ func TestHandleDomainCardAcquired_AppendsUniqueAndSkipsMissing(t *testing.T) {
 		t.Fatalf("put profile: %v", err)
 	}
 
-	if err := adapter.HandleDomainCardAcquired(context.Background(), event.Event{CampaignID: "camp-1"}, DomainCardAcquiredPayload{
+	if err := adapter.HandleDomainCardAcquired(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DomainCardAcquiredPayload{
 		CharacterID: "char-1",
 		CardID:      "card-2",
 	}); err != nil {
 		t.Fatalf("handleDomainCardAcquired append: %v", err)
 	}
-	if err := adapter.HandleDomainCardAcquired(context.Background(), event.Event{CampaignID: "camp-1"}, DomainCardAcquiredPayload{
+	if err := adapter.HandleDomainCardAcquired(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DomainCardAcquiredPayload{
 		CharacterID: "char-1",
 		CardID:      "card-1",
 	}); err != nil {
@@ -227,7 +232,7 @@ func TestHandleDomainCardAcquired_AppendsUniqueAndSkipsMissing(t *testing.T) {
 
 func TestAppendUnique_AppendsMissingOnly(t *testing.T) {
 	initial := []string{"card-1", "card-2"}
-	withNew := appendUnique(initial, "card-3")
+	withNew := daggerheartstate.AppendUnique(initial, "card-3")
 	if len(withNew) != 3 {
 		t.Fatalf("len(withNew) = %d, want 3", len(withNew))
 	}
@@ -235,7 +240,7 @@ func TestAppendUnique_AppendsMissingOnly(t *testing.T) {
 		t.Fatalf("last value = %q, want %q", withNew[2], "card-3")
 	}
 
-	withDuplicate := appendUnique(withNew, "card-2")
+	withDuplicate := daggerheartstate.AppendUnique(withNew, "card-2")
 	if len(withDuplicate) != 3 {
 		t.Fatalf("len(withDuplicate) = %d, want 3", len(withDuplicate))
 	}
@@ -270,7 +275,7 @@ func TestHandleEquipmentSwapped_ArmorUpdatesProfileAndState(t *testing.T) {
 		t.Fatalf("put state: %v", err)
 	}
 
-	err := adapter.HandleEquipmentSwapped(context.Background(), event.Event{CampaignID: "camp-1"}, EquipmentSwappedPayload{
+	err := adapter.HandleEquipmentSwapped(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.EquipmentSwappedPayload{
 		CharacterID:             "char-1",
 		ItemType:                "armor",
 		EquippedArmorID:         "armor.chainmail-armor",

@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func TestSessionActionRoll_Success(t *testing.T) {
@@ -111,7 +112,7 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 
 	hopeBefore := 2
 	hopeAfter := 1
-	patchPayload := daggerheart.CharacterStatePatchedPayload{
+	patchPayload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		Hope:        &hopeAfter,
 	}
@@ -199,7 +200,7 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
 		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
 	}
-	var spend daggerheart.HopeSpendPayload
+	var spend daggerheartpayload.HopeSpendPayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &spend); err != nil {
 		t.Fatalf("decode hope spend command payload: %v", err)
 	}
@@ -242,7 +243,7 @@ func TestSessionActionRoll_WithModifiers(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
 	hopeAfter := 1
-	patchPayload := daggerheart.CharacterStatePatchedPayload{
+	patchPayload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		Hope:        &hopeAfter,
 	}

@@ -7,9 +7,12 @@ import (
 	"testing"
 	"time"
 
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestHandleRestTaken_ReturnsSnapshotWriteError(t *testing.T) {
@@ -17,7 +20,7 @@ func TestHandleRestTaken_ReturnsSnapshotWriteError(t *testing.T) {
 	store.putSnapshotErr = errors.New("snapshot write failed")
 	adapter := NewAdapter(store)
 
-	err := adapter.HandleRestTaken(context.Background(), event.Event{CampaignID: "camp-1"}, RestTakenPayload{
+	err := adapter.HandleRestTaken(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.RestTakenPayload{
 		GMFear:     2,
 		ShortRests: 1,
 	})
@@ -31,7 +34,7 @@ func TestHandleRestTaken_StopsOnClearTemporaryArmorError(t *testing.T) {
 	store.getCharacterStateErr = errors.New("character read failed")
 	adapter := NewAdapter(store)
 
-	err := adapter.HandleRestTaken(context.Background(), event.Event{CampaignID: "camp-1"}, RestTakenPayload{
+	err := adapter.HandleRestTaken(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.RestTakenPayload{
 		GMFear:       2,
 		ShortRests:   1,
 		RefreshRest:  true,
@@ -90,7 +93,7 @@ func TestHandleGMFearChanged_UsesExistingShortRests(t *testing.T) {
 		t.Fatalf("seed snapshot: %v", err)
 	}
 
-	if err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, GMFearChangedPayload{
+	if err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.GMFearChangedPayload{
 		Value: 3,
 	}); err != nil {
 		t.Fatalf("handleGMFearChanged() error = %v", err)
@@ -109,7 +112,7 @@ func TestHandleGMFearChanged_GetSnapshotErrorFallsBackToZero(t *testing.T) {
 	store.getSnapshotErr = errors.New("snapshot read failed")
 	adapter := NewAdapter(store)
 
-	if err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, GMFearChangedPayload{
+	if err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.GMFearChangedPayload{
 		Value: 4,
 	}); err != nil {
 		t.Fatalf("handleGMFearChanged() error = %v", err)
@@ -129,7 +132,7 @@ func TestHandleGMFearChanged_ReturnsPutError(t *testing.T) {
 	store.putSnapshotErr = errors.New("snapshot write failed")
 	adapter := NewAdapter(store)
 
-	err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, GMFearChangedPayload{
+	err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.GMFearChangedPayload{
 		Value: 3,
 	})
 	if err == nil || !strings.Contains(err.Error(), "put daggerheart snapshot: snapshot write failed") {
@@ -143,7 +146,7 @@ func TestHandleCountdownUpdated_Branches(t *testing.T) {
 		store.getCountdownErr = errors.New("countdown read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleCountdownUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, CountdownUpdatedPayload{
+		err := adapter.HandleCountdownUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CountdownUpdatedPayload{
 			CountdownID: "cd-1",
 			Value:       2,
 		})
@@ -167,7 +170,7 @@ func TestHandleCountdownUpdated_Branches(t *testing.T) {
 			t.Fatalf("seed countdown: %v", err)
 		}
 
-		err := adapter.HandleCountdownUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, CountdownUpdatedPayload{
+		err := adapter.HandleCountdownUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CountdownUpdatedPayload{
 			CountdownID: "cd-1",
 			Value:       5,
 		})
@@ -183,7 +186,7 @@ func TestApplyAdversaryConditionPatch_WrapsStoreErrors(t *testing.T) {
 		store.getAdversaryErr = errors.New("adversary read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.ApplyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []ConditionState{mustTestConditionState(t, "hidden")})
+		err := adapter.ApplyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []rules.ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart adversary: adversary read failed") {
 			t.Fatalf("applyAdversaryConditionPatch() error = %v, want wrapped read error", err)
 		}
@@ -210,7 +213,7 @@ func TestApplyAdversaryConditionPatch_WrapsStoreErrors(t *testing.T) {
 		}
 		store.putAdversaryErr = errors.New("adversary write failed")
 
-		err := adapter.ApplyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []ConditionState{mustTestConditionState(t, "hidden")})
+		err := adapter.ApplyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []rules.ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "put daggerheart adversary: adversary write failed") {
 			t.Fatalf("applyAdversaryConditionPatch() error = %v, want wrapped write error", err)
 		}
@@ -255,7 +258,7 @@ func TestApplyConditionPatch_WrapsPutError(t *testing.T) {
 	store.putCharacterStateErr = errors.New("character write failed")
 	adapter := NewAdapter(store)
 
-	err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []ConditionState{mustTestConditionState(t, "hidden")})
+	err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []rules.ConditionState{mustTestConditionState(t, "hidden")})
 	if err == nil || !strings.Contains(err.Error(), "put daggerheart character state: character write failed") {
 		t.Fatalf("applyConditionPatch() error = %v, want wrapped write error", err)
 	}

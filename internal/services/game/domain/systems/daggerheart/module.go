@@ -5,6 +5,10 @@ import (
 	"errors"
 	"time"
 
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -23,7 +27,7 @@ type Module struct {
 // NewModule creates a Daggerheart system module.
 func NewModule() *Module {
 	return &Module{
-		decider: NewDecider(commandTypesFromDefinitions()),
+		decider: daggerheartdecider.NewDecider(commandTypesFromDefinitions()),
 		folder:  NewFolder(),
 		factory: NewStateFactory(),
 	}
@@ -40,80 +44,80 @@ func (m *Module) Version() string {
 }
 
 var daggerheartCommandDefinitions = []command.Definition{
-	{Type: commandTypeGMMoveApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateGMMoveApplyPayload},
-	{Type: commandTypeGMFearSet, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateGMFearSetPayload},
-	{Type: commandTypeCharacterProfileReplace, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileReplacePayload, ActiveSession: command.BlockedDuringActiveSession()},
-	{Type: commandTypeCharacterProfileDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileDeletePayload, ActiveSession: command.BlockedDuringActiveSession()},
-	{Type: commandTypeCharacterStatePatch, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterStatePatchPayload},
-	{Type: commandTypeConditionChange, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConditionChangePayload},
-	{Type: commandTypeHopeSpend, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateHopeSpendPayload},
-	{Type: commandTypeStressSpend, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateStressSpendPayload},
-	{Type: commandTypeLoadoutSwap, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateLoadoutSwapPayload},
-	{Type: commandTypeRestTake, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateRestTakePayload},
-	{Type: commandTypeCountdownCreate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCountdownCreatePayload},
-	{Type: commandTypeCountdownUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCountdownUpdatePayload},
-	{Type: commandTypeCountdownDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCountdownDeletePayload},
-	{Type: commandTypeDamageApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateDamageApplyPayload},
-	{Type: commandTypeAdversaryDamageApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDamageApplyPayload},
-	{Type: commandTypeCharacterTemporaryArmorApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterTemporaryArmorApplyPayload},
-	{Type: commandTypeAdversaryConditionChange, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryConditionChangePayload},
-	{Type: commandTypeAdversaryCreate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryCreatePayload},
-	{Type: commandTypeAdversaryUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryUpdatePayload},
-	{Type: commandTypeAdversaryFeatureApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryFeatureApplyPayload},
-	{Type: commandTypeAdversaryDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDeletePayload},
-	{Type: commandTypeEnvironmentEntityCreate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityCreatePayload},
-	{Type: commandTypeEnvironmentEntityUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityUpdatePayload},
-	{Type: commandTypeEnvironmentEntityDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityDeletePayload},
-	{Type: commandTypeMultiTargetDamageApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateMultiTargetDamageApplyPayload},
-	{Type: commandTypeLevelUpApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateLevelUpApplyPayload},
-	{Type: commandTypeClassFeatureApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateClassFeatureApplyPayload},
-	{Type: commandTypeSubclassFeatureApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateSubclassFeatureApplyPayload},
-	{Type: commandTypeBeastformTransform, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateBeastformTransformPayload},
-	{Type: commandTypeBeastformDrop, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateBeastformDropPayload},
-	{Type: commandTypeCompanionExperienceBegin, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCompanionExperienceBeginPayload},
-	{Type: commandTypeCompanionReturn, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCompanionReturnPayload},
-	{Type: commandTypeGoldUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateGoldUpdatePayload},
-	{Type: commandTypeDomainCardAcquire, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateDomainCardAcquirePayload},
-	{Type: commandTypeEquipmentSwap, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEquipmentSwapPayload},
-	{Type: commandTypeConsumableUse, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConsumableUsePayload},
-	{Type: commandTypeConsumableAcquire, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConsumableAcquirePayload},
-	{Type: commandTypeStatModifierChange, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateStatModifierChangePayload},
+	{Type: daggerheartdecider.CommandTypeGMMoveApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateGMMoveApplyPayload},
+	{Type: daggerheartdecider.CommandTypeGMFearSet, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateGMFearSetPayload},
+	{Type: daggerheartdecider.CommandTypeCharacterProfileReplace, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileReplacePayload, ActiveSession: command.BlockedDuringActiveSession()},
+	{Type: daggerheartdecider.CommandTypeCharacterProfileDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileDeletePayload, ActiveSession: command.BlockedDuringActiveSession()},
+	{Type: daggerheartdecider.CommandTypeCharacterStatePatch, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterStatePatchPayload},
+	{Type: daggerheartdecider.CommandTypeConditionChange, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConditionChangePayload},
+	{Type: daggerheartdecider.CommandTypeHopeSpend, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateHopeSpendPayload},
+	{Type: daggerheartdecider.CommandTypeStressSpend, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateStressSpendPayload},
+	{Type: daggerheartdecider.CommandTypeLoadoutSwap, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateLoadoutSwapPayload},
+	{Type: daggerheartdecider.CommandTypeRestTake, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateRestTakePayload},
+	{Type: daggerheartdecider.CommandTypeCountdownCreate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCountdownCreatePayload},
+	{Type: daggerheartdecider.CommandTypeCountdownUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCountdownUpdatePayload},
+	{Type: daggerheartdecider.CommandTypeCountdownDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCountdownDeletePayload},
+	{Type: daggerheartdecider.CommandTypeDamageApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateDamageApplyPayload},
+	{Type: daggerheartdecider.CommandTypeAdversaryDamageApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDamageApplyPayload},
+	{Type: daggerheartdecider.CommandTypeCharacterTemporaryArmorApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCharacterTemporaryArmorApplyPayload},
+	{Type: daggerheartdecider.CommandTypeAdversaryConditionChange, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryConditionChangePayload},
+	{Type: daggerheartdecider.CommandTypeAdversaryCreate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryCreatePayload},
+	{Type: daggerheartdecider.CommandTypeAdversaryUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryUpdatePayload},
+	{Type: daggerheartdecider.CommandTypeAdversaryFeatureApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryFeatureApplyPayload},
+	{Type: daggerheartdecider.CommandTypeAdversaryDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDeletePayload},
+	{Type: daggerheartdecider.CommandTypeEnvironmentEntityCreate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityCreatePayload},
+	{Type: daggerheartdecider.CommandTypeEnvironmentEntityUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityUpdatePayload},
+	{Type: daggerheartdecider.CommandTypeEnvironmentEntityDelete, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityDeletePayload},
+	{Type: daggerheartdecider.CommandTypeMultiTargetDamageApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateMultiTargetDamageApplyPayload},
+	{Type: daggerheartdecider.CommandTypeLevelUpApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateLevelUpApplyPayload},
+	{Type: daggerheartdecider.CommandTypeClassFeatureApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateClassFeatureApplyPayload},
+	{Type: daggerheartdecider.CommandTypeSubclassFeatureApply, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateSubclassFeatureApplyPayload},
+	{Type: daggerheartdecider.CommandTypeBeastformTransform, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateBeastformTransformPayload},
+	{Type: daggerheartdecider.CommandTypeBeastformDrop, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateBeastformDropPayload},
+	{Type: daggerheartdecider.CommandTypeCompanionExperienceBegin, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCompanionExperienceBeginPayload},
+	{Type: daggerheartdecider.CommandTypeCompanionReturn, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateCompanionReturnPayload},
+	{Type: daggerheartdecider.CommandTypeGoldUpdate, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateGoldUpdatePayload},
+	{Type: daggerheartdecider.CommandTypeDomainCardAcquire, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateDomainCardAcquirePayload},
+	{Type: daggerheartdecider.CommandTypeEquipmentSwap, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEquipmentSwapPayload},
+	{Type: daggerheartdecider.CommandTypeConsumableUse, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConsumableUsePayload},
+	{Type: daggerheartdecider.CommandTypeConsumableAcquire, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConsumableAcquirePayload},
+	{Type: daggerheartdecider.CommandTypeStatModifierChange, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateStatModifierChangePayload},
 }
 
 var daggerheartEventDefinitions = []event.Definition{
-	{Type: EventTypeGMMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateGMMoveAppliedPayload, Intent: event.IntentAuditOnly},
-	{Type: EventTypeGMFearChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateGMFearChangedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCharacterProfileReplaced, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileReplacedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCharacterProfileDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileDeletedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCharacterStatePatched, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterStatePatchedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeBeastformTransformed, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateBeastformTransformedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeBeastformDropped, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateBeastformDroppedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCompanionExperienceBegun, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCompanionExperienceBegunPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCompanionReturned, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCompanionReturnedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConditionChangedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeLoadoutSwapped, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateLoadoutSwappedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeRestTaken, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateRestTakenPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCountdownCreated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCountdownCreatedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCountdownUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCountdownUpdatedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCountdownDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCountdownDeletedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateDamageAppliedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeAdversaryDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDamageAppliedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeDowntimeMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateDowntimeMoveAppliedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeCharacterTemporaryArmorApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterTemporaryArmorAppliedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeAdversaryConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryConditionChangedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeAdversaryCreated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryCreatedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeAdversaryUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryUpdatedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeAdversaryDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDeletedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeEnvironmentEntityCreated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityCreatedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeEnvironmentEntityUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityUpdatedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeEnvironmentEntityDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityDeletedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeLevelUpApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateLevelUpAppliedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeGoldUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateGoldUpdatedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeDomainCardAcquired, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateDomainCardAcquiredPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeEquipmentSwapped, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEquipmentSwappedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeConsumableUsed, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConsumableUsedPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeConsumableAcquired, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConsumableAcquiredPayload, Intent: event.IntentProjectionAndReplay},
-	{Type: EventTypeStatModifierChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateStatModifierChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeGMMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateGMMoveAppliedPayload, Intent: event.IntentAuditOnly},
+	{Type: daggerheartpayload.EventTypeGMFearChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateGMFearChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCharacterProfileReplaced, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileReplacedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCharacterProfileDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterProfileDeletedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCharacterStatePatched, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterStatePatchedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeBeastformTransformed, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateBeastformTransformedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeBeastformDropped, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateBeastformDroppedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCompanionExperienceBegun, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCompanionExperienceBegunPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCompanionReturned, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCompanionReturnedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConditionChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeLoadoutSwapped, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateLoadoutSwappedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeRestTaken, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateRestTakenPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCountdownCreated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCountdownCreatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCountdownUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCountdownUpdatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCountdownDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCountdownDeletedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateDamageAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeAdversaryDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDamageAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeDowntimeMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateDowntimeMoveAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeCharacterTemporaryArmorApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateCharacterTemporaryArmorAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeAdversaryConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryConditionChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeAdversaryCreated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryCreatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeAdversaryUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryUpdatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeAdversaryDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateAdversaryDeletedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeEnvironmentEntityCreated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityCreatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeEnvironmentEntityUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityUpdatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeEnvironmentEntityDeleted, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEnvironmentEntityDeletedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeLevelUpApplied, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateLevelUpAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeGoldUpdated, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateGoldUpdatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeDomainCardAcquired, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateDomainCardAcquiredPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeEquipmentSwapped, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEquipmentSwappedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeConsumableUsed, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConsumableUsedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeConsumableAcquired, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConsumableAcquiredPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: daggerheartpayload.EventTypeStatModifierChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateStatModifierChangedPayload, Intent: event.IntentProjectionAndReplay},
 }
 
 // commandTypesFromDefinitions returns all command types from
@@ -180,7 +184,7 @@ func (m *Module) StateFactory() module.StateFactory {
 // CharacterReady evaluates Daggerheart-specific character readiness gates used
 // by session.start.
 func (m *Module) CharacterReady(systemState any, ch character.State) (bool, string) {
-	snapshot, err := assertSnapshotState(systemState)
+	snapshot, err := daggerheartstate.AssertSnapshotState(systemState)
 	if err != nil {
 		return false, "daggerheart state is invalid"
 	}
@@ -201,11 +205,11 @@ func (m *Module) SessionStartBootstrap(
 	cmd command.Command,
 	now time.Time,
 ) ([]event.Event, error) {
-	snapshot, err := assertSnapshotState(systemState)
+	snapshot, err := daggerheartstate.AssertSnapshotState(systemState)
 	if err != nil {
 		return nil, err
 	}
-	if snapshot.GMFear != GMFearDefault {
+	if snapshot.GMFear != daggerheartstate.GMFearDefault {
 		return nil, nil
 	}
 
@@ -216,11 +220,11 @@ func (m *Module) SessionStartBootstrap(
 		}
 		pcCount++
 	}
-	if pcCount == GMFearDefault {
+	if pcCount == daggerheartstate.GMFearDefault {
 		return nil, nil
 	}
 
-	payloadJSON, err := json.Marshal(GMFearChangedPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.GMFearChangedPayload{
 		Value:  pcCount,
 		Reason: "campaign_start",
 	})
@@ -229,7 +233,7 @@ func (m *Module) SessionStartBootstrap(
 	}
 	return []event.Event{{
 		CampaignID:    cmd.CampaignID,
-		Type:          EventTypeGMFearChanged,
+		Type:          daggerheartpayload.EventTypeGMFearChanged,
 		Timestamp:     now.UTC(),
 		ActorType:     event.ActorType(cmd.ActorType),
 		ActorID:       cmd.ActorID,

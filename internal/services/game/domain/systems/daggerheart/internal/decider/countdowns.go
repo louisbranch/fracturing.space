@@ -10,11 +10,11 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func decideRestTake(snapshotState snapstate.SnapshotState, cmd command.Command, now func() time.Time) command.Decision {
+func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Command, now func() time.Time) command.Decision {
 	var p payload.RestTakePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &p); err != nil {
 		return command.Reject(command.Rejection{
@@ -109,10 +109,10 @@ func decideCountdownCreate(cmd command.Command, now func() time.Time) command.De
 		}, now)
 }
 
-func decideCountdownUpdate(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideCountdownUpdate(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, payload.EventTypeCountdownUpdated, "countdown",
 		func(p *payload.CountdownUpdatePayload) string { return strings.TrimSpace(p.CountdownID.String()) },
-		func(s snapstate.SnapshotState, hasState bool, p *payload.CountdownUpdatePayload, _ func() time.Time) *command.Rejection {
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.CountdownUpdatePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if rejection := countdownUpdateSnapshotRejection(s, *p); rejection != nil {
 					return rejection
@@ -122,7 +122,7 @@ func decideCountdownUpdate(snapshotState snapstate.SnapshotState, hasSnapshot bo
 			p.Reason = strings.TrimSpace(p.Reason)
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.CountdownUpdatePayload) payload.CountdownUpdatedPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CountdownUpdatePayload) payload.CountdownUpdatedPayload {
 			return payload.CountdownUpdatedPayload{
 				CountdownID: p.CountdownID,
 				Value:       p.After,
@@ -146,7 +146,7 @@ func decideCountdownDelete(cmd command.Command, now func() time.Time) command.De
 
 // ── File-local helpers ─────────────────────────────────────────────────
 
-func isCountdownUpdateNoMutation(snapshot snapstate.SnapshotState, p payload.CountdownUpdatePayload) bool {
+func isCountdownUpdateNoMutation(snapshot daggerheartstate.SnapshotState, p payload.CountdownUpdatePayload) bool {
 	countdown, hasCountdown := snapshotCountdownState(snapshot, p.CountdownID)
 	if !hasCountdown {
 		return false
@@ -160,7 +160,7 @@ func isCountdownUpdateNoMutation(snapshot snapstate.SnapshotState, p payload.Cou
 	return true
 }
 
-func countdownUpdateSnapshotRejection(snapshot snapstate.SnapshotState, p payload.CountdownUpdatePayload) *command.Rejection {
+func countdownUpdateSnapshotRejection(snapshot daggerheartstate.SnapshotState, p payload.CountdownUpdatePayload) *command.Rejection {
 	if countdown, hasCountdown := snapshotCountdownState(snapshot, p.CountdownID); hasCountdown && p.Before != countdown.Current {
 		return &command.Rejection{
 			Code:    rejectionCodeCountdownBeforeMismatch,
@@ -176,14 +176,14 @@ func countdownUpdateSnapshotRejection(snapshot snapstate.SnapshotState, p payloa
 	return nil
 }
 
-func snapshotCountdownState(snapshot snapstate.SnapshotState, countdownID ids.CountdownID) (snapstate.CountdownState, bool) {
+func snapshotCountdownState(snapshot daggerheartstate.SnapshotState, countdownID ids.CountdownID) (daggerheartstate.CountdownState, bool) {
 	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
 	if trimmed == "" {
-		return snapstate.CountdownState{}, false
+		return daggerheartstate.CountdownState{}, false
 	}
 	countdown, ok := snapshot.CountdownStates[trimmed]
 	if !ok {
-		return snapstate.CountdownState{}, false
+		return daggerheartstate.CountdownState{}, false
 	}
 	countdown.CountdownID = trimmed
 	countdown.CampaignID = snapshot.CampaignID

@@ -74,9 +74,11 @@ func setDefaultOnRejection(options *domainwrite.Options, deps Deps) {
 	if options.OnRejection != nil {
 		return
 	}
-	var emitter *audit.Emitter
+	emitter := audit.NewEmitter(audit.DisabledPolicy())
 	if ad, ok := deps.(auditStoreDeps); ok {
-		emitter = audit.NewEmitter(ad.AuditEventStore())
+		if store := ad.AuditEventStore(); store != nil {
+			emitter = audit.NewEmitter(audit.EnabledPolicy(store))
+		}
 	}
 	options.OnRejection = func(ctx context.Context, info domainwrite.OnRejectionInfo) {
 		if emitter != nil {

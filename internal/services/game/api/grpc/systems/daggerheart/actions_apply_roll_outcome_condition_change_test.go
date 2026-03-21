@@ -12,7 +12,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
@@ -22,7 +25,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	profile := dhStore.Profiles["camp-1:char-1"]
 	state := dhStore.States["camp-1:char-1"]
 	state.Stress = profile.StressMax
-	state.Conditions = []projectionstore.DaggerheartConditionState{projectionStandardConditionState(daggerheart.ConditionVulnerable)}
+	state.Conditions = []projectionstore.DaggerheartConditionState{projectionStandardConditionState(rules.ConditionVulnerable)}
 	dhStore.States["camp-1:char-1"] = state
 	now := testTimestamp
 
@@ -58,7 +61,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	hopeBefore := state.Hope
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
-		hopeMax = daggerheart.HopeMax
+		hopeMax = mechanics.HopeMax
 	}
 	hopeAfter := hopeBefore + 1
 	if hopeAfter > hopeMax {
@@ -66,7 +69,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	}
 	stressBefore := profile.StressMax
 	stressAfter := stressBefore - 1
-	patchPayload := daggerheart.CharacterStatePatchedPayload{
+	patchPayload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		Hope:        &hopeAfter,
 		Stress:      &stressAfter,
@@ -77,10 +80,10 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	}
 
 	rollSeq := rollEvent.Seq
-	conditionPayload := daggerheart.ConditionChangedPayload{
+	conditionPayload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "char-1",
-		Conditions:  []daggerheart.ConditionState{},
-		Removed:     []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
+		Conditions:  []rules.ConditionState{},
+		Removed:     []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
 		RollSeq:     &rollSeq,
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)

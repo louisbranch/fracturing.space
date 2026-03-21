@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func (r *Runner) runLevelUpStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -70,7 +70,7 @@ func (r *Runner) runLevelUpStep(ctx context.Context, state *scenarioState, step 
 	if err != nil {
 		return fmt.Errorf("level_up: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeLevelUpApplied); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeLevelUpApplied); err != nil {
 		return err
 	}
 
@@ -169,7 +169,7 @@ func (r *Runner) runClassFeatureStep(ctx context.Context, state *scenarioState, 
 	if err != nil {
 		return fmt.Errorf("class_feature: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterStatePatched); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCharacterStatePatched); err != nil {
 		return err
 	}
 
@@ -289,7 +289,7 @@ func (r *Runner) runUpdateGoldStep(ctx context.Context, state *scenarioState, st
 	if err != nil {
 		return fmt.Errorf("update_gold: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGoldUpdated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeGoldUpdated)
 }
 
 func (r *Runner) runAcquireDomainCardStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -325,7 +325,7 @@ func (r *Runner) runAcquireDomainCardStep(ctx context.Context, state *scenarioSt
 	if err != nil {
 		return fmt.Errorf("acquire_domain_card: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDomainCardAcquired)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeDomainCardAcquired)
 }
 
 func (r *Runner) runSwapEquipmentStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -363,7 +363,7 @@ func (r *Runner) runSwapEquipmentStep(ctx context.Context, state *scenarioState,
 	if err != nil {
 		return fmt.Errorf("swap_equipment: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeEquipmentSwapped); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeEquipmentSwapped); err != nil {
 		return err
 	}
 	return r.assertSwapEquipmentExpectations(ctx, state, characterID, step.Args)
@@ -402,7 +402,7 @@ func (r *Runner) runUseConsumableStep(ctx context.Context, state *scenarioState,
 	if err != nil {
 		return fmt.Errorf("use_consumable: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeConsumableUsed)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeConsumableUsed)
 }
 
 func (r *Runner) runAcquireConsumableStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -438,7 +438,7 @@ func (r *Runner) runAcquireConsumableStep(ctx context.Context, state *scenarioSt
 	if err != nil {
 		return fmt.Errorf("acquire_consumable: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeConsumableAcquired)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeConsumableAcquired)
 }
 
 func (r *Runner) assertSwapEquipmentExpectations(ctx context.Context, state *scenarioState, characterID string, args map[string]any) error {

@@ -3,9 +3,10 @@
 //
 // Why this package exists:
 //   - It makes worker-facing integration delivery persistence a visible backend
-//     concern instead of another responsibility hidden in the root SQLite store.
+//     concern instead of another responsibility hidden in the event-journal
+//     backend.
 //   - It keeps event-journal append logic responsible for enqueue triggers while
 //     moving lease/ack/query behavior behind a dedicated backend boundary.
-//   - It reduces pressure on the root `storage/sqlite` package so contributors
-//     can reason about journal persistence and integration delivery separately.
+//   - It lets contributors reason about journal persistence and integration
+//     delivery separately inside the SQLite backend family.
 package integrationoutbox

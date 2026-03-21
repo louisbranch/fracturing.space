@@ -5,7 +5,9 @@ import (
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func TestDaggerheartConditionsFromProto(t *testing.T) {
@@ -49,7 +51,7 @@ func TestDaggerheartConditionsFromProto(t *testing.T) {
 		if len(result) != 3 {
 			t.Fatalf("expected 3 conditions, got %d", len(result))
 		}
-		if result[0] != daggerheart.ConditionHidden || result[1] != daggerheart.ConditionRestrained || result[2] != daggerheart.ConditionVulnerable {
+		if result[0] != rules.ConditionHidden || result[1] != rules.ConditionRestrained || result[2] != rules.ConditionVulnerable {
 			t.Fatalf("unexpected condition order: %v", result)
 		}
 	})
@@ -65,9 +67,9 @@ func TestDaggerheartConditionsToProto(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		result := charactertransport.DaggerheartConditionsToProto([]string{
-			daggerheart.ConditionHidden,
+			rules.ConditionHidden,
 			"unknown",
-			daggerheart.ConditionVulnerable,
+			rules.ConditionVulnerable,
 		})
 		if len(result) != 2 {
 			t.Fatalf("expected 2 conditions, got %d", len(result))
@@ -95,10 +97,10 @@ func TestDaggerheartLifeStateFromProto(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		cases := map[daggerheartv1.DaggerheartLifeState]string{
-			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE:          daggerheart.LifeStateAlive,
-			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS:    daggerheart.LifeStateUnconscious,
-			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY: daggerheart.LifeStateBlazeOfGlory,
-			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD:           daggerheart.LifeStateDead,
+			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE:          daggerheartstate.LifeStateAlive,
+			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS:    mechanics.LifeStateUnconscious,
+			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY: mechanics.LifeStateBlazeOfGlory,
+			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD:           mechanics.LifeStateDead,
 		}
 		for input, expected := range cases {
 			result, err := charactertransport.DaggerheartLifeStateFromProto(input)
@@ -115,10 +117,10 @@ func TestDaggerheartLifeStateFromProto(t *testing.T) {
 func TestDaggerheartLifeStateToProto(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		cases := map[string]daggerheartv1.DaggerheartLifeState{
-			daggerheart.LifeStateAlive:        daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE,
-			daggerheart.LifeStateUnconscious:  daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
-			daggerheart.LifeStateBlazeOfGlory: daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY,
-			daggerheart.LifeStateDead:         daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD,
+			daggerheartstate.LifeStateAlive: daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE,
+			mechanics.LifeStateUnconscious:  daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
+			mechanics.LifeStateBlazeOfGlory: daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY,
+			mechanics.LifeStateDead:         daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD,
 		}
 		for input, expected := range cases {
 			result := charactertransport.DaggerheartLifeStateToProto(input)

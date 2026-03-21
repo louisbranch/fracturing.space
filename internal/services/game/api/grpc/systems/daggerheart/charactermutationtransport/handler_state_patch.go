@@ -11,7 +11,8 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,7 +40,7 @@ func (h *Handler) ApplyCharacterStatePatch(ctx context.Context, in *pb.Daggerhea
 		return nil, grpcerror.HandleDomainError(err)
 	}
 
-	payload := daggerheart.CharacterStatePatchPayload{
+	payload := daggerheartpayload.CharacterStatePatchPayload{
 		CharacterID: ids.CharacterID(characterID),
 		Source:      strings.TrimSpace(in.GetSource()),
 	}
@@ -61,7 +62,7 @@ func (h *Handler) ApplyCharacterStatePatch(ctx context.Context, in *pb.Daggerhea
 	}
 
 	if src := in.GetMutationSource(); src != nil {
-		payload.MutationSource = &daggerheart.MutationSource{
+		payload.MutationSource = &daggerheartstate.MutationSource{
 			Type:        src.GetType().String(),
 			Description: src.GetDescription(),
 			SourceID:    src.GetSourceId(),

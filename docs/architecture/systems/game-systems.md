@@ -43,8 +43,7 @@ Non-negotiable invariants:
 
 ## Event intent policy
 
-Every event must declare an intent. Most system events should use projection + replay
-intent. Audit-only events must stay journal-only.
+Every event must declare an intent. Most system events should use projection + replay intent. Audit-only events must stay journal-only.
 
 Startup validation enforces coverage:
 
@@ -91,7 +90,9 @@ domain packages remain independent from generated API code.
 
 ### Startup validation order
 
-`BuildRegistries()` in `domain/engine/registries_builder.go`:
+`BuildRegistries()` in `domain/engine/registries_builder.go` keeps this order
+explicit through separate collaborators for core-domain registration,
+system-module registration, and post-registration contract validation:
 
 1. **Register core domains** — core commands, events, and aliases.
 2. **Register system modules** — run module-scoped registration pipeline (`register commands`, `register events`, `validate type namespace`, `validate emittable events`).

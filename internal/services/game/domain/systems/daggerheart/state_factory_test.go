@@ -1,6 +1,10 @@
 package daggerheart
 
-import "testing"
+import (
+	"testing"
+
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+)
 
 func TestStateFactory_NewSnapshotStateDefaults(t *testing.T) {
 	factory := NewStateFactory()
@@ -8,15 +12,15 @@ func TestStateFactory_NewSnapshotStateDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new snapshot state: %v", err)
 	}
-	snapshot, ok := state.(SnapshotState)
+	snapshot, ok := state.(daggerheartstate.SnapshotState)
 	if !ok {
-		t.Fatalf("expected SnapshotState, got %T", state)
+		t.Fatalf("expected daggerheartstate.SnapshotState, got %T", state)
 	}
 	if snapshot.CampaignID != "camp-1" {
 		t.Fatalf("campaign id = %s, want %s", snapshot.CampaignID, "camp-1")
 	}
-	if snapshot.GMFear != GMFearDefault {
-		t.Fatalf("gm fear = %d, want %d", snapshot.GMFear, GMFearDefault)
+	if snapshot.GMFear != daggerheartstate.GMFearDefault {
+		t.Fatalf("gm fear = %d, want %d", snapshot.GMFear, daggerheartstate.GMFearDefault)
 	}
 	if snapshot.CharacterStates == nil {
 		t.Fatal("CharacterStates map should be initialized, got nil")
@@ -30,7 +34,7 @@ func TestStateFactory_NewSnapshotStateDefaults(t *testing.T) {
 }
 
 func TestSnapshotState_EnsureMaps(t *testing.T) {
-	s := SnapshotState{}
+	s := daggerheartstate.SnapshotState{}
 	if s.CharacterStates != nil || s.AdversaryStates != nil || s.CountdownStates != nil {
 		t.Fatal("expected nil maps before EnsureMaps")
 	}
@@ -46,7 +50,7 @@ func TestSnapshotState_EnsureMaps(t *testing.T) {
 	}
 
 	// EnsureMaps should not overwrite existing maps.
-	s.CharacterStates["char-1"] = CharacterState{CharacterID: "char-1"}
+	s.CharacterStates["char-1"] = daggerheartstate.CharacterState{CharacterID: "char-1"}
 	s.EnsureMaps()
 	if _, ok := s.CharacterStates["char-1"]; !ok {
 		t.Fatal("EnsureMaps overwrote existing CharacterStates map")
@@ -59,9 +63,9 @@ func TestStateFactory_NewCharacterStateDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new character state: %v", err)
 	}
-	character, ok := state.(CharacterState)
+	character, ok := state.(daggerheartstate.CharacterState)
 	if !ok {
-		t.Fatalf("expected CharacterState, got %T", state)
+		t.Fatalf("expected daggerheartstate.CharacterState, got %T", state)
 	}
 	if character.CampaignID != "camp-1" {
 		t.Fatalf("campaign id = %s, want %s", character.CampaignID, "camp-1")
@@ -69,20 +73,20 @@ func TestStateFactory_NewCharacterStateDefaults(t *testing.T) {
 	if character.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", character.CharacterID, "char-1")
 	}
-	if character.Hope != HopeDefault {
-		t.Fatalf("hope = %d, want %d", character.Hope, HopeDefault)
+	if character.Hope != daggerheartstate.HopeDefault {
+		t.Fatalf("hope = %d, want %d", character.Hope, daggerheartstate.HopeDefault)
 	}
-	if character.StressMax != StressMaxDefault {
-		t.Fatalf("stress max = %d, want %d", character.StressMax, StressMaxDefault)
+	if character.StressMax != daggerheartstate.StressMaxDefault {
+		t.Fatalf("stress max = %d, want %d", character.StressMax, daggerheartstate.StressMaxDefault)
 	}
 
 	state, err = factory.NewCharacterState("camp-1", "npc-1", "npc")
 	if err != nil {
 		t.Fatalf("new npc state: %v", err)
 	}
-	character, ok = state.(CharacterState)
+	character, ok = state.(daggerheartstate.CharacterState)
 	if !ok {
-		t.Fatalf("expected CharacterState, got %T", state)
+		t.Fatalf("expected daggerheartstate.CharacterState, got %T", state)
 	}
 	if character.Hope != 0 {
 		t.Fatalf("npc hope = %d, want %d", character.Hope, 0)

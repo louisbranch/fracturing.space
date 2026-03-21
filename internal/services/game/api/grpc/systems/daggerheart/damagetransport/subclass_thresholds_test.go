@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func TestResolveCharacterDamageAppliesSubclassThresholdBonuses(t *testing.T) {
@@ -14,7 +15,7 @@ func TestResolveCharacterDamageAppliesSubclassThresholdBonuses(t *testing.T) {
 		state := projectionstore.DaggerheartCharacterState{
 			Hp: 10,
 			SubclassState: &projectionstore.DaggerheartSubclassState{
-				ElementalChannel: daggerheart.ElementalChannelEarth,
+				ElementalChannel: daggerheartstate.ElementalChannelEarth,
 			},
 		}
 		result, _, err := ResolveCharacterDamage(&pb.DaggerheartDamageRequest{
@@ -24,7 +25,7 @@ func TestResolveCharacterDamageAppliesSubclassThresholdBonuses(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ResolveCharacterDamage returned error: %v", err)
 		}
-		if result.Result.Severity != daggerheart.DamageMinor {
+		if result.Result.Severity != rules.DamageMinor {
 			t.Fatalf("severity = %v, want minor with earth threshold bonus", result.Result.Severity)
 		}
 	})
@@ -44,7 +45,7 @@ func TestResolveCharacterDamageAppliesSubclassThresholdBonuses(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ResolveCharacterDamage returned error: %v", err)
 		}
-		if result.Result.Severity != daggerheart.DamageMajor {
+		if result.Result.Severity != rules.DamageMajor {
 			t.Fatalf("severity = %v, want major below boosted severe threshold", result.Result.Severity)
 		}
 	})

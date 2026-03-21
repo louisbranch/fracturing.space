@@ -104,6 +104,10 @@ func testWriteRuntime(t *testing.T) *domainwrite.Runtime {
 	return runtime
 }
 
+func testRuntimeStoresWithWrite(write domainwriteexec.WritePath) RuntimeStores {
+	return RuntimeStores{Write: write}
+}
+
 func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
 	runtime := testWriteRuntime(t)
 	runtime.SetInlineApplyEnabled(true)
@@ -112,7 +116,7 @@ func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
-	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
+	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
@@ -133,7 +137,7 @@ func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T)
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
-	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
+	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
@@ -164,7 +168,7 @@ func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) 
 			}},
 		},
 	}
-	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
+	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
@@ -182,7 +186,7 @@ func TestExecuteAndApplyDomainCommand_MapsNonRetryableExecutionError(t *testing.
 	domain := fakeDomainExecutor{
 		err: nonRetryableTestError{err: errors.New("post-persist checkpoint failed")},
 	}
-	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
+	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,

@@ -21,6 +21,7 @@ import (
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -110,7 +111,7 @@ func (d *characterWorkflowDeps) SystemContent() contentstore.DaggerheartContentR
 	return d.app.stores.DaggerheartContent
 }
 
-func (d *characterWorkflowDeps) ExecuteProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {
+func (d *characterWorkflowDeps) ExecuteProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheartstate.CharacterProfile) error {
 	return d.app.executeDaggerheartProfileReplace(ctx, campaignContext, characterID, profile, nil)
 }
 
@@ -126,7 +127,7 @@ func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, p
 	return DaggerheartProfileToProto(campaignID, characterID, profile, d.app.stores.DaggerheartContent)
 }
 
-func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile, mutationSource *daggerheart.MutationSource) error {
+func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheartstate.CharacterProfile, mutationSource *daggerheartstate.MutationSource) error {
 	policyActor, err := authz.RequireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
@@ -136,7 +137,7 @@ func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Conte
 	if actorID == "" {
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
-	commandPayload := daggerheart.CharacterProfileReplacePayload{
+	commandPayload := daggerheartstate.CharacterProfileReplacePayload{
 		CharacterID:    ids.CharacterID(characterID),
 		Profile:        profile,
 		MutationSource: mutationSource,
@@ -186,7 +187,7 @@ func (c characterApplication) executeDaggerheartProfileDelete(ctx context.Contex
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
 
-	commandPayload := daggerheart.CharacterProfileDeletePayload{CharacterID: ids.CharacterID(characterID)}
+	commandPayload := daggerheartstate.CharacterProfileDeletePayload{CharacterID: ids.CharacterID(characterID)}
 	commandPayloadJSON, err := json.Marshal(commandPayload)
 	if err != nil {
 		return grpcerror.Internal("encode payload", err)

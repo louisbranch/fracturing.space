@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"fmt"
@@ -10,10 +10,9 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
-	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/interceptors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -26,10 +25,10 @@ type transportBootstrapper interface {
 	Bootstrap(
 		bundle *storageBundle,
 		srvEnv serverEnv,
-		stores gamegrpc.Stores,
-		authClient authv1.AuthServiceClient,
-		aiAgentClient aiv1.AgentServiceClient,
-		systemRegistry *bridge.MetadataRegistry,
+		daggerheartDeps daggerheartRegistrationDeps,
+		campaignDeps campaignRegistrationDeps,
+		sessionDeps sessionRegistrationDeps,
+		infrastructureDeps infrastructureRegistrationDeps,
 	) (transportRuntimeState, error)
 }
 
@@ -42,11 +41,10 @@ type transportServiceRegistrar interface {
 	Register(
 		grpcServer *grpc.Server,
 		healthServer *health.Server,
-		stores gamegrpc.Stores,
-		bundle *storageBundle,
-		authClient authv1.AuthServiceClient,
-		aiAgentClient aiv1.AgentServiceClient,
-		systemRegistry *bridge.MetadataRegistry,
+		daggerheartDeps daggerheartRegistrationDeps,
+		campaignDeps campaignRegistrationDeps,
+		sessionDeps sessionRegistrationDeps,
+		infrastructureDeps infrastructureRegistrationDeps,
 		sessionGrantConfig aisessiongrant.Config,
 	) error
 }
@@ -54,25 +52,23 @@ type transportServiceRegistrar interface {
 type transportServiceRegistrarFunc func(
 	grpcServer *grpc.Server,
 	healthServer *health.Server,
-	stores gamegrpc.Stores,
-	bundle *storageBundle,
-	authClient authv1.AuthServiceClient,
-	aiAgentClient aiv1.AgentServiceClient,
-	systemRegistry *bridge.MetadataRegistry,
+	daggerheartDeps daggerheartRegistrationDeps,
+	campaignDeps campaignRegistrationDeps,
+	sessionDeps sessionRegistrationDeps,
+	infrastructureDeps infrastructureRegistrationDeps,
 	sessionGrantConfig aisessiongrant.Config,
 ) error
 
 func (f transportServiceRegistrarFunc) Register(
 	grpcServer *grpc.Server,
 	healthServer *health.Server,
-	stores gamegrpc.Stores,
-	bundle *storageBundle,
-	authClient authv1.AuthServiceClient,
-	aiAgentClient aiv1.AgentServiceClient,
-	systemRegistry *bridge.MetadataRegistry,
+	daggerheartDeps daggerheartRegistrationDeps,
+	campaignDeps campaignRegistrationDeps,
+	sessionDeps sessionRegistrationDeps,
+	infrastructureDeps infrastructureRegistrationDeps,
 	sessionGrantConfig aisessiongrant.Config,
 ) error {
-	return f(grpcServer, healthServer, stores, bundle, authClient, aiAgentClient, systemRegistry, sessionGrantConfig)
+	return f(grpcServer, healthServer, daggerheartDeps, campaignDeps, sessionDeps, infrastructureDeps, sessionGrantConfig)
 }
 
 type defaultTransportBootstrapper struct {
@@ -85,10 +81,10 @@ type defaultTransportBootstrapper struct {
 func (b defaultTransportBootstrapper) Bootstrap(
 	bundle *storageBundle,
 	srvEnv serverEnv,
-	stores gamegrpc.Stores,
-	authClient authv1.AuthServiceClient,
-	aiAgentClient aiv1.AgentServiceClient,
-	systemRegistry *bridge.MetadataRegistry,
+	daggerheartDeps daggerheartRegistrationDeps,
+	campaignDeps campaignRegistrationDeps,
+	sessionDeps sessionRegistrationDeps,
+	infrastructureDeps infrastructureRegistrationDeps,
 ) (transportRuntimeState, error) {
 	grpcServer := b.newGRPCServer(bundle, srvEnv)
 	healthServer := b.newHealthServer()
@@ -99,11 +95,10 @@ func (b defaultTransportBootstrapper) Bootstrap(
 	if err := b.registerServices.Register(
 		grpcServer,
 		healthServer,
-		stores,
-		bundle,
-		authClient,
-		aiAgentClient,
-		systemRegistry,
+		daggerheartDeps,
+		campaignDeps,
+		sessionDeps,
+		infrastructureDeps,
 		sessionGrantConfig,
 	); err != nil {
 		return transportRuntimeState{}, fmt.Errorf("register gRPC services: %w", err)
@@ -155,14 +150,14 @@ func newDefaultGRPCServer(bundle *storageBundle, srvEnv serverEnv) *grpc.Server 
 		grpc.ChainUnaryInterceptor(
 			grpcmeta.UnaryServerInterceptor(nil),
 			interceptors.InternalServiceIdentityUnaryInterceptor(internalIdentity),
-			interceptors.AuditInterceptor(bundle.events),
+			interceptors.AuditInterceptor(audit.EnabledPolicy(bundle.events)),
 			interceptors.SessionLockInterceptor(bundle.projections),
 			interceptors.ErrorConversionUnaryInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
 			grpcmeta.StreamServerInterceptor(nil),
 			interceptors.InternalServiceIdentityStreamInterceptor(internalIdentity),
-			interceptors.StreamAuditInterceptor(bundle.events),
+			interceptors.StreamAuditInterceptor(audit.EnabledPolicy(bundle.events)),
 			interceptors.ErrorConversionStreamInterceptor(),
 		),
 	)

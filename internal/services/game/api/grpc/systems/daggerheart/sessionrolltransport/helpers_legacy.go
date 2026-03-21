@@ -3,8 +3,8 @@ package sessionrolltransport
 import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 // outcomeToProto maps a domain Outcome to the corresponding proto enum value.
@@ -31,16 +31,16 @@ func outcomeToProto(outcome daggerheartdomain.Outcome) pb.Outcome {
 
 // damageDiceFromProto converts proto DiceSpec messages into the domain
 // DamageDieSpec slice consumed by RollDamage.
-func damageDiceFromProto(specs []*pb.DiceSpec) ([]bridge.DamageDieSpec, error) {
+func damageDiceFromProto(specs []*pb.DiceSpec) ([]rules.DamageDieSpec, error) {
 	if len(specs) == 0 {
 		return nil, dice.ErrMissingDice
 	}
-	out := make([]bridge.DamageDieSpec, 0, len(specs))
+	out := make([]rules.DamageDieSpec, 0, len(specs))
 	for _, spec := range specs {
 		if spec == nil || spec.GetSides() <= 0 || spec.GetCount() <= 0 {
 			return nil, dice.ErrInvalidDiceSpec
 		}
-		out = append(out, bridge.DamageDieSpec{
+		out = append(out, rules.DamageDieSpec{
 			Sides: int(spec.GetSides()),
 			Count: int(spec.GetCount()),
 		})

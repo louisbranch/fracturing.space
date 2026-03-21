@@ -4,7 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestTierForLevel(t *testing.T) {
@@ -178,14 +181,14 @@ func TestResolveRestPackage_LongRestMovesAndProjectAdvance(t *testing.T) {
 				},
 			},
 		},
-		AvailableCountdowns: map[ids.CountdownID]Countdown{
+		AvailableCountdowns: map[ids.CountdownID]rules.Countdown{
 			"cd-1": {
 				ID:        "cd-1",
 				Name:      "Map the Hidden Pass",
-				Kind:      CountdownKindProgress,
+				Kind:      rules.CountdownKindProgress,
 				Current:   0,
 				Max:       4,
-				Direction: CountdownDirectionIncrease,
+				Direction: rules.CountdownDirectionIncrease,
 			},
 		},
 	})
@@ -228,14 +231,14 @@ func TestResolveRestPackage_LongRestMovesAndProjectAdvance(t *testing.T) {
 func TestResolveRestPackage_WorkOnProjectValidation(t *testing.T) {
 	t.Parallel()
 
-	countdowns := map[ids.CountdownID]Countdown{
+	countdowns := map[ids.CountdownID]rules.Countdown{
 		"cd-1": {
 			ID:        "cd-1",
 			Name:      "Map the Hidden Pass",
-			Kind:      CountdownKindProgress,
+			Kind:      rules.CountdownKindProgress,
 			Current:   0,
 			Max:       4,
-			Direction: CountdownDirectionIncrease,
+			Direction: rules.CountdownDirectionIncrease,
 		},
 	}
 
@@ -302,7 +305,7 @@ func TestResolveRestPackage_WorkOnProjectValidation(t *testing.T) {
 func TestResolveRestTarget_DefaultsToActorAndRejectsMissingTarget(t *testing.T) {
 	t.Parallel()
 
-	states := map[ids.CharacterID]*CharacterState{
+	states := map[ids.CharacterID]*daggerheartstate.CharacterState{
 		"char-1": ptrState(testRestState("char-1", 5, 6, 1, 3, 0, 3, 0, 2)),
 	}
 
@@ -351,19 +354,19 @@ func TestRollDowntimeAmountAndClampGMFear(t *testing.T) {
 		t.Fatalf("rollDowntimeAmount(99, 5) = %d, want 1d4 + tier(5)=3", got)
 	}
 
-	if got := clampGMFear(-2); got != GMFearMin {
-		t.Fatalf("clampGMFear(-2) = %d, want %d", got, GMFearMin)
+	if got := clampGMFear(-2); got != daggerheartstate.GMFearMin {
+		t.Fatalf("clampGMFear(-2) = %d, want %d", got, daggerheartstate.GMFearMin)
 	}
 	if got := clampGMFear(5); got != 5 {
 		t.Fatalf("clampGMFear(5) = %d, want 5", got)
 	}
-	if got := clampGMFear(GMFearMax + 10); got != GMFearMax {
-		t.Fatalf("clampGMFear(max+10) = %d, want %d", got, GMFearMax)
+	if got := clampGMFear(daggerheartstate.GMFearMax + 10); got != daggerheartstate.GMFearMax {
+		t.Fatalf("clampGMFear(max+10) = %d, want %d", got, daggerheartstate.GMFearMax)
 	}
 }
 
-func testRestState(characterID ids.CharacterID, hp, hpMax, hope, hopeMax, stress, stressMax, armor, armorMax int) CharacterState {
-	return CharacterState{
+func testRestState(characterID ids.CharacterID, hp, hpMax, hope, hopeMax, stress, stressMax, armor, armorMax int) daggerheartstate.CharacterState {
+	return daggerheartstate.CharacterState{
 		CharacterID: characterID.String(),
 		HP:          hp,
 		HPMax:       hpMax,
@@ -373,7 +376,7 @@ func testRestState(characterID ids.CharacterID, hp, hpMax, hope, hopeMax, stress
 		StressMax:   stressMax,
 		Armor:       armor,
 		ArmorMax:    armorMax,
-		LifeState:   LifeStateAlive,
+		LifeState:   daggerheartstate.LifeStateAlive,
 	}
 }
 
@@ -388,7 +391,7 @@ func intValue(v *int) int {
 	return *v
 }
 
-func ptrState(v CharacterState) *CharacterState {
+func ptrState(v daggerheartstate.CharacterState) *daggerheartstate.CharacterState {
 	return &v
 }
 

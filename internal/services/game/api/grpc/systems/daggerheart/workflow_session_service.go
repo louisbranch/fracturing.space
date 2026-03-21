@@ -10,8 +10,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -99,7 +101,7 @@ func (s *DaggerheartService) sessionFlowHandler() *sessionflowtransport.Handler 
 
 func (s *DaggerheartService) executeSessionFlowCharacterStatePatch(ctx context.Context, in sessionflowtransport.CharacterStatePatchInput) error {
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
-	payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.CharacterStatePatchPayload{
 		CharacterID:                         ids.CharacterID(in.CharacterID),
 		Source:                              in.Source,
 		HopeBefore:                          in.HopeBefore,
@@ -132,7 +134,7 @@ func (s *DaggerheartService) executeSessionFlowCharacterStatePatch(ctx context.C
 }
 
 func (s *DaggerheartService) executeSessionFlowAdversaryUpdate(ctx context.Context, in sessionflowtransport.AdversaryUpdateInput) error {
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryUpdatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryUpdatePayload{
 		AdversaryID:      ids.AdversaryID(in.Adversary.AdversaryID),
 		AdversaryEntryID: in.Adversary.AdversaryEntryID,
 		Name:             in.Adversary.Name,
@@ -148,14 +150,14 @@ func (s *DaggerheartService) executeSessionFlowAdversaryUpdate(ctx context.Conte
 		Major:            in.Adversary.Major,
 		Severe:           in.Adversary.Severe,
 		Armor:            in.Adversary.Armor,
-		FeatureStates: func() []daggerheart.AdversaryFeatureState {
+		FeatureStates: func() []rules.AdversaryFeatureState {
 			source := in.UpdatedFeatureStates
 			if source == nil {
 				source = in.Adversary.FeatureStates
 			}
-			out := make([]daggerheart.AdversaryFeatureState, 0, len(source))
+			out := make([]rules.AdversaryFeatureState, 0, len(source))
 			for _, state := range source {
-				out = append(out, daggerheart.AdversaryFeatureState{
+				out = append(out, rules.AdversaryFeatureState{
 					FeatureID:       state.FeatureID,
 					Status:          state.Status,
 					FocusedTargetID: state.FocusedTargetID,
@@ -163,7 +165,7 @@ func (s *DaggerheartService) executeSessionFlowAdversaryUpdate(ctx context.Conte
 			}
 			return out
 		}(),
-		PendingExperience: func() *daggerheart.AdversaryPendingExperience {
+		PendingExperience: func() *rules.AdversaryPendingExperience {
 			if in.ClearPendingExperience {
 				return nil
 			}
@@ -174,7 +176,7 @@ func (s *DaggerheartService) executeSessionFlowAdversaryUpdate(ctx context.Conte
 			if source == nil {
 				return nil
 			}
-			return &daggerheart.AdversaryPendingExperience{
+			return &rules.AdversaryPendingExperience{
 				Name:     source.Name,
 				Modifier: source.Modifier,
 			}
@@ -207,17 +209,17 @@ func (s *DaggerheartService) executeSessionFlowGMFearAdjust(ctx context.Context,
 		return err
 	}
 	nextFear := snapshot.GMFear + in.Delta
-	if nextFear < daggerheart.GMFearMin {
-		nextFear = daggerheart.GMFearMin
+	if nextFear < daggerheartstate.GMFearMin {
+		nextFear = daggerheartstate.GMFearMin
 	}
-	if nextFear > daggerheart.GMFearMax {
-		nextFear = daggerheart.GMFearMax
+	if nextFear > daggerheartstate.GMFearMax {
+		nextFear = daggerheartstate.GMFearMax
 	}
 	if nextFear == snapshot.GMFear {
 		return nil
 	}
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
-	payloadJSON, err := json.Marshal(daggerheart.GMFearSetPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.GMFearSetPayload{
 		After:  &nextFear,
 		Reason: in.Reason,
 	})

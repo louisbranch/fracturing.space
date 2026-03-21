@@ -6,8 +6,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/gamefakes"
@@ -69,7 +69,7 @@ func newTestHandler() (*Handler, *gamefakes.EventStore, *callbackRecorder) {
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hope:        2,
-		HopeMax:     bridge.HopeMax,
+		HopeMax:     mechanics.HopeMax,
 		Stress:      3,
 		Hp:          6,
 	}

@@ -12,6 +12,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 )
 
@@ -23,7 +24,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 	characterID string,
 	actorType event.ActorType,
 	actorID string,
-	payload daggerheart.CharacterStatePatchPayload,
+	payload daggerheartpayload.CharacterStatePatchPayload,
 ) error {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -70,7 +71,7 @@ func executeDaggerheartConditionChangeCommand(
 	actorType event.ActorType,
 	actorID string,
 	sessionID string,
-	payload daggerheart.ConditionChangePayload,
+	payload daggerheartpayload.ConditionChangePayload,
 	applyErrMessage string,
 ) error {
 	payloadJSON, err := json.Marshal(payload)

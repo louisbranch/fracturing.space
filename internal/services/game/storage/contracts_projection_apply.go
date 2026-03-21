@@ -69,8 +69,8 @@ type ProjectionApplyOutboxStore interface {
 
 // ProjectionApplyTxStore is the transaction-scoped projection contract needed
 // by exactly-once projection apply callbacks. Core projection stores only —
-// system-specific stores are extracted from explicit provider seams on the
-// concrete implementation during adapter rebinding.
+// system-specific stores are recovered separately from the concrete store
+// source during adapter rebinding.
 type ProjectionApplyTxStore interface {
 	CampaignStore
 	CharacterStore

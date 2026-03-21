@@ -3,7 +3,7 @@ package reducer
 import (
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 )
 
 func TestApplyCharacterStatePatchAndNormalize(t *testing.T) {

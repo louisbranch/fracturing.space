@@ -52,7 +52,11 @@ func (s *DaggerheartService) gmMoveHandler() *gmmovetransport.Handler {
 				EntityID:     in.EntityID,
 				PayloadJSON:  in.PayloadJSON,
 			})
-			_, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, s.stores.Applier(), cmd, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, in.ApplyErrMessage))
+			applier, err := s.resolvedApplier()
+			if err != nil {
+				return err
+			}
+			_, err = workflowwrite.ExecuteAndApply(ctx, s.stores.Write, applier, cmd, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, in.ApplyErrMessage))
 			return err
 		},
 	})

@@ -10,14 +10,18 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 )
 
 func TestApplyConditions_LifeStateOnly(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	after := daggerheart.LifeStateUnconscious
+	after := mechanics.LifeStateUnconscious
 	patchJSON := mustCharacterStatePatchedJSON(t, "char-1", after)
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("sys.daggerheart.character_state.patch"): {
@@ -95,7 +99,7 @@ func TestApplyConditions_NoConditionChanges(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	state := dhStore.States["camp-1:char-1"]
 	state.Conditions = []projectionstore.DaggerheartConditionState{
-		projectionStandardConditionState(daggerheart.ConditionVulnerable),
+		projectionStandardConditionState(rules.ConditionVulnerable),
 	}
 	dhStore.States["camp-1:char-1"] = state
 
@@ -124,7 +128,7 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
 
-	conditionJSON := mustConditionChangedJSON(t, "char-1", []string{daggerheart.ConditionHidden}, []string{daggerheart.ConditionHidden})
+	conditionJSON := mustConditionChangedJSON(t, "char-1", []string{rules.ConditionHidden}, []string{rules.ConditionHidden})
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("sys.daggerheart.condition.change"): {
@@ -169,15 +173,15 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
 		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
 	}
-	var got daggerheart.ConditionChangePayload
+	var got daggerheartpayload.ConditionChangePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode condition command payload: %v", err)
 	}
 	if got.CharacterID != "char-1" {
 		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
 	}
-	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0].Code != daggerheart.ConditionHidden {
-		t.Fatalf("command conditions_after = %v, want %s", got.ConditionsAfter, daggerheart.ConditionHidden)
+	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0].Code != rules.ConditionHidden {
+		t.Fatalf("command conditions_after = %v, want %s", got.ConditionsAfter, rules.ConditionHidden)
 	}
 	var foundConditionEvent bool
 	for _, evt := range eventStore.Events["camp-1"] {
@@ -196,8 +200,8 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
 
-	before := daggerheart.LifeStateAlive
-	after := daggerheart.LifeStateUnconscious
+	before := daggerheartstate.LifeStateAlive
+	after := mechanics.LifeStateUnconscious
 	patchJSON := mustCharacterStatePatchedJSON(t, "char-1", after)
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -243,7 +247,7 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
 		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
 	}
-	var got daggerheart.CharacterStatePatchPayload
+	var got daggerheartpayload.CharacterStatePatchPayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode patch command payload: %v", err)
 	}

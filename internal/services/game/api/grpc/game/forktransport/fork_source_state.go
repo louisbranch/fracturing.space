@@ -42,8 +42,8 @@ func (a forkApplication) loadForkSourceState(ctx context.Context, sourceCampaign
 			return forkSourceState{}, err
 		}
 	}
-	// Stores.Validate guarantees Session in production wiring; keep a nil guard so
-	// focused unit tests with partial stores remain supported.
+	// Root startup validation guarantees Session in production wiring; keep a nil
+	// guard so focused unit tests with partial stores remain supported.
 	if a.stores.Session != nil {
 		activeSession, err := a.stores.Session.GetActiveSession(ctx, sourceCampaignID)
 		if err == nil {

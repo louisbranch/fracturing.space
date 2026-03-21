@@ -13,7 +13,9 @@ The game server starts through a sequence of validated phases. Each phase
 registers rollback handlers so failures at any point clean up earlier
 resources in reverse order.
 
-Entry point: `server.NewWithAddrContext()` in `internal/services/game/app/bootstrap.go`.
+Entry point: `app.NewWithAddrContext()` in `internal/services/game/app/bootstrap.go`.
+The top-level bootstrap now sequences phase helpers; phase-local work lives in
+`bootstrap_sequence.go` and sibling `bootstrap_*.go` collaborators.
 
 ## Phase overview
 
@@ -88,13 +90,28 @@ Each database runs migrations on open and is registered for rollback cleanup.
 
 ### 4. Domain
 
-Builds the `Stores` struct and projection `Applier`:
+Builds the root transport concern groups and the explicit projection `Applier`
+as separate collaborators:
 1. Create `WriteRuntime` for in-flight write tracking
-2. Build `gamegrpc.Stores` from projection database
+2. Build root projection, infrastructure, content, and runtime concerns from
+   the core projection database plus the explicit built-in system store bundle
+   bound from that backend
 3. Attach event registry
 4. Configure domain execution layer
-5. Validate all stores are wired
-6. Extract `projection.Applier`
+   Domain bootstrap mutates only the infrastructure/runtime concern groups:
+   the event journal feeds engine construction and the runtime write path gets
+   the executor.
+5. Validate all service stores are wired
+6. Build and validate the root `projection.Applier` from explicit applier deps
+   Root store and applier construction now flow through exact app-owned source
+   structs in dedicated phase-4 helper builders rather than inline config
+   literals inside `configureStoresAndApplier`. Startup now calls the
+   projection-owned applier constructor directly instead of rebuilding that
+   projection surface in the root gRPC package. Startup also binds an explicit
+   audit policy for the applier instead of relying on nil-store no-op
+   inference. The phase returns a narrowed domain state of concern groups plus
+   applier instead of carrying a root omnibus container forward into later
+   startup phases.
 
 ### 5. Systems
 
@@ -118,6 +135,10 @@ Connects to external microservices:
   if unavailable
 - **AI session grant config** — loaded from environment
 
+After dialing, startup attaches only the social client into the root
+`ContentStores` concern group; the dependency phase no longer mutates a broad
+root service container.
+
 ### 7. Transport
 
 `registerServices()` in `bootstrap_service_registration.go`
@@ -127,11 +148,27 @@ Builds and mounts gRPC service descriptors:
 - 13 game core services (Campaign, Participant, Character, Session, etc.)
 - Health service with per-service status
 
+The root registration file now delegates constructor wiring to capability-local
+helpers in `bootstrap_service_builders.go` so campaign, session, Daggerheart,
+and infrastructure service families stay readable and reviewable in isolation.
+Startup now assembles explicit Daggerheart, campaign, session, and
+infrastructure registration deps directly before transport bootstrap from the
+root projection, infrastructure, content, runtime, and system concern groups.
+No transport-wide registration bundle remains between startup and service
+registration, and the campaign/session family builders now consume exact
+app-owned source structs rather than the full root store container or
+concern-group bundles. Infrastructure and Daggerheart registration now follow
+the same exact-source pattern, and the top-level bootstrap delegates the
+remaining registration source fan-out to a dedicated startup-owned assembly
+helper with one exact startup-owned source input.
+
 ### 8. Runtime
 
 Configures background workers and status reporting:
 - **Projection apply mode** — resolves `inline_apply_only` (default),
   `outbox_apply_only`, or `shadow_only` from environment
+- **Runtime store seam** — projection runtime policy mutates only the root
+  `RuntimeStores` concern group rather than a broad root service container
 - **Outbox worker** — processes queued projection events (if enabled)
 - **Shadow worker** — cleans up processed outbox rows (if enabled)
 - **Status reporter** — heartbeat and catalog availability monitoring
