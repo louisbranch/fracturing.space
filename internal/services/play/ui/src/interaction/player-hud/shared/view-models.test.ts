@@ -14,12 +14,14 @@ describe("player HUD view models", () => {
   it("derives backstage status badges from the full shared state", () => {
     expect(backstageStatusBadge(backstageFixtureCatalog.openDiscussion)).toEqual({
       className: "badge-warning badge-soft",
+      indicator: "none",
       label: "OOC Open",
       tooltip: "Awaiting player readiness.",
     });
 
     expect(backstageStatusBadge(backstageFixtureCatalog.waitingOnGM)).toEqual({
       className: "badge-info badge-soft",
+      indicator: "loading-bars",
       label: "Waiting on GM",
       tooltip: "All players are ready. Waiting for the GM to resume on-stage play.",
     });
@@ -28,15 +30,38 @@ describe("player HUD view models", () => {
   it("derives on-stage status badges from the full shared state", () => {
     expect(onStageStatusBadge(onStageFixtureCatalog.viewerPosted)).toEqual({
       className: "badge-primary badge-soft",
+      indicator: "none",
       label: "Your Beat",
       tooltip: "Commit the next action for your character and yield when you are ready.",
     });
 
     expect(onStageStatusBadge(onStageFixtureCatalog.oocBlocked)).toEqual({
       className: "badge-warning badge-soft",
+      indicator: "none",
       label: "OOC Open",
       tooltip:
         "Backstage is open for a rules pause: Clarify whether tools touching the seam trigger the ward.",
+    });
+
+    expect(onStageStatusBadge(onStageFixtureCatalog.waitingOnGM)).toEqual({
+      className: "badge-ghost",
+      indicator: "loading-bars",
+      label: "Waiting",
+      tooltip: "Waiting for the GM to frame the next beat.",
+    });
+
+    expect(onStageStatusBadge(onStageFixtureCatalog.aiThinking)).toEqual({
+      className: "badge-info badge-soft",
+      indicator: "loading-bars",
+      label: "AI Thinking",
+      tooltip: "The next beat is being framed. Hold position until the scene opens again.",
+    });
+
+    expect(onStageStatusBadge(onStageFixtureCatalog.aiFailed)).toEqual({
+      className: "badge-error badge-soft",
+      indicator: "none",
+      label: "GM Delayed",
+      tooltip: "The next beat is delayed while GM authority reorients.",
     });
   });
 

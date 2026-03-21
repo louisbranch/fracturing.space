@@ -18,7 +18,7 @@ function statusDisplay(status: ParticipantPortraitStatus): {
         badgeClassName: "badge-info",
         label: "typing",
         tooltip: "Typing",
-        icon: <span className="text-[10px] font-bold leading-none" aria-hidden="true">...</span>,
+        icon: <span aria-hidden="true" className="loading loading-dots loading-xs" />,
       };
     case "ready":
       return {

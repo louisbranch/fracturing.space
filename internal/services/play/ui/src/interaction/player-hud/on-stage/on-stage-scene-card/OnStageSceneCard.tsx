@@ -1,4 +1,5 @@
 import type { OnStageSceneCardProps } from "./contract";
+import { PlayerHUDStatusPill } from "../../shared/PlayerHUDStatusPill";
 
 export function OnStageSceneCard({
   sceneName,
@@ -19,15 +20,10 @@ export function OnStageSceneCard({
             <span className="badge badge-sm badge-soft">Active Scene</span>
             <h2 className="text-base font-semibold text-base-content">{sceneName}</h2>
           </div>
-          <span
-            aria-label={`On-stage status: ${status.label}`}
-            className="tooltip tooltip-left shrink-0"
-            data-tip={status.tooltip}
-          >
-            <span className={`badge ${status.className}`} tabIndex={0}>
-              {status.label}
-            </span>
-          </span>
+          <PlayerHUDStatusPill
+            ariaLabel={`On-stage status: ${status.label}`}
+            status={status}
+          />
         </div>
 
         {sceneDescription ? (

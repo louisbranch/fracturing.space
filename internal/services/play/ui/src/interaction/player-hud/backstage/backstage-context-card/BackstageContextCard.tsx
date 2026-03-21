@@ -1,4 +1,5 @@
 import type { BackstageContextCardProps } from "./contract";
+import { PlayerHUDStatusPill } from "../../shared/PlayerHUDStatusPill";
 
 export function BackstageContextCard({
   sceneName,
@@ -23,15 +24,10 @@ export function BackstageContextCard({
               <h2 className="text-base font-semibold text-base-content">{sceneName}</h2>
             ) : null}
           </div>
-          <span
-            aria-label={`Backstage status: ${status.label}`}
-            className="tooltip tooltip-left shrink-0"
-            data-tip={status.tooltip}
-          >
-            <span className={`badge ${status.className}`} tabIndex={0}>
-              {status.label}
-            </span>
-          </span>
+          <PlayerHUDStatusPill
+            ariaLabel={`Backstage status: ${status.label}`}
+            status={status}
+          />
         </div>
 
         {pausedPromptText ? (

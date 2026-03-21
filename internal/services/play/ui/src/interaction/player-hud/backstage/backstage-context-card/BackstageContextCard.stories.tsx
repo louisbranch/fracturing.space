@@ -10,6 +10,7 @@ function statusArgs(state: typeof backstageFixtureCatalog.openDiscussion) {
 const meta = {
   title: "Interaction/Player HUD/Backstage/Context Card",
   component: BackstageContextCard,
+  tags: ["autodocs"],
   parameters: {
     docs: {
       description: {
@@ -59,5 +60,43 @@ export const Dormant: Story = {
     sceneName: backstageFixtureCatalog.dormant.sceneName,
     pausedPromptText: backstageFixtureCatalog.dormant.pausedPromptText,
     status: statusArgs(backstageFixtureCatalog.dormant),
+  },
+};
+
+const backstageAllStates = [
+  { name: "Backstage Idle", state: backstageFixtureCatalog.dormant },
+  { name: "OOC Open", state: backstageFixtureCatalog.openDiscussion },
+  { name: "Ready", state: backstageFixtureCatalog.viewerReady },
+  { name: "Waiting on GM", state: backstageFixtureCatalog.waitingOnGM },
+] as const;
+
+export const AllStates: Story = {
+  args: {
+    sceneName: backstageFixtureCatalog.openDiscussion.sceneName,
+    pausedPromptText: backstageFixtureCatalog.openDiscussion.pausedPromptText,
+    reason: backstageFixtureCatalog.openDiscussion.reason,
+    status: statusArgs(backstageFixtureCatalog.openDiscussion),
+  },
+  render: () => (
+    <div className="flex max-w-4xl flex-col gap-4">
+      {backstageAllStates.map(({ name, state }) => (
+        <div key={name} className="flex flex-col gap-2">
+          <div className="preview-kicker">{name}</div>
+          <BackstageContextCard
+            sceneName={state.sceneName}
+            pausedPromptText={state.pausedPromptText}
+            reason={state.reason}
+            status={statusArgs(state)}
+          />
+        </div>
+      ))}
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "Overview of every backstage status badge state, including the waiting-on-gm loading-bar treatment.",
+      },
+    },
   },
 };

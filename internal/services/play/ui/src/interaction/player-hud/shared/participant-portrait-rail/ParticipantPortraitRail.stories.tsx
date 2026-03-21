@@ -48,6 +48,7 @@ function ParticipantPortraitRailPreview(
 const meta = {
   title: "Interaction/Player HUD/Shared/Participant Portrait Rail",
   component: ParticipantPortraitRailPreview,
+  tags: ["autodocs"],
   parameters: {
     docs: {
       description: {
@@ -114,5 +115,61 @@ export const ChangesRequested: Story = {
     participants: participantPortraitRailFixtures.changesRequested,
     viewerParticipantId: "p-rhea",
     ariaLabel: "On-stage participants",
+  },
+};
+
+const portraitRailAllStates = [
+  {
+    name: "Typing / Idle",
+    participants: participantPortraitRailFixtures.typing,
+    ariaLabel: "Side chat participants",
+  },
+  {
+    name: "Ready / Waiting",
+    participants: participantPortraitRailFixtures.ready,
+    ariaLabel: "Backstage participants",
+  },
+  {
+    name: "Active / Yielded / Waiting",
+    participants: participantPortraitRailFixtures.active,
+    ariaLabel: "On-stage participants",
+  },
+  {
+    name: "Changes Requested",
+    participants: participantPortraitRailFixtures.changesRequested,
+    ariaLabel: "On-stage participants",
+  },
+] as const;
+
+export const AllStates: Story = {
+  args: {
+    participants: participantPortraitRailFixtures.typing,
+    viewerParticipantId: "p-rhea",
+    ariaLabel: "Side chat participants",
+  },
+  render: () => (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {portraitRailAllStates.map((state) => (
+        <div key={state.name} className="preview-panel overflow-hidden">
+          <div className="preview-panel-body gap-3">
+            <div className="preview-kicker">{state.name}</div>
+            <div className="flex justify-end bg-base-100">
+              <ParticipantPortraitRailPreview
+                participants={state.participants}
+                viewerParticipantId="p-rhea"
+                ariaLabel={state.ariaLabel}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "Overview of all portrait overlay states, including typing rendered with daisyUI loading dots.",
+      },
+    },
   },
 };

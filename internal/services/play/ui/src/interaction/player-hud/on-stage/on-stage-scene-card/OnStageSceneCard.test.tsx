@@ -15,6 +15,7 @@ describe("OnStageSceneCard", () => {
         status={{
           label: "Your Beat",
           className: "badge-primary badge-soft",
+          indicator: "none",
           tooltip: "Commit the next action for your character and yield when you are ready.",
         }}
       />,
@@ -30,5 +31,26 @@ describe("OnStageSceneCard", () => {
     expect(screen.getByText("Current Frame")).toBeInTheDocument();
     expect(screen.getByText("Acting Now")).toBeInTheDocument();
     expect(screen.getByText("Aria")).toBeInTheDocument();
+  });
+
+  it("shows a loading bar for pending on-stage statuses", () => {
+    render(
+      <OnStageSceneCard
+        sceneName={onStageFixtureCatalog.waitingOnGM.sceneName}
+        sceneDescription={onStageFixtureCatalog.waitingOnGM.sceneDescription}
+        gmOutputText={onStageFixtureCatalog.waitingOnGM.gmOutputText}
+        actingCharacterNames={onStageFixtureCatalog.waitingOnGM.actingCharacterNames}
+        status={{
+          label: "Waiting",
+          className: "badge-ghost",
+          indicator: "loading-bars",
+          tooltip: "Waiting for the GM to frame the next beat.",
+        }}
+      />,
+    );
+
+    const status = screen.getByLabelText("On-stage status: Waiting");
+    expect(status.querySelector(".loading.loading-bars")).not.toBeNull();
+    expect(screen.getByText("Waiting")).toBeInTheDocument();
   });
 });
