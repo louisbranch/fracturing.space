@@ -47,6 +47,20 @@ describe("App", () => {
     expect(screen.getByText("/app/campaigns/guildhouse/game")).toBeInTheDocument();
   });
 
+  it("renders config-missing fallback when runtime mode lacks shell config", () => {
+    render(
+      <App
+        mode={{
+          kind: "runtime",
+          campaignId: "guildhouse",
+        }}
+        shellConfig={null}
+      />,
+    );
+
+    expect(screen.getByText("Play shell config not available")).toBeInTheDocument();
+  });
+
   it("renders the unsupported route screen for unknown paths", () => {
     render(
       <App

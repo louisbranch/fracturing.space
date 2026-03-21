@@ -127,10 +127,12 @@ func TestHandleCampaignShellRendersSPAShellForExistingPlaySession(t *testing.T) 
 				},
 			}},
 		},
-		campaign:    fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:      fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		transcripts: &fakeTranscriptStore{},
-		shellAssets: shellAssets{devServerURL: "http://localhost:5173"},
+		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+		transcripts:  &fakeTranscriptStore{},
+		shellAssets:  shellAssets{devServerURL: "http://localhost:5173"},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/campaigns/c1", nil)
@@ -198,9 +200,11 @@ func TestHandleBootstrapReturnsPlayContract(t *testing.T) {
 				},
 			}},
 		},
-		campaign:    fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:      fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		transcripts: &fakeTranscriptStore{},
+		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+		transcripts:  &fakeTranscriptStore{},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap", nil)
@@ -248,9 +252,11 @@ func TestHandleBootstrapUsesCookieScopedRealtimeURL(t *testing.T) {
 				Viewer:     &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
 			}},
 		},
-		campaign:    fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:      fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		transcripts: &fakeTranscriptStore{},
+		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+		transcripts:  &fakeTranscriptStore{},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap", nil)
@@ -286,9 +292,11 @@ func TestHandleBootstrapRejectsPlaySessionQueryParamWithoutCookie(t *testing.T) 
 				Viewer:     &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
 			}},
 		},
-		campaign:    fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:      fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		transcripts: &fakeTranscriptStore{},
+		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+		transcripts:  &fakeTranscriptStore{},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap?play_session=ps-1", nil)
@@ -434,6 +442,30 @@ type fakePlaySystemClient struct {
 
 func (f fakePlaySystemClient) GetGameSystem(context.Context, *gamev1.GetGameSystemRequest, ...grpc.CallOption) (*gamev1.GetGameSystemResponse, error) {
 	return f.response, f.err
+}
+
+type fakePlayParticipantClient struct {
+	response *gamev1.ListParticipantsResponse
+	err      error
+}
+
+func (f fakePlayParticipantClient) ListParticipants(context.Context, *gamev1.ListParticipantsRequest, ...grpc.CallOption) (*gamev1.ListParticipantsResponse, error) {
+	return f.response, f.err
+}
+
+type fakePlayCharacterClient struct {
+	listResponse  *gamev1.ListCharactersResponse
+	listErr       error
+	sheetResponse *gamev1.GetCharacterSheetResponse
+	sheetErr      error
+}
+
+func (f fakePlayCharacterClient) ListCharacters(context.Context, *gamev1.ListCharactersRequest, ...grpc.CallOption) (*gamev1.ListCharactersResponse, error) {
+	return f.listResponse, f.listErr
+}
+
+func (f fakePlayCharacterClient) GetCharacterSheet(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+	return f.sheetResponse, f.sheetErr
 }
 
 type fakeTranscriptStore struct{}

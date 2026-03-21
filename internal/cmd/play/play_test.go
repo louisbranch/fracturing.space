@@ -159,7 +159,7 @@ func TestOpenRuntimeDependenciesWithSuccessBuildsDependenciesAndClosesIdempotent
 	if err != nil {
 		t.Fatalf("openRuntimeDependenciesWith() error = %v", err)
 	}
-	if deps.Auth == nil || deps.Interaction == nil || deps.Campaign == nil || deps.System == nil || deps.Events == nil {
+	if deps.Auth == nil || deps.Interaction == nil || deps.Campaign == nil || deps.System == nil || deps.Participants == nil || deps.Characters == nil || deps.Events == nil {
 		t.Fatalf("dependencies = %#v", deps)
 	}
 	if deps.Transcripts != store {

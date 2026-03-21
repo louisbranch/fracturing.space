@@ -1,12 +1,13 @@
 import type { AppMode } from "./app_mode";
+import { PlayRuntime } from "./PlayRuntime";
 import type { PlayShellConfig } from "./shell_config";
 
 const storybookURL = "http://localhost:6006";
 const storybookCommand = "npm run storybook";
 const storybookWorkspace = "internal/services/play/ui";
 
-// App renders only runtime-oriented placeholder shells now that isolated
-// component work has moved into the separate Storybook workflow.
+// App renders the runtime play shell when a campaign is loaded, or placeholder
+// screens for other routes.
 export function App(props: { mode: AppMode; shellConfig?: PlayShellConfig | null }) {
   switch (props.mode.kind) {
     case "root-placeholder":
@@ -18,6 +19,24 @@ export function App(props: { mode: AppMode; shellConfig?: PlayShellConfig | null
           shellConfig={props.shellConfig ?? null}
         />
       );
+    case "runtime": {
+      const config = props.shellConfig && props.shellConfig.campaignId === props.mode.campaignId
+        ? props.shellConfig
+        : null;
+      if (!config) {
+        return (
+          <PlaceholderScreen
+            kicker="Configuration missing"
+            title="Play shell config not available"
+            body="The play session shell config was not embedded by the server. This usually means the session cookie or launch grant is missing."
+            detailLabel="Campaign path"
+            detailValue={`/campaigns/${props.mode.campaignId}`}
+            shellConfig={null}
+          />
+        );
+      }
+      return <PlayRuntime shellConfig={config} />;
+    }
     case "runtime-placeholder":
       return (
         <PlaceholderScreen

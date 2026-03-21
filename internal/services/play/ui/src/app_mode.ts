@@ -2,6 +2,7 @@
 // moved out of the bundled SPA and into Storybook.
 export type AppMode =
   | { kind: "root-placeholder" }
+  | { kind: "runtime"; campaignId: string }
   | { kind: "runtime-placeholder"; campaignId: string }
   | { kind: "unsupported"; path: string };
 
@@ -28,7 +29,7 @@ export function resolveAppLocation(location: LocationLike): AppResolution {
     return {
       kind: "render",
       mode: {
-        kind: "runtime-placeholder",
+        kind: "runtime",
         campaignId: decodeURIComponent(campaignMatch[1]),
       },
     };
