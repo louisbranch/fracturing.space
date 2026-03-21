@@ -150,7 +150,7 @@ For web-login-first local flows, many contributors set
 
 - `FRACTURING_SPACE_PLAY_HTTP_ADDR`: HTTP bind address for the browser-facing play service. Default: `:8094`.
 - `FRACTURING_SPACE_PLAY_DB_PATH`: SQLite path for play-owned transcript storage. Default: `data/play.db`.
-- `FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`: optional Vite dev-server URL used instead of embedded assets in local UI development. Leave unset for normal Compose and production runs.
+- `FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`: optional Vite dev-server URL used instead of embedded assets in local UI development. When unset, `play` serves the checked-in `internal/services/play/ui/dist` bundle and startup does not rebuild it.
 - `FRACTURING_SPACE_PLAY_TRUST_FORWARDED_PROTO`: trust `X-Forwarded-Proto` when resolving external scheme for redirects and cookies. Default: `false`.
 
 Compose note:

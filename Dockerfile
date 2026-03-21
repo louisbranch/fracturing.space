@@ -37,6 +37,10 @@ COPY internal/services/play/ui/src ./src
 RUN npm ci
 RUN npm run build
 
+FROM scratch AS export-play-ui-dist
+
+COPY --from=build-play-ui /src/internal/services/play/ui/dist /dist
+
 FROM base AS build-game
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/game ./cmd/game
