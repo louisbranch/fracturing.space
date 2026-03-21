@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	daggerheartadapter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -227,7 +228,7 @@ func TestApplyStatePatch_Branches(t *testing.T) {
 		adapter := NewAdapter(store)
 		hope := 3
 
-		err := adapter.ApplyStatePatch(context.Background(), "camp-1", "char-1", nil, &hope, nil, nil, nil, nil, nil, nil, nil, nil)
+		err := adapter.ApplyStatePatch(context.Background(), "camp-1", "char-1", daggerheartadapter.StatePatch{Hope: &hope})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character state: character read failed") {
 			t.Fatalf("applyStatePatch() error = %v, want wrapped read error", err)
 		}
@@ -246,7 +247,7 @@ func TestApplyStatePatch_Branches(t *testing.T) {
 		store.getCharacterProfileErr = errors.New("profile read failed")
 		hope := 3
 
-		err := adapter.ApplyStatePatch(context.Background(), "camp-1", "char-1", nil, &hope, nil, nil, nil, nil, nil, nil, nil, nil)
+		err := adapter.ApplyStatePatch(context.Background(), "camp-1", "char-1", daggerheartadapter.StatePatch{Hope: &hope})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character profile: profile read failed") {
 			t.Fatalf("applyStatePatch() error = %v, want wrapped profile read error", err)
 		}

@@ -86,37 +86,48 @@ func StorageCharacterStateFromDomain(state *mechanics.CharacterState) projection
 	}
 }
 
+// StatePatch carries optional field overrides for a character state update.
+// Named fields replace the previous 10-parameter positional signature so that
+// call sites are self-documenting and review-safe.
+type StatePatch struct {
+	HP                            *int
+	Hope                          *int
+	HopeMax                       *int
+	Stress                        *int
+	Armor                         *int
+	LifeState                     *string
+	ClassState                    *projectionstore.DaggerheartClassState
+	SubclassState                 *projectionstore.DaggerheartSubclassState
+	CompanionState                *projectionstore.DaggerheartCompanionState
+	ImpenetrableUsedThisShortRest *bool
+}
+
 // ApplyStatePatch applies a character state patch and normalizes bounds.
 func ApplyStatePatch(
 	state projectionstore.DaggerheartCharacterState,
 	armorMax int,
-	hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int,
-	lifeStateAfter *string,
-	classStateAfter *projectionstore.DaggerheartClassState,
-	subclassStateAfter *projectionstore.DaggerheartSubclassState,
-	companionStateAfter *projectionstore.DaggerheartCompanionState,
-	impenetrableUsedThisShortRestAfter *bool,
+	patch StatePatch,
 ) (projectionstore.DaggerheartCharacterState, error) {
 	domainState := CharacterStateFromStorage(state, armorMax)
 	reducer.ApplyCharacterStatePatch(&domainState, reducer.CharacterStatePatch{
-		HPAfter:        hpAfter,
-		HopeAfter:      hopeAfter,
-		HopeMaxAfter:   hopeMaxAfter,
-		StressAfter:    stressAfter,
-		ArmorAfter:     armorAfter,
-		LifeStateAfter: lifeStateAfter,
+		HPAfter:        patch.HP,
+		HopeAfter:      patch.Hope,
+		HopeMaxAfter:   patch.HopeMax,
+		StressAfter:    patch.Stress,
+		ArmorAfter:     patch.Armor,
+		LifeStateAfter: patch.LifeState,
 	})
 	if err := reducer.NormalizeAndValidateCharacterState(&domainState); err != nil {
 		return projectionstore.DaggerheartCharacterState{}, err
 	}
 	next := StorageCharacterStateFromDomain(&domainState)
 	next.ClassState = state.ClassState
-	if classStateAfter != nil {
-		next.ClassState = *classStateAfter
+	if patch.ClassState != nil {
+		next.ClassState = *patch.ClassState
 	}
 	next.SubclassState = state.SubclassState
-	if subclassStateAfter != nil {
-		next.SubclassState = subclassStateAfter
+	if patch.SubclassState != nil {
+		next.SubclassState = patch.SubclassState
 		if next.SubclassState.BattleRitualUsedThisLongRest == false &&
 			next.SubclassState.GiftedPerformerRelaxingSongUses == 0 &&
 			next.SubclassState.GiftedPerformerEpicSongUses == 0 &&
@@ -142,12 +153,12 @@ func ApplyStatePatch(
 		}
 	}
 	next.CompanionState = state.CompanionState
-	if companionStateAfter != nil {
-		next.CompanionState = companionStateAfter
+	if patch.CompanionState != nil {
+		next.CompanionState = patch.CompanionState
 	}
 	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
-	if impenetrableUsedThisShortRestAfter != nil {
-		next.ImpenetrableUsedThisShortRest = *impenetrableUsedThisShortRestAfter
+	if patch.ImpenetrableUsedThisShortRest != nil {
+		next.ImpenetrableUsedThisShortRest = *patch.ImpenetrableUsedThisShortRest
 	}
 	next.StatModifiers = state.StatModifiers
 	return next, nil

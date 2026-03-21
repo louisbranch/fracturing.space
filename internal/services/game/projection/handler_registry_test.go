@@ -76,7 +76,7 @@ func TestCheckMissingStores_AllPresent(t *testing.T) {
 		SceneInteraction:   newFakeSceneInteractionStore(),
 		Adapters:           bridge.NewAdapterRegistry(),
 	}
-	missing := checkMissingStores(needCampaign|needCharacter|needParticipant, applier)
+	missing := checkMissingStores(storeCampaign|storeCharacter|storeParticipant, applier)
 	if len(missing) > 0 {
 		t.Fatalf("expected no missing stores, got: %v", missing)
 	}
@@ -85,7 +85,7 @@ func TestCheckMissingStores_AllPresent(t *testing.T) {
 func TestCheckMissingStores_SomeMissing(t *testing.T) {
 	// Zero-value Applier has all stores nil.
 	applier := Applier{}
-	missing := checkMissingStores(needCampaign|needCharacter, applier)
+	missing := checkMissingStores(storeCampaign|storeCharacter, applier)
 	if len(missing) != 2 {
 		t.Fatalf("expected 2 missing stores, got %d: %v", len(missing), missing)
 	}
@@ -135,10 +135,10 @@ func TestRequirements_MapsTypedDependenciesAndEnvelopeFields(t *testing.T) {
 		needsEnvelope(fieldCampaignID, fieldSessionID),
 	)
 
-	if req.stores != needCampaign|needSessionGate|needAdapters {
+	if req.stores != storeCampaign|storeSessionGate|storeAdapters {
 		t.Fatalf("stores = %v, want campaign|session_gate|adapters", req.stores)
 	}
-	if req.ids != requireCampaignID|requireSessionID {
+	if req.ids != fieldCampaignID|fieldSessionID {
 		t.Fatalf("ids = %v, want campaign_id|session_id", req.ids)
 	}
 }

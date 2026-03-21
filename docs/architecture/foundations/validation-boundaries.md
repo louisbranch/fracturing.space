@@ -92,6 +92,42 @@ System validators use `ValidatePayload[P]()` to unmarshal and check
 system-specific payload fields. This keeps game-system concerns out of the
 core domain decider while maintaining the transport/domain boundary.
 
+## Error type conventions
+
+Each layer uses a different error mechanism matched to its boundary:
+
+| Layer | Error type | When to use |
+|-------|-----------|-------------|
+| Transport (input validation) | `status.Error(codes.InvalidArgument, msg)` | Syntactic validation failures (missing fields, bounds, bad enums) |
+| Transport (domain error mapping) | `grpcerror.HandleDomainError(err)` | Converting domain apperrors to gRPC status |
+| Transport (infrastructure) | `grpcerror.Internal(msg, err)` | Store errors, marshalling failures (logs full error, returns sanitized status) |
+| Transport (catch-all) | `grpcerror.EnsureStatus(err)` | Final boundary guard — ensures every error has a gRPC status |
+| Domain (semantic rejection) | `command.Reject(Rejection{Code, Message})` | State-dependent invariant violations with stable machine-readable codes |
+| Domain (structured error) | `apperrors.New(code, msg)` | Errors that need machine-readable codes outside the command/rejection path |
+| Domain (internal) | `fmt.Errorf("context: %w", err)` | Error wrapping within domain internals (never crosses transport boundary raw) |
+| System validators | `fmt.Errorf(msg)` / `errors.New(msg)` | Payload structure validation (caught by deciders, wrapped as rejection) |
+
+**Key rule**: Every error that reaches the gRPC transport boundary must be a
+`status.Error` or pass through `grpcerror.EnsureStatus`. Plain `fmt.Errorf`
+errors that escape to the boundary become `Internal` status — acceptable for
+unexpected failures, but intentional validation failures should use the
+appropriate mechanism.
+
+## String normalization convention
+
+Use the `normalize` package (`domain/normalize/`) at **input boundaries** — transport
+handlers and event fold functions — where raw user or proto input first enters the
+domain. The package provides `String()`, `ID[T]()`, and `RequireID[T]()`.
+
+Downstream domain code may use `strings.TrimSpace` defensively when combining values
+from multiple sources (e.g., projection builders merging event payloads with stored
+state). This multi-layer trimming is intentional: normalization at the boundary is the
+contract, but projection code cannot assume all historical events were written by
+current-version transports.
+
+Do **not** add `strings.TrimSpace` to purely internal domain functions that only
+receive values already normalized at the boundary.
+
 ## Anti-patterns
 
 - **Domain checks in transport**: Do not query aggregate state in handlers.

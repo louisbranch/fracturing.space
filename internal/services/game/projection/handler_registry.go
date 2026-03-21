@@ -9,35 +9,40 @@ import (
 )
 
 // idRequirement specifies which event envelope fields a handler requires.
+// The field constants below double as both registration-site names and bitmask
+// values, eliminating the former envelopeField→idRequirement mapping switch.
 type idRequirement uint8
 
 const (
-	requireCampaignID idRequirement = 1 << iota
-	requireEntityID
-	requireSessionID
+	fieldCampaignID idRequirement = 1 << iota
+	fieldEntityID
+	fieldSessionID
 )
 
 // storeRequirement specifies which stores a handler depends on. Hard
 // requirements are checked before dispatch; the handler will not execute
 // if any required store is nil.
+//
+// The store constants below double as both registration-site names and bitmask
+// values, eliminating the former storeDependency→storeRequirement mapping switch.
 type storeRequirement uint16
 
 const (
-	needCampaign storeRequirement = 1 << iota
-	needCharacter
-	needCampaignFork
-	needInvite
-	needParticipant
-	needSession
-	needSessionGate
-	needSessionSpotlight
-	needSessionInteraction
-	needScene
-	needSceneCharacter
-	needSceneGate
-	needSceneSpotlight
-	needSceneInteraction
-	needAdapters
+	storeCampaign storeRequirement = 1 << iota
+	storeCharacter
+	storeCampaignFork
+	storeInvite
+	storeParticipant
+	storeSession
+	storeSessionGate
+	storeSessionSpotlight
+	storeSessionInteraction
+	storeScene
+	storeSceneCharacter
+	storeSceneGate
+	storeSceneSpotlight
+	storeSceneInteraction
+	storeAdapters
 	// ClaimIndex is intentionally absent — handlers that use it perform soft
 	// nil checks and skip claim logic when the store is nil.
 )
@@ -58,34 +63,6 @@ type registrationRequirements struct {
 
 type requirementOption func(*registrationRequirements)
 
-type storeDependency uint8
-
-const (
-	storeCampaign storeDependency = iota
-	storeCharacter
-	storeCampaignFork
-	storeInvite
-	storeParticipant
-	storeSession
-	storeSessionGate
-	storeSessionSpotlight
-	storeSessionInteraction
-	storeScene
-	storeSceneCharacter
-	storeSceneGate
-	storeSceneSpotlight
-	storeSceneInteraction
-	storeAdapters
-)
-
-type envelopeField uint8
-
-const (
-	fieldCampaignID envelopeField = iota
-	fieldEntityID
-	fieldSessionID
-)
-
 func requirements(options ...requirementOption) registrationRequirements {
 	var req registrationRequirements
 	for _, option := range options {
@@ -96,56 +73,18 @@ func requirements(options ...requirementOption) registrationRequirements {
 	return req
 }
 
-func needsStores(dependencies ...storeDependency) requirementOption {
+func needsStores(deps ...storeRequirement) requirementOption {
 	return func(req *registrationRequirements) {
-		for _, dependency := range dependencies {
-			switch dependency {
-			case storeCampaign:
-				req.stores |= needCampaign
-			case storeCharacter:
-				req.stores |= needCharacter
-			case storeCampaignFork:
-				req.stores |= needCampaignFork
-			case storeInvite:
-				req.stores |= needInvite
-			case storeParticipant:
-				req.stores |= needParticipant
-			case storeSession:
-				req.stores |= needSession
-			case storeSessionGate:
-				req.stores |= needSessionGate
-			case storeSessionSpotlight:
-				req.stores |= needSessionSpotlight
-			case storeSessionInteraction:
-				req.stores |= needSessionInteraction
-			case storeScene:
-				req.stores |= needScene
-			case storeSceneCharacter:
-				req.stores |= needSceneCharacter
-			case storeSceneGate:
-				req.stores |= needSceneGate
-			case storeSceneSpotlight:
-				req.stores |= needSceneSpotlight
-			case storeSceneInteraction:
-				req.stores |= needSceneInteraction
-			case storeAdapters:
-				req.stores |= needAdapters
-			}
+		for _, dep := range deps {
+			req.stores |= dep
 		}
 	}
 }
 
-func needsEnvelope(fields ...envelopeField) requirementOption {
+func needsEnvelope(fields ...idRequirement) requirementOption {
 	return func(req *registrationRequirements) {
 		for _, field := range fields {
-			switch field {
-			case fieldCampaignID:
-				req.ids |= requireCampaignID
-			case fieldEntityID:
-				req.ids |= requireEntityID
-			case fieldSessionID:
-				req.ids |= requireSessionID
-			}
+			req.ids |= field
 		}
 	}
 }
@@ -189,21 +128,21 @@ type storeCheck struct {
 // storeChecks is the single table that drives both ValidateStorePreconditions
 // and validatePreconditions, eliminating duplicated nil-check logic.
 var storeChecks = []storeCheck{
-	{needCampaign, "campaign", func(a Applier) bool { return a.Campaign == nil }},
-	{needCharacter, "character", func(a Applier) bool { return a.Character == nil }},
-	{needCampaignFork, "campaign fork", func(a Applier) bool { return a.CampaignFork == nil }},
-	{needInvite, "invite", func(a Applier) bool { return a.Invite == nil }},
-	{needParticipant, "participant", func(a Applier) bool { return a.Participant == nil }},
-	{needSession, "session", func(a Applier) bool { return a.Session == nil }},
-	{needSessionGate, "session gate", func(a Applier) bool { return a.SessionGate == nil }},
-	{needSessionSpotlight, "session spotlight", func(a Applier) bool { return a.SessionSpotlight == nil }},
-	{needSessionInteraction, "session interaction", func(a Applier) bool { return a.SessionInteraction == nil }},
-	{needScene, "scene", func(a Applier) bool { return a.Scene == nil }},
-	{needSceneCharacter, "scene character", func(a Applier) bool { return a.SceneCharacter == nil }},
-	{needSceneGate, "scene gate", func(a Applier) bool { return a.SceneGate == nil }},
-	{needSceneSpotlight, "scene spotlight", func(a Applier) bool { return a.SceneSpotlight == nil }},
-	{needSceneInteraction, "scene interaction", func(a Applier) bool { return a.SceneInteraction == nil }},
-	{needAdapters, "system adapters", func(a Applier) bool { return a.Adapters == nil }},
+	{storeCampaign, "campaign", func(a Applier) bool { return a.Campaign == nil }},
+	{storeCharacter, "character", func(a Applier) bool { return a.Character == nil }},
+	{storeCampaignFork, "campaign fork", func(a Applier) bool { return a.CampaignFork == nil }},
+	{storeInvite, "invite", func(a Applier) bool { return a.Invite == nil }},
+	{storeParticipant, "participant", func(a Applier) bool { return a.Participant == nil }},
+	{storeSession, "session", func(a Applier) bool { return a.Session == nil }},
+	{storeSessionGate, "session gate", func(a Applier) bool { return a.SessionGate == nil }},
+	{storeSessionSpotlight, "session spotlight", func(a Applier) bool { return a.SessionSpotlight == nil }},
+	{storeSessionInteraction, "session interaction", func(a Applier) bool { return a.SessionInteraction == nil }},
+	{storeScene, "scene", func(a Applier) bool { return a.Scene == nil }},
+	{storeSceneCharacter, "scene character", func(a Applier) bool { return a.SceneCharacter == nil }},
+	{storeSceneGate, "scene gate", func(a Applier) bool { return a.SceneGate == nil }},
+	{storeSceneSpotlight, "scene spotlight", func(a Applier) bool { return a.SceneSpotlight == nil }},
+	{storeSceneInteraction, "scene interaction", func(a Applier) bool { return a.SceneInteraction == nil }},
+	{storeAdapters, "system adapters", func(a Applier) bool { return a.Adapters == nil }},
 }
 
 // checkMissingStores returns the labels of stores that are required by the
@@ -238,7 +177,7 @@ func (a Applier) ValidateStorePreconditions() error {
 	if a.Events != nil {
 		for _, def := range a.Events.ListDefinitions() {
 			if def.Owner == event.OwnerSystem {
-				required |= needAdapters
+				required |= storeAdapters
 				break
 			}
 		}
@@ -257,13 +196,13 @@ func (a Applier) validatePreconditions(h handlerEntry, evt event.Event) error {
 		return fmt.Errorf("%s store is not configured", missing[0])
 	}
 
-	if h.ids&requireCampaignID != 0 && strings.TrimSpace(string(evt.CampaignID)) == "" {
+	if h.ids&fieldCampaignID != 0 && strings.TrimSpace(string(evt.CampaignID)) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-	if h.ids&requireEntityID != 0 && strings.TrimSpace(evt.EntityID) == "" {
+	if h.ids&fieldEntityID != 0 && strings.TrimSpace(evt.EntityID) == "" {
 		return fmt.Errorf("entity id is required")
 	}
-	if h.ids&requireSessionID != 0 && strings.TrimSpace(evt.SessionID.String()) == "" {
+	if h.ids&fieldSessionID != 0 && strings.TrimSpace(evt.SessionID.String()) == "" {
 		return fmt.Errorf("session id is required")
 	}
 	return nil

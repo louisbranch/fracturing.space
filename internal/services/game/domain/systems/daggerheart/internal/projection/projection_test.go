@@ -62,13 +62,13 @@ func TestApplyStatePatch_ValidatesRanges(t *testing.T) {
 		Armor:       0,
 	}
 	badHope := 7
-	_, err := ApplyStatePatch(state, 0, nil, &badHope, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err := ApplyStatePatch(state, 0, StatePatch{Hope: &badHope})
 	if err == nil || !strings.Contains(err.Error(), "hope must be in range") {
 		t.Fatalf("expected hope range error, got %v", err)
 	}
 
 	goodHope := 3
-	next, err := ApplyStatePatch(state, 0, nil, &goodHope, nil, nil, nil, nil, nil, nil, nil, nil)
+	next, err := ApplyStatePatch(state, 0, StatePatch{Hope: &goodHope})
 	if err != nil {
 		t.Fatalf("ApplyStatePatch: %v", err)
 	}
