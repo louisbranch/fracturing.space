@@ -13,6 +13,9 @@ func TestContentKindMappings(t *testing.T) {
 	if weaponCategoryToProto("secondary") != pb.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_SECONDARY {
 		t.Fatal("expected secondary weapon category")
 	}
+	if weaponDisplayGroupToProto("magic") != pb.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_MAGIC {
+		t.Fatal("expected magic weapon display group")
+	}
 	if itemRarityToProto("Rare") != pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_RARE {
 		t.Fatal("expected rare item rarity")
 	}
@@ -39,6 +42,9 @@ func TestContentKindMappingsExtended(t *testing.T) {
 	}
 	if weaponCategoryToProto("unknown") != pb.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_UNSPECIFIED {
 		t.Fatal("expected unspecified weapon category")
+	}
+	if weaponDisplayGroupToProto("unknown") != pb.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_UNSPECIFIED {
+		t.Fatal("expected unspecified weapon display group")
 	}
 	if itemRarityToProto("common") != pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_COMMON {
 		t.Fatal("expected common item rarity")

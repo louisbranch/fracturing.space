@@ -141,6 +141,36 @@ func TestAssembleCatalogFiltersWeaponsByTierAndCategory(t *testing.T) {
 	}
 }
 
+func TestAssembleCatalogPreservesWeaponInputOrder(t *testing.T) {
+	t.Parallel()
+
+	creation := Workflow{}.assembleCatalog(
+		campaignworkflow.Progress{},
+		campaignworkflow.Catalog{
+			Weapons: []campaignworkflow.Weapon{
+				{ID: "w2", Name: "Arc Staff", Tier: 1, Category: "primary", DisplayOrder: 2, DisplayGroup: "magic"},
+				{ID: "w1", Name: "Blade", Tier: 1, Category: "primary", DisplayOrder: 1, DisplayGroup: "physical"},
+				{ID: "w4", Name: "Wheelchair Ram", Tier: 1, Category: "secondary", DisplayOrder: 4, DisplayGroup: "combat_wheelchair"},
+				{ID: "w3", Name: "Dagger", Tier: 1, Category: "secondary", DisplayOrder: 3, DisplayGroup: "physical"},
+			},
+		},
+		campaignworkflow.Profile{},
+	)
+
+	if len(creation.PrimaryWeapons) != 2 {
+		t.Fatalf("primary weapons = %d, want 2", len(creation.PrimaryWeapons))
+	}
+	if creation.PrimaryWeapons[0].ID != "w2" || creation.PrimaryWeapons[1].ID != "w1" {
+		t.Fatalf("primary weapon order = %#v, want [w2 w1]", creation.PrimaryWeapons)
+	}
+	if len(creation.SecondaryWeapons) != 2 {
+		t.Fatalf("secondary weapons = %d, want 2", len(creation.SecondaryWeapons))
+	}
+	if creation.SecondaryWeapons[0].ID != "w4" || creation.SecondaryWeapons[1].ID != "w3" {
+		t.Fatalf("secondary weapon order = %#v, want [w4 w3]", creation.SecondaryWeapons)
+	}
+}
+
 func TestAssembleCatalogFiltersArmorByTier(t *testing.T) {
 	t.Parallel()
 

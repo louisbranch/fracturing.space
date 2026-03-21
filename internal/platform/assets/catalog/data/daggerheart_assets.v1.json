@@ -271,7 +271,7 @@
         "weapon.no-secondary",
         "weapon.quarterstaff",
         "weapon.rapier",
-        "weapon.returning",
+        "weapon.returning-blade",
         "weapon.round-shield",
         "weapon.scepter",
         "weapon.shortbow",
@@ -1627,9 +1627,9 @@
     {
       "asset_type": "daggerheart_weapon_illustration",
       "set_id": "daggerheart_weapon_set_v1",
-      "entity_id": "weapon.returning",
+      "entity_id": "weapon.returning-blade",
       "entity_type": "weapon",
-      "asset_id": "weapon.returning"
+      "asset_id": "weapon.returning-blade"
     },
     {
       "asset_type": "daggerheart_weapon_illustration",

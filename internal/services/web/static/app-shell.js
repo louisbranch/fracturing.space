@@ -54,9 +54,31 @@ function syncAppNavActiveLinks(currentPath) {
 	});
 }
 
+var appNavbarSelector = "[data-app-navbar]";
+var appScrollOffsetVariable = "--app-scroll-offset";
+var fallbackAppNavbarHeightPx = 80;
+var appScrollOffsetGapPx = 16;
 var campaignWorkspaceRouteArea = "campaign-workspace";
 var campaignMainCoverClass = "w-full max-w-none px-0 pt-20 flex-1";
 var fallbackMainClass = "w-full max-w-none px-4 pt-20 flex-1";
+
+function syncAppScrollOffset() {
+	var root = document.documentElement;
+	if (!root || !root.style || typeof root.style.setProperty !== "function") {
+		return;
+	}
+
+	var navbar = document.querySelector(appNavbarSelector);
+	var navbarHeight = fallbackAppNavbarHeightPx;
+	if (navbar && typeof navbar.getBoundingClientRect === "function") {
+		var measuredHeight = Math.ceil(navbar.getBoundingClientRect().height);
+		if (Number.isFinite(measuredHeight) && measuredHeight > 0) {
+			navbarHeight = measuredHeight;
+		}
+	}
+
+	root.style.setProperty(appScrollOffsetVariable, String(navbarHeight + appScrollOffsetGapPx) + "px");
+}
 
 function mainFallbackClass(main) {
 	if (!main) {
@@ -332,6 +354,7 @@ function appPathFromHtmxDetail(detail) {
 }
 
 function syncAppChromeState(currentPath) {
+	syncAppScrollOffset();
 	syncAppNavActiveLinks(currentPath);
 	syncMainStateForRoute(currentPath);
 	initAppToasts();
@@ -411,6 +434,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	syncAppChromeState();
 	prewarmDeclaredImages(document);
 });
+window.addEventListener("resize", syncAppScrollOffset);
 window.addEventListener("popstate", function() {
 	syncAppChromeState();
 });

@@ -299,15 +299,17 @@ func mapCatalogWeapons(
 			continue
 		}
 		mapped = append(mapped, campaignapp.CatalogWeapon{
-			ID:       weaponID,
-			Name:     strings.TrimSpace(weapon.GetName()),
-			Category: daggerheartWeaponCategoryLabel(weapon.GetCategory()),
-			Tier:     weapon.GetTier(),
-			Burden:   weapon.GetBurden(),
-			Trait:    strings.TrimSpace(weapon.GetTrait()),
-			Range:    strings.TrimSpace(weapon.GetRange()),
-			Damage:   formatDamageDice(weapon.GetDamageDice()),
-			Feature:  strings.TrimSpace(weapon.GetFeature()),
+			ID:           weaponID,
+			Name:         strings.TrimSpace(weapon.GetName()),
+			Category:     daggerheartWeaponCategoryLabel(weapon.GetCategory()),
+			Tier:         weapon.GetTier(),
+			Burden:       weapon.GetBurden(),
+			Trait:        strings.TrimSpace(weapon.GetTrait()),
+			Range:        strings.TrimSpace(weapon.GetRange()),
+			Damage:       formatDamageDice(weapon.GetDamageDice()),
+			Feature:      strings.TrimSpace(weapon.GetFeature()),
+			DisplayOrder: weapon.GetDisplayOrder(),
+			DisplayGroup: daggerheartWeaponDisplayGroupLabel(weapon.GetDisplayGroup()),
 			Illustration: mapCatalogAssetReference(
 				assetBaseURL,
 				assetLookup.get(

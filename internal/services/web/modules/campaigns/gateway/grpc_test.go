@@ -132,11 +132,18 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 	contentClient := &fakeDaggerheartContentClient{
 		resp: &daggerheartv1.GetDaggerheartContentCatalogResponse{
 			Catalog: &daggerheartv1.DaggerheartContentCatalog{
-				Classes:      []*daggerheartv1.DaggerheartClass{{Id: "warrior", Name: "Warrior", DomainIds: []string{"valor", "blade"}}},
-				Subclasses:   []*daggerheartv1.DaggerheartSubclass{{Id: "guardian", Name: "Guardian", ClassId: "warrior"}},
-				Heritages:    []*daggerheartv1.DaggerheartHeritage{{Id: "human", Name: "Human", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY}},
-				Domains:      []*daggerheartv1.DaggerheartDomain{{Id: "valor", Name: "Valor"}},
-				Weapons:      []*daggerheartv1.DaggerheartWeapon{{Id: "weapon.longsword", Name: "Longsword", Category: daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY, Tier: 1}},
+				Classes:    []*daggerheartv1.DaggerheartClass{{Id: "warrior", Name: "Warrior", DomainIds: []string{"valor", "blade"}}},
+				Subclasses: []*daggerheartv1.DaggerheartSubclass{{Id: "guardian", Name: "Guardian", ClassId: "warrior"}},
+				Heritages:  []*daggerheartv1.DaggerheartHeritage{{Id: "human", Name: "Human", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY}},
+				Domains:    []*daggerheartv1.DaggerheartDomain{{Id: "valor", Name: "Valor"}},
+				Weapons: []*daggerheartv1.DaggerheartWeapon{{
+					Id:           "weapon.longsword",
+					Name:         "Longsword",
+					Category:     daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY,
+					Tier:         1,
+					DisplayOrder: 7,
+					DisplayGroup: daggerheartv1.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_MAGIC,
+				}},
 				Armor:        []*daggerheartv1.DaggerheartArmor{{Id: "armor.chain", Name: "Chain", Tier: 1}},
 				Items:        []*daggerheartv1.DaggerheartItem{{Id: "item.minor-health-potion", Name: "Minor Health Potion"}},
 				DomainCards:  []*daggerheartv1.DaggerheartDomainCard{{Id: "card.guard", Name: "Guard", DomainId: "valor", Level: 1}},
@@ -313,6 +320,9 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 	}
 	if len(catalog.Weapons) != 1 || catalog.Weapons[0].Category != "primary" {
 		t.Fatalf("Weapons = %#v", catalog.Weapons)
+	}
+	if catalog.Weapons[0].DisplayOrder != 7 || catalog.Weapons[0].DisplayGroup != "magic" {
+		t.Fatalf("weapon display metadata = %#v, want order 7 and magic group", catalog.Weapons[0])
 	}
 	if catalog.Weapons[0].Illustration.Status != "mapped" {
 		t.Fatalf("weapon illustration status = %q, want mapped", catalog.Weapons[0].Illustration.Status)

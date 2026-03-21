@@ -9,16 +9,18 @@ import (
 
 func TestToProtoDaggerheartWeapon(t *testing.T) {
 	proto := toProtoDaggerheartWeapon(contentstore.DaggerheartWeapon{
-		ID:         "weapon-1",
-		Name:       "Blade",
-		Category:   "primary",
-		Tier:       2,
-		Trait:      "finesse",
-		Range:      "melee",
-		DamageDice: []contentstore.DaggerheartDamageDie{{Sides: 8, Count: 1}},
-		DamageType: "physical",
-		Burden:     1,
-		Feature:    "quick",
+		ID:           "weapon-1",
+		Name:         "Blade",
+		Category:     "primary",
+		Tier:         2,
+		Trait:        "finesse",
+		Range:        "melee",
+		DamageDice:   []contentstore.DaggerheartDamageDie{{Sides: 8, Count: 1}},
+		DamageType:   "physical",
+		Burden:       1,
+		Feature:      "quick",
+		DisplayOrder: 12,
+		DisplayGroup: contentstore.DaggerheartWeaponDisplayGroupMagic,
 	})
 
 	if proto.GetId() != "weapon-1" || proto.GetCategory() != pb.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY {
@@ -29,6 +31,9 @@ func TestToProtoDaggerheartWeapon(t *testing.T) {
 	}
 	if len(proto.GetDamageDice()) != 1 || proto.GetDamageDice()[0].GetSides() != 8 {
 		t.Fatalf("damage dice mismatch: %v", proto.GetDamageDice())
+	}
+	if proto.GetDisplayOrder() != 12 || proto.GetDisplayGroup() != pb.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_MAGIC {
+		t.Fatalf("display metadata mismatch: %v", proto)
 	}
 }
 

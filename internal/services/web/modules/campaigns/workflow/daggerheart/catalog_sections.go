@@ -155,6 +155,8 @@ func buildWeapons(weapons []campaignworkflow.Weapon) ([]campaignworkflow.Weapon,
 			Range:        strings.TrimSpace(weapon.Range),
 			Damage:       strings.TrimSpace(weapon.Damage),
 			Feature:      strings.TrimSpace(weapon.Feature),
+			DisplayOrder: weapon.DisplayOrder,
+			DisplayGroup: normalizeWeaponDisplayGroup(weapon.DisplayGroup),
 			Illustration: weapon.Illustration,
 		}
 		switch strings.ToLower(strings.TrimSpace(weapon.Category)) {
@@ -164,9 +166,18 @@ func buildWeapons(weapons []campaignworkflow.Weapon) ([]campaignworkflow.Weapon,
 			secondary = append(secondary, entry)
 		}
 	}
-	sortByName(primary, func(w campaignworkflow.Weapon) string { return w.Name }, func(w campaignworkflow.Weapon) string { return w.ID })
-	sortByName(secondary, func(w campaignworkflow.Weapon) string { return w.Name }, func(w campaignworkflow.Weapon) string { return w.ID })
 	return primary, secondary
+}
+
+func normalizeWeaponDisplayGroup(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "magic":
+		return "magic"
+	case "combat_wheelchair":
+		return "combat_wheelchair"
+	default:
+		return "physical"
+	}
 }
 
 // buildArmor keeps only tier-1 armor entries for creation-time selection.

@@ -899,7 +899,7 @@ func (q *Queries) GetDaggerheartSubclass(ctx context.Context, id string) (Dagger
 }
 
 const getDaggerheartWeapon = `-- name: GetDaggerheartWeapon :one
-SELECT id, name, category, tier, trait, "range", damage_dice_json, damage_type, burden, feature, created_at, updated_at FROM daggerheart_weapons WHERE id = ?
+SELECT id, name, category, tier, trait, "range", damage_dice_json, damage_type, burden, feature, created_at, updated_at, display_order, display_group FROM daggerheart_weapons WHERE id = ?
 `
 
 func (q *Queries) GetDaggerheartWeapon(ctx context.Context, id string) (DaggerheartWeapon, error) {
@@ -918,6 +918,8 @@ func (q *Queries) GetDaggerheartWeapon(ctx context.Context, id string) (Daggerhe
 		&i.Feature,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DisplayOrder,
+		&i.DisplayGroup,
 	)
 	return i, err
 }
@@ -1981,7 +1983,7 @@ func (q *Queries) ListDaggerheartSubclasses(ctx context.Context) ([]DaggerheartS
 }
 
 const listDaggerheartWeapons = `-- name: ListDaggerheartWeapons :many
-SELECT id, name, category, tier, trait, "range", damage_dice_json, damage_type, burden, feature, created_at, updated_at FROM daggerheart_weapons ORDER BY name ASC, id ASC
+SELECT id, name, category, tier, trait, "range", damage_dice_json, damage_type, burden, feature, created_at, updated_at, display_order, display_group FROM daggerheart_weapons ORDER BY display_order ASC, id ASC
 `
 
 func (q *Queries) ListDaggerheartWeapons(ctx context.Context) ([]DaggerheartWeapon, error) {
@@ -2006,6 +2008,8 @@ func (q *Queries) ListDaggerheartWeapons(ctx context.Context) ([]DaggerheartWeap
 			&i.Feature,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DisplayOrder,
+			&i.DisplayGroup,
 		); err != nil {
 			return nil, err
 		}
@@ -3022,8 +3026,8 @@ func (q *Queries) PutDaggerheartSubclass(ctx context.Context, arg PutDaggerheart
 
 const putDaggerheartWeapon = `-- name: PutDaggerheartWeapon :exec
 INSERT INTO daggerheart_weapons (
-    id, name, category, tier, trait, range, damage_dice_json, damage_type, burden, feature, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    id, name, category, tier, trait, range, damage_dice_json, damage_type, burden, feature, display_order, display_group, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     category = excluded.category,
@@ -3034,6 +3038,8 @@ ON CONFLICT(id) DO UPDATE SET
     damage_type = excluded.damage_type,
     burden = excluded.burden,
     feature = excluded.feature,
+    display_order = excluded.display_order,
+    display_group = excluded.display_group,
     created_at = excluded.created_at,
     updated_at = excluded.updated_at
 `
@@ -3049,6 +3055,8 @@ type PutDaggerheartWeaponParams struct {
 	DamageType     string `json:"damage_type"`
 	Burden         int64  `json:"burden"`
 	Feature        string `json:"feature"`
+	DisplayOrder   int64  `json:"display_order"`
+	DisplayGroup   string `json:"display_group"`
 	CreatedAt      int64  `json:"created_at"`
 	UpdatedAt      int64  `json:"updated_at"`
 }
@@ -3065,6 +3073,8 @@ func (q *Queries) PutDaggerheartWeapon(ctx context.Context, arg PutDaggerheartWe
 		arg.DamageType,
 		arg.Burden,
 		arg.Feature,
+		arg.DisplayOrder,
+		arg.DisplayGroup,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

@@ -86,6 +86,8 @@ type Weapon struct {
 	Range        string
 	Damage       string
 	Feature      string
+	DisplayOrder int32
+	DisplayGroup string
 	Illustration AssetReference
 }
 

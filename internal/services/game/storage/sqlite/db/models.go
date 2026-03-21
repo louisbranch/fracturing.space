@@ -374,6 +374,8 @@ type DaggerheartWeapon struct {
 	Feature        string `json:"feature"`
 	CreatedAt      int64  `json:"created_at"`
 	UpdatedAt      int64  `json:"updated_at"`
+	DisplayOrder   int64  `json:"display_order"`
+	DisplayGroup   string `json:"display_group"`
 }
 
 type Event struct {
@@ -621,7 +623,7 @@ type SessionInteraction struct {
 	SessionID                   string `json:"session_id"`
 	ActiveSceneID               string `json:"active_scene_id"`
 	GmAuthorityParticipantID    string `json:"gm_authority_participant_id"`
-	OocPaused                   int64  `json:"ooc_opened"`
+	OocOpened                   int64  `json:"ooc_opened"`
 	OocRequestedByParticipantID string `json:"ooc_requested_by_participant_id"`
 	OocReason                   string `json:"ooc_reason"`
 	OocInterruptedSceneID       string `json:"ooc_interrupted_scene_id"`

@@ -1873,7 +1873,7 @@
             "weapon.no-secondary",
             "weapon.quarterstaff",
             "weapon.rapier",
-            "weapon.returning",
+            "weapon.returning-blade",
             "weapon.round-shield",
             "weapon.scepter",
             "weapon.shortbow",
@@ -3229,9 +3229,9 @@
         {
           "asset_type": "daggerheart_weapon_illustration",
           "set_id": "daggerheart_weapon_set_v1",
-          "entity_id": "weapon.returning",
+          "entity_id": "weapon.returning-blade",
           "entity_type": "weapon",
-          "asset_id": "weapon.returning"
+          "asset_id": "weapon.returning-blade"
         },
         {
           "asset_type": "daggerheart_weapon_illustration",
@@ -9464,7 +9464,7 @@
       "asset_type": "daggerheart_weapon_illustration",
       "set_id": "daggerheart_weapon_set_v1",
       "batch_id": "dh_starting_items_r1",
-      "fs_asset_id": "weapon.returning",
+      "fs_asset_id": "weapon.returning-blade",
       "output_id": "img_c269a91e5666",
       "provider": "imported",
       "model": "imported",
@@ -9484,7 +9484,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "weapon",
-        "entity_id": "weapon.returning",
+        "entity_id": "weapon.returning-blade",
         "source_file": "weapons.json"
       },
       "review_flags": []

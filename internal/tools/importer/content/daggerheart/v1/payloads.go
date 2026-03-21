@@ -292,16 +292,18 @@ type damageDieRecord struct {
 }
 
 type weaponRecord struct {
-	ID         string            `json:"id"`
-	Name       string            `json:"name"`
-	Category   string            `json:"category"`
-	Tier       int               `json:"tier"`
-	Trait      string            `json:"trait"`
-	Range      string            `json:"range"`
-	DamageDice []damageDieRecord `json:"damage_dice"`
-	DamageType string            `json:"damage_type"`
-	Burden     int               `json:"burden"`
-	Feature    string            `json:"feature"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Category     string            `json:"category"`
+	Tier         int               `json:"tier"`
+	Trait        string            `json:"trait"`
+	Range        string            `json:"range"`
+	DamageDice   []damageDieRecord `json:"damage_dice"`
+	DamageType   string            `json:"damage_type"`
+	Burden       int               `json:"burden"`
+	Feature      string            `json:"feature"`
+	DisplayOrder int               `json:"display_order"`
+	DisplayGroup string            `json:"display_group"`
 }
 
 type armorRecord struct {

@@ -137,24 +137,54 @@ func TestNewCharacterCreationViewAdaptsNestedWorkflowFields(t *testing.T) {
 			}},
 		}},
 		PrimaryWeapons: []campaignworkflow.CreationWeaponView{{
-			ID:       "weapon.spear",
-			Name:     "Spear",
-			ImageURL: "/spear.png",
-			Burden:   1,
-			Trait:    "finesse",
-			Range:    "melee",
-			Damage:   "d8",
-			Feature:  "Reach",
+			ID:           "weapon.spear",
+			Name:         "Spear",
+			ImageURL:     "/spear.png",
+			Burden:       1,
+			Trait:        "finesse",
+			Range:        "melee",
+			Damage:       "d8",
+			Feature:      "Reach",
+			DisplayGroup: "physical",
 		}},
 		SecondaryWeapons: []campaignworkflow.CreationWeaponView{{
-			ID:       "weapon.dagger",
-			Name:     "Dagger",
-			ImageURL: "/dagger.png",
-			Burden:   1,
-			Trait:    "agility",
-			Range:    "melee",
-			Damage:   "d6",
-			Feature:  "Thrown",
+			ID:           "weapon.dagger",
+			Name:         "Dagger",
+			ImageURL:     "/dagger.png",
+			Burden:       1,
+			Trait:        "agility",
+			Range:        "melee",
+			Damage:       "d6",
+			Feature:      "Thrown",
+			DisplayGroup: "magic",
+		}},
+		PrimaryWeaponGroups: []campaignworkflow.CreationWeaponGroupView{{
+			Key: "physical",
+			Weapons: []campaignworkflow.CreationWeaponView{{
+				ID:           "weapon.spear",
+				Name:         "Spear",
+				ImageURL:     "/spear.png",
+				Burden:       1,
+				Trait:        "finesse",
+				Range:        "melee",
+				Damage:       "d8",
+				Feature:      "Reach",
+				DisplayGroup: "physical",
+			}},
+		}},
+		SecondaryWeaponGroups: []campaignworkflow.CreationWeaponGroupView{{
+			Key: "magic",
+			Weapons: []campaignworkflow.CreationWeaponView{{
+				ID:           "weapon.dagger",
+				Name:         "Dagger",
+				ImageURL:     "/dagger.png",
+				Burden:       1,
+				Trait:        "agility",
+				Range:        "melee",
+				Damage:       "d6",
+				Feature:      "Thrown",
+				DisplayGroup: "magic",
+			}},
 		}},
 		SecondaryWeaponNoneImageURL: "/none.png",
 		Armor: []campaignworkflow.CreationArmorView{{
@@ -206,6 +236,12 @@ func TestNewCharacterCreationViewAdaptsNestedWorkflowFields(t *testing.T) {
 	}
 	if len(view.PrimaryWeapons) != 1 || view.PrimaryWeapons[0].Feature != "Reach" {
 		t.Fatalf("primary weapons = %#v, want adapted weapon card", view.PrimaryWeapons)
+	}
+	if view.PrimaryWeapons[0].DisplayGroup != "physical" || len(view.PrimaryWeaponGroups) != 1 || view.PrimaryWeaponGroups[0].Key != "physical" {
+		t.Fatalf("primary weapon groups = %#v, want adapted grouped weapons", view.PrimaryWeaponGroups)
+	}
+	if view.SecondaryWeapons[0].DisplayGroup != "magic" || len(view.SecondaryWeaponGroups) != 1 || view.SecondaryWeaponGroups[0].Key != "magic" {
+		t.Fatalf("secondary weapon groups = %#v, want adapted grouped weapons", view.SecondaryWeaponGroups)
 	}
 	if len(view.Armor) != 1 || view.Armor[0].ArmorScore != 5 {
 		t.Fatalf("armor = %#v, want adapted armor card", view.Armor)
