@@ -6,7 +6,7 @@ export type DaggerheartTrait = {
   name: string;
   abbreviation: string;
   value: number;
-  skills: string[];
+  skills?: string[];
 };
 
 // DaggerheartWeapon models a weapon entry on the character sheet.

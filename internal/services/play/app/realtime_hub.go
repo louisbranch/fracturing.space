@@ -185,15 +185,16 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 		return
 	}
 	app := h.deps.application()
-	state, err := app.interactionState(ctx, playRequest{
+	req := playRequest{
 		campaignRequest: campaignRequest{CampaignID: campaignID},
 		UserID:          session.userID,
-	})
+	}
+	state, err := app.interactionState(ctx, req)
 	if err != nil {
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to load interaction state", nil)
 		return
 	}
-	snapshot, err := app.roomSnapshotFromState(ctx, campaignID, state, room.latestGameSequence())
+	snapshot, err := app.roomSnapshotFromState(ctx, req, state, room.latestGameSequence())
 	if err != nil {
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to build play snapshot", nil)
 		return
@@ -205,6 +206,7 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 		RequestID: frame.RequestID,
 		Payload:   mustJSON(snapshot),
 	})
+	room.ensureProjectionSubscription()
 
 	if sessionID := session.activeSession(); sessionID != "" && payload.LastChatSeq < snapshot.Chat.LatestSequenceID {
 		messages, err := app.incrementalChatMessages(ctx, transcript.Scope{CampaignID: campaignID, SessionID: sessionID}, payload.LastChatSeq)
@@ -317,7 +319,6 @@ func (h *realtimeHub) room(campaignID string) *campaignRoom {
 		sessions:   map[*realtimeSession]struct{}{},
 	}
 	h.rooms[campaignID] = room
-	go room.runProjectionSubscription()
 	return room
 }
 

@@ -145,6 +145,8 @@ func buildAuthorityText(bootstrap bool, input PromptInput) string {
 		b.WriteString("After the scene is active and narrated, start the first player phase when the acting characters are clear.")
 	} else {
 		b.WriteString("\n\nActive scene mode: continue the session from the current interaction state and use tools for authoritative changes.")
+		b.WriteString("\nWhen handing control back to players, commit the new GM narration first and then call interaction_scene_player_phase_start with explicit acting character_ids.")
+		b.WriteString("\nNever start a player phase before committing the narration that frames it.")
 	}
 	return b.String()
 }

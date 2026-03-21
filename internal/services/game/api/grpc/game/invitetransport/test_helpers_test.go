@@ -7,15 +7,19 @@ import (
 	"testing"
 	"time"
 
+	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/inviteclaimworkflow"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -68,6 +72,9 @@ func (f *fakeDomainEngine) Execute(ctx context.Context, cmd command.Command) (en
 			result = selected
 		}
 	}
+	if len(result.Decision.Events) == 0 && cmd.Type == inviteclaimworkflow.CommandTypeClaimBind {
+		result = synthesizeInviteClaimWorkflowResult(timedNow(cmd), cmd)
+	}
 	if f.store == nil {
 		return result, nil
 	}
@@ -84,6 +91,109 @@ func (f *fakeDomainEngine) Execute(ctx context.Context, cmd command.Command) (en
 	}
 	result.Decision.Events = stored
 	return result, nil
+}
+
+func withInviteClaimWrite(t *testing.T, deps Deps) Deps {
+	t.Helper()
+	if deps.Write.Executor != nil {
+		return deps
+	}
+	deps.Write = newInviteClaimWritePath(t, deps.Event)
+	return deps
+}
+
+func newInviteClaimWritePath(t *testing.T, store storage.EventStore) domainwrite.WritePath {
+	t.Helper()
+	if store == nil {
+		t.Fatal("event store is required")
+	}
+
+	registries, err := engine.BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	decider, err := engine.NewCoreDecider(registries.Systems, registries.Commands.ListDefinitions())
+	if err != nil {
+		t.Fatalf("build core decider: %v", err)
+	}
+
+	checkpoints := checkpoint.NewNoop()
+	folder := &aggregate.Folder{
+		Events:         registries.Events,
+		SystemRegistry: registries.Systems,
+	}
+	stateLoader := engine.ReplayStateLoader{
+		Events:       gamegrpc.NewEventStoreAdapter(store),
+		Checkpoints:  checkpoints,
+		Snapshots:    checkpoints,
+		Folder:       folder,
+		StateFactory: func() any { return aggregate.NewState() },
+	}
+	gateStateLoader := engine.ReplayGateStateLoader{StateLoader: stateLoader}
+	domain, err := engine.NewHandler(engine.Handler{
+		Commands:             registries.Commands,
+		Events:               registries.Events,
+		Journal:              gamegrpc.NewJournalAdapter(store),
+		Checkpoints:          checkpoints,
+		Snapshots:            checkpoints,
+		Gate:                 engine.DecisionGate{Registry: registries.Commands},
+		GateStateLoader:      gateStateLoader,
+		SceneGateStateLoader: gateStateLoader,
+		StateLoader:          stateLoader,
+		Decider:              decider,
+		Folder:               folder,
+	})
+	if err != nil {
+		t.Fatalf("build domain handler: %v", err)
+	}
+	return domainwrite.WritePath{Executor: domain, Runtime: testRuntime}
+}
+
+func synthesizeInviteClaimWorkflowResult(now time.Time, cmd command.Command) engine.Result {
+	var payload inviteclaimworkflow.ClaimBindPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return engine.Result{}
+	}
+
+	bindPayloadJSON, _ := json.Marshal(participant.BindPayload{
+		ParticipantID: payload.ParticipantID,
+		UserID:        payload.UserID,
+	})
+	claimPayloadJSON, _ := json.Marshal(invite.ClaimPayload{
+		InviteID:      payload.InviteID,
+		ParticipantID: payload.ParticipantID,
+		UserID:        payload.UserID,
+		JWTID:         payload.JWTID,
+	})
+
+	return engine.Result{
+		Decision: command.Accept(
+			event.Event{
+				CampaignID:  cmd.CampaignID,
+				Type:        participant.EventTypeBound,
+				Timestamp:   now,
+				ActorType:   event.ActorType(cmd.ActorType),
+				ActorID:     cmd.ActorID,
+				EntityType:  "participant",
+				EntityID:    string(payload.ParticipantID),
+				PayloadJSON: bindPayloadJSON,
+			},
+			event.Event{
+				CampaignID:  cmd.CampaignID,
+				Type:        invite.EventTypeClaimed,
+				Timestamp:   now,
+				ActorType:   event.ActorType(cmd.ActorType),
+				ActorID:     cmd.ActorID,
+				EntityType:  "invite",
+				EntityID:    string(payload.InviteID),
+				PayloadJSON: claimPayloadJSON,
+			},
+		),
+	}
+}
+
+func timedNow(cmd command.Command) time.Time {
+	return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 }
 
 type eventAppender interface {

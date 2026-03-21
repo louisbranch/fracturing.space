@@ -99,6 +99,9 @@ func TestWriteJSONHelpers(t *testing.T) {
 		if got := rr.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
 			t.Fatalf("Content-Type = %q", got)
 		}
+		if got := rr.Header().Get("Cache-Control"); got != "no-store" {
+			t.Fatalf("Cache-Control = %q", got)
+		}
 		var payload map[string]string
 		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
 			t.Fatalf("decode payload: %v", err)
@@ -136,6 +139,9 @@ func TestProtoJSONHelpers(t *testing.T) {
 	}
 	if got := rr.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
 		t.Fatalf("Content-Type = %q", got)
+	}
+	if got := rr.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("Cache-Control = %q", got)
 	}
 	if strings.TrimSpace(rr.Body.String()) != "{}" {
 		t.Fatalf("body = %q, want {}", rr.Body.String())
@@ -200,7 +206,7 @@ func TestShellAssetsHelpers(t *testing.T) {
 			CampaignID:    "c1",
 			BootstrapPath: "/api/campaigns/c1/bootstrap",
 			RealtimePath:  "/realtime",
-			BackURL:       "/app/campaigns/c1/game",
+			BackURL:       "http://example.com/app/campaigns/c1",
 		})
 		if err != nil {
 			t.Fatalf("renderHTML() error = %v", err)
@@ -211,7 +217,7 @@ func TestShellAssetsHelpers(t *testing.T) {
 			`type="module" src="`,
 			`/api/campaigns/c1/bootstrap`,
 			`/realtime`,
-			`/app/campaigns/c1/game`,
+			`http://example.com/app/campaigns/c1`,
 		} {
 			if !strings.Contains(body, want) {
 				t.Fatalf("renderHTML() missing %q in %q", want, body)

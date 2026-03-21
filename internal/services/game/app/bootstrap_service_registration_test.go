@@ -120,6 +120,7 @@ func TestBuildServiceDescriptors_RegistersCampaignAIOrchestrationService(t *test
 		"RegisterCampaignAIOrchestrationServiceServer",
 		"NewCampaignAIOrchestrationService(gamegrpc.CampaignAIOrchestrationDeps{",
 		"SessionInteraction: deps.sessionInteraction",
+		"SceneInteraction:   deps.sceneInteraction",
 	} {
 		if !strings.Contains(source, marker) {
 			t.Fatalf("%s missing %q", filepath.Base(path), marker)

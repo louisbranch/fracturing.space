@@ -143,6 +143,9 @@ func (a interactionApplication) aiTurnEligibility(
 	if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" {
 		return aiTurnEligibilityResult{ok: true, ownerParticipant: owner}, nil
 	}
+	if a.stores.SceneInteraction == nil {
+		return aiTurnEligibilityResult{reason: "active scene interaction state is unavailable"}, nil
+	}
 	sceneInteraction, err := a.stores.SceneInteraction.GetSceneInteraction(ctx, campaignRecord.ID, sessionInteraction.ActiveSceneID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return aiTurnEligibilityResult{}, grpcerror.Internal("load active scene interaction", err)

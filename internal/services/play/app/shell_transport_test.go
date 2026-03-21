@@ -22,8 +22,8 @@ func TestHandleCampaignShellInvalidLaunchRedirectsToWebAndClearsCookie(t *testin
 	if rr.Code != http.StatusSeeOther {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusSeeOther)
 	}
-	if got := rr.Header().Get("Location"); got != "http://example.com/app/campaigns/c1/game" {
-		t.Fatalf("Location = %q, want %q", got, "http://example.com/app/campaigns/c1/game")
+	if got := rr.Header().Get("Location"); got != "http://example.com/app/campaigns/c1" {
+		t.Fatalf("Location = %q, want %q", got, "http://example.com/app/campaigns/c1")
 	}
 	cookies := rr.Result().Cookies()
 	if len(cookies) == 0 || cookies[0].Name != playSessionCookieName || cookies[0].MaxAge != -1 {
@@ -47,8 +47,8 @@ func TestHandleCampaignShellStalePlaySessionRedirectsToWebAndClearsCookie(t *tes
 	if rr.Code != http.StatusSeeOther {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusSeeOther)
 	}
-	if got := rr.Header().Get("Location"); got != "http://example.com/app/campaigns/c1/game" {
-		t.Fatalf("Location = %q, want %q", got, "http://example.com/app/campaigns/c1/game")
+	if got := rr.Header().Get("Location"); got != "http://example.com/app/campaigns/c1" {
+		t.Fatalf("Location = %q, want %q", got, "http://example.com/app/campaigns/c1")
 	}
 	cookies := rr.Result().Cookies()
 	if len(cookies) == 0 || cookies[0].Name != playSessionCookieName || cookies[0].MaxAge != -1 {

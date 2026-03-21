@@ -47,7 +47,15 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 		},
 	}
 	server := newAuthedPlayServer(interaction, transcripts)
-	server.events = fakeEventClient{stream: &fakeCampaignUpdateStream{}}
+	participants := &authSensitivePlayParticipantClient{response: enrichedParticipantResponse()}
+	characters := &authSensitivePlayCharacterClient{
+		listResponse:  enrichedCharacterResponse(),
+		sheetResponse: enrichedCharacterSheetResponse(),
+	}
+	server.participants = participants
+	server.characters = characters
+	events := &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
+	server.events = events
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 
@@ -67,8 +75,31 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 	if frames[0].Type != "play.ready" {
 		t.Fatalf("first frame type = %q, want %q", frames[0].Type, "play.ready")
 	}
+	var ready playprotocol.RoomSnapshot
+	if err := json.Unmarshal(frames[0].Payload, &ready); err != nil {
+		t.Fatalf("decode ready payload: %v", err)
+	}
+	if len(ready.Participants) != 2 {
+		t.Fatalf("ready participants = %#v, want 2 entries", ready.Participants)
+	}
+	if got := ready.CharacterInspectionCatalog["char-1"].System; got != "daggerheart" {
+		t.Fatalf("ready character_inspection_catalog[char-1].system = %q, want %q", got, "daggerheart")
+	}
 	if frames[1].Type != "play.chat.message" {
 		t.Fatalf("second frame type = %q, want %q", frames[1].Type, "play.chat.message")
+	}
+	if participants.lastUserID != "user-1" || characters.lastUserID != "user-1" {
+		t.Fatalf("auth metadata = participant:%q character:%q, want user-1", participants.lastUserID, characters.lastUserID)
+	}
+	events.awaitSubscribe(t)
+	if events.lastUserID != "user-1" {
+		t.Fatalf("event auth metadata = %q, want %q", events.lastUserID, "user-1")
+	}
+	if events.lastRequest == nil {
+		t.Fatal("SubscribeCampaignUpdates request = nil")
+	}
+	if events.lastRequest.GetAfterSeq() != 0 {
+		t.Fatalf("SubscribeCampaignUpdates after_seq = %d, want %d", events.lastRequest.GetAfterSeq(), 0)
 	}
 
 	hub.handleTyping(session, wsFrame{
@@ -105,9 +136,10 @@ func TestRealtimeChatSendRequiresActiveSession(t *testing.T) {
 	interaction := newRecordingInteractionClient(state)
 	transcripts := &scriptTranscriptStore{}
 	server := newAuthedPlayServer(interaction, transcripts)
-	server.events = fakeEventClient{stream: &fakeCampaignUpdateStream{}}
+	server.events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}}
 	hub := newRealtimeHub(server)
 	server.realtime = hub
+	defer hub.Close()
 
 	var buffer bytes.Buffer
 	session := &realtimeSession{
@@ -148,6 +180,13 @@ func TestRealtimeRoomLifecycleAndBroadcasts(t *testing.T) {
 	t.Parallel()
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{latest: 5})
+	participants := &authSensitivePlayParticipantClient{response: enrichedParticipantResponse()}
+	characters := &authSensitivePlayCharacterClient{
+		listResponse:  enrichedCharacterResponse(),
+		sheetResponse: enrichedCharacterSheetResponse(),
+	}
+	server.participants = participants
+	server.characters = characters
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 	room := &campaignRoom{
@@ -191,6 +230,19 @@ func TestRealtimeRoomLifecycleAndBroadcasts(t *testing.T) {
 	frames := drainWSFrames(t, &buffer)
 	if len(frames) != 1 || frames[0].Type != "play.interaction.updated" {
 		t.Fatalf("broadcastCurrent frames = %#v", frames)
+	}
+	var payload playprotocol.RoomSnapshot
+	if err := json.Unmarshal(frames[0].Payload, &payload); err != nil {
+		t.Fatalf("decode interaction update payload: %v", err)
+	}
+	if len(payload.Participants) != 2 {
+		t.Fatalf("broadcast participants = %#v, want 2 entries", payload.Participants)
+	}
+	if got := payload.CharacterInspectionCatalog["char-1"].System; got != "daggerheart" {
+		t.Fatalf("broadcast character_inspection_catalog[char-1].system = %q, want %q", got, "daggerheart")
+	}
+	if participants.lastUserID != "user-1" || characters.lastUserID != "user-1" {
+		t.Fatalf("auth metadata = participant:%q character:%q, want user-1", participants.lastUserID, characters.lastUserID)
 	}
 
 	room.broadcastFrame(wsFrame{Type: "play.ping", Payload: mustJSON(map[string]any{"ok": true})})

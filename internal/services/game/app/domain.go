@@ -66,7 +66,7 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		return nil, fmt.Errorf("build core decider: %w", err)
 	}
 
-	checkpoints := checkpoint.NewMemory()
+	checkpoints := checkpoint.NewNoop()
 	folder := &aggregate.Folder{
 		Events:         registries.Events,
 		SystemRegistry: registries.Systems,

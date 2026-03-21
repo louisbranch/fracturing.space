@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/inviteclaimworkflow"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
@@ -152,6 +153,12 @@ func inviteRoute(_ coreCommandRouter, current aggregate.State, cmd command.Comma
 	return invite.Decide(inviteStateFor(cmd, current), cmd, now)
 }
 
+// inviteClaimWorkflowRoute handles the intentional cross-aggregate invite claim
+// workflow that binds a participant and claims the invite atomically.
+func inviteClaimWorkflowRoute(_ coreCommandRouter, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return inviteclaimworkflow.Decide(current, cmd, now)
+}
+
 // characterRoute resolves the target character snapshot and routes accordingly.
 func characterRoute(_ coreCommandRouter, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return character.Decide(characterStateFor(cmd, current), cmd, now)
@@ -202,6 +209,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		participant.CommandTypeUnbind:                participantRoute,
 		participant.CommandTypeSeatReassign:          participantRoute,
 		invite.CommandTypeCreate:                     inviteRoute,
+		inviteclaimworkflow.CommandTypeClaimBind:     inviteClaimWorkflowRoute,
 		invite.CommandTypeClaim:                      inviteRoute,
 		invite.CommandTypeDecline:                    inviteRoute,
 		invite.CommandTypeRevoke:                     inviteRoute,

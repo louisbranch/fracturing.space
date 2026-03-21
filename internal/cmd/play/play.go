@@ -26,6 +26,7 @@ import (
 type Config struct {
 	HTTPAddr            string `env:"FRACTURING_SPACE_PLAY_HTTP_ADDR" envDefault:":8094"`
 	WebHTTPAddr         string `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"`
+	AssetBaseURL        string `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
 	AuthAddr            string `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	GameAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"`
 	StatusAddr          string `env:"FRACTURING_SPACE_STATUS_ADDR"`
@@ -47,6 +48,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "play HTTP listen address")
 	fs.StringVar(&cfg.WebHTTPAddr, "web-http-addr", cfg.WebHTTPAddr, "web HTTP listen address for browser fallback links")
+	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "asset CDN base URL for avatar delivery")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "auth service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "game service gRPC address")
 	fs.StringVar(&cfg.DBPath, "db-path", cfg.DBPath, "play SQLite database path")
@@ -84,6 +86,7 @@ func Run(ctx context.Context, cfg Config) error {
 		server, err := playapp.NewServer(playapp.Config{
 			HTTPAddr:            cfg.HTTPAddr,
 			WebHTTPAddr:         cfg.WebHTTPAddr,
+			AssetBaseURL:        cfg.AssetBaseURL,
 			PlayUIDevServerURL:  cfg.PlayUIDevServerURL,
 			RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
 			LaunchGrant:         launchGrantCfg,

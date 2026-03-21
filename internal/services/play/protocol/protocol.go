@@ -6,7 +6,9 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -448,14 +450,29 @@ type Participant struct {
 }
 
 // ParticipantFromGameParticipant maps a proto Participant to protocol.
-func ParticipantFromGameParticipant(p *gamev1.Participant) Participant {
+func ParticipantFromGameParticipant(assetBaseURL string, p *gamev1.Participant) Participant {
 	if p == nil {
 		return Participant{}
+	}
+	avatarEntityID := strings.TrimSpace(p.GetId())
+	if avatarEntityID == "" {
+		avatarEntityID = strings.TrimSpace(p.GetUserId())
+	}
+	if avatarEntityID == "" {
+		avatarEntityID = strings.TrimSpace(p.GetCampaignId())
 	}
 	return Participant{
 		ID:   strings.TrimSpace(p.GetId()),
 		Name: strings.TrimSpace(p.GetName()),
 		Role: interactionRoleString(p.GetRole()),
+		AvatarURL: websupport.AvatarImageURL(
+			assetBaseURL,
+			catalog.AvatarRoleParticipant,
+			avatarEntityID,
+			strings.TrimSpace(p.GetAvatarSetId()),
+			strings.TrimSpace(p.GetAvatarAssetId()),
+			playAvatarDeliveryWidthPX,
+		),
 	}
 }
 

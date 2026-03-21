@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"strings"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -193,12 +194,19 @@ func TestAITurnFromGameAITurnNilReturnsNil(t *testing.T) {
 
 func TestParticipantFromGameParticipant(t *testing.T) {
 	t.Parallel()
-	got := ParticipantFromGameParticipant(&gamev1.Participant{
-		Id:   " p1 ",
-		Name: " Avery ",
-		Role: gamev1.ParticipantRole_PLAYER,
+	got := ParticipantFromGameParticipant("https://cdn.example.com/assets", &gamev1.Participant{
+		Id:            " p1 ",
+		UserId:        " user-1 ",
+		CampaignId:    " camp-1 ",
+		Name:          " Avery ",
+		Role:          gamev1.ParticipantRole_PLAYER,
+		AvatarSetId:   " avatar_set_v1 ",
+		AvatarAssetId: " ceremonial_choir_lead ",
 	})
 	if got.ID != "p1" || got.Name != "Avery" || got.Role != "player" {
 		t.Fatalf("participant = %#v", got)
+	}
+	if !strings.Contains(got.AvatarURL, "ceremonial_choir_lead") {
+		t.Fatalf("avatar_url = %q, want asset-backed URL", got.AvatarURL)
 	}
 }

@@ -57,6 +57,7 @@ func decodeStrictJSON(r *http.Request, target any) error {
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
@@ -82,6 +83,7 @@ func writeProtoJSON(w http.ResponseWriter, status int, message proto.Message) er
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_, err = w.Write(data)
 	return err

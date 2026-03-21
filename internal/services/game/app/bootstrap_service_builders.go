@@ -55,6 +55,7 @@ type campaignRegistrationDeps struct {
 	auditStore         storage.AuditEventStore
 	sessionStore       storage.SessionStore
 	sessionInteraction storage.SessionInteractionStore
+	sceneInteraction   storage.SceneInteractionStore
 	systemStores       gamegrpc.SystemStores
 	inviteStore        storage.InviteStore
 	claimIndexStore    storage.ClaimIndexStore
@@ -93,6 +94,7 @@ type sessionRegistrationDeps struct {
 	sceneInteraction   storage.SceneInteractionStore
 	campaignForkStore  storage.CampaignForkStore
 	eventStore         storage.EventStore
+	eventRegistry      *event.Registry
 	socialClient       socialv1.SocialServiceClient
 	writePath          gamegrpc.WritePath
 	applier            projection.Applier
@@ -199,6 +201,7 @@ func buildCampaignServiceDescriptors(
 		Participant:        deps.participantStore,
 		Session:            deps.sessionStore,
 		SessionInteraction: deps.sessionInteraction,
+		SceneInteraction:   deps.sceneInteraction,
 		Write:              deps.writePath,
 		Applier:            deps.applier,
 	})
@@ -315,16 +318,17 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Applier:        deps.applier,
 	})
 	forkService := forktransport.NewService(forktransport.Deps{
-		Auth:         policy,
-		Campaign:     deps.campaignStore,
-		Participant:  deps.participantStore,
-		Character:    deps.characterStore,
-		Session:      deps.sessionStore,
-		CampaignFork: deps.campaignForkStore,
-		Event:        deps.eventStore,
-		Social:       deps.socialClient,
-		Write:        deps.writePath,
-		Applier:      deps.applier,
+		Auth:          policy,
+		Campaign:      deps.campaignStore,
+		Participant:   deps.participantStore,
+		Character:     deps.characterStore,
+		Session:       deps.sessionStore,
+		CampaignFork:  deps.campaignForkStore,
+		Event:         deps.eventStore,
+		EventRegistry: deps.eventRegistry,
+		Social:        deps.socialClient,
+		Write:         deps.writePath,
+		Applier:       deps.applier,
 	})
 	eventService := eventtransport.NewService(eventtransport.Deps{
 		Auth:        policy,

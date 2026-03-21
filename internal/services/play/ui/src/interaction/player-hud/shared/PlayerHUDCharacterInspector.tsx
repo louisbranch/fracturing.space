@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { Component, useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { CharacterCard } from "../../../systems/daggerheart/character-card/CharacterCard";
 import { CharacterSheet } from "../../../systems/daggerheart/character-sheet/CharacterSheet";
@@ -18,6 +18,17 @@ type InspectorState = {
   characters: PlayerHUDCharacterReference[];
   activeCharacterId?: string;
   isViewer: boolean;
+};
+
+type CharacterInspectorRenderBoundaryProps = {
+  boundaryKey: string;
+  viewMode: "card" | "sheet";
+  characterName: string;
+  children: React.ReactNode;
+};
+
+type CharacterInspectorRenderBoundaryState = {
+  error: Error | null;
 };
 
 export type PlayerHUDCharacterInspectorDialogProps = {
@@ -203,14 +214,20 @@ export function PlayerHUDCharacterInspectorDialog({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-1">
           {hasActiveInspection ? (
-            viewMode === "card" ? (
-              <CharacterCard
-                character={activeCard!}
-                variant="basic"
-              />
-            ) : (
-              <CharacterSheet character={activeSheet!} />
-            )
+            <CharacterInspectorRenderBoundary
+              boundaryKey={`${viewMode}:${activeCharacterId ?? ""}`}
+              viewMode={viewMode}
+              characterName={activeCharacter?.name ?? participantName}
+            >
+              {viewMode === "card" ? (
+                <CharacterCard
+                  character={activeCard!}
+                  variant="basic"
+                />
+              ) : (
+                <CharacterSheet character={activeSheet!} />
+              )}
+            </CharacterInspectorRenderBoundary>
           ) : hasCharacters ? (
             <section className="rounded-box border border-warning/40 bg-warning/10 px-4 py-6 text-sm text-base-content/75">
               Character details are not available for the selected portrait yet.
@@ -255,6 +272,52 @@ export function PlayerHUDCharacterInspectorDialog({
       </form>
     </dialog>
   );
+}
+
+class CharacterInspectorRenderBoundary extends Component<
+  CharacterInspectorRenderBoundaryProps,
+  CharacterInspectorRenderBoundaryState
+> {
+  state: CharacterInspectorRenderBoundaryState = {
+    error: null,
+  };
+
+  static getDerivedStateFromError(error: Error): CharacterInspectorRenderBoundaryState {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("[play character inspector] render failed", {
+      boundaryKey: this.props.boundaryKey,
+      viewMode: this.props.viewMode,
+      characterName: this.props.characterName,
+      error: error.message,
+    });
+  }
+
+  componentDidUpdate(prevProps: CharacterInspectorRenderBoundaryProps) {
+    if (prevProps.boundaryKey !== this.props.boundaryKey && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <section className="rounded-box border border-error/40 bg-error/10 px-4 py-6 text-sm text-base-content/75">
+          <p className="font-medium text-base-content">Character details could not be rendered.</p>
+          <p className="mt-2">
+            The {this.props.viewMode === "sheet" ? "sheet" : "card"} view for {this.props.characterName} failed to load.
+          </p>
+          <p className="mt-1 text-base-content/60">
+            Try switching characters or returning to the other view.
+          </p>
+        </section>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 export function CharacterPortraitAvatar(input: {

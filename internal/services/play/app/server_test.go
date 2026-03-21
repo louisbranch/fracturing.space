@@ -30,8 +30,8 @@ func TestHandleCampaignShellRedirectsToWebWhenSessionAndGrantAreMissing(t *testi
 	if rr.Code != http.StatusSeeOther {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusSeeOther)
 	}
-	if got := rr.Header().Get("Location"); got != "http://example.com/app/campaigns/c1/game" {
-		t.Fatalf("Location = %q, want %q", got, "http://example.com/app/campaigns/c1/game")
+	if got := rr.Header().Get("Location"); got != "http://example.com/app/campaigns/c1" {
+		t.Fatalf("Location = %q, want %q", got, "http://example.com/app/campaigns/c1")
 	}
 }
 
@@ -151,6 +151,9 @@ func TestHandleCampaignShellRendersSPAShellForExistingPlaySession(t *testing.T) 
 	}
 	if !strings.Contains(body, "/src/main.tsx") {
 		t.Fatalf("body missing dev entrypoint: %q", body)
+	}
+	if !strings.Contains(body, "http://example.com/app/campaigns/c1") {
+		t.Fatalf("body missing web overview back url: %q", body)
 	}
 }
 

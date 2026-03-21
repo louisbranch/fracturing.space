@@ -8,20 +8,18 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
-	domainwrite "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/journalimport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // forkEventReplay owns list/filter/append/apply replay for fork creation so the
 // top-level fork application can stay focused on the campaign fork use-case.
 type forkEventReplay struct {
-	events  storage.EventStore
-	applier projection.Applier
-	runtime *domainwrite.Runtime
+	events   storage.EventStore
+	importer journalimport.Importer
 }
 
 func (r forkEventReplay) CopyToCampaign(
@@ -35,9 +33,6 @@ func (r forkEventReplay) CopyToCampaign(
 		return time.Time{}, nil
 	}
 
-	inlineApplyEnabled := r.runtime.InlineApplyEnabled()
-	shouldApply := r.runtime.ShouldApply()
-
 	afterSeq := uint64(0)
 	var lastEventAt time.Time
 	for {
@@ -49,8 +44,12 @@ func (r forkEventReplay) CopyToCampaign(
 			return lastEventAt, nil
 		}
 
+		toImport := make([]event.Event, 0, len(events))
 		for _, evt := range events {
 			if evt.Seq > forkEventSeq {
+				if err := r.importer.Import(ctx, toImport); err != nil {
+					return lastEventAt, fmt.Errorf("import forked events: %w", err)
+				}
 				return lastEventAt, nil
 			}
 			lastEventAt = evt.Timestamp
@@ -64,17 +63,11 @@ func (r forkEventReplay) CopyToCampaign(
 				continue
 			}
 
-			forked := forkEventForCampaign(evt, forkCampaignID)
-			stored, err := r.events.AppendEvent(ctx, forked)
-			if err != nil {
-				return lastEventAt, fmt.Errorf("append forked event: %w", err)
-			}
-			if inlineApplyEnabled && shouldApply(stored) {
-				if err := r.applier.Apply(ctx, stored); err != nil {
-					return lastEventAt, fmt.Errorf("apply forked event: %w", err)
-				}
-			}
+			toImport = append(toImport, forkEventForCampaign(evt, forkCampaignID))
 			afterSeq = evt.Seq
+		}
+		if err := r.importer.Import(ctx, toImport); err != nil {
+			return lastEventAt, fmt.Errorf("import forked events: %w", err)
 		}
 
 		if len(events) < forkEventPageSize {

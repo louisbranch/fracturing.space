@@ -3,10 +3,12 @@ import type { WireChatMessage, WireRoomSnapshot } from "./types";
 
 export type WSEvent =
   | { type: "ready"; snapshot: WireRoomSnapshot }
+  | { type: "interaction.updated"; snapshot: WireRoomSnapshot }
   | { type: "chat.message"; message: WireChatMessage }
   | { type: "chat.typing"; participantId: string; name: string; active: boolean }
   | { type: "draft.typing"; participantId: string; name: string; active: boolean }
   | { type: "connection"; state: HUDConnectionState }
+  | { type: "resync" }
   | { type: "error"; code: string; message: string };
 
 type WSFrame = {
@@ -63,6 +65,7 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
 
   // Track the latest known sequence so reconnects don't replay already-received
   // messages. Updated on every chat message and ready snapshot.
+  let currentGameSeq = opts.lastGameSeq;
   let currentChatSeq = opts.lastChatSeq;
 
   function connect() {
@@ -74,7 +77,7 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
         type: FrameType.Connect,
         payload: {
           campaign_id: opts.campaignId,
-          last_game_seq: opts.lastGameSeq,
+          last_game_seq: currentGameSeq,
           last_chat_seq: currentChatSeq,
         },
       });
@@ -117,11 +120,32 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
         connected = true;
         reconnectDelay = RECONNECT_BASE;
         const snapshot = payload as unknown as WireRoomSnapshot;
+        if (typeof snapshot?.latest_game_sequence === "number") {
+          currentGameSeq = Math.max(currentGameSeq, snapshot.latest_game_sequence);
+        }
         if (snapshot?.chat?.latest_sequence_id) {
           currentChatSeq = snapshot.chat.latest_sequence_id;
         }
+        console.info("[play websocket ready]", {
+          campaignId: opts.campaignId,
+          participants: snapshot?.participants?.length ?? 0,
+          characterCatalogEntries: Object.keys(snapshot?.character_inspection_catalog ?? {}).length,
+          latestGameSeq: snapshot?.latest_game_sequence ?? 0,
+          latestChatSeq: snapshot?.chat?.latest_sequence_id ?? 0,
+        });
         opts.onEvent({ type: "connection", state: "connected" });
         opts.onEvent({ type: "ready", snapshot });
+        break;
+      }
+      case FrameType.InteractionUpdated: {
+        const snapshot = payload as unknown as WireRoomSnapshot;
+        if (typeof snapshot?.latest_game_sequence === "number") {
+          currentGameSeq = Math.max(currentGameSeq, snapshot.latest_game_sequence);
+        }
+        if (typeof snapshot?.chat?.latest_sequence_id === "number") {
+          currentChatSeq = Math.max(currentChatSeq, snapshot.chat.latest_sequence_id);
+        }
+        opts.onEvent({ type: "interaction.updated", snapshot });
         break;
       }
       case FrameType.ChatMessage: {
@@ -156,6 +180,9 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
         }
         break;
       }
+      case FrameType.Resync:
+        opts.onEvent({ type: "resync" });
+        break;
       case FrameType.Pong:
         break;
       case FrameType.Error: {

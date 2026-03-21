@@ -9,14 +9,14 @@ describe("shell_config", () => {
           campaign_id: " c1 ",
           bootstrap_path: " /api/campaigns/c1/bootstrap ",
           realtime_path: " /realtime ",
-          back_url: " /app/campaigns/c1/game ",
+          back_url: " http://example.com/app/campaigns/c1 ",
         }),
       }),
     ).toEqual({
       campaignId: "c1",
       bootstrapPath: "/api/campaigns/c1/bootstrap",
       realtimePath: "/realtime",
-      backURL: "/app/campaigns/c1/game",
+      backURL: "http://example.com/app/campaigns/c1",
     });
   });
 

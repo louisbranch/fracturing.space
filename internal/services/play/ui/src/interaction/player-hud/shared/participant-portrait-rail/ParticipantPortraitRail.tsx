@@ -101,6 +101,20 @@ export function ParticipantPortraitRail({
                   src={participant.avatarUrl}
                   alt={participant.name}
                   className="h-full w-full object-cover"
+                  onLoad={() => {
+                    console.info("[play portrait rail] avatar loaded", {
+                      participantId: participant.id,
+                      participantName: participant.name,
+                      avatarUrl: participant.avatarUrl,
+                    });
+                  }}
+                  onError={() => {
+                    console.warn("[play portrait rail] avatar failed", {
+                      participantId: participant.id,
+                      participantName: participant.name,
+                      avatarUrl: participant.avatarUrl,
+                    });
+                  }}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center font-semibold">

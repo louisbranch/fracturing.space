@@ -98,7 +98,7 @@ describe("connectWebSocket", () => {
     MockWebSocket.instances = [];
     // jsdom provides window.location with protocol "http:" and host "localhost"
     // which is sufficient for buildURL().
-    (globalThis as unknown as { WebSocket: typeof MockWebSocket }).WebSocket = MockWebSocket as unknown as typeof WebSocket;
+    (globalThis as unknown as { WebSocket: typeof WebSocket }).WebSocket = MockWebSocket as unknown as typeof WebSocket;
   });
 
   afterEach(() => {
@@ -132,6 +132,22 @@ describe("connectWebSocket", () => {
     expect(events).toHaveLength(2);
     expect(events[0]).toEqual({ type: "connection", state: "connected" });
     expect(events[1].type).toBe("ready");
+  });
+
+  it("emits interaction.updated when the server pushes a full snapshot update", () => {
+    const events: WSEvent[] = [];
+    connectWebSocket(defaultOpts((e) => events.push(e)));
+
+    const ws = latestWS();
+    ws.simulateOpen();
+    ws.simulateMessage({ type: FrameType.InteractionUpdated, payload: readySnapshot(6) });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe("interaction.updated");
+    if (events[0].type === "interaction.updated") {
+      expect(events[0].snapshot.latest_game_sequence).toBe(10);
+      expect(events[0].snapshot.chat.latest_sequence_id).toBe(6);
+    }
   });
 
   // -----------------------------------------------------------------------
@@ -338,6 +354,17 @@ describe("connectWebSocket", () => {
     expect(events[0]).toEqual({ type: "error", code: "", message: "" });
   });
 
+  it("emits resync events from play.resync frames", () => {
+    const events: WSEvent[] = [];
+    connectWebSocket(defaultOpts((e) => events.push(e)));
+
+    const ws = latestWS();
+    ws.simulateOpen();
+    ws.simulateMessage({ type: FrameType.Resync });
+
+    expect(events).toEqual([{ type: "resync" }]);
+  });
+
   // -----------------------------------------------------------------------
   // 8. Unparseable frame
   // -----------------------------------------------------------------------
@@ -421,6 +448,30 @@ describe("connectWebSocket", () => {
     // Reconnect should use updated sequence 20
     expect(ws2.sentFrames()[0].payload).toEqual(
       expect.objectContaining({ last_chat_seq: 20 }),
+    );
+  });
+
+  it("uses updated currentGameSeq from interaction snapshots on reconnect", () => {
+    connectWebSocket(defaultOpts(() => {}));
+
+    const ws1 = latestWS();
+    ws1.simulateOpen();
+    ws1.simulateMessage({
+      type: FrameType.InteractionUpdated,
+      payload: {
+        ...readySnapshot(5),
+        latest_game_sequence: 42,
+      },
+    });
+
+    ws1.simulateClose();
+    vi.advanceTimersByTime(1_000);
+
+    const ws2 = latestWS();
+    ws2.simulateOpen();
+
+    expect(ws2.sentFrames()[0].payload).toEqual(
+      expect.objectContaining({ last_game_seq: 42 }),
     );
   });
 

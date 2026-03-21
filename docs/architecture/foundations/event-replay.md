@@ -38,6 +38,10 @@ checkpoints reduce rebuild cost; they do not replace journal truth.
 - **Snapshot-accelerated replay**: seed from snapshot, continue from snapshot sequence.
 - **Partial replay**: resume after a known sequence boundary.
 
+Command-time mutation handling uses full journal replay from authoritative
+history. Snapshot/checkpoint acceleration is a replay/projection concern, not a
+command-decision cache.
+
 Mode selection is operational; invariants stay the same.
 
 ## Code-level seam contracts
@@ -74,6 +78,10 @@ detection) instead of broad infrastructure fake implementations.
 
 This page defines replay architecture only. Operator procedures, repair commands,
 and runbook workflows live in running docs.
+
+Historical event copy/import is explicit and centralized. When the system needs
+to append already-authoritative past events, it must use the dedicated import
+seam rather than letting transports append to the journal directly.
 
 ## Deep references
 

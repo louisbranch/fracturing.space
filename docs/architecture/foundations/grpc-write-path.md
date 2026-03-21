@@ -9,9 +9,7 @@ last_reviewed: "2026-03-07"
 
 # gRPC Write Path
 
-How gRPC handlers execute domain commands, with error handling boundaries and helper conventions.
-
-Prerequisite: [Event-driven system](event-driven-system.md) for the core lifecycle.
+How gRPC handlers execute domain commands, with error handling boundaries and helper conventions. Prerequisite: [Event-driven system](event-driven-system.md).
 
 ## Handler to domain — execution flow
 
@@ -32,6 +30,8 @@ gRPC handler
             └─ applier.Apply(event)           ← inline projection (if enabled)
 ```
 
+Command-time mutation decisions replay from journal truth on every execution. The write path does not reuse process-local replay checkpoints or snapshots for command-state reconstruction.
+
 ## Two execution helpers
 
 | Helper | Inline projection | Use when |
@@ -39,7 +39,7 @@ gRPC handler
 | `executeAndApplyDomainCommand` | Yes | Default. Handler needs read-after-write consistency |
 | `executeDomainCommandWithoutInlineApply` | No | Outbox pattern or fire-and-forget writes |
 
-Both call `normalizeGRPCDefaults` and `ensureGRPCStatus` identically. The only difference is whether events are applied to projections inline.
+Both call `normalizeGRPCDefaults` and `ensureGRPCStatus`; the only difference is whether events apply inline.
 
 ## Error handling boundaries
 
@@ -55,7 +55,7 @@ Sets three error handlers on `Options` if the caller didn't provide custom ones:
 | `ApplyErr` | Projection apply failures | `codes.Internal` |
 | `RejectErr` | Domain rejections (business rule violations) | `codes.FailedPrecondition` |
 
-These fire inside `WriteRuntime.ExecuteAndApply` at the appropriate points.
+These fire inside `WriteRuntime.ExecuteAndApply`.
 
 ### 2. `ensureGRPCStatus` — final error wrapper
 
@@ -67,9 +67,7 @@ Catches any error that escapes without a gRPC status:
 
 ### 3. `handleDomainError` — domain code mapping
 
-Delegates to `apperrors.HandleError(err, apperrors.DefaultLocale)`, which maps domain error codes to gRPC codes with i18n-ready structured error details.
-
-Both the game service and daggerheart packages use the same pattern.
+Delegates to `apperrors.HandleError(err, apperrors.DefaultLocale)`, which maps domain error codes to gRPC codes with i18n-ready structured error details. Game and daggerheart handlers use the same pattern.
 
 ## Options type
 
@@ -101,9 +99,12 @@ type Options struct {
 
 This ensures projection appliers only process events they are responsible for.
 
+## Historical event import
+
+Normal write handlers must execute domain commands through the helpers above. The one sanctioned non-command journal writer is the centralized historical import seam under `internal/services/game/api/grpc/internal/journalimport/`. It exists for already-authoritative history copy/import flows such as campaign fork replay; transports must not append imported events directly.
+
 ## Startup store wiring contracts
-Startup wires projection bundles with `game.NewStoresFromProjection(...)` (`internal/services/game/api/grpc/game/stores.go`) and `gameplaystores.NewFromProjection(...)` (`internal/services/game/api/grpc/systems/daggerheart/gameplaystores/stores.go`) instead of manually assigning every store field in `app/bootstrap.go`, reducing wiring drift while keeping explicit override fields available.
-Shared transport error/default behavior is centralized under `internal/services/game/api/grpc/internal/grpcerror` so game and system handlers do not drift in domain-error mapping or write-path option defaults.
+Startup wires projection bundles with `game.NewStoresFromProjection(...)` and `gameplaystores.NewFromProjection(...)` instead of manually assigning every store field in bootstrap wiring. Shared transport error/default behavior is centralized under `internal/services/game/api/grpc/internal/grpcerror`.
 
 ## Typical handler pattern
 
@@ -117,7 +118,6 @@ func (a *application) DoSomething(ctx context.Context, in *pb.Request) (*pb.Resp
         return nil, status.Error(codes.InvalidArgument, "campaign_id is required")
     }
 
-    // Build domain command
     cmd := commandbuild.Core(commandbuild.CoreInput{
         CampaignID:  campaignID,
         Type:        commandType,
@@ -125,7 +125,6 @@ func (a *application) DoSomething(ctx context.Context, in *pb.Request) (*pb.Resp
         // ...
     })
 
-    // Execute and apply
     _, err := executeAndApplyDomainCommand(ctx, a.stores, applier, cmd, domainwrite.Options{})
     if err != nil {
         return nil, err // already gRPC-wrapped
@@ -137,7 +136,7 @@ func (a *application) DoSomething(ctx context.Context, in *pb.Request) (*pb.Resp
 
 Key conventions:
 - Validate request fields before building commands (return `codes.InvalidArgument`).
-- The returned error from `executeAndApplyDomainCommand` is always gRPC-status-wrapped — don't double-wrap.
+- The returned error from `executeAndApplyDomainCommand` is already gRPC-status-wrapped.
 - Use `handleDomainError` for errors from store lookups or other domain operations outside the command path.
 
 ## Adding a new write handler
@@ -146,4 +145,4 @@ Key conventions:
 2. Write a handler following the pattern above.
 3. Choose `executeAndApplyDomainCommand` (default) or `executeDomainCommandWithoutInlineApply`.
 4. Use `domainwrite.Options{}` or a preset — custom error handlers are rarely needed.
-5. Errors from domain operations flow through `handleDomainError`; errors from the command path flow through the options handlers and `ensureGRPCStatus`.
+5. Domain-operation errors flow through `handleDomainError`; command-path errors flow through the options handlers and `ensureGRPCStatus`.

@@ -9,12 +9,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	gogrpc "google.golang.org/grpc"
 	gogrpcmetadata "google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func playTestState() *gamev1.InteractionState {
@@ -231,26 +236,166 @@ func (s *scriptTranscriptStore) Close() error {
 }
 
 type fakeEventClient struct {
-	stream gogrpc.ServerStreamingClient[gamev1.CampaignUpdate]
-	err    error
+	mu          sync.Mutex
+	stream      gogrpc.ServerStreamingClient[gamev1.CampaignUpdate]
+	err         error
+	lastUserID  string
+	lastRequest *gamev1.SubscribeCampaignUpdatesRequest
+	subscribeCh chan struct{}
 }
 
-func (f fakeEventClient) SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[gamev1.CampaignUpdate], error) {
-	if f.err != nil {
-		return nil, f.err
+func (f *fakeEventClient) SubscribeCampaignUpdates(ctx context.Context, req *gamev1.SubscribeCampaignUpdatesRequest, _ ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[gamev1.CampaignUpdate], error) {
+	f.mu.Lock()
+	f.lastUserID = grpcauthctx.UserIDFromOutgoingContext(ctx)
+	if req != nil {
+		cloned := *req
+		cloned.Kinds = append([]gamev1.CampaignUpdateKind(nil), req.GetKinds()...)
+		cloned.ProjectionScopes = append([]string(nil), req.GetProjectionScopes()...)
+		f.lastRequest = &cloned
 	}
-	if f.stream != nil {
-		return f.stream, nil
+	subscribeCh := f.subscribeCh
+	stream := f.stream
+	err := f.err
+	f.mu.Unlock()
+	if subscribeCh != nil {
+		select {
+		case subscribeCh <- struct{}{}:
+		default:
+		}
 	}
-	return &fakeCampaignUpdateStream{}, nil
+	if streamState, ok := stream.(*fakeCampaignUpdateStream); ok && streamState.ctx == nil {
+		streamState.ctx = ctx
+	}
+	if err != nil {
+		return nil, err
+	}
+	if stream != nil {
+		return stream, nil
+	}
+	return &fakeCampaignUpdateStream{ctx: ctx}, nil
 }
 
-type fakeCampaignUpdateStream struct{}
+func (f *fakeEventClient) awaitSubscribe(t *testing.T) {
+	t.Helper()
+	if f.subscribeCh == nil {
+		t.Fatal("subscribeCh is nil")
+	}
+	select {
+	case <-f.subscribeCh:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for SubscribeCampaignUpdates")
+	}
+}
 
-func (f *fakeCampaignUpdateStream) Recv() (*gamev1.CampaignUpdate, error) { return nil, io.EOF }
-func (f *fakeCampaignUpdateStream) Header() (gogrpcmetadata.MD, error)    { return nil, nil }
-func (f *fakeCampaignUpdateStream) Trailer() gogrpcmetadata.MD            { return nil }
-func (f *fakeCampaignUpdateStream) CloseSend() error                      { return nil }
-func (f *fakeCampaignUpdateStream) Context() context.Context              { return context.Background() }
-func (f *fakeCampaignUpdateStream) SendMsg(any) error                     { return nil }
-func (f *fakeCampaignUpdateStream) RecvMsg(any) error                     { return nil }
+type fakeCampaignUpdateStream struct {
+	ctx     context.Context
+	updates chan *gamev1.CampaignUpdate
+	recvErr error
+}
+
+func (f *fakeCampaignUpdateStream) Recv() (*gamev1.CampaignUpdate, error) {
+	if f.recvErr != nil {
+		return nil, f.recvErr
+	}
+	if f.updates != nil {
+		select {
+		case update, ok := <-f.updates:
+			if !ok {
+				return nil, io.EOF
+			}
+			return update, nil
+		case <-f.Context().Done():
+			return nil, f.Context().Err()
+		}
+	}
+	<-f.Context().Done()
+	return nil, f.Context().Err()
+}
+func (f *fakeCampaignUpdateStream) Header() (gogrpcmetadata.MD, error) { return nil, nil }
+func (f *fakeCampaignUpdateStream) Trailer() gogrpcmetadata.MD         { return nil }
+func (f *fakeCampaignUpdateStream) CloseSend() error                   { return nil }
+func (f *fakeCampaignUpdateStream) Context() context.Context {
+	if f.ctx == nil {
+		return context.Background()
+	}
+	return f.ctx
+}
+func (f *fakeCampaignUpdateStream) SendMsg(any) error { return nil }
+func (f *fakeCampaignUpdateStream) RecvMsg(any) error { return nil }
+
+type authSensitivePlayParticipantClient struct {
+	response   *gamev1.ListParticipantsResponse
+	lastUserID string
+}
+
+func (f *authSensitivePlayParticipantClient) ListParticipants(ctx context.Context, _ *gamev1.ListParticipantsRequest, _ ...gogrpc.CallOption) (*gamev1.ListParticipantsResponse, error) {
+	userID := grpcauthctx.UserIDFromOutgoingContext(ctx)
+	if userID == "" {
+		return nil, errors.New("missing user metadata")
+	}
+	f.lastUserID = userID
+	return f.response, nil
+}
+
+type authSensitivePlayCharacterClient struct {
+	listResponse  *gamev1.ListCharactersResponse
+	sheetResponse *gamev1.GetCharacterSheetResponse
+	lastUserID    string
+}
+
+func (f *authSensitivePlayCharacterClient) ListCharacters(ctx context.Context, _ *gamev1.ListCharactersRequest, _ ...gogrpc.CallOption) (*gamev1.ListCharactersResponse, error) {
+	userID := grpcauthctx.UserIDFromOutgoingContext(ctx)
+	if userID == "" {
+		return nil, errors.New("missing user metadata")
+	}
+	f.lastUserID = userID
+	return f.listResponse, nil
+}
+
+func (f *authSensitivePlayCharacterClient) GetCharacterSheet(ctx context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...gogrpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+	userID := grpcauthctx.UserIDFromOutgoingContext(ctx)
+	if userID == "" {
+		return nil, errors.New("missing user metadata")
+	}
+	f.lastUserID = userID
+	return f.sheetResponse, nil
+}
+
+func enrichedParticipantResponse() *gamev1.ListParticipantsResponse {
+	return &gamev1.ListParticipantsResponse{
+		Participants: []*gamev1.Participant{
+			{Id: "p1", Name: "Avery", Role: gamev1.ParticipantRole_PLAYER},
+			{Id: "p2", Name: "Guide", Role: gamev1.ParticipantRole_GM},
+		},
+	}
+}
+
+func enrichedCharacterResponse() *gamev1.ListCharactersResponse {
+	return &gamev1.ListCharactersResponse{
+		Characters: []*gamev1.Character{
+			{
+				Id:            "char-1",
+				CampaignId:    "c1",
+				Name:          "Lark",
+				Kind:          gamev1.CharacterKind_PC,
+				ParticipantId: &wrapperspb.StringValue{Value: "p1"},
+			},
+		},
+	}
+}
+
+func enrichedCharacterSheetResponse() *gamev1.GetCharacterSheetResponse {
+	return &gamev1.GetCharacterSheetResponse{
+		Character: enrichedCharacterResponse().GetCharacters()[0],
+		Profile: &gamev1.CharacterProfile{
+			CampaignId:  "c1",
+			CharacterId: "char-1",
+			SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+				Daggerheart: &daggerheartv1.DaggerheartProfile{
+					Level: 1,
+					HpMax: 10,
+				},
+			},
+		},
+	}
+}

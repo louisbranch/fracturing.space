@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -13,8 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
-
-const rejectionCodeSessionAITurnNotActive = "SESSION_AI_TURN_NOT_ACTIVE"
 
 var (
 	// ErrCommandRegistryRequired indicates a missing command registry.
@@ -67,13 +64,6 @@ type SceneGateStateLoader interface {
 // on fully reconstructed state from the replay pipeline.
 type StateLoader interface {
 	Load(ctx context.Context, cmd command.Command) (any, error)
-}
-
-// FreshStateLoader optionally reconstructs state without cached snapshots or
-// checkpoints. Handlers use this to verify rejections against authoritative
-// journal replay before returning them to callers.
-type FreshStateLoader interface {
-	LoadFresh(ctx context.Context, cmd command.Command) (any, error)
 }
 
 // EventJournal appends events to the journal.
@@ -264,10 +254,6 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 	if err != nil {
 		return command.Command{}, nil, command.Decision{}, err
 	}
-	state, decision, err = h.retryRejectedDecisionWithFreshState(ctx, validated, state, decision)
-	if err != nil {
-		return command.Command{}, nil, command.Decision{}, err
-	}
 
 	decision, err = h.validateDecisionEvents(decision)
 	if err != nil {
@@ -362,45 +348,6 @@ func (h Handler) decide(state any, cmd command.Command) (command.Decision, error
 		return command.Decision{}, fmt.Errorf("%w: %w", ErrCommandMustMutate, err)
 	}
 	return decision, nil
-}
-
-func (h Handler) retryRejectedDecisionWithFreshState(
-	ctx context.Context,
-	cmd command.Command,
-	state any,
-	decision command.Decision,
-) (any, command.Decision, error) {
-	if !shouldRetryRejectedDecisionWithFreshState(cmd, decision) {
-		return state, decision, nil
-	}
-	freshLoader, ok := h.StateLoader.(FreshStateLoader)
-	if !ok {
-		return state, decision, nil
-	}
-	freshState, err := freshLoader.LoadFresh(ctx, cmd)
-	if err != nil {
-		return nil, command.Decision{}, err
-	}
-	freshDecision, err := h.decide(freshState, cmd)
-	if err != nil {
-		return nil, command.Decision{}, err
-	}
-	return freshState, freshDecision, nil
-}
-
-func shouldRetryRejectedDecisionWithFreshState(cmd command.Command, decision command.Decision) bool {
-	if len(decision.Rejections) == 0 {
-		return false
-	}
-	if !strings.HasPrefix(strings.TrimSpace(string(cmd.Type)), "session.ai_turn.") {
-		return false
-	}
-	for _, rejection := range decision.Rejections {
-		if strings.TrimSpace(rejection.Code) != rejectionCodeSessionAITurnNotActive {
-			return false
-		}
-	}
-	return true
 }
 
 func (h Handler) nowFunc() func() time.Time {

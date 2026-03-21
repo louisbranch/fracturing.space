@@ -70,3 +70,55 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 		t.Fatalf("ineligible status = %v, want idle", state.GetStatus())
 	}
 }
+
+func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSceneInteractionStoreIsMissing(t *testing.T) {
+	t.Parallel()
+
+	campaignStore := gametest.NewFakeCampaignStore()
+	sessionStore := gametest.NewFakeSessionStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	sessionInteractionStore := &gametest.FakeSessionInteractionStore{
+		Values: map[string]storage.SessionInteraction{
+			"camp-1:sess-1": {
+				CampaignID:               "camp-1",
+				SessionID:                "sess-1",
+				ActiveSceneID:            "scene-1",
+				GMAuthorityParticipantID: "gm-ai",
+				AITurn:                   storage.SessionAITurn{Status: session.AITurnStatusIdle},
+			},
+		},
+	}
+
+	campaignStore.Campaigns["camp-1"] = storage.CampaignRecord{
+		ID:        "camp-1",
+		Status:    campaign.StatusActive,
+		GmMode:    campaign.GmModeAI,
+		AIAgentID: "agent-1",
+	}
+	sessionStore.Sessions["camp-1"] = map[string]storage.SessionRecord{
+		"sess-1": {ID: "sess-1", CampaignID: "camp-1", Status: session.StatusActive},
+	}
+	sessionStore.ActiveSession["camp-1"] = "sess-1"
+	participantStore.Participants["camp-1"] = map[string]storage.ParticipantRecord{
+		"gm-ai": {ID: "gm-ai", CampaignID: "camp-1", Role: participant.RoleGM, Controller: participant.ControllerAI},
+	}
+
+	app := newCampaignAIOrchestrationApplicationWithDependencies(
+		CampaignAIOrchestrationDeps{
+			Campaign:           campaignStore,
+			Session:            sessionStore,
+			Participant:        participantStore,
+			SessionInteraction: sessionInteractionStore,
+			Applier:            projection.Applier{},
+		},
+		gametest.FixedIDGenerator("unused"),
+	)
+
+	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.active_scene_set", "scene-1", "")
+	if err != nil {
+		t.Fatalf("QueueAIGMTurn error = %v", err)
+	}
+	if state.GetStatus() != gamev1.AITurnStatus_AI_TURN_STATUS_IDLE {
+		t.Fatalf("status = %v, want idle", state.GetStatus())
+	}
+}
