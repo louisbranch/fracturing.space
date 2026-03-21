@@ -18,10 +18,18 @@ func TestFold_SessionInteractionLifecycle(t *testing.T) {
 	}{
 		{typ: EventTypeActiveSceneSet, payload: ActiveSceneSetPayload{ActiveSceneID: "scene-1"}},
 		{typ: EventTypeGMAuthoritySet, payload: GMAuthoritySetPayload{ParticipantID: "gm-1"}},
-		{typ: EventTypeOOCPaused, payload: OOCPausedPayload{Reason: "rules"}},
+		{typ: EventTypeOOCPaused, payload: OOCPausedPayload{
+			Reason:                   "rules",
+			RequestedByParticipantID: "gm-1",
+			InterruptedSceneID:       "scene-1",
+			InterruptedPhaseID:       "phase-1",
+			InterruptedPhaseStatus:   "GM_REVIEW",
+		}},
+		{typ: EventTypeOOCPosted, payload: OOCPostedPayload{PostID: "ooc-1", ParticipantID: "p1", Body: "question"}},
 		{typ: EventTypeOOCReadyMarked, payload: OOCReadyMarkedPayload{ParticipantID: "p1"}},
 		{typ: EventTypeOOCReadyCleared, payload: OOCReadyClearedPayload{ParticipantID: "p1"}},
 		{typ: EventTypeOOCResumed, payload: OOCResumedPayload{Reason: "resume"}},
+		{typ: EventTypeOOCInterruptionResolved, payload: OOCInterruptionResolvedPayload{Resolution: "resume_original_phase"}},
 		{typ: EventTypeAITurnQueued, payload: AITurnQueuedPayload{
 			TurnToken:          "turn-1",
 			OwnerParticipantID: "gm-ai",
@@ -54,6 +62,9 @@ func TestFold_SessionInteractionLifecycle(t *testing.T) {
 	if state.OOCPaused {
 		t.Fatal("ooc paused = true, want false after resume")
 	}
+	if state.OOCRequestedByParticipantID != "" || state.OOCReason != "" || state.OOCInterruptedSceneID != "" || state.OOCInterruptedPhaseID != "" || state.OOCInterruptedPhaseStatus != "" || state.OOCResolutionPending {
+		t.Fatalf("ooc interruption state = %#v, want cleared", state)
+	}
 	if state.OOCReadyParticipants != nil {
 		t.Fatalf("ready participants = %#v, want nil after resume", state.OOCReadyParticipants)
 	}
@@ -69,6 +80,7 @@ func TestFold_SessionInteractionInvalidPayloadsReturnErrors(t *testing.T) {
 	for _, evtType := range []event.Type{
 		EventTypeActiveSceneSet,
 		EventTypeGMAuthoritySet,
+		EventTypeOOCPaused,
 		EventTypeOOCReadyMarked,
 		EventTypeOOCReadyCleared,
 		EventTypeAITurnQueued,
@@ -78,5 +90,28 @@ func TestFold_SessionInteractionInvalidPayloadsReturnErrors(t *testing.T) {
 		if _, err := Fold(State{}, event.Event{Type: evtType, PayloadJSON: corrupt}); err == nil {
 			t.Fatalf("expected error for %s", evtType)
 		}
+	}
+}
+
+func TestFold_OOCResumedSetsResolutionPendingWhenInterruptionExists(t *testing.T) {
+	t.Parallel()
+
+	next, err := Fold(State{
+		OOCPaused:             true,
+		OOCInterruptedSceneID: "scene-1",
+		OOCInterruptedPhaseID: "phase-1",
+		OOCReadyParticipants:  map[ids.ParticipantID]bool{"p1": true},
+	}, event.Event{Type: EventTypeOOCResumed})
+	if err != nil {
+		t.Fatalf("fold resume: %v", err)
+	}
+	if next.OOCPaused {
+		t.Fatal("expected ooc pause to clear")
+	}
+	if !next.OOCResolutionPending {
+		t.Fatal("expected resolution pending to be set")
+	}
+	if next.OOCReadyParticipants != nil {
+		t.Fatalf("ready participants = %#v, want nil", next.OOCReadyParticipants)
 	}
 }

@@ -43,7 +43,7 @@
       "description": "Daggerheart profile defaults and validation policy seams."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics",
       "floor": 95.5,
       "description": "Pure Daggerheart mechanics seam used by folder and adapter paths."
     },
@@ -53,9 +53,9 @@
       "description": "Pure Daggerheart reducer seam for deterministic state mutations."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate",
-      "floor": 90.0,
-      "description": "Leaf character-state value types for campaign snapshot runtime state."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state",
+      "floor": 89.7,
+      "description": "Daggerheart campaign snapshot state and supporting runtime value types."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/validator",
@@ -71,11 +71,6 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider",
       "floor": 86.0,
       "description": "Daggerheart command decision handlers and rejection logic."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/folder",
-      "floor": 97.0,
-      "description": "Daggerheart in-memory snapshot fold handlers."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest",

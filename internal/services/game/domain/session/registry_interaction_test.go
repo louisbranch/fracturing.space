@@ -20,6 +20,7 @@ func TestSessionInteractionPayloadValidatorsAcceptAndRejectJSON(t *testing.T) {
 		{name: "ooc ready marked", validate: func(raw []byte) error { return validateOOCReadyMarkedPayload(json.RawMessage(raw)) }, valid: `{"participant_id":"p1"}`},
 		{name: "ooc ready cleared", validate: func(raw []byte) error { return validateOOCReadyClearedPayload(json.RawMessage(raw)) }, valid: `{"participant_id":"p1"}`},
 		{name: "ooc resumed", validate: func(raw []byte) error { return validateOOCResumedPayload(json.RawMessage(raw)) }, valid: `{"reason":"resume"}`},
+		{name: "ooc interruption resolved", validate: func(raw []byte) error { return validateOOCInterruptionResolvedPayload(json.RawMessage(raw)) }, valid: `{"resolution":"resume_original_phase"}`},
 		{name: "ai turn queued", validate: func(raw []byte) error { return validateAITurnQueuedPayload(json.RawMessage(raw)) }, valid: `{"turn_token":"turn-1","owner_participant_id":"gm-ai"}`},
 		{name: "ai turn running", validate: func(raw []byte) error { return validateAITurnRunningPayload(json.RawMessage(raw)) }, valid: `{"turn_token":"turn-1"}`},
 		{name: "ai turn failed", validate: func(raw []byte) error { return validateAITurnFailedPayload(json.RawMessage(raw)) }, valid: `{"turn_token":"turn-1","last_error":"timeout"}`},

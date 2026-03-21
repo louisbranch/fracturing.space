@@ -107,6 +107,23 @@ func TestSessionStartBootstrapNoopsWithoutCreatedPCs(t *testing.T) {
 	}
 }
 
+func TestSessionStartBootstrapRejectsInvalidSystemState(t *testing.T) {
+	module := NewModule()
+
+	events, err := module.SessionStartBootstrap(
+		struct{}{},
+		nil,
+		command.Command{CampaignID: "camp-1"},
+		time.Now(),
+	)
+	if err == nil {
+		t.Fatal("expected invalid system state error")
+	}
+	if len(events) != 0 {
+		t.Fatalf("events = %d, want 0 on error", len(events))
+	}
+}
+
 func TestDeciderGMMoveApplyRejectsCustomWithoutDescription(t *testing.T) {
 	payloadJSON := []byte(`{"target":{"type":"direct_move","kind":"interrupt_and_move","shape":"custom"},"fear_spent":1}`)
 	decision := (daggerheartdecider.Decider{}).Decide(daggerheartstate.SnapshotState{GMFear: 2}, command.Command{
