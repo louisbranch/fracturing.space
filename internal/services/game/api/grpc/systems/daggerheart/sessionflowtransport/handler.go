@@ -793,11 +793,21 @@ func (h *Handler) SessionAdversaryAttackFlow(ctx context.Context, in *pb.Session
 		effectiveDifficulty += subclassRules.EvasionBonusWhileHopeAtLeast
 	}
 	effectiveDifficulty += targetSubclassState.TranscendenceEvasionBonus
+	for _, mod := range targetState.StatModifiers {
+		if mod.Target == "evasion" {
+			effectiveDifficulty += mod.Delta
+		}
+	}
 	if featureRule != nil && featureRule.Kind == daggerheart.AdversaryFeatureRuleKindDifficultyBonusWhileActive && hasActiveAdversaryFeatureState(adversary, featureID) {
 		effectiveDifficulty += featureRule.DifficultyBonus
 	}
 	if featureRule != nil && featureRule.Kind == daggerheart.AdversaryFeatureRuleKindHiddenUntilNextAttack && hasActiveAdversaryFeatureState(adversary, featureID) {
 		effectiveAdvantage++
+	}
+	if featureRule != nil && featureRule.Kind == daggerheart.AdversaryFeatureRuleKindFocusTargetDisadvantage {
+		if focusedID := focusedTargetIDForFeature(adversary, featureID); focusedID != "" && focusedID == targetID {
+			effectiveDisadvantage++
+		}
 	}
 	var targetArmor *contentstore.DaggerheartArmor
 	if equippedArmorID := strings.TrimSpace(targetProfile.EquippedArmorID); equippedArmorID != "" {
@@ -1215,6 +1225,19 @@ func hasActiveAdversaryFeatureState(adversary projectionstore.DaggerheartAdversa
 		}
 	}
 	return false
+}
+
+// focusedTargetIDForFeature returns the focused target character ID from an
+// active adversary feature state, or empty if the feature is not active or
+// has no focused target.
+func focusedTargetIDForFeature(adversary projectionstore.DaggerheartAdversary, featureID string) string {
+	for _, featureState := range adversary.FeatureStates {
+		if strings.TrimSpace(featureState.FeatureID) == strings.TrimSpace(featureID) &&
+			strings.EqualFold(strings.TrimSpace(featureState.Status), "active") {
+			return strings.TrimSpace(featureState.FocusedTargetID)
+		}
+	}
+	return ""
 }
 
 func clearAdversaryFeatureState(current []projectionstore.DaggerheartAdversaryFeatureState, featureID string) []projectionstore.DaggerheartAdversaryFeatureState {

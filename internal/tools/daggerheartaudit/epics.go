@@ -159,6 +159,25 @@ var epicDefinitions = map[string]epicDefinition{
 			"Remove any compatibility handling for the old equipment-before-details order once all callers use the canonical sequence.",
 		},
 	},
+	"domain-card-primitive-gaps": {
+		Title:    "Domain Card Primitive Gaps",
+		Priority: "p2",
+		Summary:  "Add missing mutation primitives (HP healing, Hope granting, direct stress reduction, temporary non-armor buffs) so domain card ability effects can be expressed through the command surface.",
+		Boundary: "Mutation command coverage for mechanical effects described in domain card feature text.",
+		ContractsToTouch: []string{
+			"api/proto/systems/daggerheart/v1/service.proto",
+			"internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/",
+			"internal/services/game/domain/systems/daggerheart/",
+		},
+		TestsRequired: []string{
+			"Domain tests for HP healing, Hope granting, and stress reduction commands.",
+			"Transport tests for new mutation RPCs or extended request payloads.",
+			"Scenario coverage reusing existing damage, condition, and rest flows to verify primitive integration.",
+		},
+		RemovalCriteria: []string{
+			"Remove missing_primitive gap classification once each effect category has a corresponding mutation command or an explicit non-goal declaration.",
+		},
+	},
 	"death-scar-terminal-hope": {
 		Title:    "Death Scar Terminal Hope",
 		Priority: "p1",

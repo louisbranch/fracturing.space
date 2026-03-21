@@ -59,6 +59,7 @@ type GMMoveAppliedPayload struct {
 type CharacterStatePatchPayload struct {
 	CharacterID                         ids.CharacterID                   `json:"character_id"`
 	Source                              string                            `json:"source,omitempty"`
+	MutationSource                      *snapstate.MutationSource         `json:"mutation_source,omitempty"`
 	HPBefore                            *int                              `json:"hp_before,omitempty"`
 	HPAfter                             *int                              `json:"hp_after,omitempty"`
 	HopeBefore                          *int                              `json:"hope_before,omitempty"`
@@ -830,4 +831,25 @@ type ConsumableAcquiredPayload struct {
 	CharacterID  ids.CharacterID `json:"character_id"`
 	ConsumableID string          `json:"consumable_id"`
 	Quantity     int             `json:"quantity_after"`
+}
+
+// --- Stat Modifiers ---
+
+// StatModifierChangePayload captures the payload for sys.daggerheart.stat_modifier.change commands.
+type StatModifierChangePayload struct {
+	CharacterID     ids.CharacterID           `json:"character_id"`
+	ModifiersBefore []rules.StatModifierState `json:"modifiers_before,omitempty"`
+	ModifiersAfter  []rules.StatModifierState `json:"modifiers_after"`
+	Added           []rules.StatModifierState `json:"added,omitempty"`
+	Removed         []rules.StatModifierState `json:"removed,omitempty"`
+	Source          string                    `json:"source,omitempty"`
+}
+
+// StatModifierChangedPayload captures the payload for sys.daggerheart.stat_modifier_changed events.
+type StatModifierChangedPayload struct {
+	CharacterID ids.CharacterID           `json:"character_id"`
+	Modifiers   []rules.StatModifierState `json:"modifiers_after"`
+	Added       []rules.StatModifierState `json:"added,omitempty"`
+	Removed     []rules.StatModifierState `json:"removed,omitempty"`
+	Source      string                    `json:"source,omitempty"`
 }

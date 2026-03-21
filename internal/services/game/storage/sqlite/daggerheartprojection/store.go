@@ -411,6 +411,14 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 	if err != nil {
 		return fmt.Errorf("encode companion state: %w", err)
 	}
+	statModifiers := state.StatModifiers
+	if statModifiers == nil {
+		statModifiers = []projectionstore.DaggerheartStatModifier{}
+	}
+	statModifiersJSON, err := json.Marshal(statModifiers)
+	if err != nil {
+		return fmt.Errorf("encode stat modifiers: %w", err)
+	}
 
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
@@ -437,6 +445,7 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 		SubclassStateJson:             string(subclassStateJSON),
 		CompanionStateJson:            string(companionStateJSON),
 		ImpenetrableUsedThisShortRest: boolToInt64(state.ImpenetrableUsedThisShortRest),
+		StatModifiersJson:             string(statModifiersJSON),
 	})
 }
 
@@ -506,6 +515,12 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 	if strings.TrimSpace(lifeState) == "" {
 		lifeState = daggerheart.LifeStateAlive
 	}
+	var statModifiers []projectionstore.DaggerheartStatModifier
+	if row.StatModifiersJson != "" && row.StatModifiersJson != "[]" {
+		if err := json.Unmarshal([]byte(row.StatModifiersJson), &statModifiers); err != nil {
+			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode stat modifiers: %w", err)
+		}
+	}
 
 	return projectionstore.DaggerheartCharacterState{
 		CampaignID:                    row.CampaignID,
@@ -522,6 +537,7 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 		SubclassState:                 subclassState,
 		CompanionState:                companionState,
 		ImpenetrableUsedThisShortRest: row.ImpenetrableUsedThisShortRest != 0,
+		StatModifiers:                 statModifiers,
 	}, nil
 }
 

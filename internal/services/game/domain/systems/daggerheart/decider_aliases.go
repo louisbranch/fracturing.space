@@ -48,6 +48,7 @@ const (
 	commandTypeEquipmentSwap                = decider.CommandTypeEquipmentSwap
 	commandTypeConsumableUse                = decider.CommandTypeConsumableUse
 	commandTypeConsumableAcquire            = decider.CommandTypeConsumableAcquire
+	commandTypeStatModifierChange           = decider.CommandTypeStatModifierChange
 )
 
 // --- Rejection code constant aliases ---
@@ -74,6 +75,7 @@ const (
 	rejectionCodeAdversaryCreateNoMutation         = decider.RejectionCodeAdversaryCreateNoMutation
 	rejectionCodeAdversaryFeatureApplyNoMutation   = decider.RejectionCodeAdversaryFeatureApplyNoMutation
 	rejectionCodeEnvironmentEntityCreateNoMutation = decider.RejectionCodeEnvironmentEntityCreateNoMutation
+	rejectionCodeStatModifierChangeNoMutation      = decider.RejectionCodeStatModifierChangeNoMutation
 	rejectionCodePayloadDecodeFailed               = decider.RejectionCodePayloadDecodeFailed
 	rejectionCodeCommandTypeUnsupported            = decider.RejectionCodeCommandTypeUnsupported
 	rejectionCodeGoldInvalid                       = decider.RejectionCodeGoldInvalid

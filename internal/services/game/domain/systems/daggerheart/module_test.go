@@ -59,6 +59,7 @@ func commandValidationCases() []commandValidationCase {
 		{typ: commandTypeEquipmentSwap, validPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"inventory","to":"active"}`, invalidPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"active","to":"active"}`},
 		{typ: commandTypeConsumableUse, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":2,"quantity_after":1}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":0,"quantity_after":-1}`},
 		{typ: commandTypeConsumableAcquire, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":1,"quantity_after":2}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":5,"quantity_after":6}`},
+		{typ: commandTypeStatModifierChange, validPayload: `{"character_id":"char-1","modifiers_after":[{"id":"mod-1","target":"evasion","delta":2}]}`, invalidPayload: `{"character_id":1}`},
 	}
 }
 
@@ -104,6 +105,7 @@ func eventValidationCases() []eventValidationCase {
 		{typ: EventTypeEquipmentSwapped, validPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"inventory","to":"active"}`, invalidPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"active","to":"active"}`},
 		{typ: EventTypeConsumableUsed, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_after":1}`, invalidPayload: `{"character_id":"char-1","consumable_id":""}`},
 		{typ: EventTypeConsumableAcquired, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_after":2}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_after":6}`},
+		{typ: EventTypeStatModifierChanged, validPayload: `{"character_id":"char-1","modifiers_after":[{"id":"mod-1","target":"evasion","delta":2}]}`, invalidPayload: `{"character_id":1}`},
 	}
 }
 

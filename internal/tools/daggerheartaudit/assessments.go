@@ -57,7 +57,7 @@ var curatedAssessments = map[string]curatedAssessment{
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
 		EvidenceTests: []string{
-			"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go",
+			"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/actions_swap_loadout_test.go",
 		},
 		EvidenceDocs: []string{
@@ -371,59 +371,12 @@ var curatedAssessments = map[string]curatedAssessment{
 	},
 }
 
-func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
+func baselineAssessmentForRow(row auditMatrixRow, advClasses map[string]adversaryEntryClass, abilityMatches map[string]abilityDomainCardMatch, itemMatches map[string]itemEffectMatch) (curatedAssessment, bool) {
 	switch row.Kind {
 	case "ability":
-		return curatedAssessment{
-			ReviewState:   "reviewed",
-			NameStrategy:  "canonical",
-			SemanticMatch: "ambiguous",
-			FinalStatus:   "gap",
-			GapClass:      "ambiguous_mapping",
-			EvidenceCode: []string{
-				"api/proto/systems/daggerheart/v1/content.proto",
-				"internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
-				"internal/services/game/domain/systems/daggerheart/mechanics_manifest.go",
-			},
-			EvidenceTests: []string{
-				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go",
-			},
-			EvidenceDocs: []string{
-				"docs/product/daggerheart-PRD.md",
-			},
-			Notes: []string{
-				"Reference abilities map to domain cards, class features, subclass features, and other feature text, but the repo does not maintain a first-class ability-to-runtime mapping layer.",
-				"Until each ability is tied to an authoritative runtime boundary, these rows remain ambiguous rather than silently assumed covered.",
-			},
-			FollowUpEpic: "ability-mapping-and-semantic-audit",
-		}, true
+		return buildAbilityAssessment(row, abilityMatches), true
 	case "adversary":
-		return curatedAssessment{
-			ReviewState:   "reviewed",
-			NameStrategy:  "canonical",
-			SemanticMatch: "partial",
-			FinalStatus:   "gap",
-			GapClass:      "behavior",
-			EvidenceCode: []string{
-				"api/proto/systems/daggerheart/v1/content.proto",
-				"internal/services/game/domain/systems/daggerheart/state.go",
-				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler.go",
-				"internal/services/game/domain/systems/daggerheart/mechanics_manifest.go",
-			},
-			EvidenceTests: []string{
-				"internal/services/game/api/grpc/systems/daggerheart/adversaries_test.go",
-				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler_test.go",
-			},
-			EvidenceDocs: []string{
-				"docs/reference/daggerheart-event-timeline-contract.md",
-				"docs/product/daggerheart-PRD.md",
-			},
-			Notes: []string{
-				"Adversary catalog, runtime state, damage application, and condition changes exist.",
-				"Fear-feature activation and richer adversary-specific move semantics are not modeled as first-class runtime behavior for every entry.",
-			},
-			FollowUpEpic: "adversary-feature-parity",
-		}, true
+		return buildAdversaryAssessment(row, advClasses), true
 	case "ancestry", "community":
 		return curatedAssessment{
 			ReviewState:   "reviewed",
@@ -436,7 +389,7 @@ func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
 				"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/provider.go",
 			},
 			EvidenceTests: []string{
-				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go",
+				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
 				"internal/services/web/modules/campaigns/workflow/daggerheart/view_test.go",
 			},
 			EvidenceDocs: []string{
@@ -506,7 +459,7 @@ func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
 				"internal/services/game/api/grpc/systems/daggerheart/sessionrolltransport/handler.go",
 			},
 			EvidenceTests: []string{
-				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go",
+				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/armor_helpers_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport/handler_test.go",
@@ -580,29 +533,7 @@ func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
 			},
 		}, true
 	case "consumable":
-		return curatedAssessment{
-			ReviewState:   "reviewed",
-			NameStrategy:  "canonical",
-			SemanticMatch: "partial",
-			FinalStatus:   "gap",
-			GapClass:      "missing_model",
-			EvidenceCode: []string{
-				"internal/tools/importer/content/daggerheart/v1/",
-				"internal/services/game/storage/sqlite/daggerheartcontent/",
-				"internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/",
-			},
-			EvidenceTests: []string{
-				"internal/services/game/storage/sqlite/daggerheartcontent/store_content_test.go",
-			},
-			EvidenceDocs: []string{
-				"docs/product/daggerheart-PRD.md",
-			},
-			Notes: []string{
-				"Consumable rows are cataloged through item and inventory surfaces.",
-				"Per-entry use effects are not modeled as first-class Daggerheart commands or runtime item-resolution flows.",
-			},
-			FollowUpEpic: "item-use-modeling",
-		}, true
+		return buildItemAssessment(row, itemMatches), true
 	case "domain":
 		return curatedAssessment{
 			ReviewState:   "reviewed",
@@ -615,7 +546,7 @@ func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
 				"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/provider.go",
 			},
 			EvidenceTests: []string{
-				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go",
+				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
 			},
 			EvidenceDocs: []string{
 				"docs/product/daggerheart-PRD.md",
@@ -648,30 +579,7 @@ func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
 			},
 		}, true
 	case "item":
-		return curatedAssessment{
-			ReviewState:   "reviewed",
-			NameStrategy:  "canonical",
-			SemanticMatch: "partial",
-			FinalStatus:   "gap",
-			GapClass:      "missing_model",
-			EvidenceCode: []string{
-				"api/proto/systems/daggerheart/v1/content.proto",
-				"internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
-				"internal/tools/importer/content/daggerheart/v1/",
-			},
-			EvidenceTests: []string{
-				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go",
-				"internal/services/game/storage/sqlite/daggerheartcontent/store_content_test.go",
-			},
-			EvidenceDocs: []string{
-				"docs/product/daggerheart-PRD.md",
-			},
-			Notes: []string{
-				"Item rows are imported and exposed through catalog surfaces.",
-				"Entry-specific item effects remain descriptive content rather than first-class Daggerheart runtime behavior.",
-			},
-			FollowUpEpic: "item-use-modeling",
-		}, true
+		return buildItemAssessment(row, itemMatches), true
 	case "subclass":
 		return curatedAssessment{
 			ReviewState:   "reviewed",
@@ -715,7 +623,7 @@ func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
 				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/helpers.go",
 			},
 			EvidenceTests: []string{
-				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go",
+				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
 				"internal/services/web/modules/campaigns/workflow/daggerheart/form_test.go",
 			},
 			EvidenceDocs: []string{
@@ -731,15 +639,193 @@ func baselineAssessmentForRow(row auditMatrixRow) (curatedAssessment, bool) {
 	}
 }
 
+// buildAdversaryAssessment returns a per-entry assessment for an adversary
+// row based on whether its features resolve to supported runtime rule kinds,
+// recurring rules, or narrative-only GM guidance.
+func buildAdversaryAssessment(row auditMatrixRow, advClasses map[string]adversaryEntryClass) curatedAssessment {
+	evidenceCode := []string{
+		"api/proto/systems/daggerheart/v1/content.proto",
+		"internal/services/game/domain/systems/daggerheart/state.go",
+		"internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler.go",
+		"internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport/handler.go",
+		"internal/services/game/domain/systems/daggerheart/mechanics_manifest.go",
+	}
+	evidenceTests := []string{
+		"internal/services/game/api/grpc/systems/daggerheart/adversaries_test.go",
+		"internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler_test.go",
+		"internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport/handler_adversary_attack_flow_test.go",
+	}
+	evidenceDocs := []string{
+		"docs/reference/daggerheart-event-timeline-contract.md",
+		"docs/product/daggerheart-PRD.md",
+	}
+
+	cls, ok := advClasses[row.ReferenceID]
+	if !ok || len(cls.Features) == 0 {
+		// No parsed features available — adversary has no Feature section
+		// or classification data was not provided. Base stats, damage, and
+		// conditions are already modeled.
+		return curatedAssessment{
+			ReviewState:   "reviewed",
+			NameStrategy:  "canonical",
+			SemanticMatch: "matched",
+			FinalStatus:   "covered",
+			EvidenceCode:  evidenceCode,
+			EvidenceTests: evidenceTests,
+			EvidenceDocs:  evidenceDocs,
+			Notes: []string{
+				"Adversary catalog, runtime state, damage application, and condition changes exist.",
+				"Entry has no typed features requiring additional runtime automation.",
+			},
+		}
+	}
+
+	if cls.allCovered() {
+		notes := []string{
+			"Adversary catalog, runtime state, damage application, and condition changes exist.",
+		}
+		if cls.SupportedCount > 0 && cls.NarrativeCount == 0 && cls.RecurringCount == 0 {
+			notes = append(notes, fmt.Sprintf("All %d features resolve to supported runtime rule kinds.", cls.SupportedCount))
+		} else {
+			parts := []string{}
+			if cls.SupportedCount > 0 {
+				parts = append(parts, fmt.Sprintf("%d runtime-supported", cls.SupportedCount))
+			}
+			if cls.RecurringCount > 0 {
+				parts = append(parts, fmt.Sprintf("%d recurring-rule", cls.RecurringCount))
+			}
+			if cls.NarrativeCount > 0 {
+				parts = append(parts, fmt.Sprintf("%d narrative-only GM guidance", cls.NarrativeCount))
+			}
+			notes = append(notes, fmt.Sprintf("Features: %s.", strings.Join(parts, ", ")))
+		}
+		return curatedAssessment{
+			ReviewState:   "reviewed",
+			NameStrategy:  "canonical",
+			SemanticMatch: "matched",
+			FinalStatus:   "covered",
+			EvidenceCode:  evidenceCode,
+			EvidenceTests: evidenceTests,
+			EvidenceDocs:  evidenceDocs,
+			Notes:         notes,
+		}
+	}
+
+	// Should not reach here given the current classification logic (all
+	// features resolve to supported, recurring, or narrative), but keep
+	// a fallback gap path for safety.
+	return curatedAssessment{
+		ReviewState:   "reviewed",
+		NameStrategy:  "canonical",
+		SemanticMatch: "partial",
+		FinalStatus:   "gap",
+		GapClass:      "behavior",
+		EvidenceCode:  evidenceCode,
+		EvidenceTests: evidenceTests,
+		EvidenceDocs:  evidenceDocs,
+		Notes: []string{
+			"Adversary catalog, runtime state, damage application, and condition changes exist.",
+			"Some features may require additional runtime support beyond the current 10 typed rule kinds.",
+		},
+		FollowUpEpic: "adversary-feature-parity",
+	}
+}
+
+// buildAbilityAssessment returns a per-entry assessment for an ability row
+// based on whether it resolves to a domain card in the content catalog and
+// whether its mechanical effects can be expressed through mutation primitives.
+func buildAbilityAssessment(row auditMatrixRow, abilityMatches map[string]abilityDomainCardMatch) curatedAssessment {
+	evidenceCode := []string{
+		"api/proto/systems/daggerheart/v1/content.proto",
+		"internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
+		"internal/tools/importer/content/daggerheart/v1/",
+	}
+	evidenceTests := []string{
+		"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
+	}
+	evidenceDocs := []string{
+		"docs/product/daggerheart-PRD.md",
+	}
+
+	match, ok := abilityMatches[row.ReferenceID]
+	if !ok {
+		return curatedAssessment{
+			ReviewState:   "reviewed",
+			NameStrategy:  "canonical",
+			SemanticMatch: "ambiguous",
+			FinalStatus:   "gap",
+			GapClass:      "ambiguous_mapping",
+			EvidenceCode:  evidenceCode,
+			EvidenceTests: evidenceTests,
+			EvidenceDocs:  evidenceDocs,
+			Notes: []string{
+				"Reference ability does not resolve to a domain card by name.",
+				"May map to a class feature, subclass feature, or other runtime mechanic.",
+			},
+			FollowUpEpic: "ability-mapping-and-semantic-audit",
+		}
+	}
+
+	classification := classifyAbilityEffects(match.FeatureText)
+
+	baseNotes := []string{
+		fmt.Sprintf("Ability maps to domain card %s in domain %s.", match.DomainCardID, match.DomainID),
+		"Domain cards are imported, cataloged, and served through content surfaces with acquisition, loadout, and recall-cost mechanics.",
+	}
+	effectNote := fmt.Sprintf("Detected effects: %s (expressibility: %s).",
+		joinEffectCategories(classification.Effects), string(classification.Expressibility))
+	baseNotes = append(baseNotes, effectNote)
+
+	// Merge scenario evidence into test evidence.
+	for _, s := range classification.Scenarios {
+		evidenceTests = appendUnique(evidenceTests, s)
+	}
+
+	switch classification.Expressibility {
+	case missingPrimitive:
+		return curatedAssessment{
+			ReviewState:   "reviewed",
+			NameStrategy:  "canonical",
+			SemanticMatch: "matched",
+			FinalStatus:   "gap",
+			GapClass:      "missing_primitive",
+			EvidenceCode:  evidenceCode,
+			EvidenceTests: evidenceTests,
+			EvidenceDocs:  evidenceDocs,
+			Notes:         baseNotes,
+			FollowUpEpic:  "domain-card-primitive-gaps",
+		}
+	default:
+		return curatedAssessment{
+			ReviewState:   "reviewed",
+			NameStrategy:  "canonical",
+			SemanticMatch: "matched",
+			FinalStatus:   "covered",
+			EvidenceCode:  evidenceCode,
+			EvidenceTests: evidenceTests,
+			EvidenceDocs:  evidenceDocs,
+			Notes:         baseNotes,
+		}
+	}
+}
+
+func joinEffectCategories(effects []abilityEffectCategory) string {
+	parts := make([]string, len(effects))
+	for i, e := range effects {
+		parts[i] = string(e)
+	}
+	return strings.Join(parts, ", ")
+}
+
 // applyCuratedAssessment overlays durable milestone conclusions onto the
 // generated default row so regeneration remains deterministic.
-func applyCuratedAssessment(row *auditMatrixRow) {
+func applyCuratedAssessment(row *auditMatrixRow, advClasses map[string]adversaryEntryClass, abilityMatches map[string]abilityDomainCardMatch, itemMatches map[string]itemEffectMatch) {
 	if row == nil {
 		return
 	}
 	assessment, ok := curatedAssessments[row.ReferenceID]
 	if !ok {
-		assessment, ok = baselineAssessmentForRow(*row)
+		assessment, ok = baselineAssessmentForRow(*row, advClasses, abilityMatches, itemMatches)
 		if !ok {
 			return
 		}
@@ -869,7 +955,7 @@ func isAllowedFinalStatus(value string) bool {
 
 func isAllowedGapClass(value string) bool {
 	switch value {
-	case "behavior", "missing_model", "content_schema", "surface_parity", "test_gap", "repo_doc_drift", "ambiguous_mapping":
+	case "behavior", "missing_model", "missing_primitive", "content_schema", "surface_parity", "test_gap", "repo_doc_drift", "ambiguous_mapping":
 		return true
 	default:
 		return false

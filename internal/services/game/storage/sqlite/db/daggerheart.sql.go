@@ -575,7 +575,7 @@ func (q *Queries) GetDaggerheartCharacterSheet(ctx context.Context, arg GetDagge
 
 const getDaggerheartCharacterState = `-- name: GetDaggerheartCharacterState :one
 
-SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest
+SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest, stat_modifiers_json
 FROM daggerheart_character_states
 WHERE campaign_id = ? AND character_id = ?
 `
@@ -604,6 +604,7 @@ func (q *Queries) GetDaggerheartCharacterState(ctx context.Context, arg GetDagge
 		&i.SubclassStateJson,
 		&i.CompanionStateJson,
 		&i.ImpenetrableUsedThisShortRest,
+		&i.StatModifiersJson,
 	)
 	return i, err
 }
@@ -2405,8 +2406,8 @@ func (q *Queries) PutDaggerheartCharacterProfile(ctx context.Context, arg PutDag
 
 const putDaggerheartCharacterState = `-- name: PutDaggerheartCharacterState :exec
 INSERT INTO daggerheart_character_states (
-    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest, stat_modifiers_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     hp = excluded.hp,
     hope = excluded.hope,
@@ -2419,7 +2420,8 @@ ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     class_state_json = excluded.class_state_json,
     subclass_state_json = excluded.subclass_state_json,
     companion_state_json = excluded.companion_state_json,
-    impenetrable_used_this_short_rest = excluded.impenetrable_used_this_short_rest
+    impenetrable_used_this_short_rest = excluded.impenetrable_used_this_short_rest,
+    stat_modifiers_json = excluded.stat_modifiers_json
 `
 
 type PutDaggerheartCharacterStateParams struct {
@@ -2437,6 +2439,7 @@ type PutDaggerheartCharacterStateParams struct {
 	SubclassStateJson             string `json:"subclass_state_json"`
 	CompanionStateJson            string `json:"companion_state_json"`
 	ImpenetrableUsedThisShortRest int64  `json:"impenetrable_used_this_short_rest"`
+	StatModifiersJson             string `json:"stat_modifiers_json"`
 }
 
 func (q *Queries) PutDaggerheartCharacterState(ctx context.Context, arg PutDaggerheartCharacterStateParams) error {
@@ -2455,6 +2458,7 @@ func (q *Queries) PutDaggerheartCharacterState(ctx context.Context, arg PutDagge
 		arg.SubclassStateJson,
 		arg.CompanionStateJson,
 		arg.ImpenetrableUsedThisShortRest,
+		arg.StatModifiersJson,
 	)
 	return err
 }
@@ -3069,7 +3073,7 @@ func (q *Queries) PutDaggerheartWeapon(ctx context.Context, arg PutDaggerheartWe
 
 const updateDaggerheartCharacterState = `-- name: UpdateDaggerheartCharacterState :exec
 UPDATE daggerheart_character_states
-SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, temporary_armor_json = ?, life_state = ?, class_state_json = ?, subclass_state_json = ?, companion_state_json = ?, impenetrable_used_this_short_rest = ?
+SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, temporary_armor_json = ?, life_state = ?, class_state_json = ?, subclass_state_json = ?, companion_state_json = ?, impenetrable_used_this_short_rest = ?, stat_modifiers_json = ?
 WHERE campaign_id = ? AND character_id = ?
 `
 
@@ -3086,6 +3090,7 @@ type UpdateDaggerheartCharacterStateParams struct {
 	SubclassStateJson             string `json:"subclass_state_json"`
 	CompanionStateJson            string `json:"companion_state_json"`
 	ImpenetrableUsedThisShortRest int64  `json:"impenetrable_used_this_short_rest"`
+	StatModifiersJson             string `json:"stat_modifiers_json"`
 	CampaignID                    string `json:"campaign_id"`
 	CharacterID                   string `json:"character_id"`
 }
@@ -3104,6 +3109,7 @@ func (q *Queries) UpdateDaggerheartCharacterState(ctx context.Context, arg Updat
 		arg.SubclassStateJson,
 		arg.CompanionStateJson,
 		arg.ImpenetrableUsedThisShortRest,
+		arg.StatModifiersJson,
 		arg.CampaignID,
 		arg.CharacterID,
 	)

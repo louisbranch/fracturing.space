@@ -77,6 +77,7 @@ var daggerheartCommandDefinitions = []command.Definition{
 	{Type: commandTypeEquipmentSwap, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateEquipmentSwapPayload},
 	{Type: commandTypeConsumableUse, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConsumableUsePayload},
 	{Type: commandTypeConsumableAcquire, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateConsumableAcquirePayload},
+	{Type: commandTypeStatModifierChange, Owner: command.OwnerSystem, ValidatePayload: validator.ValidateStatModifierChangePayload},
 }
 
 var daggerheartEventDefinitions = []event.Definition{
@@ -112,6 +113,7 @@ var daggerheartEventDefinitions = []event.Definition{
 	{Type: EventTypeEquipmentSwapped, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateEquipmentSwappedPayload, Intent: event.IntentProjectionAndReplay},
 	{Type: EventTypeConsumableUsed, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConsumableUsedPayload, Intent: event.IntentProjectionAndReplay},
 	{Type: EventTypeConsumableAcquired, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateConsumableAcquiredPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: EventTypeStatModifierChanged, Owner: event.OwnerSystem, ValidatePayload: validator.ValidateStatModifierChangedPayload, Intent: event.IntentProjectionAndReplay},
 }
 
 // commandTypesFromDefinitions returns all command types from

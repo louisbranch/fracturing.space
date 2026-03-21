@@ -75,6 +75,8 @@ const (
 	DaggerheartService_SwapEquipment_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/SwapEquipment"
 	DaggerheartService_UseConsumable_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/UseConsumable"
 	DaggerheartService_AcquireConsumable_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/AcquireConsumable"
+	DaggerheartService_ApplyCharacterStatePatch_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/ApplyCharacterStatePatch"
+	DaggerheartService_ApplyStatModifiers_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/ApplyStatModifiers"
 )
 
 // DaggerheartServiceClient is the client API for DaggerheartService service.
@@ -189,6 +191,10 @@ type DaggerheartServiceClient interface {
 	UseConsumable(ctx context.Context, in *DaggerheartUseConsumableRequest, opts ...grpc.CallOption) (*DaggerheartUseConsumableResponse, error)
 	// Acquire a consumable, incrementing its quantity (inventory).
 	AcquireConsumable(ctx context.Context, in *DaggerheartAcquireConsumableRequest, opts ...grpc.CallOption) (*DaggerheartAcquireConsumableResponse, error)
+	// Apply a direct character state patch (HP, Hope, Stress, Armor).
+	ApplyCharacterStatePatch(ctx context.Context, in *DaggerheartApplyCharacterStatePatchRequest, opts ...grpc.CallOption) (*DaggerheartApplyCharacterStatePatchResponse, error)
+	// Add or remove stat modifiers on a character (evasion, thresholds, etc.).
+	ApplyStatModifiers(ctx context.Context, in *DaggerheartApplyStatModifiersRequest, opts ...grpc.CallOption) (*DaggerheartApplyStatModifiersResponse, error)
 }
 
 type daggerheartServiceClient struct {
@@ -749,6 +755,26 @@ func (c *daggerheartServiceClient) AcquireConsumable(ctx context.Context, in *Da
 	return out, nil
 }
 
+func (c *daggerheartServiceClient) ApplyCharacterStatePatch(ctx context.Context, in *DaggerheartApplyCharacterStatePatchRequest, opts ...grpc.CallOption) (*DaggerheartApplyCharacterStatePatchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyCharacterStatePatchResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyCharacterStatePatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyStatModifiers(ctx context.Context, in *DaggerheartApplyStatModifiersRequest, opts ...grpc.CallOption) (*DaggerheartApplyStatModifiersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyStatModifiersResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyStatModifiers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DaggerheartServiceServer is the server API for DaggerheartService service.
 // All implementations must embed UnimplementedDaggerheartServiceServer
 // for forward compatibility.
@@ -861,6 +887,10 @@ type DaggerheartServiceServer interface {
 	UseConsumable(context.Context, *DaggerheartUseConsumableRequest) (*DaggerheartUseConsumableResponse, error)
 	// Acquire a consumable, incrementing its quantity (inventory).
 	AcquireConsumable(context.Context, *DaggerheartAcquireConsumableRequest) (*DaggerheartAcquireConsumableResponse, error)
+	// Apply a direct character state patch (HP, Hope, Stress, Armor).
+	ApplyCharacterStatePatch(context.Context, *DaggerheartApplyCharacterStatePatchRequest) (*DaggerheartApplyCharacterStatePatchResponse, error)
+	// Add or remove stat modifiers on a character (evasion, thresholds, etc.).
+	ApplyStatModifiers(context.Context, *DaggerheartApplyStatModifiersRequest) (*DaggerheartApplyStatModifiersResponse, error)
 	mustEmbedUnimplementedDaggerheartServiceServer()
 }
 
@@ -1035,6 +1065,12 @@ func (UnimplementedDaggerheartServiceServer) UseConsumable(context.Context, *Dag
 }
 func (UnimplementedDaggerheartServiceServer) AcquireConsumable(context.Context, *DaggerheartAcquireConsumableRequest) (*DaggerheartAcquireConsumableResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcquireConsumable not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyCharacterStatePatch(context.Context, *DaggerheartApplyCharacterStatePatchRequest) (*DaggerheartApplyCharacterStatePatchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyCharacterStatePatch not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyStatModifiers(context.Context, *DaggerheartApplyStatModifiersRequest) (*DaggerheartApplyStatModifiersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyStatModifiers not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) mustEmbedUnimplementedDaggerheartServiceServer() {}
 func (UnimplementedDaggerheartServiceServer) testEmbeddedByValue()                            {}
@@ -2047,6 +2083,42 @@ func _DaggerheartService_AcquireConsumable_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaggerheartService_ApplyCharacterStatePatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyCharacterStatePatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyCharacterStatePatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyCharacterStatePatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyCharacterStatePatch(ctx, req.(*DaggerheartApplyCharacterStatePatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyStatModifiers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyStatModifiersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyStatModifiers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyStatModifiers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyStatModifiers(ctx, req.(*DaggerheartApplyStatModifiersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DaggerheartService_ServiceDesc is the grpc.ServiceDesc for DaggerheartService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2273,6 +2345,14 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AcquireConsumable",
 			Handler:    _DaggerheartService_AcquireConsumable_Handler,
+		},
+		{
+			MethodName: "ApplyCharacterStatePatch",
+			Handler:    _DaggerheartService_ApplyCharacterStatePatch_Handler,
+		},
+		{
+			MethodName: "ApplyStatModifiers",
+			Handler:    _DaggerheartService_ApplyStatModifiers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

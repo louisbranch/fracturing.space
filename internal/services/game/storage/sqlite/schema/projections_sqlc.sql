@@ -185,6 +185,7 @@ CREATE TABLE IF NOT EXISTS daggerheart_character_states (
     subclass_state_json TEXT NOT NULL DEFAULT '{}',
     companion_state_json TEXT NOT NULL DEFAULT '{}',
     impenetrable_used_this_short_rest INTEGER NOT NULL DEFAULT 0,
+    stat_modifiers_json TEXT NOT NULL DEFAULT '[]',
     PRIMARY KEY (campaign_id, character_id),
     FOREIGN KEY (campaign_id, character_id)
         REFERENCES characters(campaign_id, id) ON DELETE CASCADE

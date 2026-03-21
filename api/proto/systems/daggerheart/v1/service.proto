@@ -167,6 +167,14 @@ service DaggerheartService {
 
   // Acquire a consumable, incrementing its quantity (inventory).
   rpc AcquireConsumable(DaggerheartAcquireConsumableRequest) returns (DaggerheartAcquireConsumableResponse);
+
+  // Apply a direct character state patch (HP, Hope, Stress, Armor).
+  rpc ApplyCharacterStatePatch(DaggerheartApplyCharacterStatePatchRequest)
+      returns (DaggerheartApplyCharacterStatePatchResponse);
+
+  // Add or remove stat modifiers on a character (evasion, thresholds, etc.).
+  rpc ApplyStatModifiers(DaggerheartApplyStatModifiersRequest)
+      returns (DaggerheartApplyStatModifiersResponse);
 }
 
 message DaggerheartApplyDamageRequest {
@@ -1497,4 +1505,38 @@ message DaggerheartAcquireConsumableRequest {
 
 message DaggerheartAcquireConsumableResponse {
   string character_id = 1;
+}
+
+message DaggerheartApplyCharacterStatePatchRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  optional int32 hp = 3;
+  optional int32 hope = 4;
+  optional int32 stress = 5;
+  optional int32 armor = 6;
+  string source = 7;
+  DaggerheartMutationSource mutation_source = 8;
+}
+
+message DaggerheartApplyCharacterStatePatchResponse {
+  string character_id = 1;
+  optional int32 hp = 2;
+  optional int32 hope = 3;
+  optional int32 stress = 4;
+  optional int32 armor = 5;
+}
+
+message DaggerheartApplyStatModifiersRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  repeated DaggerheartStatModifier add_modifiers = 3;
+  repeated string remove_modifier_ids = 4;
+  string source = 5;
+}
+
+message DaggerheartApplyStatModifiersResponse {
+  string character_id = 1;
+  repeated DaggerheartStatModifier active_modifiers = 2;
+  repeated DaggerheartStatModifier added = 3;
+  repeated DaggerheartStatModifier removed = 4;
 }

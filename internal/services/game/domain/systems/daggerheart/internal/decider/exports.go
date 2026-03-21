@@ -79,6 +79,7 @@ const (
 	CommandTypeEquipmentSwap                = commandTypeEquipmentSwap
 	CommandTypeConsumableUse                = commandTypeConsumableUse
 	CommandTypeConsumableAcquire            = commandTypeConsumableAcquire
+	CommandTypeStatModifierChange           = commandTypeStatModifierChange
 )
 
 const (
@@ -103,6 +104,7 @@ const (
 	RejectionCodeAdversaryCreateNoMutation         = rejectionCodeAdversaryCreateNoMutation
 	RejectionCodeAdversaryFeatureApplyNoMutation   = rejectionCodeAdversaryFeatureApplyNoMutation
 	RejectionCodeEnvironmentEntityCreateNoMutation = rejectionCodeEnvironmentEntityCreateNoMutation
+	RejectionCodeStatModifierChangeNoMutation      = rejectionCodeStatModifierChangeNoMutation
 	RejectionCodePayloadDecodeFailed               = rejectionCodePayloadDecodeFailed
 	RejectionCodeCommandTypeUnsupported            = rejectionCodeCommandTypeUnsupported
 

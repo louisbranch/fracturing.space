@@ -2909,3 +2909,121 @@ func (r *Runner) runMitigateDamageStep(ctx context.Context, state *scenarioState
 	}
 	return nil
 }
+
+func (r *Runner) runApplyStatModifierStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		return r.failf("apply_stat_modifier target is required")
+	}
+	characterID, err := actorID(state, name)
+	if err != nil {
+		return err
+	}
+
+	addMods := readMapSlice(step.Args, "add")
+	removeIDs := readStringSlice(step.Args, "remove_ids")
+	source := optionalString(step.Args, "source", "")
+	if len(addMods) == 0 && len(removeIDs) == 0 {
+		return r.failf("apply_stat_modifier requires add or remove_ids")
+	}
+
+	var protoAddMods []*daggerheartv1.DaggerheartStatModifier
+	for _, m := range addMods {
+		id := requiredString(m, "id")
+		if id == "" {
+			return r.failf("apply_stat_modifier add modifier id is required")
+		}
+		target := requiredString(m, "target")
+		if target == "" {
+			return r.failf("apply_stat_modifier add modifier target is required")
+		}
+		delta, ok := readInt(m, "delta")
+		if !ok {
+			return r.failf("apply_stat_modifier add modifier delta is required")
+		}
+		label := optionalString(m, "label", "")
+		modSource := optionalString(m, "source", source)
+		sourceID := optionalString(m, "source_id", "")
+
+		var clearTriggers []daggerheartv1.DaggerheartConditionClearTrigger
+		for _, triggerStr := range readStringSlice(m, "clear_triggers") {
+			trigger, err := parseStatModifierClearTrigger(triggerStr)
+			if err != nil {
+				return err
+			}
+			clearTriggers = append(clearTriggers, trigger)
+		}
+
+		protoAddMods = append(protoAddMods, &daggerheartv1.DaggerheartStatModifier{
+			Id:            id,
+			Target:        target,
+			Delta:         int32(delta),
+			Label:         label,
+			Source:        modSource,
+			SourceId:      sourceID,
+			ClearTriggers: clearTriggers,
+		})
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+
+	ctxWithSession := withSessionID(ctx, state.sessionID)
+	resp, err := r.env.daggerheartClient.ApplyStatModifiers(ctxWithSession, &daggerheartv1.DaggerheartApplyStatModifiersRequest{
+		CampaignId:        state.campaignID,
+		CharacterId:       characterID,
+		AddModifiers:      protoAddMods,
+		RemoveModifierIds: removeIDs,
+		Source:            source,
+	})
+	if err != nil {
+		return fmt.Errorf("apply_stat_modifier: %w", err)
+	}
+
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeStatModifierChanged); err != nil {
+		return err
+	}
+
+	// Validate expected active modifiers count if specified.
+	if expectedCount, ok := readInt(step.Args, "expect_active_count"); ok {
+		if len(resp.ActiveModifiers) != expectedCount {
+			return r.failf("apply_stat_modifier: expected %d active modifiers, got %d", expectedCount, len(resp.ActiveModifiers))
+		}
+	}
+
+	// Validate expected added count if specified.
+	if expectedAdded, ok := readInt(step.Args, "expect_added_count"); ok {
+		if len(resp.Added) != expectedAdded {
+			return r.failf("apply_stat_modifier: expected %d added, got %d", expectedAdded, len(resp.Added))
+		}
+	}
+
+	// Validate expected removed count if specified.
+	if expectedRemoved, ok := readInt(step.Args, "expect_removed_count"); ok {
+		if len(resp.Removed) != expectedRemoved {
+			return r.failf("apply_stat_modifier: expected %d removed, got %d", expectedRemoved, len(resp.Removed))
+		}
+	}
+
+	return nil
+}
+
+func parseStatModifierClearTrigger(value string) (daggerheartv1.DaggerheartConditionClearTrigger, error) {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "SHORT_REST":
+		return daggerheartv1.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST, nil
+	case "LONG_REST":
+		return daggerheartv1.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_LONG_REST, nil
+	case "SESSION_END":
+		return daggerheartv1.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SESSION_END, nil
+	case "DAMAGE_TAKEN":
+		return daggerheartv1.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_DAMAGE_TAKEN, nil
+	default:
+		return daggerheartv1.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_UNSPECIFIED, fmt.Errorf("invalid stat modifier clear trigger: %q", value)
+	}
+}

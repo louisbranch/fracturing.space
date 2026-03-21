@@ -201,6 +201,7 @@ type DaggerheartCharacterState struct {
 	SubclassStateJson             string `json:"subclass_state_json"`
 	CompanionStateJson            string `json:"companion_state_json"`
 	ImpenetrableUsedThisShortRest int64  `json:"impenetrable_used_this_short_rest"`
+	StatModifiersJson             string `json:"stat_modifiers_json"`
 }
 
 type DaggerheartClass struct {

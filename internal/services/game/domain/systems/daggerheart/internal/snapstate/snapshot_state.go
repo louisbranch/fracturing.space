@@ -21,6 +21,7 @@ type SnapshotState struct {
 	CharacterClassStates    map[ids.CharacterID]CharacterClassState
 	CharacterSubclassStates map[ids.CharacterID]CharacterSubclassState
 	CharacterCompanions     map[ids.CharacterID]CharacterCompanionState
+	CharacterStatModifiers  map[ids.CharacterID][]rules.StatModifierState
 	AdversaryStates         map[ids.AdversaryID]AdversaryState
 	EnvironmentStates       map[ids.EnvironmentEntityID]EnvironmentEntityState
 	CountdownStates         map[ids.CountdownID]CountdownState
@@ -45,6 +46,9 @@ func (s *SnapshotState) EnsureMaps() {
 	}
 	if s.CharacterCompanions == nil {
 		s.CharacterCompanions = make(map[ids.CharacterID]CharacterCompanionState)
+	}
+	if s.CharacterStatModifiers == nil {
+		s.CharacterStatModifiers = make(map[ids.CharacterID][]rules.StatModifierState)
 	}
 	if s.AdversaryStates == nil {
 		s.AdversaryStates = make(map[ids.AdversaryID]AdversaryState)
@@ -181,6 +185,7 @@ func NewSnapshotState(campaignID ids.CampaignID) SnapshotState {
 		CharacterClassStates:    make(map[ids.CharacterID]CharacterClassState),
 		CharacterSubclassStates: make(map[ids.CharacterID]CharacterSubclassState),
 		CharacterCompanions:     make(map[ids.CharacterID]CharacterCompanionState),
+		CharacterStatModifiers:  make(map[ids.CharacterID][]rules.StatModifierState),
 		AdversaryStates:         make(map[ids.AdversaryID]AdversaryState),
 		EnvironmentStates:       make(map[ids.EnvironmentEntityID]EnvironmentEntityState),
 		CountdownStates:         make(map[ids.CountdownID]CountdownState),

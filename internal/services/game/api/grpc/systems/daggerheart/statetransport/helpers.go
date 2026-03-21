@@ -3,6 +3,7 @@ package statetransport
 import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/conditiontransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/statmodifiertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
@@ -32,6 +33,7 @@ func CharacterStateToProto(state projectionstore.DaggerheartCharacterState) *pb.
 		CompanionState:                companionStateToProto(state.CompanionState),
 		SubclassState:                 subclassStateToProto(state.SubclassState),
 		ImpenetrableUsedThisShortRest: state.ImpenetrableUsedThisShortRest,
+		StatModifiers:                 statmodifiertransport.ProjectionStatModifiersToProto(state.StatModifiers),
 	}
 }
 

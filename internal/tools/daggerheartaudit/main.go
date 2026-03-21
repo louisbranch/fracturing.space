@@ -22,11 +22,11 @@ const usage = `daggerheartaudit generates and validates the Daggerheart referenc
 Usage:
   go run ./internal/tools/daggerheartaudit generate \
     -reference-root ~/code/daggerheart/reference-corpus/v1/reference \
-    -out-dir .agents/plans/daggerheart-reference-audit
+    -out-dir docs/reference/daggerheart-audit
 
   go run ./internal/tools/daggerheartaudit check \
     -reference-root ~/code/daggerheart/reference-corpus/v1/reference \
-    -out-dir .agents/plans/daggerheart-reference-audit
+    -out-dir docs/reference/daggerheart-audit
 `
 
 const (
@@ -187,7 +187,7 @@ func runGenerate(args []string) error {
 	fs.SetOutput(io.Discard)
 	rootFlag := fs.String("root", "", "repo root (defaults to locating go.mod)")
 	referenceRootFlag := fs.String("reference-root", defaultReferenceRoot(), "reference corpus root")
-	outDirFlag := fs.String("out-dir", ".agents/plans/daggerheart-reference-audit", "generated audit workspace")
+	outDirFlag := fs.String("out-dir", "docs/reference/daggerheart-audit", "generated audit workspace")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
 	}
@@ -203,7 +203,19 @@ func runGenerate(args []string) error {
 	if err != nil {
 		return err
 	}
-	rows := buildAuditMatrix(entries)
+	advClasses, err := classifyAdversaryEntries(referenceRoot, entries)
+	if err != nil {
+		return fmt.Errorf("classify adversary entries: %w", err)
+	}
+	abilityMatches, err := classifyAbilityEntries(root, entries)
+	if err != nil {
+		return fmt.Errorf("classify ability entries: %w", err)
+	}
+	itemMatches, err := classifyItemEntries(root)
+	if err != nil {
+		return fmt.Errorf("classify item entries: %w", err)
+	}
+	rows := buildAuditMatrix(entries, advClasses, abilityMatches, itemMatches)
 	clauses, err := buildRuleClauses(referenceRoot, entries)
 	if err != nil {
 		return err
@@ -264,7 +276,7 @@ func runCheck(args []string) error {
 	fs.SetOutput(io.Discard)
 	rootFlag := fs.String("root", "", "repo root (defaults to locating go.mod)")
 	referenceRootFlag := fs.String("reference-root", defaultReferenceRoot(), "reference corpus root")
-	outDirFlag := fs.String("out-dir", ".agents/plans/daggerheart-reference-audit", "generated audit workspace")
+	outDirFlag := fs.String("out-dir", "docs/reference/daggerheart-audit", "generated audit workspace")
 	requireFinalStatus := fs.Bool("require-final-status", false, "require every row to have a final status")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
@@ -393,7 +405,7 @@ func countsToSummary(values map[string]int) []summaryItem {
 	return items
 }
 
-func buildAuditMatrix(entries []corpusIndexEntry) []auditMatrixRow {
+func buildAuditMatrix(entries []corpusIndexEntry, advClasses map[string]adversaryEntryClass, abilityMatches map[string]abilityDomainCardMatch, itemMatches map[string]itemEffectMatch) []auditMatrixRow {
 	rows := make([]auditMatrixRow, 0, len(entries))
 	for _, entry := range entries {
 		row := auditMatrixRow{
@@ -409,7 +421,7 @@ func buildAuditMatrix(entries []corpusIndexEntry) []auditMatrixRow {
 			SurfaceApplicability: buildSurfaceApplicability(entry),
 			SemanticMatch:        "unknown",
 		}
-		applyCuratedAssessment(&row)
+		applyCuratedAssessment(&row, advClasses, abilityMatches, itemMatches)
 		rows = append(rows, row)
 	}
 	sort.Slice(rows, func(i, j int) bool {

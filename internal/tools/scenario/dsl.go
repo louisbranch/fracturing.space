@@ -455,6 +455,17 @@ func scenarioApplyCondition(state *lua.State) int {
 	return 0
 }
 
+func scenarioApplyStatModifier(state *lua.State) int {
+	handle := checkSystemHandle(state, "apply_stat_modifier")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "apply_stat_modifier", data)
+	return 0
+}
+
 func scenarioGroupAction(state *lua.State) int {
 	handle := checkSystemHandle(state, "group_action")
 	if handle == nil {

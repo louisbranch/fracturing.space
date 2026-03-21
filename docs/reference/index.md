@@ -21,6 +21,7 @@ Exact runtime and contributor-facing contracts.
 - Campaign authz policy details: [campaign-authorization-policy-reference.md](campaign-authorization-policy-reference.md)
 - Campaign session readiness: [campaign-session-readiness.md](campaign-session-readiness.md)
 - Daggerheart AI GM guidance: [daggerheart-ai-gm-guidance.md](daggerheart-ai-gm-guidance.md)
+- Daggerheart content expressibility: [daggerheart-content-expressibility.md](daggerheart-content-expressibility.md)
 - Daggerheart creation workflow: [daggerheart-creation-workflow.md](daggerheart-creation-workflow.md)
 - Daggerheart event timeline contract: [daggerheart-event-timeline-contract.md](daggerheart-event-timeline-contract.md)
 - Event system mechanics and troubleshooting: [event-system-reference.md](event-system-reference.md)

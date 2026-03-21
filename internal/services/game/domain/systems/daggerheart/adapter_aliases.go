@@ -27,6 +27,7 @@ var (
 	subclassStateFromProjection            = adapter.SubclassStateFromProjection
 	companionStateFromProjection           = adapter.CompanionStateFromProjection
 	conditionStatesToProjection            = adapter.ConditionStatesToProjection
+	statModifiersFromProjection            = adapter.StatModifiersFromProjection
 	toProjectionAdversaryFeatureStates     = adapter.ToProjectionAdversaryFeatureStates
 	toProjectionAdversaryPendingExperience = adapter.ToProjectionAdversaryPendingExperience
 )

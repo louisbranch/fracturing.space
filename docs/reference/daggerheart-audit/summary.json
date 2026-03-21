@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-03-15T16:21:15Z",
+  "generated_at": "2026-03-17T13:11:28Z",
   "reference_root": "/home/louis/code/daggerheart/reference-corpus/v1/reference",
   "entry_count": 786,
   "rule_clause_count": 367,
@@ -143,11 +143,11 @@
   "counts_by_final_status": [
     {
       "key": "covered",
-      "count": 345
+      "count": 774
     },
     {
       "key": "gap",
-      "count": 438
+      "count": 9
     },
     {
       "key": "not_applicable",

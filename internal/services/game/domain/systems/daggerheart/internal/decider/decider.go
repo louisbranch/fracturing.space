@@ -48,6 +48,7 @@ const (
 	commandTypeEquipmentSwap                command.Type = commandids.DaggerheartEquipmentSwap
 	commandTypeConsumableUse                command.Type = commandids.DaggerheartConsumableUse
 	commandTypeConsumableAcquire            command.Type = commandids.DaggerheartConsumableAcquire
+	commandTypeStatModifierChange           command.Type = commandids.DaggerheartStatModifierChange
 )
 
 // ── Rejection code constants ───────────────────────────────────────────
@@ -74,6 +75,7 @@ const (
 	rejectionCodeAdversaryCreateNoMutation         = "ADVERSARY_CREATE_NO_MUTATION"
 	rejectionCodeAdversaryFeatureApplyNoMutation   = "ADVERSARY_FEATURE_APPLY_NO_MUTATION"
 	rejectionCodeEnvironmentEntityCreateNoMutation = "ENVIRONMENT_ENTITY_CREATE_NO_MUTATION"
+	rejectionCodeStatModifierChangeNoMutation      = "STAT_MODIFIER_CHANGE_NO_MUTATION"
 	rejectionCodePayloadDecodeFailed               = "PAYLOAD_DECODE_FAILED"
 	rejectionCodeCommandTypeUnsupported            = "COMMAND_TYPE_UNSUPPORTED"
 )
@@ -130,6 +132,7 @@ var decisionHandlers = map[command.Type]decisionHandler{
 	commandTypeEquipmentSwap:                wrapDecisionWithoutState(decideEquipmentSwap),
 	commandTypeConsumableUse:                decideConsumableUse,
 	commandTypeConsumableAcquire:            decideConsumableAcquire,
+	commandTypeStatModifierChange:           decideStatModifierChange,
 }
 
 // DeciderHandledCommands returns the command types this decider handles.

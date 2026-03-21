@@ -37,4 +37,5 @@ const (
 	EventTypeEquipmentSwapped          event.Type = "sys.daggerheart.equipment_swapped"
 	EventTypeConsumableUsed            event.Type = "sys.daggerheart.consumable_used"
 	EventTypeConsumableAcquired        event.Type = "sys.daggerheart.consumable_acquired"
+	EventTypeStatModifierChanged       event.Type = "sys.daggerheart.stat_modifier_changed"
 )

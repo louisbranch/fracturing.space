@@ -26,7 +26,7 @@ func TestBuildAuditMatrixSeedsExpectedFields(t *testing.T) {
 			Kind:  "ability",
 			Path:  "abilities/rune-ward.md",
 		},
-	})
+	}, nil, nil, nil)
 
 	if len(rows) != 3 {
 		t.Fatalf("len(rows) = %d, want 3", len(rows))
@@ -41,11 +41,15 @@ func TestBuildAuditMatrixSeedsExpectedFields(t *testing.T) {
 	if rows[0].ReviewState != "reviewed" {
 		t.Fatalf("ability review_state = %q, want reviewed", rows[0].ReviewState)
 	}
+	// Unmatched ability (no match in abilityMatches map) → ambiguous gap.
 	if rows[0].SemanticMatch != "ambiguous" {
 		t.Fatalf("ability semantic match = %q, want ambiguous", rows[0].SemanticMatch)
 	}
 	if rows[0].FinalStatus != "gap" {
 		t.Fatalf("ability final_status = %q, want gap", rows[0].FinalStatus)
+	}
+	if rows[0].GapClass != "ambiguous_mapping" {
+		t.Fatalf("ability gap_class = %q, want ambiguous_mapping", rows[0].GapClass)
 	}
 	if len(rows[0].RepoMappings) == 0 {
 		t.Fatal("ability row missing repo mappings")

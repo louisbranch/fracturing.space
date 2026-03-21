@@ -866,6 +866,14 @@ func (f *fakeDaggerheartClient) AcquireConsumable(context.Context, *daggerheartv
 	return nil, unimplemented("AcquireConsumable")
 }
 
+func (f *fakeDaggerheartClient) ApplyCharacterStatePatch(context.Context, *daggerheartv1.DaggerheartApplyCharacterStatePatchRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyCharacterStatePatchResponse, error) {
+	return nil, unimplemented("ApplyCharacterStatePatch")
+}
+
+func (f *fakeDaggerheartClient) ApplyStatModifiers(context.Context, *daggerheartv1.DaggerheartApplyStatModifiersRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyStatModifiersResponse, error) {
+	return nil, unimplemented("ApplyStatModifiers")
+}
+
 // newTestRunner creates a Runner with pre-built clients for testing.
 // Production code should use NewRunner which dials the real gRPC server.
 func newTestRunner(env scenarioEnv, opts ...func(*Runner)) *Runner {
