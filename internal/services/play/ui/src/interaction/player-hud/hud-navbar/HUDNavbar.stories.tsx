@@ -12,7 +12,7 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component: "Top-level navigation bar for the v2 player HUD with three tab surfaces.",
+        component: "Top-level navigation bar for the player HUD with three tab surfaces.",
       },
     },
   },

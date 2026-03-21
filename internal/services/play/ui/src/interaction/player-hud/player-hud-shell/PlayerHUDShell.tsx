@@ -2,9 +2,9 @@ import { HUDNavbar } from "../hud-navbar/HUDNavbar";
 import { SideChatPanel } from "../chat/side-chat-panel/SideChatPanel";
 import type { PlayerHUDShellProps } from "./contract";
 
-// PlayerHUDShell is the v2 composition viewport with a top navbar and tab
-// content below. The side-chat tab renders the SideChatPanel; other tabs show
-// a placeholder until their content panels are built.
+// PlayerHUDShell is the player HUD composition viewport with a top navbar and
+// tab content below. The side-chat tab renders the SideChatPanel; other tabs
+// show a placeholder until their content panels are built.
 export function PlayerHUDShell({
   activeTab,
   onTabChange,
