@@ -48,7 +48,7 @@ export const OpenDiscussion: Story = {
     docs: {
       description: {
         story:
-          "The main active OOC state: terse status banner, paused-scene context card, discussion transcript, ready action, and the portrait rail with mixed participant statuses.",
+          "The main active OOC state: paused-scene context with the embedded status badge, the discussion transcript, ready action, and the portrait rail with mixed participant statuses.",
       },
     },
   },

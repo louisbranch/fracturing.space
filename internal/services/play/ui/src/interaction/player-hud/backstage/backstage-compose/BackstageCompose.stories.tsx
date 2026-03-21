@@ -2,14 +2,23 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { BackstageCompose } from "./BackstageCompose";
 
-function BackstageComposePreview({ disabled = false }: { disabled?: boolean }) {
+function BackstageComposePreview({
+  disabled = false,
+  viewerReady = false,
+}: {
+  disabled?: boolean;
+  viewerReady?: boolean;
+}) {
   const [draft, setDraft] = useState("");
+  const [ready, setReady] = useState(viewerReady);
   return (
     <BackstageCompose
       draft={draft}
+      viewerReady={ready}
       disabled={disabled}
       onDraftChange={setDraft}
       onSend={() => setDraft("")}
+      onReadyToggle={() => setReady((current) => !current)}
     />
   );
 }
@@ -20,13 +29,13 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component: "Backstage-specific compose bar for posting OOC notes, clarifications, and table coordination messages.",
+        component: "Backstage-owned compose surface for posting OOC notes and managing player readiness without reusing the Side Chat composer.",
       },
     },
   },
   decorators: [
     (Story) => (
-      <div className="flex h-32 w-96 flex-col justify-end">
+      <div className="flex h-48 w-[28rem] flex-col justify-end">
         <Story />
       </div>
     ),
@@ -48,4 +57,8 @@ export const Disabled: Story = {
       },
     },
   },
+};
+
+export const ViewerReady: Story = {
+  args: { viewerReady: true },
 };

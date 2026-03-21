@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { BackstageParticipant } from "../backstage/shared/contract";
+import type { OnStageState } from "../on-stage/shared/contract";
 import type { HUDNavbarTab, PlayerHUDState } from "../shared/contract";
 import { PlayerHUDShell } from "./PlayerHUDShell";
 
@@ -9,6 +10,12 @@ type PlayerHUDShellPreviewProps = {
 
 export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewProps) {
   const [activeTab, setActiveTab] = useState<HUDNavbarTab>(initialState.activeTab);
+  const initialOnStageDraft =
+    initialState.onStage.slots.find(
+      (slot) => slot.participantId === initialState.onStage.viewerParticipantId,
+    )?.body ?? "";
+  const [onStage, setOnStage] = useState(initialState.onStage);
+  const [onStageDraft, setOnStageDraft] = useState(initialOnStageDraft);
   const [backstage, setBackstage] = useState(initialState.backstage);
   const [backstageDraft, setBackstageDraft] = useState("");
   const [draft, setDraft] = useState("");
@@ -61,10 +68,104 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
     setBackstageDraft("");
   }
 
+  function handleOnStageWrite(yielded: boolean, nextMode: OnStageState["mode"]) {
+    const body = onStageDraft.trim();
+    if (body.length === 0 && !yielded) {
+      return;
+    }
+
+    setOnStage((current) => {
+      const nextSlots = [...current.slots];
+      const index = nextSlots.findIndex(
+        (slot) => slot.participantId === current.viewerParticipantId,
+      );
+      const existing = index >= 0 ? nextSlots[index] : undefined;
+      const participant = current.participants.find(
+        (entry) => entry.id === current.viewerParticipantId,
+      );
+      const nextSlot = {
+        id: existing?.id ?? `${current.viewerParticipantId}-shell-preview`,
+        participantId: current.viewerParticipantId,
+        characters:
+          existing?.characters.length
+            ? existing.characters
+            : participant?.characters ?? [],
+        body: body || existing?.body,
+        updatedAt: new Date().toISOString(),
+        yielded,
+        reviewState: yielded ? "under-review" : "open",
+      } as const;
+
+      if (index >= 0) {
+        nextSlots[index] = nextSlot;
+      } else {
+        nextSlots.unshift(nextSlot);
+      }
+
+      return {
+        ...current,
+        mode: nextMode,
+        slots: nextSlots,
+        participants: current.participants.map((entry) =>
+          entry.id === current.viewerParticipantId
+            ? {
+                ...entry,
+                railStatus: yielded
+                  ? "yielded"
+                  : nextMode === "changes-requested"
+                    ? "changes-requested"
+                    : "active",
+              }
+            : entry,
+        ),
+        viewerControls: {
+          ...current.viewerControls,
+          canSubmit: !yielded && nextMode === "acting",
+          canSubmitAndYield: !yielded && (nextMode === "acting" || nextMode === "changes-requested"),
+          canYield: !yielded && nextMode === "acting",
+          canUnyield: yielded,
+          disabledReason: yielded
+            ? "You have already yielded. Unyield if you need to revise before the beat closes."
+            : current.viewerControls.disabledReason,
+        },
+      };
+    });
+  }
+
   return (
     <PlayerHUDShell
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      onStage={onStage}
+      onStageDraft={onStageDraft}
+      onOnStageDraftChange={setOnStageDraft}
+      onOnStageSubmit={() => handleOnStageWrite(false, "acting")}
+      onOnStageSubmitAndYield={() => handleOnStageWrite(true, "yielded-waiting")}
+      onOnStageYield={() => handleOnStageWrite(true, "yielded-waiting")}
+      onOnStageUnyield={() =>
+        setOnStage((current) => ({
+          ...current,
+          mode: "acting",
+          slots: current.slots.map((slot) =>
+            slot.participantId === current.viewerParticipantId
+              ? { ...slot, yielded: false, reviewState: "open" }
+              : slot,
+          ),
+          participants: current.participants.map((entry) =>
+            entry.id === current.viewerParticipantId
+              ? { ...entry, railStatus: "active" }
+              : entry,
+          ),
+          viewerControls: {
+            ...current.viewerControls,
+            canSubmit: true,
+            canSubmitAndYield: true,
+            canYield: true,
+            canUnyield: false,
+            disabledReason: undefined,
+          },
+        }))
+      }
       backstage={backstage}
       backstageDraft={backstageDraft}
       onBackstageDraftChange={setBackstageDraft}

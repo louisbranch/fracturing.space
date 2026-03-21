@@ -1,21 +1,64 @@
-import { ChatCompose } from "../../chat/chat-compose/ChatCompose";
+import type { KeyboardEvent } from "react";
 import type { BackstageComposeProps } from "./contract";
 
 export function BackstageCompose({
   draft,
+  viewerReady,
   disabled,
   onDraftChange,
   onSend,
+  onReadyToggle,
 }: BackstageComposeProps) {
+  const trimmedDraft = draft.trim();
+  const canSend = !disabled && trimmedDraft.length > 0;
+  const readyLabel = viewerReady ? "Clear Ready" : "Mark Ready";
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (canSend) {
+        onSend();
+      }
+    }
+  }
+
   return (
-    <ChatCompose
-      draft={draft}
-      disabled={disabled}
-      onDraftChange={onDraftChange}
-      onSend={onSend}
-      ariaLabel="Backstage message input"
-      placeholder={disabled ? "Waiting for OOC to open..." : "Add an OOC note, rules question, or clarification..."}
-      sendLabel="Post"
-    />
+    <section aria-label="Backstage actions" className="border-t border-base-300/70 bg-base-100/90 px-4 py-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end">
+        <textarea
+          aria-label="Backstage message input"
+          className="textarea textarea-bordered min-h-20 w-full flex-1 resize-y leading-snug"
+          value={draft}
+          disabled={disabled}
+          onChange={(event) => onDraftChange(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Add an OOC note, rules question, or clarification..."
+        />
+
+        <div
+          aria-label="Backstage action controls"
+          className="flex shrink-0 justify-end md:self-stretch"
+        >
+          <div className="join join-vertical w-full md:w-40">
+            <button
+              type="button"
+              className="btn join-item btn-primary btn-soft w-full"
+              disabled={!canSend}
+              onClick={onSend}
+            >
+              Post
+            </button>
+            <button
+              type="button"
+              className={`btn join-item w-full ${viewerReady ? "btn-warning btn-soft" : "btn-secondary btn-soft"}`}
+              disabled={disabled}
+              onClick={onReadyToggle}
+            >
+              {readyLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

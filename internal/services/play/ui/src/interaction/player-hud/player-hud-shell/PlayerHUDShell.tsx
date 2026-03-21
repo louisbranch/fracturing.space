@@ -3,6 +3,8 @@ import { BackstageParticipantRail } from "../backstage/backstage-participant-rai
 import { HUDNavbar } from "../hud-navbar/HUDNavbar";
 import { SideChatPanel } from "../chat/side-chat-panel/SideChatPanel";
 import { SideChatParticipantRail } from "../chat/side-chat-participant-rail/SideChatParticipantRail";
+import { OnStagePanel } from "../on-stage/on-stage-panel/OnStagePanel";
+import { OnStageParticipantRail } from "../on-stage/on-stage-participant-rail/OnStageParticipantRail";
 import type { PlayerHUDShellProps } from "./contract";
 
 // PlayerHUDShell is the player HUD composition viewport with a top navbar and
@@ -11,6 +13,13 @@ import type { PlayerHUDShellProps } from "./contract";
 export function PlayerHUDShell({
   activeTab,
   onTabChange,
+  onStage,
+  onStageDraft,
+  onOnStageDraftChange,
+  onOnStageSubmit,
+  onOnStageSubmitAndYield,
+  onOnStageYield,
+  onOnStageUnyield,
   backstage,
   backstageDraft,
   onBackstageDraftChange,
@@ -26,12 +35,17 @@ export function PlayerHUDShell({
       participants={sideChat.participants}
       viewerParticipantId={sideChat.viewerParticipantId}
     />
+  ) : activeTab === "on-stage" ? (
+    <OnStageParticipantRail
+      participants={onStage.participants}
+      viewerParticipantId={onStage.viewerParticipantId}
+    />
   ) : (
     <BackstageParticipantRail
       participants={backstage.participants}
       viewerParticipantId={backstage.viewerParticipantId}
       gmAuthorityParticipantId={backstage.gmAuthorityParticipantId}
-      ariaLabel={activeTab === "on-stage" ? "On-stage participants" : "Backstage participants"}
+      ariaLabel="Backstage participants"
     />
   );
 
@@ -41,7 +55,17 @@ export function PlayerHUDShell({
 
       <div className="flex min-h-0 flex-1">
         <div className="flex min-h-0 flex-1">
-          {activeTab === "backstage" ? (
+          {activeTab === "on-stage" ? (
+            <OnStagePanel
+              state={onStage}
+              draft={onStageDraft}
+              onDraftChange={onOnStageDraftChange}
+              onSubmit={onOnStageSubmit}
+              onSubmitAndYield={onOnStageSubmitAndYield}
+              onYield={onOnStageYield}
+              onUnyield={onOnStageUnyield}
+            />
+          ) : activeTab === "backstage" ? (
             <BackstagePanel
               state={backstage}
               draft={backstageDraft}
@@ -57,11 +81,7 @@ export function PlayerHUDShell({
               onSend={onSideChatSend}
             />
           ) : (
-            <div className="m-4 flex flex-1 items-center justify-center rounded-box border border-dashed border-base-300/70 bg-base-200/25">
-              <span className="text-sm text-base-content/50">
-                {activeTab} — content coming soon
-              </span>
-            </div>
+            <div />
           )}
         </div>
         {participantRail}

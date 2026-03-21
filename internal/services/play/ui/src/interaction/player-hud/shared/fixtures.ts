@@ -1,4 +1,9 @@
 import { backstageFixtureCatalog, backstageParticipants } from "../backstage/shared/fixtures";
+import {
+  onStageCharacterCatalog,
+  onStageFixtureCatalog,
+  onStageParticipants,
+} from "../on-stage/shared/fixtures";
 import type { PlayerHUDState, SideChatMessage, SideChatParticipant, SideChatState } from "./contract";
 
 export const sideChatParticipants: SideChatParticipant[] = [
@@ -32,9 +37,30 @@ export const playerHUDFixtureCatalog: Record<
   "onStage" | "backstage" | "sideChat",
   PlayerHUDState
 > = {
-  onStage: { activeTab: "on-stage", backstage: backstageFixtureCatalog.dormant, sideChat: sideChatState },
-  backstage: { activeTab: "backstage", backstage: backstageFixtureCatalog.openDiscussion, sideChat: sideChatState },
-  sideChat: { activeTab: "side-chat", backstage: backstageFixtureCatalog.waitingOnGM, sideChat: sideChatState },
+  onStage: {
+    activeTab: "on-stage",
+    onStage: onStageFixtureCatalog.viewerPosted,
+    backstage: backstageFixtureCatalog.dormant,
+    sideChat: sideChatState,
+  },
+  backstage: {
+    activeTab: "backstage",
+    onStage: onStageFixtureCatalog.waitingOnGM,
+    backstage: backstageFixtureCatalog.openDiscussion,
+    sideChat: sideChatState,
+  },
+  sideChat: {
+    activeTab: "side-chat",
+    onStage: onStageFixtureCatalog.aiThinking,
+    backstage: backstageFixtureCatalog.waitingOnGM,
+    sideChat: sideChatState,
+  },
 };
 
-export { backstageFixtureCatalog, backstageParticipants };
+export {
+  backstageFixtureCatalog,
+  backstageParticipants,
+  onStageCharacterCatalog,
+  onStageFixtureCatalog,
+  onStageParticipants,
+};
