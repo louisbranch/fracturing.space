@@ -1,5 +1,5 @@
-// HUDNavbarTab identifies the three top-level navigation surfaces in the v2
-// player HUD.
+// HUDNavbarTab identifies the three top-level navigation surfaces in the player
+// HUD.
 export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat";
 
 // SideChatParticipant represents a user in the side chat conversation.
@@ -24,7 +24,7 @@ export type SideChatState = {
   messages: SideChatMessage[];
 };
 
-// PlayerHUDState is the minimal top-level state for the v2 player HUD shell.
+// PlayerHUDState is the minimal top-level state for the player HUD shell.
 export type PlayerHUDState = {
   activeTab: HUDNavbarTab;
   sideChat: SideChatState;

@@ -21,9 +21,8 @@ development:
 
 The current catalog includes both:
 
-- interaction workflow slices for active-play concepts such as scenes, phases,
-  acting sets, player slots, OOC overlays, AI turn state, and the composition
-  shell
+- interaction workflow slices for the player HUD shell, navbar, and side-chat
+  surfaces
 - Daggerheart reference surfaces such as the character card and character sheet
 
 ## Run Storybook
@@ -59,10 +58,7 @@ The Daggerheart reference slices live under:
 
 The active interaction workflow slices live under:
 
-- `internal/services/play/ui/src/interaction/player-hud/` (v2 — navbar shell)
-- `internal/services/play/ui/src/interaction/legacy-player-hud/` (v1 — composer-focused)
-- older interaction workflow slices that are pending removal now live under
-  `internal/services/play/ui/src/interaction/legacy/`
+- `internal/services/play/ui/src/interaction/player-hud/`
 
 Keep concerns separate inside each component slice:
 
@@ -119,8 +115,7 @@ When adding the next isolated component:
 
 1. create a system-owned component slice with its own contract, fixtures, and stories
    for Daggerheart reference surfaces, or an interaction-owned slice under
-   `src/interaction/player-hud/` for active HUD workflow surfaces (v2),
-   or `src/interaction/legacy-player-hud/` for v1 surfaces pending migration
+   `src/interaction/player-hud/` for active HUD workflow surfaces
 2. add Storybook stories that clearly separate overview, variants, and fixtures
 3. write component tests against the exported contract, not runtime internals
 4. remove temporary or superseded UI code instead of preserving compatibility by default
