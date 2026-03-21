@@ -22,7 +22,7 @@ type Config struct {
 func New(config Config) Module {
 	service := config.Service
 	if service == nil {
-		service = discoveryapp.NewService(nil)
+		service = discoveryapp.NewService(nil, nil)
 	}
 	return Module{service: service}
 }

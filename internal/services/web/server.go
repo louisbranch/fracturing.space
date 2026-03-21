@@ -43,19 +43,11 @@ type Server struct {
 	logger     *slog.Logger
 }
 
-// composeHandler builds the root web handler from validated startup config and
-// keeps the test-only partial-dependency path explicit.
-func composeHandler(cfg Config, allowPartialDependencies bool) (http.Handler, error) {
-	if !allowPartialDependencies {
-		if err := validateRequiredDependencyBundle(cfg.Dependencies); err != nil {
-			return nil, err
-		}
-	}
-
-	deps := DependencyBundle{}
-	if cfg.Dependencies != nil {
-		deps = *cfg.Dependencies
-	}
+// composeHandler builds the root web handler from an explicit dependency
+// bundle. Production constructors validate required dependencies before
+// calling this helper; package tests may opt into partial dependency bundles
+// through test-only helpers.
+func composeHandler(cfg Config, deps DependencyBundle) (http.Handler, error) {
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -64,6 +56,7 @@ func composeHandler(cfg Config, allowPartialDependencies bool) (http.Handler, er
 	principalResolver := principal.New(deps.Principal)
 	h, err := composition.ComposeAppHandler(composition.ComposeInput{
 		Principal:           principalResolver,
+		Logger:              logger,
 		ModuleDependencies:  deps.Modules,
 		PlayHTTPAddr:        cfg.PlayHTTPAddr,
 		PlayLaunchGrant:     cfg.PlayLaunchGrant,
@@ -83,16 +76,15 @@ func composeHandler(cfg Config, allowPartialDependencies bool) (http.Handler, er
 	), nil
 }
 
-// newServer validates listener config and wraps the composed root handler in an
-// HTTP server with shared lifecycle defaults.
-func newServer(cfg Config, allowPartialDependencies bool) (*Server, error) {
+// newServer wraps an already-composed root handler in an HTTP server with
+// shared lifecycle defaults.
+func newServer(cfg Config, handler http.Handler) (*Server, error) {
 	httpAddr := strings.TrimSpace(cfg.HTTPAddr)
 	if httpAddr == "" {
 		return nil, errors.New("http address is required")
 	}
-	handler, err := composeHandler(cfg, allowPartialDependencies)
-	if err != nil {
-		return nil, fmt.Errorf("compose web handler: %w", err)
+	if handler == nil {
+		return nil, errors.New("web handler is required")
 	}
 	return &Server{
 		httpAddr: httpAddr,
@@ -105,14 +97,40 @@ func newServer(cfg Config, allowPartialDependencies bool) (*Server, error) {
 	}, nil
 }
 
+// copyDependencyBundle returns a value copy of the configured dependency
+// bundle, or the zero bundle when no dependencies were supplied.
+func copyDependencyBundle(bundle *DependencyBundle) DependencyBundle {
+	if bundle == nil {
+		return DependencyBundle{}
+	}
+	return *bundle
+}
+
+// requiredDependencyBundle validates and copies the production dependency
+// bundle before handler composition.
+func requiredDependencyBundle(bundle *DependencyBundle) (DependencyBundle, error) {
+	if err := validateRequiredDependencyBundle(bundle); err != nil {
+		return DependencyBundle{}, err
+	}
+	return copyDependencyBundle(bundle), nil
+}
+
 // NewHandler builds a root handler from default module registry groups.
 func NewHandler(cfg Config) (http.Handler, error) {
-	return composeHandler(cfg, false)
+	deps, err := requiredDependencyBundle(cfg.Dependencies)
+	if err != nil {
+		return nil, err
+	}
+	return composeHandler(cfg, deps)
 }
 
 // NewServer validates config and constructs a web server.
 func NewServer(_ context.Context, cfg Config) (*Server, error) {
-	return newServer(cfg, false)
+	handler, err := NewHandler(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return newServer(cfg, handler)
 }
 
 // loggerOrDefault normalizes nil logger inputs to the process default logger.

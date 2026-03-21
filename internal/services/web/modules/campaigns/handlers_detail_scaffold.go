@@ -6,8 +6,59 @@ import (
 
 	"github.com/a-h/templ"
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 )
+
+// campaignPageHandlerServices groups the shared workspace shell dependencies
+// used by multiple campaign detail surfaces.
+type campaignPageHandlerServices struct {
+	workspace     campaignapp.CampaignWorkspaceService
+	sessionReads  campaignapp.CampaignSessionReadService
+	authorization campaignapp.CampaignAuthorizationService
+}
+
+// campaignDetailHandlers owns the shared workspace-shell route support used by
+// detail, creation, session, and invite surfaces.
+type campaignDetailHandlers struct {
+	campaignRouteSupport
+	pages campaignPageHandlerServices
+}
+
+// newCampaignPageHandlerServices keeps shared detail-page dependencies explicit
+// at the campaign-page seam.
+func newCampaignPageHandlerServices(config pageServiceConfig) campaignPageHandlerServices {
+	return campaignPageHandlerServices{
+		workspace:     campaignapp.NewWorkspaceService(config.Workspace),
+		sessionReads:  campaignapp.NewSessionReadService(config.SessionRead),
+		authorization: campaignapp.NewAuthorizationService(config.Authorization),
+	}
+}
+
+// newCampaignDetailHandlers assembles shared detail-route support for the
+// surfaces that render inside one campaign workspace shell.
+func newCampaignDetailHandlers(support campaignRouteSupport, pages campaignPageHandlerServices) campaignDetailHandlers {
+	return campaignDetailHandlers{
+		campaignRouteSupport: support,
+		pages:                pages,
+	}
+}
+
+// missingCampaignPageHandlerServices reports which shared page-loading
+// dependencies are absent before any detail route owner is constructed.
+func missingCampaignPageHandlerServices(services campaignPageHandlerServices) []string {
+	missing := []string{}
+	if services.workspace == nil {
+		missing = append(missing, "page-workspace")
+	}
+	if services.sessionReads == nil {
+		missing = append(missing, "page-sessions")
+	}
+	if services.authorization == nil {
+		missing = append(missing, "page-authorization")
+	}
+	return missing
+}
 
 // --- Campaign detail route handlers ---
 

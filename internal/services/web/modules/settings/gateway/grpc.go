@@ -68,28 +68,3 @@ func NewAIGateway(credentialClient CredentialClient, agentClient AgentClient) GR
 		AgentClient:      agentClient,
 	}
 }
-
-// ProfileGatewayHealthy reports whether the profile surface can serve requests.
-func (g GRPCGateway) ProfileGatewayHealthy() bool {
-	return g.SocialClient != nil
-}
-
-// LocaleGatewayHealthy reports whether the locale surface can serve requests.
-func (g GRPCGateway) LocaleGatewayHealthy() bool {
-	return g.AccountClient != nil
-}
-
-// SecurityGatewayHealthy reports whether the security surface can serve requests.
-func (g GRPCGateway) SecurityGatewayHealthy() bool {
-	return g.PasskeyClient != nil
-}
-
-// AIKeyGatewayHealthy reports whether the AI keys surface can serve requests.
-func (g GRPCGateway) AIKeyGatewayHealthy() bool {
-	return g.CredentialClient != nil
-}
-
-// AIAgentGatewayHealthy reports whether the AI agents surface can serve requests.
-func (g GRPCGateway) AIAgentGatewayHealthy() bool {
-	return g.CredentialClient != nil && g.AgentClient != nil
-}

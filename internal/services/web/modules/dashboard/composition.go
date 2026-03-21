@@ -19,6 +19,7 @@ import (
 // registry package.
 type CompositionConfig struct {
 	Base          modulehandler.Base
+	Logger        *slog.Logger
 	UserHubClient dashboardgateway.UserHubClient
 	StatusClient  statusv1.StatusServiceClient
 }
@@ -26,7 +27,8 @@ type CompositionConfig struct {
 // ProtectedSurfaceOptions carries the cross-cutting inputs the protected registry is
 // allowed to pass into dashboard composition.
 type ProtectedSurfaceOptions struct {
-	Base modulehandler.Base
+	Base   modulehandler.Base
+	Logger *slog.Logger
 }
 
 // Compose builds the production dashboard module from area-owned startup
@@ -36,8 +38,8 @@ func Compose(config CompositionConfig) module.Module {
 	return New(Config{
 		Service: dashboardapp.NewService(
 			gateway,
-			nil,
-			StatusHealthProvider(config.StatusClient, nil),
+			config.Logger,
+			StatusHealthProvider(config.StatusClient, config.Logger),
 		),
 		Base: config.Base,
 	})
@@ -53,6 +55,7 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) module
 func newCompositionConfig(options ProtectedSurfaceOptions, deps Dependencies) CompositionConfig {
 	return CompositionConfig{
 		Base:          options.Base,
+		Logger:        options.Logger,
 		UserHubClient: deps.UserHubClient,
 		StatusClient:  deps.StatusClient,
 	}
@@ -63,20 +66,18 @@ const statusHealthTimeout = 3 * time.Second
 
 // StatusHealthProvider returns a HealthProvider that queries the status service
 // on each dashboard load. Returns nil when no status client is available.
-// Nil logger uses slog.Default().
 func StatusHealthProvider(client statusv1.StatusServiceClient, logger *slog.Logger) dashboardapp.HealthProvider {
 	if client == nil {
 		return nil
-	}
-	if logger == nil {
-		logger = slog.Default()
 	}
 	return func(ctx context.Context) []dashboardapp.ServiceHealthEntry {
 		ctx, cancel := context.WithTimeout(ctx, statusHealthTimeout)
 		defer cancel()
 		resp, err := client.GetSystemStatus(ctx, &statusv1.GetSystemStatusRequest{})
 		if err != nil {
-			logger.Warn("dashboard status health query failed", "error", err)
+			if logger != nil {
+				logger.Warn("dashboard status health query failed", "error", err)
+			}
 			return nil
 		}
 		services := resp.GetServices()

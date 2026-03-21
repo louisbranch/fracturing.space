@@ -10,8 +10,51 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
 
+type serviceConfigs struct {
+	Page         pageServiceConfig
+	Catalog      catalogServiceConfig
+	Starter      starterServiceConfig
+	Overview     overviewServiceConfig
+	Participants participantServiceConfig
+	Characters   characterServiceConfig
+	Sessions     sessionServiceConfig
+	Invites      inviteServiceConfig
+}
+
 func newTestCampaignSystems(workflows ...campaignworkflow.Registry) campaignSystemRegistry {
 	return newCampaignSystemsFromWorkflows(workflows...)
+}
+
+func newHandlerServices(config serviceConfigs) handlerServices {
+	return handlerServices{
+		Page:         newCampaignPageHandlerServices(config.Page),
+		Catalog:      newCatalogHandlerServices(config.Catalog),
+		Starter:      newStarterHandlerServices(config.Starter),
+		Overview:     newOverviewHandlerServices(config.Overview),
+		Participants: newParticipantHandlerServices(config.Participants),
+		Characters:   newCharacterHandlerServices(config.Characters),
+		Creation:     newCampaignCreationAppServices(config.Characters),
+		Sessions:     newSessionHandlerServices(config.Sessions, config.Page.Authorization),
+		Invites:      newInviteHandlerServices(config.Invites),
+	}
+}
+
+func newHandlersFromConfig(
+	config serviceConfigs,
+	base modulehandler.Base,
+	sync DashboardSync,
+	workflows ...campaignworkflow.Registry,
+) handlers {
+	handlerSet, err := newHandlers(handlersConfig{
+		Services: newHandlerServices(config),
+		Base:     base,
+		Sync:     sync,
+		Systems:  newCampaignSystemsFromWorkflows(workflows...),
+	})
+	if err != nil {
+		panic(err)
+	}
+	return handlerSet
 }
 
 type testGatewayBundle interface {

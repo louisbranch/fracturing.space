@@ -13,6 +13,45 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
+// catalogHandlerServices groups campaign list and creation behavior.
+type catalogHandlerServices struct {
+	campaigns campaignapp.CampaignCatalogService
+}
+
+// catalogHandlers owns the campaign catalog and creation transport surface.
+type catalogHandlers struct {
+	campaignRouteSupport
+	catalog catalogHandlerServices
+	systems campaignSystemRegistry
+}
+
+// newCatalogHandlerServices keeps catalog transport dependencies owned by the
+// list/create surface instead of the root constructor.
+func newCatalogHandlerServices(config catalogServiceConfig) catalogHandlerServices {
+	return catalogHandlerServices{
+		campaigns: campaignapp.NewCatalogService(config.Catalog),
+	}
+}
+
+// newCatalogHandlers assembles the catalog route-owner handler from support,
+// services, and installed systems.
+func newCatalogHandlers(support campaignRouteSupport, services catalogHandlerServices, systems campaignSystemRegistry) catalogHandlers {
+	return catalogHandlers{
+		campaignRouteSupport: support,
+		catalog:              services,
+		systems:              systems,
+	}
+}
+
+// missingCatalogHandlerServices reports whether the catalog list/create
+// surface has the campaigns service it needs before mounting routes.
+func missingCatalogHandlerServices(services catalogHandlerServices) []string {
+	if services.campaigns == nil {
+		return []string{"catalog"}
+	}
+	return nil
+}
+
 // --- Headers ---
 
 // campaignsListHeader builds the campaigns list header and primary creation action.

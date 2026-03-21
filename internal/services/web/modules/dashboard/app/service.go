@@ -22,9 +22,6 @@ func NewService(gateway Gateway, logger *slog.Logger, health HealthProvider) Ser
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
-	if logger == nil {
-		logger = slog.Default()
-	}
 	return service{readGateway: gateway, logger: logger, healthProvider: health}
 }
 
@@ -44,20 +41,24 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	}
 	snapshot, err := s.readGateway.LoadDashboard(ctx, userID, locale)
 	if err != nil {
-		s.logger.Warn("dashboard unavailable", "user_id", userID, "error", err)
+		if s.logger != nil {
+			s.logger.Warn("dashboard unavailable", "user_id", userID, "error", err)
+		}
 		return DashboardView{
 			DataStatus:    DashboardDataStatusUnavailable,
 			ServiceHealth: s.loadHealth(ctx),
 		}, nil
 	}
 	if snapshot.Freshness != DashboardFreshnessUnspecified || snapshot.CacheHit || !snapshot.GeneratedAt.IsZero() {
-		s.logger.Info(
-			"dashboard freshness",
-			"freshness", snapshot.Freshness,
-			"cache_hit", snapshot.CacheHit,
-			"generated_at", snapshot.GeneratedAt.UTC().Format(time.RFC3339),
-			"user_id", userID,
-		)
+		if s.logger != nil {
+			s.logger.Info(
+				"dashboard freshness",
+				"freshness", snapshot.Freshness,
+				"cache_hit", snapshot.CacheHit,
+				"generated_at", snapshot.GeneratedAt.UTC().Format(time.RFC3339),
+				"user_id", userID,
+			)
+		}
 	}
 	activeSessions := []ActiveSessionItem(nil)
 	if snapshot.ActiveSessionsAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameSessions) {
@@ -74,7 +75,9 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 		campaignStartNudgesMore = snapshot.CampaignStartNudgesHasMore
 	}
 	if HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile) {
-		s.logger.Warn("dashboard degraded dependency", "dependency", DegradedDependencySocialProfile, "user_id", userID)
+		if s.logger != nil {
+			s.logger.Warn("dashboard degraded dependency", "dependency", DegradedDependencySocialProfile, "user_id", userID)
+		}
 	}
 	health := s.loadHealth(ctx)
 	showAdventureBlock := false

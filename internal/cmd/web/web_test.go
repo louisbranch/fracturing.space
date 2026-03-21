@@ -334,7 +334,7 @@ func TestDependencyAddressBindingsCoverStartupDescriptors(t *testing.T) {
 	}
 
 	extras := make([]string, 0)
-	for name := range dependencyAddressBindings {
+	for _, name := range dependencyAddressBindingNames() {
 		name = strings.TrimSpace(name)
 		if name == "" {
 			continue

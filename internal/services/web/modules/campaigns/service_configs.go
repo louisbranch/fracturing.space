@@ -59,32 +59,3 @@ type inviteServiceConfig struct {
 	ParticipantRead campaignapp.ParticipantReadServiceConfig
 	Authorization   campaignapp.AuthorizationGateway
 }
-
-// serviceConfigs groups campaigns app config by owned route surface instead of
-// one root constructor bag.
-type serviceConfigs struct {
-	Page         pageServiceConfig
-	Catalog      catalogServiceConfig
-	Starter      starterServiceConfig
-	Overview     overviewServiceConfig
-	Participants participantServiceConfig
-	Characters   characterServiceConfig
-	Sessions     sessionServiceConfig
-	Invites      inviteServiceConfig
-}
-
-// newServiceConfigs assembles the production app-service graph from explicit
-// surface-local composition builders instead of routing every capability through
-// one root wiring sink.
-func newServiceConfigs(config CompositionConfig) serviceConfigs {
-	return serviceConfigs{
-		Page:         newPageServiceConfig(config),
-		Catalog:      newCatalogSurfaceConfig(config),
-		Starter:      newStarterSurfaceConfig(config),
-		Overview:     newOverviewSurfaceConfig(config),
-		Participants: newParticipantSurfaceConfig(config),
-		Characters:   newCharacterSurfaceConfig(config),
-		Sessions:     newSessionSurfaceConfig(config),
-		Invites:      newInviteSurfaceConfig(config),
-	}
-}

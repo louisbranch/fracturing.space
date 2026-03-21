@@ -1,7 +1,5 @@
 package app
 
-import "context"
-
 // ProfileNotFoundMessage is the canonical safe message for a missing public profile.
 const ProfileNotFoundMessage = "public profile not found"
 
@@ -52,14 +50,4 @@ type LookupUserProfileResponse struct {
 	AvatarSetID         string
 	AvatarAssetID       string
 	SocialProfileStatus SocialProfileStatus
-}
-
-// Gateway abstracts profile lookup operations behind domain types.
-type Gateway interface {
-	LookupUserProfile(context.Context, LookupUserProfileRequest) (LookupUserProfileResponse, error)
-}
-
-// Service exposes profile orchestration methods used by transport handlers.
-type Service interface {
-	LoadProfile(context.Context, string) (Profile, error)
 }

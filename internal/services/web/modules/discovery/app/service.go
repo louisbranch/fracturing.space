@@ -72,13 +72,13 @@ func IsGatewayHealthy(gateway Gateway) bool {
 }
 
 // NewService constructs a discovery service with explicit degraded-mode policy.
-func NewService(gateway Gateway) Service {
+func NewService(gateway Gateway, logger *slog.Logger) Service {
 	if gateway == nil {
 		gateway = NewUnavailableGateway()
 	}
 	return service{
 		gateway: gateway,
-		logger:  slog.Default(),
+		logger:  logger,
 	}
 }
 

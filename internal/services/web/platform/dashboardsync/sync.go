@@ -61,9 +61,6 @@ type Noop struct{}
 
 // New constructs a shared dashboard sync helper for web mutations.
 func New(userhub UserHubControlClient, game GameEventClient, logger *slog.Logger) *Syncer {
-	if logger == nil {
-		logger = slog.Default()
-	}
 	return &Syncer{
 		userhub:     userhub,
 		game:        game,

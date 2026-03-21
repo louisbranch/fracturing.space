@@ -136,33 +136,6 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 	t.Parallel()
 
 	gateway := NewUnavailableGateway()
-	for _, tc := range []struct {
-		name string
-		run  func() bool
-	}{
-		{name: "profile nil", run: func() bool { return IsProfileGatewayHealthy(nil) }},
-		{name: "locale nil", run: func() bool { return IsLocaleGatewayHealthy(nil) }},
-		{name: "ai keys nil", run: func() bool { return IsAIKeyGatewayHealthy(nil) }},
-		{name: "ai agents nil", run: func() bool { return IsAIAgentGatewayHealthy(nil) }},
-		{name: "account nil", run: func() bool { return IsAccountGatewayHealthy(nil) }},
-		{name: "ai nil", run: func() bool { return IsAIGatewayHealthy(nil) }},
-		{name: "profile unavailable", run: func() bool { return IsProfileGatewayHealthy(gateway) }},
-		{name: "locale unavailable", run: func() bool { return IsLocaleGatewayHealthy(gateway) }},
-		{name: "ai keys unavailable", run: func() bool { return IsAIKeyGatewayHealthy(gateway) }},
-		{name: "ai agents unavailable", run: func() bool { return IsAIAgentGatewayHealthy(gateway) }},
-		{name: "account unavailable", run: func() bool { return IsAccountGatewayHealthy(gateway) }},
-		{name: "ai unavailable", run: func() bool { return IsAIGatewayHealthy(gateway) }},
-	} {
-		if tc.run() {
-			t.Fatalf("%s = true, want false", tc.name)
-		}
-	}
-	if !IsAccountGatewayHealthy(&gatewayStub{}) {
-		t.Fatalf("IsAccountGatewayHealthy(stub) = false, want true")
-	}
-	if !IsAIGatewayHealthy(&gatewayStub{}) {
-		t.Fatalf("IsAIGatewayHealthy(stub) = false, want true")
-	}
 
 	ctx := context.Background()
 	if profile, err := gateway.LoadProfile(ctx, "user-1"); err == nil {

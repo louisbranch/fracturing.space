@@ -1,4 +1,3 @@
-// Package web parses command config and boots the web service.
 package web
 
 import (
