@@ -21,9 +21,11 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiapp "github.com/louisbranch/fracturing.space/internal/services/ai/app"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
+	aistorage "github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -43,6 +45,99 @@ const (
 	integrationOpenAIResponsesTargetEnv = "INTEGRATION_OPENAI_RESPONSES_URL"
 	defaultOpenAIResponsesTargetURL     = "https://api.openai.com/v1/responses"
 )
+
+// grpcArtifactAdapter bridges a gRPC CampaignArtifactServiceClient to the
+// gametools.ArtifactManager interface for integration testing.
+type grpcArtifactAdapter struct {
+	client aiv1.CampaignArtifactServiceClient
+}
+
+func (a *grpcArtifactAdapter) ListArtifacts(ctx context.Context, campaignID string) ([]aistorage.CampaignArtifactRecord, error) {
+	resp, err := a.client.ListCampaignArtifacts(ctx, &aiv1.ListCampaignArtifactsRequest{CampaignId: campaignID})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]aistorage.CampaignArtifactRecord, len(resp.GetArtifacts()))
+	for i, art := range resp.GetArtifacts() {
+		out[i] = artifactProtoToRecord(art)
+	}
+	return out, nil
+}
+
+func (a *grpcArtifactAdapter) GetArtifact(ctx context.Context, campaignID, path string) (aistorage.CampaignArtifactRecord, error) {
+	resp, err := a.client.GetCampaignArtifact(ctx, &aiv1.GetCampaignArtifactRequest{CampaignId: campaignID, Path: path})
+	if err != nil {
+		return aistorage.CampaignArtifactRecord{}, err
+	}
+	return artifactProtoToRecord(resp.GetArtifact()), nil
+}
+
+func (a *grpcArtifactAdapter) UpsertArtifact(ctx context.Context, campaignID, path, content string) (aistorage.CampaignArtifactRecord, error) {
+	resp, err := a.client.UpsertCampaignArtifact(ctx, &aiv1.UpsertCampaignArtifactRequest{CampaignId: campaignID, Path: path, Content: content})
+	if err != nil {
+		return aistorage.CampaignArtifactRecord{}, err
+	}
+	return artifactProtoToRecord(resp.GetArtifact()), nil
+}
+
+func artifactProtoToRecord(art *aiv1.CampaignArtifact) aistorage.CampaignArtifactRecord {
+	r := aistorage.CampaignArtifactRecord{
+		CampaignID: art.GetCampaignId(),
+		Path:       art.GetPath(),
+		Content:    art.GetContent(),
+		ReadOnly:   art.GetReadOnly(),
+	}
+	if ts := art.GetCreatedAt(); ts != nil {
+		r.CreatedAt = ts.AsTime()
+	}
+	if ts := art.GetUpdatedAt(); ts != nil {
+		r.UpdatedAt = ts.AsTime()
+	}
+	return r
+}
+
+// grpcReferenceAdapter bridges a gRPC SystemReferenceServiceClient to the
+// gametools.ReferenceCorpus interface for integration testing.
+type grpcReferenceAdapter struct {
+	client aiv1.SystemReferenceServiceClient
+}
+
+func (a *grpcReferenceAdapter) Search(ctx context.Context, system, query string, maxResults int) ([]referencecorpus.SearchResult, error) {
+	resp, err := a.client.SearchSystemReference(ctx, &aiv1.SearchSystemReferenceRequest{System: system, Query: query, MaxResults: int32(maxResults)})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]referencecorpus.SearchResult, len(resp.GetResults()))
+	for i, r := range resp.GetResults() {
+		out[i] = referencecorpus.SearchResult{
+			System:     r.GetSystem(),
+			DocumentID: r.GetDocumentId(),
+			Title:      r.GetTitle(),
+			Kind:       r.GetKind(),
+			Path:       r.GetPath(),
+			Aliases:    r.GetAliases(),
+			Snippet:    r.GetSnippet(),
+		}
+	}
+	return out, nil
+}
+
+func (a *grpcReferenceAdapter) Read(ctx context.Context, system, documentID string) (referencecorpus.Document, error) {
+	resp, err := a.client.ReadSystemReferenceDocument(ctx, &aiv1.ReadSystemReferenceDocumentRequest{System: system, DocumentId: documentID})
+	if err != nil {
+		return referencecorpus.Document{}, err
+	}
+	doc := resp.GetDocument()
+	return referencecorpus.Document{
+		System:     doc.GetSystem(),
+		DocumentID: doc.GetDocumentId(),
+		Title:      doc.GetTitle(),
+		Kind:       doc.GetKind(),
+		Path:       doc.GetPath(),
+		Aliases:    doc.GetAliases(),
+		Content:    doc.GetContent(),
+	}, nil
+}
 
 // aiGMBootstrapSetup exposes the run-specific IDs that a caller may need to bind into a recorder before execution.
 type aiGMBootstrapSetup struct {
@@ -244,8 +339,8 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 		Session:     sessionClient,
 		Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
 		Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
-		Artifact:    aiv1.NewCampaignArtifactServiceClient(aiInternalConn),
-		Reference:   aiv1.NewSystemReferenceServiceClient(aiInternalConn),
+		Artifact:    &grpcArtifactAdapter{client: aiv1.NewCampaignArtifactServiceClient(aiInternalConn)},
+		Reference:   &grpcReferenceAdapter{client: aiv1.NewSystemReferenceServiceClient(aiInternalConn)},
 	})
 	runner := orchestration.NewRunner(orchestration.RunnerConfig{
 		Dialer:   dialer,

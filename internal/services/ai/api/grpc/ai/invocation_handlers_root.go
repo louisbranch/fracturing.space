@@ -1,63 +1,28 @@
 package ai
 
 import (
-	"time"
+	"fmt"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 )
 
-// InvocationHandlers serves invocation RPCs from an explicit invoke-time boundary.
+// InvocationHandlers serves invocation RPCs as thin transport wrappers over
+// the invocation service.
 type InvocationHandlers struct {
 	aiv1.UnimplementedInvocationServiceServer
-
-	credentialStore            storage.CredentialStore
-	agentStore                 storage.AgentStore
-	providerGrantStore         storage.ProviderGrantStore
-	accessRequestStore         storage.AccessRequestStore
-	auditEventStore            storage.AuditEventStore
-	providerOAuthAdapters      map[provider.Provider]provider.OAuthAdapter
-	providerInvocationAdapters map[provider.Provider]provider.InvocationAdapter
-	sealer                     SecretSealer
-	clock                      func() time.Time
+	svc *service.InvocationService
 }
 
 // InvocationHandlersConfig declares the dependencies for invocation RPCs.
 type InvocationHandlersConfig struct {
-	CredentialStore            storage.CredentialStore
-	AgentStore                 storage.AgentStore
-	ProviderGrantStore         storage.ProviderGrantStore
-	AccessRequestStore         storage.AccessRequestStore
-	AuditEventStore            storage.AuditEventStore
-	ProviderOAuthAdapters      map[provider.Provider]provider.OAuthAdapter
-	ProviderInvocationAdapters map[provider.Provider]provider.InvocationAdapter
-	Sealer                     SecretSealer
-	Clock                      func() time.Time
+	InvocationService *service.InvocationService
 }
 
-// NewInvocationHandlers builds an invocation RPC server from explicit deps.
-func NewInvocationHandlers(cfg InvocationHandlersConfig) *InvocationHandlers {
-	clock := cfg.Clock
-	if clock == nil {
-		clock = time.Now
+// NewInvocationHandlers builds an invocation RPC server from a service.
+func NewInvocationHandlers(cfg InvocationHandlersConfig) (*InvocationHandlers, error) {
+	if cfg.InvocationService == nil {
+		return nil, fmt.Errorf("ai: NewInvocationHandlers: invocation service is required")
 	}
-
-	providerOAuthAdapters := newProviderOAuthAdapters(cfg.ProviderOAuthAdapters)
-	providerInvocationAdapters := make(map[provider.Provider]provider.InvocationAdapter, len(cfg.ProviderInvocationAdapters))
-	for providerID, adapter := range cfg.ProviderInvocationAdapters {
-		providerInvocationAdapters[providerID] = adapter
-	}
-
-	return &InvocationHandlers{
-		credentialStore:            cfg.CredentialStore,
-		agentStore:                 cfg.AgentStore,
-		providerGrantStore:         cfg.ProviderGrantStore,
-		accessRequestStore:         cfg.AccessRequestStore,
-		auditEventStore:            cfg.AuditEventStore,
-		providerOAuthAdapters:      providerOAuthAdapters,
-		providerInvocationAdapters: providerInvocationAdapters,
-		sealer:                     cfg.Sealer,
-		clock:                      clock,
-	}
+	return &InvocationHandlers{svc: cfg.InvocationService}, nil
 }

@@ -4,15 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
-// Clients bundles gRPC service clients needed by the direct session.
+// ArtifactManager provides campaign artifact operations for tool execution.
+// Satisfied by *campaigncontext.Manager.
+type ArtifactManager interface {
+	ListArtifacts(ctx context.Context, campaignID string) ([]storage.CampaignArtifactRecord, error)
+	GetArtifact(ctx context.Context, campaignID string, path string) (storage.CampaignArtifactRecord, error)
+	UpsertArtifact(ctx context.Context, campaignID string, path string, content string) (storage.CampaignArtifactRecord, error)
+}
+
+// ReferenceCorpus provides system reference search and read for tool execution.
+// Satisfied by *referencecorpus.Corpus.
+type ReferenceCorpus interface {
+	Search(ctx context.Context, system, query string, maxResults int) ([]referencecorpus.SearchResult, error)
+	Read(ctx context.Context, system, documentID string) (referencecorpus.Document, error)
+}
+
+// Clients bundles service clients needed by the direct session.
 type Clients struct {
 	Interaction statev1.InteractionServiceClient
 	Scene       statev1.SceneServiceClient
@@ -22,8 +37,8 @@ type Clients struct {
 	Session     statev1.SessionServiceClient
 	Snapshot    statev1.SnapshotServiceClient
 	Daggerheart pb.DaggerheartServiceClient
-	Artifact    aiv1.CampaignArtifactServiceClient
-	Reference   aiv1.SystemReferenceServiceClient
+	Artifact    ArtifactManager
+	Reference   ReferenceCorpus
 }
 
 // DirectSession implements orchestration.Session by calling game gRPC
@@ -78,7 +93,7 @@ func (s *DirectSession) CallTool(ctx context.Context, name string, args any) (or
 
 // ReadResource dispatches a resource URI to the correct gRPC reader.
 func (s *DirectSession) ReadResource(ctx context.Context, uri string) (string, error) {
-	return s.readResource(ctx, strings.TrimSpace(uri))
+	return s.readResource(ctx, uri)
 }
 
 // Close is a no-op: gRPC connections are shared, not owned by the session.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
@@ -106,23 +105,23 @@ func (s *DirectSession) sceneCreate(ctx context.Context, argsJSON []byte) (orche
 	resp, err := s.clients.Scene.CreateScene(callCtx, &statev1.CreateSceneRequest{
 		CampaignId:   campaignID,
 		SessionId:    sessionID,
-		Name:         strings.TrimSpace(input.Name),
-		Description:  strings.TrimSpace(input.Description),
+		Name:         input.Name,
+		Description:  input.Description,
 		CharacterIds: append([]string(nil), input.CharacterIDs...),
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("create scene failed: %w", err)
 	}
-	if resp == nil || strings.TrimSpace(resp.GetSceneId()) == "" {
+	if resp == nil || resp.GetSceneId() == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("create scene response is missing")
 	}
 
 	return toolResultJSON(sceneCreateResult{
-		SceneID:      strings.TrimSpace(resp.GetSceneId()),
+		SceneID:      resp.GetSceneId(),
 		CampaignID:   campaignID,
 		SessionID:    sessionID,
-		Name:         strings.TrimSpace(input.Name),
-		Description:  strings.TrimSpace(input.Description),
+		Name:         input.Name,
+		Description:  input.Description,
 		CharacterIDs: append([]string(nil), input.CharacterIDs...),
 	})
 }
@@ -136,8 +135,7 @@ func (s *DirectSession) sceneUpdate(ctx context.Context, argsJSON []byte) (orche
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	sceneID := strings.TrimSpace(input.SceneID)
-	if sceneID == "" {
+	if input.SceneID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("scene_id is required")
 	}
 
@@ -146,14 +144,14 @@ func (s *DirectSession) sceneUpdate(ctx context.Context, argsJSON []byte) (orche
 
 	if _, err := s.clients.Scene.UpdateScene(callCtx, &statev1.UpdateSceneRequest{
 		CampaignId:  campaignID,
-		SceneId:     sceneID,
-		Name:        strings.TrimSpace(input.Name),
-		Description: strings.TrimSpace(input.Description),
+		SceneId:     input.SceneID,
+		Name:        input.Name,
+		Description: input.Description,
 	}); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("update scene failed: %w", err)
 	}
 
-	return toolResultJSON(sceneUpdateResult{SceneID: sceneID, Updated: true})
+	return toolResultJSON(sceneUpdateResult{SceneID: input.SceneID, Updated: true})
 }
 
 func (s *DirectSession) sceneEnd(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
@@ -165,8 +163,7 @@ func (s *DirectSession) sceneEnd(ctx context.Context, argsJSON []byte) (orchestr
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	sceneID := strings.TrimSpace(input.SceneID)
-	if sceneID == "" {
+	if input.SceneID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("scene_id is required")
 	}
 
@@ -175,13 +172,13 @@ func (s *DirectSession) sceneEnd(ctx context.Context, argsJSON []byte) (orchestr
 
 	if _, err := s.clients.Scene.EndScene(callCtx, &statev1.EndSceneRequest{
 		CampaignId: campaignID,
-		SceneId:    sceneID,
-		Reason:     strings.TrimSpace(input.Reason),
+		SceneId:    input.SceneID,
+		Reason:     input.Reason,
 	}); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("end scene failed: %w", err)
 	}
 
-	return toolResultJSON(sceneEndResult{SceneID: sceneID, Ended: true})
+	return toolResultJSON(sceneEndResult{SceneID: input.SceneID, Ended: true})
 }
 
 func (s *DirectSession) sceneTransition(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
@@ -205,14 +202,14 @@ func (s *DirectSession) sceneTransition(ctx context.Context, argsJSON []byte) (o
 	resp, err := s.clients.Scene.TransitionScene(callCtx, &statev1.TransitionSceneRequest{
 		CampaignId:    campaignID,
 		SourceSceneId: sourceSceneID,
-		Name:          strings.TrimSpace(input.Name),
-		Description:   strings.TrimSpace(input.Description),
+		Name:          input.Name,
+		Description:   input.Description,
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("transition scene failed: %w", err)
 	}
 
-	newSceneID := strings.TrimSpace(resp.GetNewSceneId())
+	newSceneID := resp.GetNewSceneId()
 	if newSceneID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("transition scene response is missing new_scene_id")
 	}
@@ -232,12 +229,10 @@ func (s *DirectSession) sceneAddCharacter(ctx context.Context, argsJSON []byte) 
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	sceneID := strings.TrimSpace(input.SceneID)
-	if sceneID == "" {
+	if input.SceneID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("scene_id is required")
 	}
-	characterID := strings.TrimSpace(input.CharacterID)
-	if characterID == "" {
+	if input.CharacterID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("character_id is required")
 	}
 
@@ -246,15 +241,15 @@ func (s *DirectSession) sceneAddCharacter(ctx context.Context, argsJSON []byte) 
 
 	if _, err := s.clients.Scene.AddCharacterToScene(callCtx, &statev1.AddCharacterToSceneRequest{
 		CampaignId:  campaignID,
-		SceneId:     sceneID,
-		CharacterId: characterID,
+		SceneId:     input.SceneID,
+		CharacterId: input.CharacterID,
 	}); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("add character to scene failed: %w", err)
 	}
 
 	return toolResultJSON(sceneAddCharacterResult{
-		SceneID:     sceneID,
-		CharacterID: characterID,
+		SceneID:     input.SceneID,
+		CharacterID: input.CharacterID,
 		Added:       true,
 	})
 }
@@ -268,12 +263,10 @@ func (s *DirectSession) sceneRemoveCharacter(ctx context.Context, argsJSON []byt
 	if campaignID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
 	}
-	sceneID := strings.TrimSpace(input.SceneID)
-	if sceneID == "" {
+	if input.SceneID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("scene_id is required")
 	}
-	characterID := strings.TrimSpace(input.CharacterID)
-	if characterID == "" {
+	if input.CharacterID == "" {
 		return orchestration.ToolResult{}, fmt.Errorf("character_id is required")
 	}
 
@@ -282,15 +275,15 @@ func (s *DirectSession) sceneRemoveCharacter(ctx context.Context, argsJSON []byt
 
 	if _, err := s.clients.Scene.RemoveCharacterFromScene(callCtx, &statev1.RemoveCharacterFromSceneRequest{
 		CampaignId:  campaignID,
-		SceneId:     sceneID,
-		CharacterId: characterID,
+		SceneId:     input.SceneID,
+		CharacterId: input.CharacterID,
 	}); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("remove character from scene failed: %w", err)
 	}
 
 	return toolResultJSON(sceneRemoveCharacterResult{
-		SceneID:     sceneID,
-		CharacterID: characterID,
+		SceneID:     input.SceneID,
+		CharacterID: input.CharacterID,
 		Removed:     true,
 	})
 }

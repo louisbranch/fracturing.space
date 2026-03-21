@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -26,11 +27,14 @@ type CampaignArtifactHandlersConfig struct {
 }
 
 // NewCampaignArtifactHandlers builds a campaign-artifact RPC server.
-func NewCampaignArtifactHandlers(cfg CampaignArtifactHandlersConfig) *CampaignArtifactHandlers {
+func NewCampaignArtifactHandlers(cfg CampaignArtifactHandlersConfig) (*CampaignArtifactHandlers, error) {
+	if cfg.Manager == nil {
+		return nil, fmt.Errorf("ai: NewCampaignArtifactHandlers: campaign artifact manager is required")
+	}
 	return &CampaignArtifactHandlers{
 		campaignArtifactManager:  cfg.Manager,
 		campaignContextValidator: newCampaignContextValidator(cfg.AuthorizationClient, cfg.InternalServiceAllowlist),
-	}
+	}, nil
 }
 
 // EnsureCampaignArtifacts creates default GM campaign artifacts when missing.
@@ -38,9 +42,7 @@ func (h *CampaignArtifactHandlers) EnsureCampaignArtifacts(ctx context.Context, 
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "ensure campaign artifacts request is required")
 	}
-	if h == nil || h.campaignArtifactManager == nil {
-		return nil, status.Error(codes.FailedPrecondition, "campaign artifact manager is unavailable")
-	}
+
 	if err := h.campaignContextValidator.validateCampaignContext(ctx, in.GetCampaignId(), gamev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE); err != nil {
 		return nil, err
 	}
@@ -60,9 +62,7 @@ func (h *CampaignArtifactHandlers) ListCampaignArtifacts(ctx context.Context, in
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list campaign artifacts request is required")
 	}
-	if h == nil || h.campaignArtifactManager == nil {
-		return nil, status.Error(codes.FailedPrecondition, "campaign artifact manager is unavailable")
-	}
+
 	if err := h.campaignContextValidator.validateCampaignContext(ctx, in.GetCampaignId(), gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
 		return nil, err
 	}
@@ -82,9 +82,7 @@ func (h *CampaignArtifactHandlers) GetCampaignArtifact(ctx context.Context, in *
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get campaign artifact request is required")
 	}
-	if h == nil || h.campaignArtifactManager == nil {
-		return nil, status.Error(codes.FailedPrecondition, "campaign artifact manager is unavailable")
-	}
+
 	if err := h.campaignContextValidator.validateCampaignContext(ctx, in.GetCampaignId(), gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
 		return nil, err
 	}
@@ -100,9 +98,7 @@ func (h *CampaignArtifactHandlers) UpsertCampaignArtifact(ctx context.Context, i
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "upsert campaign artifact request is required")
 	}
-	if h == nil || h.campaignArtifactManager == nil {
-		return nil, status.Error(codes.FailedPrecondition, "campaign artifact manager is unavailable")
-	}
+
 	if err := h.campaignContextValidator.validateCampaignContext(ctx, in.GetCampaignId(), gamev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE); err != nil {
 		return nil, err
 	}

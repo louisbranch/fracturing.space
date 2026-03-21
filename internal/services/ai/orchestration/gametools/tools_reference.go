@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 )
 
@@ -55,27 +54,24 @@ func (s *DirectSession) referenceSearch(ctx context.Context, argsJSON []byte) (o
 	if err := json.Unmarshal(argsJSON, &input); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Reference == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("reference corpus is not configured")
+	}
 
-	resp, err := s.clients.Reference.SearchSystemReference(callCtx, &aiv1.SearchSystemReferenceRequest{
-		System:     input.System,
-		Query:      input.Query,
-		MaxResults: int32(input.MaxResults),
-	})
+	results, err := s.clients.Reference.Search(ctx, input.System, input.Query, input.MaxResults)
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("system reference search failed: %w", err)
 	}
-	result := referenceSearchResult{Results: make([]referenceSearchEntry, 0, len(resp.GetResults()))}
-	for _, item := range resp.GetResults() {
+	result := referenceSearchResult{Results: make([]referenceSearchEntry, 0, len(results))}
+	for _, item := range results {
 		result.Results = append(result.Results, referenceSearchEntry{
-			System:     item.GetSystem(),
-			DocumentID: item.GetDocumentId(),
-			Title:      item.GetTitle(),
-			Kind:       item.GetKind(),
-			Path:       item.GetPath(),
-			Aliases:    append([]string(nil), item.GetAliases()...),
-			Snippet:    item.GetSnippet(),
+			System:     item.System,
+			DocumentID: item.DocumentID,
+			Title:      item.Title,
+			Kind:       item.Kind,
+			Path:       item.Path,
+			Aliases:    append([]string(nil), item.Aliases...),
+			Snippet:    item.Snippet,
 		})
 	}
 	return toolResultJSON(result)
@@ -86,24 +82,21 @@ func (s *DirectSession) referenceRead(ctx context.Context, argsJSON []byte) (orc
 	if err := json.Unmarshal(argsJSON, &input); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Reference == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("reference corpus is not configured")
+	}
 
-	resp, err := s.clients.Reference.ReadSystemReferenceDocument(callCtx, &aiv1.ReadSystemReferenceDocumentRequest{
-		System:     input.System,
-		DocumentId: input.DocumentID,
-	})
+	doc, err := s.clients.Reference.Read(ctx, input.System, input.DocumentID)
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("system reference read failed: %w", err)
 	}
-	doc := resp.GetDocument()
 	return toolResultJSON(referenceDocumentResult{
-		System:     doc.GetSystem(),
-		DocumentID: doc.GetDocumentId(),
-		Title:      doc.GetTitle(),
-		Kind:       doc.GetKind(),
-		Path:       doc.GetPath(),
-		Aliases:    append([]string(nil), doc.GetAliases()...),
-		Content:    doc.GetContent(),
+		System:     doc.System,
+		DocumentID: doc.DocumentID,
+		Title:      doc.Title,
+		Kind:       doc.Kind,
+		Path:       doc.Path,
+		Aliases:    append([]string(nil), doc.Aliases...),
+		Content:    doc.Content,
 	})
 }

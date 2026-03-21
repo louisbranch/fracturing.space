@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -157,7 +156,7 @@ func (s *DirectSession) interactionSetActiveScene(ctx context.Context, argsJSON 
 	defer cancel()
 	resp, err := s.clients.Interaction.SetActiveScene(callCtx, &statev1.SetActiveSceneRequest{
 		CampaignId: campaignID,
-		SceneId:    strings.TrimSpace(input.SceneID),
+		SceneId:    input.SceneID,
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("set active scene failed: %w", err)
@@ -186,7 +185,7 @@ func (s *DirectSession) interactionStartScenePlayerPhase(ctx context.Context, ar
 	resp, err := s.clients.Interaction.StartScenePlayerPhase(callCtx, &statev1.StartScenePlayerPhaseRequest{
 		CampaignId:   campaignID,
 		SceneId:      sceneID,
-		FrameText:    strings.TrimSpace(input.FrameText),
+		FrameText:    input.FrameText,
 		CharacterIds: input.CharacterIDs,
 	})
 	if err != nil {
@@ -244,8 +243,8 @@ func (s *DirectSession) interactionRequestScenePlayerRevisions(ctx context.Conte
 	revisions := make([]*statev1.ScenePlayerRevisionRequest, 0, len(input.Revisions))
 	for _, rev := range input.Revisions {
 		revisions = append(revisions, &statev1.ScenePlayerRevisionRequest{
-			ParticipantId: strings.TrimSpace(rev.ParticipantID),
-			Reason:        strings.TrimSpace(rev.Reason),
+			ParticipantId: rev.ParticipantID,
+			Reason:        rev.Reason,
 			CharacterIds:  append([]string(nil), rev.CharacterIDs...),
 		})
 	}
@@ -281,7 +280,7 @@ func (s *DirectSession) interactionEndScenePlayerPhase(ctx context.Context, args
 	resp, err := s.clients.Interaction.EndScenePlayerPhase(callCtx, &statev1.EndScenePlayerPhaseRequest{
 		CampaignId: campaignID,
 		SceneId:    sceneID,
-		Reason:     strings.TrimSpace(input.Reason),
+		Reason:     input.Reason,
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("end scene player phase failed: %w", err)
@@ -310,7 +309,7 @@ func (s *DirectSession) interactionCommitSceneGMOutput(ctx context.Context, args
 	resp, err := s.clients.Interaction.CommitSceneGMOutput(callCtx, &statev1.CommitSceneGMOutputRequest{
 		CampaignId: campaignID,
 		SceneId:    sceneID,
-		Text:       strings.TrimSpace(input.Text),
+		Text:       input.Text,
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("commit scene gm output failed: %w", err)
@@ -334,7 +333,7 @@ func (s *DirectSession) interactionPauseOOC(ctx context.Context, argsJSON []byte
 	defer cancel()
 	resp, err := s.clients.Interaction.PauseSessionForOOC(callCtx, &statev1.PauseSessionForOOCRequest{
 		CampaignId: campaignID,
-		Reason:     strings.TrimSpace(input.Reason),
+		Reason:     input.Reason,
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("pause session for ooc failed: %w", err)
@@ -358,7 +357,7 @@ func (s *DirectSession) interactionPostOOC(ctx context.Context, argsJSON []byte)
 	defer cancel()
 	resp, err := s.clients.Interaction.PostSessionOOC(callCtx, &statev1.PostSessionOOCRequest{
 		CampaignId: campaignID,
-		Body:       strings.TrimSpace(input.Body),
+		Body:       input.Body,
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("post session ooc failed: %w", err)
@@ -441,23 +440,22 @@ func (s *DirectSession) interactionResumeOOC(ctx context.Context, argsJSON []byt
 // --- Helpers ---
 
 func (s *DirectSession) resolveCampaignID(explicit string) string {
-	if id := strings.TrimSpace(explicit); id != "" {
-		return id
+	if explicit != "" {
+		return explicit
 	}
-	return strings.TrimSpace(s.sc.CampaignID)
+	return s.sc.CampaignID
 }
 
 func (s *DirectSession) resolveSessionID(explicit string) string {
-	if id := strings.TrimSpace(explicit); id != "" {
-		return id
+	if explicit != "" {
+		return explicit
 	}
-	return strings.TrimSpace(s.sc.SessionID)
+	return s.sc.SessionID
 }
 
 func (s *DirectSession) resolveSceneID(ctx context.Context, campaignID, explicit string) (string, error) {
-	sceneID := strings.TrimSpace(explicit)
-	if sceneID != "" {
-		return sceneID, nil
+	if explicit != "" {
+		return explicit, nil
 	}
 	resp, err := s.clients.Interaction.GetInteractionState(ctx, &statev1.GetInteractionStateRequest{CampaignId: campaignID})
 	if err != nil {
@@ -466,7 +464,7 @@ func (s *DirectSession) resolveSceneID(ctx context.Context, campaignID, explicit
 	if resp == nil || resp.State == nil {
 		return "", fmt.Errorf("get interaction state response is missing")
 	}
-	sceneID = strings.TrimSpace(resp.GetState().GetActiveScene().GetSceneId())
+	sceneID := resp.GetState().GetActiveScene().GetSceneId()
 	if sceneID == "" {
 		return "", fmt.Errorf("scene_id is required when no active scene is set")
 	}

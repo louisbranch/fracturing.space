@@ -192,6 +192,12 @@ func (s Status) IsActive() bool {
 	return ParseStatus(string(s)) == StatusActive
 }
 
+// Page is a paginated set of agents.
+type Page struct {
+	Agents        []Agent
+	NextPageToken string
+}
+
 // AuthRefType returns which auth reference shape the agent uses.
 func (a Agent) AuthRefType() string {
 	return a.AuthReference.Type()

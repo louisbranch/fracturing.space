@@ -7,17 +7,20 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
 
 func TestCreateAgentRequiresActiveOwnedCredential(t *testing.T) {
 	store := newFakeStore()
-	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "revoked", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.Credentials["cred-1"] = credential.Credential{ID: "cred-1", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "A", Status: credential.StatusRevoked, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-	svc := newTestAgentHandlers(store)
+	svc := newTestAgentHandlers(t, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
 		Label:        "narrator",
@@ -30,11 +33,12 @@ func TestCreateAgentRequiresActiveOwnedCredential(t *testing.T) {
 
 func TestCreateAgentSuccess(t *testing.T) {
 	store := newFakeStore()
-	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.Credentials["cred-1"] = credential.Credential{ID: "cred-1", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "A", Status: credential.StatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-	svc := newTestAgentHandlers(store)
-	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC) }
-	svc.idGenerator = func() (string, error) { return "agent-1", nil }
+	svc := newAgentHandlersWithOpts(t, store, store, &fakeSealer{}, agentTestOpts{
+		clock:       func() time.Time { return time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC) },
+		idGenerator: func() (string, error) { return "agent-1", nil },
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
@@ -57,13 +61,13 @@ func TestCreateAgentSuccess(t *testing.T) {
 
 func TestListProviderModelsReturnsNewestFirst(t *testing.T) {
 	store := newFakeStore()
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
@@ -76,8 +80,11 @@ func TestListProviderModelsReturnsNewestFirst(t *testing.T) {
 			{ID: "", OwnedBy: "openai", Created: 300},
 		},
 	}
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerModelAdapters[provider.OpenAI] = adapter
+	svc := newAgentHandlersWithOpts(t, store, store, &fakeSealer{}, agentTestOpts{
+		modelAdapters: map[provider.Provider]provider.ModelAdapter{
+			provider.OpenAI: adapter,
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderModels(ctx, &aiv1.ListProviderModelsRequest{
@@ -100,20 +107,21 @@ func TestListProviderModelsReturnsNewestFirst(t *testing.T) {
 
 func TestCreateAgentWithProviderGrantSuccess(t *testing.T) {
 	store := newFakeStore()
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := newTestAgentHandlers(store)
-	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC) }
-	svc.idGenerator = func() (string, error) { return "agent-1", nil }
+	svc := newAgentHandlersWithOpts(t, store, store, &fakeSealer{}, agentTestOpts{
+		clock:       func() time.Time { return time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC) },
+		idGenerator: func() (string, error) { return "agent-1", nil },
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
@@ -129,29 +137,29 @@ func TestCreateAgentWithProviderGrantSuccess(t *testing.T) {
 		t.Fatalf("agent id = %q, want %q", resp.GetAgent().GetId(), "agent-1")
 	}
 	stored := store.Agents["agent-1"]
-	if stored.ProviderGrantID != "grant-1" {
-		t.Fatalf("provider_grant_id = %q, want %q", stored.ProviderGrantID, "grant-1")
+	if stored.AuthReference.ProviderGrantID() != "grant-1" {
+		t.Fatalf("provider_grant_id = %q, want %q", stored.AuthReference.ProviderGrantID(), "grant-1")
 	}
-	if stored.CredentialID != "" {
-		t.Fatalf("credential_id = %q, want empty", stored.CredentialID)
+	if stored.AuthReference.CredentialID() != "" {
+		t.Fatalf("credential_id = %q, want empty", stored.AuthReference.CredentialID())
 	}
 }
 
 func TestCreateAgentRejectsMultipleAuthReferences(t *testing.T) {
 	store := newFakeStore()
-	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.Credentials["cred-1"] = credential.Credential{ID: "cred-1", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "A", Status: credential.StatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := newTestAgentHandlers(store)
+	svc := newTestAgentHandlers(t, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
 		Label:           "narrator",
@@ -166,32 +174,30 @@ func TestCreateAgentRejectsMultipleAuthReferences(t *testing.T) {
 func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		CredentialID:    "cred-1",
-		ProviderGrantID: "",
-		Status:          "active",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Agents["agent-2"] = storage.AgentRecord{
-		ID:              "agent-2",
-		OwnerUserID:     "user-2",
-		Label:           "planner",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		CredentialID:    "cred-2",
-		ProviderGrantID: "",
-		Status:          "active",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+	store.Agents["agent-2"] = agent.Agent{
+		ID:            "agent-2",
+		OwnerUserID:   "user-2",
+		Label:         "planner",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-2"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAgents(ctx, &aiv1.ListAgentsRequest{PageSize: 10})
 	if err != nil {
@@ -208,33 +214,33 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 func TestListAgentsIncludesAuthStateAndUsage(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	cfg := newAgentHandlersConfigWithStores(store, store, &fakeSealer{})
-	cfg.GameCampaignAIClient = &fakeCampaignAIAuthStateClient{
-		usageByAgent: map[string]int32{"agent-1": 2},
-	}
-	svc := NewAgentHandlers(cfg)
+	svc := newAgentHandlersWithOpts(t, store, store, &fakeSealer{}, agentTestOpts{
+		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+			usageByAgent: map[string]int32{"agent-1": 2},
+		},
+	})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	resp, err := svc.ListAgents(ctx, &aiv1.ListAgentsRequest{PageSize: 10})
@@ -255,28 +261,28 @@ func TestListAgentsIncludesAuthStateAndUsage(t *testing.T) {
 func TestValidateCampaignAgentBindingRejectsRevokedCredentialBackedAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:          "cred-1",
 		OwnerUserID: "user-1",
-		Provider:    "openai",
+		Provider:    provider.OpenAI,
 		Label:       "Main",
-		Status:      "revoked",
+		Status:      credential.StatusRevoked,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	_, err := svc.ValidateCampaignAgentBinding(ctx, &aiv1.ValidateCampaignAgentBindingRequest{
@@ -289,40 +295,40 @@ func TestValidateCampaignAgentBindingRejectsRevokedCredentialBackedAgent(t *test
 func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-own-1"] = storage.AgentRecord{
-		ID:           "agent-own-1",
-		OwnerUserID:  "user-1",
-		Label:        "owner-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-own-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-own-1"] = agent.Agent{
+		ID:            "agent-own-1",
+		OwnerUserID:   "user-1",
+		Label:         "owner-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-own-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Agents["agent-shared-1"] = storage.AgentRecord{
-		ID:           "agent-shared-1",
-		OwnerUserID:  "user-owner",
-		Label:        "shared-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-shared-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-shared-1"] = agent.Agent{
+		ID:            "agent-shared-1",
+		OwnerUserID:   "user-owner",
+		Label:         "shared-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-shared-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.AccessRequests["request-approved"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-approved"] = accessrequest.AccessRequest{
 		ID:              "request-approved",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "user-owner",
 		AgentID:         "agent-shared-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now.Add(-time.Minute),
 		UpdatedAt:       now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	if err != nil {
@@ -343,91 +349,91 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-approved"] = storage.AgentRecord{
-		ID:           "agent-approved",
-		OwnerUserID:  "owner-1",
-		Label:        "approved-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-approved"] = agent.Agent{
+		ID:            "agent-approved",
+		OwnerUserID:   "owner-1",
+		Label:         "approved-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Agents["agent-pending"] = storage.AgentRecord{
-		ID:           "agent-pending",
-		OwnerUserID:  "owner-1",
-		Label:        "pending-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-2",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-pending"] = agent.Agent{
+		ID:            "agent-pending",
+		OwnerUserID:   "owner-1",
+		Label:         "pending-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-2"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Agents["agent-denied"] = storage.AgentRecord{
-		ID:           "agent-denied",
-		OwnerUserID:  "owner-1",
-		Label:        "denied-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-3",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-denied"] = agent.Agent{
+		ID:            "agent-denied",
+		OwnerUserID:   "owner-1",
+		Label:         "denied-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-3"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.AccessRequests["request-approved"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-approved"] = accessrequest.AccessRequest{
 		ID:              "request-approved",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-approved",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.AccessRequests["request-pending"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-pending"] = accessrequest.AccessRequest{
 		ID:              "request-pending",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-pending",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.AccessRequests["request-denied"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-denied"] = accessrequest.AccessRequest{
 		ID:              "request-denied",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-denied",
-		Scope:           "invoke",
-		Status:          "denied",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusDenied,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.AccessRequests["request-stale-agent"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-stale-agent"] = accessrequest.AccessRequest{
 		ID:              "request-stale-agent",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-missing",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.AccessRequests["request-wrong-owner"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-wrong-owner"] = accessrequest.AccessRequest{
 		ID:              "request-wrong-owner",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-other",
 		AgentID:         "agent-approved",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	if err != nil {
@@ -442,7 +448,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 }
 
 func TestListAccessibleAgentsRequiresUserID(t *testing.T) {
-	svc := newAgentHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.ListAccessibleAgents(context.Background(), &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
@@ -450,61 +456,61 @@ func TestListAccessibleAgentsRequiresUserID(t *testing.T) {
 func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-a"] = storage.AgentRecord{
-		ID:           "agent-a",
-		OwnerUserID:  "user-1",
-		Label:        "agent-a",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-a",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-a"] = agent.Agent{
+		ID:            "agent-a",
+		OwnerUserID:   "user-1",
+		Label:         "agent-a",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-a"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Agents["agent-b"] = storage.AgentRecord{
-		ID:           "agent-b",
-		OwnerUserID:  "owner-1",
-		Label:        "agent-b",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-b",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-b"] = agent.Agent{
+		ID:            "agent-b",
+		OwnerUserID:   "owner-1",
+		Label:         "agent-b",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-b"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Agents["agent-c"] = storage.AgentRecord{
-		ID:           "agent-c",
-		OwnerUserID:  "owner-2",
-		Label:        "agent-c",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-c",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-c"] = agent.Agent{
+		ID:            "agent-c",
+		OwnerUserID:   "owner-2",
+		Label:         "agent-c",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-c"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.AccessRequests["request-b"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-b"] = accessrequest.AccessRequest{
 		ID:              "request-b",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-b",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.AccessRequests["request-c"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-c"] = accessrequest.AccessRequest{
 		ID:              "request-c",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-2",
 		AgentID:         "agent-c",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	first, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 2})
@@ -543,7 +549,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 }
 
 func TestGetAccessibleAgentRequiresUserID(t *testing.T) {
-	svc := newAgentHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.GetAccessibleAgent(context.Background(), &aiv1.GetAccessibleAgentRequest{
 		AgentId: "agent-1",
 	})
@@ -551,14 +557,14 @@ func TestGetAccessibleAgentRequiresUserID(t *testing.T) {
 }
 
 func TestGetAccessibleAgentRequiresAgentID(t *testing.T) {
-	svc := newAgentHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetAccessibleAgentMissingAgent(t *testing.T) {
-	svc := newAgentHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-missing"})
 	assertStatusCode(t, err, codes.NotFound)
@@ -567,19 +573,19 @@ func TestGetAccessibleAgentMissingAgent(t *testing.T) {
 func TestGetAccessibleAgentOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 30, 0, 0, time.UTC)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "owner-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "owner-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-1"})
 	if err != nil {
@@ -593,29 +599,29 @@ func TestGetAccessibleAgentOwner(t *testing.T) {
 func TestGetAccessibleAgentApprovedRequester(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 30, 0, 0, time.UTC)
-	store.Agents["agent-shared"] = storage.AgentRecord{
-		ID:           "agent-shared",
-		OwnerUserID:  "owner-1",
-		Label:        "shared-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-owner",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-shared"] = agent.Agent{
+		ID:            "agent-shared",
+		OwnerUserID:   "owner-1",
+		Label:         "shared-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-owner"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-shared",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-shared"})
 	if err != nil {
@@ -629,29 +635,29 @@ func TestGetAccessibleAgentApprovedRequester(t *testing.T) {
 func TestGetAccessibleAgentPendingRequesterHidden(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 30, 0, 0, time.UTC)
-	store.Agents["agent-shared"] = storage.AgentRecord{
-		ID:           "agent-shared",
-		OwnerUserID:  "owner-1",
-		Label:        "shared-agent",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-owner",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-shared"] = agent.Agent{
+		ID:            "agent-shared",
+		OwnerUserID:   "owner-1",
+		Label:         "shared-agent",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-owner"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-shared",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-shared"})
 	assertStatusCode(t, err, codes.NotFound)
@@ -660,30 +666,30 @@ func TestGetAccessibleAgentPendingRequesterHidden(t *testing.T) {
 func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 10, 0, 0, time.UTC)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		CredentialID:    "cred-1",
-		ProviderGrantID: "",
-		Status:          "active",
-		CreatedAt:       now.Add(-time.Hour),
-		UpdatedAt:       now.Add(-time.Hour),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now.Add(-time.Hour),
+		UpdatedAt:     now.Add(-time.Hour),
 	}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		TokenCiphertext: `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	}
 
-	svc := newTestAgentHandlers(store)
-	svc.clock = func() time.Time { return now }
+	svc := newAgentHandlersWithOpts(t, store, store, &fakeSealer{}, agentTestOpts{
+		clock: func() time.Time { return now },
+	})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.UpdateAgent(ctx, &aiv1.UpdateAgentRequest{
 		AgentId:         "agent-1",
@@ -712,33 +718,36 @@ func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 func TestUpdateAgentMetadataEditDoesNotRequireLiveModelListing(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC)
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Primary",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now.Add(-2 * time.Hour),
 		UpdatedAt:        now.Add(-2 * time.Hour),
 	}
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Instructions: "Old instructions.",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now.Add(-time.Hour),
-		UpdatedAt:    now.Add(-time.Hour),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Instructions:  "Old instructions.",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now.Add(-time.Hour),
+		UpdatedAt:     now.Add(-time.Hour),
 	}
 
 	adapter := &fakeProviderInvocationAdapter{listModelsErr: errors.New("provider unavailable")}
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerModelAdapters[provider.OpenAI] = adapter
-	svc.clock = func() time.Time { return now }
+	svc := newAgentHandlersWithOpts(t, store, store, &fakeSealer{}, agentTestOpts{
+		modelAdapters: map[provider.Provider]provider.ModelAdapter{
+			provider.OpenAI: adapter,
+		},
+		clock: func() time.Time { return now },
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.UpdateAgent(ctx, &aiv1.UpdateAgentRequest{
@@ -763,20 +772,19 @@ func TestUpdateAgentMetadataEditDoesNotRequireLiveModelListing(t *testing.T) {
 func TestDeleteAgentRemovesOwnedRecord(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		CredentialID:    "cred-1",
-		ProviderGrantID: "",
-		Status:          "active",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	svc := newAgentHandlersWithStores(store, store, &fakeSealer{})
+	svc := newAgentHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	if _, err := svc.DeleteAgent(ctx, &aiv1.DeleteAgentRequest{AgentId: "agent-1"}); err != nil {
 		t.Fatalf("delete agent: %v", err)

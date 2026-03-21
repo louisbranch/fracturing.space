@@ -211,6 +211,41 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/shared/joingrant",
       "floor": 98.8,
       "description": "Join-grant verifier used by invite claim boundary."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest",
+      "floor": 75.0,
+      "description": "Access-request domain lifecycle, normalization, and review invariants."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/agent",
+      "floor": 88.0,
+      "description": "Agent domain model, auth reference dispatch, and status transitions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/credential",
+      "floor": 87.0,
+      "description": "Credential domain lifecycle, revocation, and status invariants."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/providergrant",
+      "floor": 77.0,
+      "description": "Provider-grant domain lifecycle, refresh logic, and expiry predicates."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration",
+      "floor": 81.0,
+      "description": "Campaign turn runner, prompt builder, and context source registration."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite",
+      "floor": 57.0,
+      "description": "SQLite persistence layer for all AI entity CRUD and pagination."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai",
+      "floor": 75.0,
+      "description": "AI gRPC transport handlers covering RPC validation and error mapping."
     }
   ]
 }

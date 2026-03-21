@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 )
 
 // ErrNotFound indicates a requested record is missing.
@@ -11,132 +16,6 @@ var ErrNotFound = errors.New("record not found")
 
 // ErrConflict indicates a requested state transition is invalid.
 var ErrConflict = errors.New("record conflict")
-
-// CredentialRecord stores a persisted provider credential.
-type CredentialRecord struct {
-	ID          string
-	OwnerUserID string
-	Provider    string
-	Label       string
-	// SecretCiphertext stores encrypted credential material only; plaintext
-	// secrets must never cross into storage records.
-	SecretCiphertext string
-	Status           string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	RevokedAt        *time.Time
-}
-
-// CredentialPage is a paged set of credentials.
-type CredentialPage struct {
-	Credentials   []CredentialRecord
-	NextPageToken string
-}
-
-// AgentRecord stores a persisted AI agent profile.
-type AgentRecord struct {
-	ID              string
-	OwnerUserID     string
-	Label           string
-	Instructions    string
-	Provider        string
-	Model           string
-	CredentialID    string
-	ProviderGrantID string
-	Status          string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-}
-
-// AgentPage is a paged set of agents.
-type AgentPage struct {
-	Agents        []AgentRecord
-	NextPageToken string
-}
-
-// ProviderGrantRecord stores a persisted provider OAuth grant.
-type ProviderGrantRecord struct {
-	ID          string
-	OwnerUserID string
-	Provider    string
-
-	GrantedScopes []string
-
-	// TokenCiphertext stores encrypted grant token material only.
-	TokenCiphertext string
-
-	RefreshSupported bool
-	Status           string
-	LastRefreshError string
-
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	RevokedAt       *time.Time
-	ExpiresAt       *time.Time
-	LastRefreshedAt *time.Time
-}
-
-// ProviderGrantPage is a paged set of provider grants.
-type ProviderGrantPage struct {
-	ProviderGrants []ProviderGrantRecord
-	NextPageToken  string
-}
-
-// ProviderGrantFilter narrows owner-scoped provider-grant listing.
-//
-// Security note: owner scope is mandatory and enforced separately; optional
-// filter fields can only reduce result visibility.
-type ProviderGrantFilter struct {
-	Provider string
-	Status   string
-}
-
-// AccessRequestRecord stores one owner-reviewed access request for an agent.
-type AccessRequestRecord struct {
-	ID string
-
-	RequesterUserID string
-	OwnerUserID     string
-	AgentID         string
-	Scope           string
-
-	RequestNote string
-
-	Status string
-
-	ReviewerUserID string
-	ReviewNote     string
-
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	ReviewedAt *time.Time
-}
-
-// AccessRequestPage is a paged set of access requests.
-type AccessRequestPage struct {
-	AccessRequests []AccessRequestRecord
-	NextPageToken  string
-}
-
-// ReviewAccessRequestInput captures one owner review decision.
-type ReviewAccessRequestInput struct {
-	OwnerUserID     string
-	AccessRequestID string
-	Status          string
-	ReviewerUserID  string
-	ReviewNote      string
-	ReviewedAt      time.Time
-}
-
-// RevokeAccessRequestInput captures one owner revocation decision.
-type RevokeAccessRequestInput struct {
-	OwnerUserID     string
-	AccessRequestID string
-	Status          string
-	ReviewerUserID  string
-	ReviewNote      string
-	RevokedAt       time.Time
-}
 
 // AuditEventRecord stores one append-only AI audit event.
 type AuditEventRecord struct {
@@ -205,24 +84,27 @@ type ProviderConnectSessionRecord struct {
 
 // CredentialStore persists credential records.
 type CredentialStore interface {
-	PutCredential(ctx context.Context, record CredentialRecord) error
-	GetCredential(ctx context.Context, credentialID string) (CredentialRecord, error)
-	ListCredentialsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (CredentialPage, error)
+	PutCredential(ctx context.Context, c credential.Credential) error
+	GetCredential(ctx context.Context, credentialID string) (credential.Credential, error)
+	ListCredentialsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (credential.Page, error)
 }
 
-// AgentStore persists AI agent records.
+// AgentStore persists AI agent profiles.
 type AgentStore interface {
-	PutAgent(ctx context.Context, record AgentRecord) error
-	GetAgent(ctx context.Context, agentID string) (AgentRecord, error)
-	ListAgentsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (AgentPage, error)
+	PutAgent(ctx context.Context, a agent.Agent) error
+	GetAgent(ctx context.Context, agentID string) (agent.Agent, error)
+	ListAgentsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (agent.Page, error)
+	// ListAccessibleAgents returns agents the user can invoke: owned agents
+	// plus agents with approved shared invoke access, in one paginated query.
+	ListAccessibleAgents(ctx context.Context, userID string, pageSize int, pageToken string) (agent.Page, error)
 	DeleteAgent(ctx context.Context, ownerUserID string, agentID string) error
 }
 
-// ProviderGrantStore persists provider grant records.
+// ProviderGrantStore persists provider grants.
 type ProviderGrantStore interface {
-	PutProviderGrant(ctx context.Context, record ProviderGrantRecord) error
-	GetProviderGrant(ctx context.Context, providerGrantID string) (ProviderGrantRecord, error)
-	ListProviderGrantsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter ProviderGrantFilter) (ProviderGrantPage, error)
+	PutProviderGrant(ctx context.Context, grant providergrant.ProviderGrant) error
+	GetProviderGrant(ctx context.Context, providerGrantID string) (providergrant.ProviderGrant, error)
+	ListProviderGrantsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter providergrant.Filter) (providergrant.Page, error)
 }
 
 // ProviderConnectSessionStore persists connect-session records.
@@ -234,20 +116,26 @@ type ProviderConnectSessionStore interface {
 
 // AccessRequestStore persists agent access-request records.
 type AccessRequestStore interface {
-	PutAccessRequest(ctx context.Context, record AccessRequestRecord) error
-	GetAccessRequest(ctx context.Context, accessRequestID string) (AccessRequestRecord, error)
-	ListAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (AccessRequestPage, error)
-	ListAccessRequestsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (AccessRequestPage, error)
+	PutAccessRequest(ctx context.Context, request accessrequest.AccessRequest) error
+	GetAccessRequest(ctx context.Context, accessRequestID string) (accessrequest.AccessRequest, error)
+	ListAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (accessrequest.Page, error)
+	ListAccessRequestsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (accessrequest.Page, error)
 	// GetApprovedInvokeAccessByRequesterForAgent returns one approved invoke grant
 	// for a requester/owner/agent tuple. Callers use this to authorize a single
 	// invoke decision without scanning unrelated access requests.
-	GetApprovedInvokeAccessByRequesterForAgent(ctx context.Context, requesterUserID string, ownerUserID string, agentID string) (AccessRequestRecord, error)
+	GetApprovedInvokeAccessByRequesterForAgent(ctx context.Context, requesterUserID string, ownerUserID string, agentID string) (accessrequest.AccessRequest, error)
 	// ListApprovedInvokeAccessRequestsByRequester returns only approved invoke
 	// access rows for one requester. This narrows list-accessible authorization
 	// scans to relevant records.
-	ListApprovedInvokeAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (AccessRequestPage, error)
-	ReviewAccessRequest(ctx context.Context, input ReviewAccessRequestInput) error
-	RevokeAccessRequest(ctx context.Context, input RevokeAccessRequestInput) error
+	ListApprovedInvokeAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (accessrequest.Page, error)
+	// ReviewAccessRequest applies an owner review decision for one pending
+	// request. The storage layer extracts status, reviewer, and timestamp
+	// fields from the domain object and performs a CAS update against the
+	// current pending status.
+	ReviewAccessRequest(ctx context.Context, reviewed accessrequest.AccessRequest) error
+	// RevokeAccessRequest applies an owner revocation for one approved
+	// request. Same CAS pattern as ReviewAccessRequest.
+	RevokeAccessRequest(ctx context.Context, revoked accessrequest.AccessRequest) error
 }
 
 // AuditEventStore persists append-only AI audit events.

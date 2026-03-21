@@ -11,6 +11,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite/migrations"
 	msqlite "modernc.org/sqlite"
@@ -55,7 +58,7 @@ func (s *Store) DB() *sql.DB {
 
 // Open opens a SQLite store at the provided path.
 func Open(path string) (*Store, error) {
-	if strings.TrimSpace(path) == "" {
+	if path == "" {
 		return nil, fmt.Errorf("storage path is required")
 	}
 
@@ -113,53 +116,56 @@ type scanner interface {
 	Scan(dest ...any) error
 }
 
-func scanProviderGrant(s scanner) (storage.ProviderGrantRecord, error) {
+func scanProviderGrant(s scanner) (providergrant.ProviderGrant, error) {
 	var (
-		rec              storage.ProviderGrantRecord
-		grantedScopesRaw string
-		createdAt        int64
-		updatedAt        int64
-		revokedAt        sql.NullInt64
-		expiresAt        sql.NullInt64
-		lastRefreshedAt  sql.NullInt64
+		id, ownerUserID, providerRaw string
+		grantedScopesRaw             string
+		tokenCiphertext              string
+		refreshSupported             bool
+		statusRaw, lastRefreshError  string
+		createdAt, updatedAt         int64
+		revokedAt, expiresAt         sql.NullInt64
+		lastRefreshedAt              sql.NullInt64
 	)
 	if err := s.Scan(
-		&rec.ID,
-		&rec.OwnerUserID,
-		&rec.Provider,
-		&grantedScopesRaw,
-		&rec.TokenCiphertext,
-		&rec.RefreshSupported,
-		&rec.Status,
-		&rec.LastRefreshError,
-		&createdAt,
-		&updatedAt,
-		&revokedAt,
-		&expiresAt,
-		&lastRefreshedAt,
+		&id, &ownerUserID, &providerRaw,
+		&grantedScopesRaw, &tokenCiphertext,
+		&refreshSupported, &statusRaw, &lastRefreshError,
+		&createdAt, &updatedAt,
+		&revokedAt, &expiresAt, &lastRefreshedAt,
 	); err != nil {
-		return storage.ProviderGrantRecord{}, err
+		return providergrant.ProviderGrant{}, err
 	}
 	scopes, err := decodeScopes(grantedScopesRaw)
 	if err != nil {
-		return storage.ProviderGrantRecord{}, err
+		return providergrant.ProviderGrant{}, err
 	}
-	rec.GrantedScopes = scopes
-	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
-	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+	normalizedProvider, _ := provider.Normalize(providerRaw)
+	grant := providergrant.ProviderGrant{
+		ID:               id,
+		OwnerUserID:      ownerUserID,
+		Provider:         normalizedProvider,
+		GrantedScopes:    scopes,
+		TokenCiphertext:  tokenCiphertext,
+		RefreshSupported: refreshSupported,
+		Status:           providergrant.ParseStatus(statusRaw),
+		LastRefreshError: lastRefreshError,
+		CreatedAt:        sqliteutil.FromMillis(createdAt),
+		UpdatedAt:        sqliteutil.FromMillis(updatedAt),
+	}
 	if revokedAt.Valid {
 		value := sqliteutil.FromMillis(revokedAt.Int64)
-		rec.RevokedAt = &value
+		grant.RevokedAt = &value
 	}
 	if expiresAt.Valid {
 		value := sqliteutil.FromMillis(expiresAt.Int64)
-		rec.ExpiresAt = &value
+		grant.ExpiresAt = &value
 	}
 	if lastRefreshedAt.Valid {
 		value := sqliteutil.FromMillis(lastRefreshedAt.Int64)
-		rec.LastRefreshedAt = &value
+		grant.RefreshedAt = &value
 	}
-	return rec, nil
+	return grant, nil
 }
 
 func scanProviderConnectSession(s scanner) (storage.ProviderConnectSessionRecord, error) {
@@ -201,34 +207,38 @@ func scanProviderConnectSession(s scanner) (storage.ProviderConnectSessionRecord
 	return rec, nil
 }
 
-func scanAccessRequest(s scanner) (storage.AccessRequestRecord, error) {
+func scanAccessRequest(s scanner) (accessrequest.AccessRequest, error) {
 	var (
-		rec        storage.AccessRequestRecord
-		createdAt  int64
-		updatedAt  int64
-		reviewedAt sql.NullInt64
+		id, requesterUserID, ownerUserID, agentID string
+		scopeRaw, requestNote, statusRaw          string
+		reviewerUserID, reviewNote                string
+		createdAt, updatedAt                      int64
+		reviewedAt                                sql.NullInt64
 	)
 	if err := s.Scan(
-		&rec.ID,
-		&rec.RequesterUserID,
-		&rec.OwnerUserID,
-		&rec.AgentID,
-		&rec.Scope,
-		&rec.RequestNote,
-		&rec.Status,
-		&rec.ReviewerUserID,
-		&rec.ReviewNote,
-		&createdAt,
-		&updatedAt,
-		&reviewedAt,
+		&id, &requesterUserID, &ownerUserID, &agentID,
+		&scopeRaw, &requestNote, &statusRaw,
+		&reviewerUserID, &reviewNote,
+		&createdAt, &updatedAt, &reviewedAt,
 	); err != nil {
-		return storage.AccessRequestRecord{}, err
+		return accessrequest.AccessRequest{}, err
 	}
-	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
-	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+	ar := accessrequest.AccessRequest{
+		ID:              id,
+		RequesterUserID: requesterUserID,
+		OwnerUserID:     ownerUserID,
+		AgentID:         agentID,
+		Scope:           accessrequest.Scope(scopeRaw),
+		RequestNote:     requestNote,
+		Status:          accessrequest.ParseStatus(statusRaw),
+		ReviewerUserID:  reviewerUserID,
+		ReviewNote:      reviewNote,
+		CreatedAt:       sqliteutil.FromMillis(createdAt),
+		UpdatedAt:       sqliteutil.FromMillis(updatedAt),
+	}
 	if reviewedAt.Valid {
 		value := sqliteutil.FromMillis(reviewedAt.Int64)
-		rec.ReviewedAt = &value
+		ar.ReviewedAt = &value
 	}
-	return rec, nil
+	return ar, nil
 }

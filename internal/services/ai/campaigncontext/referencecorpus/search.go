@@ -17,10 +17,10 @@ func validateSystem(system string) error {
 
 func metadataScore(entry indexEntry, queryLower string, queryTerms []string) int {
 	score := 0
-	idLower := strings.ToLower(strings.TrimSpace(entry.ID))
-	titleLower := strings.ToLower(strings.TrimSpace(entry.Title))
-	kindLower := strings.ToLower(strings.TrimSpace(entry.Kind))
-	pathLower := strings.ToLower(strings.TrimSpace(entry.Path))
+	idLower := strings.ToLower(entry.ID)
+	titleLower := strings.ToLower(entry.Title)
+	kindLower := strings.ToLower(entry.Kind)
+	pathLower := strings.ToLower(entry.Path)
 	switch {
 	case titleLower == queryLower:
 		score += 120
@@ -41,7 +41,7 @@ func metadataScore(entry indexEntry, queryLower string, queryTerms []string) int
 		score += 35
 	}
 	for _, alias := range entry.Aliases {
-		aliasLower := strings.ToLower(strings.TrimSpace(alias))
+		aliasLower := strings.ToLower(alias)
 		if aliasLower == queryLower {
 			score += 105
 			continue
@@ -62,7 +62,7 @@ func metadataScore(entry indexEntry, queryLower string, queryTerms []string) int
 			continue
 		}
 		for _, alias := range entry.Aliases {
-			if strings.Contains(strings.ToLower(strings.TrimSpace(alias)), term) {
+			if strings.Contains(strings.ToLower(alias), term) {
 				score += 10
 				break
 			}
@@ -73,11 +73,11 @@ func metadataScore(entry indexEntry, queryLower string, queryTerms []string) int
 
 func metadataSnippet(entry indexEntry) string {
 	parts := make([]string, 0, 3)
-	if title := strings.TrimSpace(entry.Title); title != "" {
-		parts = append(parts, title)
+	if entry.Title != "" {
+		parts = append(parts, entry.Title)
 	}
-	if kind := strings.TrimSpace(entry.Kind); kind != "" {
-		parts = append(parts, "kind: "+kind)
+	if entry.Kind != "" {
+		parts = append(parts, "kind: "+entry.Kind)
 	}
 	if len(entry.Aliases) != 0 {
 		parts = append(parts, "aliases: "+strings.Join(entry.Aliases, ", "))
@@ -112,15 +112,9 @@ func contentSnippet(content, queryLower string) string {
 		return content[:maxLen] + "..."
 	}
 	const radius = 72
-	start := idx - radius
-	if start < 0 {
-		start = 0
-	}
-	end := idx + len(queryLower) + radius
-	if end > len(content) {
-		end = len(content)
-	}
-	snippet := strings.TrimSpace(content[start:end])
+	start := max(idx-radius, 0)
+	end := min(idx+len(queryLower)+radius, len(content))
+	snippet := content[start:end]
 	if start > 0 {
 		snippet = "..." + snippet
 	}

@@ -1,17 +1,21 @@
-package orchestration
+// Package daggerheart provides Daggerheart game-system context sources for
+// campaign turn orchestration prompts.
+package daggerheart
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 )
 
-// DaggerheartContextSources returns Daggerheart-specific context sources.
+// ContextSources returns Daggerheart-specific context sources.
 // These inject authoritative game-system rules and character state into the
 // prompt so the GM agent does not need to discover them through tool calls.
-func DaggerheartContextSources() []ContextSource {
-	return []ContextSource{
-		ContextSourceFunc(dualityRulesContextSource),
-		ContextSourceFunc(characterStateContextSource),
+func ContextSources() []orchestration.ContextSource {
+	return []orchestration.ContextSource{
+		orchestration.ContextSourceFunc(dualityRulesContextSource),
+		orchestration.ContextSourceFunc(characterStateContextSource),
 	}
 }
 
@@ -19,13 +23,13 @@ func DaggerheartContextSources() []ContextSource {
 // section with per-character HP/stress/armor/hope/conditions/life_state and
 // campaign-level GM Fear. This gives the GM agent a tactical dashboard for
 // informed narration decisions without tool calls.
-func characterStateContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
+func characterStateContextSource(ctx context.Context, sess orchestration.Session, input orchestration.PromptInput) (orchestration.BriefContribution, error) {
 	uri := fmt.Sprintf("daggerheart://campaign/%s/snapshot", input.CampaignID)
 	data, err := sess.ReadResource(ctx, uri)
 	if err != nil {
-		return BriefContribution{}, fmt.Errorf("read daggerheart snapshot: %w", err)
+		return orchestration.BriefContribution{}, fmt.Errorf("read daggerheart snapshot: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return orchestration.SectionContribution(orchestration.BriefSection{
 		ID:       "daggerheart_character_state",
 		Priority: 250,
 		Label:    "Daggerheart character state",
@@ -36,12 +40,12 @@ func characterStateContextSource(ctx context.Context, sess Session, input Prompt
 // dualityRulesContextSource reads the Daggerheart duality dice rules from the
 // session resource and returns them as a brief section. This gives the GM agent
 // authoritative dice mechanics and outcome definitions in every prompt.
-func dualityRulesContextSource(ctx context.Context, sess Session, _ PromptInput) (BriefContribution, error) {
+func dualityRulesContextSource(ctx context.Context, sess orchestration.Session, _ orchestration.PromptInput) (orchestration.BriefContribution, error) {
 	rules, err := sess.ReadResource(ctx, "daggerheart://rules/version")
 	if err != nil {
-		return BriefContribution{}, fmt.Errorf("read daggerheart rules: %w", err)
+		return orchestration.BriefContribution{}, fmt.Errorf("read daggerheart rules: %w", err)
 	}
-	return sectionContribution(BriefSection{
+	return orchestration.SectionContribution(orchestration.BriefSection{
 		ID:       "daggerheart_duality_rules",
 		Priority: 200,
 		Label:    "Daggerheart duality rules",

@@ -2,7 +2,6 @@ package orchestration
 
 import (
 	"context"
-	"strings"
 )
 
 // InteractionStateSnapshot carries the typed interaction facts the prompt
@@ -13,7 +12,7 @@ type InteractionStateSnapshot struct {
 
 // Bootstrap reports whether the interaction state has no active scene yet.
 func (s InteractionStateSnapshot) Bootstrap() bool {
-	return strings.TrimSpace(s.ActiveSceneID) == ""
+	return s.ActiveSceneID == ""
 }
 
 // BriefContribution is one source's contribution to the collected session
@@ -34,13 +33,6 @@ type SessionBrief struct {
 // mode with no active scene selected yet.
 func (b SessionBrief) Bootstrap() bool {
 	return b.InteractionState != nil && b.InteractionState.Bootstrap()
-}
-
-// ContextSource contributes to the typed session brief used for prompt
-// assembly. Game systems implement this interface to inject system-specific
-// context alongside the core campaign context.
-type ContextSource interface {
-	Collect(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error)
 }
 
 // ContextSourceFunc adapts a plain function to the ContextSource interface.

@@ -5,44 +5,44 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
-func (s *Store) PutAccessRequest(ctx context.Context, record storage.AccessRequestRecord) error {
+func (s *Store) PutAccessRequest(ctx context.Context, request accessrequest.AccessRequest) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if strings.TrimSpace(record.ID) == "" {
+	if request.ID == "" {
 		return fmt.Errorf("access request id is required")
 	}
-	if strings.TrimSpace(record.RequesterUserID) == "" {
+	if request.RequesterUserID == "" {
 		return fmt.Errorf("requester user id is required")
 	}
-	if strings.TrimSpace(record.OwnerUserID) == "" {
+	if request.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	if strings.TrimSpace(record.RequesterUserID) == strings.TrimSpace(record.OwnerUserID) {
+	if request.RequesterUserID == request.OwnerUserID {
 		return fmt.Errorf("requester user id must differ from owner user id")
 	}
-	if strings.TrimSpace(record.AgentID) == "" {
+	if request.AgentID == "" {
 		return fmt.Errorf("agent id is required")
 	}
-	if strings.TrimSpace(record.Scope) == "" {
+	if request.Scope == "" {
 		return fmt.Errorf("scope is required")
 	}
-	if strings.TrimSpace(record.Status) == "" {
+	if request.Status == "" {
 		return fmt.Errorf("status is required")
 	}
 
 	var reviewedAt sql.NullInt64
-	if record.ReviewedAt != nil {
-		reviewedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.ReviewedAt), Valid: true}
+	if request.ReviewedAt != nil {
+		reviewedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*request.ReviewedAt), Valid: true}
 	}
 
 	_, err := s.sqlDB.ExecContext(ctx, `
@@ -61,17 +61,17 @@ ON CONFLICT(id) DO UPDATE SET
 	updated_at = excluded.updated_at,
 	reviewed_at = excluded.reviewed_at
 `,
-		record.ID,
-		record.RequesterUserID,
-		record.OwnerUserID,
-		record.AgentID,
-		record.Scope,
-		strings.TrimSpace(record.RequestNote),
-		record.Status,
-		strings.TrimSpace(record.ReviewerUserID),
-		strings.TrimSpace(record.ReviewNote),
-		sqliteutil.ToMillis(record.CreatedAt),
-		sqliteutil.ToMillis(record.UpdatedAt),
+		request.ID,
+		request.RequesterUserID,
+		request.OwnerUserID,
+		request.AgentID,
+		string(request.Scope),
+		request.RequestNote,
+		string(request.Status),
+		request.ReviewerUserID,
+		request.ReviewNote,
+		sqliteutil.ToMillis(request.CreatedAt),
+		sqliteutil.ToMillis(request.UpdatedAt),
 		reviewedAt,
 	)
 	if err != nil {
@@ -80,17 +80,16 @@ ON CONFLICT(id) DO UPDATE SET
 	return nil
 }
 
-// GetAccessRequest fetches an access request record by ID.
-func (s *Store) GetAccessRequest(ctx context.Context, accessRequestID string) (storage.AccessRequestRecord, error) {
+// GetAccessRequest fetches an access request by ID.
+func (s *Store) GetAccessRequest(ctx context.Context, accessRequestID string) (accessrequest.AccessRequest, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.AccessRequestRecord{}, err
+		return accessrequest.AccessRequest{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.AccessRequestRecord{}, fmt.Errorf("storage is not configured")
+		return accessrequest.AccessRequest{}, fmt.Errorf("storage is not configured")
 	}
-	accessRequestID = strings.TrimSpace(accessRequestID)
 	if accessRequestID == "" {
-		return storage.AccessRequestRecord{}, fmt.Errorf("access request id is required")
+		return accessrequest.AccessRequest{}, fmt.Errorf("access request id is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -102,27 +101,26 @@ WHERE id = ?
 	rec, err := scanAccessRequest(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.AccessRequestRecord{}, storage.ErrNotFound
+			return accessrequest.AccessRequest{}, storage.ErrNotFound
 		}
-		return storage.AccessRequestRecord{}, fmt.Errorf("get access request: %w", err)
+		return accessrequest.AccessRequest{}, fmt.Errorf("get access request: %w", err)
 	}
 	return rec, nil
 }
 
 // ListAccessRequestsByRequester returns a page of access requests by requester.
-func (s *Store) ListAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (storage.AccessRequestPage, error) {
+func (s *Store) ListAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (accessrequest.Page, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.AccessRequestPage{}, err
+		return accessrequest.Page{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("storage is not configured")
+		return accessrequest.Page{}, fmt.Errorf("storage is not configured")
 	}
-	requesterUserID = strings.TrimSpace(requesterUserID)
 	if requesterUserID == "" {
-		return storage.AccessRequestPage{}, fmt.Errorf("requester user id is required")
+		return accessrequest.Page{}, fmt.Errorf("requester user id is required")
 	}
 	if pageSize <= 0 {
-		return storage.AccessRequestPage{}, fmt.Errorf("page size must be greater than zero")
+		return accessrequest.Page{}, fmt.Errorf("page size must be greater than zero")
 	}
 
 	limit := pageSize + 1
@@ -130,7 +128,7 @@ func (s *Store) ListAccessRequestsByRequester(ctx context.Context, requesterUser
 		rows *sql.Rows
 		err  error
 	)
-	if strings.TrimSpace(pageToken) == "" {
+	if pageToken == "" {
 		rows, err = s.sqlDB.QueryContext(ctx, `
 SELECT id, requester_user_id, owner_user_id, agent_id, scope, request_note, status, reviewer_user_id, review_note, created_at, updated_at, reviewed_at
 FROM ai_access_requests
@@ -145,23 +143,23 @@ FROM ai_access_requests
 WHERE requester_user_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
-`, requesterUserID, strings.TrimSpace(pageToken), limit)
+`, requesterUserID, pageToken, limit)
 	}
 	if err != nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("list access requests by requester: %w", err)
+		return accessrequest.Page{}, fmt.Errorf("list access requests by requester: %w", err)
 	}
 	defer rows.Close()
 
-	page := storage.AccessRequestPage{AccessRequests: make([]storage.AccessRequestRecord, 0, pageSize)}
+	page := accessrequest.Page{AccessRequests: make([]accessrequest.AccessRequest, 0, pageSize)}
 	for rows.Next() {
 		rec, err := scanAccessRequest(rows)
 		if err != nil {
-			return storage.AccessRequestPage{}, fmt.Errorf("scan access request row: %w", err)
+			return accessrequest.Page{}, fmt.Errorf("scan access request row: %w", err)
 		}
 		page.AccessRequests = append(page.AccessRequests, rec)
 	}
 	if err := rows.Err(); err != nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("iterate access request rows: %w", err)
+		return accessrequest.Page{}, fmt.Errorf("iterate access request rows: %w", err)
 	}
 	if len(page.AccessRequests) > pageSize {
 		page.NextPageToken = page.AccessRequests[pageSize-1].ID
@@ -171,19 +169,18 @@ LIMIT ?
 }
 
 // ListAccessRequestsByOwner returns a page of access requests by owner.
-func (s *Store) ListAccessRequestsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (storage.AccessRequestPage, error) {
+func (s *Store) ListAccessRequestsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (accessrequest.Page, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.AccessRequestPage{}, err
+		return accessrequest.Page{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("storage is not configured")
+		return accessrequest.Page{}, fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
 	if ownerUserID == "" {
-		return storage.AccessRequestPage{}, fmt.Errorf("owner user id is required")
+		return accessrequest.Page{}, fmt.Errorf("owner user id is required")
 	}
 	if pageSize <= 0 {
-		return storage.AccessRequestPage{}, fmt.Errorf("page size must be greater than zero")
+		return accessrequest.Page{}, fmt.Errorf("page size must be greater than zero")
 	}
 
 	limit := pageSize + 1
@@ -191,7 +188,7 @@ func (s *Store) ListAccessRequestsByOwner(ctx context.Context, ownerUserID strin
 		rows *sql.Rows
 		err  error
 	)
-	if strings.TrimSpace(pageToken) == "" {
+	if pageToken == "" {
 		rows, err = s.sqlDB.QueryContext(ctx, `
 SELECT id, requester_user_id, owner_user_id, agent_id, scope, request_note, status, reviewer_user_id, review_note, created_at, updated_at, reviewed_at
 FROM ai_access_requests
@@ -206,23 +203,23 @@ FROM ai_access_requests
 WHERE owner_user_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
-`, ownerUserID, strings.TrimSpace(pageToken), limit)
+`, ownerUserID, pageToken, limit)
 	}
 	if err != nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("list access requests by owner: %w", err)
+		return accessrequest.Page{}, fmt.Errorf("list access requests by owner: %w", err)
 	}
 	defer rows.Close()
 
-	page := storage.AccessRequestPage{AccessRequests: make([]storage.AccessRequestRecord, 0, pageSize)}
+	page := accessrequest.Page{AccessRequests: make([]accessrequest.AccessRequest, 0, pageSize)}
 	for rows.Next() {
 		rec, err := scanAccessRequest(rows)
 		if err != nil {
-			return storage.AccessRequestPage{}, fmt.Errorf("scan access request row: %w", err)
+			return accessrequest.Page{}, fmt.Errorf("scan access request row: %w", err)
 		}
 		page.AccessRequests = append(page.AccessRequests, rec)
 	}
 	if err := rows.Err(); err != nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("iterate access request rows: %w", err)
+		return accessrequest.Page{}, fmt.Errorf("iterate access request rows: %w", err)
 	}
 	if len(page.AccessRequests) > pageSize {
 		page.NextPageToken = page.AccessRequests[pageSize-1].ID
@@ -233,24 +230,21 @@ LIMIT ?
 
 // GetApprovedInvokeAccessByRequesterForAgent returns one approved invoke access
 // request for a requester/owner/agent tuple.
-func (s *Store) GetApprovedInvokeAccessByRequesterForAgent(ctx context.Context, requesterUserID string, ownerUserID string, agentID string) (storage.AccessRequestRecord, error) {
+func (s *Store) GetApprovedInvokeAccessByRequesterForAgent(ctx context.Context, requesterUserID string, ownerUserID string, agentID string) (accessrequest.AccessRequest, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.AccessRequestRecord{}, err
+		return accessrequest.AccessRequest{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.AccessRequestRecord{}, fmt.Errorf("storage is not configured")
+		return accessrequest.AccessRequest{}, fmt.Errorf("storage is not configured")
 	}
-	requesterUserID = strings.TrimSpace(requesterUserID)
 	if requesterUserID == "" {
-		return storage.AccessRequestRecord{}, fmt.Errorf("requester user id is required")
+		return accessrequest.AccessRequest{}, fmt.Errorf("requester user id is required")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
 	if ownerUserID == "" {
-		return storage.AccessRequestRecord{}, fmt.Errorf("owner user id is required")
+		return accessrequest.AccessRequest{}, fmt.Errorf("owner user id is required")
 	}
-	agentID = strings.TrimSpace(agentID)
 	if agentID == "" {
-		return storage.AccessRequestRecord{}, fmt.Errorf("agent id is required")
+		return accessrequest.AccessRequest{}, fmt.Errorf("agent id is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -264,28 +258,27 @@ LIMIT 1
 	rec, err := scanAccessRequest(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.AccessRequestRecord{}, storage.ErrNotFound
+			return accessrequest.AccessRequest{}, storage.ErrNotFound
 		}
-		return storage.AccessRequestRecord{}, fmt.Errorf("get approved invoke access request: %w", err)
+		return accessrequest.AccessRequest{}, fmt.Errorf("get approved invoke access request: %w", err)
 	}
 	return rec, nil
 }
 
 // ListApprovedInvokeAccessRequestsByRequester returns approved invoke access
 // requests for one requester.
-func (s *Store) ListApprovedInvokeAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (storage.AccessRequestPage, error) {
+func (s *Store) ListApprovedInvokeAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (accessrequest.Page, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.AccessRequestPage{}, err
+		return accessrequest.Page{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("storage is not configured")
+		return accessrequest.Page{}, fmt.Errorf("storage is not configured")
 	}
-	requesterUserID = strings.TrimSpace(requesterUserID)
 	if requesterUserID == "" {
-		return storage.AccessRequestPage{}, fmt.Errorf("requester user id is required")
+		return accessrequest.Page{}, fmt.Errorf("requester user id is required")
 	}
 	if pageSize <= 0 {
-		return storage.AccessRequestPage{}, fmt.Errorf("page size must be greater than zero")
+		return accessrequest.Page{}, fmt.Errorf("page size must be greater than zero")
 	}
 
 	limit := pageSize + 1
@@ -293,7 +286,7 @@ func (s *Store) ListApprovedInvokeAccessRequestsByRequester(ctx context.Context,
 		rows *sql.Rows
 		err  error
 	)
-	if strings.TrimSpace(pageToken) == "" {
+	if pageToken == "" {
 		rows, err = s.sqlDB.QueryContext(ctx, `
 SELECT id, requester_user_id, owner_user_id, agent_id, scope, request_note, status, reviewer_user_id, review_note, created_at, updated_at, reviewed_at
 FROM ai_access_requests
@@ -308,23 +301,23 @@ FROM ai_access_requests
 WHERE requester_user_id = ? AND scope = 'invoke' AND status = 'approved' AND id > ?
 ORDER BY id
 LIMIT ?
-`, requesterUserID, strings.TrimSpace(pageToken), limit)
+`, requesterUserID, pageToken, limit)
 	}
 	if err != nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("list approved invoke access requests by requester: %w", err)
+		return accessrequest.Page{}, fmt.Errorf("list approved invoke access requests by requester: %w", err)
 	}
 	defer rows.Close()
 
-	page := storage.AccessRequestPage{AccessRequests: make([]storage.AccessRequestRecord, 0, pageSize)}
+	page := accessrequest.Page{AccessRequests: make([]accessrequest.AccessRequest, 0, pageSize)}
 	for rows.Next() {
 		rec, err := scanAccessRequest(rows)
 		if err != nil {
-			return storage.AccessRequestPage{}, fmt.Errorf("scan access request row: %w", err)
+			return accessrequest.Page{}, fmt.Errorf("scan access request row: %w", err)
 		}
 		page.AccessRequests = append(page.AccessRequests, rec)
 	}
 	if err := rows.Err(); err != nil {
-		return storage.AccessRequestPage{}, fmt.Errorf("iterate access request rows: %w", err)
+		return accessrequest.Page{}, fmt.Errorf("iterate access request rows: %w", err)
 	}
 	if len(page.AccessRequests) > pageSize {
 		page.NextPageToken = page.AccessRequests[pageSize-1].ID
@@ -334,48 +327,48 @@ LIMIT ?
 }
 
 // ReviewAccessRequest applies an owner review decision for one pending request.
-func (s *Store) ReviewAccessRequest(ctx context.Context, input storage.ReviewAccessRequestInput) error {
+// It extracts fields from the reviewed domain object and performs a CAS update
+// against the current pending status.
+func (s *Store) ReviewAccessRequest(ctx context.Context, reviewed accessrequest.AccessRequest) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	ownerUserID := strings.TrimSpace(input.OwnerUserID)
-	if ownerUserID == "" {
+	if reviewed.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	accessRequestID := strings.TrimSpace(input.AccessRequestID)
-	if accessRequestID == "" {
+	if reviewed.ID == "" {
 		return fmt.Errorf("access request id is required")
 	}
-	status := strings.TrimSpace(input.Status)
-	if status == "" {
+	if reviewed.Status == "" {
 		return fmt.Errorf("status is required")
 	}
-	reviewerUserID := strings.TrimSpace(input.ReviewerUserID)
-	if reviewerUserID == "" {
+	if reviewed.ReviewerUserID == "" {
 		return fmt.Errorf("reviewer user id is required")
 	}
-	// Owner-scoped reviews must attribute the decision to the same owner.
-	if reviewerUserID != ownerUserID {
+	if reviewed.ReviewerUserID != reviewed.OwnerUserID {
 		return fmt.Errorf("reviewer user id must match owner user id")
 	}
-	reviewedAt := input.ReviewedAt.UTC()
+	if reviewed.ReviewedAt == nil {
+		return fmt.Errorf("reviewed_at is required")
+	}
+	reviewedAt := reviewed.ReviewedAt.UTC()
 
 	var existingStatus string
 	row := s.sqlDB.QueryRowContext(ctx, `
 SELECT status
 FROM ai_access_requests
 WHERE owner_user_id = ? AND id = ?
-`, ownerUserID, accessRequestID)
+`, reviewed.OwnerUserID, reviewed.ID)
 	if err := row.Scan(&existingStatus); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.ErrNotFound
 		}
 		return fmt.Errorf("check access request status: %w", err)
 	}
-	if !strings.EqualFold(strings.TrimSpace(existingStatus), "pending") {
+	if existingStatus != "pending" {
 		return storage.ErrConflict
 	}
 
@@ -383,7 +376,7 @@ WHERE owner_user_id = ? AND id = ?
 UPDATE ai_access_requests
 SET status = ?, reviewer_user_id = ?, review_note = ?, reviewed_at = ?, updated_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'pending'
-`, status, reviewerUserID, strings.TrimSpace(input.ReviewNote), sqliteutil.ToMillis(reviewedAt), sqliteutil.ToMillis(reviewedAt), ownerUserID, accessRequestID)
+`, string(reviewed.Status), reviewed.ReviewerUserID, reviewed.ReviewNote, sqliteutil.ToMillis(reviewedAt), sqliteutil.ToMillis(reviewedAt), reviewed.OwnerUserID, reviewed.ID)
 	if err != nil {
 		return fmt.Errorf("review access request: %w", err)
 	}
@@ -398,48 +391,43 @@ WHERE owner_user_id = ? AND id = ? AND status = 'pending'
 }
 
 // RevokeAccessRequest applies an owner revocation for one approved request.
-func (s *Store) RevokeAccessRequest(ctx context.Context, input storage.RevokeAccessRequestInput) error {
+func (s *Store) RevokeAccessRequest(ctx context.Context, revoked accessrequest.AccessRequest) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	ownerUserID := strings.TrimSpace(input.OwnerUserID)
-	if ownerUserID == "" {
+	if revoked.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	accessRequestID := strings.TrimSpace(input.AccessRequestID)
-	if accessRequestID == "" {
+	if revoked.ID == "" {
 		return fmt.Errorf("access request id is required")
 	}
-	status := strings.TrimSpace(input.Status)
-	if status == "" {
+	if revoked.Status == "" {
 		return fmt.Errorf("status is required")
 	}
-	reviewerUserID := strings.TrimSpace(input.ReviewerUserID)
-	if reviewerUserID == "" {
+	if revoked.ReviewerUserID == "" {
 		return fmt.Errorf("reviewer user id is required")
 	}
-	// Owner-scoped revocations must attribute the action to the same owner.
-	if reviewerUserID != ownerUserID {
+	if revoked.ReviewerUserID != revoked.OwnerUserID {
 		return fmt.Errorf("reviewer user id must match owner user id")
 	}
-	revokedAt := input.RevokedAt.UTC()
+	revokedAt := revoked.UpdatedAt.UTC()
 
 	var existingStatus string
 	row := s.sqlDB.QueryRowContext(ctx, `
 SELECT status
 FROM ai_access_requests
 WHERE owner_user_id = ? AND id = ?
-`, ownerUserID, accessRequestID)
+`, revoked.OwnerUserID, revoked.ID)
 	if err := row.Scan(&existingStatus); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.ErrNotFound
 		}
 		return fmt.Errorf("check access request status: %w", err)
 	}
-	if !strings.EqualFold(strings.TrimSpace(existingStatus), "approved") {
+	if existingStatus != "approved" {
 		return storage.ErrConflict
 	}
 
@@ -447,7 +435,7 @@ WHERE owner_user_id = ? AND id = ?
 UPDATE ai_access_requests
 SET status = ?, reviewer_user_id = ?, review_note = ?, updated_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'approved'
-`, status, reviewerUserID, strings.TrimSpace(input.ReviewNote), sqliteutil.ToMillis(revokedAt), ownerUserID, accessRequestID)
+`, string(revoked.Status), revoked.ReviewerUserID, revoked.ReviewNote, sqliteutil.ToMillis(revokedAt), revoked.OwnerUserID, revoked.ID)
 	if err != nil {
 		return fmt.Errorf("revoke access request: %w", err)
 	}
@@ -460,5 +448,3 @@ WHERE owner_user_id = ? AND id = ? AND status = 'approved'
 	}
 	return nil
 }
-
-// PutAuditEvent appends one AI audit event row.

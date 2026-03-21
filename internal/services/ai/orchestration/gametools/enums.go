@@ -11,7 +11,7 @@ import (
 )
 
 func rollModeToProto(value string) commonv1.RollMode {
-	switch strings.ToUpper(strings.TrimSpace(value)) {
+	switch strings.ToUpper(value) {
 	case "REPLAY":
 		return commonv1.RollMode_REPLAY
 	case "LIVE":

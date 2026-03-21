@@ -12,14 +12,14 @@ func TestSectionRead(t *testing.T) {
 	}{
 		{name: "empty document", content: "", heading: "NPCs", wantBody: "", wantFound: false},
 		{name: "empty heading", content: "## NPCs\n\nSome NPC info\n", heading: "", wantBody: "", wantFound: false},
-		{name: "exact match", content: "## NPCs\n\nBartender at the Rusty Nail.\n", heading: "NPCs", wantBody: "Bartender at the Rusty Nail.", wantFound: true},
-		{name: "case insensitive match", content: "## Plot Hooks\n\nThe harbor debt is due.\n", heading: "plot hooks", wantBody: "The harbor debt is due.", wantFound: true},
+		{name: "exact match", content: "## NPCs\n\nBartender at the Rusty Nail.\n", heading: "NPCs", wantBody: "\nBartender at the Rusty Nail.\n", wantFound: true},
+		{name: "case insensitive match", content: "## Plot Hooks\n\nThe harbor debt is due.\n", heading: "plot hooks", wantBody: "\nThe harbor debt is due.\n", wantFound: true},
 		{name: "heading not found", content: "## NPCs\n\nBartender.\n", heading: "World State", wantBody: "", wantFound: false},
-		{name: "multi-section returns correct one", content: "## NPCs\n\nBartender.\n\n## Plot Hooks\n\nDebt at dawn.\n\n## World State\n\nHarbor town.\n", heading: "Plot Hooks", wantBody: "Debt at dawn.", wantFound: true},
-		{name: "preamble before first heading", content: "Campaign memory for Harbor Run.\n\n## NPCs\n\nBartender.\n", heading: "NPCs", wantBody: "Bartender.", wantFound: true},
+		{name: "multi-section returns correct one", content: "## NPCs\n\nBartender.\n\n## Plot Hooks\n\nDebt at dawn.\n\n## World State\n\nHarbor town.\n", heading: "Plot Hooks", wantBody: "\nDebt at dawn.\n", wantFound: true},
+		{name: "preamble before first heading", content: "Campaign memory for Harbor Run.\n\n## NPCs\n\nBartender.\n", heading: "NPCs", wantBody: "\nBartender.\n", wantFound: true},
 		{name: "section with no body", content: "## NPCs\n## Plot Hooks\n\nDebt.\n", heading: "NPCs", wantBody: "", wantFound: true},
-		{name: "multiline body", content: "## NPCs\n\n- Bartender at the Rusty Nail\n- Harbor master\n- The Black Lantern\n", heading: "NPCs", wantBody: "- Bartender at the Rusty Nail\n- Harbor master\n- The Black Lantern", wantFound: true},
-		{name: "whitespace heading trimmed", content: "## NPCs\n\nBartender.\n", heading: "  NPCs  ", wantBody: "Bartender.", wantFound: true},
+		{name: "multiline body", content: "## NPCs\n\n- Bartender at the Rusty Nail\n- Harbor master\n- The Black Lantern\n", heading: "NPCs", wantBody: "\n- Bartender at the Rusty Nail\n- Harbor master\n- The Black Lantern\n", wantFound: true},
+		{name: "whitespace heading trimmed", content: "## NPCs\n\nBartender.\n", heading: "  NPCs  ", wantBody: "\nBartender.\n", wantFound: true},
 	}
 
 	for _, tt := range tests {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
@@ -414,17 +413,15 @@ func (s *DirectSession) readCampaignArtifact(ctx context.Context, uri string) (s
 	if err != nil {
 		return "", err
 	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
+	if s.clients.Artifact == nil {
+		return "", fmt.Errorf("artifact manager is not configured")
+	}
 
-	resp, err := s.clients.Artifact.GetCampaignArtifact(callCtx, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       artifactPath,
-	})
+	record, err := s.clients.Artifact.GetArtifact(ctx, campaignID, artifactPath)
 	if err != nil {
 		return "", fmt.Errorf("campaign artifact get failed: %w", err)
 	}
-	return marshalIndent(artifactFromProto(resp.GetArtifact(), true))
+	return marshalIndent(artifactFromRecord(record, true))
 }
 
 // --- daggerheart://campaign/{id}/snapshot ---
@@ -541,21 +538,18 @@ func matchCampaignArtifactURI(uri string) bool {
 }
 
 func parseArtifactURI(uri string) (string, string, error) {
-	trimmed := strings.TrimSpace(uri)
-	if !strings.HasPrefix(trimmed, "campaign://") {
+	if !strings.HasPrefix(uri, "campaign://") {
 		return "", "", fmt.Errorf("URI must start with \"campaign://\"")
 	}
-	rest := strings.TrimPrefix(trimmed, "campaign://")
+	rest := strings.TrimPrefix(uri, "campaign://")
 	parts := strings.SplitN(rest, "/artifacts/", 2)
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("URI must match campaign://{campaign_id}/artifacts/{path}")
 	}
-	campaignID := strings.TrimSpace(parts[0])
-	artifactPath := strings.TrimSpace(parts[1])
-	if campaignID == "" || artifactPath == "" {
+	if parts[0] == "" || parts[1] == "" {
 		return "", "", fmt.Errorf("campaign and artifact path are required")
 	}
-	return campaignID, artifactPath, nil
+	return parts[0], parts[1], nil
 }
 
 func parseCampaignIDFromSuffixURI(uri, suffix string) (string, error) {
@@ -567,7 +561,7 @@ func parseCampaignIDFromSuffixURI(uri, suffix string) (string, error) {
 	if !strings.HasSuffix(uri, fullSuffix) {
 		return "", fmt.Errorf("URI must end with %q", fullSuffix)
 	}
-	campaignID := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(uri, prefix), fullSuffix))
+	campaignID := strings.TrimSuffix(strings.TrimPrefix(uri, prefix), fullSuffix)
 	if campaignID == "" {
 		return "", fmt.Errorf("campaign ID is required in URI")
 	}
@@ -575,21 +569,18 @@ func parseCampaignIDFromSuffixURI(uri, suffix string) (string, error) {
 }
 
 func parseSceneListURI(uri string) (string, string, error) {
-	trimmed := strings.TrimSpace(uri)
-	if !strings.HasPrefix(trimmed, "campaign://") {
+	if !strings.HasPrefix(uri, "campaign://") {
 		return "", "", fmt.Errorf("URI must start with \"campaign://\"")
 	}
-	rest := strings.TrimPrefix(trimmed, "campaign://")
+	rest := strings.TrimPrefix(uri, "campaign://")
 	parts := strings.Split(rest, "/")
 	if len(parts) != 4 || parts[1] != "sessions" || parts[3] != "scenes" {
 		return "", "", fmt.Errorf("URI must match campaign://{campaign_id}/sessions/{session_id}/scenes")
 	}
-	campaignID := strings.TrimSpace(parts[0])
-	sessionID := strings.TrimSpace(parts[2])
-	if campaignID == "" || sessionID == "" {
+	if parts[0] == "" || parts[2] == "" {
 		return "", "", fmt.Errorf("campaign and session IDs are required in URI")
 	}
-	return campaignID, sessionID, nil
+	return parts[0], parts[2], nil
 }
 
 func marshalIndent(v any) (string, error) {

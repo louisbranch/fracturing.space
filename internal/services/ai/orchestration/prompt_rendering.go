@@ -1,25 +1,14 @@
 package orchestration
 
 import (
-	"context"
 	"strings"
 )
-
-// SessionBriefCollector gathers the typed session brief used for one prompt.
-type SessionBriefCollector interface {
-	CollectBrief(ctx context.Context, sess Session, input PromptInput) (SessionBrief, error)
-}
 
 // PromptInstructions contains the static instruction content injected into the
 // rendered campaign turn prompt.
 type PromptInstructions struct {
 	Skills              string
 	InteractionContract string
-}
-
-// PromptRenderer renders one prompt from a collected brief plus prompt input.
-type PromptRenderer interface {
-	Render(brief SessionBrief, input PromptInput) string
 }
 
 // PromptRenderPolicy declares the configurable rendering behavior for one
@@ -71,12 +60,12 @@ func (r briefPromptRenderer) Render(brief SessionBrief, input PromptInput) strin
 func (r briefPromptRenderer) buildIntrinsicSections(brief SessionBrief, input PromptInput) []BriefSection {
 	var sections []BriefSection
 
-	if text := strings.TrimSpace(r.policy.Instructions.Skills); text != "" {
+	if r.policy.Instructions.Skills != "" {
 		sections = append(sections, BriefSection{
 			ID:       "skills",
 			Priority: 100,
 			Label:    "Skills",
-			Content:  text,
+			Content:  r.policy.Instructions.Skills,
 			Required: true,
 		})
 	}
@@ -97,12 +86,12 @@ func (r briefPromptRenderer) buildIntrinsicSections(brief SessionBrief, input Pr
 		Required: true,
 	})
 
-	if text := strings.TrimSpace(input.TurnInput); text != "" {
+	if input.TurnInput != "" {
 		sections = append(sections, BriefSection{
 			ID:       "turn_input",
 			Priority: 100,
 			Label:    "Turn input",
-			Content:  text,
+			Content:  input.TurnInput,
 			Required: true,
 		})
 	}
@@ -118,8 +107,8 @@ func (r briefPromptRenderer) buildIntrinsicSections(brief SessionBrief, input Pr
 }
 
 func interactionContractText(instructions PromptInstructions) string {
-	if text := strings.TrimSpace(instructions.InteractionContract); text != "" {
-		return text
+	if instructions.InteractionContract != "" {
+		return instructions.InteractionContract
 	}
 	return strings.Join([]string{
 		"You are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.",
@@ -134,9 +123,9 @@ func interactionContractText(instructions PromptInstructions) string {
 func buildAuthorityText(bootstrap bool, input PromptInput) string {
 	var b strings.Builder
 	b.WriteString("Campaign, session, and participant authority are fixed for this turn.")
-	if pid := strings.TrimSpace(input.ParticipantID); pid != "" {
+	if input.ParticipantID != "" {
 		b.WriteString("\nFixed participant authority:\n")
-		b.WriteString(pid)
+		b.WriteString(input.ParticipantID)
 	}
 	if bootstrap {
 		b.WriteString("\n\nBootstrap mode: there is no active scene yet.\n")

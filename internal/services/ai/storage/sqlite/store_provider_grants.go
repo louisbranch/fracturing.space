@@ -8,48 +8,48 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
-func (s *Store) PutProviderGrant(ctx context.Context, record storage.ProviderGrantRecord) error {
+func (s *Store) PutProviderGrant(ctx context.Context, grant providergrant.ProviderGrant) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if strings.TrimSpace(record.ID) == "" {
+	if grant.ID == "" {
 		return fmt.Errorf("provider grant id is required")
 	}
-	if strings.TrimSpace(record.OwnerUserID) == "" {
+	if grant.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	if strings.TrimSpace(record.Provider) == "" {
+	if grant.Provider == "" {
 		return fmt.Errorf("provider is required")
 	}
-	if strings.TrimSpace(record.TokenCiphertext) == "" {
+	if grant.TokenCiphertext == "" {
 		return fmt.Errorf("token ciphertext is required")
 	}
-	// TokenCiphertext must be pre-sealed by the service layer.
-	if strings.TrimSpace(record.Status) == "" {
+	if grant.Status == "" {
 		return fmt.Errorf("status is required")
 	}
-	scopesJSON, err := encodeScopes(record.GrantedScopes)
+	scopesJSON, err := encodeScopes(grant.GrantedScopes)
 	if err != nil {
 		return err
 	}
 
 	var revokedAt sql.NullInt64
-	if record.RevokedAt != nil {
-		revokedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.RevokedAt), Valid: true}
+	if grant.RevokedAt != nil {
+		revokedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*grant.RevokedAt), Valid: true}
 	}
 	var expiresAt sql.NullInt64
-	if record.ExpiresAt != nil {
-		expiresAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.ExpiresAt), Valid: true}
+	if grant.ExpiresAt != nil {
+		expiresAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*grant.ExpiresAt), Valid: true}
 	}
 	var lastRefreshedAt sql.NullInt64
-	if record.LastRefreshedAt != nil {
-		lastRefreshedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.LastRefreshedAt), Valid: true}
+	if grant.RefreshedAt != nil {
+		lastRefreshedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*grant.RefreshedAt), Valid: true}
 	}
 
 	_, err = s.sqlDB.ExecContext(ctx, `
@@ -69,16 +69,16 @@ ON CONFLICT(id) DO UPDATE SET
 	expires_at = excluded.expires_at,
 	last_refreshed_at = excluded.last_refreshed_at
 `,
-		record.ID,
-		record.OwnerUserID,
-		record.Provider,
+		grant.ID,
+		grant.OwnerUserID,
+		string(grant.Provider),
 		scopesJSON,
-		record.TokenCiphertext,
-		record.RefreshSupported,
-		record.Status,
-		record.LastRefreshError,
-		sqliteutil.ToMillis(record.CreatedAt),
-		sqliteutil.ToMillis(record.UpdatedAt),
+		grant.TokenCiphertext,
+		grant.RefreshSupported,
+		string(grant.Status),
+		grant.LastRefreshError,
+		sqliteutil.ToMillis(grant.CreatedAt),
+		sqliteutil.ToMillis(grant.UpdatedAt),
 		revokedAt,
 		expiresAt,
 		lastRefreshedAt,
@@ -89,17 +89,16 @@ ON CONFLICT(id) DO UPDATE SET
 	return nil
 }
 
-// GetProviderGrant fetches a provider grant record by ID.
-func (s *Store) GetProviderGrant(ctx context.Context, providerGrantID string) (storage.ProviderGrantRecord, error) {
+// GetProviderGrant fetches a provider grant by ID.
+func (s *Store) GetProviderGrant(ctx context.Context, providerGrantID string) (providergrant.ProviderGrant, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.ProviderGrantRecord{}, err
+		return providergrant.ProviderGrant{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.ProviderGrantRecord{}, fmt.Errorf("storage is not configured")
+		return providergrant.ProviderGrant{}, fmt.Errorf("storage is not configured")
 	}
-	providerGrantID = strings.TrimSpace(providerGrantID)
 	if providerGrantID == "" {
-		return storage.ProviderGrantRecord{}, fmt.Errorf("provider grant id is required")
+		return providergrant.ProviderGrant{}, fmt.Errorf("provider grant id is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -108,45 +107,43 @@ FROM ai_provider_grants
 WHERE id = ?
 `, providerGrantID)
 
-	rec, err := scanProviderGrant(row)
+	grant, err := scanProviderGrant(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.ProviderGrantRecord{}, storage.ErrNotFound
+			return providergrant.ProviderGrant{}, storage.ErrNotFound
 		}
-		return storage.ProviderGrantRecord{}, fmt.Errorf("get provider grant: %w", err)
+		return providergrant.ProviderGrant{}, fmt.Errorf("get provider grant: %w", err)
 	}
-	return rec, nil
+	return grant, nil
 }
 
 // ListProviderGrantsByOwner returns a page of provider grants for one owner.
-func (s *Store) ListProviderGrantsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter storage.ProviderGrantFilter) (storage.ProviderGrantPage, error) {
+func (s *Store) ListProviderGrantsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter providergrant.Filter) (providergrant.Page, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.ProviderGrantPage{}, err
+		return providergrant.Page{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.ProviderGrantPage{}, fmt.Errorf("storage is not configured")
+		return providergrant.Page{}, fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
 	if ownerUserID == "" {
-		return storage.ProviderGrantPage{}, fmt.Errorf("owner user id is required")
+		return providergrant.Page{}, fmt.Errorf("owner user id is required")
 	}
 	if pageSize <= 0 {
-		return storage.ProviderGrantPage{}, fmt.Errorf("page size must be greater than zero")
+		return providergrant.Page{}, fmt.Errorf("page size must be greater than zero")
 	}
-	provider := strings.ToLower(strings.TrimSpace(filter.Provider))
-	status := strings.ToLower(strings.TrimSpace(filter.Status))
+	filterProvider := strings.ToLower(string(filter.Provider))
+	filterStatus := strings.ToLower(string(filter.Status))
 
 	limit := pageSize + 1
-	pageToken = strings.TrimSpace(pageToken)
 	whereParts := []string{"owner_user_id = ?"}
 	args := []any{ownerUserID}
-	if provider != "" {
+	if filterProvider != "" {
 		whereParts = append(whereParts, "provider = ?")
-		args = append(args, provider)
+		args = append(args, filterProvider)
 	}
-	if status != "" {
+	if filterStatus != "" {
 		whereParts = append(whereParts, "status = ?")
-		args = append(args, status)
+		args = append(args, filterStatus)
 	}
 	if pageToken != "" {
 		whereParts = append(whereParts, "id > ?")
@@ -165,20 +162,20 @@ LIMIT ?
 `, strings.Join(whereParts, " AND "))
 	rows, err := s.sqlDB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return storage.ProviderGrantPage{}, fmt.Errorf("list provider grants: %w", err)
+		return providergrant.Page{}, fmt.Errorf("list provider grants: %w", err)
 	}
 	defer rows.Close()
 
-	page := storage.ProviderGrantPage{ProviderGrants: make([]storage.ProviderGrantRecord, 0, pageSize)}
+	page := providergrant.Page{ProviderGrants: make([]providergrant.ProviderGrant, 0, pageSize)}
 	for rows.Next() {
-		rec, err := scanProviderGrant(rows)
+		grant, err := scanProviderGrant(rows)
 		if err != nil {
-			return storage.ProviderGrantPage{}, fmt.Errorf("scan provider grant row: %w", err)
+			return providergrant.Page{}, fmt.Errorf("scan provider grant row: %w", err)
 		}
-		page.ProviderGrants = append(page.ProviderGrants, rec)
+		page.ProviderGrants = append(page.ProviderGrants, grant)
 	}
 	if err := rows.Err(); err != nil {
-		return storage.ProviderGrantPage{}, fmt.Errorf("iterate provider grant rows: %w", err)
+		return providergrant.Page{}, fmt.Errorf("iterate provider grant rows: %w", err)
 	}
 
 	if len(page.ProviderGrants) > pageSize {

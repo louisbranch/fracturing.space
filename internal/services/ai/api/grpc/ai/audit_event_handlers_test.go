@@ -13,8 +13,8 @@ import (
 )
 
 func TestListAuditEventsRequiresUserID(t *testing.T) {
-	svc := newAccessRequestHandlersWithStores(newFakeStore(), newFakeStore(), newFakeStore())
-	_, err := svc.ListAuditEvents(context.Background(), &aiv1.ListAuditEventsRequest{PageSize: 10})
+	th := newAccessRequestHandlersWithStores(t, newFakeStore(), newFakeStore(), newFakeStore())
+	_, err := th.ListAuditEvents(context.Background(), &aiv1.ListAuditEventsRequest{PageSize: 10})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
@@ -27,9 +27,9 @@ func TestListAuditEventsOwnerScoped(t *testing.T) {
 		{ID: "3", EventName: "access_request.created", ActorUserID: "user-2", OwnerUserID: "owner-2", RequesterUserID: "user-2", AgentID: "agent-2", AccessRequestID: "request-2", Outcome: "pending", CreatedAt: now},
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{PageSize: 10})
+	resp, err := th.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{PageSize: 10})
 	if err != nil {
 		t.Fatalf("list audit events: %v", err)
 	}
@@ -53,10 +53,10 @@ func TestListAuditEventsPaginates(t *testing.T) {
 		{ID: "3", EventName: "access_request.revoked", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "revoked", CreatedAt: now.Add(2 * time.Minute)},
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 
-	first, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{PageSize: 2})
+	first, err := th.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{PageSize: 2})
 	if err != nil {
 		t.Fatalf("first page: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestListAuditEventsPaginates(t *testing.T) {
 		t.Fatalf("first next token = %q, want %q", got, "2")
 	}
 
-	second, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
+	second, err := th.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize:  2,
 		PageToken: first.GetNextPageToken(),
 	})
@@ -93,9 +93,9 @@ func TestListAuditEventsFiltersByEventName(t *testing.T) {
 		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(time.Minute)},
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
+	resp, err := th.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize:  10,
 		EventName: "access_request.reviewed",
 	})
@@ -118,9 +118,9 @@ func TestListAuditEventsFiltersByAgentID(t *testing.T) {
 		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-2", CreatedAt: now.Add(time.Minute)},
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
+	resp, err := th.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize: 10,
 		AgentId:  "agent-2",
 	})
@@ -144,9 +144,9 @@ func TestListAuditEventsFiltersByTimeWindow(t *testing.T) {
 		{ID: "3", EventName: "access_request.revoked", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(4 * time.Minute)},
 	}
 
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
+	resp, err := th.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize:      10,
 		CreatedAfter:  timestamppb.New(now.Add(time.Minute)),
 		CreatedBefore: timestamppb.New(now.Add(3 * time.Minute)),
@@ -165,9 +165,9 @@ func TestListAuditEventsFiltersByTimeWindow(t *testing.T) {
 func TestListAuditEventsRejectsInvalidTimeWindow(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	svc := newAccessRequestHandlersWithStores(store, store, store)
+	th := newAccessRequestHandlersWithStores(t, store, store, store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
-	_, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
+	_, err := th.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize:      10,
 		CreatedAfter:  timestamppb.New(now.Add(2 * time.Minute)),
 		CreatedBefore: timestamppb.New(now),

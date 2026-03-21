@@ -1,48 +1,28 @@
 package ai
 
 import (
-	"time"
+	"fmt"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/id"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 )
 
-// AccessRequestHandlers serves access-request and audit-event RPCs.
+// AccessRequestHandlers serves access-request and audit-event RPCs as thin
+// transport wrappers over the access-request service.
 type AccessRequestHandlers struct {
 	aiv1.UnimplementedAccessRequestServiceServer
-
-	agentStore         storage.AgentStore
-	accessRequestStore storage.AccessRequestStore
-	auditEventStore    storage.AuditEventStore
-	clock              func() time.Time
-	idGenerator        func() (string, error)
+	svc *service.AccessRequestService
 }
 
 // AccessRequestHandlersConfig declares the dependencies for access-request RPCs.
 type AccessRequestHandlersConfig struct {
-	AgentStore         storage.AgentStore
-	AccessRequestStore storage.AccessRequestStore
-	AuditEventStore    storage.AuditEventStore
-	Clock              func() time.Time
-	IDGenerator        func() (string, error)
+	AccessRequestService *service.AccessRequestService
 }
 
-// NewAccessRequestHandlers builds an access-request RPC server from explicit deps.
-func NewAccessRequestHandlers(cfg AccessRequestHandlersConfig) *AccessRequestHandlers {
-	clock := cfg.Clock
-	if clock == nil {
-		clock = time.Now
+// NewAccessRequestHandlers builds an access-request RPC server from a service.
+func NewAccessRequestHandlers(cfg AccessRequestHandlersConfig) (*AccessRequestHandlers, error) {
+	if cfg.AccessRequestService == nil {
+		return nil, fmt.Errorf("ai: NewAccessRequestHandlers: access request service is required")
 	}
-	idGenerator := cfg.IDGenerator
-	if idGenerator == nil {
-		idGenerator = id.NewID
-	}
-	return &AccessRequestHandlers{
-		agentStore:         cfg.AgentStore,
-		accessRequestStore: cfg.AccessRequestStore,
-		auditEventStore:    cfg.AuditEventStore,
-		clock:              clock,
-		idGenerator:        idGenerator,
-	}
+	return &AccessRequestHandlers{svc: cfg.AccessRequestService}, nil
 }

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 func TestNormalizeCreateInput(t *testing.T) {
@@ -177,48 +176,6 @@ func TestRecordRefreshFailure(t *testing.T) {
 	}
 	if got.RefreshedAt == nil || !got.RefreshedAt.Equal(refreshedAt) {
 		t.Fatalf("refreshed_at = %v, want %v", got.RefreshedAt, refreshedAt)
-	}
-}
-
-func TestFromRecordAndApplyLifecycle(t *testing.T) {
-	createdAt := time.Date(2026, 2, 15, 23, 20, 0, 0, time.UTC)
-	record := storage.ProviderGrantRecord{
-		ID:               "grant-1",
-		OwnerUserID:      "user-1",
-		Provider:         "openai",
-		GrantedScopes:    []string{"responses.read"},
-		TokenCiphertext:  "enc:token",
-		RefreshSupported: true,
-		Status:           "active",
-		CreatedAt:        createdAt,
-		UpdatedAt:        createdAt,
-	}
-
-	grant := FromRecord(record)
-	if grant.ID != "grant-1" {
-		t.Fatalf("ID = %q, want %q", grant.ID, "grant-1")
-	}
-	if grant.Provider != provider.OpenAI {
-		t.Fatalf("Provider = %q, want %q", grant.Provider, provider.OpenAI)
-	}
-	if grant.Status != StatusActive {
-		t.Fatalf("Status = %q, want %q", grant.Status, StatusActive)
-	}
-	if !grant.RefreshSupported {
-		t.Fatal("expected RefreshSupported")
-	}
-
-	revokedAt := createdAt.Add(5 * time.Minute)
-	grant.Status = StatusRevoked
-	grant.UpdatedAt = revokedAt
-	grant.RevokedAt = &revokedAt
-
-	ApplyLifecycle(&record, grant)
-	if record.Status != "revoked" {
-		t.Fatalf("record.Status = %q, want %q", record.Status, "revoked")
-	}
-	if record.RevokedAt == nil || !record.RevokedAt.Equal(revokedAt) {
-		t.Fatalf("record.RevokedAt = %v, want %v", record.RevokedAt, revokedAt)
 	}
 }
 

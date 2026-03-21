@@ -2,16 +2,11 @@ package ai
 
 import (
 	"context"
-	"errors"
-	"sort"
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -21,66 +16,27 @@ func (h *AgentHandlers) CreateAgent(ctx context.Context, in *aiv1.CreateAgentReq
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create agent request is required")
 	}
-	if h.agentStore == nil {
-		return nil, status.Error(codes.Internal, "agent store is not configured")
-	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
-
 	providerID, err := providerFromProto(in.GetProvider())
 	if err != nil {
 		return nil, err
 	}
 
-	authReference, err := agent.AuthReferenceFromIDs(in.GetCredentialId(), in.GetProviderGrantId(), true)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	createInput, err := agent.NormalizeCreateInput(agent.CreateInput{
-		OwnerUserID:   userID,
-		Label:         in.GetLabel(),
-		Instructions:  in.GetInstructions(),
-		Provider:      providerID,
-		Model:         in.GetModel(),
-		AuthReference: authReference,
+	record, err := h.svc.Create(ctx, service.CreateAgentInput{
+		OwnerUserID:     userID,
+		Label:           in.GetLabel(),
+		Instructions:    in.GetInstructions(),
+		Provider:        providerID,
+		Model:           in.GetModel(),
+		CredentialID:    in.GetCredentialId(),
+		ProviderGrantID: in.GetProviderGrantId(),
 	})
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, serviceErrorToStatus(err)
 	}
-	if err := h.validateAgentAuthReferenceForProvider(ctx, userID, providerID, createInput.AuthReference); err != nil {
-		return nil, err
-	}
-	if err := h.validateProviderModelAvailable(ctx, userID, providerID, createInput.AuthReference, createInput.Model); err != nil {
-		return nil, err
-	}
-
-	created, err := agent.Create(createInput, h.clock, h.idGenerator)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	record := storage.AgentRecord{
-		ID:           created.ID,
-		OwnerUserID:  created.OwnerUserID,
-		Label:        created.Label,
-		Instructions: created.Instructions,
-		Provider:     string(created.Provider),
-		Model:        created.Model,
-		Status:       string(created.Status),
-		CreatedAt:    created.CreatedAt,
-		UpdatedAt:    created.UpdatedAt,
-	}
-	agent.ApplyAuthReference(&record, created.AuthReference)
-	if err := h.agentStore.PutAgent(ctx, record); err != nil {
-		if errors.Is(err, storage.ErrConflict) {
-			return nil, status.Error(codes.AlreadyExists, "agent label already exists")
-		}
-		return nil, status.Errorf(codes.Internal, "put agent: %v", err)
-	}
-
 	return &aiv1.CreateAgentResponse{Agent: h.agentProtoWithAuthState(ctx, record)}, nil
 }
 
@@ -89,18 +45,14 @@ func (h *AgentHandlers) ListAgents(ctx context.Context, in *aiv1.ListAgentsReque
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list agents request is required")
 	}
-	if h.agentStore == nil {
-		return nil, status.Error(codes.Internal, "agent store is not configured")
-	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
 
-	page, err := h.agentStore.ListAgentsByOwner(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
+	page, err := h.svc.List(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list agents: %v", err)
+		return nil, serviceErrorToStatus(err)
 	}
 
 	resp := &aiv1.ListAgentsResponse{
@@ -110,7 +62,7 @@ func (h *AgentHandlers) ListAgents(ctx context.Context, in *aiv1.ListAgentsReque
 	for _, rec := range page.Agents {
 		proto, err := h.agentProtoWithUsage(ctx, rec)
 		if err != nil {
-			return nil, err
+			return nil, serviceErrorToStatus(err)
 		}
 		resp.Agents = append(resp.Agents, proto)
 	}
@@ -122,55 +74,30 @@ func (h *AgentHandlers) ListProviderModels(ctx context.Context, in *aiv1.ListPro
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list provider models request is required")
 	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
-
 	providerID, err := providerFromProto(in.GetProvider())
 	if err != nil {
 		return nil, err
 	}
-	authReference, err := agent.AuthReferenceFromIDs(in.GetCredentialId(), in.GetProviderGrantId(), true)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	token, err := h.authTokenResolver.resolveAuthReferenceToken(
-		ctx,
-		userID,
-		providerID,
-		authReference,
-	)
-	if err != nil {
-		return nil, err
-	}
 
-	modelProvider := providerID
-	adapter, ok := h.providerModelAdapters[modelProvider]
-	if !ok || adapter == nil {
-		return nil, status.Error(codes.FailedPrecondition, "provider model adapter is unavailable")
-	}
-	models, err := adapter.ListModels(ctx, provider.ListModelsInput{CredentialSecret: token})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list provider models: %v", err)
-	}
-	sort.Slice(models, func(i int, j int) bool {
-		if models[i].Created != models[j].Created {
-			return models[i].Created > models[j].Created
-		}
-		return strings.Compare(strings.TrimSpace(models[i].ID), strings.TrimSpace(models[j].ID)) > 0
+	models, err := h.svc.ListProviderModels(ctx, service.ListProviderModelsInput{
+		OwnerUserID:     userID,
+		Provider:        providerID,
+		CredentialID:    in.GetCredentialId(),
+		ProviderGrantID: in.GetProviderGrantId(),
 	})
+	if err != nil {
+		return nil, serviceErrorToStatus(err)
+	}
 
 	resp := &aiv1.ListProviderModelsResponse{Models: make([]*aiv1.ProviderModel, 0, len(models))}
 	for _, model := range models {
-		modelID := strings.TrimSpace(model.ID)
-		if modelID == "" {
-			continue
-		}
 		resp.Models = append(resp.Models, &aiv1.ProviderModel{
-			Id:      modelID,
-			OwnedBy: strings.TrimSpace(model.OwnedBy),
+			Id:      model.ID,
+			OwnedBy: model.OwnedBy,
 		})
 	}
 	return resp, nil
@@ -182,39 +109,21 @@ func (h *AgentHandlers) ListAccessibleAgents(ctx context.Context, in *aiv1.ListA
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list accessible agents request is required")
 	}
-	if h.agentStore == nil {
-		return nil, status.Error(codes.Internal, "agent store is not configured")
-	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
 
-	records, err := newAccessibleAgentResolver(h.agentStore, h.accessRequestStore).collectAccessibleAgents(ctx, userID)
+	page, err := h.svc.ListAccessible(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
 	if err != nil {
-		return nil, err
-	}
-	sort.Slice(records, func(i int, j int) bool {
-		return records[i].ID < records[j].ID
-	})
-
-	pageSize := clampPageSize(in.GetPageSize())
-	pageToken := strings.TrimSpace(in.GetPageToken())
-	start := findPageStartByID(records, pageToken)
-	end := start + pageSize
-	nextPageToken := ""
-	if end < len(records) {
-		nextPageToken = records[end-1].ID
-	} else {
-		end = len(records)
+		return nil, serviceErrorToStatus(err)
 	}
 
 	resp := &aiv1.ListAccessibleAgentsResponse{
-		NextPageToken: nextPageToken,
-		Agents:        make([]*aiv1.Agent, 0, end-start),
+		NextPageToken: page.NextPageToken,
+		Agents:        make([]*aiv1.Agent, 0, len(page.Agents)),
 	}
-	for _, rec := range records[start:end] {
+	for _, rec := range page.Agents {
 		resp.Agents = append(resp.Agents, h.agentProtoWithAuthState(ctx, rec))
 	}
 	return resp, nil
@@ -225,10 +134,6 @@ func (h *AgentHandlers) GetAccessibleAgent(ctx context.Context, in *aiv1.GetAcce
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get accessible agent request is required")
 	}
-	if h.agentStore == nil {
-		return nil, status.Error(codes.Internal, "agent store is not configured")
-	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
@@ -238,25 +143,11 @@ func (h *AgentHandlers) GetAccessibleAgent(ctx context.Context, in *aiv1.GetAcce
 		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
 	}
 
-	agentRecord, err := h.agentStore.GetAgent(ctx, agentID)
+	record, err := h.svc.GetAccessible(ctx, userID, agentID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "agent not found")
-		}
-		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
+		return nil, serviceErrorToStatus(err)
 	}
-
-	// Authorization is intentionally shared with invoke checks so lookup and
-	// runtime execution enforce one access policy source.
-	authResult, err := newAccessibleAgentResolver(h.agentStore, h.accessRequestStore).isAuthorizedToInvokeAgent(ctx, userID, agentRecord)
-	if err != nil {
-		return nil, err
-	}
-	if !authResult.Authorized {
-		// Mask inaccessible resources as not found to avoid tenant probing.
-		return nil, status.Error(codes.NotFound, "agent not found")
-	}
-	return &aiv1.GetAccessibleAgentResponse{Agent: h.agentProtoWithAuthState(ctx, agentRecord)}, nil
+	return &aiv1.GetAccessibleAgentResponse{Agent: h.agentProtoWithAuthState(ctx, record)}, nil
 }
 
 // ValidateCampaignAgentBinding verifies owner-scoped bind eligibility for one agent.
@@ -264,40 +155,16 @@ func (h *AgentHandlers) ValidateCampaignAgentBinding(ctx context.Context, in *ai
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "validate campaign agent binding request is required")
 	}
-	if h.agentStore == nil {
-		return nil, status.Error(codes.Internal, "agent store is not configured")
-	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
-	agentID := strings.TrimSpace(in.GetAgentId())
-	if agentID == "" {
-		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
-	}
 
-	agentRecord, err := h.agentStore.GetAgent(ctx, agentID)
+	record, err := h.svc.ValidateCampaignAgentBinding(ctx, userID, strings.TrimSpace(in.GetAgentId()))
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "agent not found")
-		}
-		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
+		return nil, serviceErrorToStatus(err)
 	}
-	if strings.TrimSpace(agentRecord.OwnerUserID) != userID {
-		return nil, status.Error(codes.NotFound, "agent not found")
-	}
-	if agentStatusToProto(agentRecord.Status) != aiv1.AgentStatus_AGENT_STATUS_ACTIVE {
-		return nil, status.Error(codes.FailedPrecondition, "agent is not active")
-	}
-	authReference, err := agent.AuthReferenceFromRecord(agentRecord)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
-	}
-	if err := h.validateAgentAuthReferenceForProvider(ctx, userID, providerFromString(agentRecord.Provider), authReference); err != nil {
-		return nil, err
-	}
-	return &aiv1.ValidateCampaignAgentBindingResponse{Agent: h.agentProtoWithAuthState(ctx, agentRecord)}, nil
+	return &aiv1.ValidateCampaignAgentBindingResponse{Agent: h.agentProtoWithAuthState(ctx, record)}, nil
 }
 
 // UpdateAgent updates mutable fields on one user-owned agent.
@@ -305,87 +172,23 @@ func (h *AgentHandlers) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentReq
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update agent request is required")
 	}
-	if h.agentStore == nil {
-		return nil, status.Error(codes.Internal, "agent store is not configured")
-	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
 
-	agentID := strings.TrimSpace(in.GetAgentId())
-	if agentID == "" {
-		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
-	}
-
-	existing, err := h.agentStore.GetAgent(ctx, agentID)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "agent not found")
-		}
-		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
-	}
-	if strings.TrimSpace(existing.OwnerUserID) != userID {
-		return nil, status.Error(codes.NotFound, "agent not found")
-	}
-	if err := h.ensureAgentNotBoundToActiveCampaigns(ctx, existing.ID); err != nil {
-		return nil, err
-	}
-
-	label := firstNonEmpty(strings.TrimSpace(in.GetLabel()), existing.Label)
-	instructions := firstNonEmpty(strings.TrimSpace(in.GetInstructions()), existing.Instructions)
-	model := firstNonEmpty(strings.TrimSpace(in.GetModel()), existing.Model)
-	authReference, err := agent.AuthReferenceFromRecord(existing)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
-	}
-	requestCredentialID := strings.TrimSpace(in.GetCredentialId())
-	requestProviderGrantID := strings.TrimSpace(in.GetProviderGrantId())
-	if requestCredentialID != "" || requestProviderGrantID != "" {
-		authReference, err = agent.AuthReferenceFromIDs(requestCredentialID, requestProviderGrantID, true)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
-	}
-	normalized, err := agent.NormalizeUpdateInput(agent.UpdateInput{
-		ID:            existing.ID,
-		OwnerUserID:   existing.OwnerUserID,
-		Label:         label,
-		Instructions:  instructions,
-		Model:         model,
-		AuthReference: authReference,
+	record, err := h.svc.Update(ctx, service.UpdateAgentInput{
+		OwnerUserID:     userID,
+		AgentID:         strings.TrimSpace(in.GetAgentId()),
+		Label:           strings.TrimSpace(in.GetLabel()),
+		Instructions:    strings.TrimSpace(in.GetInstructions()),
+		Model:           strings.TrimSpace(in.GetModel()),
+		CredentialID:    strings.TrimSpace(in.GetCredentialId()),
+		ProviderGrantID: strings.TrimSpace(in.GetProviderGrantId()),
 	})
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, serviceErrorToStatus(err)
 	}
-	if err := h.validateAgentAuthReferenceForProvider(ctx, userID, providerFromString(existing.Provider), normalized.AuthReference); err != nil {
-		return nil, err
-	}
-	existingAuthReference, err := agent.AuthReferenceFromRecord(existing)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
-	}
-	if normalized.Model != existing.Model ||
-		normalized.AuthReference != existingAuthReference {
-		if err := h.validateProviderModelAvailable(ctx, userID, providerFromString(existing.Provider), normalized.AuthReference, normalized.Model); err != nil {
-			return nil, err
-		}
-	}
-
-	record := existing
-	record.Label = normalized.Label
-	record.Instructions = normalized.Instructions
-	record.Model = normalized.Model
-	record.UpdatedAt = h.clock().UTC()
-	agent.ApplyAuthReference(&record, normalized.AuthReference)
-	if err := h.agentStore.PutAgent(ctx, record); err != nil {
-		if errors.Is(err, storage.ErrConflict) {
-			return nil, status.Error(codes.AlreadyExists, "agent label already exists")
-		}
-		return nil, status.Errorf(codes.Internal, "put agent: %v", err)
-	}
-
 	return &aiv1.UpdateAgentResponse{Agent: h.agentProtoWithAuthState(ctx, record)}, nil
 }
 
@@ -394,127 +197,47 @@ func (h *AgentHandlers) DeleteAgent(ctx context.Context, in *aiv1.DeleteAgentReq
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "delete agent request is required")
 	}
-	if h.agentStore == nil {
-		return nil, status.Error(codes.Internal, "agent store is not configured")
-	}
-
 	userID := userIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
-	agentID := strings.TrimSpace(in.GetAgentId())
-	if agentID == "" {
-		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
-	}
-	if err := h.ensureAgentNotBoundToActiveCampaigns(ctx, agentID); err != nil {
-		return nil, err
-	}
 
-	if err := h.agentStore.DeleteAgent(ctx, userID, agentID); err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "agent not found")
-		}
-		return nil, status.Errorf(codes.Internal, "delete agent: %v", err)
+	if err := h.svc.Delete(ctx, userID, strings.TrimSpace(in.GetAgentId())); err != nil {
+		return nil, serviceErrorToStatus(err)
 	}
 	return &aiv1.DeleteAgentResponse{}, nil
 }
 
-func findPageStartByID(records []storage.AgentRecord, pageToken string) int {
-	pageToken = strings.TrimSpace(pageToken)
-	if pageToken == "" {
-		return 0
+// agentProtoWithUsage enriches one agent read with auth health and usage metadata.
+func (h *AgentHandlers) agentProtoWithUsage(ctx context.Context, a agent.Agent) (*aiv1.Agent, error) {
+	proto := agentToProto(a)
+	proto.AuthState = agentAuthStateToProto(h.svc.GetAuthState(ctx, a))
+
+	activeCampaignCount, err := h.svc.GetActiveCampaignCount(ctx, a.ID)
+	if err != nil {
+		return nil, err
 	}
-	for idx, rec := range records {
-		if strings.Compare(strings.TrimSpace(rec.ID), pageToken) > 0 {
-			return idx
-		}
-	}
-	return len(records)
+	proto.ActiveCampaignCount = activeCampaignCount
+	return proto, nil
 }
 
-func mapValues(values map[string]storage.AgentRecord) []storage.AgentRecord {
-	if len(values) == 0 {
-		return []storage.AgentRecord{}
-	}
-	items := make([]storage.AgentRecord, 0, len(values))
-	for _, rec := range values {
-		items = append(items, rec)
-	}
-	return items
+// agentProtoWithAuthState enriches one agent read with auth health only.
+func (h *AgentHandlers) agentProtoWithAuthState(ctx context.Context, a agent.Agent) *aiv1.Agent {
+	proto := agentToProto(a)
+	proto.AuthState = agentAuthStateToProto(h.svc.GetAuthState(ctx, a))
+	return proto
 }
 
-func (h *AgentHandlers) ensureAgentNotBoundToActiveCampaigns(ctx context.Context, agentID string) error {
-	return newAuthReferenceUsageGuard(h.agentStore, h.gameCampaignAIClient).ensureAgentNotBoundToActiveCampaigns(ctx, agentID)
-}
-
-func (h *AgentHandlers) validateAgentAuthReferenceForProvider(ctx context.Context, ownerUserID string, requestedProvider provider.Provider, authReference agent.AuthReference) error {
-	switch authReference.Kind {
-	case agent.AuthReferenceKindCredential:
-		if h.credentialStore == nil {
-			return status.Error(codes.Internal, "credential store is not configured")
-		}
-		credentialRecord, err := h.credentialStore.GetCredential(ctx, authReference.CredentialID())
-		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return status.Error(codes.FailedPrecondition, "credential is unavailable")
-			}
-			return status.Errorf(codes.Internal, "get credential: %v", err)
-		}
-		if !credential.FromRecord(credentialRecord).IsUsableBy(ownerUserID, requestedProvider) {
-			return status.Error(codes.FailedPrecondition, "credential must be active and owned by caller")
-		}
-		return nil
-	case agent.AuthReferenceKindProviderGrant:
-		if h.providerGrantStore == nil {
-			return status.Error(codes.Internal, "provider grant store is not configured")
-		}
-		grantRecord, err := h.providerGrantStore.GetProviderGrant(ctx, authReference.ProviderGrantID())
-		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return status.Error(codes.FailedPrecondition, "provider grant is unavailable")
-			}
-			return status.Errorf(codes.Internal, "get provider grant: %v", err)
-		}
-		if !providergrant.FromRecord(grantRecord).IsUsableBy(ownerUserID, requestedProvider) {
-			return status.Error(codes.FailedPrecondition, "provider grant must be active and owned by caller")
-		}
-		return nil
+// agentAuthStateToProto maps a service-layer agent auth state to the proto enum.
+func agentAuthStateToProto(state service.AgentAuthState) aiv1.AgentAuthState {
+	switch state {
+	case service.AgentAuthStateReady:
+		return aiv1.AgentAuthState_AGENT_AUTH_STATE_READY
+	case service.AgentAuthStateRevoked:
+		return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_REVOKED
+	case service.AgentAuthStateUnavailable:
+		return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE
 	default:
-		return status.Error(codes.InvalidArgument, "exactly one agent auth reference is required")
+		return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE
 	}
-}
-
-func (h *AgentHandlers) validateProviderModelAvailable(ctx context.Context, ownerUserID string, requestedProvider provider.Provider, authReference agent.AuthReference, model string) error {
-	model = strings.TrimSpace(model)
-	if model == "" {
-		return status.Error(codes.InvalidArgument, "model is required")
-	}
-
-	token, err := h.authTokenResolver.resolveAuthReferenceToken(ctx, ownerUserID, requestedProvider, authReference)
-	if err != nil {
-		return err
-	}
-	adapter, ok := h.providerModelAdapters[requestedProvider]
-	if !ok || adapter == nil {
-		return status.Error(codes.FailedPrecondition, "provider model adapter is unavailable")
-	}
-	models, err := adapter.ListModels(ctx, provider.ListModelsInput{CredentialSecret: token})
-	if err != nil {
-		return status.Errorf(codes.Internal, "list provider models: %v", err)
-	}
-	for _, candidate := range models {
-		if strings.TrimSpace(candidate.ID) == model {
-			return nil
-		}
-	}
-	return status.Error(codes.FailedPrecondition, "model is unavailable for the selected auth reference")
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
 }

@@ -2,57 +2,57 @@ package aifakes
 
 import (
 	"context"
-	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // CredentialStore is an in-memory credential repository fake.
 type CredentialStore struct {
-	Credentials map[string]storage.CredentialRecord
+	Credentials map[string]credential.Credential
 }
 
 // NewCredentialStore creates an initialized credential fake.
 func NewCredentialStore() *CredentialStore {
-	return &CredentialStore{Credentials: make(map[string]storage.CredentialRecord)}
+	return &CredentialStore{Credentials: make(map[string]credential.Credential)}
 }
 
-// PutCredential stores a credential record.
-func (s *CredentialStore) PutCredential(_ context.Context, record storage.CredentialRecord) error {
+// PutCredential stores a credential.
+func (s *CredentialStore) PutCredential(_ context.Context, c credential.Credential) error {
 	for id, existing := range s.Credentials {
-		if id == record.ID {
+		if id == c.ID {
 			continue
 		}
-		if !sameNormalizedOwner(record.OwnerUserID, existing.OwnerUserID) {
+		if !sameNormalizedOwner(c.OwnerUserID, existing.OwnerUserID) {
 			continue
 		}
-		if existing.RevokedAt != nil || strings.EqualFold(strings.TrimSpace(existing.Status), "revoked") {
+		if existing.RevokedAt != nil || existing.Status.IsRevoked() {
 			continue
 		}
-		if normalizedLabel(record.Label) == normalizedLabel(existing.Label) {
+		if normalizedLabel(c.Label) == normalizedLabel(existing.Label) {
 			return storage.ErrConflict
 		}
 	}
-	s.Credentials[record.ID] = record
+	s.Credentials[c.ID] = c
 	return nil
 }
 
 // GetCredential returns a credential by ID.
-func (s *CredentialStore) GetCredential(_ context.Context, credentialID string) (storage.CredentialRecord, error) {
-	rec, ok := s.Credentials[credentialID]
+func (s *CredentialStore) GetCredential(_ context.Context, credentialID string) (credential.Credential, error) {
+	c, ok := s.Credentials[credentialID]
 	if !ok {
-		return storage.CredentialRecord{}, storage.ErrNotFound
+		return credential.Credential{}, storage.ErrNotFound
 	}
-	return rec, nil
+	return c, nil
 }
 
 // ListCredentialsByOwner lists credentials for an owner.
-func (s *CredentialStore) ListCredentialsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (storage.CredentialPage, error) {
-	items := make([]storage.CredentialRecord, 0)
-	for _, rec := range s.Credentials {
-		if rec.OwnerUserID == ownerUserID {
-			items = append(items, rec)
+func (s *CredentialStore) ListCredentialsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (credential.Page, error) {
+	items := make([]credential.Credential, 0)
+	for _, c := range s.Credentials {
+		if c.OwnerUserID == ownerUserID {
+			items = append(items, c)
 		}
 	}
-	return storage.CredentialPage{Credentials: items}, nil
+	return credential.Page{Credentials: items}, nil
 }

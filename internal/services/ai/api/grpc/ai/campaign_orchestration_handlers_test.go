@@ -8,20 +8,21 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"google.golang.org/grpc/codes"
 )
 
 func TestRunCampaignTurnRejectsInvalidGrant(t *testing.T) {
-	cfg := newCampaignOrchestrationHandlersConfigWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
-	cfg.CampaignTurnRunner = &fakeCampaignTurnRunner{}
-	cfg.GameCampaignAIClient = &fakeCampaignAIAuthStateClient{}
 	sessionGrantConfig := testAISessionGrantConfig()
-	cfg.SessionGrantConfig = &sessionGrantConfig
-	svc := NewCampaignOrchestrationHandlers(cfg)
+	svc := newCampaignOrchestrationHandlersWithOpts(t, newFakeStore(), newFakeStore(), &fakeSealer{}, campaignOrchestrationTestOpts{
+		campaignTurnRunner:   &fakeCampaignTurnRunner{},
+		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{},
+		sessionGrantConfig:   &sessionGrantConfig,
+	})
 
 	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
 		SessionGrant: "bad-token",
@@ -30,20 +31,20 @@ func TestRunCampaignTurnRejectsInvalidGrant(t *testing.T) {
 }
 
 func TestRunCampaignTurnRejectsStaleGrant(t *testing.T) {
-	cfg := newCampaignOrchestrationHandlersConfigWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
-	cfg.CampaignTurnRunner = &fakeCampaignTurnRunner{}
 	sessionGrantConfig := testAISessionGrantConfig()
-	cfg.SessionGrantConfig = &sessionGrantConfig
-	cfg.GameCampaignAIClient = &fakeCampaignAIAuthStateClient{
-		authState: &gamev1.GetCampaignAIAuthStateResponse{
-			CampaignId:      "camp-1",
-			AiAgentId:       "agent-1",
-			ActiveSessionId: "sess-1",
-			AuthEpoch:       1,
-			ParticipantId:   "gm-2",
+	svc := newCampaignOrchestrationHandlersWithOpts(t, newFakeStore(), newFakeStore(), &fakeSealer{}, campaignOrchestrationTestOpts{
+		campaignTurnRunner: &fakeCampaignTurnRunner{},
+		sessionGrantConfig: &sessionGrantConfig,
+		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+			authState: &gamev1.GetCampaignAIAuthStateResponse{
+				CampaignId:      "camp-1",
+				AiAgentId:       "agent-1",
+				ActiveSessionId: "sess-1",
+				AuthEpoch:       1,
+				ParticipantId:   "gm-2",
+			},
 		},
-	}
-	svc := NewCampaignOrchestrationHandlers(cfg)
+	})
 
 	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
 		SessionGrant: mustIssueAISessionGrant(t, testAISessionGrantConfig(), aisessiongrant.IssueInput{
@@ -60,42 +61,42 @@ func TestRunCampaignTurnRejectsStaleGrant(t *testing.T) {
 func TestRunCampaignTurnMapsRunnerTimeout(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now().UTC()
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "main",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		SecretCiphertext: "enc:sk-1",
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "gm",
-		Provider:     "openai",
-		Model:        "gpt-4.1-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "gm",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4.1-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	cfg := newCampaignOrchestrationHandlersConfigWithStores(store, store, &fakeSealer{})
-	cfg.CampaignTurnRunner = &fakeCampaignTurnRunner{runErr: context.DeadlineExceeded}
 	sessionGrantConfig := testAISessionGrantConfig()
-	cfg.SessionGrantConfig = &sessionGrantConfig
-	cfg.GameCampaignAIClient = &fakeCampaignAIAuthStateClient{
-		authState: &gamev1.GetCampaignAIAuthStateResponse{
-			CampaignId:      "camp-1",
-			AiAgentId:       "agent-1",
-			ActiveSessionId: "sess-1",
-			AuthEpoch:       7,
-			ParticipantId:   "gm-1",
+	svc := newCampaignOrchestrationHandlersWithOpts(t, store, store, &fakeSealer{}, campaignOrchestrationTestOpts{
+		campaignTurnRunner: &fakeCampaignTurnRunner{runErr: context.DeadlineExceeded},
+		sessionGrantConfig: &sessionGrantConfig,
+		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+			authState: &gamev1.GetCampaignAIAuthStateResponse{
+				CampaignId:      "camp-1",
+				AiAgentId:       "agent-1",
+				ActiveSessionId: "sess-1",
+				AuthEpoch:       7,
+				ParticipantId:   "gm-1",
+			},
 		},
-	}
-	svc := NewCampaignOrchestrationHandlers(cfg)
+	})
 
 	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
 		SessionGrant: mustIssueAISessionGrant(t, testAISessionGrantConfig(), aisessiongrant.IssueInput{
@@ -113,42 +114,42 @@ func TestRunCampaignTurnMapsRunnerTimeout(t *testing.T) {
 func TestRunCampaignTurnMapsRunnerStepLimit(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now().UTC()
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "main",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		SecretCiphertext: "enc:sk-1",
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "gm",
-		Provider:     "openai",
-		Model:        "gpt-4.1-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "gm",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4.1-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	cfg := newCampaignOrchestrationHandlersConfigWithStores(store, store, &fakeSealer{})
-	cfg.CampaignTurnRunner = &fakeCampaignTurnRunner{runErr: orchestration.ErrStepLimit}
 	sessionGrantConfig := testAISessionGrantConfig()
-	cfg.SessionGrantConfig = &sessionGrantConfig
-	cfg.GameCampaignAIClient = &fakeCampaignAIAuthStateClient{
-		authState: &gamev1.GetCampaignAIAuthStateResponse{
-			CampaignId:      "camp-1",
-			AiAgentId:       "agent-1",
-			ActiveSessionId: "sess-1",
-			AuthEpoch:       7,
-			ParticipantId:   "gm-1",
+	svc := newCampaignOrchestrationHandlersWithOpts(t, store, store, &fakeSealer{}, campaignOrchestrationTestOpts{
+		campaignTurnRunner: &fakeCampaignTurnRunner{runErr: orchestration.ErrStepLimit},
+		sessionGrantConfig: &sessionGrantConfig,
+		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+			authState: &gamev1.GetCampaignAIAuthStateResponse{
+				CampaignId:      "camp-1",
+				AiAgentId:       "agent-1",
+				ActiveSessionId: "sess-1",
+				AuthEpoch:       7,
+				ParticipantId:   "gm-1",
+			},
 		},
-	}
-	svc := NewCampaignOrchestrationHandlers(cfg)
+	})
 
 	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
 		SessionGrant: mustIssueAISessionGrant(t, testAISessionGrantConfig(), aisessiongrant.IssueInput{
@@ -166,27 +167,27 @@ func TestRunCampaignTurnMapsRunnerStepLimit(t *testing.T) {
 func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now().UTC()
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "main",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		SecretCiphertext: "enc:sk-1",
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "gm",
-		Provider:     "openai",
-		Model:        "gpt-4.1-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		Instructions: "Be the GM.",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "gm",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4.1-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		Instructions:  "Be the GM.",
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	runner := &fakeCampaignTurnRunner{
@@ -195,20 +196,20 @@ func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 			Usage:      provider.Usage{InputTokens: 14, OutputTokens: 9, ReasoningTokens: 4, TotalTokens: 23},
 		},
 	}
-	cfg := newCampaignOrchestrationHandlersConfigWithStores(store, store, &fakeSealer{})
-	cfg.CampaignTurnRunner = runner
 	sessionGrantConfig := testAISessionGrantConfig()
-	cfg.SessionGrantConfig = &sessionGrantConfig
-	cfg.GameCampaignAIClient = &fakeCampaignAIAuthStateClient{
-		authState: &gamev1.GetCampaignAIAuthStateResponse{
-			CampaignId:      "camp-1",
-			AiAgentId:       "agent-1",
-			ActiveSessionId: "sess-1",
-			AuthEpoch:       7,
-			ParticipantId:   "gm-1",
+	svc := newCampaignOrchestrationHandlersWithOpts(t, store, store, &fakeSealer{}, campaignOrchestrationTestOpts{
+		campaignTurnRunner: runner,
+		sessionGrantConfig: &sessionGrantConfig,
+		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+			authState: &gamev1.GetCampaignAIAuthStateResponse{
+				CampaignId:      "camp-1",
+				AiAgentId:       "agent-1",
+				ActiveSessionId: "sess-1",
+				AuthEpoch:       7,
+				ParticipantId:   "gm-1",
+			},
 		},
-	}
-	svc := NewCampaignOrchestrationHandlers(cfg)
+	})
 
 	resp, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
 		SessionGrant: mustIssueAISessionGrant(t, testAISessionGrantConfig(), aisessiongrant.IssueInput{

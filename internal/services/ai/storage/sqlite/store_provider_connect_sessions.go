@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
@@ -19,22 +18,22 @@ func (s *Store) PutProviderConnectSession(ctx context.Context, record storage.Pr
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if strings.TrimSpace(record.ID) == "" {
+	if record.ID == "" {
 		return fmt.Errorf("connect session id is required")
 	}
-	if strings.TrimSpace(record.OwnerUserID) == "" {
+	if record.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	if strings.TrimSpace(record.Provider) == "" {
+	if record.Provider == "" {
 		return fmt.Errorf("provider is required")
 	}
-	if strings.TrimSpace(record.Status) == "" {
+	if record.Status == "" {
 		return fmt.Errorf("status is required")
 	}
-	if strings.TrimSpace(record.StateHash) == "" {
+	if record.StateHash == "" {
 		return fmt.Errorf("state hash is required")
 	}
-	if strings.TrimSpace(record.CodeVerifierCiphertext) == "" {
+	if record.CodeVerifierCiphertext == "" {
 		return fmt.Errorf("code verifier ciphertext is required")
 	}
 	if record.ExpiresAt.IsZero() {
@@ -90,7 +89,6 @@ func (s *Store) GetProviderConnectSession(ctx context.Context, connectSessionID 
 	if s == nil || s.sqlDB == nil {
 		return storage.ProviderConnectSessionRecord{}, fmt.Errorf("storage is not configured")
 	}
-	connectSessionID = strings.TrimSpace(connectSessionID)
 	if connectSessionID == "" {
 		return storage.ProviderConnectSessionRecord{}, fmt.Errorf("connect session id is required")
 	}
@@ -119,11 +117,9 @@ func (s *Store) CompleteProviderConnectSession(ctx context.Context, ownerUserID 
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
 	if ownerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	connectSessionID = strings.TrimSpace(connectSessionID)
 	if connectSessionID == "" {
 		return fmt.Errorf("connect session id is required")
 	}

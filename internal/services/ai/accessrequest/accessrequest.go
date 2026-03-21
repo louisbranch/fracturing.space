@@ -70,6 +70,12 @@ var (
 	ErrNotApproved = errors.New("access request is not approved")
 )
 
+// Page is a paged set of access requests.
+type Page struct {
+	AccessRequests []AccessRequest
+	NextPageToken  string
+}
+
 // AccessRequest stores owner-mediated access intent for one target agent.
 type AccessRequest struct {
 	ID string
@@ -210,14 +216,13 @@ func Review(request AccessRequest, input ReviewInput, now func() time.Time) (Acc
 		return AccessRequest{}, err
 	}
 
-	request.ID = strings.TrimSpace(request.ID)
 	if request.ID == "" {
 		return AccessRequest{}, ErrEmptyID
 	}
 	if request.Status != StatusPending {
 		return AccessRequest{}, ErrNotPending
 	}
-	if strings.TrimSpace(request.OwnerUserID) != normalized.ReviewerUserID {
+	if request.OwnerUserID != normalized.ReviewerUserID {
 		return AccessRequest{}, ErrReviewerNotOwner
 	}
 
@@ -260,14 +265,13 @@ func Revoke(request AccessRequest, input RevokeInput, now func() time.Time) (Acc
 		return AccessRequest{}, err
 	}
 
-	request.ID = strings.TrimSpace(request.ID)
 	if request.ID == "" {
 		return AccessRequest{}, ErrEmptyID
 	}
 	if request.Status != StatusApproved {
 		return AccessRequest{}, ErrNotApproved
 	}
-	if strings.TrimSpace(request.OwnerUserID) != normalized.RevokerUserID {
+	if request.OwnerUserID != normalized.RevokerUserID {
 		return AccessRequest{}, ErrReviewerNotOwner
 	}
 

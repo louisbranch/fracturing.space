@@ -8,14 +8,17 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
 
 func TestInvokeAgentRequiresUserID(t *testing.T) {
-	svc := newInvocationHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.InvokeAgent(context.Background(), &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
 		Input:   "Say hello",
@@ -24,14 +27,14 @@ func TestInvokeAgentRequiresUserID(t *testing.T) {
 }
 
 func TestInvokeAgentRequiresRequest(t *testing.T) {
-	svc := newInvocationHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestInvokeAgentRequiresAgentID(t *testing.T) {
-	svc := newInvocationHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: " ",
@@ -41,7 +44,7 @@ func TestInvokeAgentRequiresAgentID(t *testing.T) {
 }
 
 func TestInvokeAgentRequiresInput(t *testing.T) {
-	svc := newInvocationHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -52,29 +55,29 @@ func TestInvokeAgentRequiresInput(t *testing.T) {
 
 func TestInvokeAgentRequiresActiveOwnedCredential(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "revoked",
+		Status:           credential.StatusRevoked,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -85,31 +88,34 @@ func TestInvokeAgentRequiresActiveOwnedCredential(t *testing.T) {
 
 func TestInvokeAgentProviderGrantPathWithoutCredentialStore(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		ProviderGrantID: "grant-1",
-		Status:          "active",
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.ProviderGrantAuthReference("grant-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        "openai",
+		Provider:        provider.OpenAI,
 		TokenCiphertext: `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
-		Status:          "active",
+		Status:          providergrant.StatusActive,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(nil, store, &fakeSealer{})
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
-		invokeResult: provider.InvokeResult{OutputText: "Hello"},
-	}
+	svc := newInvocationHandlersWithOpts(t, nil, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{
+				invokeResult: provider.InvokeResult{OutputText: "Hello"},
+			},
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -123,22 +129,25 @@ func TestInvokeAgentProviderGrantPathWithoutCredentialStore(t *testing.T) {
 
 func TestInvokeAgentCredentialPathWithoutCredentialStore(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(nil, store, &fakeSealer{})
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
-		invokeResult: provider.InvokeResult{OutputText: "Hello"},
-	}
+	svc := newInvocationHandlersWithOpts(t, nil, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{
+				invokeResult: provider.InvokeResult{OutputText: "Hello"},
+			},
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -150,36 +159,39 @@ func TestInvokeAgentCredentialPathWithoutCredentialStore(t *testing.T) {
 
 func TestInvokeAgentSuccess(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
 	adapter := &fakeProviderInvocationAdapter{
 		invokeResult: provider.InvokeResult{
 			OutputText: "Hello from AI",
 			Usage:      provider.Usage{InputTokens: 12, OutputTokens: 7, ReasoningTokens: 3, TotalTokens: 19},
 		},
 	}
-	svc.providerInvocationAdapters[provider.OpenAI] = adapter
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: adapter,
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -214,33 +226,30 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
 	expiresAt := now.Add(30 * time.Second)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		CredentialID:    "",
-		ProviderGrantID: "grant-1",
-		Status:          "active",
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.ProviderGrantAuthReference("grant-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		GrantedScopes:    []string{"responses.read"},
 		TokenCiphertext:  `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
 		RefreshSupported: true,
-		Status:           "active",
+		Status:           providergrant.StatusActive,
 		ExpiresAt:        &expiresAt,
 		CreatedAt:        now.Add(-time.Hour),
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return now }
 	oauthAdapter := &fakeProviderOAuthAdapter{
 		refreshResult: provider.TokenExchangeResult{
 			TokenPlaintext:   `{"access_token":"at-2","refresh_token":"rt-2"}`,
@@ -253,8 +262,15 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 			OutputText: "Hello from refreshed grant",
 		},
 	}
-	svc.providerOAuthAdapters[provider.OpenAI] = oauthAdapter
-	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		clock: func() time.Time { return now },
+		oauthAdapters: map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: oauthAdapter,
+		},
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: invokeAdapter,
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -278,33 +294,36 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 func TestInvokeAgentWithRefreshFailedGrantWithoutRefreshSupport(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		ProviderGrantID: "grant-1",
-		Status:          "active",
-		CreatedAt:       now.Add(-time.Hour),
-		UpdatedAt:       now.Add(-time.Hour),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.ProviderGrantAuthReference("grant-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now.Add(-time.Hour),
+		UpdatedAt:     now.Add(-time.Hour),
 	}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		TokenCiphertext:  `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
 		RefreshSupported: false,
-		Status:           "refresh_failed",
+		Status:           providergrant.StatusRefreshFailed,
 		CreatedAt:        now.Add(-time.Hour),
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return now }
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
-		invokeResult: provider.InvokeResult{OutputText: "Hello"},
-	}
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		clock: func() time.Time { return now },
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{
+				invokeResult: provider.InvokeResult{OutputText: "Hello"},
+			},
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -318,35 +337,38 @@ func TestInvokeAgentWithExpiredGrantWithoutRefreshSupport(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
 	expiresAt := now.Add(-time.Minute)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		ProviderGrantID: "grant-1",
-		Status:          "active",
-		CreatedAt:       now.Add(-time.Hour),
-		UpdatedAt:       now.Add(-time.Hour),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.ProviderGrantAuthReference("grant-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now.Add(-time.Hour),
+		UpdatedAt:     now.Add(-time.Hour),
 	}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		TokenCiphertext:  `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
 		RefreshSupported: false,
-		Status:           "active",
+		Status:           providergrant.StatusActive,
 		ExpiresAt:        &expiresAt,
 		CreatedAt:        now.Add(-time.Hour),
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return now }
 	invokeAdapter := &fakeProviderInvocationAdapter{
 		invokeResult: provider.InvokeResult{OutputText: "Hello"},
 	}
-	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		clock: func() time.Time { return now },
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: invokeAdapter,
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -362,41 +384,46 @@ func TestInvokeAgentWithExpiredGrantWithoutRefreshSupport(t *testing.T) {
 func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		ProviderGrantID: "grant-1",
-		Status:          "active",
-		CreatedAt:       now.Add(-time.Hour),
-		UpdatedAt:       now.Add(-time.Hour),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.ProviderGrantAuthReference("grant-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now.Add(-time.Hour),
+		UpdatedAt:     now.Add(-time.Hour),
 	}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		TokenCiphertext:  `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
 		RefreshSupported: true,
-		Status:           "refresh_failed",
+		Status:           providergrant.StatusRefreshFailed,
 		CreatedAt:        now.Add(-time.Hour),
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.clock = func() time.Time { return now }
-	svc.providerOAuthAdapters[provider.OpenAI] = &fakeProviderOAuthAdapter{
-		refreshResult: provider.TokenExchangeResult{
-			TokenPlaintext:   `{"access_token":"at-2","refresh_token":"rt-2"}`,
-			RefreshSupported: true,
-			ExpiresAt:        ptrTime(now.Add(time.Hour)),
-		},
-	}
 	invokeAdapter := &fakeProviderInvocationAdapter{
 		invokeResult: provider.InvokeResult{OutputText: "Hello"},
 	}
-	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		clock: func() time.Time { return now },
+		oauthAdapters: map[provider.Provider]provider.OAuthAdapter{
+			provider.OpenAI: &fakeProviderOAuthAdapter{
+				refreshResult: provider.TokenExchangeResult{
+					TokenPlaintext:   `{"access_token":"at-2","refresh_token":"rt-2"}`,
+					RefreshSupported: true,
+					ExpiresAt:        ptrTime(now.Add(time.Hour)),
+				},
+			},
+		},
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: invokeAdapter,
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	if _, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -413,32 +440,35 @@ func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 func TestInvokeAgentWithProviderGrantMissingAccessToken(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:              "agent-1",
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        "openai",
-		Model:           "gpt-4o-mini",
-		ProviderGrantID: "grant-1",
-		Status:          "active",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.ProviderGrantAuthReference("grant-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = providergrant.ProviderGrant{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		TokenCiphertext:  `enc:{"refresh_token":"rt-1"}`,
 		RefreshSupported: true,
-		Status:           "active",
+		Status:           providergrant.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
-		invokeResult: provider.InvokeResult{OutputText: "Hello"},
-	}
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{
+				invokeResult: provider.InvokeResult{OutputText: "Hello"},
+			},
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -449,7 +479,7 @@ func TestInvokeAgentWithProviderGrantMissingAccessToken(t *testing.T) {
 }
 
 func TestInvokeAgentMissingAgentIsNotFound(t *testing.T) {
-	svc := newInvocationHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "missing",
@@ -460,19 +490,19 @@ func TestInvokeAgentMissingAgentIsNotFound(t *testing.T) {
 
 func TestInvokeAgentHiddenForNonOwner(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-2",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-2",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -484,43 +514,46 @@ func TestInvokeAgentHiddenForNonOwner(t *testing.T) {
 func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-owner",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-owner",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-owner",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now.Add(-time.Minute),
 		UpdatedAt:       now,
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
 	invokeAdapter := &fakeProviderInvocationAdapter{
 		invokeResult: provider.InvokeResult{OutputText: "Shared response"},
 	}
-	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: invokeAdapter,
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-requester"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -541,42 +574,45 @@ func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-owner",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-owner",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-owner",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now.Add(-time.Minute),
 		UpdatedAt:       now,
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
-		invokeResult: provider.InvokeResult{OutputText: "Shared response"},
-	}
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{
+				invokeResult: provider.InvokeResult{OutputText: "Shared response"},
+			},
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-requester"))
 	if _, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -597,43 +633,46 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
 	store.ListAccessRequestsByRequesterErr = errors.New("unexpected requester-wide list call")
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "owner-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "owner-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "owner-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Primary",
 		SecretCiphertext: "enc:sk-owner",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
 	adapter := &fakeProviderInvocationAdapter{
 		invokeResult: provider.InvokeResult{OutputText: "Hello from shared access"},
 	}
-	svc.providerInvocationAdapters[provider.OpenAI] = adapter
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: adapter,
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -657,43 +696,46 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-owner",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-owner",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-owner",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "approved",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusApproved,
 		CreatedAt:       now.Add(-time.Minute),
 		UpdatedAt:       now,
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
-		invokeResult: provider.InvokeResult{OutputText: "Shared response"},
-	}
-	accessSvc := newAccessRequestHandlersWithStores(store, store, store)
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{
+				invokeResult: provider.InvokeResult{OutputText: "Shared response"},
+			},
+		},
+	})
+	accessSvc := newAccessRequestHandlersWithStores(t, store, store, store)
 	ownerCtx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-owner"))
 	if _, err := accessSvc.RevokeAccessRequest(ownerCtx, &aiv1.RevokeAccessRequestRequest{
 		AccessRequestId: "request-1",
@@ -713,39 +755,39 @@ func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-owner",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-owner",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-owner",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "pending",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusPending,
 		CreatedAt:       now.Add(-time.Minute),
 		UpdatedAt:       now,
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-requester"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -757,39 +799,39 @@ func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-owner",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-owner",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-owner",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = accessrequest.AccessRequest{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
 		AgentID:         "agent-1",
-		Scope:           "invoke",
-		Status:          "denied",
+		Scope:           accessrequest.ScopeInvoke,
+		Status:          accessrequest.StatusDenied,
 		CreatedAt:       now.Add(-time.Minute),
 		UpdatedAt:       now,
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-requester"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -800,19 +842,19 @@ func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 
 func TestInvokeAgentMissingCredentialIsFailedPrecondition(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-missing",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-missing"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
+	svc := newInvocationHandlersWithStores(t, store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -823,30 +865,33 @@ func TestInvokeAgentMissingCredentialIsFailedPrecondition(t *testing.T) {
 
 func TestInvokeAgentProviderInvokeError(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{invokeErr: errors.New("provider unavailable")}
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{invokeErr: errors.New("provider unavailable")},
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -858,32 +903,35 @@ func TestInvokeAgentProviderInvokeError(t *testing.T) {
 
 func TestInvokeAgentEmptyProviderOutputIsInternal(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
-		invokeResult: provider.InvokeResult{OutputText: "   "},
-	}
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{
+				invokeResult: provider.InvokeResult{OutputText: ""},
+			},
+		},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -895,30 +943,31 @@ func TestInvokeAgentEmptyProviderOutputIsInternal(t *testing.T) {
 
 func TestInvokeAgentAdapterUnavailable(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{})
-	delete(svc.providerInvocationAdapters, provider.OpenAI)
+	svc := newInvocationHandlersWithOpts(t, store, store, &fakeSealer{}, invocationTestOpts{
+		invocationAdapters: map[provider.Provider]provider.InvocationAdapter{},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -930,29 +979,29 @@ func TestInvokeAgentAdapterUnavailable(t *testing.T) {
 
 func TestInvokeAgentSecretOpenError(t *testing.T) {
 	store := newFakeStore()
-	store.Agents["agent-1"] = storage.AgentRecord{
-		ID:           "agent-1",
-		OwnerUserID:  "user-1",
-		Label:        "narrator",
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		CredentialID: "cred-1",
-		Status:       "active",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+	store.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
-	store.Credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = credential.Credential{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
-		Provider:         "openai",
+		Provider:         provider.OpenAI,
 		Label:            "Main",
 		SecretCiphertext: "enc:sk-1",
-		Status:           "active",
+		Status:           credential.StatusActive,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := newInvocationHandlersWithStores(store, store, &fakeSealer{OpenErr: errors.New("open fail")})
+	svc := newInvocationHandlersWithStores(t, store, store, &fakeSealer{OpenErr: errors.New("open fail")})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
