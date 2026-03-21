@@ -100,16 +100,24 @@ func TestInteractionStateFromGameStateMapsAllFields(t *testing.T) {
 			Characters: []*gamev1.InteractionCharacter{
 				{CharacterId: "ch-1", Name: "Lark", OwnerParticipantId: "p1"},
 			},
-			GmOutput: &gamev1.InteractionGMOutput{
-				Text:          "You enter the tavern.",
+			CurrentInteraction: &gamev1.GMInteraction{
+				InteractionId: "interaction-1",
+				SceneId:       "scene-1",
+				PhaseId:       "phase-1",
 				ParticipantId: "p2",
-				UpdatedAt:     &timestamppb.Timestamp{Seconds: 1710331200},
+				Title:         "Arrival",
+				CharacterIds:  []string{"ch-1"},
+				Beats: []*gamev1.GMInteractionBeat{{
+					BeatId: "beat-1",
+					Type:   gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_FICTION,
+					Text:   "You enter the tavern.",
+				}},
+				CreatedAt: &timestamppb.Timestamp{Seconds: 1710331200},
 			},
 		},
 		PlayerPhase: &gamev1.ScenePlayerPhase{
 			PhaseId:              "phase-1",
 			Status:               gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_PLAYERS,
-			FrameText:            "What do you do?",
 			ActingCharacterIds:   []string{"ch-1"},
 			ActingParticipantIds: []string{"p1"},
 			Slots: []*gamev1.ScenePlayerSlot{
@@ -144,8 +152,8 @@ func TestInteractionStateFromGameStateMapsAllFields(t *testing.T) {
 	if len(got.ActiveScene.Characters) != 1 || got.ActiveScene.Characters[0].CharacterID != "ch-1" {
 		t.Fatalf("scene characters = %#v", got.ActiveScene.Characters)
 	}
-	if got.ActiveScene.GMOutput == nil || got.ActiveScene.GMOutput.Text != "You enter the tavern." {
-		t.Fatalf("gm_output = %#v", got.ActiveScene.GMOutput)
+	if got.ActiveScene.CurrentInteraction == nil || got.ActiveScene.CurrentInteraction.Beats[0].Text != "You enter the tavern." {
+		t.Fatalf("current_interaction = %#v", got.ActiveScene.CurrentInteraction)
 	}
 	if got.PlayerPhase == nil || got.PlayerPhase.PhaseID != "phase-1" || got.PlayerPhase.Status != "players" {
 		t.Fatalf("player_phase = %#v", got.PlayerPhase)

@@ -128,49 +128,19 @@ func (s *InteractionService) EndScenePlayerPhase(ctx context.Context, in *campai
 	return &campaignv1.EndScenePlayerPhaseResponse{State: state}, nil
 }
 
-func (s *InteractionService) CommitSceneGMOutput(ctx context.Context, in *campaignv1.CommitSceneGMOutputRequest) (*campaignv1.CommitSceneGMOutputResponse, error) {
+func (s *InteractionService) CommitSceneGMInteraction(ctx context.Context, in *campaignv1.CommitSceneGMInteractionRequest) (*campaignv1.CommitSceneGMInteractionResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "commit scene gm output request is required")
+		return nil, status.Error(codes.InvalidArgument, "commit scene gm interaction request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.CommitSceneGMOutput(ctx, campaignID, in)
+	state, err := s.app.CommitSceneGMInteraction(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.CommitSceneGMOutputResponse{State: state}, nil
-}
-
-func (s *InteractionService) AcceptScenePlayerPhase(ctx context.Context, in *campaignv1.AcceptScenePlayerPhaseRequest) (*campaignv1.AcceptScenePlayerPhaseResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "accept scene player phase request is required")
-	}
-	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
-	if err != nil {
-		return nil, err
-	}
-	state, err := s.app.AcceptScenePlayerPhase(ctx, campaignID, in)
-	if err != nil {
-		return nil, err
-	}
-	return &campaignv1.AcceptScenePlayerPhaseResponse{State: state}, nil
-}
-
-func (s *InteractionService) RequestScenePlayerRevisions(ctx context.Context, in *campaignv1.RequestScenePlayerRevisionsRequest) (*campaignv1.RequestScenePlayerRevisionsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "request scene player revisions request is required")
-	}
-	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
-	if err != nil {
-		return nil, err
-	}
-	state, err := s.app.RequestScenePlayerRevisions(ctx, campaignID, in)
-	if err != nil {
-		return nil, err
-	}
-	return &campaignv1.RequestScenePlayerRevisionsResponse{State: state}, nil
+	return &campaignv1.CommitSceneGMInteractionResponse{State: state}, nil
 }
 
 func (s *InteractionService) ResolveScenePlayerPhaseReview(ctx context.Context, in *campaignv1.ResolveScenePlayerPhaseReviewRequest) (*campaignv1.ResolveScenePlayerPhaseReviewResponse, error) {

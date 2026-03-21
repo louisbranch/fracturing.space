@@ -23,7 +23,12 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "Flooded Archive"})
 scn:interaction_start_player_phase{
   scene = "Flooded Archive",
-  frame_text = "The archive is flooding fast. What do you do before the ledger is lost?",
+  interaction = {
+    title = "Flooded Archive",
+    beats = {
+      {type = "prompt", text = "The archive is flooding fast. What do you do before the ledger is lost?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 
@@ -50,9 +55,15 @@ scn:interaction_expect{
 }
 
 -- The GM requests one slot revision; the original text stays visible.
-scn:interaction_request_revisions{
+scn:interaction_resolve_review{
   as = "Guide",
   scene = "Flooded Archive",
+  interaction = {
+    title = "Clarify The Route",
+    beats = {
+      {type = "guidance", text = "Commit to the route through the floodwater."},
+    },
+  },
   revisions = {
     {participant = "Rhea", reason = "Commit to the route through the floodwater.", characters = {"Aria"}}
   }
@@ -86,7 +97,17 @@ scn:interaction_expect{
     {participant = "Rhea", summary = "Aria wades in, hooks the ledger free, and signals for Corin to cover the retreat.", characters = {"Aria"}, yielded = true, review_status = "UNDER_REVIEW"}
   }
 }
-scn:interaction_accept_player_phase({as = "Guide", scene = "Flooded Archive"})
+scn:interaction_resolve_review({
+  as = "Guide",
+  scene = "Flooded Archive",
+  return_to_gm = true,
+  interaction = {
+    title = "Ledger Secured",
+    beats = {
+      {type = "resolution", text = "The flood beat resolves and the scene returns to the GM."},
+    },
+  },
+})
 scn:interaction_expect{
   phase_status = "GM",
   slots = {},

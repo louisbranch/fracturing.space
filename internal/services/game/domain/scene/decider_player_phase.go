@@ -66,7 +66,6 @@ func decidePlayerPhaseStart(scenes map[ids.SceneID]State, cmd command.Command, n
 	}
 
 	payload.SceneID = ids.SceneID(sceneID)
-	payload.FrameText = strings.TrimSpace(payload.FrameText)
 	payload.ActingCharacterIDs = actingCharacterIDs
 	payload.ActingParticipantIDs = actingParticipantIDs
 	payloadJSON, _ := json.Marshal(payload)

@@ -28,11 +28,13 @@ type Deps struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	Character          storage.CharacterStore
+	Event              storage.EventStore
 	Session            storage.SessionStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore
 	SceneCharacter     storage.SceneCharacterStore
 	SceneInteraction   storage.SceneInteractionStore
+	SceneGMInteraction storage.SceneGMInteractionStore
 	Write              domainwrite.WritePath
 	Applier            projection.Applier
 }
@@ -51,11 +53,13 @@ type interactionApplicationStores struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	Character          storage.CharacterStore
+	Event              storage.EventStore
 	Session            storage.SessionStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore
 	SceneCharacter     storage.SceneCharacterStore
 	SceneInteraction   storage.SceneInteractionStore
+	SceneGMInteraction storage.SceneGMInteractionStore
 }
 
 func newInteractionApplicationWithDependencies(
@@ -68,11 +72,13 @@ func newInteractionApplicationWithDependencies(
 			Campaign:           deps.Campaign,
 			Participant:        deps.Participant,
 			Character:          deps.Character,
+			Event:              deps.Event,
 			Session:            deps.Session,
 			SessionInteraction: deps.SessionInteraction,
 			Scene:              deps.Scene,
 			SceneCharacter:     deps.SceneCharacter,
 			SceneInteraction:   deps.SceneInteraction,
+			SceneGMInteraction: deps.SceneGMInteraction,
 		},
 		write:       deps.Write,
 		applier:     deps.Applier,

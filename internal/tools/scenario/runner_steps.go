@@ -41,8 +41,6 @@ var coreStepKinds = map[string]struct{}{
 	"interaction_yield":                     {},
 	"interaction_unyield":                   {},
 	"interaction_end_player_phase":          {},
-	"interaction_accept_player_phase":       {},
-	"interaction_request_revisions":         {},
 	"interaction_resolve_review":            {},
 	"interaction_pause_ooc":                 {},
 	"interaction_post_ooc":                  {},
@@ -217,10 +215,6 @@ func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Ste
 		return r.runInteractionUnyieldStep(ctx, state, step)
 	case "interaction_end_player_phase":
 		return r.runInteractionEndPlayerPhaseStep(ctx, state, step)
-	case "interaction_accept_player_phase":
-		return r.runInteractionAcceptPlayerPhaseStep(ctx, state, step)
-	case "interaction_request_revisions":
-		return r.runInteractionRequestRevisionsStep(ctx, state, step)
 	case "interaction_resolve_review":
 		return r.runInteractionResolveReviewStep(ctx, state, step)
 	case "interaction_pause_ooc":

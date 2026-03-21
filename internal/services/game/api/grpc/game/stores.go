@@ -36,6 +36,7 @@ type ProjectionStores struct {
 	SceneGate          storage.SceneGateStore
 	SceneSpotlight     storage.SceneSpotlightStore
 	SceneInteraction   storage.SceneInteractionStore
+	SceneGMInteraction storage.SceneGMInteractionStore
 	CampaignFork       storage.CampaignForkStore
 }
 

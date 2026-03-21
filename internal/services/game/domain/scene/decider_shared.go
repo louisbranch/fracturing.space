@@ -71,3 +71,49 @@ func normalizeParticipantIDs(participantIDs []ids.ParticipantID) []ids.Participa
 	}
 	return result
 }
+
+func normalizeGMInteractionBeats(beats []GMInteractionBeat) ([]GMInteractionBeat, *command.Rejection) {
+	result := make([]GMInteractionBeat, 0, len(beats))
+	seen := make(map[string]bool, len(beats))
+	for _, beat := range beats {
+		beatID := strings.TrimSpace(beat.BeatID)
+		if beatID == "" || seen[beatID] {
+			return nil, &command.Rejection{
+				Code:    rejectionCodeSceneGMInteractionBeatRequired,
+				Message: "gm interaction beat id is required and must be unique",
+			}
+		}
+		seen[beatID] = true
+		text := strings.TrimSpace(beat.Text)
+		if text == "" {
+			return nil, &command.Rejection{
+				Code:    rejectionCodeSceneGMInteractionBeatTextRequired,
+				Message: "gm interaction beat text is required",
+			}
+		}
+		switch GMInteractionBeatType(strings.TrimSpace(string(beat.Type))) {
+		case GMInteractionBeatTypeFiction,
+			GMInteractionBeatTypePrompt,
+			GMInteractionBeatTypeResolution,
+			GMInteractionBeatTypeConsequence,
+			GMInteractionBeatTypeGuidance:
+		default:
+			return nil, &command.Rejection{
+				Code:    rejectionCodeSceneGMInteractionBeatTypeRequired,
+				Message: "gm interaction beat type is required",
+			}
+		}
+		result = append(result, GMInteractionBeat{
+			BeatID: beatID,
+			Type:   GMInteractionBeatType(strings.TrimSpace(string(beat.Type))),
+			Text:   text,
+		})
+	}
+	if len(result) == 0 {
+		return nil, &command.Rejection{
+			Code:    rejectionCodeSceneGMInteractionBeatRequired,
+			Message: "at least one gm interaction beat is required",
+		}
+	}
+	return result, nil
+}

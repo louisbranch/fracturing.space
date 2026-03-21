@@ -318,20 +318,16 @@ type ScenePlayerSlot struct {
 
 // SceneInteraction captures authoritative scene-level player phase state.
 type SceneInteraction struct {
-	CampaignID            string
-	SceneID               string
-	SessionID             string
-	PhaseOpen             bool
-	PhaseID               string
-	PhaseStatus           scene.PlayerPhaseStatus
-	FrameText             string
-	ActingCharacterIDs    []string
-	ActingParticipantIDs  []string
-	Slots                 []ScenePlayerSlot
-	GMOutputText          string
-	GMOutputParticipantID string
-	GMOutputUpdatedAt     *time.Time
-	UpdatedAt             time.Time
+	CampaignID           string
+	SceneID              string
+	SessionID            string
+	PhaseOpen            bool
+	PhaseID              string
+	PhaseStatus          scene.PlayerPhaseStatus
+	ActingCharacterIDs   []string
+	ActingParticipantIDs []string
+	Slots                []ScenePlayerSlot
+	UpdatedAt            time.Time
 }
 
 // SceneInteractionReader provides read-only access to scene interaction state.
@@ -346,4 +342,44 @@ type SceneInteractionStore interface {
 	SceneInteractionReader
 	// PutSceneInteraction stores the authoritative scene interaction state.
 	PutSceneInteraction(ctx context.Context, interaction SceneInteraction) error
+}
+
+type SceneGMInteractionIllustration struct {
+	ImageURL string
+	Alt      string
+	Caption  string
+}
+
+type SceneGMInteractionBeat struct {
+	BeatID string
+	Type   scene.GMInteractionBeatType
+	Text   string
+}
+
+// SceneGMInteraction captures one immutable GM-authored interaction for a scene.
+type SceneGMInteraction struct {
+	CampaignID    string
+	SceneID       string
+	SessionID     string
+	InteractionID string
+	PhaseID       string
+	ParticipantID string
+	Title         string
+	CharacterIDs  []string
+	Illustration  *SceneGMInteractionIllustration
+	Beats         []SceneGMInteractionBeat
+	CreatedAt     time.Time
+}
+
+// SceneGMInteractionReader provides read-only access to scene GM interaction history.
+type SceneGMInteractionReader interface {
+	// ListSceneGMInteractions returns immutable GM interactions for a scene ordered newest first.
+	ListSceneGMInteractions(ctx context.Context, campaignID, sceneID string) ([]SceneGMInteraction, error)
+}
+
+// SceneGMInteractionStore owns immutable GM interaction history consumed by the interaction surface.
+type SceneGMInteractionStore interface {
+	SceneGMInteractionReader
+	// PutSceneGMInteraction appends or upserts one immutable GM interaction record.
+	PutSceneGMInteraction(ctx context.Context, interaction SceneGMInteraction) error
 }

@@ -63,7 +63,7 @@ clean:
 ```
 system_reference_search → system_reference_read → memory_write →
 scene_create → interaction_active_scene_set →
-interaction_scene_gm_output_commit → interaction_scene_player_phase_start
+interaction_scene_gm_interaction_commit → interaction_scene_player_phase_start
 ```
 
 The memory write tool varies: gpt-4.1-mini and gpt-5-nano prefer

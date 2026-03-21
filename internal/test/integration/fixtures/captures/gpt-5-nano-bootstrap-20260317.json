@@ -768,7 +768,7 @@
           {
             "content": [
               {
-                "text": "Interaction contract:\nYou are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.\nKeep in-character narration and out-of-character coordination separate.\nUse interaction_scene_gm_output_commit for authoritative in-character narration.\nUse interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.\nUse system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.\nUse tools for authoritative state changes; do not rely on free-form narration to mutate game state.\n\nAuthority:\nCampaign, session, and participant authority are fixed for this turn.\nFixed participant authority:\n2pktrsecffbopg6xiyvklhmxo4\n\nBootstrap mode: there is no active scene yet.\nYou are responsible for creating or choosing the opening scene from campaign, participant, and character context, setting it active, and committing authoritative GM output.\nIf there are no suitable scenes yet, create one that fits the campaign theme and the player characters.\nAfter the scene is active and narrated, start the first player phase when the acting characters are clear.\n\nTurn input:\nOpen the session, consult the Fear reference first, and remember the harbor debt.\n\nCampaign:\n{\n  \"campaign\": {\n    \"id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n    \"name\": \"Replay Harbor\",\n    \"status\": \"ACTIVE\",\n    \"gm_mode\": \"AI\",\n    \"intent\": \"STANDARD\",\n    \"access_policy\": \"PRIVATE\",\n    \"participant_count\": 2,\n    \"character_count\": 1,\n    \"theme_prompt\": \"A debt comes due at the harbor.\",\n    \"created_at\": \"2026-03-17T23:38:23Z\",\n    \"updated_at\": \"2026-03-17T23:38:23Z\"\n  }\n}\n\nCurrent context:\n{\n  \"context\": {\n    \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n    \"session_id\": \"itk3yiauj5acjhoxtmaogsn2by\",\n    \"participant_id\": \"2pktrsecffbopg6xiyvklhmxo4\"\n  }\n}\n\nCurrent interaction state:\n{\n  \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n  \"campaign_name\": \"Replay Harbor\",\n  \"locale\": \"LOCALE_EN_US\",\n  \"viewer\": {\n    \"participant_id\": \"2pktrsecffbopg6xiyvklhmxo4\",\n    \"name\": \"Oracle\",\n    \"role\": \"GM\"\n  },\n  \"active_session\": {\n    \"session_id\": \"itk3yiauj5acjhoxtmaogsn2by\",\n    \"name\": \"Opening Night\"\n  },\n  \"active_scene\": {},\n  \"player_phase\": {\n    \"status\": \"UNSPECIFIED\"\n  },\n  \"ooc\": {\n    \"open\": false\n  }\n}\n\nParticipants:\n{\n  \"participants\": [\n    {\n      \"id\": \"2pktrsecffbopg6xiyvklhmxo4\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"Oracle\",\n      \"role\": \"GM\",\n      \"controller\": \"AI\",\n      \"pronouns\": \"it/its\",\n      \"created_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    },\n    {\n      \"id\": \"7kvumbj2lrb5hklwojvdnfajqq\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"ai-gm-context-5d55bba3\",\n      \"role\": \"PLAYER\",\n      \"controller\": \"HUMAN\",\n      \"pronouns\": \"they/them\",\n      \"created_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    }\n  ]\n}\n\nCharacters:\n{\n  \"characters\": [\n    {\n      \"id\": \"tpvebv4tyrgxfjzetd36a56qvq\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"Readiness Character 1\",\n      \"kind\": \"PC\",\n      \"notes\": \"\",\n      \"pronouns\": \"\",\n      \"aliases\": [],\n      \"created_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    }\n  ]\n}\n\nSessions:\n{\n  \"sessions\": [\n    {\n      \"id\": \"itk3yiauj5acjhoxtmaogsn2by\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"Opening Night\",\n      \"status\": \"ACTIVE\",\n      \"started_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    }\n  ]\n}\n\nScenes:\n{\n  \"scenes\": []\n}\n\nstory.md:\n{\n  \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n  \"path\": \"story.md\",\n  \"content\": \"Starter seed: The Black Lantern warns of a debt collected at dawn.\",\n  \"read_only\": false,\n  \"created_at\": \"2026-03-17T23:38:23Z\",\n  \"updated_at\": \"2026-03-17T23:38:23Z\"\n}\n\nReturn narrated GM output once you have enough information.\n\nmemory.md:\n{\n  \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n  \"path\": \"memory.md\",\n  \"content\": \"Remember: the harbor master owes the party a favor.\",\n  \"read_only\": false,\n  \"created_at\": \"2026-03-17T23:38:23Z\",\n  \"updated_at\": \"2026-03-17T23:38:23Z\"\n}",
+                "text": "Interaction contract:\nYou are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.\nKeep in-character narration and out-of-character coordination separate.\nUse interaction_scene_gm_interaction_commit for authoritative in-character narration.\nUse interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.\nUse system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.\nUse tools for authoritative state changes; do not rely on free-form narration to mutate game state.\n\nAuthority:\nCampaign, session, and participant authority are fixed for this turn.\nFixed participant authority:\n2pktrsecffbopg6xiyvklhmxo4\n\nBootstrap mode: there is no active scene yet.\nYou are responsible for creating or choosing the opening scene from campaign, participant, and character context, setting it active, and committing authoritative GM output.\nIf there are no suitable scenes yet, create one that fits the campaign theme and the player characters.\nAfter the scene is active and narrated, start the first player phase when the acting characters are clear.\n\nTurn input:\nOpen the session, consult the Fear reference first, and remember the harbor debt.\n\nCampaign:\n{\n  \"campaign\": {\n    \"id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n    \"name\": \"Replay Harbor\",\n    \"status\": \"ACTIVE\",\n    \"gm_mode\": \"AI\",\n    \"intent\": \"STANDARD\",\n    \"access_policy\": \"PRIVATE\",\n    \"participant_count\": 2,\n    \"character_count\": 1,\n    \"theme_prompt\": \"A debt comes due at the harbor.\",\n    \"created_at\": \"2026-03-17T23:38:23Z\",\n    \"updated_at\": \"2026-03-17T23:38:23Z\"\n  }\n}\n\nCurrent context:\n{\n  \"context\": {\n    \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n    \"session_id\": \"itk3yiauj5acjhoxtmaogsn2by\",\n    \"participant_id\": \"2pktrsecffbopg6xiyvklhmxo4\"\n  }\n}\n\nCurrent interaction state:\n{\n  \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n  \"campaign_name\": \"Replay Harbor\",\n  \"locale\": \"LOCALE_EN_US\",\n  \"viewer\": {\n    \"participant_id\": \"2pktrsecffbopg6xiyvklhmxo4\",\n    \"name\": \"Oracle\",\n    \"role\": \"GM\"\n  },\n  \"active_session\": {\n    \"session_id\": \"itk3yiauj5acjhoxtmaogsn2by\",\n    \"name\": \"Opening Night\"\n  },\n  \"active_scene\": {},\n  \"player_phase\": {\n    \"status\": \"UNSPECIFIED\"\n  },\n  \"ooc\": {\n    \"open\": false\n  }\n}\n\nParticipants:\n{\n  \"participants\": [\n    {\n      \"id\": \"2pktrsecffbopg6xiyvklhmxo4\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"Oracle\",\n      \"role\": \"GM\",\n      \"controller\": \"AI\",\n      \"pronouns\": \"it/its\",\n      \"created_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    },\n    {\n      \"id\": \"7kvumbj2lrb5hklwojvdnfajqq\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"ai-gm-context-5d55bba3\",\n      \"role\": \"PLAYER\",\n      \"controller\": \"HUMAN\",\n      \"pronouns\": \"they/them\",\n      \"created_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    }\n  ]\n}\n\nCharacters:\n{\n  \"characters\": [\n    {\n      \"id\": \"tpvebv4tyrgxfjzetd36a56qvq\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"Readiness Character 1\",\n      \"kind\": \"PC\",\n      \"notes\": \"\",\n      \"pronouns\": \"\",\n      \"aliases\": [],\n      \"created_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    }\n  ]\n}\n\nSessions:\n{\n  \"sessions\": [\n    {\n      \"id\": \"itk3yiauj5acjhoxtmaogsn2by\",\n      \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n      \"name\": \"Opening Night\",\n      \"status\": \"ACTIVE\",\n      \"started_at\": \"2026-03-17T23:38:23Z\",\n      \"updated_at\": \"2026-03-17T23:38:23Z\"\n    }\n  ]\n}\n\nScenes:\n{\n  \"scenes\": []\n}\n\nstory.md:\n{\n  \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n  \"path\": \"story.md\",\n  \"content\": \"Starter seed: The Black Lantern warns of a debt collected at dawn.\",\n  \"read_only\": false,\n  \"created_at\": \"2026-03-17T23:38:23Z\",\n  \"updated_at\": \"2026-03-17T23:38:23Z\"\n}\n\nReturn narrated GM output once you have enough information.\n\nmemory.md:\n{\n  \"campaign_id\": \"e7xcbsbuwvfbjpupkkp5futhnq\",\n  \"path\": \"memory.md\",\n  \"content\": \"Remember: the harbor master owes the party a favor.\",\n  \"read_only\": false,\n  \"created_at\": \"2026-03-17T23:38:23Z\",\n  \"updated_at\": \"2026-03-17T23:38:23Z\"\n}",
                 "type": "input_text"
               }
             ],
@@ -1183,7 +1183,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -1999,7 +1999,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -2795,7 +2795,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -3611,7 +3611,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -4408,7 +4408,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -5224,7 +5224,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -6021,7 +6021,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -6837,7 +6837,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -7634,7 +7634,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -8450,7 +8450,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -9247,7 +9247,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -9633,7 +9633,7 @@
             "status": "completed",
             "arguments": "{\"scene_id\":\"kisenolknnhllb5pyffss4q7fa\",\"text\":\"Dawn settles over Replay Harbor in a pale wash of gray and copper. The docks creak as seafog threads through rigging and crates, and the waterup at the quay glints with a thin, oily sheen.\\n\\nA figure in a coat bearing the Black Lantern sigil threads its way through the ships toward the Readiness Character 1, a debt notice clutched in gloved hands. The message is precise: the harbor master\u2019s favor, owed to you, is due now, to be paid in some combination of coin, action, or service. No name is given for the one collecting, only a warning that failing to meet the debt will invite consequences from the harbor itself and those who watch the docks.\\n\\nThe harbor master is absent, as is the usual creak of a ledger being updated at the crack of dawn. The ledger, open on a weathered crate, bears the marks of a favor owed to Readiness Character 1\u2014though it\u2019s clear the balance has not yet been settled. The air tastes of salt and iron, and a quiet tension hums along the ropes that hold the moored vessels.\\n\\nWhat do you do, Readiness Character 1? Do you parley with the messenger, press for details about the debt, requisition aid from the harbor workers, or prepare to meet the weight of the dawning obligation?\"}",
             "call_id": "call_LZAO5fr3OFuHCx8FmdAwTRql",
-            "name": "interaction_scene_gm_output_commit"
+            "name": "interaction_scene_gm_interaction_commit"
           }
         ],
         "parallel_tool_calls": true,
@@ -10063,7 +10063,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -10860,7 +10860,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -11676,7 +11676,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -12473,7 +12473,7 @@
           },
           {
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {
@@ -13295,7 +13295,7 @@
           {
             "type": "function",
             "description": "Commits authoritative GM narration or instructions for the active scene",
-            "name": "interaction_scene_gm_output_commit",
+            "name": "interaction_scene_gm_interaction_commit",
             "parameters": {
               "additionalProperties": false,
               "properties": {

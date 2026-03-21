@@ -491,3 +491,21 @@ func (s *fakeSceneInteractionStore) GetSceneInteraction(_ context.Context, campa
 	}
 	return interaction, nil
 }
+
+type fakeSceneGMInteractionStore struct {
+	interactions map[string][]storage.SceneGMInteraction
+}
+
+func newFakeSceneGMInteractionStore() *fakeSceneGMInteractionStore {
+	return &fakeSceneGMInteractionStore{interactions: make(map[string][]storage.SceneGMInteraction)}
+}
+
+func (s *fakeSceneGMInteractionStore) PutSceneGMInteraction(_ context.Context, interaction storage.SceneGMInteraction) error {
+	key := interaction.CampaignID + ":" + interaction.SceneID
+	s.interactions[key] = append(s.interactions[key], interaction)
+	return nil
+}
+
+func (s *fakeSceneGMInteractionStore) ListSceneGMInteractions(_ context.Context, campaignID, sceneID string) ([]storage.SceneGMInteraction, error) {
+	return append([]storage.SceneGMInteraction(nil), s.interactions[campaignID+":"+sceneID]...), nil
+}

@@ -28,9 +28,8 @@ func TestInteractionServiceRejectsNilRequests(t *testing.T) {
 		{name: "yield scene player phase", run: func() error { _, err := svc.YieldScenePlayerPhase(ctx, nil); return err }},
 		{name: "unyield scene player phase", run: func() error { _, err := svc.UnyieldScenePlayerPhase(ctx, nil); return err }},
 		{name: "end scene player phase", run: func() error { _, err := svc.EndScenePlayerPhase(ctx, nil); return err }},
-		{name: "commit scene gm output", run: func() error { _, err := svc.CommitSceneGMOutput(ctx, nil); return err }},
-		{name: "accept scene player phase", run: func() error { _, err := svc.AcceptScenePlayerPhase(ctx, nil); return err }},
-		{name: "request scene player revisions", run: func() error { _, err := svc.RequestScenePlayerRevisions(ctx, nil); return err }},
+		{name: "commit scene gm interaction", run: func() error { _, err := svc.CommitSceneGMInteraction(ctx, nil); return err }},
+		{name: "resolve scene player phase review", run: func() error { _, err := svc.ResolveScenePlayerPhaseReview(ctx, nil); return err }},
 		{name: "pause session for ooc", run: func() error { _, err := svc.PauseSessionForOOC(ctx, nil); return err }},
 		{name: "post session ooc", run: func() error { _, err := svc.PostSessionOOC(ctx, nil); return err }},
 		{name: "mark ooc ready", run: func() error { _, err := svc.MarkOOCReadyToResume(ctx, nil); return err }},
@@ -93,16 +92,12 @@ func TestInteractionServiceRejectsMissingCampaignID(t *testing.T) {
 			_, err := svc.EndScenePlayerPhase(ctx, &gamev1.EndScenePlayerPhaseRequest{SceneId: "scene-1"})
 			return err
 		}},
-		{name: "commit scene gm output", run: func() error {
-			_, err := svc.CommitSceneGMOutput(ctx, &gamev1.CommitSceneGMOutputRequest{SceneId: "scene-1", Text: "Narration"})
+		{name: "commit scene gm interaction", run: func() error {
+			_, err := svc.CommitSceneGMInteraction(ctx, &gamev1.CommitSceneGMInteractionRequest{SceneId: "scene-1"})
 			return err
 		}},
-		{name: "accept scene player phase", run: func() error {
-			_, err := svc.AcceptScenePlayerPhase(ctx, &gamev1.AcceptScenePlayerPhaseRequest{SceneId: "scene-1"})
-			return err
-		}},
-		{name: "request scene player revisions", run: func() error {
-			_, err := svc.RequestScenePlayerRevisions(ctx, &gamev1.RequestScenePlayerRevisionsRequest{SceneId: "scene-1"})
+		{name: "resolve scene player phase review", run: func() error {
+			_, err := svc.ResolveScenePlayerPhaseReview(ctx, &gamev1.ResolveScenePlayerPhaseReviewRequest{SceneId: "scene-1"})
 			return err
 		}},
 		{name: "pause session for ooc", run: func() error {

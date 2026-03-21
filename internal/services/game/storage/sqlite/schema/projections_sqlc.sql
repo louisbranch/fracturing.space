@@ -616,11 +616,10 @@ CREATE TABLE scene_interactions (
     session_id TEXT NOT NULL DEFAULT '',
     phase_open INTEGER NOT NULL DEFAULT 0,
     phase_id TEXT NOT NULL DEFAULT '',
-    frame_text TEXT NOT NULL DEFAULT '',
+    phase_status TEXT NOT NULL DEFAULT '',
     acting_character_ids_json BLOB,
     acting_participant_ids_json BLOB,
-    posts_json BLOB,
-    yielded_participant_ids_json BLOB,
+    slots_json BLOB,
     updated_at INTEGER NOT NULL,
     PRIMARY KEY (campaign_id, scene_id),
     FOREIGN KEY (campaign_id, scene_id) REFERENCES scenes(campaign_id, scene_id) ON DELETE CASCADE
@@ -629,15 +628,20 @@ CREATE TABLE scene_interactions (
 CREATE INDEX idx_session_interactions_active_scene ON session_interactions(campaign_id, active_scene_id);
 CREATE INDEX idx_scene_interactions_session ON scene_interactions(campaign_id, session_id);
 
+CREATE TABLE scene_gm_interactions (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    session_id TEXT NOT NULL DEFAULT '',
+    interaction_id TEXT NOT NULL,
+    phase_id TEXT NOT NULL DEFAULT '',
+    participant_id TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    character_ids_json BLOB,
+    illustration_json BLOB,
+    beats_json BLOB,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, interaction_id),
+    FOREIGN KEY (campaign_id, scene_id) REFERENCES scenes(campaign_id, scene_id) ON DELETE CASCADE
+);
 
--- +migrate Up
-
-ALTER TABLE scene_interactions ADD COLUMN phase_status TEXT NOT NULL DEFAULT '';
-ALTER TABLE scene_interactions ADD COLUMN slots_json BLOB;
-
-
--- +migrate Up
-
-ALTER TABLE scene_interactions ADD COLUMN gm_output_text TEXT NOT NULL DEFAULT '';
-ALTER TABLE scene_interactions ADD COLUMN gm_output_participant_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE scene_interactions ADD COLUMN gm_output_updated_at INTEGER;
+CREATE INDEX idx_scene_gm_interactions_scene_created ON scene_gm_interactions(campaign_id, scene_id, created_at DESC);

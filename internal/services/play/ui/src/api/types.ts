@@ -49,7 +49,8 @@ export type WireScene = {
   name?: string;
   description?: string;
   characters: WireSceneCharacter[];
-  gm_output?: WireGMOutput;
+  current_interaction?: WireGMInteraction;
+  interaction_history?: WireGMInteraction[];
 };
 
 export type WireSceneCharacter = {
@@ -58,16 +59,33 @@ export type WireSceneCharacter = {
   owner_participant_id?: string;
 };
 
-export type WireGMOutput = {
+export type WireGMInteractionIllustration = {
+  image_url?: string;
+  alt?: string;
+  caption?: string;
+};
+
+export type WireGMInteractionBeat = {
+  beat_id: string;
+  type?: string;
   text?: string;
+};
+
+export type WireGMInteraction = {
+  interaction_id: string;
+  scene_id?: string;
+  phase_id?: string;
   participant_id?: string;
-  updated_at?: string;
+  title?: string;
+  character_ids: string[];
+  illustration?: WireGMInteractionIllustration;
+  beats: WireGMInteractionBeat[];
+  created_at?: string;
 };
 
 export type WirePlayerPhase = {
   phase_id: string;
   status?: string;
-  frame_text?: string;
   acting_character_ids: string[];
   acting_participant_ids: string[];
   slots: WirePlayerSlot[];

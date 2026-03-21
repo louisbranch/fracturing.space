@@ -304,7 +304,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 func buildCommitReminder(text string) string {
 	var b strings.Builder
 	b.WriteString("You returned narration without making the authoritative interaction update for this turn.\n")
-	b.WriteString("Use interaction_scene_gm_output_commit for standalone narration, interaction_scene_review_resolve for GM review, or interaction_scene_interrupt_resolution for post-OOC resolution before returning final text.\n")
+	b.WriteString("Use interaction_scene_gm_interaction_commit for standalone narration, interaction_scene_review_resolve for GM review, or interaction_scene_interrupt_resolution for post-OOC resolution before returning final text.\n")
 	b.WriteString("If there is no active scene, set one active first.\n")
 	if text != "" {
 		b.WriteString("Use this draft narration as the commit text unless you need a small correction:\n")

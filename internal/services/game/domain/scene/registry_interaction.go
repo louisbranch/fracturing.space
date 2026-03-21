@@ -90,9 +90,9 @@ var sceneInteractionCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
-			Type:            CommandTypeGMOutputCommit,
+			Type:            CommandTypeGMInteractionCommit,
 			Owner:           command.OwnerCore,
-			ValidatePayload: validateGMOutputCommittedPayload,
+			ValidatePayload: validateGMInteractionCommittedPayload,
 			Gate: command.GatePolicy{
 				Scope:         command.GateScopeScene,
 				AllowWhenOpen: true,
@@ -193,10 +193,10 @@ var sceneInteractionEventContracts = []eventProjectionContract{
 	},
 	{
 		definition: event.Definition{
-			Type:            EventTypeGMOutputCommitted,
+			Type:            EventTypeGMInteractionCommitted,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
-			ValidatePayload: validateGMOutputCommittedPayload,
+			ValidatePayload: validateGMInteractionCommittedPayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		emittable:  true,
@@ -244,7 +244,7 @@ func validatePlayerPhaseEndedPayload(raw json.RawMessage) error {
 	return json.Unmarshal(raw, &payload)
 }
 
-func validateGMOutputCommittedPayload(raw json.RawMessage) error {
-	var payload GMOutputCommittedPayload
+func validateGMInteractionCommittedPayload(raw json.RawMessage) error {
+	var payload GMInteractionCommittedPayload
 	return json.Unmarshal(raw, &payload)
 }

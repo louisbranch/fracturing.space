@@ -181,7 +181,7 @@ func TestManagerEnsureDefaultArtifactsRefreshesExistingSkillsArtifact(t *testing
 	store.CampaignArtifacts["campaign-1\x00"+SkillsArtifactPath] = storage.CampaignArtifactRecord{
 		CampaignID: "campaign-1",
 		Path:       SkillsArtifactPath,
-		Content:    "# Old Skills\nCommit via interaction_scene_gm_output_commit only.",
+		Content:    "# Old Skills\nCommit via interaction_scene_gm_interaction_commit only.",
 		ReadOnly:   true,
 		CreatedAt:  now.Add(-time.Hour),
 		UpdatedAt:  now.Add(-time.Hour),

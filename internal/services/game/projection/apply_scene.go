@@ -133,7 +133,6 @@ func (a Applier) applySceneEnded(ctx context.Context, evt event.Event, payload s
 			sceneState.PhaseOpen = false
 			sceneState.PhaseID = ""
 			sceneState.PhaseStatus = ""
-			sceneState.FrameText = ""
 			sceneState.ActingCharacterIDs = []string{}
 			sceneState.ActingParticipantIDs = []string{}
 			sceneState.Slots = []storage.ScenePlayerSlot{}

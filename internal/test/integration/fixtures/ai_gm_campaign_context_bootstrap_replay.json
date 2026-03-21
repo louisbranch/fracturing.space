@@ -28,7 +28,7 @@
     "interaction_active_scene_set",
     "interaction_scene_player_phase_start",
     "interaction_scene_review_resolve",
-    "interaction_scene_gm_output_commit",
+    "interaction_scene_gm_interaction_commit",
     "interaction_ooc_pause",
     "interaction_scene_interrupt_resolution",
     "interaction_ooc_post",
@@ -118,10 +118,18 @@
       "tool_calls": [
         {
           "call_id": "call_eZc8Q6ANV6R2zMFtxz58e6aL",
-          "name": "interaction_scene_gm_output_commit",
+          "name": "interaction_scene_gm_interaction_commit",
           "arguments": {
             "scene_id": "{{scene_id}}",
-            "text": "The quay breathes in slow, salt-sour gusts beneath a pale, thinning sky. Lanterns wobble along the planks; crates cast long, spidery shadows. Near the harbor master's office, a broad-shouldered man leans on the rail, eyes red-rimmed with worry — the same harbor master who owes you a favor. He gives you a quick, guilty nod when he sees you.\n\nFrom the east, the Black Lantern's warning hangs like a smear in your head: a debt is due at dawn. Voices — low, hard — drift across the water. Footsteps on the gangway. Someone has come to collect.\n\nYou have a few breaths before the collectors make their presence known. You can step forward to speak with the harbor master, confront whoever arrives, set a trap, try to learn who the collectors answer to, or take some other preparation. Choose your approach and describe what your character does."
+            "interaction": {
+              "title": "Dawn At The Quay",
+              "beats": [
+                {
+                  "type": "fiction",
+                  "text": "The quay breathes in slow, salt-sour gusts beneath a pale, thinning sky. Lanterns wobble along the planks; crates cast long, spidery shadows. Near the harbor master's office, a broad-shouldered man leans on the rail, eyes red-rimmed with worry — the same harbor master who owes you a favor. He gives you a quick, guilty nod when he sees you.\n\nFrom the east, the Black Lantern's warning hangs like a smear in your head: a debt is due at dawn. Voices — low, hard — drift across the water. Footsteps on the gangway. Someone has come to collect.\n\nYou have a few breaths before the collectors make their presence known. You can step forward to speak with the harbor master, confront whoever arrives, set a trap, try to learn who the collectors answer to, or take some other preparation. Choose your approach and describe what your character does."
+                }
+              ]
+            }
           }
         }
       ]
@@ -136,7 +144,18 @@
             "character_ids": [
               "{{character_id}}"
             ],
-            "frame_text": "Player phase — Readiness Character 1: You're on the quay before dawn. Describe your approach (speak to the harbor master, confront arrivals, hide, set a trap, gather information, etc.). If your action requires a roll, describe how you want to attempt it; I'll set the Difficulty and call for a roll when needed.",
+            "interaction": {
+              "title": "Readiness At The Quay",
+              "character_ids": [
+                "{{character_id}}"
+              ],
+              "beats": [
+                {
+                  "type": "prompt",
+                  "text": "Player phase — Readiness Character 1: You're on the quay before dawn. Describe your approach (speak to the harbor master, confront arrivals, hide, set a trap, gather information, etc.). If your action requires a roll, describe how you want to attempt it; I'll set the Difficulty and call for a roll when needed."
+                }
+              ]
+            },
             "scene_id": "{{scene_id}}"
           }
         }
@@ -144,7 +163,7 @@
     },
     {
       "id": "resp_089b3231a52e9d610069b9ee15b05c8193900ad5092f7c9f4f",
-      "output_text": "OOC — I consulted the Daggerheart \"Running an Adventure\" guidance (Fear usage and GM moves) and updated campaign memory with session notes about the harbor debt.\n\nSession memory updated (memory.md):\n- Existing: \"Remember: the harbor master owes the party a favor.\"\n- Added session notes: The Black Lantern warned the party that a debt will be collected at dawn; unnamed collectors are expected; harbor master is an ally/lever; GM intends to open at the quay before dawn and track countdowns/Fear as collectors escalate.\n\nActive scene created and set:\n- Scene: Dawn at the Quay (pre-dawn on the eastern quay; harbor master present; collectors expected)\n\nAuthoritative in-character narration (committed to the scene):\n\"The quay breathes in slow, salt-sour gusts beneath a pale, thinning sky. Lanterns wobble along the planks; crates cast long, spidery shadows. Near the harbor master's office, a broad-shouldered man leans on the rail, eyes red-rimmed with worry — the same harbor master who owes you a favor. He gives you a quick, guilty nod when he sees you.\n\nFrom the east, the Black Lantern's warning hangs like a smear in your head: a debt is due at dawn. Voices — low, hard — drift across the water. Footsteps on the gangway. Someone has come to collect.\n\nYou have a few breaths before the collectors make their presence known. You can step forward to speak with the harbor master, confront whoever arrives, set a trap, try to learn who the collectors answer to, or take some other preparation. Choose your approach and describe what your character does.\"\n\nPlayer phase started (acting character: Readiness Character 1)\nGM frame to the player: Describe your approach (speak to the harbor master, confront arrivals, hide, set a trap, gather information, etc.). If your action requires a roll, describe how you want to attempt it and I will set the Difficulty and call for the roll when needed.\n\nIf you want any OOC notes, to pause the session, or to adjust fear/countdown bookkeeping before the player acts, tell me now."
+      "output_text": "OOC — I consulted the Daggerheart \"Running an Adventure\" guidance (Fear usage and GM moves) and updated campaign memory with session notes about the harbor debt.\n\nSession memory updated (memory.md):\n- Existing: \"Remember: the harbor master owes the party a favor.\"\n- Added session notes: The Black Lantern warned the party that a debt will be collected at dawn; unnamed collectors are expected; harbor master is an ally/lever; GM intends to open at the quay before dawn and track countdowns/Fear as collectors escalate.\n\nActive scene created and set:\n- Scene: Dawn at the Quay (pre-dawn on the eastern quay; harbor master present; collectors expected)\n\nAuthoritative in-character narration (committed to the scene):\n\"The quay breathes in slow, salt-sour gusts beneath a pale, thinning sky. Lanterns wobble along the planks; crates cast long, spidery shadows. Near the harbor master's office, a broad-shouldered man leans on the rail, eyes red-rimmed with worry — the same harbor master who owes you a favor. He gives you a quick, guilty nod when he sees you.\n\nFrom the east, the Black Lantern's warning hangs like a smear in your head: a debt is due at dawn. Voices — low, hard — drift across the water. Footsteps on the gangway. Someone has come to collect.\n\nYou have a few breaths before the collectors make their presence known. You can step forward to speak with the harbor master, confront whoever arrives, set a trap, try to learn who the collectors answer to, or take some other preparation. Choose your approach and describe what your character does.\"\n\nPlayer phase started (acting character: Readiness Character 1)\nGM prompt to the player: Describe your approach (speak to the harbor master, confront arrivals, hide, set a trap, gather information, etc.). If your action requires a roll, describe how you want to attempt it and I will set the Difficulty and call for the roll when needed.\n\nIf you want any OOC notes, to pause the session, or to adjust fear/countdown bookkeeping before the player acts, tell me now."
     }
   ]
 }

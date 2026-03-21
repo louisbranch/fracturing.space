@@ -1,10 +1,11 @@
-import type { PlayerHUDStatusBadge } from "../../shared/view-models";
+import type { OnStageCharacterSummary } from "../shared/contract";
 
 export type OnStageSceneCardProps = {
   sceneName: string;
   sceneDescription?: string;
-  gmOutputText?: string;
-  frameText?: string;
-  actingCharacterNames: string[];
-  status: PlayerHUDStatusBadge;
+  sceneCharacters: OnStageCharacterSummary[];
+  resolvedInteractionCount: number;
+  expanded: boolean;
+  onToggle: () => void;
+  onCharacterInspect?: (characterId: string) => void;
 };

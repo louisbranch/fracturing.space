@@ -90,7 +90,12 @@ owner. This is how interaction loops model alternating GM/player authority:
 -- GM opens the beat.
 scn:interaction_start_player_phase({
   scene = "The Bridge",
-  frame_text = "The bridge lurches in the wind. What do you do?",
+  interaction = {
+    title = "Bridge Lurch",
+    beats = {
+      {type = "prompt", text = "The bridge lurches in the wind. What do you do?"},
+    },
+  },
   characters = {"Aria", "Corin"},
   as = "Guide",
 })
@@ -119,8 +124,7 @@ Available root interaction steps are:
 - `interaction_post`
 - `interaction_yield`
 - `interaction_unyield`
-- `interaction_accept_player_phase`
-- `interaction_request_revisions`
+- `interaction_resolve_review`
 - `interaction_end_player_phase`
 - `interaction_pause_ooc`
 - `interaction_post_ooc`
@@ -130,7 +134,7 @@ Available root interaction steps are:
 - `interaction_expect`
 
 `interaction_expect` reads authoritative interaction state and can assert the
-active session/scene, phase status/frame, acting characters or participants,
+active session/scene, phase status/prompt, acting characters or participants,
 player slots, OOC state, OOC posts, ready-to-resume set, and GM authority.
 
 Player slot assertions replace the older `posts` and `yielded_participants`
@@ -164,9 +168,15 @@ scn:interaction_expect({
   },
 })
 
-scn:interaction_request_revisions({
+scn:interaction_resolve_review({
   as = "Guide",
   scene = "Flooded Archive",
+  interaction = {
+    title = "Clarify The Route",
+    beats = {
+      {type = "guidance", text = "Keep the lantern dry and tell me where Aria ends up."},
+    },
+  },
   revisions = {
     {
       participant = "Rhea",

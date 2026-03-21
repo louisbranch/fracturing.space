@@ -237,7 +237,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		scene.CommandTypePlayerPhaseAccept:           sceneRoute,
 		scene.CommandTypePlayerPhaseRequestRevisions: sceneRoute,
 		scene.CommandTypePlayerPhaseEnd:              sceneRoute,
-		scene.CommandTypeGMOutputCommit:              sceneRoute,
+		scene.CommandTypeGMInteractionCommit:         sceneRoute,
 	}
 }
 

@@ -152,7 +152,7 @@ export const backstageFixtureCatalog: Record<
       {
         id: "ooc-2",
         participantId: "p-bryn",
-        body: "Same here. Waiting on the next frame.",
+        body: "Same here. Waiting on the next prompt.",
         sentAt: "2026-03-19T19:35:00Z",
       },
     ],

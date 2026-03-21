@@ -94,10 +94,6 @@ func (r *Runner) runInteractionStartPlayerPhaseStep(ctx context.Context, state *
 	if err != nil {
 		return err
 	}
-	frameText := strings.TrimSpace(optionalString(step.Args, "frame_text", optionalString(step.Args, "frame", "")))
-	if frameText == "" {
-		return r.failf("interaction_start_player_phase frame_text is required")
-	}
 	characterIDs, err := resolveCharacterList(state, step.Args, "characters")
 	if err != nil {
 		return err
@@ -105,11 +101,15 @@ func (r *Runner) runInteractionStartPlayerPhaseStep(ctx context.Context, state *
 	if len(characterIDs) == 0 {
 		return r.failf("interaction_start_player_phase characters are required")
 	}
+	interaction, err := scenarioInteractionInputFromArgs(state, step.Args, characterIDs)
+	if err != nil {
+		return err
+	}
 	_, err = client.StartScenePlayerPhase(ctx, &gamev1.StartScenePlayerPhaseRequest{
 		CampaignId:   state.campaignID,
 		SceneId:      sceneID,
-		FrameText:    frameText,
 		CharacterIds: characterIDs,
+		Interaction:  interaction,
 	})
 	if err != nil {
 		return fmt.Errorf("interaction_start_player_phase: %w", err)
@@ -219,58 +219,6 @@ func (r *Runner) runInteractionEndPlayerPhaseStep(ctx context.Context, state *sc
 	return nil
 }
 
-func (r *Runner) runInteractionAcceptPlayerPhaseStep(ctx context.Context, state *scenarioState, step Step) error {
-	if err := r.ensureSession(ctx, state); err != nil {
-		return err
-	}
-	client, err := r.requireInteractionClient()
-	if err != nil {
-		return err
-	}
-	sceneID, err := resolveInteractionSceneID(state, step.Args, false)
-	if err != nil {
-		return err
-	}
-	_, err = client.AcceptScenePlayerPhase(ctx, &gamev1.AcceptScenePlayerPhaseRequest{
-		CampaignId: state.campaignID,
-		SceneId:    sceneID,
-	})
-	if err != nil {
-		return fmt.Errorf("interaction_accept_player_phase: %w", err)
-	}
-	return nil
-}
-
-func (r *Runner) runInteractionRequestRevisionsStep(ctx context.Context, state *scenarioState, step Step) error {
-	if err := r.ensureSession(ctx, state); err != nil {
-		return err
-	}
-	client, err := r.requireInteractionClient()
-	if err != nil {
-		return err
-	}
-	sceneID, err := resolveInteractionSceneID(state, step.Args, false)
-	if err != nil {
-		return err
-	}
-	revisions, err := parseScenePlayerRevisionRequests(state, step.Args, "revisions")
-	if err != nil {
-		return err
-	}
-	if len(revisions) == 0 {
-		return r.failf("interaction_request_revisions revisions are required")
-	}
-	_, err = client.RequestScenePlayerRevisions(ctx, &gamev1.RequestScenePlayerRevisionsRequest{
-		CampaignId: state.campaignID,
-		SceneId:    sceneID,
-		Revisions:  revisions,
-	})
-	if err != nil {
-		return fmt.Errorf("interaction_request_revisions: %w", err)
-	}
-	return nil
-}
-
 func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
@@ -288,6 +236,10 @@ func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *sce
 		SceneId:    sceneID,
 	}
 	if _, ok := step.Args["revisions"]; ok {
+		interaction, err := scenarioInteractionInputFromArgs(state, step.Args, nil)
+		if err != nil {
+			return err
+		}
 		revisions, err := parseScenePlayerRevisionRequests(state, step.Args, "revisions")
 		if err != nil {
 			return err
@@ -296,17 +248,22 @@ func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *sce
 			return r.failf("interaction_resolve_review revisions are required")
 		}
 		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions{
-			RequestRevisions: &gamev1.ResolveScenePlayerPhaseReviewRequestRevisions{Revisions: revisions},
+			RequestRevisions: &gamev1.ResolveScenePlayerPhaseReviewRequestRevisions{
+				Interaction: interaction,
+				Revisions:   revisions,
+			},
+		}
+	} else if optionalBool(step.Args, "return_to_gm", false) {
+		interaction, err := scenarioInteractionInputFromArgs(state, step.Args, nil)
+		if err != nil {
+			return err
+		}
+		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_ReturnToGm{
+			ReturnToGm: &gamev1.ResolveScenePlayerPhaseReviewReturnToGM{
+				Interaction: interaction,
+			},
 		}
 	} else {
-		frameText := strings.TrimSpace(optionalString(step.Args, "frame_text", optionalString(step.Args, "next_frame_text", "")))
-		if frameText == "" {
-			return r.failf("interaction_resolve_review frame_text is required when not requesting revisions")
-		}
-		gmOutputText := strings.TrimSpace(optionalString(step.Args, "gm_output_text", ""))
-		if gmOutputText == "" {
-			return r.failf("interaction_resolve_review gm_output_text is required when advancing to players")
-		}
 		characterIDs, err := resolveCharacterList(state, step.Args, "characters")
 		if err != nil {
 			return err
@@ -314,11 +271,14 @@ func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *sce
 		if len(characterIDs) == 0 {
 			return r.failf("interaction_resolve_review characters are required when advancing to players")
 		}
+		interaction, err := scenarioInteractionInputFromArgs(state, step.Args, characterIDs)
+		if err != nil {
+			return err
+		}
 		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_AdvanceToPlayers{
 			AdvanceToPlayers: &gamev1.ResolveScenePlayerPhaseReviewAdvanceToPlayers{
-				GmOutputText:     gmOutputText,
-				NextFrameText:    frameText,
 				NextCharacterIds: characterIDs,
+				Interaction:      interaction,
 			},
 		}
 	}
@@ -439,12 +399,15 @@ func (r *Runner) runInteractionResolveInterruptedPhaseStep(ctx context.Context, 
 		if err != nil {
 			return err
 		}
+		interaction, err := scenarioInteractionInputFromArgs(state, step.Args, characterIDs)
+		if err != nil {
+			return err
+		}
 		req.Resolution = &gamev1.ResolveInterruptedScenePhaseRequest_ReplaceWithPlayerPhase{
 			ReplaceWithPlayerPhase: &gamev1.ResolveInterruptedScenePhaseReplaceWithPlayerPhase{
-				SceneId:      sceneID,
-				GmOutputText: strings.TrimSpace(optionalString(step.Args, "gm_output_text", "")),
-				FrameText:    strings.TrimSpace(optionalString(step.Args, "frame_text", "")),
-				CharacterIds: characterIDs,
+				SceneId:          sceneID,
+				NextCharacterIds: characterIDs,
+				Interaction:      interaction,
 			},
 		}
 	}
@@ -453,6 +416,33 @@ func (r *Runner) runInteractionResolveInterruptedPhaseStep(ctx context.Context, 
 		return fmt.Errorf("interaction_resolve_interrupted_phase: %w", err)
 	}
 	return nil
+}
+
+func scenarioSingleBeatInteraction(title string, beatType gamev1.GMInteractionBeatType, text string, characterIDs ...string) *gamev1.GMInteractionInput {
+	return &gamev1.GMInteractionInput{
+		Title:        title,
+		CharacterIds: append([]string(nil), characterIDs...),
+		Beats: []*gamev1.GMInteractionInputBeat{{
+			BeatId: "beat-1",
+			Type:   beatType,
+			Text:   strings.TrimSpace(text),
+		}},
+	}
+}
+
+func currentInteractionPromptText(interaction *gamev1.GMInteraction) string {
+	if interaction == nil {
+		return ""
+	}
+	for _, beat := range interaction.GetBeats() {
+		if beat == nil {
+			continue
+		}
+		if beat.GetType() == gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT {
+			return strings.TrimSpace(beat.GetText())
+		}
+	}
+	return ""
 }
 
 func (r *Runner) runInteractionExpectStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -488,9 +478,10 @@ func (r *Runner) runInteractionExpectStep(ctx context.Context, state *scenarioSt
 			return r.assertf("interaction phase_status = %q, want %q", actualStatus, wantStatus)
 		}
 	}
-	if expectedFrame, ok := step.Args["frame_text"]; ok {
-		if strings.TrimSpace(fmt.Sprint(expectedFrame)) != strings.TrimSpace(stateProto.GetPlayerPhase().GetFrameText()) {
-			return r.assertf("interaction frame_text = %q, want %q", stateProto.GetPlayerPhase().GetFrameText(), fmt.Sprint(expectedFrame))
+	if expectedPrompt, ok := step.Args["prompt"]; ok {
+		actualPrompt := currentInteractionPromptText(stateProto.GetActiveScene().GetCurrentInteraction())
+		if strings.TrimSpace(fmt.Sprint(expectedPrompt)) != actualPrompt {
+			return r.assertf("interaction prompt = %q, want %q", actualPrompt, fmt.Sprint(expectedPrompt))
 		}
 	}
 	if _, ok := step.Args["acting_characters"]; ok {
@@ -668,6 +659,87 @@ func normalizeScenePhaseStatusString(value string) string {
 		return "UNSPECIFIED"
 	default:
 		return strings.ToUpper(strings.TrimSpace(value))
+	}
+}
+
+func scenarioInteractionInputFromArgs(state *scenarioState, args map[string]any, fallbackCharacterIDs []string) (*gamev1.GMInteractionInput, error) {
+	interactionArgs := readMap(args, "interaction")
+	if len(interactionArgs) == 0 {
+		return nil, fmt.Errorf("interaction is required")
+	}
+	title := strings.TrimSpace(optionalString(interactionArgs, "title", ""))
+	if title == "" {
+		return nil, fmt.Errorf("interaction title is required")
+	}
+	characterIDs, err := resolveCharacterList(state, interactionArgs, "character_ids")
+	if err != nil {
+		return nil, err
+	}
+	if len(characterIDs) == 0 {
+		characterIDs = append([]string(nil), fallbackCharacterIDs...)
+	}
+	beatArgs := readMapSlice(interactionArgs, "beats")
+	if len(beatArgs) == 0 {
+		return nil, fmt.Errorf("interaction beats are required")
+	}
+	beats := make([]*gamev1.GMInteractionInputBeat, 0, len(beatArgs))
+	for idx, beatArg := range beatArgs {
+		text := strings.TrimSpace(optionalString(beatArg, "text", ""))
+		if text == "" {
+			return nil, fmt.Errorf("interaction beats[%d].text is required", idx)
+		}
+		beatType, err := parseScenarioGMInteractionBeatType(optionalString(beatArg, "type", ""))
+		if err != nil {
+			return nil, fmt.Errorf("interaction beats[%d].type: %w", idx, err)
+		}
+		beatID := strings.TrimSpace(optionalString(beatArg, "beat_id", ""))
+		if beatID == "" {
+			beatID = fmt.Sprintf("beat-%d", idx+1)
+		}
+		beats = append(beats, &gamev1.GMInteractionInputBeat{
+			BeatId: beatID,
+			Type:   beatType,
+			Text:   text,
+		})
+	}
+	result := &gamev1.GMInteractionInput{
+		Title:        title,
+		CharacterIds: characterIDs,
+		Beats:        beats,
+	}
+	if illustrationArgs := readMap(interactionArgs, "illustration"); len(illustrationArgs) != 0 {
+		imageURL := strings.TrimSpace(optionalString(illustrationArgs, "image_url", ""))
+		alt := strings.TrimSpace(optionalString(illustrationArgs, "alt", ""))
+		caption := strings.TrimSpace(optionalString(illustrationArgs, "caption", ""))
+		if imageURL == "" {
+			return nil, fmt.Errorf("interaction illustration image_url is required")
+		}
+		if alt == "" {
+			return nil, fmt.Errorf("interaction illustration alt is required")
+		}
+		result.Illustration = &gamev1.GMInteractionInputIllustration{
+			ImageUrl: imageURL,
+			Alt:      alt,
+			Caption:  caption,
+		}
+	}
+	return result, nil
+}
+
+func parseScenarioGMInteractionBeatType(raw string) (gamev1.GMInteractionBeatType, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "fiction":
+		return gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_FICTION, nil
+	case "prompt":
+		return gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT, nil
+	case "resolution":
+		return gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION, nil
+	case "consequence":
+		return gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE, nil
+	case "guidance":
+		return gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_GUIDANCE, nil
+	default:
+		return gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_UNSPECIFIED, fmt.Errorf("unsupported beat type %q", raw)
 	}
 }
 

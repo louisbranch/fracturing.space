@@ -113,7 +113,7 @@ func interactionContractText(instructions PromptInstructions) string {
 	return strings.Join([]string{
 		"You are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.",
 		"Keep in-character narration and out-of-character coordination separate.",
-		"Use interaction_scene_gm_output_commit for standalone in-character narration when framing a fresh beat outside GM review.",
+		"Use interaction_scene_gm_interaction_commit for standalone in-character narration when framing a fresh beat outside GM review.",
 		"Use interaction_scene_review_resolve when the scene is waiting on GM review.",
 		"Use interaction_scene_interrupt_resolution when OOC has resumed but players are still blocked pending interaction resolution.",
 		"Use interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.",

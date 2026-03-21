@@ -142,19 +142,9 @@ func (f *recordingInteractionClient) EndScenePlayerPhase(_ context.Context, req 
 	return &gamev1.EndScenePlayerPhaseResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) CommitSceneGMOutput(_ context.Context, req *gamev1.CommitSceneGMOutputRequest, _ ...gogrpc.CallOption) (*gamev1.CommitSceneGMOutputResponse, error) {
-	f.record("CommitSceneGMOutput", req.GetCampaignId())
-	return &gamev1.CommitSceneGMOutputResponse{State: f.state}, f.mutationErr
-}
-
-func (f *recordingInteractionClient) AcceptScenePlayerPhase(_ context.Context, req *gamev1.AcceptScenePlayerPhaseRequest, _ ...gogrpc.CallOption) (*gamev1.AcceptScenePlayerPhaseResponse, error) {
-	f.record("AcceptScenePlayerPhase", req.GetCampaignId())
-	return &gamev1.AcceptScenePlayerPhaseResponse{State: f.state}, f.mutationErr
-}
-
-func (f *recordingInteractionClient) RequestScenePlayerRevisions(_ context.Context, req *gamev1.RequestScenePlayerRevisionsRequest, _ ...gogrpc.CallOption) (*gamev1.RequestScenePlayerRevisionsResponse, error) {
-	f.record("RequestScenePlayerRevisions", req.GetCampaignId())
-	return &gamev1.RequestScenePlayerRevisionsResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) CommitSceneGMInteraction(_ context.Context, req *gamev1.CommitSceneGMInteractionRequest, _ ...gogrpc.CallOption) (*gamev1.CommitSceneGMInteractionResponse, error) {
+	f.record("CommitSceneGMInteraction", req.GetCampaignId())
+	return &gamev1.CommitSceneGMInteractionResponse{State: f.state}, f.mutationErr
 }
 
 func (f *recordingInteractionClient) ResolveScenePlayerPhaseReview(_ context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...gogrpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {

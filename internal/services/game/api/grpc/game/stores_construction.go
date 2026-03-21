@@ -23,6 +23,7 @@ func NewProjectionStores(config StoresProjectionConfig) ProjectionStores {
 		SceneGate:          config.ProjectionStore,
 		SceneSpotlight:     config.ProjectionStore,
 		SceneInteraction:   config.ProjectionStore,
+		SceneGMInteraction: config.ProjectionStore,
 		CampaignFork:       config.ProjectionStore,
 	}
 }

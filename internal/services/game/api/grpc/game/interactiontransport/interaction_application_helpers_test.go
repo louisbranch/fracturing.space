@@ -56,7 +56,6 @@ func TestSceneInteractionToProtoSortsCollectionsForPlayersPhase(t *testing.T) {
 		PhaseOpen:            true,
 		PhaseID:              "phase-1",
 		PhaseStatus:          scene.PlayerPhaseStatusPlayers,
-		FrameText:            "What do you do?",
 		ActingCharacterIDs:   []string{"char-b", "char-a"},
 		ActingParticipantIDs: []string{"p2", "p1"},
 		Slots: []storage.ScenePlayerSlot{
@@ -65,7 +64,7 @@ func TestSceneInteractionToProtoSortsCollectionsForPlayersPhase(t *testing.T) {
 		},
 	})
 
-	if got.GetPhaseId() != "phase-1" || got.GetFrameText() != "What do you do?" {
+	if got.GetPhaseId() != "phase-1" {
 		t.Fatalf("phase metadata = %#v", got)
 	}
 	if got.GetStatus() != gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_PLAYERS {

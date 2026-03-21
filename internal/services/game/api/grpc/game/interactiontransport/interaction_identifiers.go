@@ -26,5 +26,5 @@ const (
 	commandTypeScenePlayerPhaseAccept           command.Type = commandids.ScenePlayerPhaseAccept
 	commandTypeScenePlayerPhaseRequestRevisions command.Type = commandids.ScenePlayerPhaseRequestRevisions
 	commandTypeScenePlayerPhaseEnd              command.Type = commandids.ScenePlayerPhaseEnd
-	commandTypeSceneGMOutputCommit              command.Type = commandids.SceneGMOutputCommit
+	commandTypeSceneGMInteractionCommit         command.Type = commandids.SceneGMInteractionCommit
 )

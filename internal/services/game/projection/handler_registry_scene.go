@@ -21,5 +21,5 @@ func registerSceneProjectionHandlers(r *CoreRouter) {
 	HandleProjection(r, scene.EventTypePlayerPhaseRevisionsRequested, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseRevisionsRequested)
 	HandleProjection(r, scene.EventTypePlayerPhaseAccepted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseAccepted)
 	HandleProjection(r, scene.EventTypePlayerPhaseEnded, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseEnded)
-	HandleProjection(r, scene.EventTypeGMOutputCommitted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applySceneGMOutputCommitted)
+	HandleProjection(r, scene.EventTypeGMInteractionCommitted, requirements(needsStores(storeSceneGMInteraction), needsEnvelope(fieldCampaignID)), Applier.applySceneGMInteractionCommitted)
 }

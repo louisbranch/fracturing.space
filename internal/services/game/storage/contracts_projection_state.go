@@ -113,6 +113,7 @@ type SceneReadStores interface {
 	SceneGateStore
 	SceneSpotlightStore
 	SceneInteractionStore
+	SceneGMInteractionStore
 }
 
 // ProjectionStore groups all core read-model stores consumed by APIs, queries,

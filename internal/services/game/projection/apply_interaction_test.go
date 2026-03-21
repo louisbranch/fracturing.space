@@ -76,7 +76,6 @@ func TestApplyScenePlayerPhaseStartedInitializesPhaseStateAndSlots(t *testing.T)
 	}, scene.PlayerPhaseStartedPayload{
 		SceneID:              ids.SceneID("scene-1"),
 		PhaseID:              "phase-1",
-		FrameText:            "What do you do next?",
 		ActingCharacterIDs:   []ids.CharacterID{"char-1", "char-2"},
 		ActingParticipantIDs: []ids.ParticipantID{"p2", "p1"},
 	})
@@ -99,33 +98,44 @@ func TestApplyScenePlayerPhaseStartedInitializesPhaseStateAndSlots(t *testing.T)
 	}
 }
 
-func TestApplySceneGMOutputCommittedStoresLatestNarration(t *testing.T) {
+func TestApplySceneGMInteractionCommittedStoresInteractionHistory(t *testing.T) {
 	t.Parallel()
 
-	store := newFakeSceneInteractionStore()
-	applier := Applier{SceneInteraction: store}
+	store := newFakeSceneGMInteractionStore()
+	applier := Applier{SceneGMInteraction: store}
 	now := time.Date(2026, 3, 13, 10, 10, 0, 0, time.UTC)
 
-	err := applier.applySceneGMOutputCommitted(context.Background(), event.Event{
+	err := applier.applySceneGMInteractionCommitted(context.Background(), event.Event{
 		CampaignID: "camp-1",
 		SessionID:  "sess-1",
 		SceneID:    "scene-1",
 		Timestamp:  now,
-	}, scene.GMOutputCommittedPayload{
+	}, scene.GMInteractionCommittedPayload{
 		SceneID:       ids.SceneID("scene-1"),
+		InteractionID: "interaction-1",
+		PhaseID:       "phase-1",
 		ParticipantID: ids.ParticipantID("gm-ai"),
-		Text:          "The chamber falls quiet.",
+		Title:         "Chamber Quiets",
+		CharacterIDs:  []ids.CharacterID{"char-1"},
+		Beats: []scene.GMInteractionBeat{{
+			BeatID: "beat-1",
+			Type:   scene.GMInteractionBeatTypeFiction,
+			Text:   "The chamber falls quiet.",
+		}},
 	})
 	if err != nil {
 		t.Fatalf("apply: %v", err)
 	}
 
 	got := store.interactions["camp-1:scene-1"]
-	if got.GMOutputText != "The chamber falls quiet." || got.GMOutputParticipantID != "gm-ai" {
-		t.Fatalf("gm output = %#v", got)
+	if len(got) != 1 {
+		t.Fatalf("gm interactions = %#v, want one record", got)
 	}
-	if got.GMOutputUpdatedAt == nil || !got.GMOutputUpdatedAt.Equal(now) {
-		t.Fatalf("gm output updated at = %#v, want %v", got.GMOutputUpdatedAt, now)
+	if got[0].Title != "Chamber Quiets" || got[0].ParticipantID != "gm-ai" {
+		t.Fatalf("gm interaction = %#v", got[0])
+	}
+	if !got[0].CreatedAt.Equal(now) {
+		t.Fatalf("gm interaction created at = %#v, want %v", got[0].CreatedAt, now)
 	}
 }
 
@@ -139,7 +149,6 @@ func TestApplyScenePlayerPhaseReviewLifecycle(t *testing.T) {
 		PhaseOpen:            true,
 		PhaseID:              "phase-1",
 		PhaseStatus:          scene.PlayerPhaseStatusPlayers,
-		FrameText:            "Cross the bridge.",
 		ActingCharacterIDs:   []string{"char-1", "char-2"},
 		ActingParticipantIDs: []string{"p1", "p2"},
 		Slots: []storage.ScenePlayerSlot{

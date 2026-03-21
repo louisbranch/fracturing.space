@@ -28,7 +28,12 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "Sealed Vault"})
 scn:interaction_start_player_phase{
   scene = "Sealed Vault",
-  frame_text = "The ward crackles hotter with every step toward the seam. What do you do?",
+  interaction = {
+    title = "Warded Vault",
+    beats = {
+      {type = "prompt", text = "The ward crackles hotter with every step toward the seam. What do you do?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 
@@ -62,14 +67,19 @@ scn:interaction_expect{
 scn:interaction_resolve_interrupted_phase{
   as = "Guide",
   scene = "Collapsed Antechamber",
-  gm_output_text = "The ward's shriek drives you back before the seam can be tested. Dust rains from the ceiling as you retreat into the collapsed antechamber.",
-  frame_text = "Safe from the immediate surge, what do you salvage and how do you regroup in the antechamber?",
+  interaction = {
+    title = "Retreat To The Antechamber",
+    beats = {
+      {type = "fiction", text = "The ward's shriek drives you back before the seam can be tested. Dust rains from the ceiling as you retreat into the collapsed antechamber."},
+      {type = "prompt", text = "Safe from the immediate surge, what do you salvage and how do you regroup in the antechamber?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 scn:interaction_expect{
   active_scene = "Collapsed Antechamber",
   phase_status = "PLAYERS",
-  frame_text = "Safe from the immediate surge, what do you salvage and how do you regroup in the antechamber?",
+  prompt = "Safe from the immediate surge, what do you salvage and how do you regroup in the antechamber?",
   acting_characters = {"Aria", "Corin"},
   acting_participants = {"Rhea", "Bryn"},
   ooc_open = false,

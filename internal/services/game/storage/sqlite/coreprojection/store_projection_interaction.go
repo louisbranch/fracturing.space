@@ -240,36 +240,27 @@ func (s *Store) PutSceneInteraction(ctx context.Context, interaction storage.Sce
 
 	_, err = s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO scene_interactions (
-			campaign_id, scene_id, session_id, phase_open, phase_id, frame_text,
-			phase_status, acting_character_ids_json, acting_participant_ids_json, slots_json,
-			gm_output_text, gm_output_participant_id, gm_output_updated_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			campaign_id, scene_id, session_id, phase_open, phase_id,
+			phase_status, acting_character_ids_json, acting_participant_ids_json, slots_json, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (campaign_id, scene_id) DO UPDATE SET
 			session_id = excluded.session_id,
 			phase_open = excluded.phase_open,
 			phase_id = excluded.phase_id,
-			frame_text = excluded.frame_text,
 			phase_status = excluded.phase_status,
 			acting_character_ids_json = excluded.acting_character_ids_json,
 			acting_participant_ids_json = excluded.acting_participant_ids_json,
 			slots_json = excluded.slots_json,
-			gm_output_text = excluded.gm_output_text,
-			gm_output_participant_id = excluded.gm_output_participant_id,
-			gm_output_updated_at = excluded.gm_output_updated_at,
 			updated_at = excluded.updated_at`,
 		interaction.CampaignID,
 		interaction.SceneID,
 		interaction.SessionID,
 		boolToInt(interaction.PhaseOpen),
 		interaction.PhaseID,
-		interaction.FrameText,
 		string(interaction.PhaseStatus),
 		actingCharacterIDsJSON,
 		actingParticipantIDsJSON,
 		slotsJSON,
-		interaction.GMOutputText,
-		interaction.GMOutputParticipantID,
-		sqliteutil.ToNullMillis(interaction.GMOutputUpdatedAt),
 		sqliteutil.ToMillis(interaction.UpdatedAt),
 	)
 	if err != nil {
@@ -297,20 +288,15 @@ func (s *Store) GetSceneInteraction(ctx context.Context, campaignID, sceneID str
 		sessionID                string
 		phaseOpen                int64
 		phaseID                  string
-		frameText                string
 		phaseStatus              string
 		actingCharacterIDsJSON   []byte
 		actingParticipantIDsJSON []byte
 		slotsJSON                []byte
-		gmOutputText             string
-		gmOutputParticipantID    string
-		gmOutputUpdatedAt        sql.NullInt64
 		updatedAt                int64
 	)
 	err := s.projectionQueryable().QueryRowContext(ctx,
-		`SELECT session_id, phase_open, phase_id, frame_text, phase_status, acting_character_ids_json,
-		        acting_participant_ids_json, slots_json, gm_output_text, gm_output_participant_id,
-		        gm_output_updated_at, updated_at
+		`SELECT session_id, phase_open, phase_id, phase_status, acting_character_ids_json,
+		        acting_participant_ids_json, slots_json, updated_at
 		 FROM scene_interactions
 		 WHERE campaign_id = ? AND scene_id = ?`,
 		campaignID,
@@ -319,14 +305,10 @@ func (s *Store) GetSceneInteraction(ctx context.Context, campaignID, sceneID str
 		&sessionID,
 		&phaseOpen,
 		&phaseID,
-		&frameText,
 		&phaseStatus,
 		&actingCharacterIDsJSON,
 		&actingParticipantIDsJSON,
 		&slotsJSON,
-		&gmOutputText,
-		&gmOutputParticipantID,
-		&gmOutputUpdatedAt,
 		&updatedAt,
 	)
 	if err != nil {
@@ -355,21 +337,177 @@ func (s *Store) GetSceneInteraction(ctx context.Context, campaignID, sceneID str
 		}
 	}
 	return storage.SceneInteraction{
-		CampaignID:            campaignID,
-		SceneID:               sceneID,
-		SessionID:             sessionID,
-		PhaseOpen:             intToBool(phaseOpen),
-		PhaseID:               phaseID,
-		PhaseStatus:           normalizeScenePhaseStatus(phaseStatus),
-		FrameText:             frameText,
-		ActingCharacterIDs:    actingCharacterIDs,
-		ActingParticipantIDs:  actingParticipantIDs,
-		Slots:                 slots,
-		GMOutputText:          gmOutputText,
-		GMOutputParticipantID: gmOutputParticipantID,
-		GMOutputUpdatedAt:     sqliteutil.FromNullMillis(gmOutputUpdatedAt),
-		UpdatedAt:             sqliteutil.FromMillis(updatedAt),
+		CampaignID:           campaignID,
+		SceneID:              sceneID,
+		SessionID:            sessionID,
+		PhaseOpen:            intToBool(phaseOpen),
+		PhaseID:              phaseID,
+		PhaseStatus:          normalizeScenePhaseStatus(phaseStatus),
+		ActingCharacterIDs:   actingCharacterIDs,
+		ActingParticipantIDs: actingParticipantIDs,
+		Slots:                slots,
+		UpdatedAt:            sqliteutil.FromMillis(updatedAt),
 	}, nil
+}
+
+// PutSceneGMInteraction persists one immutable GM-authored interaction record for a scene.
+func (s *Store) PutSceneGMInteraction(ctx context.Context, interaction storage.SceneGMInteraction) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(interaction.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(interaction.SceneID) == "" {
+		return fmt.Errorf("scene id is required")
+	}
+	if strings.TrimSpace(interaction.InteractionID) == "" {
+		return fmt.Errorf("interaction id is required")
+	}
+
+	characterIDsJSON, err := json.Marshal(interaction.CharacterIDs)
+	if err != nil {
+		return fmt.Errorf("encode interaction character ids: %w", err)
+	}
+	beatsJSON, err := json.Marshal(interaction.Beats)
+	if err != nil {
+		return fmt.Errorf("encode interaction beats: %w", err)
+	}
+	illustrationJSON, err := json.Marshal(interaction.Illustration)
+	if err != nil {
+		return fmt.Errorf("encode interaction illustration: %w", err)
+	}
+
+	_, err = s.projectionQueryable().ExecContext(ctx,
+		`INSERT INTO scene_gm_interactions (
+			campaign_id, scene_id, session_id, interaction_id, phase_id, participant_id,
+			title, character_ids_json, illustration_json, beats_json, created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT (campaign_id, interaction_id) DO UPDATE SET
+			scene_id = excluded.scene_id,
+			session_id = excluded.session_id,
+			phase_id = excluded.phase_id,
+			participant_id = excluded.participant_id,
+			title = excluded.title,
+			character_ids_json = excluded.character_ids_json,
+			illustration_json = excluded.illustration_json,
+			beats_json = excluded.beats_json,
+			created_at = excluded.created_at`,
+		interaction.CampaignID,
+		interaction.SceneID,
+		interaction.SessionID,
+		interaction.InteractionID,
+		interaction.PhaseID,
+		interaction.ParticipantID,
+		interaction.Title,
+		characterIDsJSON,
+		illustrationJSON,
+		beatsJSON,
+		sqliteutil.ToMillis(interaction.CreatedAt),
+	)
+	if err != nil {
+		return fmt.Errorf("put scene gm interaction: %w", err)
+	}
+	return nil
+}
+
+// ListSceneGMInteractions retrieves immutable GM interactions for one scene ordered newest first.
+func (s *Store) ListSceneGMInteractions(ctx context.Context, campaignID, sceneID string) ([]storage.SceneGMInteraction, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(sceneID) == "" {
+		return nil, fmt.Errorf("scene id is required")
+	}
+
+	rows, err := s.projectionQueryable().QueryContext(ctx,
+		`SELECT session_id, interaction_id, phase_id, participant_id, title,
+		        character_ids_json, illustration_json, beats_json, created_at
+		 FROM scene_gm_interactions
+		 WHERE campaign_id = ? AND scene_id = ?
+		 ORDER BY created_at DESC, interaction_id DESC`,
+		campaignID,
+		sceneID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list scene gm interactions: %w", err)
+	}
+	defer rows.Close()
+
+	interactions := []storage.SceneGMInteraction{}
+	for rows.Next() {
+		var (
+			sessionID        string
+			interactionID    string
+			phaseID          string
+			participantID    string
+			title            string
+			characterIDsJSON []byte
+			illustrationJSON []byte
+			beatsJSON        []byte
+			createdAt        int64
+		)
+		if err := rows.Scan(
+			&sessionID,
+			&interactionID,
+			&phaseID,
+			&participantID,
+			&title,
+			&characterIDsJSON,
+			&illustrationJSON,
+			&beatsJSON,
+			&createdAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan scene gm interaction: %w", err)
+		}
+
+		var characterIDs []string
+		if len(characterIDsJSON) != 0 {
+			if err := json.Unmarshal(characterIDsJSON, &characterIDs); err != nil {
+				return nil, fmt.Errorf("decode interaction character ids: %w", err)
+			}
+		}
+		var beats []storage.SceneGMInteractionBeat
+		if len(beatsJSON) != 0 {
+			if err := json.Unmarshal(beatsJSON, &beats); err != nil {
+				return nil, fmt.Errorf("decode interaction beats: %w", err)
+			}
+		}
+		var illustration *storage.SceneGMInteractionIllustration
+		if len(illustrationJSON) != 0 && string(illustrationJSON) != "null" {
+			var value storage.SceneGMInteractionIllustration
+			if err := json.Unmarshal(illustrationJSON, &value); err != nil {
+				return nil, fmt.Errorf("decode interaction illustration: %w", err)
+			}
+			illustration = &value
+		}
+		interactions = append(interactions, storage.SceneGMInteraction{
+			CampaignID:    campaignID,
+			SceneID:       sceneID,
+			SessionID:     sessionID,
+			InteractionID: interactionID,
+			PhaseID:       phaseID,
+			ParticipantID: participantID,
+			Title:         title,
+			CharacterIDs:  characterIDs,
+			Illustration:  illustration,
+			Beats:         beats,
+			CreatedAt:     sqliteutil.FromMillis(createdAt),
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate scene gm interactions: %w", err)
+	}
+	return interactions, nil
 }
 
 func normalizeAITurnStatus(value string) session.AITurnStatus {

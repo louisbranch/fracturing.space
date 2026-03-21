@@ -91,7 +91,6 @@ type SpotlightClearedPayload struct {
 type PlayerPhaseStartedPayload struct {
 	SceneID              ids.SceneID         `json:"scene_id"`
 	PhaseID              string              `json:"phase_id"`
-	FrameText            string              `json:"frame_text,omitempty"`
 	ActingCharacterIDs   []ids.CharacterID   `json:"acting_character_ids,omitempty"`
 	ActingParticipantIDs []ids.ParticipantID `json:"acting_participant_ids,omitempty"`
 }
@@ -152,9 +151,36 @@ type PlayerPhaseEndedPayload struct {
 	Reason  string      `json:"reason,omitempty"`
 }
 
-// GMOutputCommittedPayload captures the payload for scene.gm_output_committed events.
-type GMOutputCommittedPayload struct {
-	SceneID       ids.SceneID       `json:"scene_id"`
-	ParticipantID ids.ParticipantID `json:"participant_id"`
-	Text          string            `json:"text,omitempty"`
+type GMInteractionBeatType string
+
+const (
+	GMInteractionBeatTypeFiction     GMInteractionBeatType = "fiction"
+	GMInteractionBeatTypePrompt      GMInteractionBeatType = "prompt"
+	GMInteractionBeatTypeResolution  GMInteractionBeatType = "resolution"
+	GMInteractionBeatTypeConsequence GMInteractionBeatType = "consequence"
+	GMInteractionBeatTypeGuidance    GMInteractionBeatType = "guidance"
+)
+
+type GMInteractionIllustration struct {
+	ImageURL string `json:"image_url,omitempty"`
+	Alt      string `json:"alt,omitempty"`
+	Caption  string `json:"caption,omitempty"`
+}
+
+type GMInteractionBeat struct {
+	BeatID string                `json:"beat_id"`
+	Type   GMInteractionBeatType `json:"type"`
+	Text   string                `json:"text,omitempty"`
+}
+
+// GMInteractionCommittedPayload captures the payload for scene.gm_interaction_committed events.
+type GMInteractionCommittedPayload struct {
+	SceneID       ids.SceneID                `json:"scene_id"`
+	InteractionID string                     `json:"interaction_id"`
+	PhaseID       string                     `json:"phase_id,omitempty"`
+	ParticipantID ids.ParticipantID          `json:"participant_id"`
+	Title         string                     `json:"title,omitempty"`
+	CharacterIDs  []ids.CharacterID          `json:"character_ids,omitempty"`
+	Illustration  *GMInteractionIllustration `json:"illustration,omitempty"`
+	Beats         []GMInteractionBeat        `json:"beats,omitempty"`
 }

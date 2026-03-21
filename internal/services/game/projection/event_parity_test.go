@@ -41,6 +41,7 @@ func TestApplyProjectionRequiredCoreEventsAreHandled(t *testing.T) {
 		SceneGate:          newFakeSceneGateStore(),
 		SceneSpotlight:     newFakeSceneSpotlightStore(),
 		SceneInteraction:   newFakeSceneInteractionStore(),
+		SceneGMInteraction: newFakeSceneGMInteractionStore(),
 		Adapters:           coreAdapters,
 	}
 

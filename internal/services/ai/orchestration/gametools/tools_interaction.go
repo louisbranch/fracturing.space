@@ -19,10 +19,29 @@ type interactionSetActiveSceneInput struct {
 }
 
 type interactionStartScenePlayerPhaseInput struct {
-	CampaignID   string   `json:"campaign_id,omitempty"`
-	SceneID      string   `json:"scene_id,omitempty"`
-	FrameText    string   `json:"frame_text"`
-	CharacterIDs []string `json:"character_ids"`
+	CampaignID   string                         `json:"campaign_id,omitempty"`
+	SceneID      string                         `json:"scene_id,omitempty"`
+	Interaction  *interactionGMInteractionInput `json:"interaction"`
+	CharacterIDs []string                       `json:"character_ids"`
+}
+
+type interactionGMInteractionIllustrationInput struct {
+	ImageURL string `json:"image_url,omitempty"`
+	Alt      string `json:"alt,omitempty"`
+	Caption  string `json:"caption,omitempty"`
+}
+
+type interactionGMInteractionBeatInput struct {
+	BeatID string `json:"beat_id,omitempty"`
+	Type   string `json:"type"`
+	Text   string `json:"text"`
+}
+
+type interactionGMInteractionInput struct {
+	Title        string                                     `json:"title"`
+	CharacterIDs []string                                   `json:"character_ids,omitempty"`
+	Illustration *interactionGMInteractionIllustrationInput `json:"illustration,omitempty"`
+	Beats        []interactionGMInteractionBeatInput        `json:"beats"`
 }
 
 type interactionScenePlayerRevisionInput struct {
@@ -32,29 +51,37 @@ type interactionScenePlayerRevisionInput struct {
 }
 
 type interactionReviewAdvanceToPlayersInput struct {
-	GMOutputText     string   `json:"gm_output_text"`
-	NextFrameText    string   `json:"next_frame_text"`
-	NextCharacterIDs []string `json:"next_character_ids"`
+	Interaction      *interactionGMInteractionInput `json:"interaction"`
+	NextCharacterIDs []string                       `json:"next_character_ids"`
+}
+
+type interactionReviewRequestRevisionsInput struct {
+	Interaction *interactionGMInteractionInput        `json:"interaction"`
+	Revisions   []interactionScenePlayerRevisionInput `json:"revisions"`
+}
+
+type interactionReviewReturnToGMInput struct {
+	Interaction *interactionGMInteractionInput `json:"interaction"`
 }
 
 type interactionResolveScenePlayerPhaseReviewInput struct {
 	CampaignID       string                                  `json:"campaign_id,omitempty"`
 	SceneID          string                                  `json:"scene_id,omitempty"`
 	AdvanceToPlayers *interactionReviewAdvanceToPlayersInput `json:"advance_to_players,omitempty"`
-	RequestRevisions []interactionScenePlayerRevisionInput   `json:"request_revisions,omitempty"`
+	RequestRevisions *interactionReviewRequestRevisionsInput `json:"request_revisions,omitempty"`
+	ReturnToGM       *interactionReviewReturnToGMInput       `json:"return_to_gm,omitempty"`
 }
 
-type interactionCommitSceneGMOutputInput struct {
-	CampaignID string `json:"campaign_id,omitempty"`
-	SceneID    string `json:"scene_id,omitempty"`
-	Text       string `json:"text"`
+type interactionCommitSceneGMInteractionInput struct {
+	CampaignID  string                         `json:"campaign_id,omitempty"`
+	SceneID     string                         `json:"scene_id,omitempty"`
+	Interaction *interactionGMInteractionInput `json:"interaction"`
 }
 
 type interactionReplaceInterruptedScenePhaseInput struct {
-	SceneID      string   `json:"scene_id,omitempty"`
-	GMOutputText string   `json:"gm_output_text,omitempty"`
-	FrameText    string   `json:"frame_text"`
-	CharacterIDs []string `json:"character_ids"`
+	SceneID      string                         `json:"scene_id,omitempty"`
+	Interaction  *interactionGMInteractionInput `json:"interaction"`
+	CharacterIDs []string                       `json:"character_ids"`
 }
 
 type interactionResolveInterruptedScenePhaseInput struct {
@@ -104,18 +131,29 @@ type interactionCharacterResult struct {
 }
 
 type interactionSceneResult struct {
-	SceneID     string                       `json:"scene_id,omitempty"`
-	SessionID   string                       `json:"session_id,omitempty"`
-	Name        string                       `json:"name,omitempty"`
-	Description string                       `json:"description,omitempty"`
-	Characters  []interactionCharacterResult `json:"characters,omitempty"`
-	GMOutput    *interactionGMOutputResult   `json:"gm_output,omitempty"`
+	SceneID            string                          `json:"scene_id,omitempty"`
+	SessionID          string                          `json:"session_id,omitempty"`
+	Name               string                          `json:"name,omitempty"`
+	Description        string                          `json:"description,omitempty"`
+	Characters         []interactionCharacterResult    `json:"characters,omitempty"`
+	CurrentInteraction *interactionGMInteractionResult `json:"current_interaction,omitempty"`
 }
 
-type interactionGMOutputResult struct {
-	Text          string `json:"text,omitempty"`
-	ParticipantID string `json:"participant_id,omitempty"`
-	UpdatedAt     string `json:"updated_at,omitempty"`
+type interactionGMInteractionBeatResult struct {
+	BeatID string `json:"beat_id,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Text   string `json:"text,omitempty"`
+}
+
+type interactionGMInteractionResult struct {
+	InteractionID string                               `json:"interaction_id,omitempty"`
+	SceneID       string                               `json:"scene_id,omitempty"`
+	PhaseID       string                               `json:"phase_id,omitempty"`
+	ParticipantID string                               `json:"participant_id,omitempty"`
+	Title         string                               `json:"title,omitempty"`
+	CharacterIDs  []string                             `json:"character_ids,omitempty"`
+	Beats         []interactionGMInteractionBeatResult `json:"beats,omitempty"`
+	CreatedAt     string                               `json:"created_at,omitempty"`
 }
 
 type interactionPlayerSlotResult struct {
@@ -132,7 +170,6 @@ type interactionPlayerSlotResult struct {
 type interactionPlayerPhaseResult struct {
 	PhaseID              string                        `json:"phase_id,omitempty"`
 	Status               string                        `json:"status,omitempty"`
-	FrameText            string                        `json:"frame_text,omitempty"`
 	ActingCharacterIDs   []string                      `json:"acting_character_ids,omitempty"`
 	ActingParticipantIDs []string                      `json:"acting_participant_ids,omitempty"`
 	Slots                []interactionPlayerSlotResult `json:"slots,omitempty"`
@@ -198,11 +235,15 @@ func (s *DirectSession) interactionStartScenePlayerPhase(ctx context.Context, ar
 	if err != nil {
 		return orchestration.ToolResult{}, err
 	}
+	interaction, err := gmInteractionInputFromTool(input.Interaction, input.CharacterIDs)
+	if err != nil {
+		return orchestration.ToolResult{}, err
+	}
 	resp, err := s.clients.Interaction.StartScenePlayerPhase(callCtx, &statev1.StartScenePlayerPhaseRequest{
 		CampaignId:   campaignID,
 		SceneId:      sceneID,
-		FrameText:    input.FrameText,
 		CharacterIds: input.CharacterIDs,
+		Interaction:  interaction,
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("start scene player phase failed: %w", err)
@@ -232,17 +273,25 @@ func (s *DirectSession) interactionResolveScenePlayerPhaseReview(ctx context.Con
 		CampaignId: campaignID,
 		SceneId:    sceneID,
 	}
-	if input.AdvanceToPlayers != nil {
+	switch {
+	case input.AdvanceToPlayers != nil:
+		advanceInteraction, err := gmInteractionInputFromTool(input.AdvanceToPlayers.Interaction, input.AdvanceToPlayers.NextCharacterIDs)
+		if err != nil {
+			return orchestration.ToolResult{}, err
+		}
 		req.Resolution = &statev1.ResolveScenePlayerPhaseReviewRequest_AdvanceToPlayers{
 			AdvanceToPlayers: &statev1.ResolveScenePlayerPhaseReviewAdvanceToPlayers{
-				GmOutputText:     strings.TrimSpace(input.AdvanceToPlayers.GMOutputText),
-				NextFrameText:    strings.TrimSpace(input.AdvanceToPlayers.NextFrameText),
 				NextCharacterIds: append([]string(nil), input.AdvanceToPlayers.NextCharacterIDs...),
+				Interaction:      advanceInteraction,
 			},
 		}
-	} else if len(input.RequestRevisions) != 0 {
-		revisions := make([]*statev1.ScenePlayerRevisionRequest, 0, len(input.RequestRevisions))
-		for _, rev := range input.RequestRevisions {
+	case input.RequestRevisions != nil:
+		revisionInteraction, err := gmInteractionInputFromTool(input.RequestRevisions.Interaction, nil)
+		if err != nil {
+			return orchestration.ToolResult{}, err
+		}
+		revisions := make([]*statev1.ScenePlayerRevisionRequest, 0, len(input.RequestRevisions.Revisions))
+		for _, rev := range input.RequestRevisions.Revisions {
 			revisions = append(revisions, &statev1.ScenePlayerRevisionRequest{
 				ParticipantId: strings.TrimSpace(rev.ParticipantID),
 				Reason:        strings.TrimSpace(rev.Reason),
@@ -250,10 +299,23 @@ func (s *DirectSession) interactionResolveScenePlayerPhaseReview(ctx context.Con
 			})
 		}
 		req.Resolution = &statev1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions{
-			RequestRevisions: &statev1.ResolveScenePlayerPhaseReviewRequestRevisions{Revisions: revisions},
+			RequestRevisions: &statev1.ResolveScenePlayerPhaseReviewRequestRevisions{
+				Interaction: revisionInteraction,
+				Revisions:   revisions,
+			},
 		}
-	} else {
-		return orchestration.ToolResult{}, fmt.Errorf("advance_to_players or request_revisions is required")
+	case input.ReturnToGM != nil:
+		returnInteraction, err := gmInteractionInputFromTool(input.ReturnToGM.Interaction, nil)
+		if err != nil {
+			return orchestration.ToolResult{}, err
+		}
+		req.Resolution = &statev1.ResolveScenePlayerPhaseReviewRequest_ReturnToGm{
+			ReturnToGm: &statev1.ResolveScenePlayerPhaseReviewReturnToGM{
+				Interaction: returnInteraction,
+			},
+		}
+	default:
+		return orchestration.ToolResult{}, fmt.Errorf("advance_to_players, request_revisions, or return_to_gm is required")
 	}
 	resp, err := s.clients.Interaction.ResolveScenePlayerPhaseReview(callCtx, req)
 	if err != nil {
@@ -265,8 +327,8 @@ func (s *DirectSession) interactionResolveScenePlayerPhaseReview(ctx context.Con
 	return toolResultJSON(interactionStateFromProto(resp.GetState()))
 }
 
-func (s *DirectSession) interactionCommitSceneGMOutput(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
-	var input interactionCommitSceneGMOutputInput
+func (s *DirectSession) interactionCommitSceneGMInteraction(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
+	var input interactionCommitSceneGMInteractionInput
 	if err := json.Unmarshal(argsJSON, &input); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
 	}
@@ -281,22 +343,26 @@ func (s *DirectSession) interactionCommitSceneGMOutput(ctx context.Context, args
 		return orchestration.ToolResult{}, err
 	}
 	if state.GetPlayerPhase().GetStatus() == statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW {
-		return orchestration.ToolResult{}, fmt.Errorf("scene is waiting on gm review; use interaction_scene_review_resolve instead of interaction_scene_gm_output_commit")
+		return orchestration.ToolResult{}, fmt.Errorf("scene is waiting on gm review; use interaction_scene_review_resolve instead of interaction_scene_gm_interaction_commit")
 	}
 	sceneID, err := s.resolveSceneIDFromState(state, input.SceneID)
 	if err != nil {
 		return orchestration.ToolResult{}, err
 	}
-	resp, err := s.clients.Interaction.CommitSceneGMOutput(callCtx, &statev1.CommitSceneGMOutputRequest{
-		CampaignId: campaignID,
-		SceneId:    sceneID,
-		Text:       input.Text,
+	interaction, err := gmInteractionInputFromTool(input.Interaction, nil)
+	if err != nil {
+		return orchestration.ToolResult{}, err
+	}
+	resp, err := s.clients.Interaction.CommitSceneGMInteraction(callCtx, &statev1.CommitSceneGMInteractionRequest{
+		CampaignId:  campaignID,
+		SceneId:     sceneID,
+		Interaction: interaction,
 	})
 	if err != nil {
-		return orchestration.ToolResult{}, fmt.Errorf("commit scene gm output failed: %w", err)
+		return orchestration.ToolResult{}, fmt.Errorf("commit scene gm interaction failed: %w", err)
 	}
 	if resp == nil {
-		return orchestration.ToolResult{}, fmt.Errorf("commit scene gm output response is missing")
+		return orchestration.ToolResult{}, fmt.Errorf("commit scene gm interaction response is missing")
 	}
 	return toolResultJSON(interactionStateFromProto(resp.GetState()))
 }
@@ -343,12 +409,15 @@ func (s *DirectSession) interactionResolveInterruptedScenePhase(ctx context.Cont
 			ResumeOriginalPhase: &statev1.ResolveInterruptedScenePhaseResumeOriginal{},
 		}
 	case input.ReplaceWithPlayerPhase != nil:
+		interaction, err := gmInteractionInputFromTool(input.ReplaceWithPlayerPhase.Interaction, input.ReplaceWithPlayerPhase.CharacterIDs)
+		if err != nil {
+			return orchestration.ToolResult{}, err
+		}
 		req.Resolution = &statev1.ResolveInterruptedScenePhaseRequest_ReplaceWithPlayerPhase{
 			ReplaceWithPlayerPhase: &statev1.ResolveInterruptedScenePhaseReplaceWithPlayerPhase{
-				SceneId:      strings.TrimSpace(input.ReplaceWithPlayerPhase.SceneID),
-				GmOutputText: strings.TrimSpace(input.ReplaceWithPlayerPhase.GMOutputText),
-				FrameText:    strings.TrimSpace(input.ReplaceWithPlayerPhase.FrameText),
-				CharacterIds: append([]string(nil), input.ReplaceWithPlayerPhase.CharacterIDs...),
+				SceneId:          strings.TrimSpace(input.ReplaceWithPlayerPhase.SceneID),
+				NextCharacterIds: append([]string(nil), input.ReplaceWithPlayerPhase.CharacterIDs...),
+				Interaction:      interaction,
 			},
 		}
 	default:
@@ -525,17 +594,16 @@ func interactionStateFromProto(state *statev1.InteractionState) interactionState
 			Name:      state.GetActiveSession().GetName(),
 		},
 		ActiveScene: interactionSceneResult{
-			SceneID:     state.GetActiveScene().GetSceneId(),
-			SessionID:   state.GetActiveScene().GetSessionId(),
-			Name:        state.GetActiveScene().GetName(),
-			Description: state.GetActiveScene().GetDescription(),
-			Characters:  make([]interactionCharacterResult, 0, len(state.GetActiveScene().GetCharacters())),
-			GMOutput:    interactionGMOutputFromProto(state.GetActiveScene().GetGmOutput()),
+			SceneID:            state.GetActiveScene().GetSceneId(),
+			SessionID:          state.GetActiveScene().GetSessionId(),
+			Name:               state.GetActiveScene().GetName(),
+			Description:        state.GetActiveScene().GetDescription(),
+			Characters:         make([]interactionCharacterResult, 0, len(state.GetActiveScene().GetCharacters())),
+			CurrentInteraction: interactionGMInteractionFromProto(state.GetActiveScene().GetCurrentInteraction()),
 		},
 		PlayerPhase: interactionPlayerPhaseResult{
 			PhaseID:              state.GetPlayerPhase().GetPhaseId(),
 			Status:               scenePhaseStatusToString(state.GetPlayerPhase().GetStatus()),
-			FrameText:            state.GetPlayerPhase().GetFrameText(),
 			ActingCharacterIDs:   append([]string(nil), state.GetPlayerPhase().GetActingCharacterIds()...),
 			ActingParticipantIDs: append([]string(nil), state.GetPlayerPhase().GetActingParticipantIds()...),
 			Slots:                make([]interactionPlayerSlotResult, 0, len(state.GetPlayerPhase().GetSlots())),
@@ -582,16 +650,125 @@ func interactionStateFromProto(state *statev1.InteractionState) interactionState
 	return result
 }
 
-func interactionGMOutputFromProto(output *statev1.InteractionGMOutput) *interactionGMOutputResult {
-	if output == nil {
+func interactionGMInteractionFromProto(interaction *statev1.GMInteraction) *interactionGMInteractionResult {
+	if interaction == nil {
 		return nil
 	}
-	result := &interactionGMOutputResult{
-		Text:          output.GetText(),
-		ParticipantID: output.GetParticipantId(),
+	result := &interactionGMInteractionResult{
+		InteractionID: interaction.GetInteractionId(),
+		SceneID:       interaction.GetSceneId(),
+		PhaseID:       interaction.GetPhaseId(),
+		ParticipantID: interaction.GetParticipantId(),
+		Title:         interaction.GetTitle(),
+		CharacterIDs:  append([]string(nil), interaction.GetCharacterIds()...),
+		Beats:         make([]interactionGMInteractionBeatResult, 0, len(interaction.GetBeats())),
 	}
-	if output.GetUpdatedAt() != nil {
-		result.UpdatedAt = output.GetUpdatedAt().AsTime().UTC().Format(time.RFC3339)
+	if interaction.GetCreatedAt() != nil {
+		result.CreatedAt = interaction.GetCreatedAt().AsTime().UTC().Format(time.RFC3339)
+	}
+	for _, beat := range interaction.GetBeats() {
+		result.Beats = append(result.Beats, interactionGMInteractionBeatResult{
+			BeatID: beat.GetBeatId(),
+			Type:   gmInteractionBeatTypeToString(beat.GetType()),
+			Text:   beat.GetText(),
+		})
 	}
 	return result
+}
+
+func singleBeatGMInteractionInput(title string, beatType statev1.GMInteractionBeatType, text string, characterIDs ...string) *statev1.GMInteractionInput {
+	return &statev1.GMInteractionInput{
+		Title:        title,
+		CharacterIds: append([]string(nil), characterIDs...),
+		Beats: []*statev1.GMInteractionInputBeat{{
+			BeatId: "beat-1",
+			Type:   beatType,
+			Text:   strings.TrimSpace(text),
+		}},
+	}
+}
+
+func gmInteractionInputFromTool(input *interactionGMInteractionInput, fallbackCharacterIDs []string) (*statev1.GMInteractionInput, error) {
+	if input == nil {
+		return nil, fmt.Errorf("interaction is required")
+	}
+	title := strings.TrimSpace(input.Title)
+	if title == "" {
+		return nil, fmt.Errorf("interaction title is required")
+	}
+	beats := make([]*statev1.GMInteractionInputBeat, 0, len(input.Beats))
+	for idx, beat := range input.Beats {
+		text := strings.TrimSpace(beat.Text)
+		if text == "" {
+			return nil, fmt.Errorf("interaction beats[%d].text is required", idx)
+		}
+		beatType, err := parseGMInteractionBeatType(beat.Type)
+		if err != nil {
+			return nil, fmt.Errorf("interaction beats[%d].type: %w", idx, err)
+		}
+		beatID := strings.TrimSpace(beat.BeatID)
+		if beatID == "" {
+			beatID = fmt.Sprintf("beat-%d", idx+1)
+		}
+		beats = append(beats, &statev1.GMInteractionInputBeat{
+			BeatId: beatID,
+			Type:   beatType,
+			Text:   text,
+		})
+	}
+	if len(beats) == 0 {
+		return nil, fmt.Errorf("interaction beats are required")
+	}
+	characterIDs := append([]string(nil), input.CharacterIDs...)
+	if len(characterIDs) == 0 {
+		characterIDs = append([]string(nil), fallbackCharacterIDs...)
+	}
+	result := &statev1.GMInteractionInput{
+		Title:        title,
+		CharacterIds: characterIDs,
+		Beats:        beats,
+	}
+	if input.Illustration != nil {
+		imageURL := strings.TrimSpace(input.Illustration.ImageURL)
+		alt := strings.TrimSpace(input.Illustration.Alt)
+		caption := strings.TrimSpace(input.Illustration.Caption)
+		if imageURL == "" {
+			return nil, fmt.Errorf("interaction illustration image_url is required when illustration is provided")
+		}
+		if alt == "" {
+			return nil, fmt.Errorf("interaction illustration alt is required when illustration is provided")
+		}
+		result.Illustration = &statev1.GMInteractionInputIllustration{
+			ImageUrl: imageURL,
+			Alt:      alt,
+			Caption:  caption,
+		}
+	}
+	return result, nil
+}
+
+func parseGMInteractionBeatType(raw string) (statev1.GMInteractionBeatType, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "fiction":
+		return statev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_FICTION, nil
+	case "prompt":
+		return statev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT, nil
+	case "resolution":
+		return statev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION, nil
+	case "consequence":
+		return statev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE, nil
+	case "guidance":
+		return statev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_GUIDANCE, nil
+	default:
+		return statev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_UNSPECIFIED, fmt.Errorf("unsupported beat type %q", raw)
+	}
+}
+
+func gmInteractionBeatTypeToString(value statev1.GMInteractionBeatType) string {
+	name := strings.TrimSpace(value.String())
+	if name == "" || name == statev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_UNSPECIFIED.String() {
+		return ""
+	}
+	name = strings.TrimPrefix(name, "GM_INTERACTION_BEAT_TYPE_")
+	return strings.ToLower(name)
 }

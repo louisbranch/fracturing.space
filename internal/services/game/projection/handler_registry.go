@@ -42,6 +42,7 @@ const (
 	storeSceneGate
 	storeSceneSpotlight
 	storeSceneInteraction
+	storeSceneGMInteraction
 	storeAdapters
 	// ClaimIndex is intentionally absent — handlers that use it perform soft
 	// nil checks and skip claim logic when the store is nil.
@@ -142,6 +143,7 @@ var storeChecks = []storeCheck{
 	{storeSceneGate, "scene gate", func(a Applier) bool { return a.SceneGate == nil }},
 	{storeSceneSpotlight, "scene spotlight", func(a Applier) bool { return a.SceneSpotlight == nil }},
 	{storeSceneInteraction, "scene interaction", func(a Applier) bool { return a.SceneInteraction == nil }},
+	{storeSceneGMInteraction, "scene gm interaction", func(a Applier) bool { return a.SceneGMInteraction == nil }},
 	{storeAdapters, "system adapters", func(a Applier) bool { return a.Adapters == nil }},
 }
 
