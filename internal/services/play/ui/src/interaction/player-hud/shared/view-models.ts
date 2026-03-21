@@ -119,7 +119,7 @@ export function onStageStatusBadge(
       className: "badge-info badge-soft",
       label: "AI Thinking",
       indicator: "loading-bars",
-      tooltip: "The next beat is being framed. Hold position until the scene opens again.",
+      tooltip: "The next prompt is being prepared. Hold position until the scene opens again.",
     };
   }
 
@@ -136,7 +136,7 @@ export function onStageStatusBadge(
     className: "badge-ghost",
     label: "Waiting",
     indicator: "loading-bars",
-    tooltip: state.viewerControls.disabledReason ?? "Waiting for the GM to frame the next beat.",
+    tooltip: state.viewerControls.disabledReason ?? "Waiting for the GM to open the next beat.",
   };
 }
 

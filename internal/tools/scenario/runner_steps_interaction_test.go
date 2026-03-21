@@ -175,8 +175,13 @@ func TestRunStepInteractionStartPlayerPhaseUsesExplicitActor(t *testing.T) {
 	step := Step{
 		Kind: "interaction_start_player_phase",
 		Args: map[string]any{
-			"as":         "Guide",
-			"frame_text": "What do you do?",
+			"as": "Guide",
+			"interaction": map[string]any{
+				"title": "Opening Beat",
+				"beats": []any{
+					map[string]any{"type": "prompt", "text": "What do you do?"},
+				},
+			},
 			"characters": []any{"Aria", "Corin"},
 		},
 	}
@@ -192,8 +197,14 @@ func TestRunStepInteractionStartPlayerPhaseUsesExplicitActor(t *testing.T) {
 	if gotRequest.GetSceneId() != "scene-1" {
 		t.Fatalf("scene_id = %q, want %q", gotRequest.GetSceneId(), "scene-1")
 	}
-	if gotRequest.GetFrameText() != "What do you do?" {
-		t.Fatalf("frame_text = %q, want %q", gotRequest.GetFrameText(), "What do you do?")
+	if gotRequest.GetInteraction() == nil {
+		t.Fatal("interaction = nil, want GM interaction input")
+	}
+	if gotRequest.GetInteraction().GetTitle() != "Opening Beat" {
+		t.Fatalf("interaction.title = %q, want %q", gotRequest.GetInteraction().GetTitle(), "Opening Beat")
+	}
+	if beats := gotRequest.GetInteraction().GetBeats(); len(beats) != 1 || beats[0].GetText() != "What do you do?" {
+		t.Fatalf("interaction.beats = %#v, want single prompt beat", beats)
 	}
 	if len(gotRequest.GetCharacterIds()) != 2 || gotRequest.GetCharacterIds()[0] != "character-aria" || gotRequest.GetCharacterIds()[1] != "character-corin" {
 		t.Fatalf("character_ids = %v, want [character-aria character-corin]", gotRequest.GetCharacterIds())
@@ -204,32 +215,45 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 	fixture := testEnv()
 	runner := quietRunner(fixture.env)
 
-	t.Run("accept player phase", func(t *testing.T) {
+	t.Run("return to gm", func(t *testing.T) {
 		state := testState()
 		state.activeSceneID = "scene-1"
 		state.participants = map[string]string{"Guide": "participant-guide"}
 
 		var gotParticipantID string
-		var gotRequest *gamev1.AcceptScenePlayerPhaseRequest
+		var gotRequest *gamev1.ResolveScenePlayerPhaseReviewRequest
 		runner.env.interactionClient = &fakeInteractionClient{
-			acceptPlayerPhase: func(ctx context.Context, req *gamev1.AcceptScenePlayerPhaseRequest, _ ...grpc.CallOption) (*gamev1.AcceptScenePlayerPhaseResponse, error) {
+			resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
 				gotParticipantID = outgoingParticipantID(t, ctx)
 				gotRequest = req
-				return &gamev1.AcceptScenePlayerPhaseResponse{}, nil
+				return &gamev1.ResolveScenePlayerPhaseReviewResponse{}, nil
 			},
 		}
 
 		if err := runner.runStep(context.Background(), state, Step{
-			Kind: "interaction_accept_player_phase",
-			Args: map[string]any{"as": "Guide"},
+			Kind: "interaction_resolve_review",
+			Args: map[string]any{
+				"as":           "Guide",
+				"return_to_gm": true,
+				"interaction": map[string]any{
+					"title": "Resolution",
+					"beats": []any{
+						map[string]any{"type": "resolution", "text": "Phase resolved."},
+					},
+				},
+			},
 		}); err != nil {
-			t.Fatalf("runStep(interaction_accept_player_phase): %v", err)
+			t.Fatalf("runStep(interaction_resolve_review return_to_gm): %v", err)
 		}
 		if gotParticipantID != "participant-guide" {
 			t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "participant-guide")
 		}
 		if gotRequest == nil || gotRequest.GetCampaignId() != "campaign-1" || gotRequest.GetSceneId() != "scene-1" {
 			t.Fatalf("accept request = %#v", gotRequest)
+		}
+		resolution, ok := gotRequest.GetResolution().(*gamev1.ResolveScenePlayerPhaseReviewRequest_ReturnToGm)
+		if !ok || resolution.ReturnToGm == nil || resolution.ReturnToGm.GetInteraction() == nil {
+			t.Fatalf("resolution = %#v, want return_to_gm interaction", gotRequest.GetResolution())
 		}
 	})
 
@@ -240,19 +264,25 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 		state.actors = map[string]string{"Aria": "character-aria"}
 
 		var gotParticipantID string
-		var gotRequest *gamev1.RequestScenePlayerRevisionsRequest
+		var gotRequest *gamev1.ResolveScenePlayerPhaseReviewRequest
 		runner.env.interactionClient = &fakeInteractionClient{
-			requestRevisions: func(ctx context.Context, req *gamev1.RequestScenePlayerRevisionsRequest, _ ...grpc.CallOption) (*gamev1.RequestScenePlayerRevisionsResponse, error) {
+			resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
 				gotParticipantID = outgoingParticipantID(t, ctx)
 				gotRequest = req
-				return &gamev1.RequestScenePlayerRevisionsResponse{}, nil
+				return &gamev1.ResolveScenePlayerPhaseReviewResponse{}, nil
 			},
 		}
 
 		if err := runner.runStep(context.Background(), state, Step{
-			Kind: "interaction_request_revisions",
+			Kind: "interaction_resolve_review",
 			Args: map[string]any{
 				"as": "Guide",
+				"interaction": map[string]any{
+					"title": "Clarify The Route",
+					"beats": []any{
+						map[string]any{"type": "guidance", "text": "Clarify Aria's route through the water."},
+					},
+				},
 				"revisions": []any{
 					map[string]any{
 						"participant": "Rhea",
@@ -262,7 +292,7 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 				},
 			},
 		}); err != nil {
-			t.Fatalf("runStep(interaction_request_revisions): %v", err)
+			t.Fatalf("runStep(interaction_resolve_review revisions): %v", err)
 		}
 		if gotParticipantID != "participant-guide" {
 			t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "participant-guide")
@@ -270,10 +300,14 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 		if gotRequest == nil || gotRequest.GetCampaignId() != "campaign-1" || gotRequest.GetSceneId() != "scene-1" {
 			t.Fatalf("revision request = %#v", gotRequest)
 		}
-		if len(gotRequest.GetRevisions()) != 1 {
-			t.Fatalf("revisions = %#v, want 1 entry", gotRequest.GetRevisions())
+		resolution, ok := gotRequest.GetResolution().(*gamev1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions)
+		if !ok || resolution.RequestRevisions == nil {
+			t.Fatalf("resolution = %#v, want request_revisions", gotRequest.GetResolution())
 		}
-		revision := gotRequest.GetRevisions()[0]
+		if len(resolution.RequestRevisions.GetRevisions()) != 1 {
+			t.Fatalf("revisions = %#v, want 1 entry", resolution.RequestRevisions.GetRevisions())
+		}
+		revision := resolution.RequestRevisions.GetRevisions()[0]
 		if revision.GetParticipantId() != "participant-rhea" || revision.GetReason() != "Clarify Aria's route through the water." {
 			t.Fatalf("revision = %#v", revision)
 		}
@@ -548,19 +582,28 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 			},
 		},
 		{
-			name: "accept_player_phase",
-			step: Step{Kind: "interaction_accept_player_phase", Args: map[string]any{"as": "Guide"}},
+			name: "resolve_review_return_to_gm",
+			step: Step{Kind: "interaction_resolve_review", Args: map[string]any{
+				"as":           "Guide",
+				"return_to_gm": true,
+				"interaction": map[string]any{
+					"title": "Resolution",
+					"beats": []any{
+						map[string]any{"type": "resolution", "text": "Phase resolved."},
+					},
+				},
+			}},
 			setup: func(state *scenarioState) {
 				state.activeSceneID = "scene-1"
 				state.participants = map[string]string{"Guide": "participant-guide"}
 			},
 			client: func(capture *interactionCapture) *fakeInteractionClient {
 				return &fakeInteractionClient{
-					acceptPlayerPhase: func(ctx context.Context, req *gamev1.AcceptScenePlayerPhaseRequest, _ ...grpc.CallOption) (*gamev1.AcceptScenePlayerPhaseResponse, error) {
+					resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
 						capture.participantID = outgoingParticipantID(t, ctx)
 						capture.campaignID = req.GetCampaignId()
 						capture.sceneID = req.GetSceneId()
-						return &gamev1.AcceptScenePlayerPhaseResponse{}, nil
+						return &gamev1.ResolveScenePlayerPhaseReviewResponse{}, nil
 					},
 				}
 			},
@@ -1017,10 +1060,18 @@ func TestRunInteractionExpectStepMatchesAuthoritativeState(t *testing.T) {
 			return &gamev1.GetInteractionStateResponse{
 				State: &gamev1.InteractionState{
 					ActiveSession: &gamev1.InteractionSession{Name: "Crossing"},
-					ActiveScene:   &gamev1.InteractionScene{Name: "The Bridge"},
+					ActiveScene: &gamev1.InteractionScene{
+						Name: "The Bridge",
+						CurrentInteraction: &gamev1.GMInteraction{
+							Title: "Bridge Crossing",
+							Beats: []*gamev1.GMInteractionBeat{{
+								Type: gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT,
+								Text: "Rain lashes the ropes. What do you do next?",
+							}},
+						},
+					},
 					PlayerPhase: &gamev1.ScenePlayerPhase{
 						Status:               gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW,
-						FrameText:            "Rain lashes the ropes. What do you do next?",
 						ActingCharacterIds:   []string{"character-aria", "character-corin"},
 						ActingParticipantIds: []string{"participant-bryn", "participant-rhea"},
 						Slots: []*gamev1.ScenePlayerSlot{
@@ -1053,7 +1104,7 @@ func TestRunInteractionExpectStepMatchesAuthoritativeState(t *testing.T) {
 			"session":             "Crossing",
 			"active_scene":        "The Bridge",
 			"phase_status":        "GM_REVIEW",
-			"frame_text":          "Rain lashes the ropes. What do you do next?",
+			"prompt":              "Rain lashes the ropes. What do you do next?",
 			"acting_characters":   []any{"Aria", "Corin"},
 			"acting_participants": []any{"Rhea", "Bryn"},
 			"gm_authority":        "Guide",

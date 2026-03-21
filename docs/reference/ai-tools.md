@@ -32,10 +32,9 @@ Broader bootstrap or dev-only registrations are intentionally omitted here.
 
 - `interaction_active_scene_set`
 - `interaction_scene_player_phase_start`
-- `interaction_scene_player_phase_accept`
-- `interaction_scene_player_revisions_request`
-- `interaction_scene_player_phase_end`
-- `interaction_scene_gm_output_commit`
+- `interaction_scene_review_resolve`
+- `interaction_scene_gm_interaction_commit`
+- `interaction_scene_interrupt_resolution`
 - `interaction_ooc_pause`
 - `interaction_ooc_post`
 - `interaction_ooc_ready_mark`

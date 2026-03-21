@@ -116,7 +116,7 @@ func TestGateProgressJSONAPIHelpers(t *testing.T) {
 func TestBuildInitialGateProgressReturnsNilForEmptyGenericWorkflow(t *testing.T) {
 	t.Parallel()
 
-	progressJSON, err := BuildInitialGateProgress("gm_prompt", mustMarshalGateMetadataForType(t, "gm_prompt", map[string]any{
+	progressJSON, err := BuildInitialGateProgress("gm_interaction", mustMarshalGateMetadataForType(t, "gm_interaction", map[string]any{
 		"topic": "handoff",
 	}))
 	if err != nil {

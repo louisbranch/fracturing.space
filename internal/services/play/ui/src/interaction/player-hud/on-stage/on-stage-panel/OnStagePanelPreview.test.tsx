@@ -14,7 +14,7 @@ describe("OnStagePanelPreview", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Inspect Aria" }));
+    await user.click(screen.getAllByRole("button", { name: "Inspect Aria" })[1]);
 
     const dialog = screen.getByRole("dialog");
 

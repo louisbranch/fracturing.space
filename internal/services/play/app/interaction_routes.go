@@ -51,21 +51,11 @@ func interactionRoutes(server *Server) []interactionRoute {
 		}, func(req *gamev1.EndScenePlayerPhaseRequest, campaignID string) {
 			req.CampaignId = campaignID
 		}, server.interaction.EndScenePlayerPhase),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/commit-scene-gm-output", func() *gamev1.CommitSceneGMOutputRequest {
-			return &gamev1.CommitSceneGMOutputRequest{}
-		}, func(req *gamev1.CommitSceneGMOutputRequest, campaignID string) {
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/commit-scene-gm-interaction", func() *gamev1.CommitSceneGMInteractionRequest {
+			return &gamev1.CommitSceneGMInteractionRequest{}
+		}, func(req *gamev1.CommitSceneGMInteractionRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.CommitSceneGMOutput),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/accept-scene-player-phase", func() *gamev1.AcceptScenePlayerPhaseRequest {
-			return &gamev1.AcceptScenePlayerPhaseRequest{}
-		}, func(req *gamev1.AcceptScenePlayerPhaseRequest, campaignID string) {
-			req.CampaignId = campaignID
-		}, server.interaction.AcceptScenePlayerPhase),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/request-scene-player-revisions", func() *gamev1.RequestScenePlayerRevisionsRequest {
-			return &gamev1.RequestScenePlayerRevisionsRequest{}
-		}, func(req *gamev1.RequestScenePlayerRevisionsRequest, campaignID string) {
-			req.CampaignId = campaignID
-		}, server.interaction.RequestScenePlayerRevisions),
+		}, server.interaction.CommitSceneGMInteraction),
 		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/resolve-scene-player-phase-review", func() *gamev1.ResolveScenePlayerPhaseReviewRequest {
 			return &gamev1.ResolveScenePlayerPhaseReviewRequest{}
 		}, func(req *gamev1.ResolveScenePlayerPhaseReviewRequest, campaignID string) {

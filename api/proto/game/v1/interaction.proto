@@ -16,7 +16,7 @@ service InteractionService {
   rpc GetInteractionState(GetInteractionStateRequest) returns (GetInteractionStateResponse);
   // Sets the session's active scene.
   rpc SetActiveScene(SetActiveSceneRequest) returns (SetActiveSceneResponse);
-  // Starts a new player phase on the active scene from a GM frame.
+  // Starts a new player phase on the active scene from a GM interaction.
   rpc StartScenePlayerPhase(StartScenePlayerPhaseRequest) returns (StartScenePlayerPhaseResponse);
   // Updates one participant's current post in the open player phase. When
   // yield_after_post is true, the participant yields in the same accepted write.
@@ -28,12 +28,8 @@ service InteractionService {
   rpc UnyieldScenePlayerPhase(UnyieldScenePlayerPhaseRequest) returns (UnyieldScenePlayerPhaseResponse);
   // Ends the active scene's current player phase early under GM control.
   rpc EndScenePlayerPhase(EndScenePlayerPhaseRequest) returns (EndScenePlayerPhaseResponse);
-  // Commits one authoritative GM narration/update to the active scene.
-  rpc CommitSceneGMOutput(CommitSceneGMOutputRequest) returns (CommitSceneGMOutputResponse);
-  // Accepts the submitted player phase after GM review and returns to GM control.
-  rpc AcceptScenePlayerPhase(AcceptScenePlayerPhaseRequest) returns (AcceptScenePlayerPhaseResponse);
-  // Returns one or more participant slots for correction while preserving the current phase state.
-  rpc RequestScenePlayerRevisions(RequestScenePlayerRevisionsRequest) returns (RequestScenePlayerRevisionsResponse);
+  // Commits one authoritative GM interaction to the active scene.
+  rpc CommitSceneGMInteraction(CommitSceneGMInteractionRequest) returns (CommitSceneGMInteractionResponse);
   // Resolves a GM-review player phase by either reframing the next player beat
   // or returning one or more slots for revision.
   rpc ResolveScenePlayerPhaseReview(ResolveScenePlayerPhaseReviewRequest) returns (ResolveScenePlayerPhaseReviewResponse);
@@ -82,10 +78,56 @@ message InteractionCharacter {
   string owner_participant_id = 3;
 }
 
-message InteractionGMOutput {
-  string text = 1;
-  string participant_id = 2;
-  google.protobuf.Timestamp updated_at = 3;
+enum GMInteractionBeatType {
+  GM_INTERACTION_BEAT_TYPE_UNSPECIFIED = 0;
+  GM_INTERACTION_BEAT_TYPE_FICTION = 1;
+  GM_INTERACTION_BEAT_TYPE_PROMPT = 2;
+  GM_INTERACTION_BEAT_TYPE_RESOLUTION = 3;
+  GM_INTERACTION_BEAT_TYPE_CONSEQUENCE = 4;
+  GM_INTERACTION_BEAT_TYPE_GUIDANCE = 5;
+}
+
+message GMInteractionIllustration {
+  string image_url = 1;
+  string alt = 2;
+  string caption = 3;
+}
+
+message GMInteractionBeat {
+  string beat_id = 1;
+  GMInteractionBeatType type = 2;
+  string text = 3;
+}
+
+message GMInteraction {
+  string interaction_id = 1;
+  string scene_id = 2;
+  string phase_id = 3;
+  string participant_id = 4;
+  string title = 5;
+  repeated string character_ids = 6;
+  GMInteractionIllustration illustration = 7;
+  repeated GMInteractionBeat beats = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message GMInteractionInputIllustration {
+  string image_url = 1;
+  string alt = 2;
+  string caption = 3;
+}
+
+message GMInteractionInputBeat {
+  string beat_id = 1;
+  GMInteractionBeatType type = 2;
+  string text = 3;
+}
+
+message GMInteractionInput {
+  string title = 1;
+  repeated string character_ids = 2;
+  GMInteractionInputIllustration illustration = 3;
+  repeated GMInteractionInputBeat beats = 4;
 }
 
 message InteractionScene {
@@ -94,7 +136,8 @@ message InteractionScene {
   string name = 3;
   string description = 4;
   repeated InteractionCharacter characters = 5;
-  InteractionGMOutput gm_output = 6;
+  GMInteraction current_interaction = 6;
+  repeated GMInteraction interaction_history = 7;
 }
 
 enum ScenePhaseStatus {
@@ -126,7 +169,6 @@ message ScenePlayerSlot {
 message ScenePlayerPhase {
   string phase_id = 1;
   ScenePhaseStatus status = 2;
-  string frame_text = 3;
   repeated string acting_character_ids = 4;
   repeated string acting_participant_ids = 5;
   repeated ScenePlayerSlot slots = 6;
@@ -202,7 +244,7 @@ message SetActiveSceneResponse {
 message StartScenePlayerPhaseRequest {
   string campaign_id = 1;
   string scene_id = 2;
-  string frame_text = 3;
+  GMInteractionInput interaction = 3;
   repeated string character_ids = 4;
 }
 
@@ -250,22 +292,13 @@ message EndScenePlayerPhaseResponse {
   InteractionState state = 1;
 }
 
-message CommitSceneGMOutputRequest {
+message CommitSceneGMInteractionRequest {
   string campaign_id = 1;
   string scene_id = 2;
-  string text = 3;
+  GMInteractionInput interaction = 3;
 }
 
-message CommitSceneGMOutputResponse {
-  InteractionState state = 1;
-}
-
-message AcceptScenePlayerPhaseRequest {
-  string campaign_id = 1;
-  string scene_id = 2;
-}
-
-message AcceptScenePlayerPhaseResponse {
+message CommitSceneGMInteractionResponse {
   InteractionState state = 1;
 }
 
@@ -275,24 +308,18 @@ message ScenePlayerRevisionRequest {
   repeated string character_ids = 3;
 }
 
-message RequestScenePlayerRevisionsRequest {
-  string campaign_id = 1;
-  string scene_id = 2;
-  repeated ScenePlayerRevisionRequest revisions = 3;
-}
-
-message RequestScenePlayerRevisionsResponse {
-  InteractionState state = 1;
-}
-
 message ResolveScenePlayerPhaseReviewAdvanceToPlayers {
-  string gm_output_text = 1;
-  string next_frame_text = 2;
-  repeated string next_character_ids = 3;
+  GMInteractionInput interaction = 1;
+  repeated string next_character_ids = 2;
 }
 
 message ResolveScenePlayerPhaseReviewRequestRevisions {
-  repeated ScenePlayerRevisionRequest revisions = 1;
+  GMInteractionInput interaction = 1;
+  repeated ScenePlayerRevisionRequest revisions = 2;
+}
+
+message ResolveScenePlayerPhaseReviewReturnToGM {
+  GMInteractionInput interaction = 1;
 }
 
 message ResolveScenePlayerPhaseReviewRequest {
@@ -301,6 +328,7 @@ message ResolveScenePlayerPhaseReviewRequest {
   oneof resolution {
     ResolveScenePlayerPhaseReviewAdvanceToPlayers advance_to_players = 3;
     ResolveScenePlayerPhaseReviewRequestRevisions request_revisions = 4;
+    ResolveScenePlayerPhaseReviewReturnToGM return_to_gm = 5;
   }
 }
 
@@ -354,9 +382,8 @@ message ResolveInterruptedScenePhaseResumeOriginal {}
 
 message ResolveInterruptedScenePhaseReplaceWithPlayerPhase {
   string scene_id = 1;
-  string gm_output_text = 2;
-  string frame_text = 3;
-  repeated string character_ids = 4;
+  GMInteractionInput interaction = 2;
+  repeated string next_character_ids = 3;
 }
 
 message ResolveInterruptedScenePhaseRequest {

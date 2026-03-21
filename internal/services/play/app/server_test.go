@@ -398,13 +398,7 @@ func (f fakePlayInteractionClient) UnyieldScenePlayerPhase(context.Context, *gam
 func (f fakePlayInteractionClient) EndScenePlayerPhase(context.Context, *gamev1.EndScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.EndScenePlayerPhaseResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) CommitSceneGMOutput(context.Context, *gamev1.CommitSceneGMOutputRequest, ...grpc.CallOption) (*gamev1.CommitSceneGMOutputResponse, error) {
-	return nil, nil
-}
-func (f fakePlayInteractionClient) AcceptScenePlayerPhase(context.Context, *gamev1.AcceptScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.AcceptScenePlayerPhaseResponse, error) {
-	return nil, nil
-}
-func (f fakePlayInteractionClient) RequestScenePlayerRevisions(context.Context, *gamev1.RequestScenePlayerRevisionsRequest, ...grpc.CallOption) (*gamev1.RequestScenePlayerRevisionsResponse, error) {
+func (f fakePlayInteractionClient) CommitSceneGMInteraction(context.Context, *gamev1.CommitSceneGMInteractionRequest, ...grpc.CallOption) (*gamev1.CommitSceneGMInteractionResponse, error) {
 	return nil, nil
 }
 func (f fakePlayInteractionClient) ResolveScenePlayerPhaseReview(context.Context, *gamev1.ResolveScenePlayerPhaseReviewRequest, ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {

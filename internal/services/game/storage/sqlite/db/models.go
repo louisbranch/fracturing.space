@@ -522,23 +522,31 @@ type SceneGate struct {
 	ResolutionJson      []byte         `json:"resolution_json"`
 }
 
+type SceneGmInteraction struct {
+	CampaignID       string `json:"campaign_id"`
+	SceneID          string `json:"scene_id"`
+	SessionID        string `json:"session_id"`
+	InteractionID    string `json:"interaction_id"`
+	PhaseID          string `json:"phase_id"`
+	ParticipantID    string `json:"participant_id"`
+	Title            string `json:"title"`
+	CharacterIdsJson []byte `json:"character_ids_json"`
+	IllustrationJson []byte `json:"illustration_json"`
+	BeatsJson        []byte `json:"beats_json"`
+	CreatedAt        int64  `json:"created_at"`
+}
+
 type SceneInteraction struct {
-	CampaignID                string        `json:"campaign_id"`
-	SceneID                   string        `json:"scene_id"`
-	SessionID                 string        `json:"session_id"`
-	PhaseOpen                 int64         `json:"phase_open"`
-	PhaseID                   string        `json:"phase_id"`
-	FrameText                 string        `json:"frame_text"`
-	ActingCharacterIdsJson    []byte        `json:"acting_character_ids_json"`
-	ActingParticipantIdsJson  []byte        `json:"acting_participant_ids_json"`
-	PostsJson                 []byte        `json:"posts_json"`
-	YieldedParticipantIdsJson []byte        `json:"yielded_participant_ids_json"`
-	UpdatedAt                 int64         `json:"updated_at"`
-	PhaseStatus               string        `json:"phase_status"`
-	SlotsJson                 []byte        `json:"slots_json"`
-	GmOutputText              string        `json:"gm_output_text"`
-	GmOutputParticipantID     string        `json:"gm_output_participant_id"`
-	GmOutputUpdatedAt         sql.NullInt64 `json:"gm_output_updated_at"`
+	CampaignID               string `json:"campaign_id"`
+	SceneID                  string `json:"scene_id"`
+	SessionID                string `json:"session_id"`
+	PhaseOpen                int64  `json:"phase_open"`
+	PhaseID                  string `json:"phase_id"`
+	PhaseStatus              string `json:"phase_status"`
+	ActingCharacterIdsJson   []byte `json:"acting_character_ids_json"`
+	ActingParticipantIdsJson []byte `json:"acting_participant_ids_json"`
+	SlotsJson                []byte `json:"slots_json"`
+	UpdatedAt                int64  `json:"updated_at"`
 }
 
 type SceneSpotlight struct {
@@ -609,21 +617,27 @@ type SessionGateResponse struct {
 }
 
 type SessionInteraction struct {
-	CampaignID               string `json:"campaign_id"`
-	SessionID                string `json:"session_id"`
-	ActiveSceneID            string `json:"active_scene_id"`
-	GmAuthorityParticipantID string `json:"gm_authority_participant_id"`
-	OocPaused                int64  `json:"ooc_paused"`
-	OocPostsJson             []byte `json:"ooc_posts_json"`
-	ReadyToResumeJson        []byte `json:"ready_to_resume_json"`
-	AiTurnStatus             string `json:"ai_turn_status"`
-	AiTurnToken              string `json:"ai_turn_token"`
-	AiTurnOwnerParticipantID string `json:"ai_turn_owner_participant_id"`
-	AiTurnSourceEventType    string `json:"ai_turn_source_event_type"`
-	AiTurnSourceSceneID      string `json:"ai_turn_source_scene_id"`
-	AiTurnSourcePhaseID      string `json:"ai_turn_source_phase_id"`
-	AiTurnLastError          string `json:"ai_turn_last_error"`
-	UpdatedAt                int64  `json:"updated_at"`
+	CampaignID                  string `json:"campaign_id"`
+	SessionID                   string `json:"session_id"`
+	ActiveSceneID               string `json:"active_scene_id"`
+	GmAuthorityParticipantID    string `json:"gm_authority_participant_id"`
+	OocPaused                   int64  `json:"ooc_paused"`
+	OocRequestedByParticipantID string `json:"ooc_requested_by_participant_id"`
+	OocReason                   string `json:"ooc_reason"`
+	OocInterruptedSceneID       string `json:"ooc_interrupted_scene_id"`
+	OocInterruptedPhaseID       string `json:"ooc_interrupted_phase_id"`
+	OocInterruptedPhaseStatus   string `json:"ooc_interrupted_phase_status"`
+	OocResolutionPending        int64  `json:"ooc_resolution_pending"`
+	OocPostsJson                []byte `json:"ooc_posts_json"`
+	ReadyToResumeJson           []byte `json:"ready_to_resume_json"`
+	AiTurnStatus                string `json:"ai_turn_status"`
+	AiTurnToken                 string `json:"ai_turn_token"`
+	AiTurnOwnerParticipantID    string `json:"ai_turn_owner_participant_id"`
+	AiTurnSourceEventType       string `json:"ai_turn_source_event_type"`
+	AiTurnSourceSceneID         string `json:"ai_turn_source_scene_id"`
+	AiTurnSourcePhaseID         string `json:"ai_turn_source_phase_id"`
+	AiTurnLastError             string `json:"ai_turn_last_error"`
+	UpdatedAt                   int64  `json:"updated_at"`
 }
 
 type SessionSpotlight struct {

@@ -25,6 +25,42 @@ export type OnStageSlotReviewState =
 
 export type OnStageCharacterSummary = PlayerHUDCharacterReference;
 
+export type OnStageGMBeatType =
+  | "fiction"
+  | "prompt"
+  | "resolution"
+  | "consequence"
+  | "guidance";
+
+export type OnStageGMInteractionIllustration = {
+  imageUrl: string;
+  alt: string;
+  caption?: string;
+  sizeHint?: "compact" | "wide";
+};
+
+export type OnStageGMBeat = {
+  id: string;
+  type: OnStageGMBeatType;
+  text: string;
+};
+
+export type OnStageGMInteraction = {
+  id: string;
+  title: string;
+  characterIds: string[];
+  illustration?: OnStageGMInteractionIllustration;
+  beats: OnStageGMBeat[];
+};
+
+export type OnStageScene = {
+  id: string;
+  name: string;
+  description?: string;
+  characters: OnStageCharacterSummary[];
+  resolvedInteractionCount: number;
+};
+
 export type OnStageParticipant = {
   id: string;
   name: string;
@@ -62,14 +98,12 @@ export type OnStageMechanicsExtension = {
 export type OnStageState = {
   mode: OnStageMode;
   aiStatus: OnStageAIStatus;
-  sceneName: string;
-  sceneDescription?: string;
-  gmOutputText?: string;
-  frameText?: string;
+  scene: OnStageScene;
+  currentInteraction?: OnStageGMInteraction;
+  interactionHistory: OnStageGMInteraction[];
   oocReason?: string;
   viewerParticipantId: string;
   actingParticipantIds: string[];
-  actingCharacterNames: string[];
   gmAuthorityParticipantId?: string;
   participants: OnStageParticipant[];
   slots: OnStageSlot[];

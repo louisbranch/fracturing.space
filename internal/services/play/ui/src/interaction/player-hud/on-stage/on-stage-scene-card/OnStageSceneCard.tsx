@@ -1,66 +1,74 @@
+import { FoldVertical, UnfoldVertical } from "lucide-react";
+import { OnStageCharacterAvatarStack } from "../on-stage-character-avatar-stack/OnStageCharacterAvatarStack";
 import type { OnStageSceneCardProps } from "./contract";
-import { PlayerHUDStatusPill } from "../../shared/PlayerHUDStatusPill";
+
+const COLLAPSED_DESCRIPTION_CHAR_CAP = 150;
+
+function truncateDescription(value: string): string {
+  if (value.length <= COLLAPSED_DESCRIPTION_CHAR_CAP) {
+    return value;
+  }
+  return `${value.slice(0, COLLAPSED_DESCRIPTION_CHAR_CAP)}...`;
+}
 
 export function OnStageSceneCard({
   sceneName,
   sceneDescription,
-  gmOutputText,
-  frameText,
-  actingCharacterNames,
-  status,
+  sceneCharacters,
+  expanded,
+  onToggle,
+  onCharacterInspect,
 }: OnStageSceneCardProps) {
   return (
     <section
       aria-label="On-stage scene context"
-      className="border-b border-base-300/70 bg-base-100/80 px-3 py-3"
+      className="min-w-0 border-b border-base-300/70 bg-base-100/80 px-3 py-3"
     >
-      <div className="rounded-box border border-base-300/70 bg-base-100 px-3 py-3">
+      <div className="min-w-0 rounded-box border border-base-300/70 bg-base-100 px-3 py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="min-w-0 truncate text-base font-semibold text-base-content">{sceneName}</h2>
             <span className="badge badge-sm badge-soft">Active Scene</span>
-            <h2 className="text-base font-semibold text-base-content">{sceneName}</h2>
           </div>
-          <PlayerHUDStatusPill
-            ariaLabel={`On-stage status: ${status.label}`}
-            status={status}
-          />
+          {sceneCharacters.length > 0 ? (
+            <OnStageCharacterAvatarStack
+              characters={sceneCharacters}
+              ariaLabel={`Scene characters: ${sceneCharacters.map((character) => character.name).join(", ")}`}
+              onCharacterInspect={onCharacterInspect}
+            />
+          ) : null}
         </div>
 
         {sceneDescription ? (
-          <p className="mt-2 text-sm text-base-content/75">{sceneDescription}</p>
-        ) : null}
-
-        {actingCharacterNames.length > 0 ? (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <div className="text-xs font-semibold uppercase tracking-wide text-base-content/55">
-              Acting Now
+          expanded ? (
+            <div className="mt-3 flex items-start gap-2">
+              <p className="min-w-0 flex-1 text-sm leading-6 text-base-content/75">{sceneDescription}</p>
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs shrink-0"
+                onClick={onToggle}
+                aria-expanded={expanded}
+                aria-label="Collapse scene description"
+              >
+                <FoldVertical className="h-4 w-4" />
+              </button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {actingCharacterNames.map((name) => (
-                <span key={name} className="badge badge-outline badge-sm">
-                  {name}
-                </span>
-              ))}
+          ) : (
+            <div className="mt-3 flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-sm text-base-content/60">
+                {truncateDescription(sceneDescription)}
+              </p>
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs shrink-0"
+                onClick={onToggle}
+                aria-expanded={expanded}
+                aria-label="Expand scene description"
+              >
+                <UnfoldVertical className="h-4 w-4" />
+              </button>
             </div>
-          </div>
-        ) : null}
-
-        {gmOutputText ? (
-          <div className="mt-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-base-content/55">
-              Latest GM Output
-            </div>
-            <p className="mt-1 text-sm text-base-content/80">{gmOutputText}</p>
-          </div>
-        ) : null}
-
-        {frameText ? (
-          <div className="mt-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-base-content/55">
-              Current Frame
-            </div>
-            <p className="mt-1 text-sm text-base-content/80">{frameText}</p>
-          </div>
+          )
         ) : null}
       </div>
     </section>

@@ -48,6 +48,65 @@ const ivesAvatar = participantAvatarPreviewAssets[3];
 
 const onStageShellPreview = {
   ...onStageFixtureCatalog.viewerPosted,
+  scene: {
+    id: "scene-drowned-chapel-vault",
+    name: "Drowned Chapel Vault",
+    description:
+      "The drowned chapel vault crouches beneath a leaning bell tower, its black-stone door slick with condensation while hairline sigils pulse under the bronze seam like banked lightning. Water from the nave has crept down the steps in a glass-thin sheet, and every carved saint in the corridor has been worn faceless except for the one directly above the lock, whose remaining mouth seems to split wider whenever the ward hum rises. A rack of rusted censers swings somewhere out of sight, tapping faintly against stone in the same off-tempo rhythm as the lower glyphs.",
+    characters: [
+      onStageCharacterCatalog.aria,
+      onStageCharacterCatalog.corin,
+      onStageCharacterCatalog.sable,
+    ],
+    resolvedInteractionCount: 2,
+  },
+  currentInteraction: {
+    id: "gmint-drowned-chapel-current",
+    title: "At the Breached Seal",
+    characterIds: ["aria", "corin", "sable"],
+    beats: [
+      {
+        id: "beat-drowned-chapel-fiction",
+        type: "fiction" as const,
+        text:
+          "Lanternlight catches on the ward lattice every time Aria leans in. Corin spots three glyphs near the lower hinge flashing out of rhythm, but each pulse is answered by a distant iron knock somewhere deeper in the keep. Sable, posted halfway up the flooded stairs with one eye on the transept, hears armored movement stop and start above the chapel floorboards as if someone is listening for the ward to break cleanly. The cold spilling through the seam smells of wet parchment, extinguished incense, and a tomb that has been opened once already tonight.",
+      },
+      {
+        id: "beat-drowned-chapel-prompt",
+        type: "prompt" as const,
+        text:
+          "The seal has parted by barely a finger's width, enough to breathe out cold dust and stale incense. Aria, if you commit to the pry, what exact leverage do you take, and Corin, how do you keep the ward from translating that motion into a full alarm through the chapel above? Sable, you are the only one with a clear line to the upper gallery, so tell me how you manage the patrol's approach, the hanging censers, and the one stretch of open water that will throw back lanternlight if anyone moves too quickly. If this goes wrong, I need to know which compromise each of you is already prepared to make: noise, delay, or exposure.",
+      },
+    ],
+  },
+  interactionHistory: [
+    {
+      id: "gmint-drowned-chapel-history-1",
+      title: "The First Safe Opening",
+      characterIds: ["aria", "corin"],
+      beats: [
+        {
+          id: "beat-drowned-chapel-history-1-guidance",
+          type: "guidance" as const,
+          text:
+            "The lower seam only holds quiet if the force arrives on the ward's weak pulse. Anything harsher will travel upstairs faster than the team can recover from it.",
+        },
+      ],
+    },
+    {
+      id: "gmint-drowned-chapel-history-2",
+      title: "Noise in the Gallery",
+      characterIds: ["sable"],
+      beats: [
+        {
+          id: "beat-drowned-chapel-history-2-consequence",
+          type: "consequence" as const,
+          text:
+            "A patrol pause above the gallery means the team no longer has time for a second full reset. The next action has to carry the vault open and keep the chapel quiet at the same time.",
+        },
+      ],
+    },
+  ],
   participants: [
     ...onStageFixtureCatalog.viewerPosted.participants.map((participant) =>
       participant.id === "p-rhea" || participant.id === "p-bryn"
@@ -64,13 +123,6 @@ const onStageShellPreview = {
     },
   ],
   actingParticipantIds: ["p-rhea", "p-bryn", "p-ives"],
-  actingCharacterNames: ["Aria", "Corin", "Sable"],
-  sceneDescription:
-    "The drowned chapel vault crouches beneath a leaning bell tower, its black-stone door slick with condensation while hairline sigils pulse under the bronze seam like banked lightning. Water from the nave has crept down the steps in a glass-thin sheet, and every carved saint in the corridor has been worn faceless except for the one directly above the lock, whose remaining mouth seems to split wider whenever the ward hum rises. A rack of rusted censers swings somewhere out of sight, tapping faintly against stone in the same off-tempo rhythm as the lower glyphs.",
-  gmOutputText:
-    "Lanternlight catches on the ward lattice every time Aria leans in. Corin spots three glyphs near the lower hinge flashing out of rhythm, but each pulse is answered by a distant iron knock somewhere deeper in the keep. Sable, posted halfway up the flooded stairs with one eye on the transept, hears armored movement stop and start above the chapel floorboards as if someone is listening for the ward to break cleanly. The cold spilling through the seam smells of wet parchment, extinguished incense, and a tomb that has been opened once already tonight.",
-  frameText:
-    "The seal has parted by barely a finger's width, enough to breathe out cold dust and stale incense. Aria, if you commit to the pry, what exact leverage do you take, and Corin, how do you keep the ward from translating that motion into a full alarm through the chapel above? Sable, you are the only one with a clear line to the upper gallery, so tell me how you manage the patrol's approach, the hanging censers, and the one stretch of open water that will throw back lanternlight if anyone moves too quickly. If this goes wrong, I need to know which compromise each of you is already prepared to make: noise, delay, or exposure.",
   slots: [
     ...onStageFixtureCatalog.viewerPosted.slots.map((slot) => {
       if (slot.participantId === "p-rhea") {

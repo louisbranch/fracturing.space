@@ -46,8 +46,6 @@ type State struct {
 	SpotlightCharacterID ids.CharacterID
 	// PlayerPhaseID identifies the currently open player phase, when any.
 	PlayerPhaseID string
-	// PlayerPhaseFrameText stores the GM frame text for the open player phase.
-	PlayerPhaseFrameText string
 	// PlayerPhaseStatus stores whether the open phase is accepting player input
 	// or waiting on GM review.
 	PlayerPhaseStatus PlayerPhaseStatus
@@ -57,10 +55,6 @@ type State struct {
 	PlayerPhaseActingParticipants map[ids.ParticipantID]bool
 	// PlayerPhaseSlots stores the latest participant-owned slot state for the phase.
 	PlayerPhaseSlots map[ids.ParticipantID]PlayerPhaseSlot
-	// GMOutputText stores the latest committed GM narration for the scene.
-	GMOutputText string
-	// GMOutputParticipantID stores which participant committed the latest narration.
-	GMOutputParticipantID ids.ParticipantID
 }
 
 // HasPC returns true if the scene contains at least one character whose ID

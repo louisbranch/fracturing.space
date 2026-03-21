@@ -227,11 +227,12 @@ func interactionRoleString(value gamev1.ParticipantRole) string {
 
 // InteractionScene represents an active scene in the interaction.
 type InteractionScene struct {
-	SceneID     string                 `json:"scene_id"`
-	Name        string                 `json:"name,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Characters  []InteractionCharacter `json:"characters"`
-	GMOutput    *InteractionGMOutput   `json:"gm_output,omitempty"`
+	SceneID            string                     `json:"scene_id"`
+	Name               string                     `json:"name,omitempty"`
+	Description        string                     `json:"description,omitempty"`
+	Characters         []InteractionCharacter     `json:"characters"`
+	CurrentInteraction *InteractionGMInteraction  `json:"current_interaction,omitempty"`
+	InteractionHistory []InteractionGMInteraction `json:"interaction_history,omitempty"`
 }
 
 // InteractionCharacter is a character present in a scene.
@@ -241,11 +242,28 @@ type InteractionCharacter struct {
 	OwnerParticipantID string `json:"owner_participant_id,omitempty"`
 }
 
-// InteractionGMOutput holds the latest GM narrative output for a scene.
-type InteractionGMOutput struct {
-	Text          string `json:"text,omitempty"`
-	ParticipantID string `json:"participant_id,omitempty"`
-	UpdatedAt     string `json:"updated_at,omitempty"`
+type InteractionGMInteractionIllustration struct {
+	ImageURL string `json:"image_url,omitempty"`
+	Alt      string `json:"alt,omitempty"`
+	Caption  string `json:"caption,omitempty"`
+}
+
+type InteractionGMInteractionBeat struct {
+	BeatID string `json:"beat_id"`
+	Type   string `json:"type,omitempty"`
+	Text   string `json:"text,omitempty"`
+}
+
+type InteractionGMInteraction struct {
+	InteractionID string                                `json:"interaction_id"`
+	SceneID       string                                `json:"scene_id,omitempty"`
+	PhaseID       string                                `json:"phase_id,omitempty"`
+	ParticipantID string                                `json:"participant_id,omitempty"`
+	Title         string                                `json:"title,omitempty"`
+	CharacterIDs  []string                              `json:"character_ids"`
+	Illustration  *InteractionGMInteractionIllustration `json:"illustration,omitempty"`
+	Beats         []InteractionGMInteractionBeat        `json:"beats"`
+	CreatedAt     string                                `json:"created_at,omitempty"`
 }
 
 // SceneFromGameScene maps a proto InteractionScene to protocol.
@@ -266,28 +284,59 @@ func SceneFromGameScene(scene *gamev1.InteractionScene) *InteractionScene {
 		})
 	}
 	return &InteractionScene{
-		SceneID:     sceneID,
-		Name:        strings.TrimSpace(scene.GetName()),
-		Description: strings.TrimSpace(scene.GetDescription()),
-		Characters:  characters,
-		GMOutput:    gmOutputFromProto(scene.GetGmOutput()),
+		SceneID:            sceneID,
+		Name:               strings.TrimSpace(scene.GetName()),
+		Description:        strings.TrimSpace(scene.GetDescription()),
+		Characters:         characters,
+		CurrentInteraction: gmInteractionFromProto(scene.GetCurrentInteraction()),
+		InteractionHistory: gmInteractionHistoryFromProto(scene.GetInteractionHistory()),
 	}
 }
 
-func gmOutputFromProto(output *gamev1.InteractionGMOutput) *InteractionGMOutput {
-	if output == nil {
+func gmInteractionFromProto(interaction *gamev1.GMInteraction) *InteractionGMInteraction {
+	if interaction == nil {
 		return nil
 	}
-	text := strings.TrimSpace(output.GetText())
-	pid := strings.TrimSpace(output.GetParticipantId())
-	if text == "" && pid == "" {
+	interactionID := strings.TrimSpace(interaction.GetInteractionId())
+	if interactionID == "" {
 		return nil
 	}
-	return &InteractionGMOutput{
-		Text:          text,
-		ParticipantID: pid,
-		UpdatedAt:     formatTimestamp(output.GetUpdatedAt()),
+	beats := make([]InteractionGMInteractionBeat, 0, len(interaction.GetBeats()))
+	for _, beat := range interaction.GetBeats() {
+		beats = append(beats, InteractionGMInteractionBeat{
+			BeatID: strings.TrimSpace(beat.GetBeatId()),
+			Type:   gmInteractionBeatTypeString(beat.GetType()),
+			Text:   strings.TrimSpace(beat.GetText()),
+		})
 	}
+	result := &InteractionGMInteraction{
+		InteractionID: interactionID,
+		SceneID:       strings.TrimSpace(interaction.GetSceneId()),
+		PhaseID:       strings.TrimSpace(interaction.GetPhaseId()),
+		ParticipantID: strings.TrimSpace(interaction.GetParticipantId()),
+		Title:         strings.TrimSpace(interaction.GetTitle()),
+		CharacterIDs:  trimStringSlice(interaction.GetCharacterIds()),
+		Beats:         beats,
+		CreatedAt:     formatTimestamp(interaction.GetCreatedAt()),
+	}
+	if illustration := interaction.GetIllustration(); illustration != nil {
+		result.Illustration = &InteractionGMInteractionIllustration{
+			ImageURL: strings.TrimSpace(illustration.GetImageUrl()),
+			Alt:      strings.TrimSpace(illustration.GetAlt()),
+			Caption:  strings.TrimSpace(illustration.GetCaption()),
+		}
+	}
+	return result
+}
+
+func gmInteractionHistoryFromProto(items []*gamev1.GMInteraction) []InteractionGMInteraction {
+	result := make([]InteractionGMInteraction, 0, len(items))
+	for _, item := range items {
+		if interaction := gmInteractionFromProto(item); interaction != nil {
+			result = append(result, *interaction)
+		}
+	}
+	return result
 }
 
 // --- Player Phase types ---
@@ -296,7 +345,6 @@ func gmOutputFromProto(output *gamev1.InteractionGMOutput) *InteractionGMOutput 
 type ScenePlayerPhase struct {
 	PhaseID              string            `json:"phase_id"`
 	Status               string            `json:"status,omitempty"`
-	FrameText            string            `json:"frame_text,omitempty"`
 	ActingCharacterIDs   []string          `json:"acting_character_ids"`
 	ActingParticipantIDs []string          `json:"acting_participant_ids"`
 	Slots                []ScenePlayerSlot `json:"slots"`
@@ -339,11 +387,19 @@ func PlayerPhaseFromGamePhase(phase *gamev1.ScenePlayerPhase) *ScenePlayerPhase 
 	return &ScenePlayerPhase{
 		PhaseID:              phaseID,
 		Status:               scenePhaseStatusString(phase.GetStatus()),
-		FrameText:            strings.TrimSpace(phase.GetFrameText()),
 		ActingCharacterIDs:   trimStringSlice(phase.GetActingCharacterIds()),
 		ActingParticipantIDs: trimStringSlice(phase.GetActingParticipantIds()),
 		Slots:                slots,
 	}
+}
+
+func gmInteractionBeatTypeString(value gamev1.GMInteractionBeatType) string {
+	name := strings.TrimSpace(value.String())
+	if name == "" || name == gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_UNSPECIFIED.String() {
+		return ""
+	}
+	name = strings.TrimPrefix(name, "GM_INTERACTION_BEAT_TYPE_")
+	return strings.ToLower(name)
 }
 
 func scenePhaseStatusString(value gamev1.ScenePhaseStatus) string {

@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-12"
+last_reviewed: "2026-03-21"
 ---
 
 # Domain Language
@@ -90,8 +90,10 @@ campaign-local even though bootstrap emits participant join events atomically.
   in-character interaction authority.
 - **Scene player phase**: a scene-scoped interval where one or more selected
   characters may act before authority returns to the GM.
-- **GM frame**: the authoritative scene prompt that opens a player phase and
-  defines what the current acting set is responding to.
+- **GM interaction**: the primary authored GM response for one GM-owned moment
+  of play. A GM interaction is structured, immutable once committed, and may
+  contain ordered fiction, prompt, resolution, consequence, and guidance
+  beats.
 - **Acting character set**: the characters selected by the GM for the current
   scene player phase.
 - **Acting participant set**: the participant seats derived from the acting
@@ -101,6 +103,9 @@ campaign-local even though bootstrap emits participant join events atomically.
   during the current scene player phase.
 - **Yield**: explicit participant signal that their contribution to the current
   scene player phase is complete. Yields are revokable until the phase closes.
+- **GM review resolution**: the authoritative GM decision made after all acting
+  participants yield. Resolution may request revisions in the same phase,
+  return the scene to GM control, or open a new player phase.
 - **Session OOC overlay**: a session-level out-of-character pause used for
   participant and GM discussion while scene play is suspended.
 

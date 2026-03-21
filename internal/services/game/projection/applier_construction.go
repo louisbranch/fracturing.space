@@ -43,11 +43,12 @@ type SessionStores struct {
 
 // SceneStores groups scene and scene-interaction projection dependencies.
 type SceneStores struct {
-	Scene            storage.SceneStore
-	SceneCharacter   storage.SceneCharacterStore
-	SceneGate        storage.SceneGateStore
-	SceneSpotlight   storage.SceneSpotlightStore
-	SceneInteraction storage.SceneInteractionStore
+	Scene              storage.SceneStore
+	SceneCharacter     storage.SceneCharacterStore
+	SceneGate          storage.SceneGateStore
+	SceneSpotlight     storage.SceneSpotlightStore
+	SceneInteraction   storage.SceneInteractionStore
+	SceneGMInteraction storage.SceneGMInteractionStore
 }
 
 // SupportStores groups projection support concerns such as watermarks.
@@ -104,11 +105,12 @@ func StoreGroupsFromBundle(bundle StoreBundle) StoreGroups {
 			SessionInteraction: bundle,
 		},
 		SceneStores: SceneStores{
-			Scene:            bundle,
-			SceneCharacter:   bundle,
-			SceneGate:        bundle,
-			SceneSpotlight:   bundle,
-			SceneInteraction: bundle,
+			Scene:              bundle,
+			SceneCharacter:     bundle,
+			SceneGate:          bundle,
+			SceneSpotlight:     bundle,
+			SceneInteraction:   bundle,
+			SceneGMInteraction: bundle,
 		},
 		SupportStores: SupportStores{
 			Watermarks: bundle,
@@ -194,6 +196,7 @@ func NewBoundApplier(config BoundApplierConfig) Applier {
 		SceneGate:          config.Stores.SceneGate,
 		SceneSpotlight:     config.Stores.SceneSpotlight,
 		SceneInteraction:   config.Stores.SceneInteraction,
+		SceneGMInteraction: config.Stores.SceneGMInteraction,
 		Adapters:           config.Adapters,
 		Watermarks:         config.Stores.Watermarks,
 		Now:                config.Now,

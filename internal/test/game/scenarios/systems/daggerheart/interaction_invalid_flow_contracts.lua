@@ -31,7 +31,12 @@ scn:interaction_set_active_scene({scene = "Signal Tower"})
 -- 1. A player phase cannot start on a scene that is not active.
 scn:interaction_start_player_phase{
   scene = "Courtyard",
-  frame_text = "Corin, what do you do below the tower?",
+  interaction = {
+    title = "Courtyard Prompt",
+    beats = {
+      {type = "prompt", text = "Corin, what do you do below the tower?"},
+    },
+  },
   characters = {"Corin"},
   expect_error = {code = "FAILED_PRECONDITION", contains = "scene is not the active scene"}
 }
@@ -39,7 +44,12 @@ scn:interaction_start_player_phase{
 -- 2. A participant outside the acting set cannot post into the current player phase.
 scn:interaction_start_player_phase{
   scene = "Signal Tower",
-  frame_text = "Aria, what do you do from the tower?",
+  interaction = {
+    title = "Signal Tower Prompt",
+    beats = {
+      {type = "prompt", text = "Aria, what do you do from the tower?"},
+    },
+  },
   characters = {"Aria"}
 }
 scn:interaction_post{

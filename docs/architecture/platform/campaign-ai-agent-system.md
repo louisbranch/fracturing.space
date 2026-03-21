@@ -27,7 +27,7 @@ The agent speaks through three output channels. Each maps to a distinct role:
 | Channel | Role | Purpose |
 |---------|------|---------|
 | Tool calls (dice, scene, interaction tools) | **Game Master** | Adjudicate rules, resolve mechanics, manage authoritative game state |
-| `interaction_scene_gm_output_commit` text | **Narrator** | In-character prose, atmosphere, NPC dialogue |
+| `interaction_scene_gm_interaction_commit` structured content | **Narrator** | In-character prose, atmosphere, prompts, and consequence beats |
 | Final model response (`OutputText`) | **Meta / OOC** | Conversational reply to the caller, summaries, coordination notes |
 
 **Channel discipline**: The agent must never mix rules text into committed

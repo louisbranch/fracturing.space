@@ -124,6 +124,119 @@ func (a interactionApplication) clearOOCResolutionIfPending(ctx context.Context,
 	return a.executeSessionCommand(ctx, commandTypeSessionOOCInterruptionResolve, campaignID, sessionID, payload, "session.ooc.interruption_resolve")
 }
 
+func (a interactionApplication) buildGMInteractionPayload(
+	input *campaignv1.GMInteractionInput,
+	sceneID ids.SceneID,
+	phaseID string,
+	participantID ids.ParticipantID,
+) (scene.GMInteractionCommittedPayload, error) {
+	if input == nil {
+		return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "interaction is required")
+	}
+	interactionID, err := a.idGenerator()
+	if err != nil {
+		return scene.GMInteractionCommittedPayload{}, grpcerror.Internal("generate gm interaction id", err)
+	}
+	title := strings.TrimSpace(input.GetTitle())
+	if title == "" {
+		return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "interaction title is required")
+	}
+	characterIDs := make([]ids.CharacterID, 0, len(input.GetCharacterIds()))
+	for _, rawCharacterID := range input.GetCharacterIds() {
+		characterID := strings.TrimSpace(rawCharacterID)
+		if characterID == "" {
+			continue
+		}
+		characterIDs = append(characterIDs, ids.CharacterID(characterID))
+	}
+	beats := make([]scene.GMInteractionBeat, 0, len(input.GetBeats()))
+	for _, beat := range input.GetBeats() {
+		if beat == nil {
+			return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "interaction beats must be present")
+		}
+		beatID := strings.TrimSpace(beat.GetBeatId())
+		if beatID == "" {
+			return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "interaction beat id is required")
+		}
+		text := strings.TrimSpace(beat.GetText())
+		if text == "" {
+			return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "interaction beat text is required")
+		}
+		beatType, err := gmInteractionBeatTypeFromProto(beat.GetType())
+		if err != nil {
+			return scene.GMInteractionCommittedPayload{}, err
+		}
+		beats = append(beats, scene.GMInteractionBeat{
+			BeatID: beatID,
+			Type:   beatType,
+			Text:   text,
+		})
+	}
+	if len(beats) == 0 {
+		return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "at least one interaction beat is required")
+	}
+
+	var illustration *scene.GMInteractionIllustration
+	if rawIllustration := input.GetIllustration(); rawIllustration != nil {
+		imageURL := strings.TrimSpace(rawIllustration.GetImageUrl())
+		alt := strings.TrimSpace(rawIllustration.GetAlt())
+		caption := strings.TrimSpace(rawIllustration.GetCaption())
+		if imageURL != "" || alt != "" || caption != "" {
+			if imageURL == "" {
+				return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "interaction illustration image_url is required")
+			}
+			if alt == "" {
+				return scene.GMInteractionCommittedPayload{}, status.Error(codes.InvalidArgument, "interaction illustration alt is required")
+			}
+			illustration = &scene.GMInteractionIllustration{
+				ImageURL: imageURL,
+				Alt:      alt,
+				Caption:  caption,
+			}
+		}
+	}
+
+	return scene.GMInteractionCommittedPayload{
+		SceneID:       sceneID,
+		InteractionID: interactionID,
+		PhaseID:       strings.TrimSpace(phaseID),
+		ParticipantID: participantID,
+		Title:         title,
+		CharacterIDs:  characterIDs,
+		Illustration:  illustration,
+		Beats:         beats,
+	}, nil
+}
+
+func gmInteractionBeatTypeFromProto(value campaignv1.GMInteractionBeatType) (scene.GMInteractionBeatType, error) {
+	switch value {
+	case campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_FICTION:
+		return scene.GMInteractionBeatTypeFiction, nil
+	case campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT:
+		return scene.GMInteractionBeatTypePrompt, nil
+	case campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION:
+		return scene.GMInteractionBeatTypeResolution, nil
+	case campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE:
+		return scene.GMInteractionBeatTypeConsequence, nil
+	case campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_GUIDANCE:
+		return scene.GMInteractionBeatTypeGuidance, nil
+	default:
+		return "", status.Error(codes.InvalidArgument, "interaction beat type is required")
+	}
+}
+
+func interactionCharacterIDsToStrings(values []ids.CharacterID) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		characterID := strings.TrimSpace(value.String())
+		if characterID == "" {
+			continue
+		}
+		result = append(result, characterID)
+	}
+	return result
+}
+
 func (a interactionApplication) loadSceneState(ctx context.Context, campaignID string, sceneRecord storage.SceneRecord) (*campaignv1.InteractionScene, storage.SceneInteraction, error) {
 	sceneCharacters, err := a.stores.SceneCharacter.ListSceneCharacters(ctx, campaignID, sceneRecord.SceneID)
 	if err != nil {
@@ -165,15 +278,112 @@ func (a interactionApplication) loadSceneState(ctx context.Context, campaignID s
 			Slots:                []storage.ScenePlayerSlot{},
 		}
 	}
+	gmInteractions := []storage.SceneGMInteraction{}
+	if a.stores.SceneGMInteraction != nil {
+		var err error
+		gmInteractions, err = a.stores.SceneGMInteraction.ListSceneGMInteractions(ctx, campaignID, sceneRecord.SceneID)
+		if err != nil {
+			return nil, storage.SceneInteraction{}, grpcerror.Internal("list scene gm interactions", err)
+		}
+	}
+	if len(gmInteractions) == 0 && a.stores.Event != nil {
+		var err error
+		gmInteractions, err = a.loadSceneGMInteractionsFromEvents(ctx, campaignID, sceneRecord)
+		if err != nil {
+			return nil, storage.SceneInteraction{}, err
+		}
+	}
+
+	var currentInteraction *campaignv1.GMInteraction
+	history := make([]*campaignv1.GMInteraction, 0, max(len(gmInteractions)-1, 0))
+	for i, interaction := range gmInteractions {
+		protoInteraction := sceneGMInteractionToProto(interaction)
+		if protoInteraction == nil {
+			continue
+		}
+		if i == 0 {
+			currentInteraction = protoInteraction
+			continue
+		}
+		history = append(history, protoInteraction)
+	}
 
 	return &campaignv1.InteractionScene{
-		SceneId:     sceneRecord.SceneID,
-		SessionId:   sceneRecord.SessionID,
-		Name:        sceneRecord.Name,
-		Description: sceneRecord.Description,
-		Characters:  characters,
-		GmOutput:    sceneGMOutputToProto(sceneInteraction),
+		SceneId:            sceneRecord.SceneID,
+		SessionId:          sceneRecord.SessionID,
+		Name:               sceneRecord.Name,
+		Description:        sceneRecord.Description,
+		Characters:         characters,
+		CurrentInteraction: currentInteraction,
+		InteractionHistory: history,
 	}, sceneInteraction, nil
+}
+
+func (a interactionApplication) loadSceneGMInteractionsFromEvents(
+	ctx context.Context,
+	campaignID string,
+	sceneRecord storage.SceneRecord,
+) ([]storage.SceneGMInteraction, error) {
+	const pageSize = 200
+
+	afterSeq := uint64(0)
+	interactions := make([]storage.SceneGMInteraction, 0, 8)
+	for {
+		events, err := a.stores.Event.ListEventsBySession(ctx, campaignID, sceneRecord.SessionID, afterSeq, pageSize)
+		if err != nil {
+			return nil, grpcerror.Internal("list scene gm interaction events", err)
+		}
+		if len(events) == 0 {
+			break
+		}
+		for _, evt := range events {
+			afterSeq = evt.Seq
+			if evt.Type != scene.EventTypeGMInteractionCommitted || evt.SceneID.String() != sceneRecord.SceneID {
+				continue
+			}
+			var payload scene.GMInteractionCommittedPayload
+			if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+				return nil, grpcerror.Internal("decode scene gm interaction event", err)
+			}
+			interaction := storage.SceneGMInteraction{
+				CampaignID:    campaignID,
+				SceneID:       sceneRecord.SceneID,
+				SessionID:     sceneRecord.SessionID,
+				InteractionID: strings.TrimSpace(payload.InteractionID),
+				PhaseID:       strings.TrimSpace(payload.PhaseID),
+				ParticipantID: strings.TrimSpace(payload.ParticipantID.String()),
+				Title:         strings.TrimSpace(payload.Title),
+				CharacterIDs:  interactionCharacterIDsToStrings(payload.CharacterIDs),
+				Beats:         make([]storage.SceneGMInteractionBeat, 0, len(payload.Beats)),
+				CreatedAt:     evt.Timestamp.UTC(),
+			}
+			if payload.Illustration != nil {
+				interaction.Illustration = &storage.SceneGMInteractionIllustration{
+					ImageURL: strings.TrimSpace(payload.Illustration.ImageURL),
+					Alt:      strings.TrimSpace(payload.Illustration.Alt),
+					Caption:  strings.TrimSpace(payload.Illustration.Caption),
+				}
+			}
+			for _, beat := range payload.Beats {
+				interaction.Beats = append(interaction.Beats, storage.SceneGMInteractionBeat{
+					BeatID: strings.TrimSpace(beat.BeatID),
+					Type:   beat.Type,
+					Text:   strings.TrimSpace(beat.Text),
+				})
+			}
+			interactions = append(interactions, interaction)
+		}
+		if len(events) < pageSize {
+			break
+		}
+	}
+	sort.SliceStable(interactions, func(i, j int) bool {
+		if interactions[i].CreatedAt.Equal(interactions[j].CreatedAt) {
+			return interactions[i].InteractionID > interactions[j].InteractionID
+		}
+		return interactions[i].CreatedAt.After(interactions[j].CreatedAt)
+	})
+	return interactions, nil
 }
 
 func (a interactionApplication) requireActiveSceneForGM(

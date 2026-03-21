@@ -13,7 +13,7 @@ scn:participant({name = "Guide", role = "GM"})
 scn:participant({name = "Rhea"}):character({name = "Aria"})
 scn:participant({name = "Bryn"}):character({name = "Corin"})
 
--- Open the session and frame the first scene through the interaction surface.
+-- Open the session and start the first scene through the interaction surface.
 scn:start_session("Crossing")
 scn:create_scene{
   name = "The Bridge",
@@ -24,14 +24,19 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "The Bridge"})
 scn:interaction_start_player_phase{
   scene = "The Bridge",
-  frame_text = "Rain lashes the ropes and the bridge dips hard under your boots. What do you do next?",
+  interaction = {
+    title = "Bridge In The Rain",
+    beats = {
+      {type = "prompt", text = "Rain lashes the ropes and the bridge dips hard under your boots. What do you do next?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 scn:interaction_expect{
   session = "Crossing",
   active_scene = "The Bridge",
   phase_status = "PLAYERS",
-  frame_text = "Rain lashes the ropes and the bridge dips hard under your boots. What do you do next?",
+  prompt = "Rain lashes the ropes and the bridge dips hard under your boots. What do you do next?",
   acting_characters = {"Aria", "Corin"},
   acting_participants = {"Rhea", "Bryn"},
   gm_authority = "Guide"
@@ -79,13 +84,18 @@ scn:interaction_expect{
 }
 scn:interaction_resolve_review{
   as = "Guide",
-  gm_output_text = "The far anchor snaps loose and the lantern swings over the gorge.",
-  frame_text = "Who catches it before it drops?",
+  interaction = {
+    title = "Lantern Over The Gorge",
+    beats = {
+      {type = "fiction", text = "The far anchor snaps loose and the lantern swings over the gorge."},
+      {type = "prompt", text = "Who catches it before it drops?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 scn:interaction_expect{
   phase_status = "PLAYERS",
-  frame_text = "Who catches it before it drops?",
+  prompt = "Who catches it before it drops?",
   acting_characters = {"Aria", "Corin"},
   acting_participants = {"Rhea", "Bryn"},
   slots = {

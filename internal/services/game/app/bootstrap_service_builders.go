@@ -92,6 +92,7 @@ type sessionRegistrationDeps struct {
 	sceneStore         storage.SceneStore
 	sceneCharacter     storage.SceneCharacterStore
 	sceneInteraction   storage.SceneInteractionStore
+	sceneGMInteraction storage.SceneGMInteractionStore
 	campaignForkStore  storage.CampaignForkStore
 	eventStore         storage.EventStore
 	eventRegistry      *event.Registry
@@ -344,11 +345,13 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Campaign:           deps.campaignStore,
 		Participant:        deps.participantStore,
 		Character:          deps.characterStore,
+		Event:              deps.eventStore,
 		Session:            deps.sessionStore,
 		SessionInteraction: deps.sessionInteraction,
 		Scene:              deps.sceneStore,
 		SceneCharacter:     deps.sceneCharacter,
 		SceneInteraction:   deps.sceneInteraction,
+		SceneGMInteraction: deps.sceneGMInteraction,
 		Write:              deps.writePath,
 		Applier:            deps.applier,
 	})

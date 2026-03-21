@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { onStageStatusBadge } from "../../shared/view-models";
 import { OnStageSceneCard } from "./OnStageSceneCard";
 import { onStageFixtureCatalog } from "./fixtures";
 
@@ -11,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Scene context card for On Stage, carrying the active scene, current GM output, current frame, and the acting roster for the beat.",
+          "Scene overview card for On Stage, carrying the active scene, scene portraits, and the collapsible scene description.",
       },
     },
   },
@@ -21,59 +20,54 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const FramedBeat: Story = {
+export const OpeningScene: Story = {
   args: {
-    sceneName: onStageFixtureCatalog.viewerPosted.sceneName,
-    sceneDescription: onStageFixtureCatalog.viewerPosted.sceneDescription,
-    gmOutputText: onStageFixtureCatalog.viewerPosted.gmOutputText,
-    frameText: onStageFixtureCatalog.viewerPosted.frameText,
-    actingCharacterNames: onStageFixtureCatalog.viewerPosted.actingCharacterNames,
-    status: onStageStatusBadge(onStageFixtureCatalog.viewerPosted),
+    sceneName: onStageFixtureCatalog.actingEmpty.scene.name,
+    sceneDescription: onStageFixtureCatalog.actingEmpty.scene.description,
+    sceneCharacters: onStageFixtureCatalog.actingEmpty.scene.characters,
+    resolvedInteractionCount: onStageFixtureCatalog.actingEmpty.scene.resolvedInteractionCount,
+    expanded: true,
+    onToggle: () => {},
   },
 };
 
-export const WaitingOnGM: Story = {
+export const CollapsedAfterFirstResolution: Story = {
   args: {
-    sceneName: onStageFixtureCatalog.waitingOnGM.sceneName,
-    sceneDescription: onStageFixtureCatalog.waitingOnGM.sceneDescription,
-    gmOutputText: onStageFixtureCatalog.waitingOnGM.gmOutputText,
-    frameText: onStageFixtureCatalog.waitingOnGM.frameText,
-    actingCharacterNames: onStageFixtureCatalog.waitingOnGM.actingCharacterNames,
-    status: onStageStatusBadge(onStageFixtureCatalog.waitingOnGM),
+    sceneName: onStageFixtureCatalog.viewerPosted.scene.name,
+    sceneDescription: onStageFixtureCatalog.viewerPosted.scene.description,
+    sceneCharacters: onStageFixtureCatalog.viewerPosted.scene.characters,
+    resolvedInteractionCount: onStageFixtureCatalog.viewerPosted.scene.resolvedInteractionCount,
+    expanded: false,
+    onToggle: () => {},
   },
 };
 
 const onStageAllStates = [
-  { name: "Your Beat", state: onStageFixtureCatalog.viewerPosted },
-  { name: "Yielded", state: onStageFixtureCatalog.yieldedWaiting },
-  { name: "Changes Requested", state: onStageFixtureCatalog.changesRequested },
-  { name: "OOC Open", state: onStageFixtureCatalog.oocBlocked },
-  { name: "Waiting", state: onStageFixtureCatalog.waitingOnGM },
-  { name: "AI Thinking", state: onStageFixtureCatalog.aiThinking },
-  { name: "GM Delayed", state: onStageFixtureCatalog.aiFailed },
+  { name: "Opening", state: onStageFixtureCatalog.actingEmpty, expanded: true },
+  { name: "Collapsed", state: onStageFixtureCatalog.viewerPosted, expanded: false },
 ] as const;
 
 export const AllStates: Story = {
   args: {
-    sceneName: onStageFixtureCatalog.viewerPosted.sceneName,
-    sceneDescription: onStageFixtureCatalog.viewerPosted.sceneDescription,
-    gmOutputText: onStageFixtureCatalog.viewerPosted.gmOutputText,
-    frameText: onStageFixtureCatalog.viewerPosted.frameText,
-    actingCharacterNames: onStageFixtureCatalog.viewerPosted.actingCharacterNames,
-    status: onStageStatusBadge(onStageFixtureCatalog.viewerPosted),
+    sceneName: onStageFixtureCatalog.viewerPosted.scene.name,
+    sceneDescription: onStageFixtureCatalog.viewerPosted.scene.description,
+    sceneCharacters: onStageFixtureCatalog.viewerPosted.scene.characters,
+    resolvedInteractionCount: onStageFixtureCatalog.viewerPosted.scene.resolvedInteractionCount,
+    expanded: false,
+    onToggle: () => {},
   },
   render: () => (
     <div className="flex max-w-4xl flex-col gap-4">
-      {onStageAllStates.map(({ name, state }) => (
+      {onStageAllStates.map(({ name, state, expanded }) => (
         <div key={name} className="flex flex-col gap-2">
           <div className="preview-kicker">{name}</div>
           <OnStageSceneCard
-            sceneName={state.sceneName}
-            sceneDescription={state.sceneDescription}
-            gmOutputText={state.gmOutputText}
-            frameText={state.frameText}
-            actingCharacterNames={state.actingCharacterNames}
-            status={onStageStatusBadge(state)}
+            sceneName={state.scene.name}
+            sceneDescription={state.scene.description}
+            sceneCharacters={state.scene.characters}
+            resolvedInteractionCount={state.scene.resolvedInteractionCount}
+            expanded={expanded}
+            onToggle={() => {}}
           />
         </div>
       ))}
@@ -82,7 +76,7 @@ export const AllStates: Story = {
   parameters: {
     docs: {
       description: {
-        story: "Overview of every on-stage status badge state, including the loading-bar variants for pending GM-owned progress.",
+        story: "Comparison of the default expanded opening scene and the collapsed state after the first resolved interaction.",
       },
     },
   },

@@ -503,6 +503,14 @@ func (f *fakeProjectionStore) GetSceneInteraction(context.Context, string, strin
 	return storage.SceneInteraction{}, fmt.Errorf("not implemented")
 }
 
+// SceneGMInteractionStore methods.
+func (f *fakeProjectionStore) PutSceneGMInteraction(context.Context, storage.SceneGMInteraction) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) ListSceneGMInteractions(context.Context, string, string) ([]storage.SceneGMInteraction, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 // fakeClosableProjectionStore wraps fakeProjectionStore with a closable interface.
 type fakeClosableProjectionStore struct {
 	fakeProjectionStore

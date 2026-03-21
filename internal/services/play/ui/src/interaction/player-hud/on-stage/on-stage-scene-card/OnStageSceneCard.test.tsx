@@ -1,56 +1,76 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
+import { vi } from "vitest";
 import { onStageFixtureCatalog } from "./fixtures";
 import { OnStageSceneCard } from "./OnStageSceneCard";
 
 describe("OnStageSceneCard", () => {
-  it("renders scene, GM output, frame, and acting-character context", () => {
+  it("renders the active scene header and scene portraits", () => {
     render(
       <OnStageSceneCard
-        sceneName={onStageFixtureCatalog.viewerPosted.sceneName}
-        sceneDescription={onStageFixtureCatalog.viewerPosted.sceneDescription}
-        gmOutputText={onStageFixtureCatalog.viewerPosted.gmOutputText}
-        frameText={onStageFixtureCatalog.viewerPosted.frameText}
-        actingCharacterNames={onStageFixtureCatalog.viewerPosted.actingCharacterNames}
-        status={{
-          label: "Your Beat",
-          className: "badge-primary badge-soft",
-          indicator: "none",
-          tooltip: "Commit the next action for your character and yield when you are ready.",
-        }}
+        sceneName={onStageFixtureCatalog.viewerPosted.scene.name}
+        sceneDescription={onStageFixtureCatalog.viewerPosted.scene.description}
+        sceneCharacters={onStageFixtureCatalog.viewerPosted.scene.characters}
+        resolvedInteractionCount={onStageFixtureCatalog.viewerPosted.scene.resolvedInteractionCount}
+        expanded
+        onToggle={() => {}}
       />,
     );
 
     expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
-    expect(screen.getByLabelText("On-stage status: Your Beat")).toHaveClass(
-      "tooltip",
-      "tooltip-left",
-    );
     expect(screen.getByText("Sealed Vault")).toBeInTheDocument();
-    expect(screen.getByText("Latest GM Output")).toBeInTheDocument();
-    expect(screen.getByText("Current Frame")).toBeInTheDocument();
-    expect(screen.getByText("Acting Now")).toBeInTheDocument();
-    expect(screen.getByText("Aria")).toBeInTheDocument();
+    expect(screen.getByText("Active Scene")).toBeInTheDocument();
+    expect(screen.getByLabelText("Scene characters: Aria, Corin")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Inspect Aria" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Inspect Corin" })).toBeInTheDocument();
   });
 
-  it("shows a loading bar for pending on-stage statuses", () => {
+  it("shows collapsed scene descriptions with an expand control and allows reopening them", async () => {
+    const user = userEvent.setup();
+
+    function Preview() {
+      const [expanded, setExpanded] = useState(false);
+      return (
+        <OnStageSceneCard
+          sceneName={onStageFixtureCatalog.viewerPosted.scene.name}
+          sceneDescription={onStageFixtureCatalog.viewerPosted.scene.description}
+          sceneCharacters={onStageFixtureCatalog.viewerPosted.scene.characters}
+          resolvedInteractionCount={onStageFixtureCatalog.viewerPosted.scene.resolvedInteractionCount}
+          expanded={expanded}
+          onToggle={() => setExpanded((current) => !current)}
+        />
+      );
+    }
+
+    render(<Preview />);
+
+    expect(screen.getByRole("button", { name: "Expand scene description" })).toBeInTheDocument();
+    expect(screen.getByText(/^A humming ward seals the old vault/i)).toHaveClass("truncate");
+
+    await user.click(screen.getByRole("button", { name: "Expand scene description" }));
+    expect(screen.getByRole("button", { name: "Collapse scene description" })).toBeInTheDocument();
+    expect(screen.getByText(/hairline seam catches the lantern light/i)).toBeInTheDocument();
+  });
+
+  it("forwards scene portrait clicks when character inspection is enabled", async () => {
+    const user = userEvent.setup();
+    const onCharacterInspect = vi.fn();
+
     render(
       <OnStageSceneCard
-        sceneName={onStageFixtureCatalog.waitingOnGM.sceneName}
-        sceneDescription={onStageFixtureCatalog.waitingOnGM.sceneDescription}
-        gmOutputText={onStageFixtureCatalog.waitingOnGM.gmOutputText}
-        actingCharacterNames={onStageFixtureCatalog.waitingOnGM.actingCharacterNames}
-        status={{
-          label: "Waiting",
-          className: "badge-ghost",
-          indicator: "loading-bars",
-          tooltip: "Waiting for the GM to frame the next beat.",
-        }}
+        sceneName={onStageFixtureCatalog.viewerPosted.scene.name}
+        sceneDescription={onStageFixtureCatalog.viewerPosted.scene.description}
+        sceneCharacters={onStageFixtureCatalog.viewerPosted.scene.characters}
+        resolvedInteractionCount={onStageFixtureCatalog.viewerPosted.scene.resolvedInteractionCount}
+        expanded
+        onToggle={() => {}}
+        onCharacterInspect={onCharacterInspect}
       />,
     );
 
-    const status = screen.getByLabelText("On-stage status: Waiting");
-    expect(status.querySelector(".loading.loading-bars")).not.toBeNull();
-    expect(screen.getByText("Waiting")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Inspect Aria" }));
+    expect(onCharacterInspect).toHaveBeenCalledWith("char-aria");
   });
 });

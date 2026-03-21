@@ -74,7 +74,7 @@ const (
 	ScenePlayerPhaseAccept           command.Type = "scene.player_phase.accept"
 	ScenePlayerPhaseRequestRevisions command.Type = "scene.player_phase.request_revisions"
 	ScenePlayerPhaseEnd              command.Type = "scene.player_phase.end"
-	SceneGMOutputCommit              command.Type = "scene.gm_output.commit"
+	SceneGMInteractionCommit         command.Type = "scene.gm_interaction.commit"
 
 	// Daggerheart system commands.
 	DaggerheartGMMoveApply                  command.Type = "sys.daggerheart.gm_move.apply"

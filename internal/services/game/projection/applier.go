@@ -47,6 +47,8 @@ type Applier struct {
 	SceneSpotlight storage.SceneSpotlightStore
 	// SceneInteraction writes scene player-phase state.
 	SceneInteraction storage.SceneInteractionStore
+	// SceneGMInteraction writes immutable GM-authored interaction history.
+	SceneGMInteraction storage.SceneGMInteractionStore
 	// Adapters holds extension-specific projection hooks including
 	// system event application and character profile updates.
 	Adapters *bridge.AdapterRegistry

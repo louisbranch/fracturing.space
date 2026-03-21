@@ -34,7 +34,7 @@ func newFoldRouter() *fold.CoreFoldRouter[State] {
 	r.Handle(EventTypePlayerPhaseRevisionsRequested, foldPlayerPhaseRevisionsRequested)
 	r.Handle(EventTypePlayerPhaseAccepted, foldPlayerPhaseAccepted)
 	r.Handle(EventTypePlayerPhaseEnded, foldPlayerPhaseEnded)
-	r.Handle(EventTypeGMOutputCommitted, foldGMOutputCommitted)
+	r.Handle(EventTypeGMInteractionCommitted, foldGMInteractionCommitted)
 	return r
 }
 
@@ -89,7 +89,6 @@ func foldEnded(state State, _ event.Event) (State, error) {
 	state.SpotlightType = ""
 	state.SpotlightCharacterID = ""
 	state.PlayerPhaseID = ""
-	state.PlayerPhaseFrameText = ""
 	state.PlayerPhaseStatus = ""
 	state.PlayerPhaseActingCharacters = nil
 	state.PlayerPhaseActingParticipants = nil
@@ -157,7 +156,6 @@ func foldPlayerPhaseStarted(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
 	}
 	state.PlayerPhaseID = payload.PhaseID
-	state.PlayerPhaseFrameText = payload.FrameText
 	state.PlayerPhaseStatus = PlayerPhaseStatusPlayers
 	state.PlayerPhaseActingCharacters = append([]ids.CharacterID(nil), payload.ActingCharacterIDs...)
 	state.PlayerPhaseActingParticipants = make(map[ids.ParticipantID]bool, len(payload.ActingParticipantIDs))
@@ -277,7 +275,6 @@ func foldPlayerPhaseAccepted(state State, _ event.Event) (State, error) {
 
 func foldPlayerPhaseEnded(state State, _ event.Event) (State, error) {
 	state.PlayerPhaseID = ""
-	state.PlayerPhaseFrameText = ""
 	state.PlayerPhaseStatus = ""
 	state.PlayerPhaseActingCharacters = nil
 	state.PlayerPhaseActingParticipants = nil
@@ -285,12 +282,10 @@ func foldPlayerPhaseEnded(state State, _ event.Event) (State, error) {
 	return state, nil
 }
 
-func foldGMOutputCommitted(state State, evt event.Event) (State, error) {
-	var payload GMOutputCommittedPayload
+func foldGMInteractionCommitted(state State, evt event.Event) (State, error) {
+	var payload GMInteractionCommittedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
 	}
-	state.GMOutputText = payload.Text
-	state.GMOutputParticipantID = payload.ParticipantID
 	return state, nil
 }

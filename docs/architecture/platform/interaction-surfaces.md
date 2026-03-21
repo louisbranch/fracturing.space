@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-21"
 ---
 
 # Interaction Surfaces
@@ -26,11 +26,15 @@ remains the authority either way.
   - A session-level OOC overlay can pause scene play for participant/GM
     discussion and rulings.
 - `scene` owns in-character phase state.
-  - The GM opens a player phase by posting a frame and selecting the acting
-    character set.
+  - The GM opens a player phase by committing a `gm_interaction` and selecting
+    the acting character set.
   - Acting participants are derived from the owners of those characters.
   - Each acting participant owns one committed post and one revokable yield.
   - When all acting participants yield, authority returns to the GM.
+- `gm_interaction` owns authored GM content.
+  - One immutable interaction is committed for each GM-owned moment.
+  - Interactions contain ordered beats such as fiction, prompt, resolution,
+    consequence, and guidance.
 - Player authority is participant-scoped.
   - UI may present portraits and character-specific bubbles.
   - Rules-affecting writes remain participant-owned, even when one participant
@@ -47,17 +51,21 @@ Reads:
   - viewer participant
   - active session
   - active scene and roster
+  - current scene GM interaction
+  - scene GM interaction history
   - current player phase
   - session OOC overlay
 
 Writes:
 
 - `SetActiveScene`
+- `CommitSceneGMInteraction`
 - `StartScenePlayerPhase`
 - `SubmitScenePlayerPost`
 - `YieldScenePlayerPhase`
 - `UnyieldScenePlayerPhase`
 - `EndScenePlayerPhase`
+- `ResolveScenePlayerPhaseReview`
 - `PauseSessionForOOC`
 - `PostSessionOOC`
 - `MarkOOCReadyToResume`
@@ -75,12 +83,14 @@ persona state is no longer the authoritative game-surface contract.
   - OOC posts
   - ready-to-resume tracking
 - Scene events own:
+  - GM interaction commits
   - player phase start/end
   - participant posts
   - yield and unyield transitions
 - Projections expose:
   - session interaction state
-  - scene interaction state
+  - scene phase control state
+  - scene GM interaction history
 
 Typing indicators, draft text, and voice transport are not part of the domain
 event model. They remain transport concerns.
@@ -95,8 +105,9 @@ status rather than transcript routing controls.
 Expected behavior:
 
 - Show the active scene and which characters are currently acting.
-- Show the GM frame for the current player phase.
+- Show the latest GM interaction for the active scene.
 - Show the latest committed post per acting participant.
+- Allow inspection of prior GM interactions for the scene.
 - Show yielded participants and OOC ready-to-resume state.
 - Keep OOC display distinct from in-character scene display.
 

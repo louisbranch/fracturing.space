@@ -4,9 +4,12 @@ import type { BackstageMessage, BackstageMode, BackstageParticipant, BackstageRe
 import type {
   OnStageAIStatus,
   OnStageCharacterSummary,
+  OnStageGMBeatType,
+  OnStageGMInteraction,
   OnStageMode,
   OnStageParticipant,
   OnStageParticipantRailStatus,
+  OnStageScene,
   OnStageSlot,
   OnStageSlotReviewState,
   OnStageState,
@@ -31,6 +34,7 @@ import type {
   WireCharacterInspection,
   WireChatMessage,
   WireInteractionState,
+  WireGMInteraction,
   WireOOCState,
   WireParticipant,
   WirePlayerPhase,
@@ -43,6 +47,7 @@ import type {
 const KNOWN_AI_STATUSES = new Set<string>(["idle", "queued", "running", "failed"]);
 const KNOWN_REVIEW_STATES = new Set<string>(["open", "under-review", "accepted", "changes-requested"]);
 const KNOWN_ROLES = new Set<string>(["player", "gm"]);
+const KNOWN_GM_BEAT_TYPES = new Set<string>(["fiction", "prompt", "resolution", "consequence", "guidance"]);
 
 function safeAIStatus(raw: string | undefined): OnStageAIStatus {
   return KNOWN_AI_STATUSES.has(raw ?? "") ? (raw as OnStageAIStatus) : "idle";
@@ -54,6 +59,10 @@ function safeReviewState(raw: string | undefined): OnStageSlotReviewState {
 
 function safeRole(raw: string | undefined): "player" | "gm" {
   return KNOWN_ROLES.has(raw ?? "") ? (raw as "player" | "gm") : "player";
+}
+
+function safeGMBeatType(raw: string | undefined): OnStageGMBeatType {
+  return KNOWN_GM_BEAT_TYPES.has(raw ?? "") ? (raw as OnStageGMBeatType) : "fiction";
 }
 
 /** Returns whether the viewer has marked themselves "ready to resume" in the current OOC break. */
@@ -162,6 +171,7 @@ function mapOnStageState(
 
   const mode = deriveOnStageMode(phase, ooc, viewerPID);
   const aiStatus = safeAIStatus(aiTurn?.status);
+  const currentInteraction = scene?.current_interaction;
 
   const onStageParticipants: OnStageParticipant[] = participants.map((p) =>
     mapOnStageParticipant(p, phase, state.gm_authority_participant_id, catalog),
@@ -175,19 +185,75 @@ function mapOnStageState(
   return {
     mode,
     aiStatus,
-    sceneName: scene?.name ?? "",
-    sceneDescription: scene?.description,
-    gmOutputText: scene?.gm_output?.text,
-    frameText: phase?.frame_text,
+    scene: mapOnStageScene(scene, catalog),
+    currentInteraction: mapGMInteraction(currentInteraction),
+    interactionHistory: (scene?.interaction_history ?? [])
+      .map(mapGMInteraction)
+      .filter((interaction): interaction is OnStageGMInteraction => Boolean(interaction)),
     oocReason: undefined,
     viewerParticipantId: viewerPID,
     actingParticipantIds: phase?.acting_participant_ids ?? [],
-    actingCharacterNames: actingCharacterNames(phase, scene),
     gmAuthorityParticipantId: state.gm_authority_participant_id,
     participants: onStageParticipants,
     slots,
     characterInspectionCatalog: catalog,
     viewerControls,
+  };
+}
+
+function mapOnStageScene(
+  scene: WireScene | undefined,
+  catalog: PlayerHUDCharacterInspectionCatalog,
+): OnStageScene {
+  return {
+    id: scene?.scene_id ?? "",
+    name: scene?.name ?? "",
+    description: scene?.description,
+    characters: mapSceneCharacters(scene, catalog),
+    resolvedInteractionCount: scene?.interaction_history?.length ?? 0,
+  };
+}
+
+function mapSceneCharacters(
+  scene: WireScene | undefined,
+  catalog: PlayerHUDCharacterInspectionCatalog,
+): OnStageCharacterSummary[] {
+  return (scene?.characters ?? []).map((character) => ({
+    id: character.character_id,
+    name: catalog[character.character_id]?.card?.name ?? character.name ?? character.character_id,
+    avatarUrl: catalog[character.character_id]?.card?.portrait?.src?.trim() || undefined,
+  }));
+}
+
+function mapGMInteraction(interaction: WireGMInteraction | undefined): OnStageGMInteraction | undefined {
+  if (!interaction) {
+    return undefined;
+  }
+
+  return {
+    id: interaction.interaction_id,
+    title: interaction.title?.trim() || "GM Interaction",
+    characterIds: interaction.character_ids ?? [],
+    illustration: interaction.illustration?.image_url
+      ? {
+          imageUrl: interaction.illustration.image_url,
+          alt: interaction.illustration.alt?.trim() || "GM interaction illustration",
+          caption: interaction.illustration.caption?.trim() || undefined,
+        }
+      : undefined,
+    beats: (interaction.beats ?? [])
+      .map((beat) => {
+        const text = beat.text?.trim() ?? "";
+        if (!text) {
+          return null;
+        }
+        return {
+          id: beat.beat_id,
+          type: safeGMBeatType(beat.type),
+          text,
+        };
+      })
+      .filter((beat): beat is NonNullable<typeof beat> => Boolean(beat)),
   };
 }
 
@@ -242,14 +308,6 @@ function mapOnStageSlot(s: WirePlayerSlot, catalog: PlayerHUDCharacterInspection
     reviewState: safeReviewState(s.review_status),
     reviewReason: s.review_reason,
   };
-}
-
-function actingCharacterNames(phase: WirePlayerPhase | undefined, scene: WireScene | undefined): string[] {
-  const ids = phase?.acting_character_ids ?? [];
-  if (!scene?.characters) return [];
-  return ids
-    .map((id) => scene.characters.find((c) => c.character_id === id)?.name ?? "")
-    .filter(Boolean);
 }
 
 function deriveViewerControls(mode: OnStageMode, viewerSlot: WirePlayerSlot | undefined, viewerRole: string): OnStageViewerControls {

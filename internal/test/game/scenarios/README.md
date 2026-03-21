@@ -44,7 +44,10 @@ inside a step table to run that write as a specific GM or player participant:
 ```lua
 scn:interaction_start_player_phase({
   scene = "The Bridge",
-  frame_text = "What do you do next?",
+  interaction = {
+    title = "Bridge Prompt",
+    beats = {{type = "prompt", text = "What do you do next?"}},
+  },
   characters = {"Aria", "Corin"},
   as = "Guide",
 })
@@ -64,8 +67,7 @@ Supported interaction root methods:
 - `interaction_post`
 - `interaction_yield`
 - `interaction_unyield`
-- `interaction_accept_player_phase`
-- `interaction_request_revisions`
+- `interaction_resolve_review`
 - `interaction_end_player_phase`
 - `interaction_pause_ooc`
 - `interaction_post_ooc`

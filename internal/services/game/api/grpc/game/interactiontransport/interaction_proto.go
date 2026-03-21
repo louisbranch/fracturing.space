@@ -99,25 +99,59 @@ func sceneInteractionToProto(interaction storage.SceneInteraction) *campaignv1.S
 	return &campaignv1.ScenePlayerPhase{
 		PhaseId:              interaction.PhaseID,
 		Status:               scenePhaseStatusToProto(interaction.PhaseStatus),
-		FrameText:            interaction.FrameText,
 		ActingCharacterIds:   actingCharacters,
 		ActingParticipantIds: actingParticipants,
 		Slots:                slots,
 	}
 }
 
-func sceneGMOutputToProto(interaction storage.SceneInteraction) *campaignv1.InteractionGMOutput {
-	if strings.TrimSpace(interaction.GMOutputText) == "" {
+func sceneGMInteractionToProto(interaction storage.SceneGMInteraction) *campaignv1.GMInteraction {
+	if strings.TrimSpace(interaction.InteractionID) == "" {
 		return nil
 	}
-	output := &campaignv1.InteractionGMOutput{
-		Text:          interaction.GMOutputText,
-		ParticipantId: interaction.GMOutputParticipantID,
+	beats := make([]*campaignv1.GMInteractionBeat, 0, len(interaction.Beats))
+	for _, beat := range interaction.Beats {
+		beats = append(beats, &campaignv1.GMInteractionBeat{
+			BeatId: strings.TrimSpace(beat.BeatID),
+			Type:   gmInteractionBeatTypeToProto(beat.Type),
+			Text:   strings.TrimSpace(beat.Text),
+		})
 	}
-	if interaction.GMOutputUpdatedAt != nil {
-		output.UpdatedAt = timestamppb.New(*interaction.GMOutputUpdatedAt)
+	result := &campaignv1.GMInteraction{
+		InteractionId: strings.TrimSpace(interaction.InteractionID),
+		SceneId:       strings.TrimSpace(interaction.SceneID),
+		PhaseId:       strings.TrimSpace(interaction.PhaseID),
+		ParticipantId: strings.TrimSpace(interaction.ParticipantID),
+		Title:         strings.TrimSpace(interaction.Title),
+		CharacterIds:  append([]string(nil), interaction.CharacterIDs...),
+		Beats:         beats,
+		CreatedAt:     timestamppb.New(interaction.CreatedAt),
 	}
-	return output
+	if interaction.Illustration != nil {
+		result.Illustration = &campaignv1.GMInteractionIllustration{
+			ImageUrl: strings.TrimSpace(interaction.Illustration.ImageURL),
+			Alt:      strings.TrimSpace(interaction.Illustration.Alt),
+			Caption:  strings.TrimSpace(interaction.Illustration.Caption),
+		}
+	}
+	return result
+}
+
+func gmInteractionBeatTypeToProto(value scene.GMInteractionBeatType) campaignv1.GMInteractionBeatType {
+	switch value {
+	case scene.GMInteractionBeatTypeFiction:
+		return campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_FICTION
+	case scene.GMInteractionBeatTypePrompt:
+		return campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT
+	case scene.GMInteractionBeatTypeResolution:
+		return campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION
+	case scene.GMInteractionBeatTypeConsequence:
+		return campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE
+	case scene.GMInteractionBeatTypeGuidance:
+		return campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_GUIDANCE
+	default:
+		return campaignv1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_UNSPECIFIED
+	}
 }
 
 func scenePhaseStatusToProto(status scene.PlayerPhaseStatus) campaignv1.ScenePhaseStatus {

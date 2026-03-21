@@ -25,7 +25,12 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "Storm Ledge"})
 scn:interaction_start_player_phase{
   scene = "Storm Ledge",
-  frame_text = "The scout is slipping and the cliff path is crumbling under the rain. What do you do?",
+  interaction = {
+    title = "Scout On The Ledge",
+    beats = {
+      {type = "prompt", text = "The scout is slipping and the cliff path is crumbling under the rain. What do you do?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 
@@ -59,19 +64,33 @@ scn:interaction_expect{
     {participant = "Rhea", summary = "Aria darts for the loose mooring pin before the rope line tears free.", characters = {"Aria"}, yielded = true, review_status = "UNDER_REVIEW"}
   }
 }
-scn:interaction_accept_player_phase({as = "Guide"})
+scn:interaction_resolve_review({
+  as = "Guide",
+  return_to_gm = true,
+  interaction = {
+    title = "Scout Secured",
+    beats = {
+      {type = "resolution", text = "The first beat resolves and the scene returns briefly to the GM."},
+    },
+  },
+})
 
 -- Simulate the AI GM reacting to the result by narrowing the next beat to one player.
 scn:interaction_start_player_phase{
   scene = "Storm Ledge",
-  frame_text = "Aria has the line, but the scout is panicking. Corin, what do you say to keep them moving?",
+  interaction = {
+    title = "Talk The Scout Through It",
+    beats = {
+      {type = "prompt", text = "Aria has the line, but the scout is panicking. Corin, what do you say to keep them moving?"},
+    },
+  },
   characters = {"Corin"}
 }
 scn:interaction_expect{
   phase_status = "PLAYERS",
   acting_characters = {"Corin"},
   acting_participants = {"Bryn"},
-  frame_text = "Aria has the line, but the scout is panicking. Corin, what do you say to keep them moving?"
+  prompt = "Aria has the line, but the scout is panicking. Corin, what do you say to keep them moving?"
 }
 scn:interaction_post{
   as = "Bryn",

@@ -14,7 +14,7 @@ type CampaignTurnRunner interface {
 
 // DefaultCommitToolName is the tool name that signals a committed narration
 // output during a campaign turn. Callers may override via RunnerConfig.
-const DefaultCommitToolName = "interaction_scene_gm_output_commit"
+const DefaultCommitToolName = "interaction_scene_gm_interaction_commit"
 
 // RunnerConfig defines orchestration runtime policy for campaign turns.
 type RunnerConfig struct {

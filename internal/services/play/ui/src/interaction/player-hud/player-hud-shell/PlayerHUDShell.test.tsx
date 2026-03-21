@@ -42,7 +42,9 @@ describe("PlayerHUDShell", () => {
     expect(screen.getByLabelText("Connection status: Connected")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "On Stage" })).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
-    expect(screen.getByText(/banked lightning/i)).toBeInTheDocument();
+    expect(screen.getByText("Drowned Chapel Vault")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand scene description" })).toBeInTheDocument();
+    expect(screen.getByLabelText("On-stage GM interaction")).toBeInTheDocument();
     expect(screen.getByText(/if this goes wrong, i need to know which compromise/i)).toBeInTheDocument();
     expect(screen.getByText(/one moment where the ward's recoil is weakest/i)).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage slot by Ives")).toBeInTheDocument();

@@ -59,6 +59,7 @@ func (s ProjectionStores) requirements() []dependencyRequirement {
 		{name: "SceneGate", configured: s.SceneGate != nil},
 		{name: "SceneSpotlight", configured: s.SceneSpotlight != nil},
 		{name: "SceneInteraction", configured: s.SceneInteraction != nil},
+		{name: "SceneGMInteraction", configured: s.SceneGMInteraction != nil},
 		{name: "CampaignFork", configured: s.CampaignFork != nil},
 	}
 }

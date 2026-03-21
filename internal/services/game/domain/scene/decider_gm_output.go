@@ -10,8 +10,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
-func decideGMOutputCommit(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
-	var payload GMOutputCommittedPayload
+func decideGMInteractionCommit(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
+	var payload GMInteractionCommittedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 	}
@@ -30,21 +30,29 @@ func decideGMOutputCommit(scenes map[ids.SceneID]State, cmd command.Command, now
 	}
 	if strings.TrimSpace(payload.ParticipantID.String()) == "" {
 		return command.Reject(command.Rejection{
-			Code:    rejectionCodeSceneGMOutputParticipantRequired,
+			Code:    rejectionCodeSceneGMInteractionParticipantRequired,
 			Message: "participant id is required",
 		})
 	}
-	text := strings.TrimSpace(payload.Text)
-	if text == "" {
+	title := strings.TrimSpace(payload.Title)
+	if title == "" {
 		return command.Reject(command.Rejection{
-			Code:    rejectionCodeSceneGMOutputRequired,
-			Message: "gm output text is required",
+			Code:    rejectionCodeSceneGMInteractionTitleRequired,
+			Message: "gm interaction title is required",
 		})
 	}
+	beats, rejection := normalizeGMInteractionBeats(payload.Beats)
+	if rejection != nil {
+		return command.Reject(*rejection)
+	}
 	payload.SceneID = ids.SceneID(sceneID)
-	payload.Text = text
+	payload.Title = title
+	payload.InteractionID = strings.TrimSpace(payload.InteractionID)
+	payload.PhaseID = strings.TrimSpace(payload.PhaseID)
+	payload.CharacterIDs = normalizeCharacterIDs(payload.CharacterIDs)
+	payload.Beats = beats
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeGMOutputCommitted, "scene", sceneID, payloadJSON, now().UTC())
+	evt := command.NewEvent(cmd, EventTypeGMInteractionCommitted, "scene", sceneID, payloadJSON, now().UTC())
 	evt.SceneID = ids.SceneID(sceneID)
 	return command.Accept(evt)
 }

@@ -41,7 +41,7 @@ func TestStoresValidate(t *testing.T) {
 			"Campaign", "Participant", "ClaimIndex", "Invite",
 			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
 			"SessionSpotlight", "SessionInteraction", "Scene", "SceneCharacter",
-			"SceneGate", "SceneSpotlight", "SceneInteraction",
+			"SceneGate", "SceneSpotlight", "SceneInteraction", "SceneGMInteraction",
 			"Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
 			"Write.Executor", "Write.Runtime",
@@ -86,6 +86,7 @@ func TestRootStoreConcernBuilders(t *testing.T) {
 		SceneGateStore:           stubSceneGateStore{},
 		SceneSpotlightStore:      stubSceneSpotlightStore{},
 		CampaignForkStore:        &gametest.FakeCampaignForkStore{},
+		SceneGMInteractionStore:  stubSceneGMInteractionStore{},
 		StatisticsStore:          &gametest.FakeStatisticsStore{},
 		SnapshotStore:            stubSnapshot{},
 		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
@@ -143,6 +144,7 @@ func TestNewRuntimeStores_AuditWiring(t *testing.T) {
 		SceneGateStore:           stubSceneGateStore{},
 		SceneSpotlightStore:      stubSceneSpotlightStore{},
 		CampaignForkStore:        &gametest.FakeCampaignForkStore{},
+		SceneGMInteractionStore:  stubSceneGMInteractionStore{},
 		StatisticsStore:          &gametest.FakeStatisticsStore{},
 		SnapshotStore:            stubSnapshot{},
 		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
@@ -208,6 +210,7 @@ func validRootStoreGroups() rootStoreGroupsFixture {
 			SceneGate:          stubSceneGateStore{},
 			SceneSpotlight:     stubSceneSpotlightStore{},
 			SceneInteraction:   stubSceneInteractionStore{},
+			SceneGMInteraction: stubSceneGMInteractionStore{},
 			CampaignFork:       &gametest.FakeCampaignForkStore{},
 		},
 		system: SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}},
@@ -244,6 +247,9 @@ type stubSceneCharacterStore struct{ storage.SceneCharacterStore }
 type stubSceneGateStore struct{ storage.SceneGateStore }
 type stubSceneSpotlightStore struct{ storage.SceneSpotlightStore }
 type stubSceneInteractionStore struct{ storage.SceneInteractionStore }
+type stubSceneGMInteractionStore struct {
+	storage.SceneGMInteractionStore
+}
 
 // projectionStoreStub satisfies storage.ProjectionStore for test construction.
 type projectionStoreStub struct {
@@ -262,6 +268,7 @@ type projectionStoreStub struct {
 	storage.SceneGateStore
 	storage.SceneSpotlightStore
 	storage.SceneInteractionStore
+	storage.SceneGMInteractionStore
 	storage.SnapshotStore
 	storage.StatisticsStore
 	storage.ProjectionWatermarkStore

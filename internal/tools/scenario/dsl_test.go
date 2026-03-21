@@ -306,7 +306,15 @@ scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Hand GM authority to a named participant and open a player phase.
 scn:interaction_set_gm_authority({participant = "Guide", as = "Guide"})
-scn:interaction_start_player_phase({scene = "The Bridge", frame_text = "What do you do?", characters = {"Aria", "Corin"}, as = "Guide"})
+scn:interaction_start_player_phase({
+  scene = "The Bridge",
+  interaction = {
+    title = "Opening Beat",
+    beats = {{type = "prompt", text = "What do you do?"}},
+  },
+  characters = {"Aria", "Corin"},
+  as = "Guide",
+})
 scn:interaction_post({summary = "Aria rushes forward.", characters = {"Aria"}, as = "Rhea", yield = true})
 scn:interaction_resume_ooc()
 
@@ -329,8 +337,17 @@ return scn
 	if scenario.Steps[2].Kind != "interaction_start_player_phase" {
 		t.Fatalf("step[2].Kind = %q", scenario.Steps[2].Kind)
 	}
-	if scenario.Steps[2].Args["frame_text"] != "What do you do?" {
-		t.Fatalf("frame_text = %v, want prompt", scenario.Steps[2].Args["frame_text"])
+	interactionArgs, ok := scenario.Steps[2].Args["interaction"].(map[string]any)
+	if !ok {
+		t.Fatalf("interaction = %#v, want table", scenario.Steps[2].Args["interaction"])
+	}
+	beats, ok := interactionArgs["beats"].([]any)
+	if !ok || len(beats) != 1 {
+		t.Fatalf("interaction.beats = %#v, want single beat", interactionArgs["beats"])
+	}
+	beat, ok := beats[0].(map[string]any)
+	if !ok || beat["text"] != "What do you do?" {
+		t.Fatalf("interaction beat = %#v, want prompt", beats[0])
 	}
 	if scenario.Steps[3].Kind != "interaction_post" {
 		t.Fatalf("step[3].Kind = %q", scenario.Steps[3].Kind)
@@ -353,9 +370,27 @@ scn:interaction_set_active_scene({scene = "The Bridge"})
 scn:interaction_yield({as = "Rhea"})
 scn:interaction_unyield({as = "Rhea"})
 scn:interaction_end_player_phase({reason = "gm_interrupted"})
-scn:interaction_accept_player_phase({as = "Guide"})
-scn:interaction_request_revisions({as = "Guide", revisions = {{participant = "Rhea", reason = "Clarify", characters = {"Aria"}}}})
-scn:interaction_resolve_review({as = "Guide", gm_output_text = "The bridge buckles.", frame_text = "Who catches the lantern?", characters = {"Aria"}})
+scn:interaction_resolve_review({
+  as = "Guide",
+  return_to_gm = true,
+  interaction = {title = "Resolution", beats = {{type = "resolution", text = "The bridge settles."}}},
+})
+scn:interaction_resolve_review({
+  as = "Guide",
+  interaction = {title = "Clarify", beats = {{type = "guidance", text = "Clarify"}}},
+  revisions = {{participant = "Rhea", reason = "Clarify", characters = {"Aria"}}},
+})
+scn:interaction_resolve_review({
+  as = "Guide",
+  interaction = {
+    title = "Bridge Buckles",
+    beats = {
+      {type = "fiction", text = "The bridge buckles."},
+      {type = "prompt", text = "Who catches the lantern?"},
+    },
+  },
+  characters = {"Aria"},
+})
 scn:interaction_pause_ooc({reason = "clarify the ruling"})
 scn:interaction_post_ooc({as = "Rhea", body = "Question?"})
 scn:interaction_ready_ooc({as = "Rhea"})
@@ -377,8 +412,8 @@ return scn
 		"interaction_yield",
 		"interaction_unyield",
 		"interaction_end_player_phase",
-		"interaction_accept_player_phase",
-		"interaction_request_revisions",
+		"interaction_resolve_review",
+		"interaction_resolve_review",
 		"interaction_resolve_review",
 		"interaction_pause_ooc",
 		"interaction_post_ooc",

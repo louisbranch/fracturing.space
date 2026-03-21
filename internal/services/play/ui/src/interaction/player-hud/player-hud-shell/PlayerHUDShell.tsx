@@ -79,8 +79,8 @@ export function PlayerHUDShell({
             onTabChange={onTabChange}
           />
 
-          <div className="flex min-h-0 flex-1">
-            <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1">
+            <div className="flex min-h-0 min-w-0 flex-1">
               {activeTab === "on-stage" ? (
                 <PanelErrorBoundary panelName="On Stage">
                   <OnStagePanel

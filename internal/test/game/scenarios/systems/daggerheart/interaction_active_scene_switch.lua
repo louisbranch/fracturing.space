@@ -31,7 +31,12 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "North Gate"})
 scn:interaction_start_player_phase{
   scene = "North Gate",
-  frame_text = "The gate guards are changing watch. Aria, what do you do?",
+  interaction = {
+    title = "Changing Watch",
+    beats = {
+      {type = "prompt", text = "The gate guards are changing watch. Aria, what do you do?"},
+    },
+  },
   characters = {"Aria"}
 }
 scn:interaction_post{
@@ -61,7 +66,12 @@ scn:interaction_expect{
 -- The new active scene is now the only one that can open a player phase.
 scn:interaction_start_player_phase{
   scene = "South Tunnel",
-  frame_text = "Corin, the tunnel opens beneath the keep. What do you do next?",
+  interaction = {
+    title = "Tunnel Opening",
+    beats = {
+      {type = "prompt", text = "Corin, the tunnel opens beneath the keep. What do you do next?"},
+    },
+  },
   characters = {"Corin"}
 }
 scn:interaction_post{

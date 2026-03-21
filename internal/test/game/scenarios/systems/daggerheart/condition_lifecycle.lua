@@ -16,7 +16,7 @@ dh:adversary("Galadriel")
 scn:start_session("Conditions")
 dh:gm_fear(3)
 
--- Galadriel becomes Vulnerable, then the GM spends Fear to frame the break free.
+-- Galadriel becomes Vulnerable, then the GM spends Fear to drive the break free.
 dh:apply_condition{
   target = "Galadriel",
   add = { "VULNERABLE" },

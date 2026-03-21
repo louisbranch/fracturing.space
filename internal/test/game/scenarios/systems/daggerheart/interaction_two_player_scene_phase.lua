@@ -25,7 +25,12 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "The Bridge"})
 scn:interaction_start_player_phase{
   scene = "The Bridge",
-  frame_text = "The bridge jerks under your boots and the far ropes groan. What do you do?",
+  interaction = {
+    title = "Bridge Prompt",
+    beats = {
+      {type = "prompt", text = "The bridge jerks under your boots and the far ropes groan. What do you do?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 scn:interaction_expect{

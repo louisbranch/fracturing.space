@@ -38,14 +38,6 @@ func scenarioInteractionEndPlayerPhase(state *lua.State) int {
 	return interactionStep(state, "interaction_end_player_phase")
 }
 
-func scenarioInteractionAcceptPlayerPhase(state *lua.State) int {
-	return interactionStep(state, "interaction_accept_player_phase")
-}
-
-func scenarioInteractionRequestRevisions(state *lua.State) int {
-	return interactionStep(state, "interaction_request_revisions")
-}
-
 func scenarioInteractionResolveReview(state *lua.State) int {
 	return interactionStep(state, "interaction_resolve_review")
 }

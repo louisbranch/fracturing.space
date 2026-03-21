@@ -196,7 +196,7 @@ func TestGateProjectionJSONErrorAndNilHelpers(t *testing.T) {
 }
 
 func TestStoredGateProjectionGenericWorkflowHelpers(t *testing.T) {
-	stored, err := BuildStoredGateMetadata("gm_prompt", map[string]any{
+	stored, err := BuildStoredGateMetadata("gm_interaction", map[string]any{
 		"eligible_participant_ids": []string{"p2", "p1"},
 		"response_authority":       GateResponseAuthorityParticipant,
 		"note":                     "handoff",
@@ -211,18 +211,18 @@ func TestStoredGateProjectionGenericWorkflowHelpers(t *testing.T) {
 		t.Fatalf("generic extra note = %#v", got)
 	}
 
-	metadataMap, err := BuildGateMetadataMapFromStored("gm_prompt", stored)
+	metadataMap, err := BuildGateMetadataMapFromStored("gm_interaction", stored)
 	if err != nil {
 		t.Fatalf("build generic metadata map: %v", err)
 	}
 	if got := metadataMap["note"]; got != "handoff" {
 		t.Fatalf("generic metadata note = %#v", got)
 	}
-	if got, err := BuildGateMetadataMapFromStored("gm_prompt", StoredGateMetadata{}); err != nil || got != nil {
+	if got, err := BuildGateMetadataMapFromStored("gm_interaction", StoredGateMetadata{}); err != nil || got != nil {
 		t.Fatalf("empty generic metadata map = %#v err=%v", got, err)
 	}
 
-	progress, err := BuildGateProgressFromResponses("gm_prompt", nil, nil)
+	progress, err := BuildGateProgressFromResponses("gm_interaction", nil, nil)
 	if err != nil {
 		t.Fatalf("build generic progress: %v", err)
 	}

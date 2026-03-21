@@ -24,7 +24,12 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "Sealed Vault"})
 scn:interaction_start_player_phase{
   scene = "Sealed Vault",
-  frame_text = "The ward crackles when either of you nears the seam. What do you do?",
+  interaction = {
+    title = "Ward At The Seam",
+    beats = {
+      {type = "prompt", text = "The ward crackles when either of you nears the seam. What do you do?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 scn:interaction_pause_ooc({as = "Rhea", reason = "Clarify how the ward reacts to tools."})
@@ -60,8 +65,13 @@ scn:interaction_expect{
 }
 scn:interaction_resolve_interrupted_phase{
   as = "Guide",
-  gm_output_text = "The ward's crackle changes once you understand the seam is the trigger.",
-  frame_text = "Aria, now that you know the seam is the trigger, how do you pry the vault open?",
+  interaction = {
+    title = "The Seam Is The Trigger",
+    beats = {
+      {type = "fiction", text = "The ward's crackle changes once you understand the seam is the trigger."},
+      {type = "prompt", text = "Aria, now that you know the seam is the trigger, how do you pry the vault open?"},
+    },
+  },
   characters = {"Aria", "Corin"}
 }
 scn:interaction_post{

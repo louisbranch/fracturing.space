@@ -74,6 +74,7 @@ func TestCheckMissingStores_AllPresent(t *testing.T) {
 		SceneGate:          newFakeSceneGateStore(),
 		SceneSpotlight:     newFakeSceneSpotlightStore(),
 		SceneInteraction:   newFakeSceneInteractionStore(),
+		SceneGMInteraction: newFakeSceneGMInteractionStore(),
 		Adapters:           bridge.NewAdapterRegistry(),
 	}
 	missing := checkMissingStores(storeCampaign|storeCharacter|storeParticipant, applier)
@@ -122,6 +123,7 @@ func TestValidateStorePreconditions_PassesWhenAllConfigured(t *testing.T) {
 		SceneGate:          newFakeSceneGateStore(),
 		SceneSpotlight:     newFakeSceneSpotlightStore(),
 		SceneInteraction:   newFakeSceneInteractionStore(),
+		SceneGMInteraction: newFakeSceneGMInteractionStore(),
 		Adapters:           bridge.NewAdapterRegistry(),
 	}
 	if err := applier.ValidateStorePreconditions(); err != nil {

@@ -47,14 +47,14 @@ describe("player HUD view models", () => {
       className: "badge-ghost",
       indicator: "loading-bars",
       label: "Waiting",
-      tooltip: "Waiting for the GM to frame the next beat.",
+      tooltip: "Waiting for the GM to open the next beat.",
     });
 
     expect(onStageStatusBadge(onStageFixtureCatalog.aiThinking)).toEqual({
       className: "badge-info badge-soft",
       indicator: "loading-bars",
       label: "AI Thinking",
-      tooltip: "The next beat is being framed. Hold position until the scene opens again.",
+      tooltip: "The next prompt is being prepared. Hold position until the scene opens again.",
     });
 
     expect(onStageStatusBadge(onStageFixtureCatalog.aiFailed)).toEqual({

@@ -151,7 +151,7 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 		"system_reference_search",
 		"scene_create",
 		"interaction_active_scene_set",
-		"interaction_scene_gm_output_commit",
+		"interaction_scene_gm_interaction_commit",
 		"interaction_scene_player_phase_start",
 	); err != nil {
 		t.Fatalf("fixture tool coverage: %v", err)
@@ -435,10 +435,10 @@ func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, re
 			case "scene_create":
 				sceneName = asString(call.Arguments["name"])
 				sceneDesc = asString(call.Arguments["description"])
-			case "interaction_scene_gm_output_commit":
-				gmNarration = asString(call.Arguments["text"])
+			case "interaction_scene_gm_interaction_commit":
+				gmNarration = interactionBeatText(call.Arguments["interaction"], "fiction")
 			case "interaction_scene_player_phase_start":
-				playerFrame = asString(call.Arguments["frame_text"])
+				playerFrame = interactionBeatText(call.Arguments["interaction"], "prompt")
 			case "campaign_memory_section_update":
 				memoryContent = asString(call.Arguments["content"])
 			case "campaign_artifact_upsert":
@@ -496,4 +496,30 @@ func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, re
 		t.Fatalf("write quality report: %v", err)
 	}
 	return path
+}
+
+func interactionBeatText(raw any, beatType string) string {
+	interaction, ok := raw.(map[string]any)
+	if !ok {
+		return ""
+	}
+	beats, ok := interaction["beats"].([]any)
+	if !ok {
+		return ""
+	}
+	lastNonEmpty := ""
+	for _, entry := range beats {
+		beat, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		text := asString(beat["text"])
+		if strings.TrimSpace(text) != "" {
+			lastNonEmpty = text
+		}
+		if strings.EqualFold(asString(beat["type"]), beatType) {
+			return text
+		}
+	}
+	return lastNonEmpty
 }

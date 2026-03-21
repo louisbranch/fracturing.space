@@ -104,7 +104,7 @@ describe("mapToPlayerHUDState", () => {
 
     expect(state.activeTab).toBe("on-stage");
     expect(state.connectionState).toBe("connected");
-    expect(state.onStage.sceneName).toBe("The Tavern");
+    expect(state.onStage.scene.name).toBe("The Tavern");
     expect(state.onStage.viewerParticipantId).toBe("p1");
     expect(state.backstage.viewerParticipantId).toBe("p1");
     expect(state.sideChat.viewerParticipantId).toBe("p1");

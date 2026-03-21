@@ -27,7 +27,6 @@ func (a Applier) applyScenePlayerPhaseStarted(ctx context.Context, evt event.Eve
 	current.PhaseOpen = true
 	current.PhaseID = strings.TrimSpace(payload.PhaseID)
 	current.PhaseStatus = scene.PlayerPhaseStatusPlayers
-	current.FrameText = strings.TrimSpace(payload.FrameText)
 	current.ActingCharacterIDs = characterIDsToStrings(payload.ActingCharacterIDs)
 	current.ActingParticipantIDs = participantIDsToStrings(payload.ActingParticipantIDs)
 	current.Slots = newScenePlayerSlots(current.ActingParticipantIDs)
@@ -66,7 +65,7 @@ func (a Applier) applyScenePlayerPhaseYielded(ctx context.Context, evt event.Eve
 	return a.applySceneYieldMutation(ctx, evt, strings.TrimSpace(payload.SceneID.String()), strings.TrimSpace(payload.ParticipantID.String()), true)
 }
 
-func (a Applier) applySceneGMOutputCommitted(ctx context.Context, evt event.Event, payload scene.GMOutputCommittedPayload) error {
+func (a Applier) applySceneGMInteractionCommitted(ctx context.Context, evt event.Event, payload scene.GMInteractionCommittedPayload) error {
 	updatedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
 		return err
@@ -75,15 +74,33 @@ func (a Applier) applySceneGMOutputCommitted(ctx context.Context, evt event.Even
 	if err != nil {
 		return err
 	}
-	current, err := loadSceneInteraction(ctx, a.SceneInteraction, string(evt.CampaignID), sceneID, evt.SessionID.String())
-	if err != nil {
-		return err
+	interaction := storage.SceneGMInteraction{
+		CampaignID:    string(evt.CampaignID),
+		SceneID:       sceneID,
+		SessionID:     strings.TrimSpace(evt.SessionID.String()),
+		InteractionID: strings.TrimSpace(payload.InteractionID),
+		PhaseID:       strings.TrimSpace(payload.PhaseID),
+		ParticipantID: strings.TrimSpace(payload.ParticipantID.String()),
+		Title:         strings.TrimSpace(payload.Title),
+		CharacterIDs:  characterIDsToStrings(payload.CharacterIDs),
+		Beats:         make([]storage.SceneGMInteractionBeat, 0, len(payload.Beats)),
+		CreatedAt:     updatedAt,
 	}
-	current.GMOutputText = strings.TrimSpace(payload.Text)
-	current.GMOutputParticipantID = strings.TrimSpace(payload.ParticipantID.String())
-	current.GMOutputUpdatedAt = timePtr(updatedAt)
-	current.UpdatedAt = updatedAt
-	return a.SceneInteraction.PutSceneInteraction(ctx, current)
+	if payload.Illustration != nil {
+		interaction.Illustration = &storage.SceneGMInteractionIllustration{
+			ImageURL: strings.TrimSpace(payload.Illustration.ImageURL),
+			Alt:      strings.TrimSpace(payload.Illustration.Alt),
+			Caption:  strings.TrimSpace(payload.Illustration.Caption),
+		}
+	}
+	for _, beat := range payload.Beats {
+		interaction.Beats = append(interaction.Beats, storage.SceneGMInteractionBeat{
+			BeatID: strings.TrimSpace(beat.BeatID),
+			Type:   beat.Type,
+			Text:   strings.TrimSpace(beat.Text),
+		})
+	}
+	return a.SceneGMInteraction.PutSceneGMInteraction(ctx, interaction)
 }
 
 func (a Applier) applyScenePlayerPhaseReviewStarted(ctx context.Context, evt event.Event, payload scene.PlayerPhaseReviewStartedPayload) error {
@@ -186,7 +203,6 @@ func (a Applier) applyScenePlayerPhaseEnded(ctx context.Context, evt event.Event
 	current.PhaseOpen = false
 	current.PhaseID = ""
 	current.PhaseStatus = ""
-	current.FrameText = ""
 	current.ActingCharacterIDs = []string{}
 	current.ActingParticipantIDs = []string{}
 	current.Slots = []storage.ScenePlayerSlot{}

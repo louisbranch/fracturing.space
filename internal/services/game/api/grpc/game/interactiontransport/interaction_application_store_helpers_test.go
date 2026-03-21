@@ -245,6 +245,22 @@ func (interactionSceneInteractionStoreStub) PutSceneInteraction(context.Context,
 	return nil
 }
 
+type interactionSceneGMInteractionStoreStub struct {
+	interactions map[string][]storage.SceneGMInteraction
+	err          error
+}
+
+func (s interactionSceneGMInteractionStoreStub) ListSceneGMInteractions(_ context.Context, campaignID, sceneID string) ([]storage.SceneGMInteraction, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return append([]storage.SceneGMInteraction(nil), s.interactions[campaignID+":"+sceneID]...), nil
+}
+
+func (interactionSceneGMInteractionStoreStub) PutSceneGMInteraction(context.Context, storage.SceneGMInteraction) error {
+	return nil
+}
+
 func TestInteractionApplicationLoadActiveSessionInteractionDefaultsMissingProjection(t *testing.T) {
 	t.Parallel()
 
@@ -292,7 +308,8 @@ func TestInteractionApplicationLoadSceneStateSortsCharactersAndDefaultsInteracti
 					},
 				},
 			},
-			SceneInteraction: interactionSceneInteractionStoreStub{},
+			SceneInteraction:   interactionSceneInteractionStoreStub{},
+			SceneGMInteraction: interactionSceneGMInteractionStoreStub{},
 		},
 	}
 
@@ -310,6 +327,44 @@ func TestInteractionApplicationLoadSceneStateSortsCharactersAndDefaultsInteracti
 		t.Fatalf("scene characters = %#v, want sorted surviving records", sceneView.GetCharacters())
 	}
 	if interaction.SceneID != "scene-1" || len(interaction.Slots) != 0 || len(interaction.ActingParticipantIDs) != 0 {
+		t.Fatalf("interaction = %#v", interaction)
+	}
+}
+
+func TestInteractionApplicationLoadSceneStateDefaultsMissingGMInteractionStore(t *testing.T) {
+	t.Parallel()
+
+	characters := gametest.NewFakeCharacterStore()
+	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-1", Name: "Aria", OwnerParticipantID: "p1"})
+
+	app := interactionApplication{
+		stores: interactionApplicationStores{
+			Character: characters,
+			SceneCharacter: interactionSceneCharacterStoreStub{
+				records: map[string][]storage.SceneCharacterRecord{
+					"camp-1:scene-1": {
+						{CampaignID: "camp-1", SceneID: "scene-1", CharacterID: "char-1"},
+					},
+				},
+			},
+			SceneInteraction: interactionSceneInteractionStoreStub{},
+		},
+	}
+
+	sceneView, interaction, err := app.loadSceneState(context.Background(), "camp-1", storage.SceneRecord{
+		CampaignID:  "camp-1",
+		SceneID:     "scene-1",
+		SessionID:   "sess-1",
+		Name:        "Bridge",
+		Description: "A rope bridge.",
+	})
+	if err != nil {
+		t.Fatalf("loadSceneState error = %v", err)
+	}
+	if sceneView.GetCurrentInteraction() != nil || len(sceneView.GetInteractionHistory()) != 0 {
+		t.Fatalf("scene interactions = %#v, want empty defaults", sceneView)
+	}
+	if interaction.SceneID != "scene-1" || len(interaction.Slots) != 0 {
 		t.Fatalf("interaction = %#v", interaction)
 	}
 }
@@ -548,7 +603,6 @@ func TestInteractionApplicationLoadSceneStateReturnsStoredInteraction(t *testing
 						SessionID:            "sess-1",
 						PhaseOpen:            true,
 						PhaseID:              "phase-1",
-						FrameText:            "What do you do?",
 						ActingCharacterIDs:   []string{"char-1"},
 						ActingParticipantIDs: []string{"p1"},
 						Slots: []storage.ScenePlayerSlot{{
@@ -559,6 +613,7 @@ func TestInteractionApplicationLoadSceneStateReturnsStoredInteraction(t *testing
 					},
 				},
 			},
+			SceneGMInteraction: interactionSceneGMInteractionStoreStub{},
 		},
 	}
 

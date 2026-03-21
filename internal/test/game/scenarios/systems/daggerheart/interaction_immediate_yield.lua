@@ -23,7 +23,12 @@ scn:interaction_set_gm_authority({participant = "Guide"})
 scn:interaction_set_active_scene({scene = "Slate Roof"})
 scn:interaction_start_player_phase{
   scene = "Slate Roof",
-  frame_text = "The alley below is quiet for the moment. Do you act now or keep watching?",
+  interaction = {
+    title = "Quiet Alley",
+    beats = {
+      {type = "prompt", text = "The alley below is quiet for the moment. Do you act now or keep watching?"},
+    },
+  },
   characters = {"Aria"}
 }
 scn:interaction_expect{
@@ -39,7 +44,16 @@ scn:interaction_expect{
   },
   gm_authority = "Guide"
 }
-scn:interaction_accept_player_phase({as = "Guide"})
+scn:interaction_resolve_review({
+  as = "Guide",
+  return_to_gm = true,
+  interaction = {
+    title = "Watching The Alley",
+    beats = {
+      {type = "resolution", text = "Aria yields the moment and the scene returns to GM control."},
+    },
+  },
+})
 scn:interaction_expect{
   phase_status = "GM",
   slots = {},

@@ -29,7 +29,7 @@ func TestFoldHandledTypes_ReturnsSceneEventContract(t *testing.T) {
 		EventTypePlayerPhaseRevisionsRequested,
 		EventTypePlayerPhaseAccepted,
 		EventTypePlayerPhaseEnded,
-		EventTypeGMOutputCommitted,
+		EventTypeGMInteractionCommitted,
 	}
 
 	if got := FoldHandledTypes(); !testcontracts.EqualSlices(got, want) {
@@ -68,7 +68,7 @@ func TestDeciderHandledCommands_ReturnsSceneCommandContract(t *testing.T) {
 		CommandTypePlayerPhaseAccept,
 		CommandTypePlayerPhaseRequestRevisions,
 		CommandTypePlayerPhaseEnd,
-		CommandTypeGMOutputCommit,
+		CommandTypeGMInteractionCommit,
 	}
 
 	if got := DeciderHandledCommands(); !testcontracts.EqualSlices(got, want) {

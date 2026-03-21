@@ -180,28 +180,24 @@ func (a interactionApplication) ResolveInterruptedScenePhase(ctx context.Context
 		if err != nil {
 			return nil, err
 		}
-		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, replace.GetCharacterIds())
+		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, replace.GetNextCharacterIds())
 		if err != nil {
 			return nil, err
-		}
-		if gmOutputText := strings.TrimSpace(replace.GetGmOutputText()); gmOutputText != "" {
-			payload := scene.GMOutputCommittedPayload{
-				SceneID:       ids.SceneID(targetSceneID),
-				ParticipantID: ids.ParticipantID(actor.ID),
-				Text:          gmOutputText,
-			}
-			if err := a.executeSceneCommand(ctx, commandTypeSceneGMOutputCommit, campaignID, activeSession.ID, targetSceneID, payload, "scene.gm_output.commit"); err != nil {
-				return nil, err
-			}
 		}
 		phaseID, err := a.idGenerator()
 		if err != nil {
 			return nil, grpcerror.Internal("generate scene phase id", err)
 		}
+		interactionPayload, err := a.buildGMInteractionPayload(replace.GetInteraction(), ids.SceneID(targetSceneID), phaseID, ids.ParticipantID(actor.ID))
+		if err != nil {
+			return nil, err
+		}
+		if err := a.executeSceneCommand(ctx, commandTypeSceneGMInteractionCommit, campaignID, activeSession.ID, targetSceneID, interactionPayload, "scene.gm_interaction.commit"); err != nil {
+			return nil, err
+		}
 		payload := scene.PlayerPhaseStartedPayload{
 			SceneID:              ids.SceneID(targetSceneID),
 			PhaseID:              phaseID,
-			FrameText:            strings.TrimSpace(replace.GetFrameText()),
 			ActingCharacterIDs:   actingCharacterIDs,
 			ActingParticipantIDs: actingParticipantIDs,
 		}
