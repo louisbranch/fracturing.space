@@ -103,12 +103,12 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 	}
 
 	hub.handleTyping(session, wsFrame{
-		Type:      "play.chat.typing",
+		Type:      "play.typing",
 		RequestID: "req-2",
 		Payload:   mustJSON(typingPayload{Active: true}),
-	}, "play.chat.typing")
+	})
 	typingFrames := drainWSFrames(t, &buffer)
-	if len(typingFrames) != 1 || typingFrames[0].Type != "play.chat.typing" {
+	if len(typingFrames) != 1 || typingFrames[0].Type != "play.typing" {
 		t.Fatalf("typing frames = %#v", typingFrames)
 	}
 
@@ -173,6 +173,121 @@ func TestRealtimeChatSendRequiresActiveSession(t *testing.T) {
 	}
 	if transcripts.appendArgs.request.Scope.SessionID != "" || transcripts.appendArgs.request.Body != "" {
 		t.Fatalf("append args = %#v, want zero value", transcripts.appendArgs)
+	}
+}
+
+func TestRealtimeTypingRequiresCampaignRoom(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+	defer hub.Close()
+
+	var buffer bytes.Buffer
+	session := &realtimeSession{
+		userID:          "user-1",
+		peer:            &wsPeer{encoder: json.NewEncoder(&buffer)},
+		campaignID:      "c1",
+		participantID:   "p1",
+		participantName: "Avery",
+		activeSessionID: "s1",
+	}
+
+	hub.handleTyping(session, wsFrame{
+		Type:      "play.typing",
+		RequestID: "req-1",
+		Payload:   mustJSON(typingPayload{Active: true}),
+	})
+
+	frames := drainWSFrames(t, &buffer)
+	if len(frames) != 1 || frames[0].Type != "play.error" {
+		t.Fatalf("typing frames = %#v", frames)
+	}
+	var payload playprotocol.ErrorEnvelope
+	if err := json.Unmarshal(frames[0].Payload, &payload); err != nil {
+		t.Fatalf("decode error payload: %v", err)
+	}
+	if payload.Error.Message != "join a campaign before sending typing" {
+		t.Fatalf("error message = %q", payload.Error.Message)
+	}
+}
+
+func TestRealtimeTypingRequiresParticipantIdentity(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+	defer hub.Close()
+
+	room := &campaignRoom{
+		hub:        hub,
+		campaignID: "c1",
+		ctx:        context.Background(),
+		cancel:     func() {},
+		sessions:   map[*realtimeSession]struct{}{},
+	}
+	hub.rooms["c1"] = room
+
+	var buffer bytes.Buffer
+	session := &realtimeSession{
+		userID:        "user-1",
+		peer:          &wsPeer{encoder: json.NewEncoder(&buffer)},
+		room:          room,
+		campaignID:    "c1",
+		participantID: "p1",
+	}
+
+	hub.handleTyping(session, wsFrame{
+		Type:      "play.typing",
+		RequestID: "req-1",
+		Payload:   mustJSON(typingPayload{Active: true}),
+	})
+
+	frames := drainWSFrames(t, &buffer)
+	if len(frames) != 1 || frames[0].Type != "play.error" {
+		t.Fatalf("typing frames = %#v", frames)
+	}
+	var payload playprotocol.ErrorEnvelope
+	if err := json.Unmarshal(frames[0].Payload, &payload); err != nil {
+		t.Fatalf("decode error payload: %v", err)
+	}
+	if payload.Error.Message != "participant identity unavailable" {
+		t.Fatalf("error message = %q", payload.Error.Message)
+	}
+}
+
+func TestRealtimeTypingRejectsInvalidPayload(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+	defer hub.Close()
+
+	var buffer bytes.Buffer
+	session := &realtimeSession{
+		userID: "user-1",
+		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
+	}
+
+	hub.handleTyping(session, wsFrame{
+		Type:      "play.typing",
+		RequestID: "req-1",
+		Payload:   []byte(`{`),
+	})
+
+	frames := drainWSFrames(t, &buffer)
+	if len(frames) != 1 || frames[0].Type != "play.error" {
+		t.Fatalf("typing frames = %#v", frames)
+	}
+	var payload playprotocol.ErrorEnvelope
+	if err := json.Unmarshal(frames[0].Payload, &payload); err != nil {
+		t.Fatalf("decode error payload: %v", err)
+	}
+	if payload.Error.Message != "invalid typing payload" {
+		t.Fatalf("error message = %q", payload.Error.Message)
 	}
 }
 
@@ -251,14 +366,58 @@ func TestRealtimeRoomLifecycleAndBroadcasts(t *testing.T) {
 		t.Fatalf("broadcastFrame frames = %#v", frames)
 	}
 
-	session.resetTypingTimer("play.chat.typing", true)
+	session.resetTypingTimer(true)
 	time.Sleep(defaultTypingTTL + 200*time.Millisecond)
 	frames = drainWSFrames(t, &buffer)
-	if len(frames) != 1 || frames[0].Type != "play.chat.typing" {
+	if len(frames) != 1 || frames[0].Type != "play.typing" {
 		t.Fatalf("typing expiry frames = %#v", frames)
 	}
 
 	hub.unregisterSession(session)
+	if got := len(room.sessionsSnapshot()); got != 0 {
+		t.Fatalf("sessions after unregister = %d, want %d", got, 0)
+	}
+}
+
+func TestRealtimeUnregisterSessionClearsTypingPresence(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{latest: 5})
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+	room := &campaignRoom{
+		hub:        hub,
+		campaignID: "c1",
+		ctx:        context.Background(),
+		cancel:     func() {},
+		sessions:   map[*realtimeSession]struct{}{},
+	}
+	hub.rooms["c1"] = room
+
+	var buffer bytes.Buffer
+	session := &realtimeSession{
+		userID: "user-1",
+		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
+	}
+	session.attach(room, playprotocol.InteractionStateFromGameState(playTestState()))
+	room.add(session)
+
+	session.resetTypingTimer(true)
+	_ = drainWSFrames(t, &buffer)
+
+	hub.unregisterSession(session)
+
+	frames := drainWSFrames(t, &buffer)
+	if len(frames) != 1 || frames[0].Type != "play.typing" {
+		t.Fatalf("typing frames = %#v", frames)
+	}
+	var payload playprotocol.TypingEvent
+	if err := json.Unmarshal(frames[0].Payload, &payload); err != nil {
+		t.Fatalf("decode typing payload: %v", err)
+	}
+	if payload.Active {
+		t.Fatal("typing clear event should mark inactive")
+	}
 	if got := len(room.sessionsSnapshot()); got != 0 {
 		t.Fatalf("sessions after unregister = %d, want %d", got, 0)
 	}

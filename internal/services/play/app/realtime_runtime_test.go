@@ -49,12 +49,12 @@ func TestRealtimeSessionResetTypingTimerUsesInjectedRuntimeTimer(t *testing.T) {
 	session.attach(room, playprotocol.InteractionStateFromGameState(playTestState()))
 	room.add(session)
 
-	session.resetTypingTimer("play.chat.typing", true)
+	session.resetTypingTimer(true)
 	if len(delays) != 1 || delays[0] != 42*time.Millisecond {
 		t.Fatalf("afterFunc delays = %#v", delays)
 	}
 
-	session.resetTypingTimer("play.chat.typing", true)
+	session.resetTypingTimer(true)
 	if len(created) != 2 {
 		t.Fatalf("timers = %d, want %d", len(created), 2)
 	}
@@ -64,7 +64,7 @@ func TestRealtimeSessionResetTypingTimerUsesInjectedRuntimeTimer(t *testing.T) {
 
 	created[1].Fire()
 	frames := drainWSFrames(t, &buffer)
-	if len(frames) != 1 || frames[0].Type != "play.chat.typing" {
+	if len(frames) != 1 || frames[0].Type != "play.typing" {
 		t.Fatalf("typing frames = %#v", frames)
 	}
 	var payload struct {

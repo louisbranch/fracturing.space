@@ -14,14 +14,13 @@ type realtimeSession struct {
 	userID string
 	peer   *wsPeer
 
-	mu               sync.Mutex
-	room             *campaignRoom
-	campaignID       string
-	participantID    string
-	participantName  string
-	activeSessionID  string
-	chatTypingTimer  realtimeTimer
-	draftTypingTimer realtimeTimer
+	mu              sync.Mutex
+	room            *campaignRoom
+	campaignID      string
+	participantID   string
+	participantName string
+	activeSessionID string
+	typingTimer     realtimeTimer
 }
 
 type wsPeer struct {
@@ -96,19 +95,12 @@ func (s *realtimeSession) chatIdentity() (sessionChatIdentity, bool) {
 	}, true
 }
 
-func (s *realtimeSession) resetTypingTimer(frameType string, active bool) {
+func (s *realtimeSession) resetTypingTimer(active bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var timer *realtimeTimer
-	switch frameType {
-	case "play.chat.typing":
-		timer = &s.chatTypingTimer
-	default:
-		timer = &s.draftTypingTimer
-	}
-	if *timer != nil {
-		(*timer).Stop()
-		*timer = nil
+	if s.typingTimer != nil {
+		s.typingTimer.Stop()
+		s.typingTimer = nil
 	}
 	if !active || s.room == nil {
 		return
@@ -117,8 +109,8 @@ func (s *realtimeSession) resetTypingTimer(frameType string, active bool) {
 	sessionID := s.activeSessionID
 	participantID := s.participantID
 	participantName := s.participantName
-	*timer = room.hub.runtime.newTimer(room.hub.runtime.typingTTL, func() {
-		room.broadcastFrame(wsFrame{Type: frameType, Payload: mustJSON(playprotocol.TypingEvent{
+	s.typingTimer = room.hub.runtime.newTimer(room.hub.runtime.typingTTL, func() {
+		room.broadcastFrame(wsFrame{Type: "play.typing", Payload: mustJSON(playprotocol.TypingEvent{
 			SessionID:     sessionID,
 			ParticipantID: participantID,
 			Name:          participantName,

@@ -13,6 +13,7 @@ export type OnStageMode =
 export type OnStageAIStatus = "idle" | "queued" | "running" | "failed";
 export type OnStageParticipantRole = "player" | "gm";
 export type OnStageParticipantRailStatus =
+  | "typing"
   | "waiting"
   | "active"
   | "yielded"

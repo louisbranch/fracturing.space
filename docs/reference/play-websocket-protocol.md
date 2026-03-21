@@ -117,26 +117,13 @@ Send a chat message to the room.
 - `client_message_id` -- client-generated idempotency key.
 - `body` -- message text content.
 
-### `play.chat.typing`
+### `play.typing`
 
-Chat typing indicator.
-
-```json
-{
-  "type": "play.chat.typing",
-  "payload": {
-    "active": true
-  }
-}
-```
-
-### `play.draft.typing`
-
-Draft typing indicator (on-stage content). Same shape as `play.chat.typing`.
+Participant typing indicator for any compose surface in the play HUD.
 
 ```json
 {
-  "type": "play.draft.typing",
+  "type": "play.typing",
   "payload": {
     "active": true
   }
@@ -198,28 +185,13 @@ A new chat message was posted to the room.
 }
 ```
 
-### `play.chat.typing`
+### `play.typing`
 
-Typing indicator broadcast for chat.
-
-```json
-{
-  "type": "play.chat.typing",
-  "payload": {
-    "participant_id": "string",
-    "name": "string",
-    "active": true
-  }
-}
-```
-
-### `play.draft.typing`
-
-Typing indicator broadcast for on-stage drafts.
+Typing indicator broadcast for any active composer.
 
 ```json
 {
-  "type": "play.draft.typing",
+  "type": "play.typing",
   "payload": {
     "participant_id": "string",
     "name": "string",
@@ -270,6 +242,8 @@ Error notification.
 
 The server expires typing indicators after a configurable TTL. The default is
 3 seconds, communicated to the client via `bootstrap.realtime.typing_ttl_ms`.
+Clients should treat this as shared participant presence, not as chat-vs-draft
+metadata.
 
 To keep a typing indicator active, the client must re-send the typing event
 before the TTL expires. When the user stops typing, the client sends
