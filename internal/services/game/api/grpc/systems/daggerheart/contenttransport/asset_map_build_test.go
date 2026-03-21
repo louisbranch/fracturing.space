@@ -61,7 +61,7 @@ func TestBuildDaggerheartAssetMap(t *testing.T) {
 	}
 }
 
-func TestBuildDaggerheartAssetMap_PublishesNewlyMappedAssets(t *testing.T) {
+func TestBuildDaggerheartAssetMap_PublishesCanonicalCatalogAssetIDs(t *testing.T) {
 	store := newFakeContentStore()
 	store.heritages["heritage.clank"] = contentstore.DaggerheartHeritage{
 		ID:   "heritage.clank",
@@ -88,8 +88,8 @@ func TestBuildDaggerheartAssetMap_PublishesNewlyMappedAssets(t *testing.T) {
 	if ancestryRef.GetSetId() != "daggerheart_ancestry_set_v1" {
 		t.Fatalf("ancestry set id = %q, want %q", ancestryRef.GetSetId(), "daggerheart_ancestry_set_v1")
 	}
-	if ancestryRef.GetAssetId() != "heritage_clank" {
-		t.Fatalf("ancestry asset id = %q, want %q", ancestryRef.GetAssetId(), "heritage_clank")
+	if ancestryRef.GetAssetId() != "heritage.clank" {
+		t.Fatalf("ancestry asset id = %q, want %q", ancestryRef.GetAssetId(), "heritage.clank")
 	}
 	if ancestryRef.GetCdnAssetId() == "" {
 		t.Fatal("expected non-empty ancestry cdn asset id")
@@ -105,15 +105,15 @@ func TestBuildDaggerheartAssetMap_PublishesNewlyMappedAssets(t *testing.T) {
 	if adversaryRef.GetSetId() != "daggerheart_adversary_set_v1" {
 		t.Fatalf("adversary set id = %q, want %q", adversaryRef.GetSetId(), "daggerheart_adversary_set_v1")
 	}
-	if adversaryRef.GetAssetId() != "acid_burrower" {
-		t.Fatalf("adversary asset id = %q, want %q", adversaryRef.GetAssetId(), "acid_burrower")
+	if adversaryRef.GetAssetId() != "adversary.acid-burrower" {
+		t.Fatalf("adversary asset id = %q, want %q", adversaryRef.GetAssetId(), "adversary.acid-burrower")
 	}
 	if adversaryRef.GetCdnAssetId() == "" {
 		t.Fatal("expected non-empty adversary cdn asset id")
 	}
 }
 
-func TestBuildDaggerheartAssetMap_ResolvesRenamedDomainCardIDs(t *testing.T) {
+func TestBuildDaggerheartAssetMap_ResolvesCanonicalDomainCardIDs(t *testing.T) {
 	store := newFakeContentStore()
 	store.domainCards["domain_card.book-of-ava"] = contentstore.DaggerheartDomainCard{
 		ID:       "domain_card.book-of-ava",
@@ -136,8 +136,8 @@ func TestBuildDaggerheartAssetMap_ResolvesRenamedDomainCardIDs(t *testing.T) {
 	if cardRef.GetSetId() != "daggerheart_domain_card_set_v1" {
 		t.Fatalf("domain-card set id = %q, want %q", cardRef.GetSetId(), "daggerheart_domain_card_set_v1")
 	}
-	if cardRef.GetAssetId() != "codex_book_of_ava" {
-		t.Fatalf("domain-card asset id = %q, want %q", cardRef.GetAssetId(), "codex_book_of_ava")
+	if cardRef.GetAssetId() != "domain_card.book-of-ava" {
+		t.Fatalf("domain-card asset id = %q, want %q", cardRef.GetAssetId(), "domain_card.book-of-ava")
 	}
 	if cardRef.GetCdnAssetId() == "" {
 		t.Fatal("expected non-empty domain-card cdn asset id")

@@ -1,6 +1,11 @@
 package catalog
 
-import "testing"
+import (
+	"encoding/json"
+	"reflect"
+	"strings"
+	"testing"
+)
 
 func TestDaggerheartAssetsManifest_ResolvesSecondaryNoneWeaponCard(t *testing.T) {
 	manifest := DaggerheartAssetsManifest()
@@ -17,15 +22,15 @@ func TestDaggerheartAssetsManifest_ResolvesSecondaryNoneWeaponCard(t *testing.T)
 	if resolved.SetID != "daggerheart_weapon_set_v1" {
 		t.Fatalf("set id = %q, want %q", resolved.SetID, "daggerheart_weapon_set_v1")
 	}
-	if resolved.AssetID != "no_secondary_weapon" {
-		t.Fatalf("asset id = %q, want %q", resolved.AssetID, "no_secondary_weapon")
+	if resolved.AssetID != "weapon.no-secondary" {
+		t.Fatalf("asset id = %q, want %q", resolved.AssetID, "weapon.no-secondary")
 	}
 	if resolved.CDNAssetID == "" {
 		t.Fatal("expected non-empty cdn asset id")
 	}
 }
 
-func TestDaggerheartAssetsManifest_ResolvesNewlyPublishedMappedAssets(t *testing.T) {
+func TestDaggerheartAssetsManifest_ResolvesCanonicalCatalogIDs(t *testing.T) {
 	manifest := DaggerheartAssetsManifest()
 
 	tests := []struct {
@@ -42,7 +47,7 @@ func TestDaggerheartAssetsManifest_ResolvesNewlyPublishedMappedAssets(t *testing
 			entityID:    "heritage.clank",
 			assetType:   DaggerheartAssetTypeAncestryIllustration,
 			wantSetID:   "daggerheart_ancestry_set_v1",
-			wantAssetID: "heritage_clank",
+			wantAssetID: "heritage.clank",
 		},
 		{
 			name:        "adversary",
@@ -50,7 +55,7 @@ func TestDaggerheartAssetsManifest_ResolvesNewlyPublishedMappedAssets(t *testing
 			entityID:    "adversary.acid-burrower",
 			assetType:   DaggerheartAssetTypeAdversaryIllustration,
 			wantSetID:   "daggerheart_adversary_set_v1",
-			wantAssetID: "acid_burrower",
+			wantAssetID: "adversary.acid-burrower",
 		},
 	}
 
@@ -74,7 +79,7 @@ func TestDaggerheartAssetsManifest_ResolvesNewlyPublishedMappedAssets(t *testing
 	}
 }
 
-func TestDaggerheartAssetsManifest_ResolvesRenamedDomainCardIDs(t *testing.T) {
+func TestDaggerheartAssetsManifest_ResolvesCanonicalDomainCardIDs(t *testing.T) {
 	manifest := DaggerheartAssetsManifest()
 
 	tests := []struct {
@@ -85,22 +90,22 @@ func TestDaggerheartAssetsManifest_ResolvesRenamedDomainCardIDs(t *testing.T) {
 		{
 			name:        "book of ava",
 			entityID:    "domain_card.book-of-ava",
-			wantAssetID: "codex_book_of_ava",
+			wantAssetID: "domain_card.book-of-ava",
 		},
 		{
 			name:        "rune ward",
 			entityID:    "domain_card.rune-ward",
-			wantAssetID: "arcana_runeward",
+			wantAssetID: "domain_card.rune-ward",
 		},
 		{
 			name:        "rain of blades",
 			entityID:    "domain_card.rain-of-blades",
-			wantAssetID: "midnight_rain_of_blades",
+			wantAssetID: "domain_card.rain-of-blades",
 		},
 		{
 			name:        "natures tongue",
 			entityID:    "domain_card.nature-s-tongue",
-			wantAssetID: "sage_natures_tongue",
+			wantAssetID: "domain_card.nature-s-tongue",
 		},
 	}
 
@@ -125,6 +130,69 @@ func TestDaggerheartAssetsManifest_ResolvesRenamedDomainCardIDs(t *testing.T) {
 				t.Fatal("expected non-empty cdn asset id")
 			}
 		})
+	}
+}
+
+func TestEmbeddedDaggerheartAssets_DoNotRequireAliasing(t *testing.T) {
+	var cloudinaryCatalog map[string]json.RawMessage
+	if err := json.Unmarshal(cloudinaryAssetsCatalogJSON, &cloudinaryCatalog); err != nil {
+		t.Fatalf("decode embedded cloudinary catalog: %v", err)
+	}
+
+	for key, raw := range cloudinaryCatalog {
+		if !strings.HasPrefix(key, "daggerheart_") {
+			continue
+		}
+		var entries []struct {
+			FSAssetID  string `json:"fs_asset_id"`
+			CatalogRef struct {
+				EntityID string `json:"entity_id"`
+			} `json:"catalog_ref"`
+		}
+		if err := json.Unmarshal(raw, &entries); err != nil {
+			t.Fatalf("decode %s entries: %v", key, err)
+		}
+		for _, entry := range entries {
+			entityID := strings.TrimSpace(entry.CatalogRef.EntityID)
+			if entityID == "" {
+				continue
+			}
+			if got := strings.TrimSpace(entry.FSAssetID); got != entityID {
+				t.Fatalf("%s fs_asset_id = %q, want catalog entity id %q", key, got, entityID)
+			}
+		}
+	}
+
+	var suggestions struct {
+		DaggerheartV1 daggerheartAssetManifestJSONDocument `json:"daggerheart_v1"`
+	}
+	if err := json.Unmarshal(cloudinaryCatalog["fs_catalog_suggestions"], &suggestions); err != nil {
+		t.Fatalf("decode daggerheart suggestions: %v", err)
+	}
+
+	var embeddedManifest daggerheartAssetManifestJSONDocument
+	if err := json.Unmarshal(daggerheartAssetManifestJSON, &embeddedManifest); err != nil {
+		t.Fatalf("decode embedded daggerheart manifest: %v", err)
+	}
+
+	if embeddedManifest.ID != suggestions.DaggerheartV1.ID ||
+		embeddedManifest.SystemID != suggestions.DaggerheartV1.SystemID ||
+		embeddedManifest.SystemVersion != suggestions.DaggerheartV1.SystemVersion ||
+		embeddedManifest.Locale != suggestions.DaggerheartV1.Locale ||
+		embeddedManifest.Theme != suggestions.DaggerheartV1.Theme {
+		t.Fatalf("embedded manifest metadata does not match cloudinary suggestions")
+	}
+
+	if !reflect.DeepEqual(daggerheartSetAssetIDsByKey(embeddedManifest), daggerheartSetAssetIDsByKey(suggestions.DaggerheartV1)) {
+		t.Fatal("embedded manifest sets do not match cloudinary daggerheart suggestions")
+	}
+	if !reflect.DeepEqual(daggerheartEntityAssetIDsByKey(embeddedManifest), daggerheartEntityAssetIDsByKey(suggestions.DaggerheartV1)) {
+		t.Fatal("embedded manifest entity asset map does not match cloudinary daggerheart suggestions")
+	}
+	for _, entry := range embeddedManifest.EntityAssetMap {
+		if strings.TrimSpace(entry.AssetID) != strings.TrimSpace(entry.EntityID) {
+			t.Fatalf("entity asset map asset_id = %q, want canonical entity id %q", entry.AssetID, entry.EntityID)
+		}
 	}
 }
 
@@ -296,4 +364,26 @@ func testCloudinaryLookup(values map[string]string) cloudinaryAssetLookupFn {
 		}
 		return value, true
 	}
+}
+
+func daggerheartSetAssetIDsByKey(manifest daggerheartAssetManifestJSONDocument) map[string][]string {
+	sets := make(map[string][]string, len(manifest.Sets))
+	for _, set := range manifest.Sets {
+		key := strings.TrimSpace(set.ID) + "\x00" + strings.ToLower(strings.TrimSpace(set.AssetType))
+		sets[key] = append([]string(nil), set.AssetIDs...)
+	}
+	return sets
+}
+
+func daggerheartEntityAssetIDsByKey(manifest daggerheartAssetManifestJSONDocument) map[string]string {
+	entityAssets := make(map[string]string, len(manifest.EntityAssetMap))
+	for _, entry := range manifest.EntityAssetMap {
+		key := strings.ToLower(strings.TrimSpace(entry.EntityType)) +
+			"\x00" +
+			strings.ToLower(strings.TrimSpace(entry.AssetType)) +
+			"\x00" +
+			strings.TrimSpace(entry.EntityID)
+		entityAssets[key] = strings.TrimSpace(entry.AssetID)
+	}
+	return entityAssets
 }
