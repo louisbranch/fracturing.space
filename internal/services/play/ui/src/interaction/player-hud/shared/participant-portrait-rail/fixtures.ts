@@ -1,4 +1,5 @@
 import { participantAvatarPreviewAssets } from "../../../../storybook/preview-assets/fixtures";
+import { playerHUDCharacterCatalog } from "../character-inspection-fixtures";
 import type { ParticipantPortraitRailParticipant } from "./contract";
 
 const [viewerAvatar, otherParticipantAvatar, gmAvatar] = participantAvatarPreviewAssets;
@@ -13,6 +14,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Rhea",
       roleLabel: "PLAYER",
       avatarUrl: viewerAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.aria, playerHUDCharacterCatalog.mira],
       status: "idle",
     },
     {
@@ -20,6 +22,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Bryn",
       roleLabel: "PLAYER",
       avatarUrl: otherParticipantAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.corin],
       status: "typing",
     },
     {
@@ -27,6 +30,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Guide",
       roleLabel: "GM",
       avatarUrl: gmAvatar?.imageUrl,
+      characters: [],
       status: "idle",
       ownsGMAuthority: true,
     },
@@ -37,6 +41,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Rhea",
       roleLabel: "PLAYER",
       avatarUrl: viewerAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.aria, playerHUDCharacterCatalog.mira],
       status: "ready",
     },
     {
@@ -44,6 +49,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Bryn",
       roleLabel: "PLAYER",
       avatarUrl: otherParticipantAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.corin],
       status: "ready",
     },
     {
@@ -51,6 +57,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Guide",
       roleLabel: "GM",
       avatarUrl: gmAvatar?.imageUrl,
+      characters: [],
       status: "idle",
       ownsGMAuthority: true,
     },
@@ -61,6 +68,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Rhea",
       roleLabel: "PLAYER",
       avatarUrl: viewerAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.aria, playerHUDCharacterCatalog.mira],
       status: "active",
     },
     {
@@ -68,6 +76,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Bryn",
       roleLabel: "PLAYER",
       avatarUrl: otherParticipantAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.corin],
       status: "yielded",
     },
     {
@@ -75,6 +84,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Guide",
       roleLabel: "GM",
       avatarUrl: gmAvatar?.imageUrl,
+      characters: [],
       status: "idle",
       ownsGMAuthority: true,
     },
@@ -85,6 +95,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Rhea",
       roleLabel: "PLAYER",
       avatarUrl: viewerAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.aria, playerHUDCharacterCatalog.mira],
       status: "changes-requested",
     },
     {
@@ -92,6 +103,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Bryn",
       roleLabel: "PLAYER",
       avatarUrl: otherParticipantAvatar?.imageUrl,
+      characters: [playerHUDCharacterCatalog.corin],
       status: "idle",
     },
     {
@@ -99,6 +111,7 @@ export const participantPortraitRailFixtures: Record<
       name: "Guide",
       roleLabel: "GM",
       avatarUrl: gmAvatar?.imageUrl,
+      characters: [],
       status: "idle",
       ownsGMAuthority: true,
     },

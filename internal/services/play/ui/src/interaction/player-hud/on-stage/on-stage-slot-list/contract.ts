@@ -6,4 +6,5 @@ export type OnStageSlotListProps = {
   actingParticipantIds: string[];
   viewerParticipantId: string;
   ariaLabel?: string;
+  onCharacterInspect?: (participantId: string, characterId: string) => void;
 };

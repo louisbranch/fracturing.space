@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { ParticipantPortraitRail } from "./ParticipantPortraitRail";
 import { participantPortraitRailFixtures } from "./fixtures";
 
@@ -46,5 +47,65 @@ describe("ParticipantPortraitRail", () => {
     expect(screen.getByLabelText("On-stage participants")).toBeInTheDocument();
     expect(screen.getByLabelText("Rhea: changes requested")).toBeInTheDocument();
     expect(screen.getByLabelText("Rhea status: Changes requested")).toBeInTheDocument();
+  });
+
+  it("emits participant inspection clicks when portraits are interactive", async () => {
+    const user = userEvent.setup();
+    const onParticipantInspect = vi.fn();
+
+    render(
+      <ParticipantPortraitRail
+        participants={participantPortraitRailFixtures.active}
+        viewerParticipantId="p-rhea"
+        ariaLabel="On-stage participants"
+        onParticipantInspect={onParticipantInspect}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Inspect Bryn" }));
+    expect(onParticipantInspect).toHaveBeenCalledWith("p-bryn");
+  });
+
+  it("orders the viewer first, then players, then the GM in the shared rail", () => {
+    render(
+      <ParticipantPortraitRail
+        participants={[
+          {
+            id: "p-guide",
+            name: "Guide",
+            roleLabel: "GM",
+            characters: [],
+            status: "idle",
+          },
+          {
+            id: "p-bryn",
+            name: "Bryn",
+            roleLabel: "PLAYER",
+            characters: [],
+            status: "typing",
+          },
+          {
+            id: "p-rhea",
+            name: "Rhea",
+            roleLabel: "PLAYER",
+            characters: [],
+            status: "ready",
+          },
+        ]}
+        viewerParticipantId="p-rhea"
+        ariaLabel="Ordered participants"
+      />,
+    );
+
+    const rail = screen.getByLabelText("Ordered participants");
+    const orderedLabels = Array.from(
+      rail.querySelectorAll(".font-medium.text-base-content"),
+    ).map((element) => element.textContent);
+
+    expect(orderedLabels).toEqual([
+      "Rhea",
+      "Bryn",
+      "Guide",
+    ]);
   });
 });

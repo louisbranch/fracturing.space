@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { onStageFixtureCatalog } from "../shared/fixtures";
 import { OnStageCharacterAvatarStack } from "./OnStageCharacterAvatarStack";
 
@@ -27,6 +28,26 @@ describe("OnStageCharacterAvatarStack", () => {
 
     expect(screen.getByLabelText("Characters: Aria, Sable, Mira, Rowan")).toBeInTheDocument();
     expect(container.querySelectorAll("img")).toHaveLength(2);
+    expect(screen.getByText("...")).toBeInTheDocument();
+  });
+
+  it("emits the clicked character id when avatars are interactive", async () => {
+    const user = userEvent.setup();
+    const onCharacterInspect = vi.fn();
+    const multiCharacterSlot = onStageFixtureCatalog.multiCharacterOwner.slots[0];
+    if (!multiCharacterSlot) {
+      throw new Error("expected multi-character fixture");
+    }
+
+    render(
+      <OnStageCharacterAvatarStack
+        characters={multiCharacterSlot.characters}
+        onCharacterInspect={onCharacterInspect}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Inspect Aria" }));
+    expect(onCharacterInspect).toHaveBeenCalledWith("char-aria");
     expect(screen.getByText("...")).toBeInTheDocument();
   });
 });

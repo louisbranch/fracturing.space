@@ -1,5 +1,6 @@
 import { participantAvatarPreviewAssets } from "../../../storybook/preview-assets/fixtures";
 import { backstageFixtureCatalog, backstageParticipants } from "../backstage/shared/fixtures";
+import { playerHUDCharacterInspectionCatalog } from "./character-inspection-fixtures";
 import {
   onStageCharacterCatalog,
   onStageFixtureCatalog,
@@ -26,12 +27,14 @@ export const sideChatState: SideChatState = {
   viewerParticipantId: "p-rhea",
   participants: sideChatParticipants,
   messages: sideChatMessages,
+  characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
 };
 
 export const emptySideChatState: SideChatState = {
   viewerParticipantId: "p-rhea",
   participants: sideChatParticipants,
   messages: [],
+  characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
 };
 
 const ivesAvatar = participantAvatarPreviewAssets[3];
@@ -92,6 +95,7 @@ const onStageShellPreview = {
       reviewState: "open" as const,
     },
   ],
+  characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
 };
 
 export const playerHUDFixtureCatalog: Record<

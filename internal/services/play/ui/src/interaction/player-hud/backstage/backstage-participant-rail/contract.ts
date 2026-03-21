@@ -5,4 +5,5 @@ export type BackstageParticipantRailProps = {
   viewerParticipantId: string;
   gmAuthorityParticipantId?: string;
   ariaLabel?: string;
+  onParticipantInspect?: (participantId: string) => void;
 };

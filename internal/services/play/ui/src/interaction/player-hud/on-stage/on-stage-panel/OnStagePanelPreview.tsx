@@ -1,4 +1,8 @@
 import { useState } from "react";
+import {
+  PlayerHUDCharacterInspectorDialog,
+  usePlayerHUDCharacterInspector,
+} from "../../shared/PlayerHUDCharacterInspector";
 import type { OnStageState } from "../shared/contract";
 import { OnStagePanel } from "./OnStagePanel";
 
@@ -49,6 +53,12 @@ export function OnStagePanelPreview({ initialState }: OnStagePanelPreviewProps) 
     initialState.slots.find((slot) => slot.participantId === initialState.viewerParticipantId)?.body ?? "";
   const [state, setState] = useState(initialState);
   const [draft, setDraft] = useState(initialViewerSlot);
+  const {
+    inspector,
+    close,
+    openForCharacter,
+    setActiveCharacter,
+  } = usePlayerHUDCharacterInspector();
 
   function writeViewerSlot(yielded: boolean, nextMode: OnStageState["mode"]) {
     const body = draft.trim();
@@ -110,14 +120,42 @@ export function OnStagePanelPreview({ initialState }: OnStagePanelPreviewProps) 
   }
 
   return (
-    <OnStagePanel
-      state={state}
-      draft={draft}
-      onDraftChange={setDraft}
-      onSubmit={handleSubmit}
-      onSubmitAndYield={handleSubmitAndYield}
-      onYield={handleYield}
-      onUnyield={handleUnyield}
-    />
+    <>
+      <OnStagePanel
+        state={state}
+        draft={draft}
+        onDraftChange={setDraft}
+        onSubmit={handleSubmit}
+        onSubmitAndYield={handleSubmitAndYield}
+        onYield={handleYield}
+        onUnyield={handleUnyield}
+        onCharacterInspect={(participantId, characterId) => {
+          const participant = state.participants.find(
+            (entry) => entry.id === participantId,
+          );
+          if (!participant) {
+            return;
+          }
+          openForCharacter(
+            {
+              name: participant.name,
+              characters: participant.characters,
+              isViewer: participant.id === state.viewerParticipantId,
+            },
+            characterId,
+          );
+        }}
+      />
+      <PlayerHUDCharacterInspectorDialog
+        isOpen={Boolean(inspector)}
+        participantName={inspector?.participantName ?? ""}
+        characters={inspector?.characters ?? []}
+        activeCharacterId={inspector?.activeCharacterId}
+        isViewer={inspector?.isViewer ?? false}
+        characterInspectionCatalog={state.characterInspectionCatalog}
+        onCharacterChange={setActiveCharacter}
+        onClose={close}
+      />
+    </>
   );
 }

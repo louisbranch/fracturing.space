@@ -12,6 +12,8 @@ export type PlayerHUDShellProps = {
   onOnStageSubmitAndYield: () => void;
   onOnStageYield: () => void;
   onOnStageUnyield: () => void;
+  onCharacterInspect?: (participantId: string, characterId: string) => void;
+  onParticipantInspect?: (participantId: string) => void;
   backstage: BackstageState;
   backstageDraft: string;
   onBackstageDraftChange: (value: string) => void;

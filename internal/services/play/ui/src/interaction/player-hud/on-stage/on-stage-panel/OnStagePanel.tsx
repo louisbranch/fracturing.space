@@ -12,6 +12,7 @@ export function OnStagePanel({
   onSubmitAndYield,
   onYield,
   onUnyield,
+  onCharacterInspect,
 }: OnStagePanelProps) {
   const status = onStageStatusDisplay({
     mode: state.mode,
@@ -38,6 +39,7 @@ export function OnStagePanel({
           slots={state.slots}
           actingParticipantIds={state.actingParticipantIds}
           viewerParticipantId={state.viewerParticipantId}
+          onCharacterInspect={onCharacterInspect}
         />
       </div>
       <OnStageCompose

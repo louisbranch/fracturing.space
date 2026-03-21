@@ -1,10 +1,53 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  PlayerHUDCharacterInspectorDialog,
+  usePlayerHUDCharacterInspector,
+} from "../PlayerHUDCharacterInspector";
+import { playerHUDCharacterInspectionCatalog } from "../character-inspection-fixtures";
 import { ParticipantPortraitRail } from "./ParticipantPortraitRail";
 import { participantPortraitRailFixtures } from "./fixtures";
 
+function ParticipantPortraitRailPreview(
+  args: React.ComponentProps<typeof ParticipantPortraitRail>,
+) {
+  const { inspector, close, openForParticipant, setActiveCharacter } =
+    usePlayerHUDCharacterInspector();
+
+  return (
+    <>
+      <ParticipantPortraitRail
+        {...args}
+        onParticipantInspect={(participantId) => {
+          const participant = args.participants.find(
+            (entry) => entry.id === participantId,
+          );
+          if (!participant) {
+            return;
+          }
+          openForParticipant({
+            name: participant.name,
+            characters: participant.characters,
+            isViewer: participant.id === args.viewerParticipantId,
+          });
+        }}
+      />
+      <PlayerHUDCharacterInspectorDialog
+        isOpen={Boolean(inspector)}
+        participantName={inspector?.participantName ?? ""}
+        characters={inspector?.characters ?? []}
+        activeCharacterId={inspector?.activeCharacterId}
+        isViewer={inspector?.isViewer ?? false}
+        characterInspectionCatalog={playerHUDCharacterInspectionCatalog}
+        onCharacterChange={setActiveCharacter}
+        onClose={close}
+      />
+    </>
+  );
+}
+
 const meta = {
   title: "Interaction/Player HUD/Shared/Participant Portrait Rail",
-  component: ParticipantPortraitRail,
+  component: ParticipantPortraitRailPreview,
   parameters: {
     docs: {
       description: {
@@ -20,7 +63,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof ParticipantPortraitRail>;
+} satisfies Meta<typeof ParticipantPortraitRailPreview>;
 
 export default meta;
 

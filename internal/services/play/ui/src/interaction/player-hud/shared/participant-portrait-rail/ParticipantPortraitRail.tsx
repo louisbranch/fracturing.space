@@ -67,17 +67,71 @@ export function ParticipantPortraitRail({
   participants,
   viewerParticipantId,
   ariaLabel = "Participant portraits",
+  onParticipantInspect,
 }: ParticipantPortraitRailProps) {
+  function participantSortRank(participant: ParticipantPortraitRailParticipant): number {
+    if (participant.id === viewerParticipantId) {
+      return 0;
+    }
+    return roleLabel(participant)?.toUpperCase() === "GM" ? 2 : 1;
+  }
+
+  const sortedParticipants = [...participants].sort(
+    (left, right) => participantSortRank(left) - participantSortRank(right),
+  );
+
   return (
     <aside
       aria-label={ariaLabel}
       className="flex w-24 shrink-0 flex-col items-center gap-3 border-l border-base-300/70 bg-base-200/25 px-2 py-3"
     >
-      {participants.map((participant) => {
+      {sortedParticipants.map((participant) => {
         const status = statusDisplay(participant.status);
         const isViewer = participant.id === viewerParticipantId;
         const fallback = participant.name.charAt(0).toUpperCase();
         const secondaryLabel = roleLabel(participant);
+        const portraitClassName = `relative aspect-[2/3] w-14 ${
+          isViewer ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100" : ""
+        }`;
+        const portraitContent = (
+          <>
+            <div className="absolute inset-0 overflow-hidden border border-base-300 bg-base-300 text-base-content shadow-sm">
+              {participant.avatarUrl ? (
+                <img
+                  src={participant.avatarUrl}
+                  alt={participant.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center font-semibold">
+                  {fallback}
+                </div>
+              )}
+            </div>
+            {participant.ownsGMAuthority ? (
+              <span
+                aria-label={`${participant.name} GM authority`}
+                className="tooltip tooltip-left absolute top-1 right-1 z-10"
+                data-tip="Owns GM authority"
+              >
+                <span className="badge badge-warning badge-xs border border-base-100">
+                  <Crown size={12} aria-hidden="true" />
+                </span>
+              </span>
+            ) : null}
+            <span
+              aria-label={`${participant.name} status: ${status.tooltip}`}
+              className="tooltip tooltip-left absolute right-1 bottom-1 z-10"
+              data-tip={status.tooltip}
+            >
+              <span
+                className={`badge badge-xs border border-base-100 ${status.badgeClassName}`}
+              >
+                {status.icon}
+              </span>
+            </span>
+          </>
+        );
 
         return (
           <div
@@ -85,47 +139,19 @@ export function ParticipantPortraitRail({
             aria-label={`${participant.name}: ${status.label}`}
             className="flex flex-col items-center gap-1.5"
           >
-            <div
-              className={`relative aspect-[2/3] w-14 ${
-                isViewer ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100" : ""
-              }`}
-            >
-              <div className="absolute inset-0 overflow-hidden border border-base-300 bg-base-300 text-base-content shadow-sm">
-                {participant.avatarUrl ? (
-                  <img
-                    src={participant.avatarUrl}
-                    alt={participant.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center font-semibold">
-                    {fallback}
-                  </div>
-                )}
-              </div>
-              {participant.ownsGMAuthority ? (
-                <span
-                  aria-label={`${participant.name} GM authority`}
-                  className="tooltip tooltip-left absolute top-1 right-1 z-10"
-                  data-tip="Owns GM authority"
-                >
-                  <span className="badge badge-warning badge-xs border border-base-100">
-                    <Crown size={12} aria-hidden="true" />
-                  </span>
-                </span>
-              ) : null}
-              <span
-                aria-label={`${participant.name} status: ${status.tooltip}`}
-                className="tooltip tooltip-left absolute right-1 bottom-1 z-10"
-                data-tip={status.tooltip}
+            {onParticipantInspect ? (
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-label={`Inspect ${participant.name}`}
+                className={`${portraitClassName} cursor-pointer text-left transition hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80`}
+                onClick={() => onParticipantInspect(participant.id)}
               >
-                <span
-                  className={`badge badge-xs border border-base-100 ${status.badgeClassName}`}
-                >
-                  {status.icon}
-                </span>
-              </span>
-            </div>
+                {portraitContent}
+              </button>
+            ) : (
+              <div className={portraitClassName}>{portraitContent}</div>
+            )}
             <div className="text-center text-[10px] leading-tight text-base-content/70">
               <div className="font-medium text-base-content">{participant.name}</div>
               {secondaryLabel ? (

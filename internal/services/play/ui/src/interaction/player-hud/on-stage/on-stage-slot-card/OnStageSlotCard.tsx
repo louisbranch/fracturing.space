@@ -34,7 +34,12 @@ function joinCharacterNames(names: string[]): string {
   return names.join(", ");
 }
 
-export function OnStageSlotCard({ slot, participant, isViewer }: OnStageSlotCardProps) {
+export function OnStageSlotCard({
+  slot,
+  participant,
+  isViewer,
+  onCharacterInspect,
+}: OnStageSlotCardProps) {
   const characters = slot.characters.length > 0 ? slot.characters : participant.characters;
   const review = reviewDisplay(slot.reviewState);
   const body = slot.body?.trim();
@@ -51,7 +56,12 @@ export function OnStageSlotCard({ slot, participant, isViewer }: OnStageSlotCard
     >
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <OnStageCharacterAvatarStack characters={characters} />
+          <OnStageCharacterAvatarStack
+            characters={characters}
+            onCharacterInspect={(characterId) =>
+              onCharacterInspect?.(participant.id, characterId)
+            }
+          />
           <div className="min-w-0 flex items-center gap-2 text-sm text-base-content">
             <h3 className="min-w-0 font-semibold">{participant.name}</h3>
             {isViewer ? <span className="badge badge-primary badge-soft badge-sm">You</span> : null}

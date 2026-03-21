@@ -1,4 +1,8 @@
 import { useState } from "react";
+import {
+  PlayerHUDCharacterInspectorDialog,
+  usePlayerHUDCharacterInspector,
+} from "../shared/PlayerHUDCharacterInspector";
 import type { BackstageParticipant } from "../backstage/shared/contract";
 import type { OnStageState } from "../on-stage/shared/contract";
 import type { HUDNavbarTab, PlayerHUDState } from "../shared/contract";
@@ -19,6 +23,13 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
   const [backstage, setBackstage] = useState(initialState.backstage);
   const [backstageDraft, setBackstageDraft] = useState("");
   const [draft, setDraft] = useState("");
+  const {
+    inspector,
+    close,
+    openForCharacter,
+    openForParticipant,
+    setActiveCharacter,
+  } = usePlayerHUDCharacterInspector();
 
   function nextResumeState(
     mode: PlayerHUDState["backstage"]["mode"],
@@ -132,49 +143,105 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
     });
   }
 
+  function participantForActiveTab(participantId: string) {
+    if (activeTab === "on-stage") {
+      return onStage.participants.find((participant) => participant.id === participantId);
+    }
+    if (activeTab === "backstage") {
+      return backstage.participants.find((participant) => participant.id === participantId);
+    }
+    return initialState.sideChat.participants.find(
+      (participant) => participant.id === participantId,
+    );
+  }
+
   return (
-    <PlayerHUDShell
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      onStage={onStage}
-      onStageDraft={onStageDraft}
-      onOnStageDraftChange={setOnStageDraft}
-      onOnStageSubmit={() => handleOnStageWrite(false, "acting")}
-      onOnStageSubmitAndYield={() => handleOnStageWrite(true, "yielded-waiting")}
-      onOnStageYield={() => handleOnStageWrite(true, "yielded-waiting")}
-      onOnStageUnyield={() =>
-        setOnStage((current) => ({
-          ...current,
-          mode: "acting",
-          slots: current.slots.map((slot) =>
-            slot.participantId === current.viewerParticipantId
-              ? { ...slot, yielded: false, reviewState: "open" }
-              : slot,
-          ),
-          participants: current.participants.map((entry) =>
-            entry.id === current.viewerParticipantId
-              ? { ...entry, railStatus: "active" }
-              : entry,
-          ),
-          viewerControls: {
-            ...current.viewerControls,
-            canSubmit: true,
-            canSubmitAndYield: true,
-            canYield: true,
-            canUnyield: false,
-            disabledReason: undefined,
-          },
-        }))
-      }
-      backstage={backstage}
-      backstageDraft={backstageDraft}
-      onBackstageDraftChange={setBackstageDraft}
-      onBackstageSend={handleBackstageSend}
-      onBackstageReadyToggle={handleBackstageReadyToggle}
-      sideChat={initialState.sideChat}
-      sideChatDraft={draft}
-      onSideChatDraftChange={setDraft}
-      onSideChatSend={() => setDraft("")}
-    />
+    <>
+      <PlayerHUDShell
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onStage={onStage}
+        onStageDraft={onStageDraft}
+        onOnStageDraftChange={setOnStageDraft}
+        onOnStageSubmit={() => handleOnStageWrite(false, "acting")}
+        onOnStageSubmitAndYield={() => handleOnStageWrite(true, "yielded-waiting")}
+        onOnStageYield={() => handleOnStageWrite(true, "yielded-waiting")}
+        onOnStageUnyield={() =>
+          setOnStage((current) => ({
+            ...current,
+            mode: "acting",
+            slots: current.slots.map((slot) =>
+              slot.participantId === current.viewerParticipantId
+                ? { ...slot, yielded: false, reviewState: "open" }
+                : slot,
+            ),
+            participants: current.participants.map((entry) =>
+              entry.id === current.viewerParticipantId
+                ? { ...entry, railStatus: "active" }
+                : entry,
+            ),
+            viewerControls: {
+              ...current.viewerControls,
+              canSubmit: true,
+              canSubmitAndYield: true,
+              canYield: true,
+              canUnyield: false,
+              disabledReason: undefined,
+            },
+          }))
+        }
+        onCharacterInspect={(participantId, characterId) => {
+          const participant = onStage.participants.find(
+            (entry) => entry.id === participantId,
+          );
+          if (!participant) {
+            return;
+          }
+          openForCharacter(
+            {
+              name: participant.name,
+              characters: participant.characters,
+              isViewer: participant.id === onStage.viewerParticipantId,
+            },
+            characterId,
+          );
+        }}
+        onParticipantInspect={(participantId) => {
+          const participant = participantForActiveTab(participantId);
+          if (!participant) {
+            return;
+          }
+          openForParticipant({
+            name: participant.name,
+            characters: participant.characters,
+            isViewer:
+              activeTab === "on-stage"
+                ? participant.id === onStage.viewerParticipantId
+                : activeTab === "backstage"
+                  ? participant.id === backstage.viewerParticipantId
+                  : participant.id === initialState.sideChat.viewerParticipantId,
+          });
+        }}
+        backstage={backstage}
+        backstageDraft={backstageDraft}
+        onBackstageDraftChange={setBackstageDraft}
+        onBackstageSend={handleBackstageSend}
+        onBackstageReadyToggle={handleBackstageReadyToggle}
+        sideChat={initialState.sideChat}
+        sideChatDraft={draft}
+        onSideChatDraftChange={setDraft}
+        onSideChatSend={() => setDraft("")}
+      />
+      <PlayerHUDCharacterInspectorDialog
+        isOpen={Boolean(inspector)}
+        participantName={inspector?.participantName ?? ""}
+        characters={inspector?.characters ?? []}
+        activeCharacterId={inspector?.activeCharacterId}
+        isViewer={inspector?.isViewer ?? false}
+        characterInspectionCatalog={onStage.characterInspectionCatalog}
+        onCharacterChange={setActiveCharacter}
+        onClose={close}
+      />
+    </>
   );
 }

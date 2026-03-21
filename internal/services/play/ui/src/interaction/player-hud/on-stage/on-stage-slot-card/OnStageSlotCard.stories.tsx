@@ -1,4 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  PlayerHUDCharacterInspectorDialog,
+  usePlayerHUDCharacterInspector,
+} from "../../shared/PlayerHUDCharacterInspector";
 import { OnStageSlotCard } from "./OnStageSlotCard";
 import { onStageFixtureCatalog } from "./fixtures";
 
@@ -13,9 +17,42 @@ const revisionParticipant = revisionState.participants.find(
   (participant) => participant.id === revisionSlot?.participantId,
 )!;
 
+function OnStageSlotCardPreview(args: React.ComponentProps<typeof OnStageSlotCard>) {
+  const { inspector, close, openForCharacter, setActiveCharacter } =
+    usePlayerHUDCharacterInspector();
+
+  return (
+    <>
+      <OnStageSlotCard
+        {...args}
+        onCharacterInspect={(_, characterId) =>
+          openForCharacter(
+            {
+              name: args.participant.name,
+              characters: args.participant.characters,
+              isViewer: args.isViewer,
+            },
+            characterId,
+          )
+        }
+      />
+      <PlayerHUDCharacterInspectorDialog
+        isOpen={Boolean(inspector)}
+        participantName={inspector?.participantName ?? ""}
+        characters={inspector?.characters ?? []}
+        activeCharacterId={inspector?.activeCharacterId}
+        isViewer={inspector?.isViewer ?? false}
+        characterInspectionCatalog={viewerState.characterInspectionCatalog}
+        onCharacterChange={setActiveCharacter}
+        onClose={close}
+      />
+    </>
+  );
+}
+
 const meta = {
   title: "Interaction/Player HUD/On Stage/Slot Card",
-  component: OnStageSlotCard,
+  component: OnStageSlotCardPreview,
   parameters: {
     docs: {
       description: {
@@ -24,7 +61,7 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof OnStageSlotCard>;
+} satisfies Meta<typeof OnStageSlotCardPreview>;
 
 export default meta;
 
