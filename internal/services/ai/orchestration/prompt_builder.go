@@ -41,7 +41,7 @@ func (defaultPromptBuilder) Build(ctx context.Context, sess Session, input Input
 	b.WriteString("Use interaction_scene_gm_output_commit for authoritative in-character narration.\n")
 	b.WriteString("Use interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.\n")
 	b.WriteString("Use system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.\n")
-	b.WriteString("Use MCP tools for authoritative state changes; do not rely on free-form narration to mutate game state.\n")
+	b.WriteString("Use tools for authoritative state changes; do not rely on free-form narration to mutate game state.\n")
 	b.WriteString("\nAuthority:\n")
 	b.WriteString("Campaign, session, and participant authority are fixed for this turn.\n")
 	if pid := strings.TrimSpace(input.ParticipantID); pid != "" {
@@ -55,9 +55,9 @@ func (defaultPromptBuilder) Build(ctx context.Context, sess Session, input Input
 		b.WriteString("If there are no suitable scenes yet, create one that fits the campaign theme and the player characters.\n")
 		b.WriteString("After the scene is active and narrated, start the first player phase when the acting characters are clear.\n\n")
 	} else {
-		b.WriteString("\nActive scene mode: continue the session from the current interaction state and use MCP tools for authoritative changes.\n\n")
+		b.WriteString("\nActive scene mode: continue the session from the current interaction state and use tools for authoritative changes.\n\n")
 	}
-	b.WriteString("Current MCP context:\n")
+	b.WriteString("Current context:\n")
 	b.WriteString(brief.current)
 	b.WriteString("\n\nCampaign:\n")
 	b.WriteString(brief.campaign)

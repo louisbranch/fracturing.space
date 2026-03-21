@@ -14,11 +14,13 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
@@ -204,8 +206,20 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	if cfg.SessionGrantConfig != nil {
 		service.SetAISessionGrantConfig(*cfg.SessionGrantConfig)
 	}
-	if strings.TrimSpace(cfg.MCPURL) != "" {
-		service.SetCampaignTurnRunner(orchestration.NewRunner(cfg.campaignTurnRunnerConfig(orchestration.NewMCPDialer(cfg.mcpDialerConfig(nil)))))
+	if gameMc != nil {
+		gameConn := gameMc.Conn()
+		dialer := gametools.NewDirectDialer(gametools.Clients{
+			Interaction: gamev1.NewInteractionServiceClient(gameConn),
+			Scene:       gamev1.NewSceneServiceClient(gameConn),
+			Campaign:    gamev1.NewCampaignServiceClient(gameConn),
+			Participant: gamev1.NewParticipantServiceClient(gameConn),
+			Character:   gamev1.NewCharacterServiceClient(gameConn),
+			Session:     gamev1.NewSessionServiceClient(gameConn),
+			Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
+			Artifact:    artifactClientAdapter{server: campaignArtifactHandlers},
+			Reference:   referenceClientAdapter{server: systemReferenceHandlers},
+		})
+		service.SetCampaignTurnRunner(orchestration.NewRunner(cfg.campaignTurnRunnerConfig(dialer)))
 	}
 
 	healthServer := health.NewServer()

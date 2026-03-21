@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -21,7 +20,7 @@ type serverEnv struct {
 	DBPath                   string `env:"FRACTURING_SPACE_AI_DB_PATH"`
 	EncryptionKey            string `env:"FRACTURING_SPACE_AI_ENCRYPTION_KEY"`
 	GameAddr                 string `env:"FRACTURING_SPACE_GAME_ADDR"`
-	InternalServiceAllowlist string `env:"FRACTURING_SPACE_AI_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,mcp,worker,game"`
+	InternalServiceAllowlist string `env:"FRACTURING_SPACE_AI_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,worker,game"`
 
 	OpenAIOAuthAuthURL       string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
 	OpenAIOAuthTokenURL      string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
@@ -29,8 +28,6 @@ type serverEnv struct {
 	OpenAIOAuthClientSecret  string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
 	OpenAIOAuthRedirectURI   string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
 	OpenAIResponsesURL       string        `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
-	MCPURL                   string        `env:"FRACTURING_SPACE_AI_MCP_URL"`
-	MCPDialTimeout           time.Duration `env:"FRACTURING_SPACE_AI_MCP_DIAL_TIMEOUT" envDefault:"10s"`
 	OrchestrationTurnTimeout time.Duration `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT" envDefault:"2m"`
 	OrchestrationMaxSteps    int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS" envDefault:"8"`
 	ToolResultMaxBytes       int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES" envDefault:"32768"`
@@ -45,8 +42,6 @@ type runtimeConfig struct {
 	InternalServiceAllowlist map[string]struct{}
 	OpenAIOAuthConfig        *openaiprovider.OAuthConfig
 	OpenAIResponsesURL       string
-	MCPURL                   string
-	MCPDialTimeout           time.Duration
 	OrchestrationTurnTimeout time.Duration
 	OrchestrationMaxSteps    int
 	ToolResultMaxBytes       int
@@ -62,12 +57,6 @@ func (cfg runtimeConfig) Validate() error {
 	}
 	if _, err := decodeBase64Key(cfg.EncryptionKey); err != nil {
 		return fmt.Errorf("decode encryption key: %w", err)
-	}
-	if strings.TrimSpace(cfg.MCPURL) != "" && cfg.SessionGrantConfig == nil {
-		return fmt.Errorf("FRACTURING_SPACE_AI_MCP_URL requires AI session grant config")
-	}
-	if cfg.MCPDialTimeout <= 0 {
-		return fmt.Errorf("FRACTURING_SPACE_AI_MCP_DIAL_TIMEOUT must be positive")
 	}
 	if cfg.OrchestrationTurnTimeout <= 0 {
 		return fmt.Errorf("FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT must be positive")
@@ -116,8 +105,6 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		InternalServiceAllowlist: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
 		OpenAIOAuthConfig:        openAIOAuthConfig,
 		OpenAIResponsesURL:       strings.TrimSpace(srvEnv.OpenAIResponsesURL),
-		MCPURL:                   strings.TrimSpace(srvEnv.MCPURL),
-		MCPDialTimeout:           srvEnv.MCPDialTimeout,
 		OrchestrationTurnTimeout: srvEnv.OrchestrationTurnTimeout,
 		OrchestrationMaxSteps:    srvEnv.OrchestrationMaxSteps,
 		ToolResultMaxBytes:       srvEnv.ToolResultMaxBytes,
@@ -128,14 +115,6 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		return runtimeConfig{}, err
 	}
 	return cfg, nil
-}
-
-func (cfg runtimeConfig) mcpDialerConfig(httpClient *http.Client) orchestration.MCPDialerConfig {
-	return orchestration.MCPDialerConfig{
-		URL:         cfg.MCPURL,
-		HTTPClient:  httpClient,
-		DialTimeout: cfg.MCPDialTimeout,
-	}
 }
 
 func (cfg runtimeConfig) campaignTurnRunnerConfig(dialer orchestration.Dialer) orchestration.RunnerConfig {

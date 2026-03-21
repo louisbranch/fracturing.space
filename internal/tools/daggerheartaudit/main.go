@@ -583,9 +583,9 @@ func buildRepoMappings(entry corpusIndexEntry) []repoMapping {
 				},
 			},
 			repoMapping{
-				Surface: "mcp",
+				Surface: "gametools",
 				Paths: []string{
-					"internal/services/mcp/domain/",
+					"internal/services/ai/orchestration/gametools/",
 				},
 			},
 		)

@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RunCampaignTurn validates a game-issued session grant and executes one MCP-backed GM turn.
+// RunCampaignTurn validates a game-issued session grant and executes one GM turn.
 func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnRequest) (*aiv1.RunCampaignTurnResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "run campaign turn request is required")

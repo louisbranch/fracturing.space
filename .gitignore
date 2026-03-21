@@ -13,3 +13,4 @@ data/
 .agents/plans/*.md
 .playwright-cli/
 artifacts/
+seed

@@ -50,8 +50,6 @@ For setup steps, see [quickstart](quickstart.md) or
 ### AI
 
 - `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8087`.
-- `FRACTURING_SPACE_AI_MCP_URL`: internal MCP bridge URL used by AI orchestration. Default: `http://localhost:8085/mcp`.
-- `FRACTURING_SPACE_AI_MCP_DIAL_TIMEOUT`: timeout for opening one MCP orchestration session. Default: `10s`.
 - `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
 - `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
 - `FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER`: issuer claim used by game to sign and AI to validate campaign AI session grants.
@@ -60,7 +58,7 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_AI_SESSION_GRANT_TTL`: campaign AI session grant TTL. Default: `10m`.
 - `FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT`: overall timeout for one campaign AI orchestration run. Default: `2m`.
 - `FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS`: max provider/tool loop steps for one campaign AI turn. Default: `8`.
-- `FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES`: max bytes from one MCP tool result fed back into the provider loop before truncation. Default: `32768`.
+- `FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES`: max bytes from one tool result fed back into the provider loop before truncation. Default: `32768`.
 
 ### Notifications
 
@@ -126,13 +124,6 @@ For web-login-first local flows, many contributors set
 - `FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY`: base64 HMAC key for play launch grant signing/verification (must decode to at least 32 bytes).
 - `FRACTURING_SPACE_PLAY_LAUNCH_GRANT_TTL`: play launch grant TTL. Default: `2m`.
 
-### MCP
-
-Internal gRPC dependencies default to Compose service DNS names (`service:port`). For direct local binary workflows, override these values to `localhost` in `.env.local`.
-
-- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, web, play, and AI services. Default: `game:8082`.
-- `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for the internal MCP bridge. Default: `localhost:8085`.
-
 ### Admin
 
 - `FRACTURING_SPACE_ADMIN_ADDR`: HTTP bind address for the admin dashboard. Default: `:8081`.
@@ -183,27 +174,6 @@ Compose note:
 - `FRACTURING_SPACE_IMAGE_REGISTRY`: container registry host. Default: `ghcr.io`.
 - `FRACTURING_SPACE_IMAGE_NAMESPACE`: container namespace/org. Default: `fracturing-space`.
 - `FRACTURING_SPACE_IMAGE_TAG`: image tag used in Compose. Default: `dev`.
-
-## MCP Server Configuration
-
-### Command-line Flags
-
-The MCP server (`cmd/mcp`) accepts the following flags:
-
-- `-addr`: game server address. Default: `game:8082`
-- `-http-addr`: HTTP server address for the internal bridge. Default: `localhost:8085`
-
-### Address Overrides
-
-The MCP server accepts flags for gRPC and HTTP addresses. If `FRACTURING_SPACE_GAME_ADDR`
-or `FRACTURING_SPACE_MCP_HTTP_ADDR` are set, they provide defaults when the matching flag
-is omitted. Command-line flags take precedence over env values.
-
-### Runtime contract
-
-The MCP runtime is HTTP-only and intended for internal AI-to-game traffic. See
-[local development](local-dev.md) for local startup and
-[MCP overview](../reference/mcp.md) for the bridge contract.
 
 ## Admin Dashboard Configuration
 

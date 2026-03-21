@@ -65,8 +65,8 @@ func TestValidateCampaignContextForwardsUserIDToAuthorization(t *testing.T) {
 }
 
 func TestValidateCampaignContextAllowsConfiguredInternalService(t *testing.T) {
-	validator := newCampaignContextValidator(nil, map[string]struct{}{"mcp": {}})
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "mcp"))
+	validator := newCampaignContextValidator(nil, map[string]struct{}{"worker": {}})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "worker"))
 
 	if err := validator.validateCampaignContext(ctx, "campaign-1", gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
 		t.Fatalf("validateCampaignContext() error = %v", err)

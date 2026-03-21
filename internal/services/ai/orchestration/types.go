@@ -2,13 +2,12 @@ package orchestration
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
 
-// CampaignTurnRunner executes one MCP-augmented provider turn for GM control.
+// CampaignTurnRunner executes one provider turn for GM control.
 type CampaignTurnRunner interface {
 	Run(ctx context.Context, input Input) (Result, error)
 }
@@ -22,7 +21,7 @@ type RunnerConfig struct {
 	ToolResultMaxBytes int
 }
 
-// PromptBuilder assembles the MCP-backed prompt for one campaign turn.
+// PromptBuilder assembles the prompt for one campaign turn.
 type PromptBuilder interface {
 	Build(ctx context.Context, sess Session, input Input) (string, error)
 }
@@ -32,19 +31,12 @@ type Provider interface {
 	Run(ctx context.Context, input ProviderInput) (ProviderOutput, error)
 }
 
-// Dialer opens one MCP session for a single orchestration run.
+// Dialer opens one session for a single orchestration run.
 type Dialer interface {
 	Dial(ctx context.Context) (Session, error)
 }
 
-// MCPDialerConfig defines how the orchestration layer opens one MCP session.
-type MCPDialerConfig struct {
-	URL         string
-	HTTPClient  *http.Client
-	DialTimeout time.Duration
-}
-
-// Session exposes the MCP operations used during campaign orchestration.
+// Session exposes the tool/resource operations used during campaign orchestration.
 type Session interface {
 	ListTools(ctx context.Context) ([]Tool, error)
 	CallTool(ctx context.Context, name string, args any) (ToolResult, error)
@@ -71,14 +63,14 @@ type Result struct {
 	Usage      provider.Usage
 }
 
-// Tool mirrors the provider-facing subset of one MCP tool definition.
+// Tool mirrors the provider-facing subset of one tool definition.
 type Tool struct {
 	Name        string
 	Description string
 	InputSchema any
 }
 
-// ToolResult captures one MCP tool result for model feedback.
+// ToolResult captures one tool result for model feedback.
 type ToolResult struct {
 	Output  string
 	IsError bool
@@ -113,7 +105,7 @@ type ProviderToolCall struct {
 	Arguments string
 }
 
-// ProviderToolResult maps one MCP tool result back to the provider.
+// ProviderToolResult maps one tool result back to the provider.
 type ProviderToolResult struct {
 	CallID  string
 	Output  string

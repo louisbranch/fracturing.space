@@ -12,8 +12,8 @@ import (
 
 func TestValidateIncomingServiceIdentity(t *testing.T) {
 	validate := validateIncomingServiceIdentity(map[string]struct{}{
-		"ai":  {},
-		"mcp": {},
+		"ai":     {},
+		"worker": {},
 	})
 
 	t.Run("allows calls without service identity", func(t *testing.T) {
@@ -23,7 +23,7 @@ func TestValidateIncomingServiceIdentity(t *testing.T) {
 	})
 
 	t.Run("allows configured service identity", func(t *testing.T) {
-		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "mcp"))
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "worker"))
 		if err := validate(ctx); err != nil {
 			t.Fatalf("validate() error = %v", err)
 		}

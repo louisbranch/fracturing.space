@@ -21,8 +21,6 @@ const (
 	ServiceGame = "game"
 	// ServiceJaeger is the jaeger HTTP service identity.
 	ServiceJaeger = "jaeger"
-	// ServiceMCP is the MCP HTTP service identity.
-	ServiceMCP = "mcp"
 	// ServicePlay is the play HTTP service identity.
 	ServicePlay = "play"
 	// ServiceNotifications is the notifications service identity.
@@ -53,7 +51,6 @@ var httpPorts = map[string]int{
 	ServiceWeb:    8080,
 	ServiceAdmin:  8081,
 	ServiceAuth:   8084,
-	ServiceMCP:    8085,
 	ServicePlay:   8094,
 	ServiceJaeger: 16686,
 }

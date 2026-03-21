@@ -42,13 +42,12 @@ Canonical how-to for system-extension changes.
    - use a system handle for mechanics (for example `local dh = scn:system(\"<SYSTEM_ID>\")`)
 6. Update generated event docs after registration changes land.
 
-## 4. If exposing MCP tooling
+## 4. If exposing AI orchestration tooling
 
-1. Add domain tool/resource handlers in `internal/services/mcp/domain/`.
-   Session-scoped bridge authority and outgoing metadata helpers belong in `internal/services/mcp/sessionctx/`, not beside gameplay handlers.
-2. Register in `internal/services/mcp/service/server_registration.go`.
-3. If the production AI bridge surface changes, update `internal/services/shared/mcpbridge/` and the MCP reference docs together.
-4. Add/update MCP-focused tests.
+1. Add tool handlers in `internal/services/ai/orchestration/gametools/`.
+2. Register the tool in the `tools.go` definition list and add dispatch in `session.go`.
+3. If the production tool surface changes, update `internal/services/shared/mcpbridge/profile.go` and the AI reference docs together.
+4. Add/update tool-focused tests.
 
 ## 5. Startup validation debugging
 

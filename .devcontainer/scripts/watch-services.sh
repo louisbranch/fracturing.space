@@ -85,8 +85,6 @@ export FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS="${FRACTURING_SPACE_WEBAUTHN_RP_ORIG
 export FRACTURING_SPACE_WEB_AUTH_ADDR="${FRACTURING_SPACE_WEB_AUTH_ADDR:-localhost:8083}"
 export FRACTURING_SPACE_OAUTH_LOGIN_UI_URL="${FRACTURING_SPACE_OAUTH_LOGIN_UI_URL:-${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/login}"
 export FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS="${FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS:-${FRACTURING_SPACE_OAUTH_LOGIN_UI_URL}}"
-export FRACTURING_SPACE_MCP_TRANSPORT="${FRACTURING_SPACE_MCP_TRANSPORT:-http}"
-export FRACTURING_SPACE_MCP_HTTP_ADDR="${FRACTURING_SPACE_MCP_HTTP_ADDR:-0.0.0.0:8085}"
 export FRACTURING_SPACE_AI_PORT="${FRACTURING_SPACE_AI_PORT:-8087}"
 export FRACTURING_SPACE_AI_ADDR="${FRACTURING_SPACE_AI_ADDR:-localhost:8087}"
 export FRACTURING_SPACE_AI_DB_PATH="${FRACTURING_SPACE_AI_DB_PATH:-data/ai.db}"
@@ -269,7 +267,6 @@ wait_for_service_log_marker "ai" "ai server listening at"
 wait_for_service_log_marker "notifications" "notifications server listening at"
 start_service userhub
 wait_for_service_log_marker "userhub" "userhub server listening at"
-start_service mcp
 start_service admin
 start_service play
 start_service worker

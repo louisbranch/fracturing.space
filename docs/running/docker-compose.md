@@ -37,7 +37,6 @@ make topology-check
 - Web login: `http://localhost:8080`
 - Auth: `http://auth.localhost:8080`
 - Admin: `http://admin.localhost:8080`
-- MCP bridge health (internal): `http://mcp.localhost:8080/mcp/health`
 - Notifications gRPC (internal): `notifications:8088`
 - Worker gRPC health (internal): `worker:8089`
 

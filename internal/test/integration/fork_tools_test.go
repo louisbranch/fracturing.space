@@ -6,400 +6,243 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 )
 
-// runForkToolsTests exercises campaign forking MCP tools.
+// runForkToolsTests exercises campaign forking gRPC operations.
 func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 	t.Helper()
 
 	t.Run("fork campaign at current state", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
+		ctx = suite.ctx(ctx)
 
-		// Create a campaign to fork from
-		campaignParams := &mcp.CallToolParams{
-			Name: "campaign_create",
-			Arguments: map[string]any{
-				"name":         "Original Campaign",
-				"system":       "DAGGERHEART",
-				"gm_mode":      "HUMAN",
-				"theme_prompt": "A test campaign for forking",
-				"user_id":      suite.userID,
-			},
-		}
-		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
+		campaignResp, err := suite.campaign.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+			Name:        "Original Campaign",
+			System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			GmMode:      statev1.GmMode_HUMAN,
+			ThemePrompt: "A test campaign for forking",
+		})
 		if err != nil {
-			t.Fatalf("call campaign_create: %v", err)
+			t.Fatalf("create campaign: %v", err)
 		}
-		if campaignResult == nil || campaignResult.IsError {
-			t.Fatalf("campaign_create failed: %+v", campaignResult)
-		}
-		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
+		campaignID := campaignResp.GetCampaign().GetId()
 
-		// Fork the campaign at current state (no event_seq specified)
-		forkParams := &mcp.CallToolParams{
-			Name: "campaign_fork",
-			Arguments: map[string]any{
-				"source_campaign_id": campaignOutput.ID,
-				"new_campaign_name":  "Forked Campaign",
-				"copy_participants":  false,
-			},
-		}
-		forkResult, err := suite.client.CallTool(ctx, forkParams)
+		forkResp, err := suite.fork.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+			SourceCampaignId: campaignID,
+			NewCampaignName:  "Forked Campaign",
+			CopyParticipants: false,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_fork: %v", err)
+			t.Fatalf("fork campaign: %v", err)
 		}
-		if forkResult == nil {
-			t.Fatal("call campaign_fork returned nil")
+		forked := forkResp.GetCampaign()
+		if forked.GetId() == "" {
+			t.Fatal("forked campaign id is empty")
 		}
-		if forkResult.IsError {
-			t.Fatalf("campaign_fork returned error content: %+v", forkResult.Content)
+		if forked.GetId() == campaignID {
+			t.Fatalf("forked campaign ID should differ from source: %s", forked.GetId())
 		}
-
-		forkOutput := decodeStructuredContent[domain.CampaignForkResult](t, forkResult.StructuredContent)
-		if forkOutput.CampaignID == "" {
-			t.Fatal("campaign_fork returned empty campaign_id")
+		if forked.GetName() != "Forked Campaign" {
+			t.Fatalf("expected name 'Forked Campaign', got %q", forked.GetName())
 		}
-		if forkOutput.CampaignID == campaignOutput.ID {
-			t.Fatalf("forked campaign ID should differ from source: %s", forkOutput.CampaignID)
+		// ForkCampaignResponse includes lineage directly — no separate GetLineage
+		// call needed (which would require participant membership in the forked campaign).
+		if forkResp.GetLineage().GetParentCampaignId() != campaignID {
+			t.Fatalf("expected parent_campaign_id %q, got %q", campaignID, forkResp.GetLineage().GetParentCampaignId())
 		}
-		if forkOutput.Name != "Forked Campaign" {
-			t.Fatalf("expected name 'Forked Campaign', got %q", forkOutput.Name)
+		if forked.GetStatus() != statev1.CampaignStatus_DRAFT {
+			t.Fatalf("expected status DRAFT, got %v", forked.GetStatus())
 		}
-		if forkOutput.ParentCampaignID != campaignOutput.ID {
-			t.Fatalf("expected parent_campaign_id %q, got %q", campaignOutput.ID, forkOutput.ParentCampaignID)
+		if forked.GetCreatedAt() == nil {
+			t.Fatal("forked campaign created_at is nil")
 		}
-		if forkOutput.Status != "DRAFT" {
-			t.Fatalf("expected status DRAFT, got %q", forkOutput.Status)
-		}
-		if forkOutput.CreatedAt == "" {
-			t.Fatal("campaign_fork returned empty created_at")
-		}
-		_ = parseRFC3339(t, forkOutput.CreatedAt)
 	})
 
 	t.Run("fork campaign with auto-generated name", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
+		ctx = suite.ctx(ctx)
 
-		// Create a campaign to fork from
-		campaignParams := &mcp.CallToolParams{
-			Name: "campaign_create",
-			Arguments: map[string]any{
-				"name":         "My Adventure",
-				"system":       "DAGGERHEART",
-				"gm_mode":      "HUMAN",
-				"theme_prompt": "",
-				"user_id":      suite.userID,
-			},
-		}
-		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
+		campaignResp, err := suite.campaign.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+			Name:   "My Adventure",
+			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			GmMode: statev1.GmMode_HUMAN,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_create: %v", err)
+			t.Fatalf("create campaign: %v", err)
 		}
-		if campaignResult == nil || campaignResult.IsError {
-			t.Fatalf("campaign_create failed: %+v", campaignResult)
-		}
-		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
+		campaignID := campaignResp.GetCampaign().GetId()
 
-		// Fork without specifying name
-		forkParams := &mcp.CallToolParams{
-			Name: "campaign_fork",
-			Arguments: map[string]any{
-				"source_campaign_id": campaignOutput.ID,
-			},
-		}
-		forkResult, err := suite.client.CallTool(ctx, forkParams)
+		forkResp, err := suite.fork.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+			SourceCampaignId: campaignID,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_fork: %v", err)
+			t.Fatalf("fork campaign: %v", err)
 		}
-		if forkResult == nil || forkResult.IsError {
-			t.Fatalf("campaign_fork failed: %+v", forkResult)
-		}
-
-		forkOutput := decodeStructuredContent[domain.CampaignForkResult](t, forkResult.StructuredContent)
-		if forkOutput.Name != "My Adventure (Fork)" {
-			t.Fatalf("expected auto-generated name 'My Adventure (Fork)', got %q", forkOutput.Name)
+		if forkResp.GetCampaign().GetName() != "My Adventure (Fork)" {
+			t.Fatalf("expected auto-generated name 'My Adventure (Fork)', got %q", forkResp.GetCampaign().GetName())
 		}
 	})
 
 	t.Run("get campaign lineage for original", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
+		ctx = suite.ctx(ctx)
 
-		// Create an original campaign
-		campaignParams := &mcp.CallToolParams{
-			Name: "campaign_create",
-			Arguments: map[string]any{
-				"name":         "Original Campaign",
-				"system":       "DAGGERHEART",
-				"gm_mode":      "HUMAN",
-				"theme_prompt": "",
-				"user_id":      suite.userID,
-			},
-		}
-		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
+		campaignResp, err := suite.campaign.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+			Name:   "Original Campaign",
+			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			GmMode: statev1.GmMode_HUMAN,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_create: %v", err)
+			t.Fatalf("create campaign: %v", err)
 		}
-		if campaignResult == nil || campaignResult.IsError {
-			t.Fatalf("campaign_create failed: %+v", campaignResult)
-		}
-		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
+		campaignID := campaignResp.GetCampaign().GetId()
 
-		// Get lineage of original campaign
-		lineageParams := &mcp.CallToolParams{
-			Name: "campaign_lineage",
-			Arguments: map[string]any{
-				"campaign_id": campaignOutput.ID,
-			},
-		}
-		lineageResult, err := suite.client.CallTool(ctx, lineageParams)
+		lineageResp, err := suite.fork.GetLineage(ctx, &statev1.GetLineageRequest{CampaignId: campaignID})
 		if err != nil {
-			t.Fatalf("call campaign_lineage: %v", err)
+			t.Fatalf("get lineage: %v", err)
 		}
-		if lineageResult == nil {
-			t.Fatal("call campaign_lineage returned nil")
+		lineage := lineageResp.GetLineage()
+		if lineage.GetCampaignId() != campaignID {
+			t.Fatalf("expected campaign_id %q, got %q", campaignID, lineage.GetCampaignId())
 		}
-		if lineageResult.IsError {
-			t.Fatalf("campaign_lineage returned error content: %+v", lineageResult.Content)
+		if lineage.GetParentCampaignId() != "" {
+			t.Fatalf("expected empty parent_campaign_id for original, got %q", lineage.GetParentCampaignId())
 		}
-
-		lineageOutput := decodeStructuredContent[domain.CampaignLineageResult](t, lineageResult.StructuredContent)
-		if lineageOutput.CampaignID != campaignOutput.ID {
-			t.Fatalf("expected campaign_id %q, got %q", campaignOutput.ID, lineageOutput.CampaignID)
+		if lineage.GetOriginCampaignId() != campaignID {
+			t.Fatalf("expected origin_campaign_id to be self for original, got %q", lineage.GetOriginCampaignId())
 		}
-		if lineageOutput.ParentCampaignID != "" {
-			t.Fatalf("expected empty parent_campaign_id for original, got %q", lineageOutput.ParentCampaignID)
+		if lineage.GetDepth() != 0 {
+			t.Fatalf("expected depth 0 for original, got %d", lineage.GetDepth())
 		}
-		if lineageOutput.OriginCampaignID != campaignOutput.ID {
-			t.Fatalf("expected origin_campaign_id to be self for original, got %q", lineageOutput.OriginCampaignID)
-		}
-		if lineageOutput.Depth != 0 {
-			t.Fatalf("expected depth 0 for original, got %d", lineageOutput.Depth)
-		}
-		if !lineageOutput.IsOriginal {
-			t.Fatal("expected is_original to be true for original campaign")
+		if lineage.GetDepth() != 0 || lineage.GetParentCampaignId() != "" {
+			t.Fatal("expected original campaign to have depth 0 and no parent")
 		}
 	})
 
 	t.Run("get campaign lineage for fork", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
+		ctx = suite.ctx(ctx)
 
-		// Create an original campaign
-		campaignParams := &mcp.CallToolParams{
-			Name: "campaign_create",
-			Arguments: map[string]any{
-				"name":         "Original Campaign",
-				"system":       "DAGGERHEART",
-				"gm_mode":      "HUMAN",
-				"theme_prompt": "",
-				"user_id":      suite.userID,
-			},
-		}
-		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
+		campaignResp, err := suite.campaign.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+			Name:   "Original Campaign",
+			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			GmMode: statev1.GmMode_HUMAN,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_create: %v", err)
+			t.Fatalf("create campaign: %v", err)
 		}
-		if campaignResult == nil || campaignResult.IsError {
-			t.Fatalf("campaign_create failed: %+v", campaignResult)
-		}
-		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
+		campaignID := campaignResp.GetCampaign().GetId()
 
-		// Fork the campaign
-		forkParams := &mcp.CallToolParams{
-			Name: "campaign_fork",
-			Arguments: map[string]any{
-				"source_campaign_id": campaignOutput.ID,
-				"new_campaign_name":  "First Fork",
-				"copy_participants":  true,
-			},
-		}
-		forkResult, err := suite.client.CallTool(ctx, forkParams)
+		forkResp, err := suite.fork.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+			SourceCampaignId: campaignID,
+			NewCampaignName:  "First Fork",
+			CopyParticipants: true,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_fork: %v", err)
+			t.Fatalf("fork campaign: %v", err)
 		}
-		if forkResult == nil || forkResult.IsError {
-			t.Fatalf("campaign_fork failed: %+v", forkResult)
-		}
-		forkOutput := decodeStructuredContent[domain.CampaignForkResult](t, forkResult.StructuredContent)
-		setContext(t, suite.client, forkOutput.CampaignID, campaignOutput.OwnerParticipantID)
+		forkedID := forkResp.GetCampaign().GetId()
 
-		// Get lineage of forked campaign
-		lineageParams := &mcp.CallToolParams{
-			Name: "campaign_lineage",
-			Arguments: map[string]any{
-				"campaign_id": forkOutput.CampaignID,
-			},
-		}
-		lineageResult, err := suite.client.CallTool(ctx, lineageParams)
+		lineageResp, err := suite.fork.GetLineage(ctx, &statev1.GetLineageRequest{CampaignId: forkedID})
 		if err != nil {
-			t.Fatalf("call campaign_lineage: %v", err)
+			t.Fatalf("get lineage: %v", err)
 		}
-		if lineageResult == nil || lineageResult.IsError {
-			t.Fatalf("campaign_lineage failed: %+v", lineageResult)
+		lineage := lineageResp.GetLineage()
+		if lineage.GetCampaignId() != forkedID {
+			t.Fatalf("expected campaign_id %q, got %q", forkedID, lineage.GetCampaignId())
 		}
-
-		lineageOutput := decodeStructuredContent[domain.CampaignLineageResult](t, lineageResult.StructuredContent)
-		if lineageOutput.CampaignID != forkOutput.CampaignID {
-			t.Fatalf("expected campaign_id %q, got %q", forkOutput.CampaignID, lineageOutput.CampaignID)
+		if lineage.GetParentCampaignId() != campaignID {
+			t.Fatalf("expected parent_campaign_id %q, got %q", campaignID, lineage.GetParentCampaignId())
 		}
-		if lineageOutput.ParentCampaignID != campaignOutput.ID {
-			t.Fatalf("expected parent_campaign_id %q, got %q", campaignOutput.ID, lineageOutput.ParentCampaignID)
+		if lineage.GetOriginCampaignId() != campaignID {
+			t.Fatalf("expected origin_campaign_id %q, got %q", campaignID, lineage.GetOriginCampaignId())
 		}
-		if lineageOutput.OriginCampaignID != campaignOutput.ID {
-			t.Fatalf("expected origin_campaign_id %q, got %q", campaignOutput.ID, lineageOutput.OriginCampaignID)
+		if lineage.GetDepth() != 1 {
+			t.Fatalf("expected depth 1 for first fork, got %d", lineage.GetDepth())
 		}
-		if lineageOutput.Depth != 1 {
-			t.Fatalf("expected depth 1 for first fork, got %d", lineageOutput.Depth)
-		}
-		if lineageOutput.IsOriginal {
-			t.Fatal("expected is_original to be false for forked campaign")
+		if lineage.GetDepth() == 0 {
+			t.Fatal("expected depth > 0 for forked campaign")
 		}
 	})
 
 	t.Run("fork a fork (nested forking)", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
+		ctx = suite.ctx(ctx)
 
-		// Create an original campaign
-		campaignParams := &mcp.CallToolParams{
-			Name: "campaign_create",
-			Arguments: map[string]any{
-				"name":         "Root Campaign",
-				"system":       "DAGGERHEART",
-				"gm_mode":      "HUMAN",
-				"theme_prompt": "",
-				"user_id":      suite.userID,
-			},
-		}
-		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
+		campaignResp, err := suite.campaign.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+			Name:   "Root Campaign",
+			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			GmMode: statev1.GmMode_HUMAN,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_create: %v", err)
+			t.Fatalf("create campaign: %v", err)
 		}
-		if campaignResult == nil || campaignResult.IsError {
-			t.Fatalf("campaign_create failed: %+v", campaignResult)
-		}
-		originalOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		setContext(t, suite.client, originalOutput.ID, originalOutput.OwnerParticipantID)
+		originalID := campaignResp.GetCampaign().GetId()
 
-		// Fork the original
-		fork1Params := &mcp.CallToolParams{
-			Name: "campaign_fork",
-			Arguments: map[string]any{
-				"source_campaign_id": originalOutput.ID,
-				"new_campaign_name":  "First Fork",
-				"copy_participants":  true,
-			},
-		}
-		fork1Result, err := suite.client.CallTool(ctx, fork1Params)
+		fork1Resp, err := suite.fork.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+			SourceCampaignId: originalID,
+			NewCampaignName:  "First Fork",
+			CopyParticipants: true,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_fork (first): %v", err)
+			t.Fatalf("fork campaign (first): %v", err)
 		}
-		if fork1Result == nil || fork1Result.IsError {
-			t.Fatalf("campaign_fork (first) failed: %+v", fork1Result)
-		}
-		fork1Output := decodeStructuredContent[domain.CampaignForkResult](t, fork1Result.StructuredContent)
-		setContext(t, suite.client, fork1Output.CampaignID, originalOutput.OwnerParticipantID)
+		fork1ID := fork1Resp.GetCampaign().GetId()
 
-		// Fork the fork
-		fork2Params := &mcp.CallToolParams{
-			Name: "campaign_fork",
-			Arguments: map[string]any{
-				"source_campaign_id": fork1Output.CampaignID,
-				"new_campaign_name":  "Second Fork",
-				"copy_participants":  true,
-			},
-		}
-		fork2Result, err := suite.client.CallTool(ctx, fork2Params)
+		fork2Resp, err := suite.fork.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+			SourceCampaignId: fork1ID,
+			NewCampaignName:  "Second Fork",
+			CopyParticipants: true,
+		})
 		if err != nil {
-			t.Fatalf("call campaign_fork (second): %v", err)
+			t.Fatalf("fork campaign (second): %v", err)
 		}
-		if fork2Result == nil || fork2Result.IsError {
-			t.Fatalf("campaign_fork (second) failed: %+v", fork2Result)
-		}
-		fork2Output := decodeStructuredContent[domain.CampaignForkResult](t, fork2Result.StructuredContent)
+		fork2 := fork2Resp.GetCampaign()
 
-		// Verify second fork's lineage
-		if fork2Output.ParentCampaignID != fork1Output.CampaignID {
-			t.Fatalf("expected parent_campaign_id %q, got %q", fork1Output.CampaignID, fork2Output.ParentCampaignID)
-		}
-		if fork2Output.OriginCampaignID != originalOutput.ID {
-			t.Fatalf("expected origin_campaign_id %q, got %q", originalOutput.ID, fork2Output.OriginCampaignID)
-		}
-
-		// Get lineage of deeply nested fork
-		lineageParams := &mcp.CallToolParams{
-			Name: "campaign_lineage",
-			Arguments: map[string]any{
-				"campaign_id": fork2Output.CampaignID,
-			},
-		}
-		lineageResult, err := suite.client.CallTool(ctx, lineageParams)
+		lineageResp, err := suite.fork.GetLineage(ctx, &statev1.GetLineageRequest{CampaignId: fork2.GetId()})
 		if err != nil {
-			t.Fatalf("call campaign_lineage: %v", err)
+			t.Fatalf("get lineage: %v", err)
 		}
-		if lineageResult == nil || lineageResult.IsError {
-			t.Fatalf("campaign_lineage failed: %+v", lineageResult)
+		lineage := lineageResp.GetLineage()
+		if lineage.GetParentCampaignId() != fork1ID {
+			t.Fatalf("expected parent_campaign_id %q, got %q", fork1ID, lineage.GetParentCampaignId())
 		}
-
-		lineageOutput := decodeStructuredContent[domain.CampaignLineageResult](t, lineageResult.StructuredContent)
-		if lineageOutput.Depth != 2 {
-			t.Fatalf("expected depth 2 for second fork, got %d", lineageOutput.Depth)
+		if lineage.GetOriginCampaignId() != originalID {
+			t.Fatalf("expected origin_campaign_id to trace back to root, got %q", lineage.GetOriginCampaignId())
 		}
-		if lineageOutput.OriginCampaignID != originalOutput.ID {
-			t.Fatalf("expected origin_campaign_id to trace back to root, got %q", lineageOutput.OriginCampaignID)
+		if lineage.GetDepth() != 2 {
+			t.Fatalf("expected depth 2 for second fork, got %d", lineage.GetDepth())
 		}
 	})
 
 	t.Run("fork non-existent campaign", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
+		ctx = suite.ctx(ctx)
 
-		forkParams := &mcp.CallToolParams{
-			Name: "campaign_fork",
-			Arguments: map[string]any{
-				"source_campaign_id": "non-existent-id",
-			},
-		}
-		forkResult, err := suite.client.CallTool(ctx, forkParams)
-		if err != nil {
-			t.Fatalf("call campaign_fork: %v", err)
-		}
-		if forkResult == nil {
-			t.Fatal("call campaign_fork returned nil")
-		}
-		if !forkResult.IsError {
-			t.Fatal("expected campaign_fork to return error for non-existent campaign")
+		_, err := suite.fork.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+			SourceCampaignId: "non-existent-id",
+		})
+		if err == nil {
+			t.Fatal("expected error for non-existent campaign fork")
 		}
 	})
 
 	t.Run("get lineage for non-existent campaign", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
+		ctx = suite.ctx(ctx)
 
-		lineageParams := &mcp.CallToolParams{
-			Name: "campaign_lineage",
-			Arguments: map[string]any{
-				"campaign_id": "non-existent-id",
-			},
-		}
-		lineageResult, err := suite.client.CallTool(ctx, lineageParams)
-		if err != nil {
-			t.Fatalf("call campaign_lineage: %v", err)
-		}
-		if lineageResult == nil {
-			t.Fatal("call campaign_lineage returned nil")
-		}
-		if !lineageResult.IsError {
-			t.Fatal("expected campaign_lineage to return error for non-existent campaign")
+		_, err := suite.fork.GetLineage(ctx, &statev1.GetLineageRequest{CampaignId: "non-existent-id"})
+		if err == nil {
+			t.Fatal("expected error for non-existent campaign lineage")
 		}
 	})
 }

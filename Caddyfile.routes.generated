@@ -17,10 +17,6 @@
   reverse_proxy jaeger:16686
 }
 
-{$FRACTURING_SPACE_CADDY_SITE_PREFIX}mcp.{$FRACTURING_SPACE_DOMAIN} {
-  reverse_proxy mcp:8085
-}
-
 {$FRACTURING_SPACE_CADDY_SITE_PREFIX}play.{$FRACTURING_SPACE_DOMAIN} {
   reverse_proxy play:8094
 }

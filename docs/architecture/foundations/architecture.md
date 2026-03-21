@@ -16,20 +16,19 @@ shape.
 
 Fracturing.Space is organized into four layers:
 
-- **Transport**: service entrypoints (`cmd/game`, `cmd/auth`, `cmd/social`, `cmd/discovery`, `cmd/ai`, `cmd/notifications`, `cmd/status`, `cmd/userhub`, `cmd/worker`, `cmd/mcp`, `cmd/play`, `cmd/admin`, `cmd/web`).
+- **Transport**: service entrypoints (`cmd/game`, `cmd/auth`, `cmd/social`, `cmd/discovery`, `cmd/ai`, `cmd/notifications`, `cmd/status`, `cmd/userhub`, `cmd/worker`, `cmd/play`, `cmd/admin`, `cmd/web`).
 - **Platform**: shared infrastructure (`internal/platform/`).
 - **Domain**: game/auth/social domain logic under `internal/services/*/domain`.
 - **Storage**: service-owned SQLite adapters and data files.
 
-The MCP service is an internal adapter surface for AI orchestration; rules/state
-authority remains in game and auth/social domain services.
+AI orchestration calls game gRPC directly; rules/state authority remains in
+game and auth/social domain services.
 
 ## Core service boundaries
 
 - **Game** (`internal/services/game/`): canonical campaign/session/action rules and event-sourced state.
 - **Web** (`internal/services/web/`): browser-facing modular BFF.
 - **Admin** (`internal/services/admin/`): operator-facing web surface.
-- **MCP** (`internal/services/mcp/`): internal AI-to-game JSON-RPC bridge.
 - **Auth** (`internal/services/auth/`): identity/authentication and OAuth primitives.
 - **Social** (`internal/services/social/`): profile metadata, contacts, and authenticated people-search read models built from auth-owned identity data.
 - **Discovery** (`internal/services/discovery/`): public discovery entry metadata and future public browsing indexes, not authenticated invite search.

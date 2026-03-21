@@ -129,7 +129,7 @@ When changing authz policy behavior:
 
 1. land policy change behind canonical evaluator updates
 2. add or update reason-code tests
-3. ensure web/mcp/grpc boundaries call same evaluator path
+3. ensure web/grpc boundaries call same evaluator path
 4. monitor deny/error distributions after rollout
 5. tighten fallback/degraded behavior once telemetry confirms stability
 

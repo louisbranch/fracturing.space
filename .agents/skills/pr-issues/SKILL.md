@@ -41,7 +41,7 @@ Use this skill when the user asks to:
    - Apply agreed changes with an architecture-first lens.
    - Avoid unrelated churn, but include small supporting refactors when needed to keep boundaries clean.
    - If a requested micro-fix worsens architecture, propose the cleaner path and explain the trade-off.
-   - Use relevant skills if changes touch those domains (`schema`, `error-handling`, `go-style`, `mcp`, `web-server`).
+   - Use relevant skills if changes touch those domains (`schema`, `error-handling`, `go-style`, `web-server`).
 
 6. **Verify**
    - Run `make check` before pushing PR updates.

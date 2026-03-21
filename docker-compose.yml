@@ -243,27 +243,6 @@ services:
       - internal
     restart: unless-stopped
 
-  mcp:
-    build:
-      context: .
-      target: mcp
-      args:
-        GO_VERSION: ${GO_VERSION:-1.26.0}
-    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/mcp:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
-    depends_on:
-      - game
-    environment:
-      FRACTURING_SPACE_MCP_HTTP_ADDR: 0.0.0.0:8085
-      FRACTURING_SPACE_MCP_TRANSPORT: http
-      FRACTURING_SPACE_MCP_ALLOWED_HOSTS: ${FRACTURING_SPACE_MCP_ALLOWED_HOSTS:-mcp.${FRACTURING_SPACE_DOMAIN:-localhost}}
-      FRACTURING_SPACE_MCP_OAUTH_ISSUER: ${FRACTURING_SPACE_MCP_OAUTH_ISSUER:-}
-      FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET:-}
-      FRACTURING_SPACE_STATUS_ADDR: status:8093
-      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
-    networks:
-      - internal
-    restart: unless-stopped
-
   admin:
     build:
       context: .
@@ -352,7 +331,6 @@ services:
       - play
       - auth
       - admin
-      - mcp
       - jaeger
     environment:
       FRACTURING_SPACE_DOMAIN: ${FRACTURING_SPACE_DOMAIN:-localhost}

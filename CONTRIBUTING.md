@@ -68,7 +68,7 @@ For web changes, also read:
 | Game-system-specific rules | `internal/services/game/domain/systems/{system}/` |
 | Generic dice mechanics | `internal/services/game/core/dice/` |
 | gRPC API endpoints | `internal/services/game/api/grpc/` |
-| MCP tools/resources | `internal/services/mcp/domain/` |
+| AI orchestration tools | `internal/services/ai/orchestration/gametools/` |
 
 ------------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ For web changes, also read:
 3. Implement `bridge.GameSystem` interface
 4. Create protos in `api/proto/systems/{name}/v1/`
 5. Create gRPC service in `internal/services/game/api/grpc/systems/{name}/`
-6. Register MCP tools/resources in `internal/services/mcp/domain/`
+6. Add AI orchestration tool handlers in `internal/services/ai/orchestration/gametools/`
 7. Add integration tests
 
 Use the canonical docs paths: [System extension onboarding](docs/guides/adding-command-event-system.md), [Architecture index](docs/architecture/index.md), and [Domain language](docs/architecture/foundations/domain-language.md).
@@ -93,13 +93,6 @@ Use the canonical docs paths: [System extension onboarding](docs/guides/adding-c
 - Update `docs/` and `README.md` when user-facing behavior changes.
 - Keep [docs/index.md](docs/index.md) and README links current.
 - Promote durable web boundary decisions to the architecture docs instead of leaving them only in code or temporary notes.
-
-------------------------------------------------------------------------
-
-## MCP Tool Changes
-
-When adding a new MCP tool, update the expected tools list in
-`internal/test/integration/fixtures/blackbox_tools_list.json`.
 
 ------------------------------------------------------------------------
 

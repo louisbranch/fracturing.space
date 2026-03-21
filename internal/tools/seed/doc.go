@@ -1,5 +1,3 @@
-// Package seed runs MCP-driven fixture scenarios for local development data.
-//
-// Seed fixtures are executed through the MCP HTTP bridge to exercise the full
-// MCP -> gRPC stack and capture IDs for chained steps.
+// Package seed provides fixture expansion and scenario loading for local
+// development data seeding via the declarative gRPC runner.
 package seed

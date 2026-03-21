@@ -1,7 +1,7 @@
-// Package mcpbridge defines the internal MCP bridge contract shared by AI and
-// MCP runtimes.
+// Package mcpbridge defines the session context and tool allowlist shared by
+// AI orchestration components.
 //
-// The package exists so production MCP sessions use one explicit source of
-// truth for fixed authority and tool exposure instead of duplicating header and
-// allowlist rules across services.
+// SessionContext carries fixed campaign/session/participant authority through
+// context values. ProductionToolAllowed gates tool exposure to the GM-safe
+// production profile.
 package mcpbridge

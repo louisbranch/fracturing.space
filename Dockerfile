@@ -41,10 +41,6 @@ FROM base AS build-game
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/game ./cmd/game
 
-FROM base AS build-mcp
-
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/mcp ./cmd/mcp
-
 FROM base AS build-admin
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/admin ./cmd/admin
@@ -100,16 +96,6 @@ COPY --from=build-game /out/game /app/game
 EXPOSE 8082
 
 ENTRYPOINT ["/app/game"]
-
-FROM gcr.io/distroless/static-debian12:nonroot AS mcp
-
-WORKDIR /app
-
-COPY --from=build-mcp /out/mcp /app/mcp
-
-EXPOSE 8085
-
-ENTRYPOINT ["/app/mcp"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS admin
 

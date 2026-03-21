@@ -28,7 +28,7 @@ For onboarding docs, run quick consistency greps:
 
 ```sh
 rg -n "docker compose|make bootstrap" README.md docs/running
-rg -n "FRACTURING_SPACE_MCP_HTTP_ADDR|FRACTURING_SPACE_AI_MCP_URL|http-addr|8085" docs/running docs/reference/mcp.md .env.example .env.local.example
+rg -n "FRACTURING_SPACE_AI_ORCHESTRATION" docs/running .env.example .env.local.example
 rg -n "defined by an email|independent of any email address" docs/architecture/foundations/domain-language.md docs/architecture/platform/identity-and-oauth.md
 rg -n "WEBAUTHN_RP_ORIGINS|MAGIC_LINK_BASE_URL" docs/running/configuration.md docs/architecture/platform/identity-and-oauth.md internal/services/auth
 ```
