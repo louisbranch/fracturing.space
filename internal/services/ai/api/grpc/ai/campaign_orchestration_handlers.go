@@ -17,20 +17,20 @@ import (
 )
 
 // RunCampaignTurn validates a game-issued session grant and executes one GM turn.
-func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnRequest) (*aiv1.RunCampaignTurnResponse, error) {
+func (h *CampaignOrchestrationHandlers) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnRequest) (*aiv1.RunCampaignTurnResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "run campaign turn request is required")
 	}
-	if s.campaignTurnRunner == nil {
+	if h.campaignTurnRunner == nil {
 		return nil, status.Error(codes.FailedPrecondition, "campaign turn runner is unavailable")
 	}
-	if s.sessionGrantConfig == nil {
+	if h.sessionGrantConfig == nil {
 		return nil, status.Error(codes.FailedPrecondition, "ai session grant validation is unavailable")
 	}
-	if s.gameCampaignAIClient == nil {
+	if h.gameCampaignAIClient == nil {
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai auth state client is unavailable")
 	}
-	if s.agentStore == nil {
+	if h.agentStore == nil {
 		return nil, status.Error(codes.Internal, "agent store is not configured")
 	}
 
@@ -39,7 +39,7 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 		return nil, status.Error(codes.InvalidArgument, "session_grant is required")
 	}
 
-	claims, err := aisessiongrant.Validate(*s.sessionGrantConfig, grant)
+	claims, err := aisessiongrant.Validate(*h.sessionGrantConfig, grant)
 	if err != nil {
 		switch {
 		case errors.Is(err, aisessiongrant.ErrExpired):
@@ -51,7 +51,7 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 		}
 	}
 
-	state, err := s.gameCampaignAIClient.GetCampaignAIAuthState(ctx, &gamev1.GetCampaignAIAuthStateRequest{
+	state, err := h.gameCampaignAIClient.GetCampaignAIAuthState(ctx, &gamev1.GetCampaignAIAuthStateRequest{
 		CampaignId: claims.CampaignID,
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai runtime is unavailable")
 	}
 
-	agentRecord, err := s.agentStore.GetAgent(ctx, agentID)
+	agentRecord, err := h.agentStore.GetAgent(ctx, agentID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.FailedPrecondition, "campaign ai runtime is unavailable")
@@ -76,24 +76,24 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 	if !agent.ParseStatus(agentRecord.Status).IsActive() {
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai runtime is inactive")
 	}
-	if s.campaignArtifactManager != nil {
-		if _, err := s.campaignArtifactManager.EnsureDefaultArtifacts(ctx, claims.CampaignID, ""); err != nil {
+	if h.campaignArtifactManager != nil {
+		if _, err := h.campaignArtifactManager.EnsureDefaultArtifacts(ctx, claims.CampaignID, ""); err != nil {
 			return nil, status.Errorf(codes.Internal, "ensure campaign artifacts: %v", err)
 		}
 	}
 
 	provider := providerFromString(agentRecord.Provider)
-	adapter, ok := s.providerToolAdapters[provider]
+	adapter, ok := h.providerToolAdapters[provider]
 	if !ok || adapter == nil {
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai provider adapter is unavailable")
 	}
 
-	token, err := s.resolveAgentInvokeToken(ctx, strings.TrimSpace(agentRecord.OwnerUserID), agentRecord)
+	token, err := h.authTokenResolver.resolveAgentInvokeToken(ctx, strings.TrimSpace(agentRecord.OwnerUserID), agentRecord)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := s.campaignTurnRunner.Run(ctx, orchestration.Input{
+	result, err := h.campaignTurnRunner.Run(ctx, orchestration.Input{
 		CampaignID:       claims.CampaignID,
 		SessionID:        claims.SessionID,
 		ParticipantID:    strings.TrimSpace(state.GetParticipantId()),

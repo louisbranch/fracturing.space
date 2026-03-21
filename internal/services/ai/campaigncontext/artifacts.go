@@ -32,27 +32,43 @@ type ArtifactStore interface {
 	ListCampaignArtifacts(ctx context.Context, campaignID string) ([]storage.CampaignArtifactRecord, error)
 }
 
-// Manager owns campaign artifact defaults and path policy.
-type Manager struct {
-	store             ArtifactStore
-	clock             func() time.Time
-	instructionLoader *InstructionLoader
+// SkillsDocumentLoader provides the composed skills document used for default
+// campaign artifact seeding.
+type SkillsDocumentLoader interface {
+	LoadSkills(system string) (string, error)
 }
 
-// NewManager builds a campaign artifact manager over one persistent store.
-func NewManager(store ArtifactStore, clock func() time.Time) *Manager {
+// ManagerConfig declares the dependencies for one artifact manager.
+type ManagerConfig struct {
+	Store         ArtifactStore
+	Clock         func() time.Time
+	SkillsLoader  SkillsDocumentLoader
+	DefaultSystem string
+}
+
+// Manager owns campaign artifact defaults and path policy.
+type Manager struct {
+	store         ArtifactStore
+	clock         func() time.Time
+	skillsLoader  SkillsDocumentLoader
+	defaultSystem string
+}
+
+// NewManager builds a constructor-complete campaign artifact manager.
+func NewManager(cfg ManagerConfig) *Manager {
+	clock := cfg.Clock
 	if clock == nil {
 		clock = time.Now
 	}
-	return &Manager{store: store, clock: clock}
-}
-
-// SetInstructionLoader configures the instruction loader used for default
-// artifact content. When set, default skills.md content comes from the
-// composed instruction files instead of the hardcoded fallback.
-func (m *Manager) SetInstructionLoader(loader *InstructionLoader) {
-	if m != nil {
-		m.instructionLoader = loader
+	defaultSystem := strings.TrimSpace(cfg.DefaultSystem)
+	if defaultSystem == "" {
+		defaultSystem = DaggerheartSystem
+	}
+	return &Manager{
+		store:         cfg.Store,
+		clock:         clock,
+		skillsLoader:  cfg.SkillsLoader,
+		defaultSystem: defaultSystem,
 	}
 }
 
@@ -208,8 +224,8 @@ func ensureArtifactIfMissing(ctx context.Context, store ArtifactStore, clock fun
 // resolveSkillsContent returns skills content from the instruction loader if
 // available, falling back to the hardcoded default.
 func (m *Manager) resolveSkillsContent() string {
-	if m.instructionLoader != nil {
-		content, err := m.instructionLoader.LoadSkills(DaggerheartSystem)
+	if m.skillsLoader != nil {
+		content, err := m.skillsLoader.LoadSkills(m.defaultSystem)
 		if err == nil && strings.TrimSpace(content) != "" {
 			return strings.TrimSpace(content)
 		}

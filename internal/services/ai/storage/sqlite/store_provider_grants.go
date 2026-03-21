@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -187,90 +186,6 @@ LIMIT ?
 		page.ProviderGrants = page.ProviderGrants[:pageSize]
 	}
 	return page, nil
-}
-
-// RevokeProviderGrant marks a provider grant as revoked.
-func (s *Store) RevokeProviderGrant(ctx context.Context, ownerUserID string, providerGrantID string, revokedAt time.Time) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
-	if ownerUserID == "" {
-		return fmt.Errorf("owner user id is required")
-	}
-	providerGrantID = strings.TrimSpace(providerGrantID)
-	if providerGrantID == "" {
-		return fmt.Errorf("provider grant id is required")
-	}
-
-	updatedAt := revokedAt.UTC()
-	res, err := s.sqlDB.ExecContext(ctx, `
-UPDATE ai_provider_grants
-SET status = 'revoked', updated_at = ?, revoked_at = ?
-WHERE owner_user_id = ? AND id = ?
-`, sqliteutil.ToMillis(updatedAt), sqliteutil.ToMillis(revokedAt.UTC()), ownerUserID, providerGrantID)
-	if err != nil {
-		return fmt.Errorf("revoke provider grant: %w", err)
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("revoke provider grant rows affected: %w", err)
-	}
-	if affected == 0 {
-		return storage.ErrNotFound
-	}
-	return nil
-}
-
-// UpdateProviderGrantToken updates token ciphertext and refresh metadata.
-func (s *Store) UpdateProviderGrantToken(ctx context.Context, input storage.UpdateProviderGrantTokenInput) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	ownerUserID := strings.TrimSpace(input.OwnerUserID)
-	if ownerUserID == "" {
-		return fmt.Errorf("owner user id is required")
-	}
-	providerGrantID := strings.TrimSpace(input.ProviderGrantID)
-	if providerGrantID == "" {
-		return fmt.Errorf("provider grant id is required")
-	}
-	tokenCiphertext := strings.TrimSpace(input.TokenCiphertext)
-	if tokenCiphertext == "" {
-		return fmt.Errorf("token ciphertext is required")
-	}
-	status := strings.TrimSpace(input.Status)
-	if status == "" {
-		return fmt.Errorf("status is required")
-	}
-	refreshedAt := input.RefreshedAt.UTC()
-
-	var expiresAtValue sql.NullInt64
-	if input.ExpiresAt != nil {
-		expiresAtValue = sql.NullInt64{Int64: sqliteutil.ToMillis(input.ExpiresAt.UTC()), Valid: true}
-	}
-	res, err := s.sqlDB.ExecContext(ctx, `
-UPDATE ai_provider_grants
-SET token_ciphertext = ?, status = ?, last_refresh_error = ?, updated_at = ?, expires_at = ?, last_refreshed_at = ?
-WHERE owner_user_id = ? AND id = ?
-`, tokenCiphertext, status, strings.TrimSpace(input.LastRefreshError), sqliteutil.ToMillis(refreshedAt), expiresAtValue, sqliteutil.ToMillis(refreshedAt), ownerUserID, providerGrantID)
-	if err != nil {
-		return fmt.Errorf("update provider grant token: %w", err)
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("update provider grant token rows affected: %w", err)
-	}
-	if affected == 0 {
-		return storage.ErrNotFound
-	}
-	return nil
 }
 
 // PutProviderConnectSession persists a provider connect session record.

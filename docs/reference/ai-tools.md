@@ -67,6 +67,7 @@ surface is not part of the runtime contract described here.
 
 For implementation, inspect:
 
-- `internal/services/shared/mcpbridge/profile.go`
+- `internal/services/ai/orchestration/gametools/tools.go`
+- `internal/services/ai/orchestration/tool_policy.go`
 - `internal/services/ai/orchestration/gametools/tools.go`
 - `internal/services/ai/orchestration/gametools/`

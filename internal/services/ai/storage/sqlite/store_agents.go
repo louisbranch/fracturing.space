@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -34,20 +35,17 @@ func (s *Store) PutAgent(ctx context.Context, record storage.AgentRecord) error 
 	if strings.TrimSpace(record.Model) == "" {
 		return fmt.Errorf("model is required")
 	}
-	record.CredentialID = strings.TrimSpace(record.CredentialID)
-	record.ProviderGrantID = strings.TrimSpace(record.ProviderGrantID)
-	hasCredentialID := record.CredentialID != ""
-	hasProviderGrantID := record.ProviderGrantID != ""
-	// Persist exactly one auth reference so invocation cannot resolve
-	// ambiguous credential sources.
-	if hasCredentialID == hasProviderGrantID {
-		return fmt.Errorf("exactly one agent auth reference is required")
+	authReference, err := agent.AuthReferenceFromIDs(record.CredentialID, record.ProviderGrantID, true)
+	if err != nil {
+		return fmt.Errorf("normalize auth reference: %w", err)
 	}
+	record.CredentialID = authReference.CredentialID()
+	record.ProviderGrantID = authReference.ProviderGrantID()
 	if strings.TrimSpace(record.Status) == "" {
 		return fmt.Errorf("status is required")
 	}
 
-	_, err := s.sqlDB.ExecContext(ctx, `
+	_, err = s.sqlDB.ExecContext(ctx, `
 INSERT INTO ai_agents (
 	id, owner_user_id, label, instructions, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

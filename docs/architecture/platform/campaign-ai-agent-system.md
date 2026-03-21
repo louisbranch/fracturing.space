@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 15
 status: draft
 owner: engineering
-last_reviewed: "2026-03-17"
+last_reviewed: "2026-03-18"
 ---
 
 # Campaign AI Agent System
@@ -58,13 +58,16 @@ data/instructions/
 
 ### Composition Order
 
-The `InstructionLoader` composes instructions in this order:
+`campaigncontext/instructionset.Loader` composes skills guidance in this order:
 
 1. `core/skills.md` — universal GM/Narrator contract
 2. `{system}/skills.md` — game-system-specific guidance (e.g. Daggerheart)
-3. `core/interaction.md` — tool channel discipline
-4. `core/memory-guide.md` — memory management guidance
-5. `{system}/reference-guide.md` — system reference lookup patterns
+3. `core/memory-guide.md` — memory management guidance
+4. `{system}/reference-guide.md` — system reference lookup patterns
+
+`core/interaction.md` is loaded separately as the prompt renderer's
+interaction-contract text so startup can degrade missing fields independently
+instead of disabling the full prompt path.
 
 ### Runtime Override
 
@@ -74,9 +77,14 @@ instruction directory. Default: embedded `data/instructions/v1` via
 
 ## Context Assembly Pipeline
 
-Each turn, the prompt builder assembles a **session brief** from prioritized
-sections. The `BriefAssembler` sorts sections by priority and drops
-low-priority content when the token budget is tight.
+Each turn, the prompt path first collects a typed **session brief** and then
+renders the final prompt from that brief plus explicit render policy. The
+collector is a `SessionBriefCollector` backed by a `ContextSourceRegistry`;
+the renderer is a `PromptRenderer` chosen by AI startup in
+`internal/services/ai/app`.
+
+The default renderer still uses `BriefAssembler` to sort prompt sections by
+priority and drop low-priority content when the token budget is tight.
 
 ### Priority Tiers
 
@@ -99,13 +107,18 @@ Game systems contribute prompt sections via the `ContextSource` interface:
 
 ```go
 type ContextSource interface {
-    Sections(ctx context.Context, sess Session, input Input) ([]BriefSection, error)
+    Collect(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error)
 }
 ```
 
 Core sources (campaign metadata, characters, scenes, interaction state) are
-always present. System-specific sources (e.g. Daggerheart dice rules, domain
-cards) are registered per game system.
+always present. System-specific sources (for example Daggerheart rules and
+reference context) are registered into the same collector registry at the
+composition root.
+
+The important invariant is that prompt rendering consumes the typed
+`SessionBrief`; it no longer re-parses already rendered prompt text to recover
+bootstrap or interaction-state facts.
 
 ## Extension Points
 
@@ -115,14 +128,17 @@ cards) are registered per game system.
    guidance.
 2. Create `data/instructions/v1/{system}/reference-guide.md` with reference
    lookup patterns.
-3. Implement `ContextSource` for system-specific prompt sections.
-4. Register the system in the game-system manifest.
+3. Implement `ContextSource` values for system-specific prompt sections.
+4. Register those sources in the AI composition root.
+5. Register the game system in the broader platform manifest when the rest of
+   the platform needs to discover it.
 
 ### Modifying Agent Behavior
 
 Edit the markdown instruction files under `data/instructions/v1/`. Changes
-take effect on the next turn without recompilation (when using the env override)
-or on next deploy (when using the embedded default).
+take effect on the next turn without recompilation when using
+`FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT`, or on next deploy when using the
+embedded default instruction set.
 
 ## Relationship to Other Docs
 
@@ -130,3 +146,4 @@ or on next deploy (when using the embedded default).
   policy, turn-loop mechanics
 - [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md) — session
   start readiness and bootstrap behavior
+- [AI service contributor map](../../reference/ai-service-contributor-map.md) — package routing for contributors

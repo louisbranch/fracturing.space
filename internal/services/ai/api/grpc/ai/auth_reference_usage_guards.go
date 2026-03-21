@@ -24,12 +24,6 @@ func newAuthReferenceUsageGuard(agentStore storage.AgentStore, gameCampaignAICli
 
 // ensureCredentialNotBoundToActiveCampaigns blocks revocation while any owned
 // agent using the credential is still bound to a DRAFT or ACTIVE campaign.
-func (s *Service) ensureCredentialNotBoundToActiveCampaigns(ctx context.Context, ownerUserID, credentialID string) error {
-	return newAuthReferenceUsageGuard(s.agentStore, s.gameCampaignAIClient).ensureCredentialNotBoundToActiveCampaigns(ctx, ownerUserID, credentialID)
-}
-
-// ensureCredentialNotBoundToActiveCampaigns blocks revocation while any owned
-// agent using the credential is still bound to a DRAFT or ACTIVE campaign.
 func (g authReferenceUsageGuard) ensureCredentialNotBoundToActiveCampaigns(ctx context.Context, ownerUserID, credentialID string) error {
 	credentialID = strings.TrimSpace(credentialID)
 	if credentialID == "" {
@@ -38,12 +32,6 @@ func (g authReferenceUsageGuard) ensureCredentialNotBoundToActiveCampaigns(ctx c
 	return g.ensureAuthReferenceNotBoundToActiveCampaigns(ctx, ownerUserID, func(record storage.AgentRecord) bool {
 		return strings.TrimSpace(record.CredentialID) == credentialID
 	}, "credential is in use by active campaigns")
-}
-
-// ensureProviderGrantNotBoundToActiveCampaigns blocks revocation while any owned
-// agent using the provider grant is still bound to a DRAFT or ACTIVE campaign.
-func (s *Service) ensureProviderGrantNotBoundToActiveCampaigns(ctx context.Context, ownerUserID, providerGrantID string) error {
-	return newAuthReferenceUsageGuard(s.agentStore, s.gameCampaignAIClient).ensureProviderGrantNotBoundToActiveCampaigns(ctx, ownerUserID, providerGrantID)
 }
 
 // ensureProviderGrantNotBoundToActiveCampaigns blocks revocation while any owned

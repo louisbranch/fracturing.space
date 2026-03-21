@@ -1,5 +1,6 @@
-// Package aifakes provides in-memory seams for AI service tests.
+// Package aifakes provides capability-specific in-memory seams for AI service
+// tests.
 //
-// The package centralizes reusable fake implementations so service tests can
-// focus on behavior setup and assertions rather than local fake definitions.
+// Each fake is intentionally scoped to one repository or helper boundary so
+// tests compose only the seams they actually depend on.
 package aifakes

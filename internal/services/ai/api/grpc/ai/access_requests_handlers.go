@@ -15,14 +15,14 @@ import (
 )
 
 // CreateAccessRequest stores a requester-owned pending access request for an agent.
-func (s *Service) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccessRequestRequest) (*aiv1.CreateAccessRequestResponse, error) {
+func (h *AccessRequestHandlers) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccessRequestRequest) (*aiv1.CreateAccessRequestResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create access request is required")
 	}
-	if s.agentStore == nil {
+	if h.agentStore == nil {
 		return nil, status.Error(codes.Internal, "agent store is not configured")
 	}
-	if s.accessRequestStore == nil {
+	if h.accessRequestStore == nil {
 		return nil, status.Error(codes.Internal, "access request store is not configured")
 	}
 
@@ -32,7 +32,7 @@ func (s *Service) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccess
 	}
 
 	agentID := strings.TrimSpace(in.GetAgentId())
-	agentRecord, err := s.agentStore.GetAgent(ctx, agentID)
+	agentRecord, err := h.agentStore.GetAgent(ctx, agentID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			// Return generic unavailability so callers cannot infer resource ownership.
@@ -55,7 +55,7 @@ func (s *Service) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccess
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	created, err := accessrequest.Create(createInput, s.clock, s.idGenerator)
+	created, err := accessrequest.Create(createInput, h.clock, h.idGenerator)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -74,10 +74,10 @@ func (s *Service) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccess
 		UpdatedAt:       created.UpdatedAt,
 		ReviewedAt:      created.ReviewedAt,
 	}
-	if err := s.accessRequestStore.PutAccessRequest(ctx, record); err != nil {
+	if err := h.accessRequestStore.PutAccessRequest(ctx, record); err != nil {
 		return nil, status.Errorf(codes.Internal, "put access request: %v", err)
 	}
-	if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
+	if err := putAuditEvent(ctx, h.auditEventStore, storage.AuditEventRecord{
 		EventName:       "access_request.created",
 		ActorUserID:     userID,
 		OwnerUserID:     record.OwnerUserID,
@@ -94,11 +94,11 @@ func (s *Service) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccess
 }
 
 // ListAccessRequests returns one role-scoped page of access requests.
-func (s *Service) ListAccessRequests(ctx context.Context, in *aiv1.ListAccessRequestsRequest) (*aiv1.ListAccessRequestsResponse, error) {
+func (h *AccessRequestHandlers) ListAccessRequests(ctx context.Context, in *aiv1.ListAccessRequestsRequest) (*aiv1.ListAccessRequestsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list access requests request is required")
 	}
-	if s.accessRequestStore == nil {
+	if h.accessRequestStore == nil {
 		return nil, status.Error(codes.Internal, "access request store is not configured")
 	}
 
@@ -113,9 +113,9 @@ func (s *Service) ListAccessRequests(ctx context.Context, in *aiv1.ListAccessReq
 	)
 	switch in.GetRole() {
 	case aiv1.AccessRequestRole_ACCESS_REQUEST_ROLE_REQUESTER:
-		page, err = s.accessRequestStore.ListAccessRequestsByRequester(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
+		page, err = h.accessRequestStore.ListAccessRequestsByRequester(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
 	case aiv1.AccessRequestRole_ACCESS_REQUEST_ROLE_OWNER:
-		page, err = s.accessRequestStore.ListAccessRequestsByOwner(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
+		page, err = h.accessRequestStore.ListAccessRequestsByOwner(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
 	default:
 		return nil, status.Error(codes.InvalidArgument, "role is required")
 	}
@@ -134,11 +134,11 @@ func (s *Service) ListAccessRequests(ctx context.Context, in *aiv1.ListAccessReq
 }
 
 // ListAuditEvents returns one owner-scoped page of AI audit events.
-func (s *Service) ListAuditEvents(ctx context.Context, in *aiv1.ListAuditEventsRequest) (*aiv1.ListAuditEventsResponse, error) {
+func (h *AccessRequestHandlers) ListAuditEvents(ctx context.Context, in *aiv1.ListAuditEventsRequest) (*aiv1.ListAuditEventsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list audit events request is required")
 	}
-	if s.auditEventStore == nil {
+	if h.auditEventStore == nil {
 		return nil, status.Error(codes.Internal, "audit event store is not configured")
 	}
 
@@ -154,7 +154,7 @@ func (s *Service) ListAuditEvents(ctx context.Context, in *aiv1.ListAuditEventsR
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	page, err := s.auditEventStore.ListAuditEventsByOwner(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken(), filter)
+	page, err := h.auditEventStore.ListAuditEventsByOwner(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken(), filter)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list audit events: %v", err)
 	}
@@ -169,11 +169,11 @@ func (s *Service) ListAuditEvents(ctx context.Context, in *aiv1.ListAuditEventsR
 }
 
 // ReviewAccessRequest applies one owner decision to a pending access request.
-func (s *Service) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccessRequestRequest) (*aiv1.ReviewAccessRequestResponse, error) {
+func (h *AccessRequestHandlers) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccessRequestRequest) (*aiv1.ReviewAccessRequestResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "review access request is required")
 	}
-	if s.accessRequestStore == nil {
+	if h.accessRequestStore == nil {
 		return nil, status.Error(codes.Internal, "access request store is not configured")
 	}
 
@@ -187,7 +187,7 @@ func (s *Service) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccess
 		return nil, status.Error(codes.InvalidArgument, "access_request_id is required")
 	}
 
-	existing, err := s.accessRequestStore.GetAccessRequest(ctx, accessRequestID)
+	existing, err := h.accessRequestStore.GetAccessRequest(ctx, accessRequestID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "access request not found")
@@ -221,7 +221,7 @@ func (s *Service) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccess
 		ReviewerUserID: userID,
 		Decision:       decision,
 		ReviewNote:     in.GetReviewNote(),
-	}, s.clock)
+	}, h.clock)
 	if err != nil {
 		if errors.Is(err, accessrequest.ErrNotPending) {
 			return nil, status.Error(codes.FailedPrecondition, "access request is already reviewed")
@@ -235,7 +235,7 @@ func (s *Service) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccess
 	if updatedDomain.ReviewedAt == nil {
 		return nil, status.Error(codes.Internal, "review timestamp is unavailable")
 	}
-	if err := s.accessRequestStore.ReviewAccessRequest(ctx, storage.ReviewAccessRequestInput{
+	if err := h.accessRequestStore.ReviewAccessRequest(ctx, storage.ReviewAccessRequestInput{
 		OwnerUserID:     userID,
 		AccessRequestID: existing.ID,
 		Status:          string(updatedDomain.Status),
@@ -252,14 +252,14 @@ func (s *Service) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccess
 		return nil, status.Errorf(codes.Internal, "review access request: %v", err)
 	}
 
-	updatedRecord, err := s.accessRequestStore.GetAccessRequest(ctx, existing.ID)
+	updatedRecord, err := h.accessRequestStore.GetAccessRequest(ctx, existing.ID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "access request not found")
 		}
 		return nil, status.Errorf(codes.Internal, "get access request: %v", err)
 	}
-	if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
+	if err := putAuditEvent(ctx, h.auditEventStore, storage.AuditEventRecord{
 		EventName:       "access_request.reviewed",
 		ActorUserID:     userID,
 		OwnerUserID:     updatedRecord.OwnerUserID,
@@ -275,11 +275,11 @@ func (s *Service) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccess
 }
 
 // RevokeAccessRequest removes delegated access for one approved request.
-func (s *Service) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccessRequestRequest) (*aiv1.RevokeAccessRequestResponse, error) {
+func (h *AccessRequestHandlers) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccessRequestRequest) (*aiv1.RevokeAccessRequestResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "revoke access request is required")
 	}
-	if s.accessRequestStore == nil {
+	if h.accessRequestStore == nil {
 		return nil, status.Error(codes.Internal, "access request store is not configured")
 	}
 
@@ -292,7 +292,7 @@ func (s *Service) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccess
 		return nil, status.Error(codes.InvalidArgument, "access_request_id is required")
 	}
 
-	existing, err := s.accessRequestStore.GetAccessRequest(ctx, accessRequestID)
+	existing, err := h.accessRequestStore.GetAccessRequest(ctx, accessRequestID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "access request not found")
@@ -320,7 +320,7 @@ func (s *Service) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccess
 		ID:            existing.ID,
 		RevokerUserID: userID,
 		RevokeNote:    in.GetRevokeNote(),
-	}, s.clock)
+	}, h.clock)
 	if err != nil {
 		if errors.Is(err, accessrequest.ErrNotApproved) {
 			return nil, status.Error(codes.FailedPrecondition, "access request is not approved")
@@ -330,7 +330,7 @@ func (s *Service) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccess
 		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	if err := s.accessRequestStore.RevokeAccessRequest(ctx, storage.RevokeAccessRequestInput{
+	if err := h.accessRequestStore.RevokeAccessRequest(ctx, storage.RevokeAccessRequestInput{
 		OwnerUserID:     userID,
 		AccessRequestID: existing.ID,
 		Status:          string(updatedDomain.Status),
@@ -347,14 +347,14 @@ func (s *Service) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccess
 		return nil, status.Errorf(codes.Internal, "revoke access request: %v", err)
 	}
 
-	updatedRecord, err := s.accessRequestStore.GetAccessRequest(ctx, existing.ID)
+	updatedRecord, err := h.accessRequestStore.GetAccessRequest(ctx, existing.ID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "access request not found")
 		}
 		return nil, status.Errorf(codes.Internal, "get access request: %v", err)
 	}
-	if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
+	if err := putAuditEvent(ctx, h.auditEventStore, storage.AuditEventRecord{
 		EventName:       "access_request.revoked",
 		ActorUserID:     userID,
 		OwnerUserID:     updatedRecord.OwnerUserID,
@@ -368,13 +368,7 @@ func (s *Service) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccess
 	}
 	return &aiv1.RevokeAccessRequestResponse{AccessRequest: accessRequestToProto(updatedRecord)}, nil
 }
-func (s *Service) putAuditEvent(ctx context.Context, record storage.AuditEventRecord) error {
-	if s.auditEventStore == nil {
-		return fmt.Errorf("audit event store is not configured")
-	}
-	record.CreatedAt = record.CreatedAt.UTC()
-	return s.auditEventStore.PutAuditEvent(ctx, record)
-}
+
 func listAuditEventFilterFromRequest(in *aiv1.ListAuditEventsRequest) (storage.AuditEventFilter, error) {
 	filter := storage.AuditEventFilter{
 		EventName: strings.TrimSpace(in.GetEventName()),

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
 
 func TestOAuthAdapterBuildAuthorizationURL(t *testing.T) {
@@ -20,7 +20,7 @@ func TestOAuthAdapterBuildAuthorizationURL(t *testing.T) {
 		RedirectURI:      "https://app.example.com/oauth/callback",
 	})
 
-	raw, err := adapter.BuildAuthorizationURL(aiservice.ProviderAuthorizationURLInput{
+	raw, err := adapter.BuildAuthorizationURL(provider.AuthorizationURLInput{
 		State:           "state-1",
 		CodeChallenge:   "challenge-1",
 		RequestedScopes: []string{"responses.read", "responses.write"},
@@ -102,7 +102,7 @@ func TestOAuthAdapterExchangeAuthorizationCode(t *testing.T) {
 		RedirectURI:  "https://app.example.com/oauth/callback",
 	})
 
-	got, err := adapter.ExchangeAuthorizationCode(context.Background(), aiservice.ProviderAuthorizationCodeInput{
+	got, err := adapter.ExchangeAuthorizationCode(context.Background(), provider.AuthorizationCodeInput{
 		AuthorizationCode: "code-1",
 		CodeVerifier:      "verifier-1",
 	})
@@ -150,7 +150,7 @@ func TestOAuthAdapterRefreshToken(t *testing.T) {
 		ClientID:     "client-1",
 		ClientSecret: "secret-1",
 	})
-	got, err := adapter.RefreshToken(context.Background(), aiservice.ProviderRefreshTokenInput{
+	got, err := adapter.RefreshToken(context.Background(), provider.RefreshTokenInput{
 		RefreshToken: "rt-1",
 	})
 	if err != nil {
@@ -181,7 +181,7 @@ func TestOAuthAdapterExchangeAuthorizationCodeNon2xxReadError(t *testing.T) {
 		},
 	}}
 
-	_, err := adapter.ExchangeAuthorizationCode(context.Background(), aiservice.ProviderAuthorizationCodeInput{
+	_, err := adapter.ExchangeAuthorizationCode(context.Background(), provider.AuthorizationCodeInput{
 		AuthorizationCode: "code-1",
 		CodeVerifier:      "verifier-1",
 	})

@@ -163,15 +163,6 @@ func (h *CredentialHandlers) RevokeCredential(ctx context.Context, in *aiv1.Revo
 	if err := h.usageGuard.ensureCredentialNotBoundToActiveCampaigns(ctx, userID, credentialID); err != nil {
 		return nil, err
 	}
-
-	revokedAt := h.clock().UTC()
-	if err := h.credentialStore.RevokeCredential(ctx, userID, credentialID, revokedAt); err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "credential not found")
-		}
-		return nil, status.Errorf(codes.Internal, "revoke credential: %v", err)
-	}
-
 	record, err := h.credentialStore.GetCredential(ctx, credentialID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -181,6 +172,14 @@ func (h *CredentialHandlers) RevokeCredential(ctx context.Context, in *aiv1.Revo
 	}
 	if strings.TrimSpace(record.OwnerUserID) != userID {
 		return nil, status.Error(codes.NotFound, "credential not found")
+	}
+	revoked, err := credential.Revoke(credentialFromRecord(record), h.clock)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	applyCredentialLifecycle(&record, revoked)
+	if err := h.credentialStore.PutCredential(ctx, record); err != nil {
+		return nil, status.Errorf(codes.Internal, "put credential: %v", err)
 	}
 
 	return &aiv1.RevokeCredentialResponse{Credential: credentialToProto(record)}, nil

@@ -7,7 +7,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
@@ -196,7 +196,7 @@ func campaignArtifactToProto(record storage.CampaignArtifactRecord) *aiv1.Campai
 	}
 }
 
-func referenceDocumentSummaryToProto(result campaigncontext.ReferenceSearchResult) *aiv1.SystemReferenceDocumentSummary {
+func referenceDocumentSummaryToProto(result referencecorpus.SearchResult) *aiv1.SystemReferenceDocumentSummary {
 	return &aiv1.SystemReferenceDocumentSummary{
 		System:     result.System,
 		DocumentId: result.DocumentID,
@@ -208,7 +208,7 @@ func referenceDocumentSummaryToProto(result campaigncontext.ReferenceSearchResul
 	}
 }
 
-func referenceDocumentToProto(document campaigncontext.ReferenceDocument) *aiv1.SystemReferenceDocument {
+func referenceDocumentToProto(document referencecorpus.Document) *aiv1.SystemReferenceDocument {
 	return &aiv1.SystemReferenceDocument{
 		System:     document.System,
 		DocumentId: document.DocumentID,

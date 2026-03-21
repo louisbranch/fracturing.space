@@ -6,20 +6,21 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	aiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // InvokeAgent executes one provider call using an owned active agent auth reference.
-func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) (*aiv1.InvokeAgentResponse, error) {
+func (h *InvocationHandlers) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) (*aiv1.InvokeAgentResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "invoke agent request is required")
 	}
-	if s.agentStore == nil {
+	if h.agentStore == nil {
 		return nil, status.Error(codes.Internal, "agent store is not configured")
 	}
-	if s.sealer == nil {
+	if h.sealer == nil {
 		return nil, status.Error(codes.Internal, "secret sealer is not configured")
 	}
 
@@ -36,7 +37,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 		return nil, status.Error(codes.InvalidArgument, "input is required")
 	}
 
-	agentRecord, err := s.agentStore.GetAgent(ctx, agentID)
+	agentRecord, err := h.agentStore.GetAgent(ctx, agentID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "agent not found")
@@ -44,7 +45,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
 	}
 
-	authorized, sharedAccess, accessRequestID, err := s.isAuthorizedToInvokeAgent(ctx, userID, agentRecord)
+	authorized, sharedAccess, accessRequestID, err := newAccessibleAgentResolver(h.agentStore, h.accessRequestStore).isAuthorizedToInvokeAgent(ctx, userID, agentRecord)
 	if err != nil {
 		return nil, err
 	}
@@ -52,17 +53,17 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 		return nil, status.Error(codes.NotFound, "agent not found")
 	}
 
-	provider := providerFromString(agentRecord.Provider)
-	adapter, ok := s.providerInvocationAdapters[provider]
+	providerID := providerFromString(agentRecord.Provider)
+	adapter, ok := h.providerInvocationAdapters[providerID]
 	if !ok || adapter == nil {
 		return nil, status.Error(codes.FailedPrecondition, "provider invocation adapter is unavailable")
 	}
 
-	invokeToken, err := s.resolveAgentInvokeToken(ctx, strings.TrimSpace(agentRecord.OwnerUserID), agentRecord)
+	invokeToken, err := h.resolveAgentInvokeToken(ctx, strings.TrimSpace(agentRecord.OwnerUserID), agentRecord)
 	if err != nil {
 		return nil, err
 	}
-	result, err := adapter.Invoke(ctx, ProviderInvokeInput{
+	result, err := adapter.Invoke(ctx, aiprovider.InvokeInput{
 		Model:            agentRecord.Model,
 		Input:            input,
 		Instructions:     strings.TrimSpace(agentRecord.Instructions),
@@ -77,7 +78,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 		return nil, status.Error(codes.Internal, "provider returned empty output")
 	}
 	if sharedAccess {
-		if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
+		if err := putAuditEvent(ctx, h.auditEventStore, storage.AuditEventRecord{
 			EventName:       "agent.invoke.shared",
 			ActorUserID:     userID,
 			OwnerUserID:     strings.TrimSpace(agentRecord.OwnerUserID),
@@ -85,7 +86,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 			AgentID:         strings.TrimSpace(agentRecord.ID),
 			AccessRequestID: accessRequestID,
 			Outcome:         "success",
-			CreatedAt:       s.clock().UTC(),
+			CreatedAt:       h.clock().UTC(),
 		}); err != nil {
 			return nil, status.Errorf(codes.Internal, "put audit event: %v", err)
 		}
@@ -98,12 +99,6 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 	}, nil
 }
 
-func (s *Service) resolveAgentInvokeToken(ctx context.Context, ownerUserID string, agentRecord storage.AgentRecord) (string, error) {
-	return s.resolveAuthReferenceToken(
-		ctx,
-		ownerUserID,
-		providerFromString(agentRecord.Provider),
-		agentRecord.CredentialID,
-		agentRecord.ProviderGrantID,
-	)
+func (h *InvocationHandlers) resolveAgentInvokeToken(ctx context.Context, ownerUserID string, agentRecord storage.AgentRecord) (string, error) {
+	return h.authTokenResolverForRuntime().resolveAgentInvokeToken(ctx, ownerUserID, agentRecord)
 }

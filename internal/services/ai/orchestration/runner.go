@@ -20,6 +20,7 @@ const defaultToolResultMaxBytes = 32 * 1024
 type runner struct {
 	dialer             Dialer
 	promptBuilder      PromptBuilder
+	toolPolicy         ToolPolicy
 	max                int
 	turnTimeout        time.Duration
 	toolResultMaxBytes int
@@ -42,11 +43,16 @@ func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 	}
 	promptBuilder := cfg.PromptBuilder
 	if promptBuilder == nil {
-		promptBuilder = newDefaultPromptBuilder()
+		promptBuilder = newDegradedPromptBuilder()
+	}
+	toolPolicy := cfg.ToolPolicy
+	if toolPolicy == nil {
+		toolPolicy = AllowAllToolPolicy()
 	}
 	return &runner{
 		dialer:             cfg.Dialer,
 		promptBuilder:      promptBuilder,
+		toolPolicy:         toolPolicy,
 		max:                maxSteps,
 		turnTimeout:        turnTimeout,
 		toolResultMaxBytes: toolResultMaxBytes,
@@ -122,14 +128,19 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		recordSpanError(span, err)
 		return Result{}, err
 	}
-	allowedTools := filterTools(tools)
+	allowedTools := filterTools(tools, r.toolPolicy)
 	span.SetAttributes(attribute.Int("ai.orchestration.allowed_tool_count", len(allowedTools)))
 	allowedToolNames := make(map[string]struct{}, len(allowedTools))
 	for _, tool := range allowedTools {
 		allowedToolNames[tool.Name] = struct{}{}
 	}
 	promptCtx, promptSpan := tracer.Start(ctx, "ai.orchestration.build_prompt")
-	prompt, err := r.promptBuilder.Build(promptCtx, sess, input)
+	prompt, err := r.promptBuilder.Build(promptCtx, sess, PromptInput{
+		CampaignID:    input.CampaignID,
+		SessionID:     input.SessionID,
+		ParticipantID: input.ParticipantID,
+		TurnInput:     input.Input,
+	})
 	if err != nil {
 		err = errPromptBuild(err)
 		recordSpanError(promptSpan, err)
@@ -283,21 +294,6 @@ func truncateToolResultOutput(text string, maxBytes int) (string, bool) {
 }
 
 const toolResultBudgetSuffix = "\n\n[truncated by AI orchestration tool-result budget]"
-
-func filterTools(tools []Tool) []Tool {
-	filtered := make([]Tool, 0, len(tools))
-	for _, tool := range tools {
-		name := strings.TrimSpace(tool.Name)
-		if name == "" {
-			continue
-		}
-		if !mcpbridge.ProductionToolAllowed(name) {
-			continue
-		}
-		filtered = append(filtered, tool)
-	}
-	return filtered
-}
 
 func decodeArgs(raw string) (any, error) {
 	raw = strings.TrimSpace(raw)

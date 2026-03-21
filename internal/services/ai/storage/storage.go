@@ -91,17 +91,6 @@ type ProviderGrantFilter struct {
 	Status   string
 }
 
-// UpdateProviderGrantTokenInput captures one provider-grant refresh result.
-type UpdateProviderGrantTokenInput struct {
-	OwnerUserID      string
-	ProviderGrantID  string
-	TokenCiphertext  string
-	RefreshedAt      time.Time
-	ExpiresAt        *time.Time
-	Status           string
-	LastRefreshError string
-}
-
 // AccessRequestRecord stores one owner-reviewed access request for an agent.
 type AccessRequestRecord struct {
 	ID string
@@ -219,7 +208,6 @@ type CredentialStore interface {
 	PutCredential(ctx context.Context, record CredentialRecord) error
 	GetCredential(ctx context.Context, credentialID string) (CredentialRecord, error)
 	ListCredentialsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (CredentialPage, error)
-	RevokeCredential(ctx context.Context, ownerUserID string, credentialID string, revokedAt time.Time) error
 }
 
 // AgentStore persists AI agent records.
@@ -235,8 +223,6 @@ type ProviderGrantStore interface {
 	PutProviderGrant(ctx context.Context, record ProviderGrantRecord) error
 	GetProviderGrant(ctx context.Context, providerGrantID string) (ProviderGrantRecord, error)
 	ListProviderGrantsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter ProviderGrantFilter) (ProviderGrantPage, error)
-	RevokeProviderGrant(ctx context.Context, ownerUserID string, providerGrantID string, revokedAt time.Time) error
-	UpdateProviderGrantToken(ctx context.Context, input UpdateProviderGrantTokenInput) error
 }
 
 // ProviderConnectSessionStore persists connect-session records.

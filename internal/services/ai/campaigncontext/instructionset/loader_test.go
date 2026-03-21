@@ -1,4 +1,4 @@
-package campaigncontext
+package instructionset
 
 import (
 	"os"
@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func TestInstructionLoaderLoadsCoreSkillsFromEmbed(t *testing.T) {
-	loader := NewInstructionLoader("")
+func TestLoaderLoadsCoreSkillsFromEmbed(t *testing.T) {
+	loader := New("")
 	content, err := loader.LoadCoreSkills()
 	if err != nil {
 		t.Fatalf("LoadCoreSkills() error = %v", err)
@@ -17,8 +17,8 @@ func TestInstructionLoaderLoadsCoreSkillsFromEmbed(t *testing.T) {
 	}
 }
 
-func TestInstructionLoaderLoadsCoreInteractionFromEmbed(t *testing.T) {
-	loader := NewInstructionLoader("")
+func TestLoaderLoadsCoreInteractionFromEmbed(t *testing.T) {
+	loader := New("")
 	content, err := loader.LoadCoreInteraction()
 	if err != nil {
 		t.Fatalf("LoadCoreInteraction() error = %v", err)
@@ -28,8 +28,8 @@ func TestInstructionLoaderLoadsCoreInteractionFromEmbed(t *testing.T) {
 	}
 }
 
-func TestInstructionLoaderLoadsSystemSkillsFromEmbed(t *testing.T) {
-	loader := NewInstructionLoader("")
+func TestLoaderLoadsSystemSkillsFromEmbed(t *testing.T) {
+	loader := New("")
 	content, err := loader.LoadSystemSkills("daggerheart")
 	if err != nil {
 		t.Fatalf("LoadSystemSkills() error = %v", err)
@@ -39,8 +39,8 @@ func TestInstructionLoaderLoadsSystemSkillsFromEmbed(t *testing.T) {
 	}
 }
 
-func TestInstructionLoaderReturnsEmptyForMissingSystem(t *testing.T) {
-	loader := NewInstructionLoader("")
+func TestLoaderReturnsEmptyForMissingSystem(t *testing.T) {
+	loader := New("")
 	content, err := loader.LoadSystemSkills("nonexistent")
 	if err != nil {
 		t.Fatalf("LoadSystemSkills() error = %v", err)
@@ -50,8 +50,8 @@ func TestInstructionLoaderReturnsEmptyForMissingSystem(t *testing.T) {
 	}
 }
 
-func TestInstructionLoaderLoadSkillsComposesCoreAndSystem(t *testing.T) {
-	loader := NewInstructionLoader("")
+func TestLoaderLoadSkillsComposesCoreAndSystem(t *testing.T) {
+	loader := New("")
 	content, err := loader.LoadSkills("daggerheart")
 	if err != nil {
 		t.Fatalf("LoadSkills() error = %v", err)
@@ -70,8 +70,8 @@ func TestInstructionLoaderLoadSkillsComposesCoreAndSystem(t *testing.T) {
 	}
 }
 
-func TestInstructionLoaderLoadSkillsWorksWithoutSystem(t *testing.T) {
-	loader := NewInstructionLoader("")
+func TestLoaderLoadSkillsWorksWithoutSystem(t *testing.T) {
+	loader := New("")
 	content, err := loader.LoadSkills("")
 	if err != nil {
 		t.Fatalf("LoadSkills() error = %v", err)
@@ -84,10 +84,8 @@ func TestInstructionLoaderLoadSkillsWorksWithoutSystem(t *testing.T) {
 	}
 }
 
-func TestInstructionLoaderFilesystemOverride(t *testing.T) {
+func TestLoaderFilesystemOverride(t *testing.T) {
 	dir := t.TempDir()
-	// Create a minimal core/skills.md under the override root,
-	// mimicking the v1/ prefix used by the loader.
 	coreDir := dir + "/v1/core"
 	if err := makeDir(coreDir); err != nil {
 		t.Fatalf("mkdir: %v", err)
@@ -96,7 +94,7 @@ func TestInstructionLoaderFilesystemOverride(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	loader := NewInstructionLoader(dir)
+	loader := New(dir)
 	content, err := loader.LoadCoreSkills()
 	if err != nil {
 		t.Fatalf("LoadCoreSkills() error = %v", err)
@@ -104,6 +102,13 @@ func TestInstructionLoaderFilesystemOverride(t *testing.T) {
 	if !strings.Contains(content, "Custom Skills") {
 		t.Fatalf("expected custom content, got: %q", content)
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func makeDir(path string) error {
