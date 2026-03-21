@@ -23,29 +23,62 @@ const maxAppendRetries = 16
 
 // Store owns transcript persistence for the play service.
 type Store struct {
-	sqlDB *sql.DB
+	sqlDB databaseHandle
 	now   func() time.Time
 }
 
 // Open opens the play transcript store.
 func Open(path string) (*Store, error) {
+	return openWith(path, storeOpeners{
+		mkdirAll: os.MkdirAll,
+		openDB: func(path string) (databaseHandle, error) {
+			return sqliteconn.Open(path)
+		},
+		applyMigrations: func(db databaseHandle, now func() time.Time) error {
+			sqlDB, ok := db.(*sql.DB)
+			if !ok {
+				return errors.New("sqlite migrations require *sql.DB")
+			}
+			return sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, "", now)
+		},
+		now: time.Now,
+	})
+}
+
+type databaseHandle interface {
+	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+	Close() error
+}
+
+type storeOpeners struct {
+	mkdirAll        func(string, os.FileMode) error
+	openDB          func(string) (databaseHandle, error)
+	applyMigrations func(databaseHandle, func() time.Time) error
+	now             func() time.Time
+}
+
+// openWith isolates the store bootstrap side effects so Open error paths can
+// be tested without real filesystem or migration failures.
+func openWith(path string, openers storeOpeners) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, errors.New("storage path is required")
 	}
 	if dir := filepath.Dir(path); dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := openers.mkdirAll(dir, 0o755); err != nil {
 			return nil, fmt.Errorf("create storage dir: %w", err)
 		}
 	}
-	sqlDB, err := sqliteconn.Open(path)
+	sqlDB, err := openers.openDB(path)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite store: %w", err)
 	}
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, "", time.Now); err != nil {
+	if err := openers.applyMigrations(sqlDB, openers.now); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("apply play sqlite migrations: %w", err)
 	}
-	return &Store{sqlDB: sqlDB, now: time.Now}, nil
+	return &Store{sqlDB: sqlDB, now: openers.now}, nil
 }
 
 // Close closes the underlying sqlite handle.

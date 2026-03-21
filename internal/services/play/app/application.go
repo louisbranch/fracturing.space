@@ -45,9 +45,9 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 	}
 	return playprotocol.Bootstrap{
 		CampaignID:       strings.TrimSpace(req.CampaignID),
-		Viewer:           state.GetViewer(),
+		Viewer:           playprotocol.ViewerFromGameViewer(state.GetViewer()),
 		System:           system,
-		InteractionState: state,
+		InteractionState: playprotocol.InteractionStateFromGameState(state),
 		Chat:             chat,
 		Realtime: playprotocol.RealtimeConfig{
 			URL:             "/realtime",
@@ -74,7 +74,7 @@ func (a playApplication) roomSnapshotFromState(ctx context.Context, campaignID s
 		return playprotocol.RoomSnapshot{}, err
 	}
 	return playprotocol.RoomSnapshot{
-		InteractionState: state,
+		InteractionState: playprotocol.InteractionStateFromGameState(state),
 		Chat:             chat,
 		LatestGameSeq:    latestGameSeq,
 	}, nil

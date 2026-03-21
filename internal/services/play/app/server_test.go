@@ -220,6 +220,15 @@ func TestHandleBootstrapReturnsPlayContract(t *testing.T) {
 	if payload.CampaignID != "c1" {
 		t.Fatalf("campaign_id = %q, want %q", payload.CampaignID, "c1")
 	}
+	if payload.Viewer == nil || payload.Viewer.ParticipantID != "p1" || payload.Viewer.Name != "Avery" {
+		t.Fatalf("viewer = %#v", payload.Viewer)
+	}
+	if payload.InteractionState.CampaignID != "c1" || payload.InteractionState.CampaignName != "The Guildhouse" {
+		t.Fatalf("interaction_state = %#v", payload.InteractionState)
+	}
+	if payload.InteractionState.ActiveSession == nil || payload.InteractionState.ActiveSession.SessionID != "s1" {
+		t.Fatalf("active_session = %#v", payload.InteractionState.ActiveSession)
+	}
 	if payload.Chat.HistoryURL != "/api/campaigns/c1/chat/history" {
 		t.Fatalf("history_url = %q", payload.Chat.HistoryURL)
 	}
@@ -258,6 +267,9 @@ func TestHandleBootstrapUsesCookieScopedRealtimeURL(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
+	if payload.InteractionState.Viewer == nil || payload.InteractionState.Viewer.ParticipantID != "p1" {
+		t.Fatalf("interaction viewer = %#v", payload.InteractionState.Viewer)
+	}
 	if payload.Realtime.URL != "/realtime" {
 		t.Fatalf("realtime.url = %q, want %q", payload.Realtime.URL, "/realtime")
 	}
@@ -287,6 +299,18 @@ func TestHandleBootstrapRejectsPlaySessionQueryParamWithoutCookie(t *testing.T) 
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestListenAndServeGuards(t *testing.T) {
+	t.Parallel()
+
+	if err := (*Server)(nil).ListenAndServe(context.Background()); err == nil {
+		t.Fatal("ListenAndServe(nil) error = nil, want non-nil")
+	}
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	if err := server.ListenAndServe(nil); err == nil {
+		t.Fatal("ListenAndServe(nil context) error = nil, want non-nil")
 	}
 }
 

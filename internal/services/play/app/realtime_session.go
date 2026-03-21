@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync"
 
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 )
 
@@ -30,14 +29,23 @@ type wsPeer struct {
 	encoder *json.Encoder
 }
 
-func (s *realtimeSession) attach(room *campaignRoom, state *gamev1.InteractionState) {
+func (s *realtimeSession) attach(room *campaignRoom, state playprotocol.InteractionState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.room = room
 	s.campaignID = strings.TrimSpace(room.campaignID)
-	s.participantID = strings.TrimSpace(state.GetViewer().GetParticipantId())
-	s.participantName = strings.TrimSpace(state.GetViewer().GetName())
-	s.activeSessionID = strings.TrimSpace(state.GetActiveSession().GetSessionId())
+	if state.Viewer != nil {
+		s.participantID = strings.TrimSpace(state.Viewer.ParticipantID)
+		s.participantName = strings.TrimSpace(state.Viewer.Name)
+	} else {
+		s.participantID = ""
+		s.participantName = ""
+	}
+	if state.ActiveSession != nil {
+		s.activeSessionID = strings.TrimSpace(state.ActiveSession.SessionID)
+	} else {
+		s.activeSessionID = ""
+	}
 }
 
 func (s *realtimeSession) currentRoom() *campaignRoom {

@@ -109,6 +109,14 @@ npm run build
 npm run build-storybook
 ```
 
+For a clean-checkout verification path that installs dependencies first and
+builds into temporary output directories instead of rewriting the checked-in
+bundle, run this from the repo root:
+
+```sh
+make play-ui-check
+```
+
 ## Extending the pattern
 
 When adding the next isolated component:

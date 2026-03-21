@@ -18,15 +18,20 @@ Canonical onboarding path for developers adding features, fixing bugs, or improv
    - `make check` before opening or updating a PR
 4. If you are changing the web service, read the [Web contributor map](../architecture/platform/web-contributor-map.md) and run:
    - `make web-architecture-check`
-5. Use `make cover` or `make cover-critical-domain` only when you need focused standalone coverage output separate from `make check`.
-6. Run docs checks for docs-heavy changes:
+5. If you are changing the play service, read the [Play contributor map](../reference/play-contributor-map.md) and run:
+   - `make play-architecture-check`
+   - `make play-ui-check` for `internal/services/play/ui/**` changes
+6. Use `make cover` or `make cover-critical-domain` only when you need focused standalone coverage output separate from `make check`.
+7. Run docs checks for docs-heavy changes:
    - `make docs-check`
 
 ## Good to know
 
 - File/package routing: [Contributor map](../reference/contributor-map.md)
+- Play routing and test placement: [Play contributor map](../reference/play-contributor-map.md)
 - Game service routing and test placement: [Game service contributor map](../reference/game-service-contributor-map.md)
 - Extension workflow: [Adding a command/event/system](../guides/adding-command-event-system.md)
+- Play UI component workflow: [Play UI Component Storybook Workflow](../guides/play-ui-component-preview-workflow.md)
 - Web architecture boundaries: [Web architecture](../architecture/platform/web-architecture.md)
 - Web routing and ownership map: [Web contributor map](../architecture/platform/web-contributor-map.md)
 - Web module patterns: [Web module playbook](../guides/web-module-playbook.md)

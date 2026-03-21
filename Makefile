@@ -28,7 +28,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down play-ui-dist cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down play-ui-dist play-ui-check cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -84,6 +84,10 @@ down: ## Stop watcher-based local services and devcontainer
 
 play-ui-dist: ## Refresh checked-in play UI dist from the canonical Docker/Linux build
 	@bash ./scripts/refresh-play-ui-dist.sh
+
+play-ui-check: ## Install and verify the play UI workspace from a clean checkout
+	mkdir -p .tmp/play-ui-dist-check .tmp/play-ui-storybook-check
+	cd internal/services/play/ui && npm ci && npm test && npm run build -- --outDir ../../../../.tmp/play-ui-dist-check && npm run build-storybook -- --output-dir ../../../../.tmp/play-ui-storybook-check
 
 cover:
 	@COVERAGE_LOCK_LABEL='make cover' \

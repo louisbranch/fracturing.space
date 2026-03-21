@@ -9,9 +9,11 @@ describe("BackstageContextCard", () => {
         sceneName="Sealed Vault"
         pausedPromptText="The ward crackles when either of you nears the seam. What do you do?"
         reason="Clarify how the ward reacts to tools."
-        statusLabel="OOC Open"
-        statusClassName="badge-warning badge-soft"
-        statusTooltip="Awaiting player readiness."
+        status={{
+          label: "OOC Open",
+          className: "badge-warning badge-soft",
+          tooltip: "Awaiting player readiness.",
+        }}
       />,
     );
 
@@ -28,9 +30,11 @@ describe("BackstageContextCard", () => {
   it("renders nothing when there is no context to show", () => {
     const { container } = render(
       <BackstageContextCard
-        statusLabel="Backstage Idle"
-        statusClassName="badge-ghost"
-        statusTooltip="OOC is closed."
+        status={{
+          label: "Backstage Idle",
+          className: "badge-ghost",
+          tooltip: "OOC is closed.",
+        }}
       />,
     );
     expect(container).toBeEmptyDOMElement();

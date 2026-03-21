@@ -1,7 +1,7 @@
 import { BackstageContextCard } from "../backstage-context-card/BackstageContextCard";
 import { BackstageCompose } from "../backstage-compose/BackstageCompose";
 import { BackstageOOCList } from "../backstage-ooc-list/BackstageOOCList";
-import { backstageStatusDisplay } from "../shared/status-display";
+import { backstageStatusBadge } from "../../shared/view-models";
 import type { BackstagePanelProps } from "./contract";
 
 export function BackstagePanel({
@@ -13,11 +13,7 @@ export function BackstagePanel({
 }: BackstagePanelProps) {
   const viewer = state.participants.find((participant) => participant.id === state.viewerParticipantId);
   const viewerReady = Boolean(viewer?.readyToResume);
-  const status = backstageStatusDisplay({
-    mode: state.mode,
-    resumeState: state.resumeState,
-    viewerReady,
-  });
+  const status = backstageStatusBadge(state);
 
   return (
     <section aria-label="Backstage" className="flex min-h-0 flex-1 flex-col">
@@ -26,9 +22,7 @@ export function BackstagePanel({
           sceneName={state.sceneName}
           pausedPromptText={state.pausedPromptText}
           reason={state.reason}
-          statusLabel={status.badgeLabel}
-          statusClassName={status.badgeClassName}
-          statusTooltip={status.message}
+          status={status}
         />
         <BackstageOOCList
           messages={state.messages}

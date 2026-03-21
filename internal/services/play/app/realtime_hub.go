@@ -170,14 +170,13 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to load interaction state", nil)
 		return
 	}
-	session.attach(room, state)
-	room.add(session)
-
 	snapshot, err := app.roomSnapshotFromState(ctx, campaignID, state, room.latestGameSequence())
 	if err != nil {
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to build play snapshot", nil)
 		return
 	}
+	session.attach(room, snapshot.InteractionState)
+	room.add(session)
 	_ = session.peer.writeFrame(wsFrame{
 		Type:      "play.ready",
 		RequestID: frame.RequestID,

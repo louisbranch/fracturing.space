@@ -1,7 +1,7 @@
 import { OnStageCompose } from "../on-stage-compose/OnStageCompose";
 import { OnStageSceneCard } from "../on-stage-scene-card/OnStageSceneCard";
 import { OnStageSlotList } from "../on-stage-slot-list/OnStageSlotList";
-import { onStageStatusDisplay } from "../shared/status-display";
+import { onStageStatusBadge } from "../../shared/view-models";
 import type { OnStagePanelProps } from "./contract";
 
 export function OnStagePanel({
@@ -14,12 +14,7 @@ export function OnStagePanel({
   onUnyield,
   onCharacterInspect,
 }: OnStagePanelProps) {
-  const status = onStageStatusDisplay({
-    mode: state.mode,
-    aiStatus: state.aiStatus,
-    disabledReason: state.viewerControls.disabledReason,
-    oocReason: state.oocReason,
-  });
+  const status = onStageStatusBadge(state);
 
   return (
     <section aria-label="On Stage" className="flex min-h-0 flex-1 flex-col">
@@ -30,9 +25,7 @@ export function OnStagePanel({
           gmOutputText={state.gmOutputText}
           frameText={state.frameText}
           actingCharacterNames={state.actingCharacterNames}
-          statusLabel={status.badgeLabel}
-          statusClassName={status.badgeClassName}
-          statusTooltip={status.message}
+          status={status}
         />
         <OnStageSlotList
           participants={state.participants}

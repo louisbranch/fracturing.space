@@ -1,10 +1,12 @@
 package app
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 )
 
@@ -106,5 +108,115 @@ func TestRequirePlayRequest(t *testing.T) {
 			t.Fatal("requirePlayRequest() unexpectedly succeeded")
 		}
 		assertJSONError(t, rr, http.StatusUnauthorized, "authentication required")
+	})
+}
+
+func TestHandleChatHistoryVariants(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		interaction := newRecordingInteractionClient(playTestState())
+		transcripts := &scriptTranscriptStore{
+			latest: 7,
+			before: []transcript.Message{{
+				MessageID:  "m1",
+				CampaignID: "c1",
+				SessionID:  "s1",
+				SequenceID: 4,
+				SentAt:     "2026-03-13T12:00:00Z",
+				Actor: transcript.MessageActor{
+					ParticipantID: "p1",
+					Name:          "Avery",
+				},
+				Body:            "Hello",
+				ClientMessageID: "cm-1",
+			}},
+		}
+		server := newAuthedPlayServer(interaction, transcripts)
+
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/chat/history?before_seq=9&limit=2", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleChatHistory(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+		}
+		var payload playprotocol.HistoryResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("decode history response: %v", err)
+		}
+		if payload.SessionID != "s1" {
+			t.Fatalf("session_id = %q, want %q", payload.SessionID, "s1")
+		}
+		if len(payload.Messages) != 1 || payload.Messages[0].MessageID != "m1" {
+			t.Fatalf("messages = %#v", payload.Messages)
+		}
+		if transcripts.beforeArgs.before != 9 {
+			t.Fatalf("before_seq = %d, want %d", transcripts.beforeArgs.before, 9)
+		}
+		if transcripts.beforeArgs.limit != 2 {
+			t.Fatalf("limit = %d, want %d", transcripts.beforeArgs.limit, 2)
+		}
+		if transcripts.beforeArgs.scope.CampaignID != "c1" || transcripts.beforeArgs.scope.SessionID != "s1" {
+			t.Fatalf("history scope = %#v, want campaign c1 session s1", transcripts.beforeArgs.scope)
+		}
+	})
+
+	t.Run("invalid before sequence", func(t *testing.T) {
+		t.Parallel()
+
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/chat/history?before_seq=oops", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleChatHistory(rr, req)
+
+		assertJSONError(t, rr, http.StatusBadRequest, "invalid before_seq")
+	})
+
+	t.Run("invalid limit", func(t *testing.T) {
+		t.Parallel()
+
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/chat/history?limit=oops", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleChatHistory(rr, req)
+
+		assertJSONError(t, rr, http.StatusBadRequest, "invalid limit")
+	})
+
+	t.Run("missing active session returns empty payload", func(t *testing.T) {
+		t.Parallel()
+
+		state := playTestState()
+		state.ActiveSession = nil
+		server := newAuthedPlayServer(newRecordingInteractionClient(state), &scriptTranscriptStore{})
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/chat/history", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleChatHistory(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+		}
+		var payload playprotocol.HistoryResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("decode history response: %v", err)
+		}
+		if payload.SessionID != "" || len(payload.Messages) != 0 {
+			t.Fatalf("payload = %#v", payload)
+		}
 	})
 }
