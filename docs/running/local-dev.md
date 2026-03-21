@@ -146,10 +146,14 @@ starting `cmd/play` or the devcontainer watchers. When unset, `play` serves the
 checked-in build under `internal/services/play/ui/dist`.
 
 In devcontainer watcher mode without `FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`,
-the `play` watcher now rebuilds the embedded UI bundle automatically before it
-recompiles the Go service. Frontend changes under
-`internal/services/play/ui/src/` should therefore show up without a separate
-manual `npm run build`.
+the `play` watcher now uses the checked-in embedded UI bundle as-is and does
+not rebuild it. For live frontend iteration, run the Vite dev server and set
+`FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`. To refresh the committed embedded
+bundle from the canonical Docker/Linux toolchain, run:
+
+```sh
+make play-ui-dist
+```
 
 In devcontainer mode, port `5173` is forwarded to the host so the browser can
 reach the Vite server directly. After changing `.env` for
