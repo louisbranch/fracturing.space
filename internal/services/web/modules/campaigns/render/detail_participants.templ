@@ -14,10 +14,10 @@ templ participantsFragment(view ParticipantsPageView, loc Localizer) {
 						if view.CanManageParticipants {
 							if campaignActionsLocked(view.ActionsLocked) {
 								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+									<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
 								</div>
 							} else {
-								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignParticipantCreate(view.CampaignID) } data-campaign-participants-add-link="true">{ T(loc, "game.participants.action_add") }</a>
+								<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignParticipantCreate(view.CampaignID) } data-campaign-participants-add-link="true">{ T(loc, "game.participants.action_add") }</a>
 							}
 						}
 					</div>

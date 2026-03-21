@@ -82,7 +82,7 @@ func TestAppSettingsProfileRendersSettingsMenuAndContent(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`<h1 class="mb-0">Settings</h1>`,
+		`<h1 class="mb-0 text-3xl">Settings</h1>`,
 		`id="settings-profile"`,
 		`href="/app/settings/profile"`,
 		`href="/app/settings/locale"`,
