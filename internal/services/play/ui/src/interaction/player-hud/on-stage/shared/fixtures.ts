@@ -1,7 +1,10 @@
 import {
-  characterAvatarPreviewAssets,
   participantAvatarPreviewAssets,
 } from "../../../../storybook/preview-assets/fixtures";
+import {
+  playerHUDCharacterCatalog,
+  playerHUDCharacterInspectionCatalog,
+} from "../../shared/character-inspection-fixtures";
 import type {
   OnStageCharacterSummary,
   OnStageParticipant,
@@ -10,15 +13,13 @@ import type {
 } from "./contract";
 
 const [rheaAvatar, brynAvatar, guideAvatar] = participantAvatarPreviewAssets;
-const [ariaAvatar, corinAvatar, sableAvatar, miraAvatar, rowanAvatar] =
-  characterAvatarPreviewAssets;
 
 export const onStageCharacterCatalog = {
-  aria: { id: "char-aria", name: "Aria", avatarUrl: ariaAvatar?.imageUrl },
-  corin: { id: "char-corin", name: "Corin", avatarUrl: corinAvatar?.imageUrl },
-  sable: { id: "char-sable", name: "Sable", avatarUrl: sableAvatar?.imageUrl },
-  mira: { id: "char-mira", name: "Mira", avatarUrl: miraAvatar?.imageUrl },
-  rowan: { id: "char-rowan", name: "Rowan", avatarUrl: rowanAvatar?.imageUrl },
+  aria: playerHUDCharacterCatalog.aria,
+  corin: playerHUDCharacterCatalog.corin,
+  sable: playerHUDCharacterCatalog.sable,
+  mira: playerHUDCharacterCatalog.mira,
+  rowan: playerHUDCharacterCatalog.rowan,
 } satisfies Record<string, OnStageCharacterSummary>;
 
 export const onStageParticipants: OnStageParticipant[] = [
@@ -99,6 +100,7 @@ export const onStageFixtureCatalog: Record<
       railStatus: "waiting",
     })),
     slots: [],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: false,
       canSubmitAndYield: false,
@@ -133,6 +135,7 @@ export const onStageFixtureCatalog: Record<
         reviewState: "open",
       }),
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: true,
       canSubmitAndYield: true,
@@ -174,6 +177,7 @@ export const onStageFixtureCatalog: Record<
         reviewState: "open",
       }),
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: true,
       canSubmitAndYield: true,
@@ -215,6 +219,7 @@ export const onStageFixtureCatalog: Record<
         reviewState: "open",
       }),
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: false,
       canSubmitAndYield: false,
@@ -250,6 +255,7 @@ export const onStageFixtureCatalog: Record<
         reviewReason: "Commit to how Aria keeps contact off the seam itself.",
       }),
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: true,
       canSubmitAndYield: true,
@@ -283,6 +289,7 @@ export const onStageFixtureCatalog: Record<
         reviewState: "open",
       }),
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: false,
       canSubmitAndYield: false,
@@ -305,6 +312,7 @@ export const onStageFixtureCatalog: Record<
       railStatus: "waiting",
     })),
     slots: [],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: false,
       canSubmitAndYield: false,
@@ -327,6 +335,7 @@ export const onStageFixtureCatalog: Record<
       railStatus: "waiting",
     })),
     slots: [],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: false,
       canSubmitAndYield: false,
@@ -378,6 +387,7 @@ export const onStageFixtureCatalog: Record<
         reviewState: "open",
       }),
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
     viewerControls: {
       canSubmit: true,
       canSubmitAndYield: true,

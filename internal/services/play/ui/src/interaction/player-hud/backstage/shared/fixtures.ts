@@ -1,4 +1,8 @@
 import { participantAvatarPreviewAssets } from "../../../../storybook/preview-assets/fixtures";
+import {
+  playerHUDCharacterCatalog,
+  playerHUDCharacterInspectionCatalog,
+} from "../../shared/character-inspection-fixtures";
 import type { BackstageState, BackstageParticipant } from "./contract";
 
 const [viewerAvatar, otherPlayerAvatar, gmAvatar] = participantAvatarPreviewAssets;
@@ -9,6 +13,12 @@ export const backstageParticipants: BackstageParticipant[] = [
     name: "Rhea",
     role: "player",
     avatarUrl: viewerAvatar?.imageUrl,
+    characters: [
+      playerHUDCharacterCatalog.aria,
+      playerHUDCharacterCatalog.sable,
+      playerHUDCharacterCatalog.mira,
+      playerHUDCharacterCatalog.rowan,
+    ],
     readyToResume: false,
   },
   {
@@ -16,6 +26,7 @@ export const backstageParticipants: BackstageParticipant[] = [
     name: "Bryn",
     role: "player",
     avatarUrl: otherPlayerAvatar?.imageUrl,
+    characters: [playerHUDCharacterCatalog.corin],
     readyToResume: false,
   },
   {
@@ -23,6 +34,7 @@ export const backstageParticipants: BackstageParticipant[] = [
     name: "Guide",
     role: "gm",
     avatarUrl: gmAvatar?.imageUrl,
+    characters: [],
     readyToResume: false,
   },
 ];
@@ -45,6 +57,7 @@ export const backstageFixtureCatalog: Record<
     viewerParticipantId: "p-rhea",
     participants: backstageParticipants,
     messages: [],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
   },
   openEmpty: {
     mode: "open",
@@ -56,6 +69,7 @@ export const backstageFixtureCatalog: Record<
     viewerParticipantId: "p-rhea",
     participants: backstageParticipants,
     messages: [],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
   },
   openDiscussion: {
     mode: "open",
@@ -90,6 +104,7 @@ export const backstageFixtureCatalog: Record<
         sentAt: "2026-03-19T19:32:00Z",
       },
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
   },
   viewerReady: {
     mode: "open",
@@ -112,6 +127,7 @@ export const backstageFixtureCatalog: Record<
         sentAt: "2026-03-19T19:31:00Z",
       },
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
   },
   waitingOnGM: {
     mode: "open",
@@ -140,5 +156,6 @@ export const backstageFixtureCatalog: Record<
         sentAt: "2026-03-19T19:35:00Z",
       },
     ],
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
   },
 };

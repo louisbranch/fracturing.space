@@ -17,6 +17,7 @@ export function BackstageParticipantRail({
   viewerParticipantId,
   gmAuthorityParticipantId,
   ariaLabel = "Backstage participants",
+  onParticipantInspect,
 }: BackstageParticipantRailProps) {
   return (
     <ParticipantPortraitRail
@@ -24,12 +25,14 @@ export function BackstageParticipantRail({
         id: participant.id,
         name: participant.name,
         avatarUrl: participant.avatarUrl,
+        characters: participant.characters,
         roleLabel: participant.role.toUpperCase(),
         status: mapStatus(participant),
         ownsGMAuthority: participant.id === gmAuthorityParticipantId,
       }))}
       viewerParticipantId={viewerParticipantId}
       ariaLabel={ariaLabel}
+      onParticipantInspect={onParticipantInspect}
     />
   );
 }

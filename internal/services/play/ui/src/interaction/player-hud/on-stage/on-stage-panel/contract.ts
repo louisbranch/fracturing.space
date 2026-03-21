@@ -8,4 +8,5 @@ export type OnStagePanelProps = {
   onSubmitAndYield: () => void;
   onYield: () => void;
   onUnyield: () => void;
+  onCharacterInspect?: (participantId: string, characterId: string) => void;
 };

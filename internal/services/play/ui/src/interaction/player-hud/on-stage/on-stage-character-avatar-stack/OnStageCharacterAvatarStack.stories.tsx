@@ -1,10 +1,53 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  PlayerHUDCharacterInspectorDialog,
+  usePlayerHUDCharacterInspector,
+} from "../../shared/PlayerHUDCharacterInspector";
+import { playerHUDCharacterInspectionCatalog } from "../../shared/character-inspection-fixtures";
 import { OnStageCharacterAvatarStack } from "./OnStageCharacterAvatarStack";
 import { onStageFixtureCatalog } from "./fixtures";
 
+const multiCharacterParticipant =
+  onStageFixtureCatalog.multiCharacterOwner.participants[0];
+
+function OnStageCharacterAvatarStackPreview(
+  args: React.ComponentProps<typeof OnStageCharacterAvatarStack>,
+) {
+  const { inspector, close, openForCharacter, setActiveCharacter } =
+    usePlayerHUDCharacterInspector();
+
+  return (
+    <>
+      <OnStageCharacterAvatarStack
+        {...args}
+        onCharacterInspect={(characterId) =>
+          openForCharacter(
+            {
+              name: multiCharacterParticipant?.name ?? "Participant",
+              characters: args.characters,
+              isViewer: true,
+            },
+            characterId,
+          )
+        }
+      />
+      <PlayerHUDCharacterInspectorDialog
+        isOpen={Boolean(inspector)}
+        participantName={inspector?.participantName ?? ""}
+        characters={inspector?.characters ?? []}
+        activeCharacterId={inspector?.activeCharacterId}
+        isViewer={inspector?.isViewer ?? false}
+        characterInspectionCatalog={playerHUDCharacterInspectionCatalog}
+        onCharacterChange={setActiveCharacter}
+        onClose={close}
+      />
+    </>
+  );
+}
+
 const meta = {
   title: "Interaction/Player HUD/On Stage/Character Avatar Stack",
-  component: OnStageCharacterAvatarStack,
+  component: OnStageCharacterAvatarStackPreview,
   parameters: {
     docs: {
       description: {
@@ -20,7 +63,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof OnStageCharacterAvatarStack>;
+} satisfies Meta<typeof OnStageCharacterAvatarStackPreview>;
 
 export default meta;
 

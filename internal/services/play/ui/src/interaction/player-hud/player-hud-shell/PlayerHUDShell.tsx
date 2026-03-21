@@ -20,6 +20,8 @@ export function PlayerHUDShell({
   onOnStageSubmitAndYield,
   onOnStageYield,
   onOnStageUnyield,
+  onCharacterInspect,
+  onParticipantInspect,
   backstage,
   backstageDraft,
   onBackstageDraftChange,
@@ -34,11 +36,13 @@ export function PlayerHUDShell({
     <SideChatParticipantRail
       participants={sideChat.participants}
       viewerParticipantId={sideChat.viewerParticipantId}
+      onParticipantInspect={onParticipantInspect}
     />
   ) : activeTab === "on-stage" ? (
     <OnStageParticipantRail
       participants={onStage.participants}
       viewerParticipantId={onStage.viewerParticipantId}
+      onParticipantInspect={onParticipantInspect}
     />
   ) : (
     <BackstageParticipantRail
@@ -46,6 +50,7 @@ export function PlayerHUDShell({
       viewerParticipantId={backstage.viewerParticipantId}
       gmAuthorityParticipantId={backstage.gmAuthorityParticipantId}
       ariaLabel="Backstage participants"
+      onParticipantInspect={onParticipantInspect}
     />
   );
 
@@ -64,6 +69,7 @@ export function PlayerHUDShell({
               onSubmitAndYield={onOnStageSubmitAndYield}
               onYield={onOnStageYield}
               onUnyield={onOnStageUnyield}
+              onCharacterInspect={onCharacterInspect}
             />
           ) : activeTab === "backstage" ? (
             <BackstagePanel

@@ -1,5 +1,9 @@
 import type { BackstageState } from "../backstage/shared/contract";
 import type { OnStageState } from "../on-stage/shared/contract";
+import type {
+  PlayerHUDCharacterInspectionCatalog,
+  PlayerHUDCharacterReference,
+} from "./character-inspection-contract";
 
 // HUDNavbarTab identifies the three top-level navigation surfaces in the player
 // HUD.
@@ -11,6 +15,7 @@ export type SideChatParticipant = {
   name: string;
   role: "player" | "gm";
   avatarUrl?: string;
+  characters: PlayerHUDCharacterReference[];
   typing?: boolean;
 };
 
@@ -27,6 +32,7 @@ export type SideChatState = {
   viewerParticipantId: string;
   participants: SideChatParticipant[];
   messages: SideChatMessage[];
+  characterInspectionCatalog: PlayerHUDCharacterInspectionCatalog;
 };
 
 // PlayerHUDState is the minimal top-level state for the player HUD shell.

@@ -12,6 +12,7 @@ function initials(name: string): string {
 export function OnStageCharacterAvatarStack({
   characters,
   ariaLabel,
+  onCharacterInspect,
 }: OnStageCharacterAvatarStackProps) {
   if (characters.length === 0) {
     return null;
@@ -23,9 +24,18 @@ export function OnStageCharacterAvatarStack({
   return (
     <div aria-label={accessibleLabel} className="flex items-center -space-x-2.5">
       {visibleCharacters.map((character) => (
-        <div
+        <button
           key={character.id}
-          className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-base-100 bg-base-300 text-base-content shadow-sm"
+          type="button"
+          aria-label={`Inspect ${character.name}`}
+          aria-haspopup="dialog"
+          className={`relative h-8 w-8 overflow-hidden rounded-full border-2 border-base-100 bg-base-300 text-base-content shadow-sm ${
+            onCharacterInspect
+              ? "cursor-pointer transition hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80"
+              : ""
+          }`}
+          disabled={!onCharacterInspect}
+          onClick={() => onCharacterInspect?.(character.id)}
         >
           {character.avatarUrl ? (
             <img src={character.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -34,7 +44,7 @@ export function OnStageCharacterAvatarStack({
               {initials(character.name) || "?"}
             </div>
           )}
-        </div>
+        </button>
       ))}
       {characters.length > 3 ? (
         <div className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-base-100 bg-base-200 text-xs font-semibold text-base-content shadow-sm">

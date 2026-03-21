@@ -1,3 +1,8 @@
+import type {
+  PlayerHUDCharacterInspectionCatalog,
+  PlayerHUDCharacterReference,
+} from "../../shared/character-inspection-contract";
+
 export type OnStageMode =
   | "waiting-on-gm"
   | "acting"
@@ -18,11 +23,7 @@ export type OnStageSlotReviewState =
   | "accepted"
   | "changes-requested";
 
-export type OnStageCharacterSummary = {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-};
+export type OnStageCharacterSummary = PlayerHUDCharacterReference;
 
 export type OnStageParticipant = {
   id: string;
@@ -72,6 +73,7 @@ export type OnStageState = {
   gmAuthorityParticipantId?: string;
   participants: OnStageParticipant[];
   slots: OnStageSlot[];
+  characterInspectionCatalog: PlayerHUDCharacterInspectionCatalog;
   viewerControls: OnStageViewerControls;
   mechanicsExtension?: OnStageMechanicsExtension;
 };

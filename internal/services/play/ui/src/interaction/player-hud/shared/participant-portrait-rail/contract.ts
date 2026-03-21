@@ -1,3 +1,5 @@
+import type { PlayerHUDCharacterReference } from "../character-inspection-contract";
+
 export type ParticipantPortraitStatus =
   | "idle"
   | "typing"
@@ -10,6 +12,7 @@ export type ParticipantPortraitRailParticipant = {
   id: string;
   name: string;
   avatarUrl?: string;
+  characters: PlayerHUDCharacterReference[];
   roleLabel?: string;
   status: ParticipantPortraitStatus;
   ownsGMAuthority?: boolean;
@@ -19,4 +22,5 @@ export type ParticipantPortraitRailProps = {
   participants: ParticipantPortraitRailParticipant[];
   viewerParticipantId: string;
   ariaLabel?: string;
+  onParticipantInspect?: (participantId: string) => void;
 };

@@ -4,4 +4,5 @@ export type OnStageParticipantRailProps = {
   participants: OnStageParticipant[];
   viewerParticipantId: string;
   ariaLabel?: string;
+  onParticipantInspect?: (participantId: string) => void;
 };

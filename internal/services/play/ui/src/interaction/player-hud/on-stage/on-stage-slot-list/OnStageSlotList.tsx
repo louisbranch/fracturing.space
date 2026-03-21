@@ -7,6 +7,7 @@ export function OnStageSlotList({
   actingParticipantIds,
   viewerParticipantId,
   ariaLabel = "On-stage messages",
+  onCharacterInspect,
 }: OnStageSlotListProps) {
   const participantMap = new Map(participants.map((participant) => [participant.id, participant]));
   const slotMap = new Map(slots.map((slot) => [slot.participantId, slot]));
@@ -46,6 +47,7 @@ export function OnStageSlotList({
             slot={slot}
             participant={participant}
             isViewer={participantId === viewerParticipantId}
+            onCharacterInspect={onCharacterInspect}
           />
         );
       })}
