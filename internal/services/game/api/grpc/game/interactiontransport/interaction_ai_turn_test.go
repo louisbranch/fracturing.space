@@ -96,13 +96,14 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		campaign    storage.CampaignRecord
-		interaction storage.SessionInteraction
-		sceneState  map[string]storage.SceneInteraction
-		source      string
-		wantOK      bool
-		wantReason  string
+		name           string
+		campaign       storage.CampaignRecord
+		interaction    storage.SessionInteraction
+		sceneState     map[string]storage.SceneInteraction
+		withSceneStore bool
+		source         string
+		wantOK         bool
+		wantReason     string
 	}{
 		{
 			name:        "missing binding",
@@ -111,7 +112,8 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 			sceneState: map[string]storage.SceneInteraction{
 				"camp-1:scene-1": {CampaignID: "camp-1", SceneID: "scene-1", SessionID: "sess-1", PhaseOpen: true, PhaseID: "phase-1"},
 			},
-			wantReason: "campaign ai binding is required",
+			withSceneStore: true,
+			wantReason:     "campaign ai binding is required",
 		},
 		{
 			name:        "human gm authority",
@@ -120,7 +122,8 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 			sceneState: map[string]storage.SceneInteraction{
 				"camp-1:scene-1": {CampaignID: "camp-1", SceneID: "scene-1", SessionID: "sess-1", PhaseOpen: true, PhaseID: "phase-1"},
 			},
-			wantReason: "gm authority participant is not ai-controlled",
+			withSceneStore: true,
+			wantReason:     "gm authority participant is not ai-controlled",
 		},
 		{
 			name:        "players still acting",
@@ -129,13 +132,15 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 			sceneState: map[string]storage.SceneInteraction{
 				"camp-1:scene-1": {CampaignID: "camp-1", SceneID: "scene-1", SessionID: "sess-1", PhaseOpen: true, PhaseID: "phase-1"},
 			},
-			wantReason: "scene player phase is open",
+			withSceneStore: true,
+			wantReason:     "scene player phase is open",
 		},
 		{
-			name:        "eligible",
-			campaign:    storage.CampaignRecord{ID: "camp-1", GmMode: campaign.GmModeAI, AIAgentID: "agent-1"},
-			interaction: storage.SessionInteraction{CampaignID: "camp-1", SessionID: "sess-1", ActiveSceneID: "scene-2", GMAuthorityParticipantID: "gm-ai"},
-			wantOK:      true,
+			name:           "eligible",
+			campaign:       storage.CampaignRecord{ID: "camp-1", GmMode: campaign.GmModeAI, AIAgentID: "agent-1"},
+			interaction:    storage.SessionInteraction{CampaignID: "camp-1", SessionID: "sess-1", ActiveSceneID: "scene-2", GMAuthorityParticipantID: "gm-ai"},
+			withSceneStore: true,
+			wantOK:         true,
 		},
 		{
 			name:     "bootstrap without active scene is eligible",
@@ -167,7 +172,19 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 					PhaseStatus: scene.PlayerPhaseStatusGMReview,
 				},
 			},
-			wantOK: true,
+			withSceneStore: true,
+			wantOK:         true,
+		},
+		{
+			name:     "active scene without scene interaction store is ineligible",
+			campaign: storage.CampaignRecord{ID: "camp-1", GmMode: campaign.GmModeAI, AIAgentID: "agent-1"},
+			interaction: storage.SessionInteraction{
+				CampaignID:               "camp-1",
+				SessionID:                "sess-1",
+				ActiveSceneID:            "scene-1",
+				GMAuthorityParticipantID: "gm-ai",
+			},
+			wantReason: "active scene interaction state is unavailable",
 		},
 	}
 
@@ -179,10 +196,12 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 			app := interactionApplication{
 				stores: interactionApplicationStores{
 					Participant: participantStore,
-					SceneInteraction: interactionSceneInteractionStoreStub{
-						interactions: tc.sceneState,
-					},
 				},
+			}
+			if tc.withSceneStore {
+				app.stores.SceneInteraction = interactionSceneInteractionStoreStub{
+					interactions: tc.sceneState,
+				}
 			}
 			got, err := app.aiTurnEligibility(context.Background(), tc.campaign, storage.SessionRecord{ID: "sess-1"}, tc.interaction, tc.source)
 			if err != nil {

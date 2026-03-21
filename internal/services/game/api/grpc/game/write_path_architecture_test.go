@@ -19,9 +19,9 @@ func TestDirectAppendEventUsageIsRestrictedToMaintenancePaths(t *testing.T) {
 	allowed := map[string]struct{}{
 		"internal/services/game/api/grpc/game/domain_adapter.go":                      {},
 		"internal/services/game/api/grpc/game/eventtransport/event_application.go":    {},
-		"internal/services/game/api/grpc/game/forktransport/fork_application.go":      {},
-		"internal/services/game/api/grpc/game/forktransport/fork_application_fork.go": {},
-		"internal/services/game/api/grpc/game/forktransport/fork_event_replay.go":     {},
+		"internal/services/game/api/grpc/game/eventtransport/event_append_service.go": {},
+		"internal/services/game/api/grpc/game/gametest/fakes_event.go":                {},
+		"internal/services/game/api/grpc/internal/journalimport/importer.go":          {},
 	}
 
 	var violations []string
@@ -60,7 +60,7 @@ func TestDirectAppendEventUsageIsRestrictedToMaintenancePaths(t *testing.T) {
 	if len(violations) == 0 {
 		return
 	}
-	t.Fatalf("direct AppendEvent usage outside maintenance/import paths:\n%s", strings.Join(violations, "\n"))
+	t.Fatalf("direct event append usage outside the adapter/event append/import seams:\n%s", strings.Join(violations, "\n"))
 }
 
 func TestDirectDomainExecuteUsageIsForbidden(t *testing.T) {
@@ -967,15 +967,14 @@ func appendEventCallLines(path string) ([]int, error) {
 		if !ok {
 			return true
 		}
-		if sel.Sel == nil || sel.Sel.Name != "AppendEvent" {
+		if sel.Sel == nil {
 			return true
 		}
-		parentSelector, ok := sel.X.(*ast.SelectorExpr)
-		if !ok || parentSelector.Sel == nil || parentSelector.Sel.Name != "Event" {
-			return true
+		switch sel.Sel.Name {
+		case "AppendEvent", "BatchAppendEvents":
+			line := fset.Position(sel.Sel.Pos()).Line
+			lines = append(lines, line)
 		}
-		line := fset.Position(sel.Sel.Pos()).Line
-		lines = append(lines, line)
 		return true
 	})
 	return lines, nil

@@ -102,6 +102,7 @@ func TestCampaignRoomProjectionSubscriptionUsesConfiguredRetryDelay(t *testing.T
 		ctx:        context.Background(),
 		cancel:     func() {},
 		sessions:   map[*realtimeSession]struct{}{},
+		authUserID: "user-1",
 	}
 
 	room.runProjectionSubscription()
@@ -111,6 +112,46 @@ func TestCampaignRoomProjectionSubscriptionUsesConfiguredRetryDelay(t *testing.T
 	}
 	if len(delays) != 1 || delays[0] != 250*time.Millisecond {
 		t.Fatalf("retry delays = %#v", delays)
+	}
+}
+
+func TestCampaignRoomEnsureProjectionSubscriptionUsesAuthenticatedCursor(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	events := &fakeEventClient{
+		stream:      &fakeCampaignUpdateStream{},
+		subscribeCh: make(chan struct{}, 1),
+	}
+	server.events = events
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+
+	room := &campaignRoom{
+		hub:        hub,
+		campaignID: "c1",
+		ctx:        context.Background(),
+		cancel:     func() {},
+		sessions:   map[*realtimeSession]struct{}{},
+		authUserID: "user-1",
+	}
+	room.setLatestGameSequence(9)
+
+	room.ensureProjectionSubscription()
+	events.awaitSubscribe(t)
+	room.cancel()
+
+	if events.lastUserID != "user-1" {
+		t.Fatalf("event auth metadata = %q, want %q", events.lastUserID, "user-1")
+	}
+	if events.lastRequest == nil {
+		t.Fatal("SubscribeCampaignUpdates request = nil")
+	}
+	if events.lastRequest.GetAfterSeq() != 9 {
+		t.Fatalf("SubscribeCampaignUpdates after_seq = %d, want %d", events.lastRequest.GetAfterSeq(), 9)
+	}
+	if got := events.lastRequest.GetProjectionScopes(); len(got) != 2 || got[0] != "campaign_sessions" || got[1] != "campaign_scenes" {
+		t.Fatalf("SubscribeCampaignUpdates projection scopes = %#v", got)
 	}
 }
 

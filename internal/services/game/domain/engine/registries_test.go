@@ -79,10 +79,10 @@ func (m syntheticModule) CharacterReady(any, character.State) (bool, string) {
 	return true, ""
 }
 
-func TestCoreDomains_AllSixRegistered(t *testing.T) {
+func TestCoreDomains_AllRegistered(t *testing.T) {
 	domains := CoreDomains()
-	if len(domains) != 7 {
-		t.Fatalf("CoreDomains() = %d, want 7", len(domains))
+	if len(domains) != 8 {
+		t.Fatalf("CoreDomains() = %d, want 8", len(domains))
 	}
 	seen := make(map[string]bool)
 	for _, d := range domains {

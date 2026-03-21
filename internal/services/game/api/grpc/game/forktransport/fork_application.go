@@ -6,22 +6,26 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/journalimport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // Deps holds all dependencies needed by the fork transport layer.
 type Deps struct {
-	Auth         authz.PolicyDeps
-	Campaign     storage.CampaignStore
-	Participant  storage.ParticipantStore
-	Character    storage.CharacterStore
-	Session      storage.SessionStore
-	CampaignFork storage.CampaignForkStore
-	Event        storage.EventStore
-	Social       socialv1.SocialServiceClient
-	Write        domainwrite.WritePath
-	Applier      projection.Applier
+	Auth          authz.PolicyDeps
+	Campaign      storage.CampaignStore
+	Participant   storage.ParticipantStore
+	Character     storage.CharacterStore
+	Session       storage.SessionStore
+	CampaignFork  storage.CampaignForkStore
+	Event         storage.EventStore
+	Social        socialv1.SocialServiceClient
+	Write         domainwrite.WritePath
+	Applier       projection.Applier
+	EventRegistry *event.Registry
+	Importer      journalimport.Importer
 }
 
 type forkApplication struct {
@@ -60,15 +64,19 @@ func newForkApplicationWithDependencies(
 			Event:        deps.Event,
 			Social:       deps.Social,
 		},
-		eventReplay: forkEventReplay{
-			events:  deps.Event,
-			applier: deps.Applier,
-			runtime: deps.Write.Runtime,
-		},
 		write:       deps.Write,
 		applier:     deps.Applier,
 		clock:       clock,
 		idGenerator: idGenerator,
+	}
+	importer := deps.Importer
+	if importer == nil {
+		defaultImporter := journalimport.NewService(deps.Event, deps.Applier, deps.Write.Runtime, deps.EventRegistry)
+		importer = defaultImporter
+	}
+	app.eventReplay = forkEventReplay{
+		events:   deps.Event,
+		importer: importer,
 	}
 	if app.clock == nil {
 		app.clock = time.Now

@@ -6,6 +6,10 @@ import { FrameType, connectWebSocket } from "./api/websocket";
 import type { BootstrapResponse, WireChatMessage, WireRoomSnapshot } from "./api/types";
 import type { HUDConnectionState, HUDNavbarTab } from "./interaction/player-hud/shared/contract";
 import { PlayerHUDShell } from "./interaction/player-hud/player-hud-shell/PlayerHUDShell";
+import {
+  PlayerHUDCharacterInspectorDialog,
+  usePlayerHUDCharacterInspector,
+} from "./interaction/player-hud/shared/PlayerHUDCharacterInspector";
 import { isViewerReadyToResume, mapToPlayerHUDState } from "./state/mapper";
 import type { PlayShellConfig } from "./shell_config";
 
@@ -28,8 +32,10 @@ type RuntimeState = {
 
 type RuntimeAction =
   | { type: "bootstrap-loaded"; bootstrap: BootstrapResponse }
+  | { type: "runtime-resynced"; bootstrap: BootstrapResponse }
   | { type: "bootstrap-error"; message: string }
   | { type: "ws-ready"; snapshot: WireRoomSnapshot }
+  | { type: "ws-interaction-updated"; snapshot: WireRoomSnapshot }
   | { type: "ws-chat-message"; message: WireChatMessage }
   | { type: "ws-connection"; state: HUDConnectionState }
   | { type: "mutation-snapshot"; snapshot: WireRoomSnapshot }
@@ -40,6 +46,17 @@ type RuntimeAction =
   | { type: "set-backstage-draft"; value: string }
   | { type: "set-side-chat-draft"; value: string }
   | { type: "set-sidebar-open"; open: boolean };
+
+type ScenePlayerPostRequest = {
+  scene_id: string;
+  character_ids: string[];
+  summary_text: string;
+  yield_after_post?: boolean;
+};
+
+type SceneScopedRequest = {
+  scene_id: string;
+};
 
 function initialState(): RuntimeState {
   return {
@@ -56,6 +73,24 @@ function initialState(): RuntimeState {
   };
 }
 
+function snapshotFromBootstrap(bootstrap: BootstrapResponse): WireRoomSnapshot {
+  return {
+    interaction_state: bootstrap.interaction_state,
+    participants: bootstrap.participants ?? [],
+    character_inspection_catalog: bootstrap.character_inspection_catalog ?? {},
+    chat: bootstrap.chat,
+    latest_game_sequence: 0,
+  };
+}
+
+function errorStatus(err: unknown): number | null {
+  if (!err || typeof err !== "object") {
+    return null;
+  }
+  const maybeStatus = (err as { status?: unknown }).status;
+  return typeof maybeStatus === "number" ? maybeStatus : null;
+}
+
 function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
   switch (action.type) {
     case "bootstrap-loaded":
@@ -65,10 +100,21 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
         bootstrap: action.bootstrap,
         chatMessages: action.bootstrap.chat.messages,
       };
+    case "runtime-resynced":
+      return {
+        ...state,
+        phase: "ready",
+        bootstrap: action.bootstrap,
+        snapshot: snapshotFromBootstrap(action.bootstrap),
+        chatMessages: action.bootstrap.chat.messages,
+        mutationError: undefined,
+      };
     case "bootstrap-error":
       return { ...state, phase: "error", errorMessage: action.message };
     case "ws-ready":
       return { ...state, snapshot: action.snapshot };
+    case "ws-interaction-updated":
+      return { ...state, snapshot: action.snapshot, mutationError: undefined };
     case "ws-chat-message":
       return { ...state, chatMessages: [...state.chatMessages, action.message] };
     case "ws-connection":
@@ -92,11 +138,70 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
   }
 }
 
+function buildScenePlayerPostRequest(
+  bootstrap: BootstrapResponse | null,
+  snapshot: WireRoomSnapshot | null,
+  draft: string,
+  yieldAfterPost = false,
+): ScenePlayerPostRequest | null {
+  const interactionState = snapshot?.interaction_state ?? bootstrap?.interaction_state;
+  const viewerParticipantID = interactionState?.viewer?.participant_id ?? bootstrap?.viewer?.participant_id ?? "";
+  const sceneID = interactionState?.active_scene?.scene_id?.trim() ?? "";
+  const actingCharacterIDs = interactionState?.player_phase?.acting_character_ids ?? [];
+  const sceneCharacters = interactionState?.active_scene?.characters ?? [];
+
+  const viewerCharacterIDs = actingCharacterIDs.filter((characterID) =>
+    sceneCharacters.some((character) =>
+      character.character_id === characterID && character.owner_participant_id === viewerParticipantID,
+    ),
+  );
+
+  if (!sceneID || viewerCharacterIDs.length === 0) {
+    return null;
+  }
+
+  return {
+    scene_id: sceneID,
+    character_ids: viewerCharacterIDs,
+    summary_text: draft,
+    yield_after_post: yieldAfterPost ? true : undefined,
+  };
+}
+
+function buildSceneScopedRequest(
+  bootstrap: BootstrapResponse | null,
+  snapshot: WireRoomSnapshot | null,
+): SceneScopedRequest | null {
+  const sceneID = (snapshot?.interaction_state ?? bootstrap?.interaction_state)?.active_scene?.scene_id?.trim() ?? "";
+  if (!sceneID) {
+    return null;
+  }
+  return { scene_id: sceneID };
+}
+
 // --- Component ---
 
 export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const wsRef = useRef<WSConnection | null>(null);
+  const {
+    inspector,
+    close: closeInspector,
+    openForCharacter,
+    openForParticipant,
+    setActiveCharacter,
+  } = usePlayerHUDCharacterInspector();
+
+  const refreshRuntimeState = useCallback(async (): Promise<boolean> => {
+    try {
+      const bootstrap = await fetchBootstrap(shellConfig.bootstrapPath);
+      dispatch({ type: "runtime-resynced", bootstrap });
+      return true;
+    } catch (err) {
+      console.warn("[play runtime] failed to resync after mutation error", err);
+      return false;
+    }
+  }, [shellConfig.bootstrapPath]);
 
   // Bootstrap
   useEffect(() => {
@@ -128,11 +233,17 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
           case "ready":
             dispatch({ type: "ws-ready", snapshot: event.snapshot });
             break;
+          case "interaction.updated":
+            dispatch({ type: "ws-interaction-updated", snapshot: event.snapshot });
+            break;
           case "chat.message":
             dispatch({ type: "ws-chat-message", message: event.message });
             break;
           case "connection":
             dispatch({ type: "ws-connection", state: event.state });
+            break;
+          case "resync":
+            void refreshRuntimeState();
             break;
         }
       },
@@ -142,7 +253,7 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       conn.close();
       wsRef.current = null;
     };
-  }, [state.bootstrap, shellConfig.realtimePath]);
+  }, [refreshRuntimeState, state.bootstrap, shellConfig.realtimePath]);
 
   // --- Handlers ---
 
@@ -156,43 +267,75 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     dispatch({ type: "mutation-error", message: err instanceof Error ? err.message : "Something went wrong" });
   }, []);
 
+  const handleMutationFailure = useCallback((err: unknown) => {
+    if (errorStatus(err) !== 409) {
+      handleMutationError(err);
+      return;
+    }
+    void refreshRuntimeState().then((refreshed) => {
+      handleMutationError(new Error(
+        refreshed
+          ? "Scene state changed. The play view was refreshed."
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong",
+      ));
+    });
+  }, [handleMutationError, refreshRuntimeState]);
+
   const handleOnStageSubmit = useCallback(() => {
     const draft = state.onStageDraft.trim();
     if (!draft) return;
+    const request = buildScenePlayerPostRequest(state.bootstrap, state.snapshot, draft);
+    if (!request) {
+      handleMutationError(new Error("Scene context is missing for this action."));
+      return;
+    }
     dispatch({ type: "set-on-stage-draft", value: "" });
     mutations
-      .submitScenePlayerPost(campaignId, { summary_text: draft })
+      .submitScenePlayerPost(campaignId, request)
       .then(handleMutationSnapshot)
       .catch((err) => {
         dispatch({ type: "set-on-stage-draft", value: draft });
-        handleMutationError(err);
+        handleMutationFailure(err);
       });
-  }, [campaignId, state.onStageDraft, handleMutationSnapshot, handleMutationError]);
+  }, [campaignId, handleMutationError, handleMutationFailure, handleMutationSnapshot, state.bootstrap, state.onStageDraft, state.snapshot]);
 
   const handleOnStageSubmitAndYield = useCallback(() => {
     const draft = state.onStageDraft.trim();
     if (!draft) return;
+    const request = buildScenePlayerPostRequest(state.bootstrap, state.snapshot, draft, true);
+    if (!request) {
+      handleMutationError(new Error("Scene context is missing for this action."));
+      return;
+    }
     dispatch({ type: "set-on-stage-draft", value: "" });
     mutations
-      .submitScenePlayerPost(campaignId, { summary_text: draft })
-      .then((snap) => {
-        handleMutationSnapshot(snap);
-        return mutations.yieldScenePlayerPhase(campaignId);
-      })
+      .submitScenePlayerPost(campaignId, request)
       .then(handleMutationSnapshot)
       .catch((err) => {
         dispatch({ type: "set-on-stage-draft", value: draft });
-        handleMutationError(err);
+        handleMutationFailure(err);
       });
-  }, [campaignId, state.onStageDraft, handleMutationSnapshot, handleMutationError]);
+  }, [campaignId, handleMutationError, handleMutationFailure, handleMutationSnapshot, state.bootstrap, state.onStageDraft, state.snapshot]);
 
   const handleOnStageYield = useCallback(() => {
-    mutations.yieldScenePlayerPhase(campaignId).then(handleMutationSnapshot).catch(handleMutationError);
-  }, [campaignId, handleMutationSnapshot, handleMutationError]);
+    const request = buildSceneScopedRequest(state.bootstrap, state.snapshot);
+    if (!request) {
+      handleMutationError(new Error("Scene context is missing for this action."));
+      return;
+    }
+    mutations.yieldScenePlayerPhase(campaignId, request).then(handleMutationSnapshot).catch(handleMutationFailure);
+  }, [campaignId, handleMutationError, handleMutationFailure, handleMutationSnapshot, state.bootstrap, state.snapshot]);
 
   const handleOnStageUnyield = useCallback(() => {
-    mutations.unyieldScenePlayerPhase(campaignId).then(handleMutationSnapshot).catch(handleMutationError);
-  }, [campaignId, handleMutationSnapshot, handleMutationError]);
+    const request = buildSceneScopedRequest(state.bootstrap, state.snapshot);
+    if (!request) {
+      handleMutationError(new Error("Scene context is missing for this action."));
+      return;
+    }
+    mutations.unyieldScenePlayerPhase(campaignId, request).then(handleMutationSnapshot).catch(handleMutationFailure);
+  }, [campaignId, handleMutationError, handleMutationFailure, handleMutationSnapshot, state.bootstrap, state.snapshot]);
 
   const handleBackstageSend = useCallback(() => {
     const draft = state.backstageDraft.trim();
@@ -203,17 +346,17 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       .then(handleMutationSnapshot)
       .catch((err) => {
         dispatch({ type: "set-backstage-draft", value: draft });
-        handleMutationError(err);
+        handleMutationFailure(err);
       });
-  }, [campaignId, state.backstageDraft, handleMutationSnapshot, handleMutationError]);
+  }, [campaignId, state.backstageDraft, handleMutationFailure, handleMutationSnapshot]);
 
   const handleBackstageReadyToggle = useCallback(() => {
     if (!state.bootstrap) return;
     const fn = isViewerReadyToResume(state.bootstrap, state.snapshot)
       ? mutations.clearOOCReadyToResume
       : mutations.markOOCReadyToResume;
-    fn(campaignId).then(handleMutationSnapshot).catch(handleMutationError);
-  }, [campaignId, state.bootstrap, state.snapshot, handleMutationSnapshot, handleMutationError]);
+    fn(campaignId).then(handleMutationSnapshot).catch(handleMutationFailure);
+  }, [campaignId, state.bootstrap, state.snapshot, handleMutationFailure, handleMutationSnapshot]);
 
   const handleSideChatSend = useCallback(() => {
     const draft = state.sideChatDraft.trim();
@@ -260,7 +403,62 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     state.connectionState,
     state.activeTab,
     state.chatMessages,
+    shellConfig.backURL,
   );
+
+  function handleCharacterInspect(participantId: string, characterId: string) {
+    const controller =
+      hudState.campaignNavigation.characterControllers.find((entry) => entry.participantId === participantId)
+      ?? hudState.campaignNavigation.characterControllers.find((entry) =>
+        entry.characters.some((character) => character.id === characterId),
+      );
+    if (!controller) {
+      console.warn("[play runtime inspect] missing character controller", { participantId, characterId });
+      return;
+    }
+    console.info("[play runtime inspect] open character", {
+      participantId,
+      characterId,
+      participantName: controller.participantName,
+      characterCount: controller.characters.length,
+    });
+    openForCharacter(
+      {
+        name: controller.participantName,
+        characters: controller.characters,
+        isViewer: controller.isViewer,
+      },
+      characterId,
+    );
+  }
+
+  function handleParticipantInspect(participantId: string) {
+    const participant = state.activeTab === "on-stage"
+      ? hudState.onStage.participants.find((entry) => entry.id === participantId)
+      : state.activeTab === "backstage"
+        ? hudState.backstage.participants.find((entry) => entry.id === participantId)
+        : hudState.sideChat.participants.find((entry) => entry.id === participantId);
+    if (!participant) {
+      console.warn("[play runtime inspect] missing participant", { participantId, activeTab: state.activeTab });
+      return;
+    }
+    const viewerParticipantID = state.activeTab === "on-stage"
+      ? hudState.onStage.viewerParticipantId
+      : state.activeTab === "backstage"
+        ? hudState.backstage.viewerParticipantId
+        : hudState.sideChat.viewerParticipantId;
+    console.info("[play runtime inspect] open participant", {
+      participantId,
+      participantName: participant.name,
+      activeTab: state.activeTab,
+      characterCount: participant.characters.length,
+    });
+    openForParticipant({
+      name: participant.name,
+      characters: participant.characters,
+      isViewer: participant.id === viewerParticipantID,
+    });
+  }
 
   return (
     <>
@@ -278,6 +476,8 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
         onOnStageSubmitAndYield={handleOnStageSubmitAndYield}
         onOnStageYield={handleOnStageYield}
         onOnStageUnyield={handleOnStageUnyield}
+        onCharacterInspect={handleCharacterInspect}
+        onParticipantInspect={handleParticipantInspect}
         backstage={hudState.backstage}
         backstageDraft={state.backstageDraft}
         onBackstageDraftChange={(value) => dispatch({ type: "set-backstage-draft", value })}
@@ -287,6 +487,16 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
         sideChatDraft={state.sideChatDraft}
         onSideChatDraftChange={(value) => dispatch({ type: "set-side-chat-draft", value })}
         onSideChatSend={handleSideChatSend}
+      />
+      <PlayerHUDCharacterInspectorDialog
+        isOpen={Boolean(inspector)}
+        participantName={inspector?.participantName ?? ""}
+        characters={inspector?.characters ?? []}
+        activeCharacterId={inspector?.activeCharacterId}
+        isViewer={inspector?.isViewer ?? false}
+        characterInspectionCatalog={hudState.campaignNavigation.characterInspectionCatalog}
+        onCharacterChange={setActiveCharacter}
+        onClose={closeInspector}
       />
       {state.mutationError && (
         <div className="toast toast-end toast-bottom z-50">

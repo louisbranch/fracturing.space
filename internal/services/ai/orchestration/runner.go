@@ -16,6 +16,7 @@ import (
 const defaultMaxSteps = 8
 const defaultTurnTimeout = 2 * time.Minute
 const defaultToolResultMaxBytes = 32 * 1024
+const playerPhaseStartToolName = "interaction_scene_player_phase_start"
 
 type runner struct {
 	dialer             Dialer
@@ -161,8 +162,12 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	committed := false
 	var results []ProviderToolResult
 	commitReminderUsed := false
+	playerPhaseReminderUsed := false
 	var followUpPrompt string
 	var usage provider.Usage
+	lastCommitToolOrder := 0
+	lastPlayerPhaseStartToolOrder := 0
+	toolOrder := 0
 
 	for i := 0; i < r.max; i++ {
 		stepCtx, stepSpan := tracer.Start(ctx, "ai.orchestration.provider_step")
@@ -216,6 +221,18 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				recordSpanError(span, ErrNarrationNotCommitted)
 				return Result{}, ErrNarrationNotCommitted
 			}
+			if lastCommitToolOrder > 0 && lastPlayerPhaseStartToolOrder > 0 && lastCommitToolOrder > lastPlayerPhaseStartToolOrder {
+				if !playerPhaseReminderUsed && i+1 < r.max {
+					playerPhaseReminderUsed = true
+					results = nil
+					followUpPrompt = buildPlayerPhaseStartReminder(text)
+					span.AddEvent("ai.orchestration.player_phase_restart_requested")
+					continue
+				}
+				err := errExecution(fmt.Errorf("campaign orchestration committed gm output after opening a player phase without reopening the phase for players"))
+				recordSpanError(span, err)
+				return Result{}, err
+			}
 			span.SetAttributes(attribute.Bool("ai.orchestration.committed_output", committed))
 			return Result{OutputText: text, Usage: usage}, nil
 		}
@@ -251,6 +268,15 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 			if call.Name == r.commitToolName && !res.IsError {
 				committed = true
 			}
+			if !res.IsError {
+				toolOrder++
+				switch call.Name {
+				case r.commitToolName:
+					lastCommitToolOrder = toolOrder
+				case playerPhaseStartToolName:
+					lastPlayerPhaseStartToolOrder = toolOrder
+				}
+			}
 			outputText, truncated := truncateToolResultOutput(res.Output, r.toolResultMaxBytes)
 			results = append(results, ProviderToolResult{
 				CallID:  call.CallID,
@@ -280,6 +306,19 @@ func buildCommitReminder(text string) string {
 	b.WriteString("If there is no active scene, set one active first.\n")
 	if text != "" {
 		b.WriteString("Use this draft narration as the commit text unless you need a small correction:\n")
+		b.WriteString(text)
+	}
+	return b.String()
+}
+
+func buildPlayerPhaseStartReminder(text string) string {
+	text = strings.TrimSpace(text)
+	var b strings.Builder
+	b.WriteString("You committed GM narration after opening a player phase, which leaves the interaction without an active player handoff.\n")
+	b.WriteString("If players should act next, call interaction_scene_player_phase_start now with the acting character_ids for the beat you just narrated.\n")
+	b.WriteString("Narration must be committed before the player phase is opened.\n")
+	if text != "" {
+		b.WriteString("Keep this final narration unless you need a small correction:\n")
 		b.WriteString(text)
 	}
 	return b.String()

@@ -25,6 +25,7 @@ import (
 type Config struct {
 	HTTPAddr            string
 	WebHTTPAddr         string
+	AssetBaseURL        string
 	PlayUIDevServerURL  string
 	RequestSchemePolicy requestmeta.SchemePolicy
 	LaunchGrant         playlaunchgrant.Config
@@ -95,6 +96,7 @@ type Server struct {
 	httpServer          *http.Server
 	logger              *slog.Logger
 	webFallbackPort     string
+	assetBaseURL        string
 	requestSchemePolicy requestmeta.SchemePolicy
 	auth                authClient
 	interaction         interactionClient
@@ -129,6 +131,7 @@ func NewServer(cfg Config, deps Dependencies) (*Server, error) {
 		httpAddr:            httpAddr,
 		logger:              loggerOrDefault(cfg.Logger),
 		webFallbackPort:     websupport.ResolveHTTPFallbackPort(cfg.WebHTTPAddr),
+		assetBaseURL:        strings.TrimSpace(cfg.AssetBaseURL),
 		requestSchemePolicy: cfg.RequestSchemePolicy,
 		auth:                deps.Auth,
 		interaction:         deps.Interaction,

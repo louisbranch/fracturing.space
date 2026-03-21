@@ -10,14 +10,14 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/inviteclaimworkflow"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
 	"google.golang.org/grpc/codes"
@@ -163,62 +163,37 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	payload := participant.BindPayload{
+	payloadJSON, err := json.Marshal(inviteclaimworkflow.ClaimBindPayload{
+		InviteID:      ids.InviteID(inv.ID),
 		ParticipantID: ids.ParticipantID(seat.ID),
 		UserID:        ids.UserID(userID),
-	}
-	payloadJSON, err := json.Marshal(payload)
+		JWTID:         claims.JWTID,
+	})
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode participant payload", err)
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode invite claim workflow payload", err)
 	}
 
 	actorID, actorType := handler.ResolveCommandActor(ctx)
-	bindCmd := commandbuild.Core(commandbuild.CoreInput{
-		CampaignID:   campaignID,
-		Type:         handler.CommandTypeParticipantBind,
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "participant",
-		EntityID:     seat.ID,
-		PayloadJSON:  payloadJSON,
-	})
-	bindEvents, err := decideParticipantBindEvents(seatState, bindCmd, a.clock)
+	_, err = handler.ExecuteAndApplyDomainCommand(
+		ctx,
+		a.write,
+		a.applier,
+		commandbuild.Core(commandbuild.CoreInput{
+			CampaignID:   campaignID,
+			Type:         handler.CommandTypeInviteClaimBind,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    requestID,
+			InvocationID: invocationID,
+			EntityType:   "invite",
+			EntityID:     inv.ID,
+			PayloadJSON:  payloadJSON,
+		}),
+		domainwrite.Options{
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply invite claim workflow event"),
+		},
+	)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
-	}
-
-	claimPayload := invite.ClaimPayload{
-		InviteID:      ids.InviteID(inv.ID),
-		ParticipantID: ids.ParticipantID(inv.ParticipantID),
-		UserID:        ids.UserID(userID),
-		JWTID:         claims.JWTID,
-	}
-	claimJSON, err := json.Marshal(claimPayload)
-	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode invite payload", err)
-	}
-	inviteActorType := command.ActorTypeSystem
-	if actorID != "" {
-		inviteActorType = command.ActorTypeParticipant
-	}
-	claimCmd := commandbuild.Core(commandbuild.CoreInput{
-		CampaignID:   campaignID,
-		Type:         handler.CommandTypeInviteClaim,
-		ActorType:    inviteActorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "invite",
-		EntityID:     inv.ID,
-		PayloadJSON:  claimJSON,
-	})
-	claimEvents, err := decideInviteClaimEvents(inviteState, claimCmd, a.clock)
-	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
-	}
-	if _, err := appendAndApplyInviteClaimEvents(ctx, a.stores.Event, a.applier, append(bindEvents, claimEvents...)); err != nil {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 	}
 
@@ -239,7 +214,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		requestID,
 		invocationID,
 		actorID,
-		inviteActorType,
+		actorType,
 	)
 	updatedParticipant, err := a.stores.Participant.GetParticipant(ctx, campaignID, seat.ID)
 	if err != nil {

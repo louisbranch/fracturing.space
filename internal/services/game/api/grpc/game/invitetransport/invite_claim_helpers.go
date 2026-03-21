@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -20,82 +18,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
-
-// decideParticipantBindEvents derives the seat-binding event before any write
-// so claim orchestration can append both accepted events atomically.
-func decideParticipantBindEvents(state participant.State, cmd command.Command, now func() time.Time) ([]event.Event, error) {
-	decision := participant.Decide(state, cmd, now)
-	if len(decision.Rejections) > 0 {
-		rejection := decision.Rejections[0]
-		return nil, domainDecisionError(rejection.Code, rejection.Message)
-	}
-	if len(decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "participant bind emitted no events")
-	}
-	return decision.Events, nil
-}
-
-// decideInviteClaimEvents derives the invite-claim event alongside the bind
-// event so the journal sees one atomic claim transition.
-func decideInviteClaimEvents(state invite.State, cmd command.Command, now func() time.Time) ([]event.Event, error) {
-	decision := invite.Decide(state, cmd, now)
-	if len(decision.Rejections) > 0 {
-		rejection := decision.Rejections[0]
-		return nil, domainDecisionError(rejection.Code, rejection.Message)
-	}
-	if len(decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "invite claim emitted no events")
-	}
-	return decision.Events, nil
-}
-
-// appendAndApplyInviteClaimEvents persists the accepted claim batch atomically,
-// then updates inline projections in the stored event order.
-func appendAndApplyInviteClaimEvents(
-	ctx context.Context,
-	store storage.EventStore,
-	applier projection.Applier,
-	events []event.Event,
-) ([]event.Event, error) {
-	stored, err := batchAppendEvents(ctx, store, events)
-	if err != nil {
-		return nil, grpcerror.Internal("append invite claim events", err)
-	}
-	applyErr := handler.ApplyErrorWithCodePreserve("apply invite claim event")
-	for _, evt := range stored {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return nil, applyErr(err)
-		}
-	}
-	return stored, nil
-}
-
-// batchAppendEvents atomically appends all events from a single command
-// decision without requiring the root game package's JournalAdapter.
-func batchAppendEvents(ctx context.Context, store storage.EventStore, events []event.Event) ([]event.Event, error) {
-	if store == nil {
-		return nil, fmt.Errorf("event store is not configured")
-	}
-	type batchAppender interface {
-		BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error)
-	}
-	ba, ok := store.(batchAppender)
-	if !ok {
-		return nil, fmt.Errorf("batch append not supported by underlying store")
-	}
-	return ba.BatchAppendEvents(ctx, events)
-}
-
-// domainDecisionError keeps manual decider flows aligned with the standard
-// write-path rejection mapping used by ExecuteAndApply.
-func domainDecisionError(code string, message string) error {
-	options := domainwrite.Options{}
-	domainwrite.NormalizeDomainWriteOptions(&options, domainwrite.NormalizeDomainWriteOptionsConfig{})
-	return options.RejectErr(code, message)
-}
 
 // findInviteClaimByJTI scans claim events for a matching JWT ID so duplicate
 // grant tokens are detected and handled idempotently.

@@ -23,6 +23,7 @@ type playApplication struct {
 	participants participantClient
 	characters   characterClient
 	transcripts  transcript.Store
+	assetBaseURL string
 }
 
 func (s *Server) application() playApplication {
@@ -33,6 +34,7 @@ func (s *Server) application() playApplication {
 		participants: s.participants,
 		characters:   s.characters,
 		transcripts:  s.transcripts,
+		assetBaseURL: s.assetBaseURL,
 	}
 }
 
@@ -50,6 +52,13 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 		return playprotocol.Bootstrap{}, err
 	}
 	participants, catalog := a.enrichedData(ctx, req)
+	slog.InfoContext(ctx, "play: bootstrap assembled",
+		"campaign_id", strings.TrimSpace(req.CampaignID),
+		"user_id", strings.TrimSpace(req.UserID),
+		"participants", len(participants),
+		"character_catalog_entries", len(catalog),
+		"active_session_id", strings.TrimSpace(state.GetActiveSession().GetSessionId()),
+	)
 	return playprotocol.Bootstrap{
 		CampaignID:                 strings.TrimSpace(req.CampaignID),
 		Viewer:                     playprotocol.ViewerFromGameViewer(state.GetViewer()),
@@ -66,16 +75,31 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 	}, nil
 }
 
-func (a playApplication) interactionResponse(ctx context.Context, state *gamev1.InteractionState) (playprotocol.RoomSnapshot, error) {
-	return a.roomSnapshotFromState(ctx, strings.TrimSpace(state.GetCampaignId()), state, 0)
+func (a playApplication) interactionResponse(ctx context.Context, req playRequest, state *gamev1.InteractionState) (playprotocol.RoomSnapshot, error) {
+	return a.roomSnapshotFromState(ctx, req, state, 0)
 }
 
-func (a playApplication) roomSnapshotFromState(ctx context.Context, campaignID string, state *gamev1.InteractionState, latestGameSeq uint64) (playprotocol.RoomSnapshot, error) {
+func (a playApplication) roomSnapshotFromState(ctx context.Context, req playRequest, state *gamev1.InteractionState, latestGameSeq uint64) (playprotocol.RoomSnapshot, error) {
+	campaignID := strings.TrimSpace(req.CampaignID)
+	if campaignID == "" {
+		campaignID = strings.TrimSpace(state.GetCampaignId())
+	}
 	chat, err := a.chatCursor(ctx, campaignID, state)
 	if err != nil {
 		return playprotocol.RoomSnapshot{}, err
 	}
-	participants, catalog := a.enrichedDataForCampaign(ctx, campaignID)
+	participants, catalog := a.enrichedData(req.authContext(ctx), playRequest{
+		campaignRequest: campaignRequest{CampaignID: campaignID},
+		UserID:          req.UserID,
+	})
+	slog.InfoContext(ctx, "play: room snapshot assembled",
+		"campaign_id", campaignID,
+		"user_id", strings.TrimSpace(req.UserID),
+		"participants", len(participants),
+		"character_catalog_entries", len(catalog),
+		"latest_game_seq", latestGameSeq,
+		"active_session_id", strings.TrimSpace(state.GetActiveSession().GetSessionId()),
+	)
 	return playprotocol.RoomSnapshot{
 		InteractionState:           playprotocol.InteractionStateFromGameState(state),
 		Participants:               participants,
@@ -257,7 +281,7 @@ func (a playApplication) listAllParticipants(ctx context.Context, campaignID str
 			return all
 		}
 		for _, p := range resp.GetParticipants() {
-			all = append(all, playprotocol.ParticipantFromGameParticipant(p))
+			all = append(all, playprotocol.ParticipantFromGameParticipant(a.assetBaseURL, p))
 		}
 		pageToken = strings.TrimSpace(resp.GetNextPageToken())
 		if pageToken == "" {
@@ -339,8 +363,8 @@ func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, ca
 		}
 		catalog[r.charID] = playprotocol.CharacterInspection{
 			System: "daggerheart",
-			Card:   playprotocol.DaggerheartCardFromSheet(r.char, dhProfile, dhState),
-			Sheet:  playprotocol.DaggerheartSheetFromResponse(r.char, dhProfile, dhState),
+			Card:   playprotocol.DaggerheartCardFromSheet(a.assetBaseURL, r.char, dhProfile, dhState),
+			Sheet:  playprotocol.DaggerheartSheetFromResponse(a.assetBaseURL, r.char, dhProfile, dhState),
 		}
 	}
 	if len(catalog) == 0 {

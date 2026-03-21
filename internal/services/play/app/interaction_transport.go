@@ -2,10 +2,13 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"strings"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	gogrpc "google.golang.org/grpc"
+	gogrpcstatus "google.golang.org/grpc/status"
 )
 
 type interactionStateResponse interface {
@@ -69,13 +72,29 @@ func (s *Server) handleInteractionMutation(
 			writeJSONError(w, http.StatusBadRequest, "invalid json body")
 			return
 		}
+		if payloadJSON, err := json.Marshal(target); err == nil {
+			loggerOrDefault(s.logger).Info("play interaction mutation request",
+				"campaign_id", strings.TrimSpace(req.CampaignID),
+				"user_id", strings.TrimSpace(req.UserID),
+				"path", r.URL.Path,
+				"payload", string(payloadJSON),
+			)
+		}
 	}
 	state, err := call(req.authContext(r.Context()), req.CampaignID)
 	if err != nil {
+		status := gogrpcstatus.Convert(err)
+		loggerOrDefault(s.logger).Warn("play interaction mutation failed",
+			"campaign_id", strings.TrimSpace(req.CampaignID),
+			"user_id", strings.TrimSpace(req.UserID),
+			"path", r.URL.Path,
+			"grpc_code", status.Code().String(),
+			"grpc_message", status.Message(),
+		)
 		writeRPCError(w, err)
 		return
 	}
-	response, err := s.application().interactionResponse(r.Context(), state)
+	response, err := s.application().interactionResponse(r.Context(), req, state)
 	if err != nil {
 		writeJSONError(w, http.StatusBadGateway, "failed to refresh play interaction state")
 		return

@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"sync"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	gogrpc "google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 // campaignRoom owns one campaign's session set and projection-driven fanout.
@@ -21,23 +24,54 @@ type campaignRoom struct {
 	mu          sync.Mutex
 	sessions    map[*realtimeSession]struct{}
 	lastGameSeq uint64
+	authUserID  string
+
+	subscriptionStarted bool
 }
 
 func (r *campaignRoom) runProjectionSubscription() {
 	retryDelay := r.hub.runtime.projectionRetryTTL
 	for {
-		stream, err := r.hub.deps.events.SubscribeCampaignUpdates(r.ctx, &gamev1.SubscribeCampaignUpdatesRequest{
-			CampaignId:       r.campaignID,
-			Kinds:            []gamev1.CampaignUpdateKind{gamev1.CampaignUpdateKind_CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED},
-			ProjectionScopes: []string{"campaign_sessions", "campaign_scenes"},
-		})
-		if err != nil {
+		authCtx, userID, ok := r.subscriptionContext()
+		if !ok {
 			if !r.hub.runtime.retryWithDelay(r.ctx, retryDelay) {
 				return
 			}
 			retryDelay = r.hub.runtime.backoff(retryDelay)
 			continue
 		}
+		afterSeq := r.latestGameSequence()
+		slog.InfoContext(r.ctx, "play realtime: subscribing to campaign updates",
+			"campaign_id", r.campaignID,
+			"user_id", userID,
+			"after_seq", afterSeq,
+			"projection_scopes", []string{"campaign_sessions", "campaign_scenes"},
+		)
+		stream, err := r.hub.deps.events.SubscribeCampaignUpdates(authCtx, &gamev1.SubscribeCampaignUpdatesRequest{
+			CampaignId:       r.campaignID,
+			AfterSeq:         afterSeq,
+			Kinds:            []gamev1.CampaignUpdateKind{gamev1.CampaignUpdateKind_CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED},
+			ProjectionScopes: []string{"campaign_sessions", "campaign_scenes"},
+		})
+		if err != nil {
+			slog.WarnContext(r.ctx, "play realtime: subscribe failed",
+				"campaign_id", r.campaignID,
+				"user_id", userID,
+				"after_seq", afterSeq,
+				"grpc_code", status.Code(err).String(),
+				"error", err,
+			)
+			if !r.hub.runtime.retryWithDelay(r.ctx, retryDelay) {
+				return
+			}
+			retryDelay = r.hub.runtime.backoff(retryDelay)
+			continue
+		}
+		slog.InfoContext(r.ctx, "play realtime: campaign update stream connected",
+			"campaign_id", r.campaignID,
+			"user_id", userID,
+			"after_seq", afterSeq,
+		)
 		// A successful stream connection resets the backoff.
 		retryDelay = r.hub.runtime.projectionRetryTTL
 		if !r.consumeProjectionStream(stream) {
@@ -51,13 +85,29 @@ func (r *campaignRoom) consumeProjectionStream(stream gogrpc.ServerStreamingClie
 		update, recvErr := stream.Recv()
 		if recvErr != nil {
 			if errors.Is(recvErr, io.EOF) {
+				slog.InfoContext(r.ctx, "play realtime: campaign update stream closed by server",
+					"campaign_id", r.campaignID,
+					"latest_game_seq", r.latestGameSequence(),
+				)
 				return true
 			}
+			slog.WarnContext(r.ctx, "play realtime: campaign update stream recv failed",
+				"campaign_id", r.campaignID,
+				"latest_game_seq", r.latestGameSequence(),
+				"grpc_code", status.Code(recvErr).String(),
+				"error", recvErr,
+			)
 			return r.hub.runtime.retryWithDelay(r.ctx, r.hub.runtime.projectionRetryTTL)
 		}
 		if update == nil || update.GetProjectionApplied() == nil {
 			continue
 		}
+		slog.InfoContext(r.ctx, "play realtime: projection update received",
+			"campaign_id", r.campaignID,
+			"seq", update.GetSeq(),
+			"event_type", update.GetEventType(),
+			"scopes", update.GetProjectionApplied().GetScopes(),
+		)
 		r.setLatestGameSequence(update.GetSeq())
 		r.broadcastCurrent()
 	}
@@ -65,17 +115,24 @@ func (r *campaignRoom) consumeProjectionStream(stream gogrpc.ServerStreamingClie
 
 func (r *campaignRoom) add(session *realtimeSession) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.sessions[session] = struct{}{}
+	if r.authUserID == "" {
+		r.authUserID = session.userID
+	}
+	r.mu.Unlock()
 }
 
 func (r *campaignRoom) remove(session *realtimeSession) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	delete(r.sessions, session)
+	if r.authUserID == session.userID {
+		r.authUserID = r.firstSessionUserIDLocked()
+	}
 	if len(r.sessions) != 0 {
+		r.mu.Unlock()
 		return
 	}
+	r.mu.Unlock()
 	r.cancel()
 	r.hub.mu.Lock()
 	delete(r.hub.rooms, r.campaignID)
@@ -106,6 +163,42 @@ func (r *campaignRoom) sessionsSnapshot() []*realtimeSession {
 	return values
 }
 
+func (r *campaignRoom) ensureProjectionSubscription() {
+	start := false
+	r.mu.Lock()
+	if !r.subscriptionStarted {
+		r.subscriptionStarted = true
+		start = true
+	}
+	r.mu.Unlock()
+	if start {
+		go r.runProjectionSubscription()
+	}
+}
+
+func (r *campaignRoom) subscriptionContext() (context.Context, string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	userID := r.authUserID
+	if userID == "" {
+		userID = r.firstSessionUserIDLocked()
+		r.authUserID = userID
+	}
+	if userID == "" {
+		return nil, "", false
+	}
+	return grpcauthctx.WithUserID(r.ctx, userID), userID, true
+}
+
+func (r *campaignRoom) firstSessionUserIDLocked() string {
+	for session := range r.sessions {
+		if session != nil && session.userID != "" {
+			return session.userID
+		}
+	}
+	return ""
+}
+
 func (r *campaignRoom) broadcastCurrent() {
 	sessions := r.sessionsSnapshot()
 	if len(sessions) == 0 {
@@ -116,21 +209,41 @@ func (r *campaignRoom) broadcastCurrent() {
 	// scene, player phase, OOC) are the same for every participant. We use the
 	// first session's auth context because GetInteractionState requires one.
 	app := r.hub.deps.application()
-	state, err := app.interactionState(r.ctx, playRequest{
+	req := playRequest{
 		campaignRequest: campaignRequest{CampaignID: r.campaignID},
 		UserID:          sessions[0].userID,
-	})
+	}
+	state, err := app.interactionState(r.ctx, req)
 	if err != nil {
 		r.broadcastResync(sessions)
 		return
 	}
 
 	// Build enrichment data and chat cursor once for the campaign.
-	snapshot, err := app.roomSnapshotFromState(r.ctx, r.campaignID, state, r.latestGameSequence())
+	snapshot, err := app.roomSnapshotFromState(r.ctx, req, state, r.latestGameSequence())
 	if err != nil {
+		slog.WarnContext(r.ctx, "play realtime: broadcast current failed; requesting resync",
+			"campaign_id", r.campaignID,
+			"error", err,
+		)
 		r.broadcastResync(sessions)
 		return
 	}
+	activeSceneID := ""
+	if snapshot.InteractionState.ActiveScene != nil {
+		activeSceneID = snapshot.InteractionState.ActiveScene.SceneID
+	}
+	aiTurnStatus := ""
+	if snapshot.InteractionState.AITurn != nil {
+		aiTurnStatus = snapshot.InteractionState.AITurn.Status
+	}
+	slog.InfoContext(r.ctx, "play realtime: broadcasting interaction update",
+		"campaign_id", r.campaignID,
+		"sessions", len(sessions),
+		"latest_game_seq", snapshot.LatestGameSeq,
+		"active_scene_id", activeSceneID,
+		"ai_turn_status", aiTurnStatus,
+	)
 
 	payload := mustJSON(snapshot)
 	for _, session := range sessions {
@@ -140,6 +253,10 @@ func (r *campaignRoom) broadcastCurrent() {
 }
 
 func (r *campaignRoom) broadcastResync(sessions []*realtimeSession) {
+	slog.WarnContext(r.ctx, "play realtime: broadcasting resync",
+		"campaign_id", r.campaignID,
+		"sessions", len(sessions),
+	)
 	frame := wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "interaction state changed; reload required"})}
 	for _, session := range sessions {
 		_ = session.peer.writeFrame(frame)

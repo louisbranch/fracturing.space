@@ -72,22 +72,21 @@ export function mapToPlayerHUDState(
   connectionState: HUDConnectionState,
   activeTab: HUDNavbarTab,
   chatMessages: WireChatMessage[],
+  backURL: string,
 ): PlayerHUDState {
   const state = snapshot?.interaction_state ?? bootstrap.interaction_state;
   const participants = snapshot?.participants ?? bootstrap.participants ?? [];
   const catalog = snapshot?.character_inspection_catalog ?? bootstrap.character_inspection_catalog ?? {};
   const viewerPID = state.viewer?.participant_id ?? bootstrap.viewer?.participant_id ?? "";
   const viewerRole = safeRole(state.viewer?.role ?? bootstrap.viewer?.role);
-  const backURL = bootstrap.campaign_id
-    ? `/app/campaigns/${bootstrap.campaign_id}/game`
-    : "/";
+  const returnURL = backURL.trim() || "/";
 
   const inspectionCatalog = mapCharacterInspectionCatalog(catalog);
 
   return {
     activeTab,
     connectionState,
-    campaignNavigation: mapCampaignNavigation(backURL, participants, viewerPID, inspectionCatalog),
+    campaignNavigation: mapCampaignNavigation(returnURL, participants, viewerPID, inspectionCatalog),
     onStage: mapOnStageState(state, participants, viewerPID, viewerRole, inspectionCatalog),
     backstage: mapBackstageState(state, participants, viewerPID, chatMessages, inspectionCatalog),
     sideChat: mapSideChatState(viewerPID, participants, chatMessages, inspectionCatalog),
@@ -135,7 +134,7 @@ function characterRefsFromIDs(
   return ids.map((id) => ({
     id,
     name: catalog[id]?.card?.name ?? id,
-    avatarUrl: undefined,
+    avatarUrl: catalog[id]?.card?.portrait?.src?.trim() || undefined,
   }));
 }
 
@@ -144,6 +143,7 @@ function mapBaseParticipant(p: WireParticipant, catalog: PlayerHUDCharacterInspe
     id: p.id,
     name: p.name,
     role: safeRole(p.role),
+    avatarUrl: p.avatar_url?.trim() || undefined,
     characters: characterRefsFromIDs(p.character_ids ?? [], catalog),
   };
 }

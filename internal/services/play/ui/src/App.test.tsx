@@ -35,7 +35,7 @@ describe("App", () => {
           campaignId: "guildhouse",
           bootstrapPath: "/api/campaigns/guildhouse/bootstrap",
           realtimePath: "/realtime",
-          backURL: "/app/campaigns/guildhouse/game",
+          backURL: "http://example.com/app/campaigns/guildhouse",
         }}
       />,
     );
@@ -44,7 +44,7 @@ describe("App", () => {
     expect(screen.getByText("/campaigns/guildhouse")).toBeInTheDocument();
     expect(screen.getByText("http://localhost:6006")).toBeInTheDocument();
     expect(screen.getByText("/api/campaigns/guildhouse/bootstrap")).toBeInTheDocument();
-    expect(screen.getByText("/app/campaigns/guildhouse/game")).toBeInTheDocument();
+    expect(screen.getByText("http://example.com/app/campaigns/guildhouse")).toBeInTheDocument();
   });
 
   it("renders config-missing fallback when runtime mode lacks shell config", () => {

@@ -11,5 +11,12 @@ export async function fetchBootstrap(path: string): Promise<BootstrapResponse> {
   if (!resp.ok) {
     throw new Error(`bootstrap failed: ${resp.status}`);
   }
-  return resp.json() as Promise<BootstrapResponse>;
+  const payload = await resp.json() as BootstrapResponse;
+  console.info("[play bootstrap]", {
+    path,
+    participants: payload.participants?.length ?? 0,
+    characterCatalogEntries: Object.keys(payload.character_inspection_catalog ?? {}).length,
+    activeSessionId: payload.interaction_state?.active_session?.session_id ?? "",
+  });
+  return payload;
 }

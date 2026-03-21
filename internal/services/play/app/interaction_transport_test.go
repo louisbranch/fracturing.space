@@ -140,3 +140,45 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 		assertJSONError(t, rr, http.StatusBadRequest, "invalid request")
 	})
 }
+
+func TestInteractionMutationResponseKeepsParticipantAndCharacterEnrichment(t *testing.T) {
+	t.Parallel()
+
+	interaction := newRecordingInteractionClient(playTestState())
+	server := newAuthedPlayServer(interaction, &scriptTranscriptStore{})
+	participants := &authSensitivePlayParticipantClient{response: enrichedParticipantResponse()}
+	characters := &authSensitivePlayCharacterClient{
+		listResponse:  enrichedCharacterResponse(),
+		sheetResponse: enrichedCharacterSheetResponse(),
+	}
+	server.participants = participants
+	server.characters = characters
+
+	handler, err := server.newHandler(testPlayLaunchGrantConfig(t))
+	if err != nil {
+		t.Fatalf("newHandler() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/submit-scene-player-post", strings.NewReader(`{}`))
+	req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	var payload playprotocol.RoomSnapshot
+	if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode interaction response: %v", err)
+	}
+	if len(payload.Participants) != 2 {
+		t.Fatalf("participants = %#v, want 2 entries", payload.Participants)
+	}
+	if got := payload.CharacterInspectionCatalog["char-1"].System; got != "daggerheart" {
+		t.Fatalf("character_inspection_catalog[char-1].system = %q, want %q", got, "daggerheart")
+	}
+	if participants.lastUserID != "user-1" || characters.lastUserID != "user-1" {
+		t.Fatalf("auth metadata = participant:%q character:%q, want user-1", participants.lastUserID, characters.lastUserID)
+	}
+}

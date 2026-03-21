@@ -24,6 +24,7 @@ const (
 	CommandTypeCharacterCreate                command.Type = commandids.CharacterCreate
 	CommandTypeCharacterDelete                command.Type = commandids.CharacterDelete
 	CommandTypeCharacterUpdate                command.Type = commandids.CharacterUpdate
+	CommandTypeInviteClaimBind                command.Type = commandids.InviteClaimBind
 	CommandTypeInviteClaim                    command.Type = commandids.InviteClaim
 	CommandTypeInviteCreate                   command.Type = commandids.InviteCreate
 	CommandTypeInviteDecline                  command.Type = commandids.InviteDecline

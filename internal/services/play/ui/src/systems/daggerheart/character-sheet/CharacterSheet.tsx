@@ -189,7 +189,7 @@ function SheetTraits({ traits }: { traits?: DaggerheartTrait[] }) {
               {trait.value >= 0 ? `+${trait.value}` : trait.value}
             </p>
             <p className="mt-0.5 text-[0.6rem] leading-tight text-base-content/35">
-              {trait.skills.join(", ")}
+              {(trait.skills ?? []).join(", ")}
             </p>
           </div>
         ))}

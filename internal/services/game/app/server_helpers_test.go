@@ -1141,7 +1141,7 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 	}
 }
 
-func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
+func TestBuildDomainEngine_ReplaysCommandsFromJournalTruth(t *testing.T) {
 	store := newFakeDomainEventStore()
 	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
@@ -1188,8 +1188,8 @@ func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
 			zeroSeqStarts++
 		}
 	}
-	if zeroSeqStarts != 1 {
-		t.Fatalf("expected 1 replay start from seq 0, got %d (calls: %v)", zeroSeqStarts, store.listAfterSeq)
+	if zeroSeqStarts < 2 {
+		t.Fatalf("expected command replays to restart from seq 0, got %d zero starts (calls: %v)", zeroSeqStarts, store.listAfterSeq)
 	}
 }
 

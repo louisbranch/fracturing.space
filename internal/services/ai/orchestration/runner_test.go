@@ -214,6 +214,69 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 	}
 }
 
+func TestRunnerRequestsPlayerPhaseRestartWhenNarrationEndsAfterPhaseStart(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{
+			{Name: "interaction_scene_player_phase_start"},
+			{Name: "interaction_scene_gm_output_commit"},
+		},
+		resources: baseSessionResources("gm-1", "scene-1"),
+		results: map[string]ToolResult{
+			"interaction_scene_player_phase_start": {Output: `{"player_phase":{"phase_id":"phase-1"}}`},
+			"interaction_scene_gm_output_commit":   {Output: `{"active_scene":{"scene_id":"scene-1"}}`},
+		},
+	}
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{
+					{CallID: "call-1", Name: "interaction_scene_player_phase_start", Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"frame_text":"What do you do next?"}`},
+					{CallID: "call-2", Name: "interaction_scene_gm_output_commit", Arguments: `{"scene_id":"scene-1","text":"The harbor groans in the fog."}`},
+				},
+			},
+			{
+				ConversationID: "resp-2",
+				OutputText:     "The harbor groans in the fog.",
+			},
+			{
+				ConversationID: "resp-3",
+				ToolCalls: []ProviderToolCall{
+					{CallID: "call-3", Name: "interaction_scene_player_phase_start", Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"frame_text":"Mira, what do you do next?"}`},
+				},
+			},
+			{
+				ConversationID: "resp-4",
+				OutputText:     "The harbor groans in the fog.",
+			},
+		},
+	}
+
+	res, err := newTestRunner(&fakeDialer{sess: sess}, 5).Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-1",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "The harbor groans in the fog." {
+		t.Fatalf("output = %q", res.OutputText)
+	}
+	if !strings.Contains(provider.calls[2].FollowUpPrompt, "interaction_scene_player_phase_start") {
+		t.Fatalf("follow-up prompt = %q", provider.calls[2].FollowUpPrompt)
+	}
+	if !reflect.DeepEqual(
+		sess.calls,
+		[]string{"interaction_scene_player_phase_start", "interaction_scene_gm_output_commit", "interaction_scene_player_phase_start"},
+	) {
+		t.Fatalf("tool calls = %#v", sess.calls)
+	}
+}
+
 func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{

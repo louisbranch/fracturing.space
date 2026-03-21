@@ -5,8 +5,12 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+const playAvatarDeliveryWidthPX = 384
 
 // DaggerheartCharacterCardData matches the browser DaggerheartCharacterCardData
 // contract for rendering character portrait cards.
@@ -105,9 +109,10 @@ type DaggerheartCharacterSheetData struct {
 
 // DaggerheartTrait is one of the six core traits on the sheet.
 type DaggerheartTrait struct {
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	Value        int32  `json:"value"`
+	Name         string   `json:"name"`
+	Abbreviation string   `json:"abbreviation"`
+	Value        int32    `json:"value"`
+	Skills       []string `json:"skills,omitempty"`
 }
 
 // DaggerheartExperience is a named experience modifier.
@@ -118,15 +123,16 @@ type DaggerheartExperience struct {
 
 // DaggerheartDomainCard is a selected domain card reference.
 type DaggerheartDomainCard struct {
-	Name string `json:"name"`
+	Name   string `json:"name"`
+	Domain string `json:"domain,omitempty"`
 }
 
 // DaggerheartCardFromSheet builds the card data from a GetCharacterSheetResponse.
-func DaggerheartCardFromSheet(char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) DaggerheartCharacterCardData {
+func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) DaggerheartCharacterCardData {
 	card := DaggerheartCharacterCardData{
 		ID:       strings.TrimSpace(char.GetId()),
 		Name:     strings.TrimSpace(char.GetName()),
-		Portrait: characterPortrait(char),
+		Portrait: characterPortrait(assetBaseURL, char),
 	}
 	card.Identity = characterIdentity(char)
 
@@ -162,11 +168,11 @@ func DaggerheartCardFromSheet(char *gamev1.Character, profile *daggerheartv1.Dag
 
 // DaggerheartSheetFromResponse builds the full sheet data from a
 // GetCharacterSheetResponse.
-func DaggerheartSheetFromResponse(char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) DaggerheartCharacterSheetData {
+func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) DaggerheartCharacterSheetData {
 	sheet := DaggerheartCharacterSheetData{
 		ID:       strings.TrimSpace(char.GetId()),
 		Name:     strings.TrimSpace(char.GetName()),
-		Portrait: characterPortrait(char),
+		Portrait: characterPortrait(assetBaseURL, char),
 		Pronouns: pronounsString(char.GetPronouns()),
 		Kind:     characterKindString(char.GetKind()),
 	}
@@ -219,9 +225,21 @@ func DaggerheartSheetFromResponse(char *gamev1.Character, profile *daggerheartv1
 
 // --- Helpers ---
 
-func characterPortrait(char *gamev1.Character) CharacterCardPortrait {
+func characterPortrait(assetBaseURL string, char *gamev1.Character) CharacterCardPortrait {
+	avatarEntityID := strings.TrimSpace(char.GetId())
+	if avatarEntityID == "" {
+		avatarEntityID = strings.TrimSpace(char.GetCampaignId())
+	}
 	return CharacterCardPortrait{
 		Alt: strings.TrimSpace(char.GetName()),
+		Src: websupport.AvatarImageURL(
+			assetBaseURL,
+			catalog.AvatarRoleCharacter,
+			avatarEntityID,
+			strings.TrimSpace(char.GetAvatarSetId()),
+			strings.TrimSpace(char.GetAvatarAssetId()),
+			playAvatarDeliveryWidthPX,
+		),
 	}
 }
 
@@ -252,7 +270,11 @@ func characterKindString(value gamev1.CharacterKind) string {
 // carries the class name; the first active subclass feature provides the
 // subclass name.
 func resolveClassNames(profile *daggerheartv1.DaggerheartProfile) (string, string) {
-	var className, subclassName string
+	className := contentLabelFromID(profile.GetClassId())
+	subclassName := contentLabelFromID(profile.GetSubclassId())
+	if className != "" || subclassName != "" {
+		return className, subclassName
+	}
 	if features := profile.GetActiveClassFeatures(); len(features) > 0 {
 		// Use the first feature name as class name — the profile features are
 		// already derived and ordered by the game service.
@@ -360,17 +382,18 @@ func daggerheartTraits(profile *daggerheartv1.DaggerheartProfile) *DaggerheartCh
 
 func daggerheartTraitSlice(profile *daggerheartv1.DaggerheartProfile) []DaggerheartTrait {
 	type traitDef struct {
-		name string
-		abbr string
-		get  func() *wrapperspb.Int32Value
+		name   string
+		abbr   string
+		skills []string
+		get    func() *wrapperspb.Int32Value
 	}
 	defs := []traitDef{
-		{"Agility", "AGI", profile.GetAgility},
-		{"Strength", "STR", profile.GetStrength},
-		{"Finesse", "FIN", profile.GetFinesse},
-		{"Instinct", "INS", profile.GetInstinct},
-		{"Presence", "PRE", profile.GetPresence},
-		{"Knowledge", "KNO", profile.GetKnowledge},
+		{"Agility", "AGI", []string{"Sprint", "Leap", "Maneuver"}, profile.GetAgility},
+		{"Strength", "STR", []string{"Lift", "Smash", "Grapple"}, profile.GetStrength},
+		{"Finesse", "FIN", []string{"Control", "Hide", "Tinker"}, profile.GetFinesse},
+		{"Instinct", "INS", []string{"Perceive", "Sense", "Navigate"}, profile.GetInstinct},
+		{"Presence", "PRE", []string{"Charm", "Perform", "Deceive"}, profile.GetPresence},
+		{"Knowledge", "KNO", []string{"Recall", "Analyze", "Comprehend"}, profile.GetKnowledge},
 	}
 	traits := make([]DaggerheartTrait, 0, len(defs))
 	for _, d := range defs {
@@ -382,6 +405,7 @@ func daggerheartTraitSlice(profile *daggerheartv1.DaggerheartProfile) []Daggerhe
 			Name:         d.name,
 			Abbreviation: d.abbr,
 			Value:        w.GetValue(),
+			Skills:       append([]string(nil), d.skills...),
 		})
 	}
 	if len(traits) == 0 {
@@ -450,17 +474,64 @@ func daggerheartDomainCards(profile *daggerheartv1.DaggerheartProfile) []Daggerh
 	if len(ids) == 0 {
 		return nil
 	}
-	// Without content service resolution, use IDs as names for MVP.
 	cards := make([]DaggerheartDomainCard, 0, len(ids))
 	for _, id := range ids {
-		if s := strings.TrimSpace(id); s != "" {
-			cards = append(cards, DaggerheartDomainCard{Name: s})
+		name, domain := domainCardLabelFromID(id)
+		if name != "" {
+			cards = append(cards, DaggerheartDomainCard{
+				Name:   name,
+				Domain: domain,
+			})
 		}
 	}
 	if len(cards) == 0 {
 		return nil
 	}
 	return cards
+}
+
+func contentLabelFromID(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if idx := strings.IndexAny(value, ".:"); idx >= 0 && idx < len(value)-1 {
+		value = value[idx+1:]
+	}
+	return humanizeContentSlug(value)
+}
+
+func domainCardLabelFromID(value string) (string, string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", ""
+	}
+	if idx := strings.IndexAny(value, ".:"); idx >= 0 && idx < len(value)-1 {
+		value = value[idx+1:]
+	}
+	domain := ""
+	if idx := strings.Index(value, "-"); idx >= 0 && idx < len(value)-1 {
+		domain = humanizeContentSlug(value[:idx])
+		value = value[idx+1:]
+	}
+	return humanizeContentSlug(value), domain
+}
+
+func humanizeContentSlug(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	value = strings.NewReplacer("-", " ", "_", " ").Replace(value)
+	parts := strings.Fields(value)
+	if len(parts) == 0 {
+		return ""
+	}
+	for i, part := range parts {
+		lower := strings.ToLower(part)
+		parts[i] = strings.ToUpper(lower[:1]) + lower[1:]
+	}
+	return strings.Join(parts, " ")
 }
 
 func lifeStateString(value daggerheartv1.DaggerheartLifeState) string {

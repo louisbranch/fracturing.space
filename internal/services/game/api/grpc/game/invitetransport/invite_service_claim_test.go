@@ -46,13 +46,13 @@ func TestClaimInvite_Success(t *testing.T) {
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -125,13 +125,13 @@ func TestClaimInvite_UsesReplayStateForSeatOccupancy(t *testing.T) {
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -175,13 +175,13 @@ func TestClaimInvite_DetectsExistingUserFromReplayState(t *testing.T) {
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -232,13 +232,13 @@ func TestClaimInvite_IgnoresLeftParticipantWhenCheckingExistingUser(t *testing.T
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -291,13 +291,13 @@ func TestClaimInvite_IgnoresUnboundParticipantWhenCheckingExistingUser(t *testin
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -350,13 +350,13 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -410,14 +410,14 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 	}}
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
-		},
+		}),
 		gametest.FixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 		nil,
 		nil,
@@ -453,13 +453,13 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -531,13 +531,13 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 	seedInviteCreatedEvent(t, eventStore, inviteStore.Invites["invite-1"], now)
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -599,7 +599,7 @@ func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
 	}}
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
@@ -607,7 +607,7 @@ func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
 			Event:       eventStore,
 			Social:      socialClient,
 			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
-		},
+		}),
 		gametest.FixedClock(now),
 		nil,
 		nil,
@@ -637,11 +637,14 @@ func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
 	if socialClient.GetUserProfileCalls != 1 {
 		t.Fatalf("GetUserProfile calls = %d, want 1", socialClient.GetUserProfileCalls)
 	}
-	if domain.calls != 1 {
-		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	if domain.calls != 2 {
+		t.Fatalf("domain calls = %d, want 2", domain.calls)
 	}
-	if len(domain.commands) != 1 || domain.commands[0].Type != command.Type("participant.update") {
-		t.Fatalf("commands = %#v, want participant.update only", domain.commands)
+	if len(domain.commands) != 2 {
+		t.Fatalf("commands = %#v, want invite.claim_bind then participant.update", domain.commands)
+	}
+	if domain.commands[0].Type != command.Type("invite.claim_bind") || domain.commands[1].Type != command.Type("participant.update") {
+		t.Fatalf("commands = %#v, want invite.claim_bind then participant.update", domain.commands)
 	}
 }
 
@@ -711,7 +714,7 @@ func TestClaimInvite_ResyncsControlledCharacterAvatarFromClaimedSeat(t *testing.
 	}}
 
 	svc := newServiceWithDependencies(
-		Deps{
+		withInviteClaimWrite(t, Deps{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Character:   characterStore,
@@ -719,7 +722,7 @@ func TestClaimInvite_ResyncsControlledCharacterAvatarFromClaimedSeat(t *testing.
 			Event:       eventStore,
 			Social:      socialClient,
 			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
-		},
+		}),
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("x"),
 		nil,
@@ -737,18 +740,21 @@ func TestClaimInvite_ResyncsControlledCharacterAvatarFromClaimedSeat(t *testing.
 		t.Fatalf("ClaimInvite returned error: %v", err)
 	}
 
-	if len(domain.commands) != 2 {
-		t.Fatalf("expected 2 commands, got %d", len(domain.commands))
+	if len(domain.commands) != 3 {
+		t.Fatalf("expected 3 commands, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("participant.update") {
-		t.Fatalf("command[0] type = %s, want participant.update", domain.commands[0].Type)
+	if domain.commands[0].Type != command.Type("invite.claim_bind") {
+		t.Fatalf("command[0] type = %s, want invite.claim_bind", domain.commands[0].Type)
 	}
-	if domain.commands[1].Type != command.Type("character.update") {
-		t.Fatalf("command[1] type = %s, want character.update", domain.commands[1].Type)
+	if domain.commands[1].Type != command.Type("participant.update") {
+		t.Fatalf("command[1] type = %s, want participant.update", domain.commands[1].Type)
+	}
+	if domain.commands[2].Type != command.Type("character.update") {
+		t.Fatalf("command[2] type = %s, want character.update", domain.commands[2].Type)
 	}
 
 	var payload character.UpdatePayload
-	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
+	if err := json.Unmarshal(domain.commands[2].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode character update payload: %v", err)
 	}
 	if payload.Fields["avatar_set_id"] != "avatar-set-1" {

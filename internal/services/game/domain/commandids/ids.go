@@ -44,6 +44,7 @@ const (
 	ParticipantBind                command.Type = "participant.bind"
 	ParticipantUnbind              command.Type = "participant.unbind"
 	InviteCreate                   command.Type = "invite.create"
+	InviteClaimBind                command.Type = "invite.claim_bind"
 	InviteClaim                    command.Type = "invite.claim"
 	InviteDecline                  command.Type = "invite.decline"
 	InviteRevoke                   command.Type = "invite.revoke"

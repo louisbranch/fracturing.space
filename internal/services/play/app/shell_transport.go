@@ -1,6 +1,7 @@
 package app
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
@@ -35,7 +36,7 @@ func (s *Server) handleCampaignShell(w http.ResponseWriter, r *http.Request, lau
 		return
 	}
 	if access.RedirectToWeb {
-		http.Redirect(w, r, playorigin.WebURL(r, s.requestSchemePolicy, s.webFallbackPort, routepath.AppCampaignGame(campaign.CampaignID)), http.StatusSeeOther)
+		http.Redirect(w, r, playorigin.WebURL(r, s.requestSchemePolicy, s.webFallbackPort, routepath.AppCampaign(campaign.CampaignID)), http.StatusSeeOther)
 		return
 	}
 	if _, err := s.application().bootstrap(r.Context(), playRequest{
@@ -45,19 +46,24 @@ func (s *Server) handleCampaignShell(w http.ResponseWriter, r *http.Request, lau
 		writeRPCError(w, err)
 		return
 	}
-	if err := s.writeCampaignShell(w, campaign.CampaignID); err != nil {
+	if err := s.writeCampaignShell(w, r, campaign.CampaignID); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to render play shell")
 	}
 }
 
 // writeCampaignShell keeps shell rendering isolated from session and bootstrap
 // gating so shell failures stay transport-only.
-func (s *Server) writeCampaignShell(w http.ResponseWriter, campaignID string) error {
+func (s *Server) writeCampaignShell(w http.ResponseWriter, r *http.Request, campaignID string) error {
+	backURL := playorigin.WebURL(r, s.requestSchemePolicy, s.webFallbackPort, routepath.AppCampaign(campaignID))
+	slog.InfoContext(r.Context(), "play: render campaign shell",
+		"campaign_id", campaignID,
+		"back_url", backURL,
+	)
 	return s.writeShell(w, shellRenderInput{
 		CampaignID:    campaignID,
 		BootstrapPath: pathForCampaignAPI(campaignID, "bootstrap"),
 		RealtimePath:  "/realtime",
-		BackURL:       routepath.AppCampaignGame(campaignID),
+		BackURL:       backURL,
 	})
 }
 
@@ -69,6 +75,7 @@ func (s *Server) writeShell(w http.ResponseWriter, input shellRenderInput) error
 		return err
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(html)
 	return nil

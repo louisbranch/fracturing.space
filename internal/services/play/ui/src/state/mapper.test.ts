@@ -100,7 +100,7 @@ describe("deriveOnStageMode", () => {
 describe("mapToPlayerHUDState", () => {
   it("maps bootstrap data to a complete HUD state", () => {
     const bootstrap = minimalBootstrap();
-    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", []);
+    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", [], "http://example.com/app/campaigns/c1");
 
     expect(state.activeTab).toBe("on-stage");
     expect(state.connectionState).toBe("connected");
@@ -108,7 +108,7 @@ describe("mapToPlayerHUDState", () => {
     expect(state.onStage.viewerParticipantId).toBe("p1");
     expect(state.backstage.viewerParticipantId).toBe("p1");
     expect(state.sideChat.viewerParticipantId).toBe("p1");
-    expect(state.campaignNavigation.returnHref).toBe("/app/campaigns/c1/game");
+    expect(state.campaignNavigation.returnHref).toBe("http://example.com/app/campaigns/c1");
   });
 
   it("maps chat messages to side chat", () => {
@@ -124,7 +124,7 @@ describe("mapToPlayerHUDState", () => {
         body: "Hello!",
       },
     ];
-    const state = mapToPlayerHUDState(bootstrap, null, "connected", "side-chat", messages);
+    const state = mapToPlayerHUDState(bootstrap, null, "connected", "side-chat", messages, "http://example.com/app/campaigns/c1");
 
     expect(state.sideChat.messages).toHaveLength(1);
     expect(state.sideChat.messages[0].body).toBe("Hello!");
@@ -132,13 +132,55 @@ describe("mapToPlayerHUDState", () => {
   });
 
   it("maps participants with character references", () => {
-    const bootstrap = minimalBootstrap();
-    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", []);
+    const bootstrap = minimalBootstrap({
+      participants: [
+        {
+          id: "p1",
+          name: "Avery",
+          role: "player",
+          avatar_url: "https://cdn.example.com/participants/p1.png",
+          character_ids: ["ch1"],
+        },
+        {
+          id: "p2",
+          name: "GM Bran",
+          role: "gm",
+          avatar_url: "https://cdn.example.com/participants/p2.png",
+          character_ids: [],
+        },
+      ],
+      character_inspection_catalog: {
+        ch1: {
+          system: "daggerheart",
+          card: {
+            id: "ch1",
+            name: "Lark",
+            portrait: {
+              alt: "Lark portrait",
+              src: "https://cdn.example.com/characters/ch1.png",
+            },
+          },
+          sheet: {
+            id: "ch1",
+            name: "Lark",
+            portrait: {
+              alt: "Lark portrait",
+              src: "https://cdn.example.com/characters/ch1.png",
+            },
+          },
+        },
+      },
+    });
+    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", [], "http://example.com/app/campaigns/c1");
 
     expect(state.campaignNavigation.characterControllers).toHaveLength(2);
     const avery = state.campaignNavigation.characterControllers.find((c) => c.participantId === "p1");
     expect(avery?.isViewer).toBe(true);
     expect(avery?.characters).toHaveLength(1);
     expect(avery?.characters[0].id).toBe("ch1");
+    expect(avery?.characters[0].avatarUrl).toBe("https://cdn.example.com/characters/ch1.png");
+    expect(state.onStage.participants.find((participant) => participant.id === "p1")?.avatarUrl).toBe(
+      "https://cdn.example.com/participants/p1.png",
+    );
   });
 });
