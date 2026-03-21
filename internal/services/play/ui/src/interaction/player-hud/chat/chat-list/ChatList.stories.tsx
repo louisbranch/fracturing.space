@@ -9,7 +9,7 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component: "Scrollable grouped message list for the side chat panel.",
+        component: "Grouped message list content rendered inside the side chat panel's scroll region.",
       },
     },
   },

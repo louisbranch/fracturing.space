@@ -6,7 +6,7 @@ import { OnStagePanel } from "./OnStagePanel";
 
 describe("OnStagePanel", () => {
   it("renders the on-stage scene context, embedded status badge, slot list, and compose regions", () => {
-    render(
+    const { container } = render(
       <OnStagePanel
         state={onStageFixtureCatalog.viewerPosted}
         draft="Aria hooks the pry tool into the seam."
@@ -18,6 +18,8 @@ describe("OnStagePanel", () => {
       />,
     );
 
+    const scrollRegion = container.querySelector(".hud-panel-scroll-region");
+    expect(scrollRegion).not.toBeNull();
     expect(screen.getByLabelText("On Stage")).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage status: Your Beat")).toBeInTheDocument();
@@ -27,6 +29,8 @@ describe("OnStagePanel", () => {
     expect(screen.getByLabelText("On-stage slot by Bryn")).toBeInTheDocument();
     expect(screen.getByLabelText("Characters: Aria")).toBeInTheDocument();
     expect(screen.getByLabelText("Characters: Corin")).toBeInTheDocument();
+    expect(scrollRegion).toContainElement(screen.getByLabelText("On-stage scene context"));
+    expect(scrollRegion).toContainElement(screen.getByLabelText("On-stage messages"));
   });
 
   it("shows the OOC-blocked state as informational and non-actionable", () => {

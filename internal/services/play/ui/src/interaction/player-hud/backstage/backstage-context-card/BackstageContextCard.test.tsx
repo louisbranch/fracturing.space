@@ -16,7 +16,10 @@ describe("BackstageContextCard", () => {
     );
 
     expect(screen.getByLabelText("Backstage context")).toBeInTheDocument();
-    expect(screen.getByLabelText("Backstage status: OOC Open")).toBeInTheDocument();
+    expect(screen.getByLabelText("Backstage status: OOC Open")).toHaveClass(
+      "tooltip",
+      "tooltip-left",
+    );
     expect(screen.getByText("Sealed Vault")).toBeInTheDocument();
     expect(screen.getByText(/The ward crackles/)).toBeInTheDocument();
     expect(screen.getByText("Clarify how the ward reacts to tools.")).toBeInTheDocument();

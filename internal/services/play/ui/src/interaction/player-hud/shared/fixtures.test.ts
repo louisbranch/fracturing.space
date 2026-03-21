@@ -8,6 +8,7 @@ import {
   onStageCharacterCatalog,
   onStageFixtureCatalog,
   onStageParticipants,
+  playerHUDFixtureCatalog,
   sideChatParticipants,
 } from "./fixtures";
 
@@ -40,5 +41,13 @@ describe("player HUD shared fixtures", () => {
         onStageCharacterCatalog.rowan.avatarUrl,
       ],
     );
+  });
+
+  it("assigns a preview avatar to shell-only on-stage participants", () => {
+    const shellOnlyParticipant = playerHUDFixtureCatalog.onStage.onStage.participants.find(
+      (participant) => participant.id === "p-ives",
+    );
+
+    expect(shellOnlyParticipant?.avatarUrl).toEqual(participantAvatarPreviewAssets[3]?.imageUrl);
   });
 });

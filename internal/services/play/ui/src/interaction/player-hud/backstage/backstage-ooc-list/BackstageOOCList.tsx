@@ -25,7 +25,7 @@ export function BackstageOOCList({
     return (
       <div
         aria-label="Backstage OOC messages"
-        className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto"
+        className="flex min-h-full flex-1 flex-col items-center justify-center px-3 py-3"
       >
         <span className="text-sm text-base-content/50">No OOC messages yet</span>
       </div>
@@ -35,7 +35,7 @@ export function BackstageOOCList({
   return (
     <div
       aria-label="Backstage OOC messages"
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 py-1.5"
+      className="flex flex-col px-1.5 py-1.5"
     >
       {messages.map((message, index) => {
         const previous = messages[index - 1];

@@ -21,19 +21,21 @@ export function BackstagePanel({
 
   return (
     <section aria-label="Backstage" className="flex min-h-0 flex-1 flex-col">
-      <BackstageContextCard
-        sceneName={state.sceneName}
-        pausedPromptText={state.pausedPromptText}
-        reason={state.reason}
-        statusLabel={status.badgeLabel}
-        statusClassName={status.badgeClassName}
-        statusTooltip={status.message}
-      />
-      <BackstageOOCList
-        messages={state.messages}
-        participants={state.participants}
-        viewerParticipantId={state.viewerParticipantId}
-      />
+      <div className="hud-panel-scroll-region">
+        <BackstageContextCard
+          sceneName={state.sceneName}
+          pausedPromptText={state.pausedPromptText}
+          reason={state.reason}
+          statusLabel={status.badgeLabel}
+          statusClassName={status.badgeClassName}
+          statusTooltip={status.message}
+        />
+        <BackstageOOCList
+          messages={state.messages}
+          participants={state.participants}
+          viewerParticipantId={state.viewerParticipantId}
+        />
+      </div>
       <BackstageCompose
         draft={draft}
         viewerReady={viewerReady}

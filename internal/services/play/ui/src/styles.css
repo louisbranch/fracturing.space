@@ -151,20 +151,8 @@
     @apply shrink-0;
   }
 
-  .hud-stage {
-    @apply flex min-h-0 flex-1;
-  }
-
-  .hud-stage-header {
-    @apply shrink-0 px-3 py-2;
-  }
-
-  .hud-stage-scroll {
-    @apply min-h-0 flex-1 overflow-y-auto border-t border-base-300/70 px-3 py-2;
-  }
-
-  .hud-stage-empty {
-    @apply flex h-full min-h-40 items-center justify-center border border-dashed border-base-300/70 bg-base-200/25 px-3 py-4 text-center;
+  .hud-panel-scroll-region {
+    @apply flex min-h-0 flex-1 flex-col overflow-y-auto;
   }
 
   .hud-composer {

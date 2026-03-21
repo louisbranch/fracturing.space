@@ -25,7 +25,7 @@ export function OnStageSlotList({
   }
 
   return (
-    <section aria-label={ariaLabel} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3">
+    <section aria-label={ariaLabel} className="flex flex-col gap-2 px-3 py-3">
       {orderedParticipantIDs.map((participantId) => {
         const participant = participantMap.get(participantId);
         if (!participant) {
