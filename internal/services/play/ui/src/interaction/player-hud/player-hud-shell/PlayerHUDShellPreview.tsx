@@ -166,6 +166,7 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
     <>
       <PlayerHUDShell
         activeTab={activeTab}
+        connectionState={initialState.connectionState}
         campaignNavigation={initialState.campaignNavigation}
         isSidebarOpen={isSidebarOpen}
         onSidebarOpenChange={setIsSidebarOpen}

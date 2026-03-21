@@ -8,6 +8,7 @@ describe("HUDNavbar", () => {
     render(
       <HUDNavbar
         activeTab="on-stage"
+        connectionState="connected"
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
         onTabChange={() => {}}
@@ -19,12 +20,14 @@ describe("HUDNavbar", () => {
     expect(screen.getByText("On Stage")).toBeInTheDocument();
     expect(screen.getByText("Backstage")).toBeInTheDocument();
     expect(screen.getByText("Side Chat")).toBeInTheDocument();
+    expect(screen.getByLabelText("Connection status: Connected")).toBeInTheDocument();
   });
 
   it("marks the active tab with aria-current", () => {
     render(
       <HUDNavbar
         activeTab="backstage"
+        connectionState="connected"
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
         onTabChange={() => {}}
@@ -40,6 +43,7 @@ describe("HUDNavbar", () => {
     render(
       <HUDNavbar
         activeTab="on-stage"
+        connectionState="connected"
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
         onTabChange={() => {}}
@@ -61,6 +65,7 @@ describe("HUDNavbar", () => {
     render(
       <HUDNavbar
         activeTab="on-stage"
+        connectionState="connected"
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
         onTabChange={onChange}
@@ -77,6 +82,7 @@ describe("HUDNavbar", () => {
     render(
       <HUDNavbar
         activeTab="on-stage"
+        connectionState="connected"
         isSidebarOpen={false}
         onSidebarOpenChange={onSidebarOpenChange}
         onTabChange={() => {}}
@@ -93,6 +99,7 @@ describe("HUDNavbar", () => {
     render(
       <HUDNavbar
         activeTab="on-stage"
+        connectionState="connected"
         isSidebarOpen={true}
         onSidebarOpenChange={onSidebarOpenChange}
         onTabChange={() => {}}
@@ -107,6 +114,7 @@ describe("HUDNavbar", () => {
     const { container } = render(
       <HUDNavbar
         activeTab="on-stage"
+        connectionState="connected"
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
         onTabChange={() => {}}
@@ -116,5 +124,20 @@ describe("HUDNavbar", () => {
     expect(container.textContent).toContain("Backstage");
     expect(container.textContent).toContain("Side Chat");
     expect(container.textContent).not.toContain("Out-of-character chat");
+  });
+
+  it("renders the unhealthy connection states as passive status badges", () => {
+    render(
+      <HUDNavbar
+        activeTab="on-stage"
+        connectionState="disconnected"
+        isSidebarOpen={false}
+        onSidebarOpenChange={() => {}}
+        onTabChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText("Connection status: Disconnected")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Connection status: Disconnected" })).toBeNull();
   });
 });
