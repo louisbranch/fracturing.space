@@ -35,14 +35,8 @@ func newSettingsConfigFromGateways(
 				AIAgentGateway: aiGateway,
 			}),
 		},
-		Availability: settingsSurfaceAvailability{
-			profile:  settingsapp.IsProfileGatewayHealthy(accountGateway),
-			locale:   settingsapp.IsLocaleGatewayHealthy(accountGateway),
-			security: settingsapp.IsSecurityGatewayHealthy(accountGateway),
-			aiKeys:   settingsapp.IsAIKeyGatewayHealthy(aiGateway),
-			aiAgents: settingsapp.IsAIAgentGatewayHealthy(aiGateway),
-		},
-		Base: base,
+		Availability: testSettingsAvailability(accountGateway, aiGateway),
+		Base:         base,
 	}
 	for _, opt := range opts {
 		opt(&config)
@@ -85,4 +79,28 @@ func testSettingsGateway(
 		CredentialClient: credential,
 		AgentClient:      agent,
 	}
+}
+
+func testSettingsAvailability(
+	accountGateway settingsapp.AccountGateway,
+	aiGateway settingsapp.AIGateway,
+) settingsSurfaceAvailability {
+	availability := settingsSurfaceAvailability{}
+	if gateway, ok := accountGateway.(settingsgateway.GRPCGateway); ok {
+		availability.profile = gateway.SocialClient != nil
+		availability.locale = gateway.AccountClient != nil
+		availability.security = gateway.PasskeyClient != nil
+	} else if accountGateway != nil {
+		availability.profile = true
+		availability.locale = true
+		availability.security = true
+	}
+	if gateway, ok := aiGateway.(settingsgateway.GRPCGateway); ok {
+		availability.aiKeys = gateway.CredentialClient != nil
+		availability.aiAgents = gateway.CredentialClient != nil && gateway.AgentClient != nil
+	} else if aiGateway != nil {
+		availability.aiKeys = true
+		availability.aiAgents = true
+	}
+	return availability
 }

@@ -4,12 +4,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
+
+// DashboardSync keeps campaign mutations aligned with dashboard freshness.
+type DashboardSync = dashboardsync.Service
 
 // campaignRouteSupport owns the cross-surface helpers reused by the campaigns
 // transport package.
@@ -18,6 +22,20 @@ type campaignRouteSupport struct {
 	requestMeta requestmeta.SchemePolicy
 	nowFunc     func() time.Time
 	sync        DashboardSync
+}
+
+// newCampaignRouteSupport keeps shared transport defaults in one constructor
+// instead of repeating them across route-owner assembly.
+func newCampaignRouteSupport(base modulehandler.Base, meta requestmeta.SchemePolicy, sync DashboardSync) campaignRouteSupport {
+	if sync == nil {
+		sync = dashboardsync.Noop{}
+	}
+	return campaignRouteSupport{
+		Base:        base,
+		requestMeta: meta,
+		nowFunc:     time.Now,
+		sync:        sync,
+	}
 }
 
 // now centralizes this web behavior in one helper seam.

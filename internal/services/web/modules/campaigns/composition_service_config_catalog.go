@@ -9,12 +9,16 @@ import (
 // workspace ownership it depends on.
 func newPageServiceConfig(config CompositionConfig) pageServiceConfig {
 	return pageServiceConfig{
-		Workspace: newWorkspaceServiceConfig(config),
-		SessionRead: campaignapp.SessionReadServiceConfig{
-			Read: campaigngateway.NewSessionReadGateway(config.Gateway.Page.SessionRead),
-		},
-		Authorization: campaigngateway.NewAuthorizationGateway(config.Gateway.Page.Authorization),
+		Workspace:     newWorkspaceServiceConfig(config),
+		SessionRead:   newSessionReadServiceConfig(config),
+		Authorization: newPageAuthorizationGateway(config),
 	}
+}
+
+// newPageAuthorizationGateway keeps shared detail-page authorization wiring
+// close to the workspace shell that consumes it.
+func newPageAuthorizationGateway(config CompositionConfig) campaignapp.AuthorizationGateway {
+	return campaigngateway.NewAuthorizationGateway(config.Gateway.Page.Authorization)
 }
 
 // newCatalogSurfaceConfig keeps catalog composition local to the catalog route

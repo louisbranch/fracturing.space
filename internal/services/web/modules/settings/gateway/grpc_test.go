@@ -117,31 +117,6 @@ func TestNewGRPCGatewayWithoutConfiguredClientsFailsClosed(t *testing.T) {
 	}
 }
 
-func TestGRPCGatewayReportsSurfaceHealthFromConfiguredClients(t *testing.T) {
-	t.Parallel()
-
-	accountOnly := NewAccountGateway(socialStub{}, &accountStub{}, nil)
-	if !settingsapp.IsAccountGatewayHealthy(accountOnly) {
-		t.Fatalf("IsAccountGatewayHealthy(accountOnly) = false, want true")
-	}
-	if settingsapp.IsAIGatewayHealthy(accountOnly) {
-		t.Fatalf("IsAIGatewayHealthy(accountOnly) = true, want false")
-	}
-
-	aiKeysOnly := NewAIGateway(&credentialStub{}, nil)
-	if !settingsapp.IsAIKeyGatewayHealthy(aiKeysOnly) {
-		t.Fatalf("IsAIKeyGatewayHealthy(aiKeysOnly) = false, want true")
-	}
-	if settingsapp.IsAIAgentGatewayHealthy(aiKeysOnly) {
-		t.Fatalf("IsAIAgentGatewayHealthy(aiKeysOnly) = true, want false")
-	}
-
-	agentsReady := NewAIGateway(&credentialStub{}, &agentStub{})
-	if !settingsapp.IsAIAgentGatewayHealthy(agentsReady) {
-		t.Fatalf("IsAIAgentGatewayHealthy(agentsReady) = false, want true")
-	}
-}
-
 func TestGRPCGatewayMapsProfileAndLocale(t *testing.T) {
 	t.Parallel()
 

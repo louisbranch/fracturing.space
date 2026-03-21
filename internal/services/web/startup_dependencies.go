@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	grpc "google.golang.org/grpc"
 )
 
@@ -70,12 +71,13 @@ const (
 // can bind during startup. Command-layer startup policy consumes this table
 // instead of owning binder selection itself.
 type StartupDependencyDescriptor struct {
-	Name       string
-	Policy     StartupDependencyPolicy
-	Capability string
-	Surfaces   []string
-	Bind       DependencyBinder
-	Validate   DependencyValidator
+	Name               string
+	Policy             StartupDependencyPolicy
+	Capability         string
+	Surfaces           []string
+	DefaultGRPCService string
+	Bind               DependencyBinder
+	Validate           DependencyValidator
 }
 
 const (
@@ -99,11 +101,12 @@ const (
 
 var startupDependencyDescriptors = []StartupDependencyDescriptor{
 	{
-		Name:       DependencyNameAuth,
-		Policy:     StartupDependencyRequired,
-		Capability: "web.auth.integration",
-		Surfaces:   []string{"principal", "publicauth", "profile", "settings"},
-		Bind:       BindAuthDependency,
+		Name:               DependencyNameAuth,
+		Policy:             StartupDependencyRequired,
+		Capability:         "web.auth.integration",
+		Surfaces:           []string{"principal", "publicauth", "profile", "settings"},
+		DefaultGRPCService: serviceaddr.ServiceAuth,
+		Bind:               BindAuthDependency,
 		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
 			return dependencyValidationIssue(
 				DependencyNameAuth,
@@ -123,11 +126,12 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		},
 	},
 	{
-		Name:       DependencyNameSocial,
-		Policy:     StartupDependencyRequired,
-		Capability: "web.social.integration",
-		Surfaces:   []string{"principal", "profile", "settings", "campaigns"},
-		Bind:       BindSocialDependency,
+		Name:               DependencyNameSocial,
+		Policy:             StartupDependencyRequired,
+		Capability:         "web.social.integration",
+		Surfaces:           []string{"principal", "profile", "settings", "campaigns"},
+		DefaultGRPCService: serviceaddr.ServiceSocial,
+		Bind:               BindSocialDependency,
 		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
 			return dependencyValidationIssue(
 				DependencyNameSocial,
@@ -143,11 +147,12 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		},
 	},
 	{
-		Name:       DependencyNameGame,
-		Policy:     StartupDependencyRequired,
-		Capability: "web.game.integration",
-		Surfaces:   []string{"campaigns", "dashboard-sync"},
-		Bind:       BindGameDependency,
+		Name:               DependencyNameGame,
+		Policy:             StartupDependencyRequired,
+		Capability:         "web.game.integration",
+		Surfaces:           []string{"campaigns", "dashboard-sync"},
+		DefaultGRPCService: serviceaddr.ServiceGame,
+		Bind:               BindGameDependency,
 		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
 			return dependencyValidationIssue(
 				DependencyNameGame,
@@ -170,39 +175,44 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		},
 	},
 	{
-		Name:       DependencyNameAI,
-		Policy:     StartupDependencyOptional,
-		Capability: "web.ai.integration",
-		Surfaces:   []string{"settings.ai", "campaigns.ai"},
-		Bind:       BindAIDependency,
+		Name:               DependencyNameAI,
+		Policy:             StartupDependencyOptional,
+		Capability:         "web.ai.integration",
+		Surfaces:           []string{"settings.ai", "campaigns.ai"},
+		DefaultGRPCService: serviceaddr.ServiceAI,
+		Bind:               BindAIDependency,
 	},
 	{
-		Name:       DependencyNameDiscovery,
-		Policy:     StartupDependencyOptional,
-		Capability: "web.discovery.integration",
-		Surfaces:   []string{"discovery"},
-		Bind:       BindDiscoveryDependency,
+		Name:               DependencyNameDiscovery,
+		Policy:             StartupDependencyOptional,
+		Capability:         "web.discovery.integration",
+		Surfaces:           []string{"discovery"},
+		DefaultGRPCService: serviceaddr.ServiceDiscovery,
+		Bind:               BindDiscoveryDependency,
 	},
 	{
-		Name:       DependencyNameUserHub,
-		Policy:     StartupDependencyOptional,
-		Capability: "web.userhub.integration",
-		Surfaces:   []string{"dashboard", "dashboard-sync"},
-		Bind:       BindUserHubDependency,
+		Name:               DependencyNameUserHub,
+		Policy:             StartupDependencyOptional,
+		Capability:         "web.userhub.integration",
+		Surfaces:           []string{"dashboard", "dashboard-sync"},
+		DefaultGRPCService: serviceaddr.ServiceUserHub,
+		Bind:               BindUserHubDependency,
 	},
 	{
-		Name:       DependencyNameNotifications,
-		Policy:     StartupDependencyOptional,
-		Capability: "web.notifications.integration",
-		Surfaces:   []string{"principal", "notifications"},
-		Bind:       BindNotificationsDependency,
+		Name:               DependencyNameNotifications,
+		Policy:             StartupDependencyOptional,
+		Capability:         "web.notifications.integration",
+		Surfaces:           []string{"principal", "notifications"},
+		DefaultGRPCService: serviceaddr.ServiceNotifications,
+		Bind:               BindNotificationsDependency,
 	},
 	{
-		Name:       DependencyNameStatus,
-		Policy:     StartupDependencyOptional,
-		Capability: "web.status.integration",
-		Surfaces:   []string{"dashboard.health"},
-		Bind:       BindStatusDependency,
+		Name:               DependencyNameStatus,
+		Policy:             StartupDependencyOptional,
+		Capability:         "web.status.integration",
+		Surfaces:           []string{"dashboard.health"},
+		DefaultGRPCService: serviceaddr.ServiceStatus,
+		Bind:               BindStatusDependency,
 	},
 }
 

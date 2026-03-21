@@ -17,7 +17,9 @@ func defaultPublicModules(deps Dependencies, requestPrincipal principal.Principa
 		RequestMeta: opts.RequestSchemePolicy,
 		AuthBaseURL: deps.PublicAuth.AuthBaseURL,
 	})
-	if discoveryModule, ok := discovery.ComposePublic(discovery.PublicSurfaceOptions{}, deps.Discovery); ok {
+	if discoveryModule, ok := discovery.ComposePublic(discovery.PublicSurfaceOptions{
+		Logger: opts.Logger,
+	}, deps.Discovery); ok {
 		publicModules = append(publicModules, discoveryModule)
 	}
 	if profileModule, ok := profile.ComposePublic(profile.PublicSurfaceOptions{

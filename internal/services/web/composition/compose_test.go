@@ -1,6 +1,8 @@
 package composition
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -41,6 +43,7 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 			},
 		},
 	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	h, err := ComposeAppHandler(ComposeInput{
 		Principal: principal.NewPrincipal(
@@ -50,6 +53,7 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 			func(*http.Request) string { return "en" },
 			func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Ada"} },
 		),
+		Logger:              logger,
 		PlayHTTPAddr:        "127.0.0.1:9004",
 		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: true},
 		RegistryBuilder:     reg,
@@ -86,6 +90,12 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 	wantPlayPort := websupport.ResolveHTTPFallbackPort("127.0.0.1:9004")
 	if reg.input.ProtectedOptions.PlayFallbackPort != wantPlayPort {
 		t.Fatalf("ProtectedOptions.PlayFallbackPort = %q, want %q", reg.input.ProtectedOptions.PlayFallbackPort, wantPlayPort)
+	}
+	if reg.input.PublicOptions.Logger != logger {
+		t.Fatalf("PublicOptions.Logger = %p, want %p", reg.input.PublicOptions.Logger, logger)
+	}
+	if reg.input.ProtectedOptions.Logger != logger {
+		t.Fatalf("ProtectedOptions.Logger = %p, want %p", reg.input.ProtectedOptions.Logger, logger)
 	}
 }
 

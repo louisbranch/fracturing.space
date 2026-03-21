@@ -32,7 +32,7 @@ type SurfaceSetConfig struct {
 // composition config and applies the provided surface constructor.
 func compose(config CompositionConfig, build func(Config) Module) module.Module {
 	gateway := publicauthgateway.NewGRPCGateway(config.AuthClient)
-	m := Config{
+	moduleConfig := Config{
 		PageService:    publicauthapp.NewPageService(config.AuthBaseURL),
 		SessionService: publicauthapp.NewSessionService(gateway, config.AuthBaseURL),
 		PasskeyService: publicauthapp.NewPasskeyService(gateway),
@@ -40,7 +40,7 @@ func compose(config CompositionConfig, build func(Config) Module) module.Module 
 		Principal:      config.Principal,
 		RequestMeta:    config.RequestMeta,
 	}
-	return build(m)
+	return build(moduleConfig)
 }
 
 // ComposeShell builds the shell/public routes module.
@@ -58,27 +58,27 @@ func ComposeAuthRedirect(config CompositionConfig) module.Module {
 	return compose(config, NewAuthRedirect)
 }
 
+// newSharedSurfaceConfig builds the shared publicauth service bundle used by
+// all route-owner modules in the stable surface set.
+func newSharedSurfaceConfig(config SurfaceSetConfig) Config {
+	gateway := publicauthgateway.NewGRPCGateway(config.AuthClient)
+	return Config{
+		PageService:    publicauthapp.NewPageService(config.AuthBaseURL),
+		SessionService: publicauthapp.NewSessionService(gateway, config.AuthBaseURL),
+		PasskeyService: publicauthapp.NewPasskeyService(gateway),
+		Recovery:       publicauthapp.NewRecoveryService(gateway),
+		Principal:      config.Principal,
+		RequestMeta:    config.RequestMeta,
+	}
+}
+
 // ComposeSurfaceSet builds the stable publicauth module set in area-owned
 // order so the central registry only declares public module ordering.
 func ComposeSurfaceSet(config SurfaceSetConfig) []module.Module {
+	moduleConfig := newSharedSurfaceConfig(config)
 	return []module.Module{
-		ComposeShell(CompositionConfig{
-			AuthClient:  config.AuthClient,
-			Principal:   config.Principal,
-			RequestMeta: config.RequestMeta,
-			AuthBaseURL: config.AuthBaseURL,
-		}),
-		ComposePasskeys(CompositionConfig{
-			AuthClient:  config.AuthClient,
-			Principal:   config.Principal,
-			RequestMeta: config.RequestMeta,
-			AuthBaseURL: config.AuthBaseURL,
-		}),
-		ComposeAuthRedirect(CompositionConfig{
-			AuthClient:  config.AuthClient,
-			Principal:   config.Principal,
-			RequestMeta: config.RequestMeta,
-			AuthBaseURL: config.AuthBaseURL,
-		}),
+		NewShell(moduleConfig),
+		NewPasskeys(moduleConfig),
+		NewAuthRedirect(moduleConfig),
 	}
 }

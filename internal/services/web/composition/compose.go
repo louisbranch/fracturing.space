@@ -1,6 +1,7 @@
 package composition
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
@@ -14,6 +15,7 @@ import (
 // ComposeInput describes the contracts needed to compose the application mux.
 type ComposeInput struct {
 	Principal principal.PrincipalResolver
+	Logger    *slog.Logger
 
 	ModuleDependencies modules.Dependencies
 
@@ -40,11 +42,13 @@ func ComposeAppHandler(input ComposeInput) (http.Handler, error) {
 		Principal:    input.Principal,
 		PublicOptions: modules.PublicModuleOptions{
 			RequestSchemePolicy: input.RequestSchemePolicy,
+			Logger:              input.Logger,
 		},
 		ProtectedOptions: modules.ProtectedModuleOptions{
 			PlayFallbackPort:    websupport.ResolveHTTPFallbackPort(input.PlayHTTPAddr),
 			PlayLaunchGrant:     input.PlayLaunchGrant,
 			RequestSchemePolicy: input.RequestSchemePolicy,
+			Logger:              input.Logger,
 		},
 	})
 

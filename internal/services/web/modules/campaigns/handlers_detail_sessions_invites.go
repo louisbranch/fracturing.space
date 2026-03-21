@@ -4,10 +4,99 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
+
+// sessionHandlerServices groups session lifecycle behavior.
+type sessionHandlerServices struct {
+	mutation campaignapp.CampaignSessionMutationService
+}
+
+// inviteHandlerServices groups invite reads, mutations, and recipient lookup
+// behavior.
+type inviteHandlerServices struct {
+	reads            campaignapp.CampaignInviteReadService
+	mutation         campaignapp.CampaignInviteMutationService
+	participantReads campaignapp.CampaignParticipantReadService
+}
+
+// sessionHandlers owns session detail/lifecycle plus play-launch routes.
+type sessionHandlers struct {
+	campaignDetailHandlers
+	sessions         sessionHandlerServices
+	playFallbackPort string
+	playLaunchGrant  playlaunchgrant.Config
+}
+
+// inviteHandlers owns invite read, search, and mutation routes.
+type inviteHandlers struct {
+	campaignDetailHandlers
+	invites inviteHandlerServices
+}
+
+// newSessionHandlerServices keeps session transport dependencies owned by the
+// session surface instead of the root constructor.
+func newSessionHandlerServices(config sessionServiceConfig, authorization campaignapp.AuthorizationGateway) sessionHandlerServices {
+	return sessionHandlerServices{
+		mutation: campaignapp.NewSessionMutationService(config.Mutation, authorization),
+	}
+}
+
+// newInviteHandlerServices keeps invite transport dependencies owned by the
+// invite surface instead of the root constructor.
+func newInviteHandlerServices(config inviteServiceConfig) inviteHandlerServices {
+	return inviteHandlerServices{
+		reads:            campaignapp.NewInviteReadService(config.Read, config.Authorization),
+		mutation:         campaignapp.NewInviteMutationService(config.Mutation, config.Authorization),
+		participantReads: campaignapp.NewParticipantReadService(config.ParticipantRead, config.Authorization),
+	}
+}
+
+// newSessionHandlers assembles the session route-owner handler.
+func newSessionHandlers(detail campaignDetailHandlers, services sessionHandlerServices, playFallbackPort string, playLaunchGrant playlaunchgrant.Config) sessionHandlers {
+	return sessionHandlers{
+		campaignDetailHandlers: detail,
+		sessions:               services,
+		playFallbackPort:       playFallbackPort,
+		playLaunchGrant:        playLaunchGrant,
+	}
+}
+
+// newInviteHandlers assembles the invite route-owner handler.
+func newInviteHandlers(detail campaignDetailHandlers, services inviteHandlerServices) inviteHandlers {
+	return inviteHandlers{
+		campaignDetailHandlers: detail,
+		invites:                services,
+	}
+}
+
+// missingSessionHandlerServices reports which session controls are absent
+// before session mutation routes are mounted.
+func missingSessionHandlerServices(services sessionHandlerServices) []string {
+	if services.mutation == nil {
+		return []string{"session-mutation"}
+	}
+	return nil
+}
+
+// missingInviteHandlerServices reports which invite capabilities are absent
+// before invite routes are mounted.
+func missingInviteHandlerServices(services inviteHandlerServices) []string {
+	missing := []string{}
+	if services.reads == nil {
+		missing = append(missing, "invite-reads")
+	}
+	if services.mutation == nil {
+		missing = append(missing, "invite-mutation")
+	}
+	if services.participantReads == nil {
+		missing = append(missing, "invite-participant-reads")
+	}
+	return missing
+}
 
 // handleSessions handles this route in the module transport layer.
 func (h sessionHandlers) handleSessions(w http.ResponseWriter, r *http.Request, campaignID string) {

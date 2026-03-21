@@ -2,6 +2,8 @@ package modules
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -253,7 +255,7 @@ func TestRegistryBuildIncludesCampaignsWhenDependencySetIsComplete(t *testing.T)
 func TestNewSharedServicesProvidesNoopDashboardSyncWhenDepsMissing(t *testing.T) {
 	t.Parallel()
 
-	shared := newSharedServices(Dependencies{})
+	shared := newSharedServices(Dependencies{}, nil)
 	if shared.dashboardSync == nil {
 		t.Fatal("dashboardSync = nil, want no-op service")
 	}
@@ -273,7 +275,7 @@ func TestNewSharedServicesReturnsSyncerWhenDashboardDependenciesConfigured(t *te
 			UserHubControlClient: stubUserHubControlClient{},
 			GameEventClient:      stubGameEventClient{},
 		},
-	})
+	}, nil)
 	if _, ok := shared.dashboardSync.(*dashboardsync.Syncer); !ok {
 		t.Fatalf("dashboardSync = %T, want *dashboardsync.Syncer", shared.dashboardSync)
 	}
@@ -399,6 +401,20 @@ func TestStatusHealthProviderEmptyServicesReturnsNil(t *testing.T) {
 	entries := provider(context.Background())
 	if entries != nil {
 		t.Fatalf("expected nil entries for empty services, got %d", len(entries))
+	}
+}
+
+func TestRegistryLoggerPrefersProtectedLogger(t *testing.T) {
+	t.Parallel()
+
+	publicLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	protectedLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	if got := registryLogger(publicLogger, protectedLogger); got != protectedLogger {
+		t.Fatalf("registryLogger(public, protected) = %p, want %p", got, protectedLogger)
+	}
+	if got := registryLogger(publicLogger, nil); got != publicLogger {
+		t.Fatalf("registryLogger(public, nil) = %p, want %p", got, publicLogger)
 	}
 }
 

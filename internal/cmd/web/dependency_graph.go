@@ -57,8 +57,8 @@ type dependencyAddressResolver func(Config) string
 // dependencyAddressBinding binds a startup dependency name to the command config
 // field and service default.
 type dependencyAddressBinding struct {
-	service string
-	address func(*Config) *string
+	descriptor web.StartupDependencyDescriptor
+	address    func(*Config) *string
 }
 
 // resolve reads and normalizes the configured gRPC address from the startup
@@ -70,55 +70,16 @@ func (b dependencyAddressBinding) resolve(cfg Config) string {
 	return strings.TrimSpace(*b.address(&cfg))
 }
 
-var dependencyAddressBindings = map[string]dependencyAddressBinding{
-	web.DependencyNameAuth: {
-		service: serviceaddr.ServiceAuth,
-		address: func(cfg *Config) *string { return &cfg.AuthAddr },
-	},
-	web.DependencyNameSocial: {
-		service: serviceaddr.ServiceSocial,
-		address: func(cfg *Config) *string { return &cfg.SocialAddr },
-	},
-	web.DependencyNameGame: {
-		service: serviceaddr.ServiceGame,
-		address: func(cfg *Config) *string { return &cfg.GameAddr },
-	},
-	web.DependencyNameAI: {
-		service: serviceaddr.ServiceAI,
-		address: func(cfg *Config) *string { return &cfg.AIAddr },
-	},
-	web.DependencyNameDiscovery: {
-		service: serviceaddr.ServiceDiscovery,
-		address: func(cfg *Config) *string { return &cfg.DiscoveryAddr },
-	},
-	web.DependencyNameUserHub: {
-		service: serviceaddr.ServiceUserHub,
-		address: func(cfg *Config) *string { return &cfg.UserHubAddr },
-	},
-	web.DependencyNameNotifications: {
-		service: serviceaddr.ServiceNotifications,
-		address: func(cfg *Config) *string { return &cfg.NotificationsAddr },
-	},
-	web.DependencyNameStatus: {
-		service: serviceaddr.ServiceStatus,
-		address: func(cfg *Config) *string { return &cfg.StatusAddr },
-	},
-}
-
 // applyDependencyAddressDefaults fills unset dependency addresses from stable
 // service defaults where a resolver is known.
 func applyDependencyAddressDefaults(cfg *Config) {
 	for _, descriptor := range web.StartupDependencyDescriptors() {
-		name := strings.TrimSpace(descriptor.Name)
-		if name == "" {
-			continue
-		}
-		binding, ok := dependencyAddressBindingForName(name)
+		binding, ok := dependencyAddressBindingForName(descriptor.Name)
 		if !ok {
 			continue
 		}
 		field := binding.address(cfg)
-		*field = serviceaddr.OrDefaultGRPCAddr(*field, binding.service)
+		*field = serviceaddr.OrDefaultGRPCAddr(*field, binding.descriptor.DefaultGRPCService)
 	}
 }
 
@@ -179,8 +140,46 @@ func dependencyAddressFlagUsage(name string) string {
 // dependencyAddressBindingForName resolves one binding from a canonical dependency
 // name.
 func dependencyAddressBindingForName(name string) (dependencyAddressBinding, bool) {
-	binding, ok := dependencyAddressBindings[strings.TrimSpace(name)]
-	return binding, ok && binding.address != nil && binding.service != ""
+	descriptor, ok := web.LookupStartupDependencyDescriptor(strings.TrimSpace(name))
+	if !ok {
+		return dependencyAddressBinding{}, false
+	}
+	return dependencyAddressBindingForDescriptor(descriptor)
+}
+
+// dependencyAddressBindingForDescriptor resolves command-layer config-field
+// ownership for one service-owned startup dependency descriptor.
+func dependencyAddressBindingForDescriptor(descriptor web.StartupDependencyDescriptor) (dependencyAddressBinding, bool) {
+	binding := dependencyAddressBinding{
+		descriptor: descriptor,
+		address:    dependencyAddressField(descriptor.Name),
+	}
+	return binding, binding.address != nil && strings.TrimSpace(binding.descriptor.DefaultGRPCService) != ""
+}
+
+// dependencyAddressField maps a service-owned startup dependency name to the
+// command config field that stores its gRPC address.
+func dependencyAddressField(name string) func(*Config) *string {
+	switch strings.TrimSpace(name) {
+	case web.DependencyNameAuth:
+		return func(cfg *Config) *string { return &cfg.AuthAddr }
+	case web.DependencyNameSocial:
+		return func(cfg *Config) *string { return &cfg.SocialAddr }
+	case web.DependencyNameGame:
+		return func(cfg *Config) *string { return &cfg.GameAddr }
+	case web.DependencyNameAI:
+		return func(cfg *Config) *string { return &cfg.AIAddr }
+	case web.DependencyNameDiscovery:
+		return func(cfg *Config) *string { return &cfg.DiscoveryAddr }
+	case web.DependencyNameUserHub:
+		return func(cfg *Config) *string { return &cfg.UserHubAddr }
+	case web.DependencyNameNotifications:
+		return func(cfg *Config) *string { return &cfg.NotificationsAddr }
+	case web.DependencyNameStatus:
+		return func(cfg *Config) *string { return &cfg.StatusAddr }
+	default:
+		return nil
+	}
 }
 
 // DependencyAddressResolverContractError reports mismatches between service-owned

@@ -24,7 +24,8 @@ func buildProtectedModules(
 ) []module.Module {
 	base := modulehandler.NewBaseFromPrincipal(requestPrincipal)
 	dashboardOptions := dashboard.ProtectedSurfaceOptions{
-		Base: base,
+		Base:   base,
+		Logger: opts.Logger,
 	}
 	settingsOptions := settings.ProtectedSurfaceOptions{
 		Base:          base,

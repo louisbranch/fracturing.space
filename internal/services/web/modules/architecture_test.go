@@ -77,6 +77,16 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 		"notifications": filepath.Join("app", "unavailable_gateway.go"),
 		"settings":      filepath.Join("app", "unavailable_gateway.go"),
 	}
+	moduleAppBoundaryFiles := map[string][]string{
+		"publicauth": {
+			filepath.Join("app", "doc.go"),
+			filepath.Join("app", "service_page.go"),
+			filepath.Join("app", "service_session.go"),
+			filepath.Join("app", "service_passkey.go"),
+			filepath.Join("app", "service_recovery.go"),
+			filepath.Join("gateway", "doc.go"),
+		},
+	}
 	for _, mod := range discoverModules(t) {
 		archetype, ok := moduleArchetypes[mod]
 		if !ok {
@@ -96,11 +106,15 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 			// transport-only modules intentionally keep orchestration minimal and
 			// do not require root/service or app/gateway subpackages.
 		case archetypeTransportLayered:
-			for _, file := range []string{
+			requiredFiles := []string{
 				filepath.Join("app", "doc.go"),
 				filepath.Join("app", "service.go"),
 				filepath.Join("gateway", "doc.go"),
-			} {
+			}
+			if customFiles, ok := moduleAppBoundaryFiles[mod]; ok {
+				requiredFiles = customFiles
+			}
+			for _, file := range requiredFiles {
 				path := filepath.Join(mod, file)
 				if _, err := os.Stat(path); err != nil {
 					t.Fatalf("module %q missing layered boundary file %q: %v", mod, file, err)

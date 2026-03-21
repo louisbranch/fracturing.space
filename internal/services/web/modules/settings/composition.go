@@ -55,13 +55,7 @@ func Compose(config CompositionConfig) module.Module {
 				AIAgentGateway: aiGateway,
 			}),
 		},
-		Availability: settingsSurfaceAvailability{
-			profile:  settingsapp.IsProfileGatewayHealthy(accountGateway),
-			locale:   settingsapp.IsLocaleGatewayHealthy(accountGateway),
-			security: settingsapp.IsSecurityGatewayHealthy(accountGateway),
-			aiKeys:   settingsapp.IsAIKeyGatewayHealthy(aiGateway),
-			aiAgents: settingsapp.IsAIAgentGatewayHealthy(aiGateway),
-		},
+		Availability:  newSurfaceAvailability(config),
 		Base:          config.Base,
 		FlashMeta:     config.FlashMeta,
 		DashboardSync: config.DashboardSync,
@@ -86,5 +80,17 @@ func newCompositionConfig(options ProtectedSurfaceOptions, deps Dependencies) Co
 		PasskeyClient:    deps.PasskeyClient,
 		CredentialClient: deps.CredentialClient,
 		AgentClient:      deps.AgentClient,
+	}
+}
+
+// newSurfaceAvailability keeps route discoverability aligned with the startup
+// dependencies that actually back each settings surface.
+func newSurfaceAvailability(config CompositionConfig) settingsSurfaceAvailability {
+	return settingsSurfaceAvailability{
+		profile:  config.SocialClient != nil,
+		locale:   config.AccountClient != nil,
+		security: config.PasskeyClient != nil,
+		aiKeys:   config.CredentialClient != nil,
+		aiAgents: config.CredentialClient != nil && config.AgentClient != nil,
 	}
 }

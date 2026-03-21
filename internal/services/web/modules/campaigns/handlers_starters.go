@@ -12,6 +12,33 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
+// starterHandlerServices groups protected starter preview and launch behavior.
+type starterHandlerServices struct {
+	starters campaignapp.CampaignStarterService
+}
+
+// starterHandlers owns the protected starter preview and launch surface.
+type starterHandlers struct {
+	campaignRouteSupport
+	starters starterHandlerServices
+}
+
+// newStarterHandlerServices keeps starter transport dependencies owned by the
+// starter surface instead of the root constructor.
+func newStarterHandlerServices(config starterServiceConfig) starterHandlerServices {
+	return starterHandlerServices{
+		starters: campaignapp.NewStarterService(config.Starter),
+	}
+}
+
+// newStarterHandlers assembles the starter route-owner handler.
+func newStarterHandlers(support campaignRouteSupport, services starterHandlerServices) starterHandlers {
+	return starterHandlers{
+		campaignRouteSupport: support,
+		starters:             services,
+	}
+}
+
 // starterPreviewHeader keeps starter preview breadcrumbs aligned with the campaigns shell.
 func starterPreviewHeader(loc webtemplates.Localizer, title string) *webtemplates.AppMainHeader {
 	if strings.TrimSpace(title) == "" {

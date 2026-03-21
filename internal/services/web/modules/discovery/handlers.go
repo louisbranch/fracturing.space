@@ -18,7 +18,7 @@ type handlers struct {
 // module roots stay transport-only.
 func newHandlersWithBase(base publichandler.Base, service discoveryapp.Service) handlers {
 	if service == nil {
-		service = discoveryapp.NewService(nil)
+		service = discoveryapp.NewService(nil, nil)
 	}
 	return handlers{Base: base, service: service}
 }

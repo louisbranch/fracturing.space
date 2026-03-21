@@ -1,6 +1,8 @@
 package modules
 
 import (
+	"log/slog"
+
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
@@ -37,12 +39,12 @@ func NewRegistryBuilder() RegistryBuilder {
 
 // Build composes module sets for the requested stability mode.
 func (Registry) Build(input RegistryInput) RegistryOutput {
-	shared := newSharedServices(input.Dependencies)
 	publicOptions := input.PublicOptions
+	protectedOptions := input.ProtectedOptions
+	shared := newSharedServices(input.Dependencies, registryLogger(publicOptions.Logger, protectedOptions.Logger))
 	if publicOptions.DashboardSync == nil {
 		publicOptions.DashboardSync = shared.dashboardSync
 	}
-	protectedOptions := input.ProtectedOptions
 	if protectedOptions.DashboardSync == nil {
 		protectedOptions.DashboardSync = shared.dashboardSync
 	}
@@ -64,6 +66,7 @@ func (Registry) Build(input RegistryInput) RegistryOutput {
 type PublicModuleOptions struct {
 	RequestSchemePolicy requestmeta.SchemePolicy
 	DashboardSync       dashboardsync.Service
+	Logger              *slog.Logger
 }
 
 // ProtectedModuleOptions controls variant behavior for protected module composition.
@@ -79,4 +82,15 @@ type ProtectedModuleOptions struct {
 
 	// DashboardSync coordinates shared dashboard freshness after successful mutations.
 	DashboardSync dashboardsync.Service
+
+	// Logger carries the runtime-owned logger for module composition and shared helpers.
+	Logger *slog.Logger
+}
+
+// registryLogger chooses the root-owned runtime logger for registry-built helpers.
+func registryLogger(publicLogger, protectedLogger *slog.Logger) *slog.Logger {
+	if protectedLogger != nil {
+		return protectedLogger
+	}
+	return publicLogger
 }

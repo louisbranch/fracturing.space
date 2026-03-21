@@ -76,7 +76,7 @@ type ProtectedSurfaceOptions struct {
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
 	return New(Config{
-		Services:         newHandlerServices(newServiceConfigs(config)),
+		Services:         newProductionHandlerServices(config),
 		Base:             config.Options.Base,
 		PlayFallbackPort: config.Options.PlayFallbackPort,
 		PlayLaunchGrant:  config.Options.PlayLaunchGrant,

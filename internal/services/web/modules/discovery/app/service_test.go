@@ -18,7 +18,7 @@ func (g gatewayStub) ListStarterEntries(context.Context) ([]StarterEntry, error)
 func TestNewServiceWithoutGatewayUsesExplicitDegradedContract(t *testing.T) {
 	t.Parallel()
 
-	page := NewService(nil).LoadPage(context.Background())
+	page := NewService(nil, nil).LoadPage(context.Background())
 	if page.Status != PageStatusUnavailable {
 		t.Fatalf("Status = %q, want %q", page.Status, PageStatusUnavailable)
 	}
@@ -27,7 +27,7 @@ func TestNewServiceWithoutGatewayUsesExplicitDegradedContract(t *testing.T) {
 func TestLoadPageReturnsExplicitDegradedStateOnGatewayError(t *testing.T) {
 	t.Parallel()
 
-	page := NewService(gatewayStub{err: errors.New("boom")}).LoadPage(context.Background())
+	page := NewService(gatewayStub{err: errors.New("boom")}, nil).LoadPage(context.Background())
 	if page.Status != PageStatusUnavailable {
 		t.Fatalf("Status = %q, want %q", page.Status, PageStatusUnavailable)
 	}
@@ -36,7 +36,7 @@ func TestLoadPageReturnsExplicitDegradedStateOnGatewayError(t *testing.T) {
 func TestLoadPageTreatsZeroEntriesAsUnavailable(t *testing.T) {
 	t.Parallel()
 
-	page := NewService(gatewayStub{}).LoadPage(context.Background())
+	page := NewService(gatewayStub{}, nil).LoadPage(context.Background())
 	if page.Status != PageStatusUnavailable {
 		t.Fatalf("Status = %q, want %q", page.Status, PageStatusUnavailable)
 	}
@@ -47,7 +47,7 @@ func TestLoadPageReturnsEntriesWithoutDegradation(t *testing.T) {
 
 	page := NewService(gatewayStub{
 		entries: []StarterEntry{{EntryID: "starter:one", Title: "Starter"}},
-	}).LoadPage(context.Background())
+	}, nil).LoadPage(context.Background())
 	if page.Status != PageStatusReady {
 		t.Fatalf("Status = %q, want %q", page.Status, PageStatusReady)
 	}
