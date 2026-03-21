@@ -34,8 +34,9 @@ type ArtifactStore interface {
 
 // Manager owns campaign artifact defaults and path policy.
 type Manager struct {
-	store ArtifactStore
-	clock func() time.Time
+	store             ArtifactStore
+	clock             func() time.Time
+	instructionLoader *InstructionLoader
 }
 
 // NewManager builds a campaign artifact manager over one persistent store.
@@ -44,6 +45,15 @@ func NewManager(store ArtifactStore, clock func() time.Time) *Manager {
 		clock = time.Now
 	}
 	return &Manager{store: store, clock: clock}
+}
+
+// SetInstructionLoader configures the instruction loader used for default
+// artifact content. When set, default skills.md content comes from the
+// composed instruction files instead of the hardcoded fallback.
+func (m *Manager) SetInstructionLoader(loader *InstructionLoader) {
+	if m != nil {
+		m.instructionLoader = loader
+	}
 }
 
 // EnsureDefaultArtifacts creates built-in GM artifacts if they are missing.
@@ -58,7 +68,7 @@ func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string,
 	if err := ensureArtifactIfMissing(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
 		CampaignID: campaignID,
 		Path:       SkillsArtifactPath,
-		Content:    defaultSkillsMarkdown(),
+		Content:    m.resolveSkillsContent(),
 		ReadOnly:   true,
 	}); err != nil {
 		return nil, err
@@ -193,6 +203,18 @@ func ensureArtifactIfMissing(ctx context.Context, store ArtifactStore, clock fun
 	record.CreatedAt = now
 	record.UpdatedAt = now
 	return store.PutCampaignArtifact(ctx, record)
+}
+
+// resolveSkillsContent returns skills content from the instruction loader if
+// available, falling back to the hardcoded default.
+func (m *Manager) resolveSkillsContent() string {
+	if m.instructionLoader != nil {
+		content, err := m.instructionLoader.LoadSkills(DaggerheartSystem)
+		if err == nil && strings.TrimSpace(content) != "" {
+			return strings.TrimSpace(content)
+		}
+	}
+	return defaultSkillsMarkdown()
 }
 
 func defaultSkillsMarkdown() string {

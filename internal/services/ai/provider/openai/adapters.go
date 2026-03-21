@@ -228,6 +228,7 @@ func (a *invokeAdapter) Run(ctx context.Context, input orchestration.ProviderInp
 			"name":        name,
 			"description": strings.TrimSpace(tool.Description),
 			"parameters":  openAIToolSchema(tool.InputSchema),
+			"strict":      true,
 		})
 	}
 
@@ -363,32 +364,58 @@ func openAIToolSchema(schema any) map[string]any {
 			"additionalProperties": false,
 		}
 	}
-	if strings.TrimSpace(stringValue(value["type"])) == "" {
-		value["type"] = "object"
-	}
-	if strings.EqualFold(stringValue(value["type"]), "object") {
-		props, ok := value["properties"].(map[string]any)
-		if !ok || props == nil {
-			value["properties"] = map[string]any{}
-		}
-		if _, ok := value["additionalProperties"]; !ok {
-			value["additionalProperties"] = false
-		}
-	}
+	enforceStrictSchema(value)
 	return value
+}
+
+// enforceStrictSchema recursively ensures every object node has
+// additionalProperties: false and a required array listing all properties,
+// as mandated by OpenAI strict mode.
+func enforceStrictSchema(node map[string]any) {
+	if strings.TrimSpace(stringValue(node["type"])) == "" {
+		node["type"] = "object"
+	}
+	if strings.EqualFold(stringValue(node["type"]), "object") {
+		props, ok := node["properties"].(map[string]any)
+		if !ok || props == nil {
+			node["properties"] = map[string]any{}
+			props = node["properties"].(map[string]any)
+		}
+		if _, ok := node["additionalProperties"]; !ok {
+			node["additionalProperties"] = false
+		}
+		// Ensure all properties are listed in required.
+		if _, ok := node["required"]; !ok {
+			required := make([]string, 0, len(props))
+			for key := range props {
+				required = append(required, key)
+			}
+			if len(required) > 0 {
+				node["required"] = required
+			}
+		}
+		// Recurse into each property.
+		for _, propValue := range props {
+			if propMap, ok := propValue.(map[string]any); ok {
+				enforceStrictSchema(propMap)
+			}
+		}
+	}
+	// Recurse into array items.
+	if strings.EqualFold(stringValue(node["type"]), "array") {
+		if items, ok := node["items"].(map[string]any); ok {
+			enforceStrictSchema(items)
+		}
+	}
 }
 
 func cloneSchemaMap(schema any) map[string]any {
 	if schema == nil {
 		return nil
 	}
-	if value, ok := schema.(map[string]any); ok {
-		clone := make(map[string]any, len(value))
-		for key, item := range value {
-			clone[key] = item
-		}
-		return clone
-	}
+	// Always use JSON roundtrip to normalize typed Go maps (e.g.
+	// map[string]schemaProperty) into map[string]any so downstream
+	// type assertions work uniformly.
 	data, err := json.Marshal(schema)
 	if err != nil {
 		return nil

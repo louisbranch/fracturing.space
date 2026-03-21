@@ -2,7 +2,7 @@
 title: "AI orchestration tools"
 parent: "Reference"
 nav_order: 2
-last_reviewed: "2026-03-17"
+last_reviewed: "2026-03-18"
 ---
 
 # AI orchestration tools
@@ -16,10 +16,20 @@ Broader bootstrap or dev-only registrations are intentionally omitted here.
 - `campaign_artifact_list`
 - `campaign_artifact_get`
 - `campaign_artifact_upsert`
+- `campaign_memory_section_read`
+- `campaign_memory_section_update`
 
-## Scene and interaction
+## Scene lifecycle
 
 - `scene_create`
+- `scene_update`
+- `scene_end`
+- `scene_transition`
+- `scene_add_character`
+- `scene_remove_character`
+
+## Interaction
+
 - `interaction_active_scene_set`
 - `interaction_scene_player_phase_start`
 - `interaction_scene_player_phase_accept`

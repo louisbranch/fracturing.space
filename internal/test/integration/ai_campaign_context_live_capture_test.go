@@ -24,9 +24,37 @@ type openAILiveCapture struct {
 	Exchanges []openAILiveExchange `json:"exchanges"`
 }
 
-// TODO: Capture and aggregate OpenAI usage/token counts from the recorded
-// Responses API exchanges so live fixture refreshes can track context-cost
-// regressions across model and reasoning settings.
+// liveCaptureUsage aggregates token counts from a raw capture's exchanges.
+type liveCaptureUsage struct {
+	InputTokens     int32
+	OutputTokens    int32
+	ReasoningTokens int32
+	TotalTokens     int32
+}
+
+func aggregateLiveCaptureUsage(capture openAILiveCapture) liveCaptureUsage {
+	var usage liveCaptureUsage
+	for _, ex := range capture.Exchanges {
+		var resp struct {
+			Usage struct {
+				InputTokens        int32 `json:"input_tokens"`
+				OutputTokens       int32 `json:"output_tokens"`
+				TotalTokens        int32 `json:"total_tokens"`
+				OutputTokenDetails struct {
+					ReasoningTokens int32 `json:"reasoning_tokens"`
+				} `json:"output_tokens_details"`
+			} `json:"usage"`
+		}
+		if err := json.Unmarshal(ex.ResponseBody, &resp); err != nil {
+			continue
+		}
+		usage.InputTokens += resp.Usage.InputTokens
+		usage.OutputTokens += resp.Usage.OutputTokens
+		usage.ReasoningTokens += resp.Usage.OutputTokenDetails.ReasoningTokens
+		usage.TotalTokens += resp.Usage.TotalTokens
+	}
+	return usage
+}
 
 // openAILiveExchange stores one proxied request/response pair for local debugging of a live capture.
 type openAILiveExchange struct {
@@ -79,6 +107,11 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 	}
 	server := httptest.NewServer(recorder)
 	t.Cleanup(server.Close)
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("recorder debug (on failure):\n%s", recorder.DebugString())
+		}
+	})
 
 	result := runAIGMCampaignContextBootstrapScenario(t, aiGMBootstrapScenarioOptions{
 		ResponsesURL:     server.URL,
@@ -90,6 +123,8 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 
 	rawPath := writeOpenAILiveCapture(t, recorder.rawCapture)
 	t.Logf("live capture written to %s", rawPath)
+	reportPath := writeOpenAILiveCaptureReport(t, recorder, result)
+	t.Logf("quality report written to %s", reportPath)
 
 	if err := recorder.Err(); err != nil {
 		t.Fatalf("live recorder: %v\nrequests:\n%s", err, recorder.DebugString())
@@ -111,15 +146,21 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 	}
 
 	fixture := recorder.ReplayFixture(result.CampaignID, result.SessionID, result.CharacterID, result.ActiveSceneID)
-	if err := requiredToolSetPresent(openAIReplayFixtureToolNames(fixture),
+	fixtureToolNames := openAIReplayFixtureToolNames(fixture)
+	if err := requiredToolSetPresent(fixtureToolNames,
 		"system_reference_search",
 		"scene_create",
 		"interaction_active_scene_set",
 		"interaction_scene_gm_output_commit",
 		"interaction_scene_player_phase_start",
-		"campaign_artifact_upsert",
 	); err != nil {
 		t.Fatalf("fixture tool coverage: %v", err)
+	}
+	// Accept either full-document upsert or section-level update as the memory write tool.
+	if err := requiredToolSetPresent(fixtureToolNames, "campaign_artifact_upsert"); err != nil {
+		if err := requiredToolSetPresent(fixtureToolNames, "campaign_memory_section_update"); err != nil {
+			t.Fatal("fixture tool coverage: missing memory write tool (campaign_artifact_upsert or campaign_memory_section_update)")
+		}
 	}
 	if envEnabled(integrationAIWriteFixtureEnv) {
 		fixturePath := writeOpenAIReplayFixture(t, aiGMBootstrapFixtureFile, fixture)
@@ -368,6 +409,91 @@ func writeOpenAILiveCapture(t *testing.T, capture openAILiveCapture) string {
 	data = append(data, '\n')
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("write live capture: %v", err)
+	}
+	return path
+}
+
+// writeOpenAILiveCaptureReport writes a human-readable markdown report alongside
+// the raw capture with token usage, tool sequence, narrative excerpts, and error
+// summary for cross-model quality comparison.
+func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, result aiGMBootstrapResult) string {
+	t.Helper()
+	recorder.mu.Lock()
+	defer recorder.mu.Unlock()
+
+	usage := aggregateLiveCaptureUsage(recorder.rawCapture)
+	model := recorder.model
+
+	// Extract narrative fields from recorded steps.
+	var sceneName, sceneDesc, gmNarration, playerFrame, memoryContent string
+	var toolSequence []string
+	var toolErrors []string
+	for _, step := range recorder.steps {
+		for _, call := range step.ToolCalls {
+			toolSequence = append(toolSequence, call.Name)
+			switch call.Name {
+			case "scene_create":
+				sceneName = asString(call.Arguments["name"])
+				sceneDesc = asString(call.Arguments["description"])
+			case "interaction_scene_gm_output_commit":
+				gmNarration = asString(call.Arguments["text"])
+			case "interaction_scene_player_phase_start":
+				playerFrame = asString(call.Arguments["frame_text"])
+			case "campaign_memory_section_update":
+				memoryContent = asString(call.Arguments["content"])
+			case "campaign_artifact_upsert":
+				if asString(call.Arguments["path"]) == "memory.md" {
+					memoryContent = asString(call.Arguments["content"])
+				}
+			}
+		}
+	}
+	for _, line := range recorder.requestDebug {
+		if strings.Contains(line, "tool call failed") {
+			toolErrors = append(toolErrors, line)
+		}
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "# Live Capture Report\n\n")
+	fmt.Fprintf(&b, "- **Model:** %s\n", model)
+	fmt.Fprintf(&b, "- **Captured:** %s\n", recorder.rawCapture.Metadata.CapturedAtUTC)
+	fmt.Fprintf(&b, "- **Scenario:** %s\n\n", aiGMBootstrapScenarioName)
+
+	fmt.Fprintf(&b, "## Token Usage\n\n")
+	fmt.Fprintf(&b, "| Metric | Tokens |\n")
+	fmt.Fprintf(&b, "|--------|-------:|\n")
+	fmt.Fprintf(&b, "| Input | %d |\n", usage.InputTokens)
+	fmt.Fprintf(&b, "| Output | %d |\n", usage.OutputTokens)
+	fmt.Fprintf(&b, "| Reasoning | %d |\n", usage.ReasoningTokens)
+	fmt.Fprintf(&b, "| Total | %d |\n\n", usage.TotalTokens)
+
+	fmt.Fprintf(&b, "## Tool Sequence (%d calls)\n\n", len(toolSequence))
+	for i, name := range toolSequence {
+		fmt.Fprintf(&b, "%d. `%s`\n", i+1, name)
+	}
+	if len(toolErrors) > 0 {
+		fmt.Fprintf(&b, "\n### Errors (%d)\n\n", len(toolErrors))
+		for _, e := range toolErrors {
+			fmt.Fprintf(&b, "- %s\n", e)
+		}
+	}
+
+	fmt.Fprintf(&b, "\n## Narrative Quality\n\n")
+	fmt.Fprintf(&b, "### Scene: %q\n\n%s\n\n", sceneName, sceneDesc)
+	fmt.Fprintf(&b, "### GM Narration\n\n%s\n\n", gmNarration)
+	fmt.Fprintf(&b, "### Player Phase Frame\n\n%s\n\n", playerFrame)
+	fmt.Fprintf(&b, "### Memory Update\n\n%s\n", memoryContent)
+
+	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
+	filename := fmt.Sprintf("%s-%s-%s.md",
+		aiGMBootstrapScenarioName,
+		model,
+		time.Now().UTC().Format("20060102T150405Z"),
+	)
+	path := filepath.Join(dir, filename)
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		t.Fatalf("write quality report: %v", err)
 	}
 	return path
 }

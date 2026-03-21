@@ -50,8 +50,17 @@ func TestAIGMCampaignContextReplayBootstrap(t *testing.T) {
 	if got := strings.TrimSpace(result.OutputText); got != replayFixtureFinalOutputText(t, replay) {
 		t.Fatalf("output_text = %q, want %q", got, replayFixtureFinalOutputText(t, replay))
 	}
-	if got := strings.TrimSpace(result.MemoryContent); got != replayFixtureMemoryContent(t, replay) {
-		t.Fatalf("memory.md = %q, want %q", got, replayFixtureMemoryContent(t, replay))
+	fixtureMemory := replayFixtureMemoryContent(t, replay)
+	if replayFixtureMemoryWriteIsSectionUpdate(replay) {
+		// Section-level writes update one heading; the full document will
+		// contain the section content but may include other sections too.
+		if got := strings.TrimSpace(result.MemoryContent); !strings.Contains(got, fixtureMemory) {
+			t.Fatalf("memory.md does not contain section content %q, got %q", fixtureMemory, got)
+		}
+	} else {
+		if got := strings.TrimSpace(result.MemoryContent); got != fixtureMemory {
+			t.Fatalf("memory.md = %q, want %q", got, fixtureMemory)
+		}
 	}
 	if !result.SkillsReadOnly {
 		t.Fatal("expected skills.md to be read-only")
@@ -253,18 +262,25 @@ func (s *openAIReplayServer) captureCallOutputs(payload map[string]any) {
 	}
 }
 
-// extractPromptAndToolNames pulls the prompt and advertised tools from the initial Responses request.
+// extractPromptAndToolNames pulls the combined prompt (instructions + user input)
+// and advertised tools from the initial Responses request.
 func extractPromptAndToolNames(payload map[string]any) (string, []string) {
-	var prompt string
+	var parts []string
+	if instructions, _ := payload["instructions"].(string); strings.TrimSpace(instructions) != "" {
+		parts = append(parts, instructions)
+	}
 	inputItems, _ := payload["input"].([]any)
 	if len(inputItems) != 0 {
 		firstInput, _ := inputItems[0].(map[string]any)
 		contentItems, _ := firstInput["content"].([]any)
 		if len(contentItems) != 0 {
 			firstContent, _ := contentItems[0].(map[string]any)
-			prompt, _ = firstContent["text"].(string)
+			if text, _ := firstContent["text"].(string); strings.TrimSpace(text) != "" {
+				parts = append(parts, text)
+			}
 		}
 	}
+	prompt := strings.Join(parts, "\n\n")
 	toolItems, _ := payload["tools"].([]any)
 	names := make([]string, 0, len(toolItems))
 	for _, raw := range toolItems {

@@ -14,6 +14,7 @@ Service-boundary and transport-boundary architecture documentation.
 
 - [Campaign authorization model](campaign-authorization-model.md)
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
+- [Campaign AI agent system](campaign-ai-agent-system.md)
 - [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)
 - [Interaction surfaces](interaction-surfaces.md)
 - [Play architecture](play-architecture.md)

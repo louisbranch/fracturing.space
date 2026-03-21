@@ -6,6 +6,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -170,4 +171,34 @@ func intSlice(values []int32) []int {
 		converted[i] = int(v)
 	}
 	return converted
+}
+
+func daggerheartLifeStateToString(state pb.DaggerheartLifeState) string {
+	switch state {
+	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE:
+		return "ALIVE"
+	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS:
+		return "UNCONSCIOUS"
+	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY:
+		return "BLAZE_OF_GLORY"
+	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD:
+		return "DEAD"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+func daggerheartConditionClearTriggerToString(trigger pb.DaggerheartConditionClearTrigger) string {
+	switch trigger {
+	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST:
+		return "SHORT_REST"
+	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_LONG_REST:
+		return "LONG_REST"
+	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SESSION_END:
+		return "SESSION_END"
+	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_DAMAGE_TAKEN:
+		return "DAMAGE_TAKEN"
+	default:
+		return "UNSPECIFIED"
+	}
 }

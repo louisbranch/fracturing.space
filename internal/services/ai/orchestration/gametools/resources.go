@@ -8,6 +8,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,6 +18,12 @@ import (
 // returns the text content.
 func (s *DirectSession) readResource(ctx context.Context, uri string) (string, error) {
 	switch {
+	case uri == "daggerheart://rules/version":
+		return s.readDaggerheartRulesVersion(ctx)
+
+	case strings.HasPrefix(uri, "daggerheart://campaign/") && strings.HasSuffix(uri, "/snapshot"):
+		return s.readDaggerheartSnapshot(ctx, uri)
+
 	case uri == "context://current":
 		return s.readContextCurrent()
 
@@ -69,6 +76,36 @@ func (s *DirectSession) readContextCurrent() (string, error) {
 	return marshalIndent(p)
 }
 
+// --- daggerheart://rules/version ---
+
+func (s *DirectSession) readDaggerheartRulesVersion(ctx context.Context) (string, error) {
+	callCtx, cancel := outgoingContext(ctx, s.sc)
+	defer cancel()
+
+	resp, err := s.clients.Daggerheart.RulesVersion(callCtx, &pb.RulesVersionRequest{})
+	if err != nil {
+		return "", fmt.Errorf("rules version failed: %w", err)
+	}
+	if resp == nil {
+		return "", fmt.Errorf("rules version response is missing")
+	}
+
+	outcomes := make([]string, 0, len(resp.GetOutcomes()))
+	for _, o := range resp.GetOutcomes() {
+		outcomes = append(outcomes, o.String())
+	}
+	return marshalIndent(rulesVersionResult{
+		System:         resp.GetSystem(),
+		Module:         resp.GetModule(),
+		RulesVersion:   resp.GetRulesVersion(),
+		DiceModel:      resp.GetDiceModel(),
+		TotalFormula:   resp.GetTotalFormula(),
+		CritRule:       resp.GetCritRule(),
+		DifficultyRule: resp.GetDifficultyRule(),
+		Outcomes:       outcomes,
+	})
+}
+
 // --- campaign://{id} ---
 
 type campaignPayload struct {
@@ -84,7 +121,6 @@ type campaignListEntry struct {
 	AccessPolicy     string `json:"access_policy"`
 	ParticipantCount int    `json:"participant_count"`
 	CharacterCount   int    `json:"character_count"`
-	GmFear           int    `json:"gm_fear"`
 	ThemePrompt      string `json:"theme_prompt"`
 	CreatedAt        string `json:"created_at"`
 	UpdatedAt        string `json:"updated_at"`
@@ -389,6 +425,113 @@ func (s *DirectSession) readCampaignArtifact(ctx context.Context, uri string) (s
 		return "", fmt.Errorf("campaign artifact get failed: %w", err)
 	}
 	return marshalIndent(artifactFromProto(resp.GetArtifact(), true))
+}
+
+// --- daggerheart://campaign/{id}/snapshot ---
+
+type snapshotPayload struct {
+	GmFear                int                   `json:"gm_fear"`
+	ConsecutiveShortRests int                   `json:"consecutive_short_rests"`
+	Characters            []characterStateEntry `json:"characters"`
+}
+
+type characterStateEntry struct {
+	CharacterID    string                `json:"character_id"`
+	HP             int                   `json:"hp"`
+	Hope           int                   `json:"hope"`
+	HopeMax        int                   `json:"hope_max"`
+	Stress         int                   `json:"stress"`
+	Armor          int                   `json:"armor"`
+	LifeState      string                `json:"life_state"`
+	Conditions     []conditionEntry      `json:"conditions,omitempty"`
+	TemporaryArmor []temporaryArmorEntry `json:"temporary_armor,omitempty"`
+	StatModifiers  []statModifierEntry   `json:"stat_modifiers,omitempty"`
+}
+
+type conditionEntry struct {
+	Label         string   `json:"label"`
+	ClearTriggers []string `json:"clear_triggers,omitempty"`
+}
+
+type temporaryArmorEntry struct {
+	Source string `json:"source"`
+	Amount int    `json:"amount"`
+}
+
+type statModifierEntry struct {
+	Target string `json:"target"`
+	Delta  int    `json:"delta"`
+	Label  string `json:"label"`
+}
+
+func (s *DirectSession) readDaggerheartSnapshot(ctx context.Context, uri string) (string, error) {
+	campaignID := strings.TrimPrefix(uri, "daggerheart://campaign/")
+	campaignID = strings.TrimSuffix(campaignID, "/snapshot")
+	if campaignID == "" {
+		return "", fmt.Errorf("campaign ID is required in snapshot URI")
+	}
+	callCtx, cancel := outgoingContext(ctx, s.sc)
+	defer cancel()
+
+	resp, err := s.clients.Snapshot.GetSnapshot(callCtx, &statev1.GetSnapshotRequest{CampaignId: campaignID})
+	if err != nil {
+		return "", fmt.Errorf("get snapshot failed: %w", err)
+	}
+
+	snap := resp.GetSnapshot()
+	var payload snapshotPayload
+	if dh := snap.GetDaggerheart(); dh != nil {
+		payload.GmFear = int(dh.GetGmFear())
+		payload.ConsecutiveShortRests = int(dh.GetConsecutiveShortRests())
+	}
+
+	payload.Characters = make([]characterStateEntry, 0, len(snap.GetCharacterStates()))
+	for _, cs := range snap.GetCharacterStates() {
+		dh := cs.GetDaggerheart()
+		if dh == nil {
+			continue
+		}
+
+		entry := characterStateEntry{
+			CharacterID: cs.GetCharacterId(),
+			HP:          int(dh.GetHp()),
+			Hope:        int(dh.GetHope()),
+			HopeMax:     int(dh.GetHopeMax()),
+			Stress:      int(dh.GetStress()),
+			Armor:       int(dh.GetArmor()),
+			LifeState:   daggerheartLifeStateToString(dh.GetLifeState()),
+		}
+
+		for _, cond := range dh.GetConditionStates() {
+			triggers := make([]string, 0, len(cond.GetClearTriggers()))
+			for _, t := range cond.GetClearTriggers() {
+				triggers = append(triggers, daggerheartConditionClearTriggerToString(t))
+			}
+			entry.Conditions = append(entry.Conditions, conditionEntry{
+				Label:         cond.GetLabel(),
+				ClearTriggers: triggers,
+			})
+		}
+
+		for _, ta := range dh.GetTemporaryArmorBuckets() {
+			entry.TemporaryArmor = append(entry.TemporaryArmor, temporaryArmorEntry{
+				Source: ta.GetSource(),
+				Amount: int(ta.GetAmount()),
+			})
+		}
+
+		for _, sm := range dh.GetStatModifiers() {
+			entry.StatModifiers = append(entry.StatModifiers, statModifierEntry{
+				Target: sm.GetTarget(),
+				Delta:  int(sm.GetDelta()),
+				Label:  sm.GetLabel(),
+			})
+		}
+
+		payload.Characters = append(payload.Characters, entry)
+	}
+
+	return marshalIndent(payload)
 }
 
 // --- URI parsers ---

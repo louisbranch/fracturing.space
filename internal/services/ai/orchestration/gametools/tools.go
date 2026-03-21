@@ -1,8 +1,12 @@
 package gametools
 
-import "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+import (
+	"slices"
 
-// productionTools returns the 23 static tool definitions that match
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+)
+
+// productionTools returns the 30 static tool definitions that match
 // mcpbridge.productionToolNames.
 func productionTools() []orchestration.Tool {
 	return []orchestration.Tool{
@@ -10,26 +14,39 @@ func productionTools() []orchestration.Tool {
 		{
 			Name:        "campaign_artifact_list",
 			Description: "Lists AI GM campaign artifacts such as skills.md, story.md, memory.md, and working notes",
-			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-			}),
+			InputSchema: schemaObject(nil),
 		},
 		{
 			Name:        "campaign_artifact_get",
 			Description: "Reads one AI GM campaign artifact such as story.md, memory.md, or a working note",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"path":        {Type: "string", Description: "artifact path such as story.md, memory.md, or working/notes.md"},
-			}, "path"),
+				"path": {Type: "string", Description: "artifact path such as story.md, memory.md, or working/notes.md"},
+			}),
 		},
 		{
 			Name:        "campaign_artifact_upsert",
 			Description: "Writes one mutable AI GM campaign artifact such as story.md, memory.md, or a working note",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"path":        {Type: "string", Description: "artifact path such as story.md, memory.md, or working/notes.md"},
-				"content":     {Type: "string", Description: "full replacement markdown content"},
-			}, "path", "content"),
+				"path":    {Type: "string", Description: "artifact path such as story.md, memory.md, or working/notes.md"},
+				"content": {Type: "string", Description: "full replacement markdown content"},
+			}),
+		},
+
+		// Memory section tools
+		{
+			Name:        "campaign_memory_section_read",
+			Description: "Reads one ## heading section from memory.md without fetching the full document",
+			InputSchema: schemaObject(map[string]schemaProperty{
+				"heading": {Type: "string", Description: "section heading to read, e.g. NPCs, Plot Hooks, World State"},
+			}),
+		},
+		{
+			Name:        "campaign_memory_section_update",
+			Description: "Replaces or appends one ## heading section in memory.md without disturbing other sections",
+			InputSchema: schemaObject(map[string]schemaProperty{
+				"heading": {Type: "string", Description: "section heading to update or create, e.g. NPCs, Plot Hooks, World State"},
+				"content": {Type: "string", Description: "new section body content (replaces existing body for this heading)"},
+			}),
 		},
 
 		// Scene tools
@@ -37,12 +54,52 @@ func productionTools() []orchestration.Tool {
 			Name:        "scene_create",
 			Description: "Creates a new scene within the current session; creation alone does not make it the authoritative active scene",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id":   {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"session_id":    {Type: "string", Description: "session identifier (defaults to context)"},
 				"name":          {Type: "string", Description: "scene title"},
 				"description":   {Type: "string", Description: "scene framing description"},
 				"character_ids": {Type: "array", Description: "optional starting character identifiers", Items: &schemaProperty{Type: "string"}},
-			}, "name"),
+			}),
+		},
+		{
+			Name:        "scene_update",
+			Description: "Updates scene metadata (name or description) for an existing scene",
+			InputSchema: schemaObject(map[string]schemaProperty{
+				"scene_id":    {Type: "string", Description: "scene identifier"},
+				"name":        {Type: "string", Description: "updated scene title"},
+				"description": {Type: "string", Description: "updated scene framing description"},
+			}),
+		},
+		{
+			Name:        "scene_end",
+			Description: "Ends a scene, marking it as no longer active",
+			InputSchema: schemaObject(map[string]schemaProperty{
+				"scene_id": {Type: "string", Description: "scene identifier"},
+				"reason":   {Type: "string", Description: "optional reason for ending the scene"},
+			}),
+		},
+		{
+			Name:        "scene_transition",
+			Description: "Atomically ends the current scene and creates a new one, carrying characters forward",
+			InputSchema: schemaObject(map[string]schemaProperty{
+				"source_scene_id": {Type: "string", Description: "scene to end (defaults to active scene)"},
+				"name":            {Type: "string", Description: "new scene title"},
+				"description":     {Type: "string", Description: "new scene framing description"},
+			}),
+		},
+		{
+			Name:        "scene_add_character",
+			Description: "Adds a character to a scene",
+			InputSchema: schemaObject(map[string]schemaProperty{
+				"scene_id":     {Type: "string", Description: "scene identifier"},
+				"character_id": {Type: "string", Description: "character identifier to add"},
+			}),
+		},
+		{
+			Name:        "scene_remove_character",
+			Description: "Removes a character from a scene",
+			InputSchema: schemaObject(map[string]schemaProperty{
+				"scene_id":     {Type: "string", Description: "scene identifier"},
+				"character_id": {Type: "string", Description: "character identifier to remove"},
+			}),
 		},
 
 		// Interaction tools
@@ -50,34 +107,30 @@ func productionTools() []orchestration.Tool {
 			Name:        "interaction_active_scene_set",
 			Description: "Sets the authoritative active scene for the current session",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"scene_id":    {Type: "string", Description: "scene identifier"},
-			}, "scene_id"),
+				"scene_id": {Type: "string", Description: "scene identifier"},
+			}),
 		},
 		{
 			Name:        "interaction_scene_player_phase_start",
 			Description: "Starts a new player phase on the active scene from a GM frame",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id":   {Type: "string", Description: "campaign identifier (defaults to context)"},
 				"scene_id":      {Type: "string", Description: "scene identifier (defaults to active scene)"},
 				"frame_text":    {Type: "string", Description: "GM frame text shown to acting players"},
 				"character_ids": {Type: "array", Description: "acting character identifiers", Items: &schemaProperty{Type: "string"}},
-			}, "frame_text", "character_ids"),
+			}),
 		},
 		{
 			Name:        "interaction_scene_player_phase_accept",
 			Description: "Accepts the active scene player phase after GM review and returns authority to the GM",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"scene_id":    {Type: "string", Description: "scene identifier (defaults to active scene)"},
+				"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
 			}),
 		},
 		{
 			Name:        "interaction_scene_player_revisions_request",
 			Description: "Requests revisions for one or more participant slots in the active scene player phase",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"scene_id":    {Type: "string", Description: "scene identifier (defaults to active scene)"},
+				"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
 				"revisions": {
 					Type:        "array",
 					Description: "participant-scoped revision requests",
@@ -90,62 +143,52 @@ func productionTools() []orchestration.Tool {
 						},
 					},
 				},
-			}, "revisions"),
+			}),
 		},
 		{
 			Name:        "interaction_scene_player_phase_end",
 			Description: "Ends the active scene player phase early under GM control",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"scene_id":    {Type: "string", Description: "scene identifier (defaults to active scene)"},
-				"reason":      {Type: "string", Description: "optional GM-supplied reason"},
+				"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
+				"reason":   {Type: "string", Description: "optional GM-supplied reason"},
 			}),
 		},
 		{
 			Name:        "interaction_scene_gm_output_commit",
 			Description: "Commits authoritative GM narration or instructions for the active scene",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"scene_id":    {Type: "string", Description: "scene identifier (defaults to active scene)"},
-				"text":        {Type: "string", Description: "authoritative GM narration or instruction text"},
-			}, "text"),
+				"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
+				"text":     {Type: "string", Description: "authoritative GM narration or instruction text"},
+			}),
 		},
 		{
 			Name:        "interaction_ooc_pause",
 			Description: "Opens the session-level out-of-character pause overlay",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"reason":      {Type: "string", Description: "optional OOC pause reason"},
+				"reason": {Type: "string", Description: "optional OOC pause reason"},
 			}),
 		},
 		{
 			Name:        "interaction_ooc_post",
 			Description: "Posts one append-only out-of-character transcript message",
 			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-				"body":        {Type: "string", Description: "out-of-character message body"},
-			}, "body"),
+				"body": {Type: "string", Description: "out-of-character message body"},
+			}),
 		},
 		{
 			Name:        "interaction_ooc_ready_mark",
 			Description: "Marks the caller as ready to resume from the current OOC pause",
-			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-			}),
+			InputSchema: schemaObject(nil),
 		},
 		{
 			Name:        "interaction_ooc_ready_clear",
 			Description: "Clears the caller's ready-to-resume state for the current OOC pause",
-			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-			}),
+			InputSchema: schemaObject(nil),
 		},
 		{
 			Name:        "interaction_ooc_resume",
 			Description: "Resumes in-character scene play from the current OOC pause",
-			InputSchema: schemaObject(map[string]schemaProperty{
-				"campaign_id": {Type: "string", Description: "campaign identifier (defaults to context)"},
-			}),
+			InputSchema: schemaObject(nil),
 		},
 
 		// Daggerheart tools
@@ -159,7 +202,7 @@ func productionTools() []orchestration.Tool {
 					"seed":      {Type: "integer", Description: "optional seed for deterministic rolls"},
 					"roll_mode": {Type: "string", Description: "roll mode (LIVE or REPLAY)"},
 				}},
-			}, "modifier"),
+			}),
 		},
 		{
 			Name:        "roll_dice",
@@ -175,7 +218,7 @@ func productionTools() []orchestration.Tool {
 					"seed":      {Type: "integer", Description: "optional seed for deterministic rolls"},
 					"roll_mode": {Type: "string", Description: "roll mode (LIVE or REPLAY)"},
 				}},
-			}, "dice"),
+			}),
 		},
 		{
 			Name:        "duality_outcome",
@@ -185,7 +228,7 @@ func productionTools() []orchestration.Tool {
 				"fear":       {Type: "integer", Description: "fear die result"},
 				"modifier":   {Type: "integer", Description: "modifier applied to the roll"},
 				"difficulty": {Type: "integer", Description: "optional difficulty target"},
-			}, "hope", "fear", "modifier"),
+			}),
 		},
 		{
 			Name:        "duality_explain",
@@ -196,7 +239,7 @@ func productionTools() []orchestration.Tool {
 				"modifier":   {Type: "integer", Description: "modifier applied to the roll"},
 				"difficulty": {Type: "integer", Description: "optional difficulty target"},
 				"request_id": {Type: "string", Description: "optional correlation identifier"},
-			}, "hope", "fear", "modifier"),
+			}),
 		},
 		{
 			Name:        "duality_probability",
@@ -204,7 +247,7 @@ func productionTools() []orchestration.Tool {
 			InputSchema: schemaObject(map[string]schemaProperty{
 				"modifier":   {Type: "integer", Description: "modifier applied to the roll"},
 				"difficulty": {Type: "integer", Description: "difficulty target"},
-			}, "modifier", "difficulty"),
+			}),
 		},
 		{
 			Name:        "duality_rules_version",
@@ -220,7 +263,7 @@ func productionTools() []orchestration.Tool {
 				"system":      {Type: "string", Description: "system identifier; defaults to daggerheart"},
 				"query":       {Type: "string", Description: "search query"},
 				"max_results": {Type: "integer", Description: "optional max result count"},
-			}, "query"),
+			}),
 		},
 		{
 			Name:        "system_reference_read",
@@ -228,7 +271,7 @@ func productionTools() []orchestration.Tool {
 			InputSchema: schemaObject(map[string]schemaProperty{
 				"system":      {Type: "string", Description: "system identifier; defaults to daggerheart"},
 				"document_id": {Type: "string", Description: "document identifier from search results"},
-			}, "document_id"),
+			}),
 		},
 	}
 }
@@ -241,15 +284,20 @@ type schemaProperty struct {
 	Properties  map[string]schemaProperty `json:"properties,omitempty"`
 }
 
-// schemaObject builds a JSON-Schema-like map for an object type with optional required fields.
-func schemaObject(properties map[string]schemaProperty, required ...string) map[string]any {
+// schemaObject builds a JSON-Schema-like map for an object type.
+// All properties are marked required for OpenAI strict mode compatibility;
+// optional fields accept empty strings and are defaulted server-side.
+func schemaObject(properties map[string]schemaProperty, _ ...string) map[string]any {
 	schema := map[string]any{
 		"type": "object",
 	}
 	if len(properties) > 0 {
 		schema["properties"] = properties
-	}
-	if len(required) > 0 {
+		required := make([]string, 0, len(properties))
+		for name := range properties {
+			required = append(required, name)
+		}
+		slices.Sort(required)
 		schema["required"] = required
 	}
 	return schema
