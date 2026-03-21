@@ -61,6 +61,89 @@ func TestBuildDaggerheartAssetMap(t *testing.T) {
 	}
 }
 
+func TestBuildDaggerheartAssetMap_PublishesNewlyMappedAssets(t *testing.T) {
+	store := newFakeContentStore()
+	store.heritages["heritage.clank"] = contentstore.DaggerheartHeritage{
+		ID:   "heritage.clank",
+		Name: "Clank",
+		Kind: "ancestry",
+	}
+	store.adversaries["adversary.acid-burrower"] = contentstore.DaggerheartAdversaryEntry{
+		ID:   "adversary.acid-burrower",
+		Name: "Acid Burrower",
+	}
+
+	assetMap, err := buildDaggerheartAssetMap(context.Background(), store, commonv1.Locale_LOCALE_UNSPECIFIED)
+	if err != nil {
+		t.Fatalf("buildDaggerheartAssetMap() error = %v", err)
+	}
+
+	ancestryRef := findAssetRef(assetMap.GetAssets(), "ancestry", "heritage.clank", pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ANCESTRY_ILLUSTRATION)
+	if ancestryRef == nil {
+		t.Fatal("asset map missing ancestry illustration ref for heritage.clank")
+	}
+	if ancestryRef.GetStatus() != pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED {
+		t.Fatalf("ancestry status = %v, want %v", ancestryRef.GetStatus(), pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED)
+	}
+	if ancestryRef.GetSetId() != "daggerheart_ancestry_set_v1" {
+		t.Fatalf("ancestry set id = %q, want %q", ancestryRef.GetSetId(), "daggerheart_ancestry_set_v1")
+	}
+	if ancestryRef.GetAssetId() != "heritage_clank" {
+		t.Fatalf("ancestry asset id = %q, want %q", ancestryRef.GetAssetId(), "heritage_clank")
+	}
+	if ancestryRef.GetCdnAssetId() == "" {
+		t.Fatal("expected non-empty ancestry cdn asset id")
+	}
+
+	adversaryRef := findAssetRef(assetMap.GetAssets(), "adversary", "adversary.acid-burrower", pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ADVERSARY_ILLUSTRATION)
+	if adversaryRef == nil {
+		t.Fatal("asset map missing adversary illustration ref for adversary.acid-burrower")
+	}
+	if adversaryRef.GetStatus() != pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED {
+		t.Fatalf("adversary status = %v, want %v", adversaryRef.GetStatus(), pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED)
+	}
+	if adversaryRef.GetSetId() != "daggerheart_adversary_set_v1" {
+		t.Fatalf("adversary set id = %q, want %q", adversaryRef.GetSetId(), "daggerheart_adversary_set_v1")
+	}
+	if adversaryRef.GetAssetId() != "acid_burrower" {
+		t.Fatalf("adversary asset id = %q, want %q", adversaryRef.GetAssetId(), "acid_burrower")
+	}
+	if adversaryRef.GetCdnAssetId() == "" {
+		t.Fatal("expected non-empty adversary cdn asset id")
+	}
+}
+
+func TestBuildDaggerheartAssetMap_ResolvesRenamedDomainCardIDs(t *testing.T) {
+	store := newFakeContentStore()
+	store.domainCards["domain_card.book-of-ava"] = contentstore.DaggerheartDomainCard{
+		ID:       "domain_card.book-of-ava",
+		Name:     "Book of Ava",
+		DomainID: "domain.codex",
+	}
+
+	assetMap, err := buildDaggerheartAssetMap(context.Background(), store, commonv1.Locale_LOCALE_UNSPECIFIED)
+	if err != nil {
+		t.Fatalf("buildDaggerheartAssetMap() error = %v", err)
+	}
+
+	cardRef := findAssetRef(assetMap.GetAssets(), "domain_card", "domain_card.book-of-ava", pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION)
+	if cardRef == nil {
+		t.Fatal("asset map missing domain-card illustration ref for domain_card.book-of-ava")
+	}
+	if cardRef.GetStatus() != pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED {
+		t.Fatalf("domain-card status = %v, want %v", cardRef.GetStatus(), pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED)
+	}
+	if cardRef.GetSetId() != "daggerheart_domain_card_set_v1" {
+		t.Fatalf("domain-card set id = %q, want %q", cardRef.GetSetId(), "daggerheart_domain_card_set_v1")
+	}
+	if cardRef.GetAssetId() != "codex_book_of_ava" {
+		t.Fatalf("domain-card asset id = %q, want %q", cardRef.GetAssetId(), "codex_book_of_ava")
+	}
+	if cardRef.GetCdnAssetId() == "" {
+		t.Fatal("expected non-empty domain-card cdn asset id")
+	}
+}
+
 func TestBuildDaggerheartAssetMapWrapsLoadFailure(t *testing.T) {
 	store := &failingAssetMapStore{
 		fakeContentStore: newFakeContentStore(),
@@ -96,10 +179,14 @@ func mustList[T any](t *testing.T, list func(context.Context) ([]T, error)) []T 
 }
 
 func hasAssetRef(assets []*pb.DaggerheartAssetRef, entityType, entityID string, assetType pb.DaggerheartAssetType) bool {
+	return findAssetRef(assets, entityType, entityID, assetType) != nil
+}
+
+func findAssetRef(assets []*pb.DaggerheartAssetRef, entityType, entityID string, assetType pb.DaggerheartAssetType) *pb.DaggerheartAssetRef {
 	for _, asset := range assets {
 		if asset.GetEntityType() == entityType && asset.GetEntityId() == entityID && asset.GetType() == assetType {
-			return true
+			return asset
 		}
 	}
-	return false
+	return nil
 }
