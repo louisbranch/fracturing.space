@@ -10,55 +10,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection/testevent"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
-
-type fakeInviteStore struct {
-	invites       map[string]storage.InviteRecord
-	updatedStatus map[string]invite.Status
-	updatedAt     map[string]time.Time
-}
-
-func newFakeInviteStore() *fakeInviteStore {
-	return &fakeInviteStore{
-		invites:       make(map[string]storage.InviteRecord),
-		updatedStatus: make(map[string]invite.Status),
-		updatedAt:     make(map[string]time.Time),
-	}
-}
-
-func (s *fakeInviteStore) PutInvite(_ context.Context, inv storage.InviteRecord) error {
-	s.invites[inv.ID] = inv
-	return nil
-}
-
-func (s *fakeInviteStore) GetInvite(_ context.Context, inviteID string) (storage.InviteRecord, error) {
-	inv, ok := s.invites[inviteID]
-	if !ok {
-		return storage.InviteRecord{}, storage.ErrNotFound
-	}
-	return inv, nil
-}
-
-func (s *fakeInviteStore) ListInvites(context.Context, string, string, invite.Status, int, string) (storage.InvitePage, error) {
-	return storage.InvitePage{}, nil
-}
-
-func (s *fakeInviteStore) ListPendingInvites(context.Context, string, int, string) (storage.InvitePage, error) {
-	return storage.InvitePage{}, nil
-}
-
-func (s *fakeInviteStore) ListPendingInvitesForRecipient(context.Context, string, int, string) (storage.InvitePage, error) {
-	return storage.InvitePage{}, nil
-}
-
-func (s *fakeInviteStore) UpdateInviteStatus(_ context.Context, inviteID string, status invite.Status, updatedAt time.Time) error {
-	s.updatedStatus[inviteID] = status
-	s.updatedAt[inviteID] = updatedAt
-	return nil
-}
 
 type fakeSessionStore struct {
 	last storage.SessionRecord

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -45,24 +44,6 @@ func TestNilStoreErrors(t *testing.T) {
 	}
 	if err := s.DeleteParticipantClaim(ctx, "c", "u"); err == nil {
 		t.Fatal("expected error from nil store DeleteParticipantClaim")
-	}
-	if err := s.PutInvite(ctx, storage.InviteRecord{ID: "i", CampaignID: "c", ParticipantID: "p"}); err == nil {
-		t.Fatal("expected error from nil store PutInvite")
-	}
-	if _, err := s.GetInvite(ctx, "i"); err == nil {
-		t.Fatal("expected error from nil store GetInvite")
-	}
-	if _, err := s.ListInvites(ctx, "c", "", invite.StatusPending, 10, ""); err == nil {
-		t.Fatal("expected error from nil store ListInvites")
-	}
-	if _, err := s.ListPendingInvites(ctx, "c", 10, ""); err == nil {
-		t.Fatal("expected error from nil store ListPendingInvites")
-	}
-	if _, err := s.ListPendingInvitesForRecipient(ctx, "u", 10, ""); err == nil {
-		t.Fatal("expected error from nil store ListPendingInvitesForRecipient")
-	}
-	if err := s.UpdateInviteStatus(ctx, "i", invite.StatusClaimed, time.Now()); err == nil {
-		t.Fatal("expected error from nil store UpdateInviteStatus")
 	}
 	if err := s.PutCharacter(ctx, storage.CharacterRecord{CampaignID: "c", ID: "ch"}); err == nil {
 		t.Fatal("expected error from nil store PutCharacter")
@@ -172,24 +153,6 @@ func TestCancelledContextErrors(t *testing.T) {
 	}
 	if err := store.DeleteParticipantClaim(ctx, "c", "u"); err == nil {
 		t.Fatal("expected context error from DeleteParticipantClaim")
-	}
-	if err := store.PutInvite(ctx, storage.InviteRecord{ID: "i", CampaignID: "c", ParticipantID: "p"}); err == nil {
-		t.Fatal("expected context error from PutInvite")
-	}
-	if _, err := store.GetInvite(ctx, "i"); err == nil {
-		t.Fatal("expected context error from GetInvite")
-	}
-	if _, err := store.ListInvites(ctx, "c", "", invite.StatusPending, 10, ""); err == nil {
-		t.Fatal("expected context error from ListInvites")
-	}
-	if _, err := store.ListPendingInvites(ctx, "c", 10, ""); err == nil {
-		t.Fatal("expected context error from ListPendingInvites")
-	}
-	if _, err := store.ListPendingInvitesForRecipient(ctx, "u", 10, ""); err == nil {
-		t.Fatal("expected context error from ListPendingInvitesForRecipient")
-	}
-	if err := store.UpdateInviteStatus(ctx, "i", invite.StatusClaimed, time.Now()); err == nil {
-		t.Fatal("expected context error from UpdateInviteStatus")
 	}
 	if err := store.PutCharacter(ctx, storage.CharacterRecord{CampaignID: "c", ID: "ch"}); err == nil {
 		t.Fatal("expected context error from PutCharacter")
@@ -330,41 +293,6 @@ func TestEmptyIDValidation(t *testing.T) {
 	}
 	if err := store.DeleteParticipantClaim(ctx, "c", ""); err == nil {
 		t.Fatal("expected error for empty user ID in DeleteParticipantClaim")
-	}
-
-	// Invite
-	if err := store.PutInvite(ctx, storage.InviteRecord{CampaignID: "c", ParticipantID: "p"}); err == nil {
-		t.Fatal("expected error for empty invite ID in PutInvite")
-	}
-	if err := store.PutInvite(ctx, storage.InviteRecord{ID: "i", ParticipantID: "p"}); err == nil {
-		t.Fatal("expected error for empty campaign ID in PutInvite")
-	}
-	if err := store.PutInvite(ctx, storage.InviteRecord{ID: "i", CampaignID: "c"}); err == nil {
-		t.Fatal("expected error for empty participant ID in PutInvite")
-	}
-	if _, err := store.GetInvite(ctx, ""); err == nil {
-		t.Fatal("expected error for empty invite ID in GetInvite")
-	}
-	if _, err := store.ListInvites(ctx, "", "", invite.StatusPending, 10, ""); err == nil {
-		t.Fatal("expected error for empty campaign ID in ListInvites")
-	}
-	if _, err := store.ListInvites(ctx, "c", "", invite.StatusPending, 0, ""); err == nil {
-		t.Fatal("expected error for zero page size in ListInvites")
-	}
-	if _, err := store.ListPendingInvites(ctx, "", 10, ""); err == nil {
-		t.Fatal("expected error for empty campaign ID in ListPendingInvites")
-	}
-	if _, err := store.ListPendingInvites(ctx, "c", 0, ""); err == nil {
-		t.Fatal("expected error for zero page size in ListPendingInvites")
-	}
-	if _, err := store.ListPendingInvitesForRecipient(ctx, "", 10, ""); err == nil {
-		t.Fatal("expected error for empty user ID in ListPendingInvitesForRecipient")
-	}
-	if _, err := store.ListPendingInvitesForRecipient(ctx, "u", 0, ""); err == nil {
-		t.Fatal("expected error for zero page size in ListPendingInvitesForRecipient")
-	}
-	if err := store.UpdateInviteStatus(ctx, "", invite.StatusClaimed, time.Now()); err == nil {
-		t.Fatal("expected error for empty invite ID in UpdateInviteStatus")
 	}
 
 	// Character

@@ -19,7 +19,6 @@ const (
 	slowProjectionWaitThreshold  = 250 * time.Millisecond
 	projectionScopeCampaigns     = "campaign_summary"
 	projectionScopeSessions      = "campaign_sessions"
-	projectionScopeInvites       = "campaign_invites"
 )
 
 // UserHubControlClient exposes cache invalidation calls required by dashboard sync.
@@ -89,20 +88,16 @@ func (s *Syncer) SessionEnded(ctx context.Context, userID, campaignID string) {
 	s.syncProjectionAndInvalidate(ctx, userID, campaignID, projectionScopeSessions, "web.session_ended")
 }
 
-// InviteChanged waits for invite projection visibility, then invalidates dashboards.
+// InviteChanged invalidates dashboards after an invite mutation.
+//
+// The invite service uses direct SQL storage (not event-sourcing), so there is
+// no game-service projection to wait for — writes are immediately visible.
 func (s *Syncer) InviteChanged(ctx context.Context, userIDs []string, campaignID string) {
-	syncUserID := ""
-	for _, userID := range userIDs {
-		userID = strings.TrimSpace(userID)
-		if userID != "" {
-			syncUserID = userID
-			break
-		}
+	var campaigns []string
+	if c := strings.TrimSpace(campaignID); c != "" {
+		campaigns = []string{c}
 	}
-	s.syncProjectionAndInvalidate(ctx, syncUserID, campaignID, projectionScopeInvites, "web.invite_changed")
-	if len(normalizedIDs(userIDs)) > 1 {
-		s.invalidate(ctx, userIDs, []string{campaignID}, "web.invite_changed")
-	}
+	s.invalidate(ctx, userIDs, campaigns, "web.invite_changed")
 }
 
 // syncProjectionAndInvalidate coordinates projection waiting with downstream

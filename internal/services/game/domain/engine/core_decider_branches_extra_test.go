@@ -12,7 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
@@ -182,9 +181,6 @@ func TestStateResolvers_ReturnZeroWhenAggregateMapsMissing(t *testing.T) {
 	if got := characterStateFor(command.Command{EntityID: "c-1"}, state); !reflect.DeepEqual(got, character.State{}) {
 		t.Fatalf("characterStateFor() = %+v, want zero state", got)
 	}
-	if got := inviteStateFor(command.Command{EntityID: "i-1"}, state); !reflect.DeepEqual(got, invite.State{}) {
-		t.Fatalf("inviteStateFor() = %+v, want zero state", got)
-	}
 }
 
 func TestStateResolvers_ReturnZeroWhenEntityIDIsEmpty(t *testing.T) {
@@ -195,9 +191,6 @@ func TestStateResolvers_ReturnZeroWhenEntityIDIsEmpty(t *testing.T) {
 		Characters: map[ids.CharacterID]character.State{
 			"c-1": {CharacterID: "c-1", Created: true},
 		},
-		Invites: map[ids.InviteID]invite.State{
-			"i-1": {InviteID: "i-1", Created: true},
-		},
 	}
 
 	if got := participantStateFor(command.Command{EntityID: "   "}, state); !reflect.DeepEqual(got, participant.State{}) {
@@ -205,9 +198,6 @@ func TestStateResolvers_ReturnZeroWhenEntityIDIsEmpty(t *testing.T) {
 	}
 	if got := characterStateFor(command.Command{EntityID: "   "}, state); !reflect.DeepEqual(got, character.State{}) {
 		t.Fatalf("characterStateFor() = %+v, want zero state", got)
-	}
-	if got := inviteStateFor(command.Command{EntityID: "   "}, state); !reflect.DeepEqual(got, invite.State{}) {
-		t.Fatalf("inviteStateFor() = %+v, want zero state", got)
 	}
 }
 

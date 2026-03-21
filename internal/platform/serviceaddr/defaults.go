@@ -33,6 +33,8 @@ const (
 	ServiceStatus = "status"
 	// ServiceWorker is the worker gRPC service identity.
 	ServiceWorker = "worker"
+	// ServiceInvite is the invite gRPC service identity.
+	ServiceInvite = "invite"
 )
 
 var grpcPorts = map[string]int{
@@ -45,6 +47,7 @@ var grpcPorts = map[string]int{
 	ServiceWorker:        8089,
 	ServiceStatus:        8093,
 	ServiceUserHub:       8092,
+	ServiceInvite:        8095,
 }
 
 var httpPorts = map[string]int{

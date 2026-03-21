@@ -9,7 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -55,7 +54,7 @@ func foldEntityKeyed[K ~string, S any](
 // coreFoldEntries returns the declarative fold dispatch table for all core
 // domains. Adding a new core domain requires only adding an entry here.
 //
-// Entity-keyed entries (participant, character, invite) perform an EntityID
+// Entity-keyed entries (participant, character) perform an EntityID
 // presence check at fold time. This is intentional defense-in-depth:
 // ValidateEntityKeyedAddressing catches missing EntityIDs at startup, but the
 // runtime check guards against regression if a new event type is registered
@@ -106,12 +105,6 @@ func coreFoldEntries() []foldEntry {
 			types: character.FoldHandledTypes,
 			fold: func(state *State, evt event.Event) error {
 				return foldEntityKeyed(&state.Characters, evt, "character", character.Fold)
-			},
-		},
-		{
-			types: invite.FoldHandledTypes,
-			fold: func(state *State, evt event.Event) error {
-				return foldEntityKeyed(&state.Invites, evt, "invite", invite.Fold)
 			},
 		},
 		{

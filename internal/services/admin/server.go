@@ -10,6 +10,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -30,6 +31,7 @@ type Config struct {
 	HTTPAddr   string
 	GRPCAddr   string
 	AuthAddr   string
+	InviteAddr string
 	StatusAddr string
 	// AuthConfig enables token-based authentication when set.
 	AuthConfig *AuthConfig
@@ -43,6 +45,7 @@ type Server struct {
 
 	gameMc   *platformgrpc.ManagedConn
 	authMc   *platformgrpc.ManagedConn
+	inviteMc *platformgrpc.ManagedConn
 	statusMc *platformgrpc.ManagedConn
 
 	// Game service clients — created at construction, always non-nil when gameMc exists.
@@ -52,11 +55,13 @@ type Server struct {
 	sessionClient     statev1.SessionServiceClient
 	characterClient   statev1.CharacterServiceClient
 	participantClient statev1.ParticipantServiceClient
-	inviteClient      statev1.InviteServiceClient
 	snapshotClient    statev1.SnapshotServiceClient
 	eventClient       statev1.EventServiceClient
 	statisticsClient  statev1.StatisticsServiceClient
 	systemClient      statev1.SystemServiceClient
+
+	// Invite service client — created at construction, always non-nil when inviteMc exists.
+	inviteClient invitev1.InviteServiceClient
 
 	// Auth service clients — created at construction, always non-nil when authMc exists.
 	authClient    authv1.AuthServiceClient
@@ -115,7 +120,7 @@ func (s *Server) ParticipantClient() statev1.ParticipantServiceClient {
 }
 
 // InviteClient returns the current invite client.
-func (s *Server) InviteClient() statev1.InviteServiceClient {
+func (s *Server) InviteClient() invitev1.InviteServiceClient {
 	if s == nil {
 		return nil
 	}
@@ -202,7 +207,6 @@ func NewServer(ctx context.Context, cfg Config) (*Server, error) {
 		srv.sessionClient = statev1.NewSessionServiceClient(conn)
 		srv.characterClient = statev1.NewCharacterServiceClient(conn)
 		srv.participantClient = statev1.NewParticipantServiceClient(conn)
-		srv.inviteClient = statev1.NewInviteServiceClient(conn)
 		srv.snapshotClient = statev1.NewSnapshotServiceClient(conn)
 		srv.eventClient = statev1.NewEventServiceClient(conn)
 		srv.statisticsClient = statev1.NewStatisticsServiceClient(conn)
@@ -227,6 +231,28 @@ func NewServer(ctx context.Context, cfg Config) (*Server, error) {
 		conn := mc.Conn()
 		srv.authClient = authv1.NewAuthServiceClient(conn)
 		srv.accountClient = authv1.NewAccountServiceClient(conn)
+	}
+
+	// Invite service — optional, same as game.
+	if addr := strings.TrimSpace(cfg.InviteAddr); addr != "" {
+		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+			Name:             "invite",
+			Addr:             addr,
+			Mode:             platformgrpc.ModeOptional,
+			Logf:             logf,
+			StatusReporter:   cfg.StatusReporter,
+			StatusCapability: "admin.invite.integration",
+			DialOpts: append(
+				platformgrpc.LenientDialOptions(),
+				grpc.WithChainUnaryInterceptor(grpcauthctx.AdminOverrideUnaryClientInterceptor(adminAuthzOverrideReason)),
+			),
+		})
+		if err != nil {
+			srv.closeConns()
+			return nil, fmt.Errorf("admin: managed conn invite: %w", err)
+		}
+		srv.inviteMc = mc
+		srv.inviteClient = invitev1.NewInviteServiceClient(mc.Conn())
 	}
 
 	// Status service — optional.
@@ -320,6 +346,8 @@ func (s *Server) Close() {
 func (s *Server) closeConns() {
 	closeManagedConn(s.statusMc, "status")
 	s.statusMc = nil
+	closeManagedConn(s.inviteMc, "invite")
+	s.inviteMc = nil
 	closeManagedConn(s.authMc, "auth")
 	s.authMc = nil
 	closeManagedConn(s.gameMc, "game")

@@ -12,7 +12,6 @@ func NewProjectionStores(config StoresProjectionConfig) ProjectionStores {
 		Campaign:           config.ProjectionStore,
 		Participant:        config.ProjectionStore,
 		ClaimIndex:         config.ProjectionStore,
-		Invite:             config.ProjectionStore,
 		Character:          config.ProjectionStore,
 		Session:            config.ProjectionStore,
 		SessionGate:        config.ProjectionStore,

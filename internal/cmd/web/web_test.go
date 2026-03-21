@@ -81,6 +81,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.StatusAddr != "status:8093" {
 		t.Fatalf("StatusAddr = %q, want %q", cfg.StatusAddr, "status:8093")
 	}
+	if cfg.InviteAddr != "invite:8095" {
+		t.Fatalf("InviteAddr = %q, want %q", cfg.InviteAddr, "invite:8095")
+	}
 	if cfg.TrustForwardedProto {
 		t.Fatalf("TrustForwardedProto = %t, want false", cfg.TrustForwardedProto)
 	}
@@ -215,6 +218,7 @@ func testDependencyConfig() Config {
 		AuthAddr:          "auth:8083",
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
+		InviteAddr:        "invite:8095",
 		AIAddr:            "ai:8087",
 		DiscoveryAddr:     "discovery:8091",
 		UserHubAddr:       "userhub:8092",
@@ -288,7 +292,7 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 		}
 	}
 	slices.Sort(requiredNames)
-	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameSocial}
+	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameInvite, web.DependencyNameSocial}
 	if !slices.Equal(requiredNames, want) {
 		t.Fatalf("required dependencies = %v, want %v", requiredNames, want)
 	}
@@ -353,6 +357,7 @@ func TestDependencyRequirementsCollectsAllMissingRequiredAddresses(t *testing.T)
 	cfg := testDependencyConfig()
 	cfg.AuthAddr = "   "
 	cfg.GameAddr = "   "
+	cfg.InviteAddr = ""
 	cfg.SocialAddr = ""
 	_, err := dependencyRequirements(cfg, nil)
 	if err == nil {
@@ -362,7 +367,7 @@ func TestDependencyRequirementsCollectsAllMissingRequiredAddresses(t *testing.T)
 	if !errors.As(err, &errMissingAddress) {
 		t.Fatalf("dependencyRequirements() error type = %T, want MissingRequiredStartupDependencyAddressesError", err)
 	}
-	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameSocial}
+	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameInvite, web.DependencyNameSocial}
 	if !slices.Equal(errMissingAddress.Missing, want) {
 		// Ordered by canonical sorted error payload.
 		t.Fatalf("dependencyRequirements() missing addresses = %#v, want %#v", errMissingAddress.Missing, want)
@@ -393,6 +398,7 @@ func TestDependencyRequirementsWithResolversRejectsCoverageDrift(t *testing.T) {
 		web.DependencyNameAuth,
 		web.DependencyNameDiscovery,
 		web.DependencyNameGame,
+		web.DependencyNameInvite,
 		web.DependencyNameNotifications,
 		web.DependencyNameSocial,
 		web.DependencyNameStatus,
@@ -464,6 +470,7 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 		web.DependencyNameAuth:          {"principal", "publicauth", "profile", "settings"},
 		web.DependencyNameSocial:        {"principal", "profile", "settings", "campaigns"},
 		web.DependencyNameGame:          {"campaigns", "dashboard-sync"},
+		web.DependencyNameInvite:        {"campaigns", "invite"},
 		web.DependencyNameAI:            {"settings.ai", "campaigns.ai"},
 		web.DependencyNameDiscovery:     {"discovery"},
 		web.DependencyNameUserHub:       {"dashboard", "dashboard-sync"},
@@ -573,8 +580,8 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	}
 	defer closeManagedConns(conns, nil)
 
-	if len(conns) != 8 {
-		t.Fatalf("managed conns = %d, want 8", len(conns))
+	if len(conns) != 9 {
+		t.Fatalf("managed conns = %d, want 9", len(conns))
 	}
 	if bundle.Principal.SessionClient == nil {
 		t.Fatal("expected principal session client")
@@ -682,9 +689,9 @@ func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
 	}
 	defer closeManagedConns(conns, nil)
 
-	// 8 requirements - 2 empty addresses = 6 connections.
-	if len(conns) != 6 {
-		t.Fatalf("managed conns = %d, want 6", len(conns))
+	// 9 requirements - 2 empty addresses = 7 connections.
+	if len(conns) != 7 {
+		t.Fatalf("managed conns = %d, want 7", len(conns))
 	}
 }
 
@@ -703,8 +710,8 @@ func TestBootstrapRuntimeDependenciesWiresStatusClientIntoDashboard(t *testing.T
 	if runtimeDeps.bundle.Modules.Dashboard.StatusClient == nil {
 		t.Fatal("expected dashboard status client")
 	}
-	if len(runtimeDeps.depsConns) != 8 {
-		t.Fatalf("managed conns = %d, want %d", len(runtimeDeps.depsConns), 8)
+	if len(runtimeDeps.depsConns) != 9 {
+		t.Fatalf("managed conns = %d, want %d", len(runtimeDeps.depsConns), 9)
 	}
 }
 

@@ -30,7 +30,6 @@ func TestApplyProjectionRequiredCoreEventsAreHandled(t *testing.T) {
 		Character:          newFakeCharacterStore(),
 		CampaignFork:       newFakeCampaignForkStore(),
 		ClaimIndex:         newFakeClaimIndexStore(),
-		Invite:             newFakeInviteStore(),
 		Participant:        newProjectionParticipantStore(),
 		Session:            &fakeSessionStore{},
 		SessionGate:        newFakeSessionGateStore(),

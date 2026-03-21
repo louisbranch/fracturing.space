@@ -13,7 +13,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -200,9 +199,6 @@ func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {CharacterID: "char-1", Created: true},
 		},
-		Invites: map[ids.InviteID]invite.State{
-			"inv-1": {InviteID: "inv-1", Created: true},
-		},
 	}
 
 	tests := []struct {
@@ -236,15 +232,6 @@ func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 			cmd: command.Command{
 				Type:        command.Type("participant.unknown"),
 				EntityID:    "part-1",
-				PayloadJSON: []byte(`{}`),
-			},
-		},
-		{
-			name:  "invite route",
-			route: inviteRoute,
-			cmd: command.Command{
-				Type:        command.Type("invite.unknown"),
-				EntityID:    "inv-1",
 				PayloadJSON: []byte(`{}`),
 			},
 		},
@@ -293,18 +280,6 @@ func TestCharacterStateFor_UsesNormalizedEntityID(t *testing.T) {
 
 	if got := characterStateFor(command.Command{EntityID: " char-1 "}, current); got.CharacterID != "char-1" {
 		t.Fatalf("characterStateFor(entity id) = %+v, want character_id char-1", got)
-	}
-}
-
-func TestInviteStateFor_UsesNormalizedEntityID(t *testing.T) {
-	current := aggregate.State{
-		Invites: map[ids.InviteID]invite.State{
-			"inv-1": {InviteID: "inv-1", Created: true},
-		},
-	}
-
-	if got := inviteStateFor(command.Command{EntityID: " inv-1 "}, current); got.InviteID != "inv-1" {
-		t.Fatalf("inviteStateFor(entity id) = %+v, want invite_id inv-1", got)
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
@@ -64,11 +64,11 @@ func TestUserHelpersBuildersAndFormatters(t *testing.T) {
 		t.Fatalf("buildUserDetail(nil) = %#v", got)
 	}
 
-	label, variant := formatInviteStatus(statev1.InviteStatus_PENDING, loc)
+	label, variant := formatInviteStatus(invitev1.InviteStatus_PENDING, loc)
 	if label != loc.Sprintf("label.invite_pending") || variant != "warning" {
 		t.Fatalf("formatInviteStatus(pending) = (%q,%q)", label, variant)
 	}
-	label, variant = formatInviteStatus(statev1.InviteStatus_INVITE_STATUS_UNSPECIFIED, loc)
+	label, variant = formatInviteStatus(invitev1.InviteStatus_INVITE_STATUS_UNSPECIFIED, loc)
 	if label != loc.Sprintf("label.unspecified") || variant != "secondary" {
 		t.Fatalf("formatInviteStatus(unspecified) = (%q,%q)", label, variant)
 	}
@@ -86,7 +86,7 @@ func TestUserServiceUnavailableClients(t *testing.T) {
 	svc := &handlers{
 		base:         modulehandler.NewBase(),
 		authClient:   authv1.NewAuthServiceClient(conn),
-		inviteClient: statev1.NewInviteServiceClient(conn),
+		inviteClient: invitev1.NewInviteServiceClient(conn),
 	}
 	loc := i18nhttp.Printer(i18nhttp.Default())
 

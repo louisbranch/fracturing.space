@@ -118,27 +118,18 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 	t.Parallel()
 
 	listItem := testNotificationSummary("n1", false)
-	detailItem := notificationsapp.NotificationSummary{
+	openedItem := notificationsapp.NotificationSummary{
 		ID:          "n1",
 		MessageType: "system.message.v1",
 		PayloadJSON: mustNotificationPayloadJSON(notificationpayload.InAppPayload{
 			Title: platformi18n.NewCopyRef("notification.campaign_invite.updated.title"),
 			Body:  platformi18n.NewCopyRef("notification.campaign_invite.updated.body"),
 		}),
-		Read: false,
+		Read: true,
 	}
 	m := newNotificationsModule(fakeGateway{
 		listItems: []notificationsapp.NotificationSummary{listItem},
-		getItem:   detailItem,
-		openItem: notificationsapp.NotificationSummary{
-			ID:          "n1",
-			MessageType: "system.message.v1",
-			PayloadJSON: mustNotificationPayloadJSON(notificationpayload.InAppPayload{
-				Title: platformi18n.NewCopyRef("notification.campaign_invite.accepted.title"),
-				Body:  platformi18n.NewCopyRef("notification.campaign_invite.accepted.body"),
-			}),
-			Read: true,
-		},
+		openItem:  openedItem,
 	})
 	mount, err := m.Mount()
 	if err != nil {
@@ -156,10 +147,6 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 	}
 	if !strings.Contains(body, "Invitation update") {
 		t.Fatalf("body missing rendered detail title: %q", body)
-	}
-	// Invariant: GET detail remains read-only; only POST /open performs acknowledgment.
-	if strings.Contains(body, "Invitation accepted") {
-		t.Fatalf("body unexpectedly rendered open-route content on GET detail: %q", body)
 	}
 	if !strings.Contains(body, `class="menu-active" href="/app/notifications/n1"`) {
 		t.Fatalf("body missing active side-menu item: %q", body)

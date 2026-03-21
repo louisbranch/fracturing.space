@@ -35,6 +35,14 @@ type Deps struct {
 	Write       domainwrite.WritePath
 	Applier     projection.Applier
 
+	// ClaimIndex enforces one-user-per-campaign seat uniqueness.
+	// Optional — if nil, claim index checks are skipped in BindParticipant.
+	ClaimIndex storage.ClaimIndexStore
+
+	// Event provides authoritative event replay for bind-time conflict
+	// detection. Optional — if nil, replay checks are skipped.
+	Event storage.EventStore
+
 	// ClearCampaignAIBinding is called when participant mutations require
 	// clearing the campaign's AI binding (e.g., owner access changes or removal).
 	// Optional — if nil, the AI binding clear step is skipped.
@@ -42,7 +50,7 @@ type Deps struct {
 }
 
 // participantApplication coordinates participant transport use-cases across
-// focused method files (create, update, delete, and policy helpers).
+// focused method files (create, update, delete, bind, and policy helpers).
 type participantApplication struct {
 	auth                   authz.PolicyDeps
 	stores                 participantApplicationStores
@@ -51,6 +59,8 @@ type participantApplication struct {
 	clock                  func() time.Time
 	idGenerator            func() (string, error)
 	authClient             authv1.AuthServiceClient
+	claimIndex             storage.ClaimIndexStore
+	eventStore             storage.EventStore
 	clearCampaignAIBinding ClearCampaignAIBindingFunc
 }
 
@@ -80,6 +90,8 @@ func newParticipantApplicationFromDeps(
 		clock:                  clock,
 		idGenerator:            idGenerator,
 		authClient:             authClient,
+		claimIndex:             deps.ClaimIndex,
+		eventStore:             deps.Event,
 		clearCampaignAIBinding: deps.ClearCampaignAIBinding,
 	}
 	if app.clock == nil {

@@ -48,10 +48,10 @@ func TestNewHandlerReturnsAggregatedDependencyErrors(t *testing.T) {
 	if !errors.As(err, &validationErr) {
 		t.Fatalf("NewHandler() error type = %T, want StartupDependencyValidationError", err)
 	}
-	if len(validationErr.Issues) != 3 {
-		t.Fatalf("validation issue count = %d, want 3", len(validationErr.Issues))
+	if len(validationErr.Issues) != 4 {
+		t.Fatalf("validation issue count = %d, want 4", len(validationErr.Issues))
 	}
-	for _, want := range []string{DependencyNameAuth, DependencyNameSocial, DependencyNameGame} {
+	for _, want := range []string{DependencyNameAuth, DependencyNameSocial, DependencyNameGame, DependencyNameInvite} {
 		found := false
 		for _, issue := range validationErr.Issues {
 			if issue.Name == want {

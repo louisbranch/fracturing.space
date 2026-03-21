@@ -186,22 +186,6 @@ func sessionStatusLabel(status statev1.SessionStatus) string {
 	}
 }
 
-// inviteStatusLabel centralizes this web behavior in one helper seam.
-func inviteStatusLabel(status statev1.InviteStatus) string {
-	switch status {
-	case statev1.InviteStatus_PENDING:
-		return "Pending"
-	case statev1.InviteStatus_CLAIMED:
-		return "Claimed"
-	case statev1.InviteStatus_DECLINED:
-		return "Declined"
-	case statev1.InviteStatus_REVOKED:
-		return "Revoked"
-	default:
-		return "Unspecified"
-	}
-}
-
 // timestampString centralizes this web behavior in one helper seam.
 func timestampString(ts *timestamppb.Timestamp) string {
 	if ts == nil {

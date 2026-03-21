@@ -85,33 +85,30 @@ func TestSessionStartedInvalidatesWhenProjectionWaitTimesOut(t *testing.T) {
 	}
 }
 
-func TestInviteChangedWaitsForInviteProjectionAndInvalidates(t *testing.T) {
+func TestInviteChangedInvalidatesWithoutProjectionWait(t *testing.T) {
 	t.Parallel()
 
 	userhub := &userhubControlStub{}
-	game := &gameEventStub{
-		listResp: &gamev1.ListEventsResponse{Events: []*gamev1.Event{{Seq: 11}}},
-		stream: &campaignStreamStub{
-			updates: []*gamev1.CampaignUpdate{{CampaignId: "camp-3", Seq: 11, Update: &gamev1.CampaignUpdate_ProjectionApplied{
-				ProjectionApplied: &gamev1.ProjectionApplied{Scopes: []string{projectionScopeInvites}},
-			}}},
-		},
-	}
+	game := &gameEventStub{}
 	syncer := New(userhub, game, nil)
 
 	syncer.InviteChanged(context.Background(), []string{"user-9"}, "camp-3")
 
-	if game.subscribeReq == nil {
-		t.Fatalf("expected SubscribeCampaignUpdates call")
-	}
-	if got := game.subscribeReq.GetProjectionScopes(); len(got) != 1 || got[0] != projectionScopeInvites {
-		t.Fatalf("ProjectionScopes = %v, want [%s]", got, projectionScopeInvites)
+	// Invite service uses direct SQL — no game projection wait should occur.
+	if game.subscribeReq != nil {
+		t.Fatalf("InviteChanged should not subscribe to campaign updates")
 	}
 	if userhub.req == nil {
 		t.Fatalf("expected invalidation request")
 	}
+	if got := userhub.req.GetUserIds(); len(got) != 1 || got[0] != "user-9" {
+		t.Fatalf("UserIds = %v, want [user-9]", got)
+	}
 	if got := userhub.req.GetCampaignIds(); len(got) != 1 || got[0] != "camp-3" {
 		t.Fatalf("CampaignIds = %v, want [camp-3]", got)
+	}
+	if got := userhub.req.GetReason(); got != "web.invite_changed" {
+		t.Fatalf("Reason = %q, want %q", got, "web.invite_changed")
 	}
 }
 

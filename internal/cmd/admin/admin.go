@@ -19,6 +19,7 @@ type Config struct {
 	HTTPAddr            string `env:"FRACTURING_SPACE_ADMIN_ADDR"                    envDefault:":8081"`
 	GRPCAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"`
 	AuthAddr            string `env:"FRACTURING_SPACE_AUTH_ADDR"`
+	InviteAddr          string `env:"FRACTURING_SPACE_ADMIN_INVITE_ADDR"`
 	StatusAddr          string `env:"FRACTURING_SPACE_STATUS_ADDR"`
 	AuthIntrospectURL   string `env:"FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL"`
 	OAuthResourceSecret string `env:"FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET"`
@@ -33,6 +34,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}
 	cfg.GRPCAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GRPCAddr, serviceaddr.ServiceGame)
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
+	cfg.InviteAddr = serviceaddr.OrDefaultGRPCAddr(cfg.InviteAddr, serviceaddr.ServiceInvite)
 	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
@@ -52,6 +54,9 @@ func logConfiguredAddresses(cfg Config) {
 	}
 	if addr := strings.TrimSpace(cfg.AuthAddr); addr != "" {
 		log.Printf("admin startup: dependency=auth address=%s", addr)
+	}
+	if addr := strings.TrimSpace(cfg.InviteAddr); addr != "" {
+		log.Printf("admin startup: dependency=invite address=%s", addr)
 	}
 	if addr := strings.TrimSpace(cfg.StatusAddr); addr != "" {
 		log.Printf("admin startup: dependency=status address=%s", addr)
@@ -79,6 +84,7 @@ func Run(ctx context.Context, cfg Config) error {
 			HTTPAddr:       cfg.HTTPAddr,
 			GRPCAddr:       cfg.GRPCAddr,
 			AuthAddr:       cfg.AuthAddr,
+			InviteAddr:     cfg.InviteAddr,
 			StatusAddr:     cfg.StatusAddr,
 			AuthConfig:     authCfg,
 			StatusReporter: reporter,

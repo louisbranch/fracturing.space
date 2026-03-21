@@ -131,7 +131,9 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 		}
 	}
 	if moduleDeps.Invite.InviteClient == nil && moduleDeps.Campaigns.InviteClient != nil {
-		moduleDeps.Invite.InviteClient = moduleDeps.Campaigns.InviteClient
+		// campaigns.InviteClient and invite.InviteClient are disjoint interfaces
+		// (different invite service RPC subsets). Fall through to the default below.
+		moduleDeps.Invite.InviteClient = defaultInviteClient()
 	}
 	if moduleDeps.Invite.AuthClient == nil {
 		switch {

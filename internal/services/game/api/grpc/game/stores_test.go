@@ -38,7 +38,7 @@ func TestStoresValidate(t *testing.T) {
 		}
 		msg := err.Error()
 		for _, name := range []string{
-			"Campaign", "Participant", "ClaimIndex", "Invite",
+			"Campaign", "Participant", "ClaimIndex",
 			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
 			"SessionSpotlight", "SessionInteraction", "Scene", "SceneCharacter",
 			"SceneGate", "SceneSpotlight", "SceneInteraction", "SceneGMInteraction",
@@ -76,7 +76,6 @@ func TestRootStoreConcernBuilders(t *testing.T) {
 		CampaignStore:            gametest.NewFakeCampaignStore(),
 		ParticipantStore:         gametest.NewFakeParticipantStore(),
 		ClaimIndexStore:          stubClaimIndex{},
-		InviteStore:              gametest.NewFakeInviteStore(),
 		CharacterStore:           gametest.NewFakeCharacterStore(),
 		SessionStore:             gametest.NewFakeSessionStore(),
 		SessionGateStore:         &gametest.FakeSessionGateStore{},
@@ -134,7 +133,6 @@ func TestNewRuntimeStores_AuditWiring(t *testing.T) {
 		CampaignStore:            gametest.NewFakeCampaignStore(),
 		ParticipantStore:         gametest.NewFakeParticipantStore(),
 		ClaimIndexStore:          stubClaimIndex{},
-		InviteStore:              gametest.NewFakeInviteStore(),
 		CharacterStore:           gametest.NewFakeCharacterStore(),
 		SessionStore:             gametest.NewFakeSessionStore(),
 		SessionGateStore:         &gametest.FakeSessionGateStore{},
@@ -199,7 +197,6 @@ func validRootStoreGroups() rootStoreGroupsFixture {
 			Campaign:           gametest.NewFakeCampaignStore(),
 			Participant:        gametest.NewFakeParticipantStore(),
 			ClaimIndex:         stubClaimIndex{},
-			Invite:             gametest.NewFakeInviteStore(),
 			Character:          gametest.NewFakeCharacterStore(),
 			Session:            gametest.NewFakeSessionStore(),
 			SessionGate:        &gametest.FakeSessionGateStore{},
@@ -256,7 +253,6 @@ type projectionStoreStub struct {
 	storage.CampaignStore
 	storage.ParticipantStore
 	storage.ClaimIndexStore
-	storage.InviteStore
 	storage.CharacterStore
 	storage.CampaignForkStore
 	storage.SessionStore

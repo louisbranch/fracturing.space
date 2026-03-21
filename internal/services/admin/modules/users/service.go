@@ -7,7 +7,7 @@ import (
 
 	"github.com/a-h/templ"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	adminerrors "github.com/louisbranch/fracturing.space/internal/services/admin/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
@@ -25,11 +25,11 @@ const (
 type handlers struct {
 	base         modulehandler.Base
 	authClient   authv1.AuthServiceClient
-	inviteClient statev1.InviteServiceClient
+	inviteClient invitev1.InviteServiceClient
 }
 
 // NewHandlers returns the users handler implementation.
-func NewHandlers(base modulehandler.Base, authClient authv1.AuthServiceClient, inviteClient statev1.InviteServiceClient) Handlers {
+func NewHandlers(base modulehandler.Base, authClient authv1.AuthServiceClient, inviteClient invitev1.InviteServiceClient) Handlers {
 	return &handlers{base: base, authClient: authClient, inviteClient: inviteClient}
 }
 
@@ -235,7 +235,7 @@ func (s *handlers) listPendingInvitesForUser(r *http.Request, ctx context.Contex
 	rows := make([]templates.InviteRow, 0)
 	pageToken := ""
 	for {
-		resp, err := s.inviteClient.ListPendingInvitesForUser(ctx, &statev1.ListPendingInvitesForUserRequest{
+		resp, err := s.inviteClient.ListPendingInvitesForUser(ctx, &invitev1.ListPendingInvitesForUserRequest{
 			PageSize:  inviteListPageSize,
 			PageToken: pageToken,
 		})
@@ -271,7 +271,7 @@ func (s *handlers) listPendingInvitesForUser(r *http.Request, ctx context.Contex
 			}
 
 			inviteID := ""
-			status := statev1.InviteStatus_INVITE_STATUS_UNSPECIFIED
+			status := invitev1.InviteStatus_INVITE_STATUS_UNSPECIFIED
 			createdAt := ""
 			if inv != nil {
 				inviteID = inv.GetId()

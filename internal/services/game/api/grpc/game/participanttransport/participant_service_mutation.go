@@ -65,3 +65,31 @@ func (s *Service) DeleteParticipant(ctx context.Context, in *campaignv1.DeletePa
 
 	return &campaignv1.DeleteParticipantResponse{Participant: ParticipantToProto(current)}, nil
 }
+
+// BindParticipant binds a user to an unoccupied participant seat.
+// Internal-only: the caller is trusted to have verified authorization.
+func (s *Service) BindParticipant(ctx context.Context, in *campaignv1.BindParticipantRequest) (*campaignv1.BindParticipantResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "bind participant request is required")
+	}
+
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+	participantID, err := validate.RequiredID(in.GetParticipantId(), "participant id")
+	if err != nil {
+		return nil, err
+	}
+	userID, err := validate.RequiredID(in.GetUserId(), "user id")
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := s.app.BindParticipant(ctx, campaignID, participantID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &campaignv1.BindParticipantResponse{Participant: ParticipantToProto(updated)}, nil
+}

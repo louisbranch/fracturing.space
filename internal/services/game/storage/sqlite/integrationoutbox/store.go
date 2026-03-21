@@ -12,7 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
@@ -121,12 +120,6 @@ ON CONFLICT(dedupe_key) DO NOTHING
 
 func integrationOutboxEventsForEvent(evt event.Event) ([]storage.IntegrationOutboxEvent, error) {
 	switch evt.Type {
-	case invite.EventTypeCreated:
-		return buildInviteCreatedOutboxEvent(evt)
-	case invite.EventTypeClaimed:
-		return buildInviteClaimedOutboxEvent(evt)
-	case invite.EventTypeDeclined:
-		return buildInviteDeclinedOutboxEvent(evt)
 	case session.EventTypeGMAuthoritySet:
 		return buildAIGMTurnRequestedOutboxEvent(evt)
 	case session.EventTypeOOCClosed:
@@ -136,98 +129,6 @@ func integrationOutboxEventsForEvent(evt event.Event) ([]storage.IntegrationOutb
 	default:
 		return nil, nil
 	}
-}
-
-func buildInviteCreatedOutboxEvent(evt event.Event) ([]storage.IntegrationOutboxEvent, error) {
-	var payload invite.CreatePayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return nil, fmt.Errorf("decode invite.created integration payload: %w", err)
-	}
-	recipientUserID := strings.TrimSpace(string(payload.RecipientUserID))
-	if recipientUserID == "" {
-		return nil, nil
-	}
-	outboxEvent, err := newInviteNotificationOutboxEvent(
-		evt,
-		gameintegration.InviteNotificationCreatedOutboxEventType,
-		gameintegration.InviteCreatedNotificationDedupeKey(string(payload.InviteID)),
-		recipientUserID,
-		"created",
-	)
-	if err != nil {
-		return nil, err
-	}
-	return []storage.IntegrationOutboxEvent{outboxEvent}, nil
-}
-
-func buildInviteClaimedOutboxEvent(evt event.Event) ([]storage.IntegrationOutboxEvent, error) {
-	var payload invite.ClaimPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return nil, fmt.Errorf("decode invite.claimed integration payload: %w", err)
-	}
-	outboxEvent, err := newInviteNotificationOutboxEvent(
-		evt,
-		gameintegration.InviteNotificationClaimedOutboxEventType,
-		gameintegration.InviteAcceptedNotificationDedupeKey(string(payload.InviteID)),
-		strings.TrimSpace(string(payload.UserID)),
-		"accepted",
-	)
-	if err != nil {
-		return nil, err
-	}
-	return []storage.IntegrationOutboxEvent{outboxEvent}, nil
-}
-
-func buildInviteDeclinedOutboxEvent(evt event.Event) ([]storage.IntegrationOutboxEvent, error) {
-	var payload invite.DeclinePayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return nil, fmt.Errorf("decode invite.declined integration payload: %w", err)
-	}
-	outboxEvent, err := newInviteNotificationOutboxEvent(
-		evt,
-		gameintegration.InviteNotificationDeclinedOutboxEventType,
-		gameintegration.InviteDeclinedNotificationDedupeKey(string(payload.InviteID)),
-		strings.TrimSpace(string(payload.UserID)),
-		"declined",
-	)
-	if err != nil {
-		return nil, err
-	}
-	return []storage.IntegrationOutboxEvent{outboxEvent}, nil
-}
-
-func newInviteNotificationOutboxEvent(
-	evt event.Event,
-	eventType string,
-	dedupeKey string,
-	recipientUserID string,
-	notificationKind string,
-) (storage.IntegrationOutboxEvent, error) {
-	outboxEventID, err := id.NewID()
-	if err != nil {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("generate integration outbox event id: %w", err)
-	}
-	payloadJSON, err := json.Marshal(gameintegration.InviteNotificationOutboxPayload{
-		InviteID:         strings.TrimSpace(evt.EntityID),
-		CampaignID:       strings.TrimSpace(string(evt.CampaignID)),
-		RecipientUserID:  strings.TrimSpace(recipientUserID),
-		NotificationKind: notificationKind,
-	})
-	if err != nil {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("marshal invite notification outbox payload: %w", err)
-	}
-	now := evt.Timestamp.UTC()
-	return storage.IntegrationOutboxEvent{
-		ID:            outboxEventID,
-		EventType:     eventType,
-		PayloadJSON:   string(payloadJSON),
-		DedupeKey:     dedupeKey,
-		Status:        storage.IntegrationOutboxStatusPending,
-		AttemptCount:  0,
-		NextAttemptAt: now,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}, nil
 }
 
 func buildAIGMTurnRequestedOutboxEvent(evt event.Event) ([]storage.IntegrationOutboxEvent, error) {

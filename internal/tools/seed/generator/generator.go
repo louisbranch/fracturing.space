@@ -10,6 +10,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/worldbuilder"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -110,7 +111,7 @@ func New(ctx context.Context, cfg Config) (*Generator, error) {
 		conn:         conn,
 		campaigns:    statev1.NewCampaignServiceClient(conn),
 		participants: statev1.NewParticipantServiceClient(conn),
-		invites:      statev1.NewInviteServiceClient(conn),
+		invites:      invitev1.NewInviteServiceClient(conn),
 		characters:   statev1.NewCharacterServiceClient(conn),
 		sessions:     statev1.NewSessionServiceClient(conn),
 		events:       statev1.NewEventServiceClient(conn),

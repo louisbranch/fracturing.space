@@ -6,7 +6,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
@@ -101,18 +100,6 @@ func parseCampaignAccess(value string) (participant.CampaignAccess, error) {
 		return normalized, nil
 	}
 	return participant.CampaignAccessUnspecified, fmt.Errorf("unknown campaign access: %s", trimmed)
-}
-
-// parseInviteStatus normalizes invite status transitions represented in event payloads.
-func parseInviteStatus(value string) (invite.Status, error) {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return invite.StatusUnspecified, fmt.Errorf("invite status is required")
-	}
-	if normalized, ok := invite.NormalizeStatus(trimmed); ok {
-		return normalized, nil
-	}
-	return invite.StatusUnspecified, fmt.Errorf("unknown invite status: %s", trimmed)
 }
 
 // parseCharacterKind validates character kind strings before updating

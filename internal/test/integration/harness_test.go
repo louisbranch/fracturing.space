@@ -23,6 +23,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/app"
+	inviteapp "github.com/louisbranch/fracturing.space/internal/services/invite/app"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 	"google.golang.org/grpc"
@@ -801,5 +802,44 @@ func pickUnusedAddress(t *testing.T) string {
 	}
 	addr := l.Addr().String()
 	l.Close()
+	return addr
+}
+
+// startInviteServer boots an invite service against the given game and auth
+// servers and returns its gRPC address. The server is shut down when t ends.
+func startInviteServer(t *testing.T, gameAddr, authAddr string) string {
+	t.Helper()
+
+	dbPath := filepath.Join(t.TempDir(), "invite-test.db")
+	t.Setenv("FRACTURING_SPACE_INVITE_DB_PATH", dbPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	server, err := inviteapp.NewWithAddr(ctx, "127.0.0.1:0", gameAddr, authAddr)
+	if err != nil {
+		cancel()
+		t.Fatalf("new invite server: %v", err)
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- server.Serve(ctx)
+	}()
+
+	addr := server.Addr()
+	waitForGRPCHealth(t, addr)
+
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case err := <-serveErr:
+			if err != nil {
+				t.Logf("invite server error: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Logf("timed out waiting for invite server to stop")
+		}
+	})
+
 	return addr
 }

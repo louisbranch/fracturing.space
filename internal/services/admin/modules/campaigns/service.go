@@ -7,6 +7,7 @@ import (
 	"github.com/a-h/templ"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	adminerrors "github.com/louisbranch/fracturing.space/internal/services/admin/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
@@ -32,7 +33,7 @@ type handlers struct {
 	campaignClient    statev1.CampaignServiceClient
 	characterClient   statev1.CharacterServiceClient
 	participantClient statev1.ParticipantServiceClient
-	inviteClient      statev1.InviteServiceClient
+	inviteClient      invitev1.InviteServiceClient
 	sessionClient     statev1.SessionServiceClient
 	eventClient       statev1.EventServiceClient
 	authClient        authv1.AuthServiceClient
@@ -46,7 +47,7 @@ func NewHandlers(
 	campaignClient statev1.CampaignServiceClient,
 	characterClient statev1.CharacterServiceClient,
 	participantClient statev1.ParticipantServiceClient,
-	inviteClient statev1.InviteServiceClient,
+	inviteClient invitev1.InviteServiceClient,
 	sessionClient statev1.SessionServiceClient,
 	eventClient statev1.EventServiceClient,
 	authClient authv1.AuthServiceClient,
@@ -325,7 +326,7 @@ func (s *handlers) HandleInvitesTable(w http.ResponseWriter, r *http.Request, ca
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 
-	response, err := s.inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
+	response, err := s.inviteClient.ListInvites(ctx, &invitev1.ListInvitesRequest{
 		CampaignId: campaignID,
 		PageSize:   inviteListPageSize,
 	})

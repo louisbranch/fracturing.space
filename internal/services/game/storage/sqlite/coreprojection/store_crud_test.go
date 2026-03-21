@@ -8,7 +8,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
@@ -128,83 +127,6 @@ func TestParticipantClaimLifecycle(t *testing.T) {
 	_, err = store.GetParticipantClaim(context.Background(), "camp-claims", "user-1")
 	if err == nil || !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected not found after delete")
-	}
-}
-
-func TestInviteListingAndUpdate(t *testing.T) {
-	store := openTestStore(t)
-	now := time.Date(2026, 2, 2, 11, 0, 0, 0, time.UTC)
-
-	seedCampaign(t, store, "camp-invites", now)
-	seedParticipant(t, store, "camp-invites", "seat-1", "user-1", now)
-	seedParticipant(t, store, "camp-invites", "seat-2", "user-2", now)
-
-	invitePending := storage.InviteRecord{
-		ID:                     "inv-1",
-		CampaignID:             "camp-invites",
-		ParticipantID:          "seat-1",
-		RecipientUserID:        "user-1",
-		Status:                 invite.StatusPending,
-		CreatedByParticipantID: "seat-1",
-		CreatedAt:              now,
-		UpdatedAt:              now,
-	}
-	inviteClaimed := storage.InviteRecord{
-		ID:                     "inv-2",
-		CampaignID:             "camp-invites",
-		ParticipantID:          "seat-2",
-		RecipientUserID:        "user-2",
-		Status:                 invite.StatusClaimed,
-		CreatedByParticipantID: "seat-2",
-		CreatedAt:              now,
-		UpdatedAt:              now,
-	}
-
-	if err := store.PutInvite(context.Background(), invitePending); err != nil {
-		t.Fatalf("put invite pending: %v", err)
-	}
-	if err := store.PutInvite(context.Background(), inviteClaimed); err != nil {
-		t.Fatalf("put invite claimed: %v", err)
-	}
-
-	pendingPage, err := store.ListPendingInvites(context.Background(), "camp-invites", 10, "")
-	if err != nil {
-		t.Fatalf("list pending invites: %v", err)
-	}
-	if len(pendingPage.Invites) != 1 || pendingPage.Invites[0].ID != invitePending.ID {
-		t.Fatalf("expected pending invite to be listed")
-	}
-
-	recipientPage, err := store.ListPendingInvitesForRecipient(context.Background(), "user-1", 10, "")
-	if err != nil {
-		t.Fatalf("list pending invites for recipient: %v", err)
-	}
-	if len(recipientPage.Invites) != 1 || recipientPage.Invites[0].ID != invitePending.ID {
-		t.Fatalf("expected pending invite for recipient to be listed")
-	}
-
-	claimedPage, err := store.ListInvites(context.Background(), "camp-invites", "", invite.StatusClaimed, 10, "")
-	if err != nil {
-		t.Fatalf("list claimed invites: %v", err)
-	}
-	if len(claimedPage.Invites) != 1 || claimedPage.Invites[0].ID != inviteClaimed.ID {
-		t.Fatalf("expected claimed invite to be listed")
-	}
-
-	updatedAt := now.Add(10 * time.Minute)
-	if err := store.UpdateInviteStatus(context.Background(), invitePending.ID, invite.StatusClaimed, updatedAt); err != nil {
-		t.Fatalf("update invite status: %v", err)
-	}
-
-	got, err := store.GetInvite(context.Background(), invitePending.ID)
-	if err != nil {
-		t.Fatalf("get invite: %v", err)
-	}
-	if got.Status != invite.StatusClaimed {
-		t.Fatalf("expected invite status to update")
-	}
-	if !got.UpdatedAt.Equal(updatedAt) {
-		t.Fatalf("expected invite updated timestamp to match")
 	}
 }
 

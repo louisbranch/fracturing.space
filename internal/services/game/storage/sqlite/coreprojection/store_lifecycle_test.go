@@ -10,7 +10,6 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
@@ -206,100 +205,6 @@ func TestSessionSpotlightNotFound(t *testing.T) {
 	_, err := store.GetSessionSpotlight(context.Background(), "no-camp", "no-sess")
 	if err == nil || !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound for GetSessionSpotlight, got %v", err)
-	}
-}
-
-func TestGetInviteNotFound(t *testing.T) {
-	store := openTestStore(t)
-
-	_, err := store.GetInvite(context.Background(), "no-invite")
-	if err == nil || !errors.Is(err, storage.ErrNotFound) {
-		t.Fatalf("expected ErrNotFound for GetInvite, got %v", err)
-	}
-}
-
-func TestUpdateInviteStatusZeroTime(t *testing.T) {
-	store := openTestStore(t)
-	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
-	seedCampaign(t, store, "camp-inv-zero", now)
-	seedParticipant(t, store, "camp-inv-zero", "part-1", "user-1", now)
-
-	inv := storage.InviteRecord{
-		ID:                     "inv-zero",
-		CampaignID:             "camp-inv-zero",
-		ParticipantID:          "part-1",
-		Status:                 invite.StatusPending,
-		CreatedByParticipantID: "part-1",
-		CreatedAt:              now,
-		UpdatedAt:              now,
-	}
-	if err := store.PutInvite(context.Background(), inv); err != nil {
-		t.Fatalf("put invite: %v", err)
-	}
-
-	// Zero time should auto-fill
-	if err := store.UpdateInviteStatus(context.Background(), "inv-zero", invite.StatusClaimed, time.Time{}); err != nil {
-		t.Fatalf("update invite status with zero time: %v", err)
-	}
-
-	got, err := store.GetInvite(context.Background(), "inv-zero")
-	if err != nil {
-		t.Fatalf("get invite: %v", err)
-	}
-	if got.Status != invite.StatusClaimed {
-		t.Fatalf("expected status claimed, got %v", got.Status)
-	}
-}
-
-func TestListInvitesWithRecipientFilter(t *testing.T) {
-	store := openTestStore(t)
-	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
-	seedCampaign(t, store, "camp-inv-recip", now)
-	seedParticipant(t, store, "camp-inv-recip", "part-1", "user-1", now)
-	seedParticipant(t, store, "camp-inv-recip", "part-2", "user-2", now)
-
-	inv1 := storage.InviteRecord{
-		ID: "inv-r1", CampaignID: "camp-inv-recip", ParticipantID: "part-1",
-		RecipientUserID: "user-1", Status: invite.StatusPending,
-		CreatedByParticipantID: "part-1", CreatedAt: now, UpdatedAt: now,
-	}
-	inv2 := storage.InviteRecord{
-		ID: "inv-r2", CampaignID: "camp-inv-recip", ParticipantID: "part-2",
-		RecipientUserID: "user-2", Status: invite.StatusPending,
-		CreatedByParticipantID: "part-2", CreatedAt: now, UpdatedAt: now,
-	}
-	if err := store.PutInvite(context.Background(), inv1); err != nil {
-		t.Fatalf("put invite 1: %v", err)
-	}
-	if err := store.PutInvite(context.Background(), inv2); err != nil {
-		t.Fatalf("put invite 2: %v", err)
-	}
-
-	// Filter by recipient
-	page, err := store.ListInvites(context.Background(), "camp-inv-recip", "user-1", invite.StatusUnspecified, 10, "")
-	if err != nil {
-		t.Fatalf("list invites with recipient filter: %v", err)
-	}
-	if len(page.Invites) != 1 || page.Invites[0].ID != "inv-r1" {
-		t.Fatalf("expected 1 invite for user-1, got %d", len(page.Invites))
-	}
-
-	// Filter by recipient + status
-	page2, err := store.ListInvites(context.Background(), "camp-inv-recip", "user-1", invite.StatusPending, 10, "")
-	if err != nil {
-		t.Fatalf("list invites with recipient+status filter: %v", err)
-	}
-	if len(page2.Invites) != 1 {
-		t.Fatalf("expected 1 invite with pending status for user-1, got %d", len(page2.Invites))
-	}
-
-	// No filter returns all
-	all, err := store.ListInvites(context.Background(), "camp-inv-recip", "", invite.StatusUnspecified, 10, "")
-	if err != nil {
-		t.Fatalf("list invites no filter: %v", err)
-	}
-	if len(all.Invites) != 2 {
-		t.Fatalf("expected 2 invites, got %d", len(all.Invites))
 	}
 }
 

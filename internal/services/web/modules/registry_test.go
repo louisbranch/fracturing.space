@@ -9,6 +9,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
@@ -73,7 +74,7 @@ func TestDefaultPublicModulesExposeDiscoveryProfileInviteWhenDependenciesAreConf
 			},
 			Invite: InviteDependencies{
 				AuthClient:   authv1.NewAuthServiceClient(conn),
-				InviteClient: gamev1.NewInviteServiceClient(conn),
+				InviteClient: invitev1.NewInviteServiceClient(conn),
 			},
 		},
 		Principal:        principal.Principal{},
@@ -234,6 +235,7 @@ func TestRegistryBuildIncludesCampaignsWhenDependencySetIsComplete(t *testing.T)
 	BindAuthDependency(&deps, conn)
 	BindSocialDependency(&deps, conn)
 	BindGameDependency(&deps, conn)
+	BindInviteDependency(&deps, conn)
 	BindAIDependency(&deps, conn)
 	BindDiscoveryDependency(&deps, conn)
 

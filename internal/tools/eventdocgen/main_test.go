@@ -225,32 +225,10 @@ func TestRenderCatalog_UsesEventValueEmitterAndPayloadMapping(t *testing.T) {
 				},
 			},
 		},
-		{
-			Events: []eventDef{
-				{
-					Owner:     "Core",
-					Name:      "eventTypeCreated",
-					Value:     "invite.created",
-					DefinedAt: "internal/services/game/domain/invite/decider.go:17",
-					Payload:   "CreatePayload",
-				},
-			},
-			Payloads: map[string]payloadDef{
-				"CreatePayload": {
-					Owner:     "Core",
-					Name:      "CreatePayload",
-					DefinedAt: "internal/services/game/domain/invite/payload.go:4",
-					Fields: []payloadField{
-						{Name: "InviteID", Type: "string", JSONTag: "json:\"invite_id\""},
-					},
-				},
-			},
-		},
 	}
 
 	emitters := map[string][]string{
 		"campaign.created": {"internal/services/game/domain/campaign/decider.go:100"},
-		"invite.created":   {"internal/services/game/domain/invite/decider.go:69"},
 	}
 
 	output, err := renderCatalog(packages, emitters)
@@ -260,11 +238,8 @@ func TestRenderCatalog_UsesEventValueEmitterAndPayloadMapping(t *testing.T) {
 
 	checks := []string{
 		"| `campaign.created` | `campaign` | `created` | `eventTypeCreated` | `CreatePayload` | 1 |",
-		"| `invite.created` | `invite` | `created` | `eventTypeCreated` | `CreatePayload` | 1 |",
 		"- Payload: `CreatePayload` (`internal/services/game/domain/campaign/payload.go:4`)",
-		"- Payload: `CreatePayload` (`internal/services/game/domain/invite/payload.go:4`)",
 		"| `Name` | `name` | `string` | yes |",
-		"| `InviteID` | `invite_id` | `string` | yes |",
 	}
 	for _, check := range checks {
 		if !strings.Contains(output, check) {

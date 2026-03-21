@@ -5,6 +5,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"google.golang.org/grpc"
 )
@@ -22,16 +23,13 @@ type SessionMutationClient interface {
 
 // InviteReadClient exposes invite queries for campaign workspace pages.
 type InviteReadClient interface {
-	ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error)
-	GetPublicInvite(context.Context, *statev1.GetPublicInviteRequest, ...grpc.CallOption) (*statev1.GetPublicInviteResponse, error)
+	ListInvites(context.Context, *invitev1.ListInvitesRequest, ...grpc.CallOption) (*invitev1.ListInvitesResponse, error)
 }
 
 // InviteMutationClient exposes invite mutations for campaign workspace pages.
 type InviteMutationClient interface {
-	CreateInvite(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error)
-	ClaimInvite(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error)
-	DeclineInvite(context.Context, *statev1.DeclineInviteRequest, ...grpc.CallOption) (*statev1.DeclineInviteResponse, error)
-	RevokeInvite(context.Context, *statev1.RevokeInviteRequest, ...grpc.CallOption) (*statev1.RevokeInviteResponse, error)
+	CreateInvite(context.Context, *invitev1.CreateInviteRequest, ...grpc.CallOption) (*invitev1.CreateInviteResponse, error)
+	RevokeInvite(context.Context, *invitev1.RevokeInviteRequest, ...grpc.CallOption) (*invitev1.RevokeInviteResponse, error)
 }
 
 // AuthClient resolves auth-owned users from usernames for invite targeting.

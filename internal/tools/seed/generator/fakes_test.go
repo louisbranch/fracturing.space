@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"google.golang.org/grpc"
 )
 
@@ -50,18 +51,18 @@ func (f *fakeParticipantCreator) CreateParticipant(ctx context.Context, in *stat
 
 // fakeInviteManager implements inviteManager with injectable functions.
 type fakeInviteManager struct {
-	createInvite func(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error)
-	claimInvite  func(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error)
+	createInvite func(context.Context, *invitev1.CreateInviteRequest, ...grpc.CallOption) (*invitev1.CreateInviteResponse, error)
+	claimInvite  func(context.Context, *invitev1.ClaimInviteRequest, ...grpc.CallOption) (*invitev1.ClaimInviteResponse, error)
 }
 
-func (f *fakeInviteManager) CreateInvite(ctx context.Context, in *statev1.CreateInviteRequest, opts ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
+func (f *fakeInviteManager) CreateInvite(ctx context.Context, in *invitev1.CreateInviteRequest, opts ...grpc.CallOption) (*invitev1.CreateInviteResponse, error) {
 	if f.createInvite != nil {
 		return f.createInvite(ctx, in, opts...)
 	}
 	return nil, fmt.Errorf("CreateInvite: not implemented")
 }
 
-func (f *fakeInviteManager) ClaimInvite(ctx context.Context, in *statev1.ClaimInviteRequest, opts ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
+func (f *fakeInviteManager) ClaimInvite(ctx context.Context, in *invitev1.ClaimInviteRequest, opts ...grpc.CallOption) (*invitev1.ClaimInviteResponse, error) {
 	if f.claimInvite != nil {
 		return f.claimInvite(ctx, in, opts...)
 	}

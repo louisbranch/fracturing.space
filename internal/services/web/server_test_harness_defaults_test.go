@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
@@ -165,12 +166,12 @@ func defaultSessionClient() fakeWebSessionClient {
 }
 
 func defaultInviteClient() fakeWebInviteClient {
-	return fakeWebInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
+	return fakeWebInviteClient{response: &invitev1.ListInvitesResponse{Invites: []*invitev1.Invite{{
 		Id:              "inv-1",
 		CampaignId:      "c1",
 		ParticipantId:   "p1",
 		RecipientUserId: "user-2",
-		Status:          statev1.InviteStatus_PENDING,
+		Status:          invitev1.InviteStatus_PENDING,
 	}}}}
 }
 

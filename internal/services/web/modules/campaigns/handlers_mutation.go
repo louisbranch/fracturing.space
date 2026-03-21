@@ -141,12 +141,17 @@ func (h inviteHandlers) handleInviteCreate(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.invites.mutation.CreateInvite(ctx, campaignID, parseCreateInviteInput(r.Form)); err != nil {
+	input := parseCreateInviteInput(r.Form)
+	if err := h.invites.mutation.CreateInvite(ctx, campaignID, input); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_invite", routepath.AppCampaignInvites(campaignID))
 		return
 	}
 	h.sync.InviteChanged(ctx, []string{userID}, campaignID)
-	h.writeMutationSuccess(w, r, "web.campaigns.notice_invite_created", routepath.AppCampaignInvites(campaignID))
+	noticeKey := "web.campaigns.notice_invite_created"
+	if input.RecipientUsername != "" {
+		noticeKey = "web.campaigns.notice_invite_sent"
+	}
+	h.writeMutationSuccess(w, r, noticeKey, routepath.AppCampaignInvites(campaignID))
 }
 
 // handleParticipantCreate handles this route in the module transport layer.

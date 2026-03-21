@@ -11,7 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
-	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 )
 
 // NewDependencies returns module dependency defaults with shared runtime
@@ -49,8 +49,16 @@ func BindGameDependency(deps *Dependencies, conn *grpc.ClientConn) {
 		return
 	}
 	campaigns.BindGameDependency(&deps.Campaigns, conn)
-	invite.BindGameDependency(&deps.Invite, conn)
 	deps.DashboardSync.GameEventClient = statev1.NewEventServiceClient(conn)
+}
+
+// BindInviteDependency wires invite-service clients into the module dependency set.
+func BindInviteDependency(deps *Dependencies, conn *grpc.ClientConn) {
+	if deps == nil || conn == nil {
+		return
+	}
+	campaigns.BindInviteDependency(&deps.Campaigns, conn)
+	invite.BindInviteDependency(&deps.Invite, conn)
 }
 
 // BindAIDependency wires AI-backed clients into the module dependency set.

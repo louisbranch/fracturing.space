@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	domainerrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
@@ -18,9 +18,9 @@ import (
 
 // InviteClient exposes public invite reads and claim/decline mutations.
 type InviteClient interface {
-	GetPublicInvite(context.Context, *gamev1.GetPublicInviteRequest, ...grpc.CallOption) (*gamev1.GetPublicInviteResponse, error)
-	ClaimInvite(context.Context, *gamev1.ClaimInviteRequest, ...grpc.CallOption) (*gamev1.ClaimInviteResponse, error)
-	DeclineInvite(context.Context, *gamev1.DeclineInviteRequest, ...grpc.CallOption) (*gamev1.DeclineInviteResponse, error)
+	GetPublicInvite(context.Context, *invitev1.GetPublicInviteRequest, ...grpc.CallOption) (*invitev1.GetPublicInviteResponse, error)
+	ClaimInvite(context.Context, *invitev1.ClaimInviteRequest, ...grpc.CallOption) (*invitev1.ClaimInviteResponse, error)
+	DeclineInvite(context.Context, *invitev1.DeclineInviteRequest, ...grpc.CallOption) (*invitev1.DeclineInviteResponse, error)
 }
 
 // AuthClient exposes the join-grant issuance needed before claiming an invite.
@@ -44,7 +44,7 @@ func NewGRPCGateway(invites InviteClient, auth AuthClient) inviteapp.Gateway {
 
 // GetPublicInvite translates the public game invite read into the web app model.
 func (g GRPCGateway) GetPublicInvite(ctx context.Context, inviteID string) (inviteapp.PublicInvite, error) {
-	resp, err := g.Invites.GetPublicInvite(ctx, &gamev1.GetPublicInviteRequest{InviteId: strings.TrimSpace(inviteID)})
+	resp, err := g.Invites.GetPublicInvite(ctx, &invitev1.GetPublicInviteRequest{InviteId: strings.TrimSpace(inviteID)})
 	if err != nil {
 		return inviteapp.PublicInvite{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnavailable,
@@ -60,7 +60,7 @@ func (g GRPCGateway) GetPublicInvite(ctx context.Context, inviteID string) (invi
 		InviteID:        strings.TrimSpace(invite.GetId()),
 		CampaignID:      strings.TrimSpace(invite.GetCampaignId()),
 		CampaignName:    strings.TrimSpace(resp.GetCampaign().GetName()),
-		CampaignStatus:  resp.GetCampaign().GetStatus().String(),
+		CampaignStatus:  strings.TrimSpace(resp.GetCampaign().GetStatus()),
 		ParticipantID:   strings.TrimSpace(invite.GetParticipantId()),
 		ParticipantName: strings.TrimSpace(resp.GetParticipant().GetName()),
 		RecipientUserID: strings.TrimSpace(invite.GetRecipientUserId()),
@@ -86,7 +86,7 @@ func (g GRPCGateway) AcceptInvite(ctx context.Context, viewerUserID string, invi
 			FallbackMessage: "failed to accept invite",
 		})
 	}
-	_, err = g.Invites.ClaimInvite(grpcauthctx.WithUserID(ctx, viewerUserID), &gamev1.ClaimInviteRequest{
+	_, err = g.Invites.ClaimInvite(grpcauthctx.WithUserID(ctx, viewerUserID), &invitev1.ClaimInviteRequest{
 		CampaignId: invite.CampaignID,
 		InviteId:   invite.InviteID,
 		JoinGrant:  grantResp.GetJoinGrant(),
@@ -106,7 +106,7 @@ func (g GRPCGateway) AcceptInvite(ctx context.Context, viewerUserID string, invi
 
 // DeclineInvite sends the recipient-owned decline mutation through the game API.
 func (g GRPCGateway) DeclineInvite(ctx context.Context, viewerUserID string, inviteID string) error {
-	_, err := g.Invites.DeclineInvite(grpcauthctx.WithUserID(ctx, viewerUserID), &gamev1.DeclineInviteRequest{
+	_, err := g.Invites.DeclineInvite(grpcauthctx.WithUserID(ctx, viewerUserID), &invitev1.DeclineInviteRequest{
 		InviteId: strings.TrimSpace(inviteID),
 	})
 	if err != nil {
@@ -119,14 +119,14 @@ func (g GRPCGateway) DeclineInvite(ctx context.Context, viewerUserID string, inv
 	return nil
 }
 
-// mapInviteStatus normalizes game transport enums into the smaller public-web set.
-func mapInviteStatus(status gamev1.InviteStatus) inviteapp.InviteStatus {
+// mapInviteStatus normalizes invite transport enums into the smaller public-web set.
+func mapInviteStatus(status invitev1.InviteStatus) inviteapp.InviteStatus {
 	switch status {
-	case gamev1.InviteStatus_CLAIMED:
+	case invitev1.InviteStatus_CLAIMED:
 		return inviteapp.InviteStatusClaimed
-	case gamev1.InviteStatus_DECLINED:
+	case invitev1.InviteStatus_DECLINED:
 		return inviteapp.InviteStatusDeclined
-	case gamev1.InviteStatus_REVOKED:
+	case invitev1.InviteStatus_REVOKED:
 		return inviteapp.InviteStatusRevoked
 	default:
 		return inviteapp.InviteStatusPending

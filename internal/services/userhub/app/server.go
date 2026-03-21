@@ -12,6 +12,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
@@ -39,6 +40,7 @@ type RuntimeConfig struct {
 	Port              int
 	AuthAddr          string
 	GameAddr          string
+	InviteAddr        string
 	SocialAddr        string
 	NotificationsAddr string
 	StatusAddr        string
@@ -57,6 +59,7 @@ type Server struct {
 
 	authMc          *platformgrpc.ManagedConn
 	gameMc          *platformgrpc.ManagedConn
+	inviteMc        *platformgrpc.ManagedConn
 	socialMc        *platformgrpc.ManagedConn
 	notificationsMc *platformgrpc.ManagedConn
 	statusMc        *platformgrpc.ManagedConn
@@ -127,6 +130,20 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		return nil, fmt.Errorf("userhub: managed conn game: %w", err)
 	}
 
+	inviteMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "invite",
+		Addr:             normalized.InviteAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             logf,
+		StatusReporter:   reporter,
+		StatusCapability: "userhub.invite.integration",
+	})
+	if err != nil {
+		authMc.Close()
+		gameMc.Close()
+		return nil, fmt.Errorf("userhub: managed conn invite: %w", err)
+	}
+
 	socialMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "social",
 		Addr:             normalized.SocialAddr,
@@ -138,6 +155,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	if err != nil {
 		authMc.Close()
 		gameMc.Close()
+		inviteMc.Close()
 		return nil, fmt.Errorf("userhub: managed conn social: %w", err)
 	}
 
@@ -152,6 +170,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	if err != nil {
 		authMc.Close()
 		gameMc.Close()
+		inviteMc.Close()
 		socialMc.Close()
 		return nil, fmt.Errorf("userhub: managed conn notifications: %w", err)
 	}
@@ -160,7 +179,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	authGateway := newGRPCAuthGateway(authv1.NewAuthServiceClient(authMc.Conn()))
 	gameGateway := newGRPCGameGateway(
 		gamev1.NewCampaignServiceClient(gameMc.Conn()),
-		gamev1.NewInviteServiceClient(gameMc.Conn()),
+		invitev1.NewInviteServiceClient(inviteMc.Conn()),
 		gamev1.NewSessionServiceClient(gameMc.Conn()),
 	)
 	eventClient := gamev1.NewEventServiceClient(gameMc.Conn())
@@ -198,6 +217,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	if err != nil {
 		authMc.Close()
 		gameMc.Close()
+		inviteMc.Close()
 		socialMc.Close()
 		notificationsMc.Close()
 		return nil, fmt.Errorf("listen on userhub port %d: %w", normalized.Port, err)
@@ -226,6 +246,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	if err != nil {
 		authMc.Close()
 		gameMc.Close()
+		inviteMc.Close()
 		socialMc.Close()
 		notificationsMc.Close()
 		listener.Close()
@@ -249,6 +270,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		reporter:                   reporter,
 		authMc:                     authMc,
 		gameMc:                     gameMc,
+		inviteMc:                   inviteMc,
 		socialMc:                   socialMc,
 		notificationsMc:            notificationsMc,
 		statusMc:                   statusMc,
@@ -338,6 +360,7 @@ func (s *Server) Close() {
 		closeManagedConn(s.statusMc, "status")
 		closeManagedConn(s.notificationsMc, "notifications")
 		closeManagedConn(s.socialMc, "social")
+		closeManagedConn(s.inviteMc, "invite")
 		closeManagedConn(s.gameMc, "game")
 		closeManagedConn(s.authMc, "auth")
 	})
@@ -349,6 +372,9 @@ func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
 	}
 	if strings.TrimSpace(cfg.GameAddr) == "" {
 		return RuntimeConfig{}, fmt.Errorf("game address is required")
+	}
+	if strings.TrimSpace(cfg.InviteAddr) == "" {
+		return RuntimeConfig{}, fmt.Errorf("invite address is required")
 	}
 	if strings.TrimSpace(cfg.SocialAddr) == "" {
 		return RuntimeConfig{}, fmt.Errorf("social address is required")

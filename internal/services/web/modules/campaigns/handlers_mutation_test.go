@@ -366,7 +366,7 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			path:         routepath.AppCampaignInviteCreate("c1"),
 			body:         "participant_id=p-1&username=alice",
 			wantLocation: routepath.AppCampaignInvites("c1"),
-			wantFlashKey: "web.campaigns.notice_invite_created",
+			wantFlashKey: "web.campaigns.notice_invite_sent",
 		},
 		{
 			name:         "invite revoke",

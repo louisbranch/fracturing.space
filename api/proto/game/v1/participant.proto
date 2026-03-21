@@ -59,6 +59,11 @@ service ParticipantService {
 
   // Get a participant by campaign ID and participant ID.
   rpc GetParticipant(GetParticipantRequest) returns (GetParticipantResponse);
+
+  // Bind a user to an unoccupied participant seat.
+  // Internal-only: caller must have verified authorization (e.g. join grant).
+  // Enforces: seat is active, not AI, not already bound, one user per campaign.
+  rpc BindParticipant(BindParticipantRequest) returns (BindParticipantResponse);
 }
 
 message CreateParticipantRequest {
@@ -172,5 +177,20 @@ message GetParticipantRequest {
 }
 
 message GetParticipantResponse {
+  Participant participant = 1;
+}
+
+message BindParticipantRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The participant seat to bind.
+  string participant_id = 2;
+
+  // The user to bind to the seat.
+  string user_id = 3;
+}
+
+message BindParticipantResponse {
   Participant participant = 1;
 }

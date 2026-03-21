@@ -520,15 +520,15 @@ func TestForkCampaign_PublicSeatClaimResyncsControlledCharacterAvatar(t *testing
 		t.Fatalf("ForkCampaign returned error: %v", err)
 	}
 
-	if len(domain.commands) != 5 {
-		t.Fatalf("expected 5 commands, got %d", len(domain.commands))
+	if len(domain.commands) != 6 {
+		t.Fatalf("expected 6 commands, got %d", len(domain.commands))
 	}
-	if domain.commands[4].Type != command.Type("character.update") {
-		t.Fatalf("command[4] type = %s, want character.update", domain.commands[4].Type)
+	if domain.commands[5].Type != command.Type("character.update") {
+		t.Fatalf("command[5] type = %s, want character.update", domain.commands[5].Type)
 	}
 
 	var payload character.UpdatePayload
-	if err := json.Unmarshal(domain.commands[4].PayloadJSON, &payload); err != nil {
+	if err := json.Unmarshal(domain.commands[5].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode character update payload: %v", err)
 	}
 	if payload.Fields["avatar_set_id"] != "avatar-set-1" {

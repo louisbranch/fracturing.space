@@ -1,11 +1,10 @@
 package invite
 
 import (
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	grpc "google.golang.org/grpc"
-
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	invitegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/gateway"
+	grpc "google.golang.org/grpc"
 )
 
 // Dependencies contains public invite reads/mutations.
@@ -22,10 +21,10 @@ func BindAuthDependency(deps *Dependencies, conn *grpc.ClientConn) {
 	deps.AuthClient = authv1.NewAuthServiceClient(conn)
 }
 
-// BindGameDependency wires game-backed clients into the invite dependency set.
-func BindGameDependency(deps *Dependencies, conn *grpc.ClientConn) {
+// BindInviteDependency wires invite-service clients into the invite dependency set.
+func BindInviteDependency(deps *Dependencies, conn *grpc.ClientConn) {
 	if deps == nil || conn == nil {
 		return
 	}
-	deps.InviteClient = statev1.NewInviteServiceClient(conn)
+	deps.InviteClient = invitev1.NewInviteServiceClient(conn)
 }

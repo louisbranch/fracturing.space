@@ -8,6 +8,7 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -387,8 +388,9 @@ func TestIsBlockedMethod(t *testing.T) {
 		{statev1.ParticipantService_CreateParticipant_FullMethodName, true},
 		{statev1.ParticipantService_UpdateParticipant_FullMethodName, true},
 		{statev1.ParticipantService_DeleteParticipant_FullMethodName, true},
-		{statev1.InviteService_CreateInvite_FullMethodName, true},
-		{statev1.InviteService_ClaimInvite_FullMethodName, true},
+		// Invite methods are now handled by the invite service, not the game service.
+		{invitev1.InviteService_CreateInvite_FullMethodName, false},
+		{invitev1.InviteService_ClaimInvite_FullMethodName, false},
 		{statev1.CharacterService_CreateCharacter_FullMethodName, true},
 		{statev1.CharacterService_UpdateCharacter_FullMethodName, true},
 		{statev1.CharacterService_DeleteCharacter_FullMethodName, true},
@@ -404,7 +406,7 @@ func TestIsBlockedMethod(t *testing.T) {
 		// Not blocked methods
 		{statev1.ParticipantService_ListParticipants_FullMethodName, false},
 		{statev1.ParticipantService_GetParticipant_FullMethodName, false},
-		{statev1.InviteService_RevokeInvite_FullMethodName, false},
+		{invitev1.InviteService_RevokeInvite_FullMethodName, false},
 		{statev1.CharacterService_ListCharacters_FullMethodName, false},
 		{statev1.CharacterService_GetCharacterSheet_FullMethodName, false},
 		{statev1.SnapshotService_GetSnapshot_FullMethodName, false},

@@ -8,6 +8,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	"google.golang.org/grpc"
@@ -36,7 +37,7 @@ func TestCampaignServiceHandlersWithUnavailableClients(t *testing.T) {
 		statev1.NewCampaignServiceClient(conn),
 		statev1.NewCharacterServiceClient(conn),
 		statev1.NewParticipantServiceClient(conn),
-		statev1.NewInviteServiceClient(conn),
+		invitev1.NewInviteServiceClient(conn),
 		statev1.NewSessionServiceClient(conn),
 		statev1.NewEventServiceClient(conn),
 		authv1.NewAuthServiceClient(conn),
@@ -178,11 +179,11 @@ func (c *fakeParticipantClient) GetParticipant(context.Context, *statev1.GetPart
 }
 
 type fakeInviteClient struct {
-	statev1.InviteServiceClient
-	listResp *statev1.ListInvitesResponse
+	invitev1.InviteServiceClient
+	listResp *invitev1.ListInvitesResponse
 }
 
-func (c *fakeInviteClient) ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error) {
+func (c *fakeInviteClient) ListInvites(context.Context, *invitev1.ListInvitesRequest, ...grpc.CallOption) (*invitev1.ListInvitesResponse, error) {
 	return c.listResp, nil
 }
 
@@ -269,8 +270,8 @@ func TestCampaignServiceHandlersWithFakeClients(t *testing.T) {
 		},
 	}
 	inviteClient := &fakeInviteClient{
-		listResp: &statev1.ListInvitesResponse{
-			Invites: []*statev1.Invite{{Id: "inv-1", CampaignId: "camp-1", ParticipantId: "part-1", RecipientUserId: "user-1", Status: statev1.InviteStatus_PENDING, CreatedAt: now, UpdatedAt: now}},
+		listResp: &invitev1.ListInvitesResponse{
+			Invites: []*invitev1.Invite{{Id: "inv-1", CampaignId: "camp-1", ParticipantId: "part-1", RecipientUserId: "user-1", Status: invitev1.InviteStatus_PENDING, CreatedAt: now, UpdatedAt: now}},
 		},
 	}
 	eventClient := &fakeEventClient{

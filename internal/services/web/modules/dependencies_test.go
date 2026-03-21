@@ -71,17 +71,19 @@ func TestBindDependenciesWireOwnedModuleClients(t *testing.T) {
 	if deps.Campaigns.SessionClient == nil {
 		t.Fatal("Campaigns.SessionClient = nil, want client")
 	}
-	if deps.Campaigns.InviteClient == nil {
-		t.Fatal("Campaigns.InviteClient = nil, want client")
-	}
-	if deps.Invite.InviteClient == nil {
-		t.Fatal("Invite.InviteClient = nil, want client")
-	}
 	if deps.Campaigns.AuthorizationClient == nil {
 		t.Fatal("Campaigns.AuthorizationClient = nil, want client")
 	}
 	if deps.DashboardSync.GameEventClient == nil {
 		t.Fatal("DashboardSync.GameEventClient = nil, want client")
+	}
+
+	BindInviteDependency(&deps, conn)
+	if deps.Campaigns.InviteClient == nil {
+		t.Fatal("Campaigns.InviteClient = nil, want client")
+	}
+	if deps.Invite.InviteClient == nil {
+		t.Fatal("Invite.InviteClient = nil, want client")
 	}
 
 	BindAIDependency(&deps, conn)
@@ -134,6 +136,8 @@ func TestBindDependenciesIgnoreNilInputs(t *testing.T) {
 	BindSocialDependency(&deps, nil)
 	BindGameDependency(nil, conn)
 	BindGameDependency(&deps, nil)
+	BindInviteDependency(nil, conn)
+	BindInviteDependency(&deps, nil)
 	BindAIDependency(nil, conn)
 	BindAIDependency(&deps, nil)
 	BindDiscoveryDependency(nil, conn)

@@ -64,6 +64,10 @@
       ]
     },
     {
+      "name": "invite",
+      "grpc_port": 8095
+    },
+    {
       "name": "notifications",
       "grpc_port": 8088
     },

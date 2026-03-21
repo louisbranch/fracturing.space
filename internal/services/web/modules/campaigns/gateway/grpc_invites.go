@@ -7,6 +7,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
@@ -43,10 +44,10 @@ func (g inviteReadGateway) CampaignInvites(ctx context.Context, campaignID strin
 		participantNames[strings.TrimSpace(participant.GetId())] = strings.TrimSpace(participant.GetName())
 	}
 
-	invites, err := grpcpaging.CollectPages[*statev1.Invite, *statev1.Invite](
+	invites, err := grpcpaging.CollectPages[*invitev1.Invite, *invitev1.Invite](
 		ctx, 10,
-		func(ctx context.Context, pageToken string) ([]*statev1.Invite, string, error) {
-			resp, err := g.read.Invite.ListInvites(ctx, &statev1.ListInvitesRequest{
+		func(ctx context.Context, pageToken string) ([]*invitev1.Invite, string, error) {
+			resp, err := g.read.Invite.ListInvites(ctx, &invitev1.ListInvitesRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 				PageToken:  pageToken,
@@ -59,7 +60,7 @@ func (g inviteReadGateway) CampaignInvites(ctx context.Context, campaignID strin
 			}
 			return resp.GetInvites(), resp.GetNextPageToken(), nil
 		},
-		func(invite *statev1.Invite) (*statev1.Invite, bool) {
+		func(invite *invitev1.Invite) (*invitev1.Invite, bool) {
 			return invite, invite != nil
 		},
 	)
@@ -84,6 +85,22 @@ func (g inviteReadGateway) CampaignInvites(ctx context.Context, campaignID strin
 	return result, nil
 }
 
+// inviteStatusLabel translates invite status enums to display labels.
+func inviteStatusLabel(s invitev1.InviteStatus) string {
+	switch s {
+	case invitev1.InviteStatus_PENDING:
+		return "Pending"
+	case invitev1.InviteStatus_CLAIMED:
+		return "Claimed"
+	case invitev1.InviteStatus_REVOKED:
+		return "Revoked"
+	case invitev1.InviteStatus_DECLINED:
+		return "Declined"
+	default:
+		return "Unspecified"
+	}
+}
+
 // CreateInvite executes package-scoped creation behavior for this flow.
 func (g inviteMutationGateway) CreateInvite(ctx context.Context, campaignID string, input campaignapp.CreateInviteInput) error {
 	if g.mutation.Invite == nil {
@@ -102,7 +119,7 @@ func (g inviteMutationGateway) CreateInvite(ctx context.Context, campaignID stri
 		return err
 	}
 
-	_, err = g.mutation.Invite.CreateInvite(ctx, &statev1.CreateInviteRequest{
+	_, err = g.mutation.Invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
 		CampaignId:      campaignID,
 		ParticipantId:   participantID,
 		RecipientUserId: recipientUserID,
@@ -153,7 +170,7 @@ func (g inviteMutationGateway) resolveInviteRecipientUserID(ctx context.Context,
 
 // resolveInviteRecipientUsernames batches best-effort auth lookups so invite pages
 // do not serialize one remote call per rendered row.
-func (g inviteReadGateway) resolveInviteRecipientUsernames(ctx context.Context, invites []*statev1.Invite) map[string]string {
+func (g inviteReadGateway) resolveInviteRecipientUsernames(ctx context.Context, invites []*invitev1.Invite) map[string]string {
 	result := map[string]string{}
 	if g.read.Auth == nil || len(invites) == 0 {
 		return result
@@ -224,7 +241,7 @@ func (g inviteMutationGateway) RevokeInvite(ctx context.Context, campaignID stri
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.invite_id_is_required", "invite id is required")
 	}
 
-	_, err := g.mutation.Invite.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: inviteID})
+	_, err := g.mutation.Invite.RevokeInvite(ctx, &invitev1.RevokeInviteRequest{InviteId: inviteID})
 	if err != nil {
 		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,

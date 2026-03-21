@@ -17,7 +17,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/eventtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/forktransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/interactiontransport"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/invitetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/scenetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/sessiontransport"
@@ -57,7 +56,6 @@ type campaignRegistrationDeps struct {
 	sessionInteraction storage.SessionInteractionStore
 	sceneInteraction   storage.SceneInteractionStore
 	systemStores       gamegrpc.SystemStores
-	inviteStore        storage.InviteStore
 	claimIndexStore    storage.ClaimIndexStore
 	eventStore         storage.EventStore
 	contentStore       contentstore.DaggerheartContentReadStore
@@ -214,19 +212,9 @@ func buildCampaignServiceDescriptors(
 		Social:                 deps.socialClient,
 		Write:                  deps.writePath,
 		Applier:                deps.applier,
+		ClaimIndex:             deps.claimIndexStore,
+		Event:                  deps.eventStore,
 		ClearCampaignAIBinding: campaigntransport.NewClearCampaignAIBindingFunc(deps.campaignStore, deps.writePath, deps.applier),
-	}, deps.authClient)
-	inviteService := invitetransport.NewService(invitetransport.Deps{
-		Auth:        policy,
-		Campaign:    deps.campaignStore,
-		Participant: deps.participantStore,
-		Character:   deps.characterStore,
-		Invite:      deps.inviteStore,
-		ClaimIndex:  deps.claimIndexStore,
-		Event:       deps.eventStore,
-		Social:      deps.socialClient,
-		Write:       deps.writePath,
-		Applier:     deps.applier,
 	}, deps.authClient)
 	characterService := charactertransport.NewService(charactertransport.Deps{
 		Auth:               policy,
@@ -270,12 +258,6 @@ func buildCampaignServiceDescriptors(
 			healthService: "game.v1.ParticipantService",
 			register: func(server *grpc.Server) {
 				statev1.RegisterParticipantServiceServer(server, participantService)
-			},
-		},
-		{
-			healthService: "game.v1.InviteService",
-			register: func(server *grpc.Server) {
-				statev1.RegisterInviteServiceServer(server, inviteService)
 			},
 		},
 		{

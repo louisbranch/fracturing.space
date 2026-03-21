@@ -6,17 +6,14 @@ import (
 	"context"
 	"testing"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcAddr string, authAddr string) {
+func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcAddr string) {
 	t.Helper()
 
 	conn, err := grpc.NewClient(
@@ -30,19 +27,6 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 	defer conn.Close()
 
 	eventClient := statev1.NewEventServiceClient(conn)
-	inviteClient := statev1.NewInviteServiceClient(conn)
-
-	authConn, err := grpc.NewClient(
-		authAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
-	)
-	if err != nil {
-		t.Fatalf("dial auth gRPC: %v", err)
-	}
-	defer authConn.Close()
-
-	authClient := authv1.NewAuthServiceClient(authConn)
 
 	t.Run("campaign mutations emit events", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
@@ -143,75 +127,9 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		_ = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, lastSeq, "campaign.updated")
 	})
 
-	t.Run("invite claim emits events", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
-		defer cancel()
-		ctxWithUser := suite.ctx(ctx)
-
-		campaignResp, err := suite.campaign.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
-			Name:   "Invite Guardrail Campaign",
-			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			GmMode: statev1.GmMode_HUMAN,
-		})
-		if err != nil {
-			t.Fatalf("create campaign: %v", err)
-		}
-		campaignID := campaignResp.GetCampaign().GetId()
-		ownerPID := campaignResp.GetOwnerParticipant().GetId()
-
-		lastSeq := requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, 0, "campaign.created")
-
-		participantResp, err := suite.participant.CreateParticipant(ctxWithUser, &statev1.CreateParticipantRequest{
-			CampaignId: campaignID,
-			Name:       "Invite Guardrail Player",
-			Role:       statev1.ParticipantRole_PLAYER,
-			Controller: statev1.Controller_CONTROLLER_HUMAN,
-		})
-		if err != nil {
-			t.Fatalf("create participant: %v", err)
-		}
-		participantID := participantResp.GetParticipant().GetId()
-		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, lastSeq, "participant.joined")
-
-		ownerCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerPID))
-		inviteResp, err := inviteClient.CreateInvite(ownerCtx, &statev1.CreateInviteRequest{
-			CampaignId:    campaignID,
-			ParticipantId: participantID,
-		})
-		if err != nil {
-			t.Fatalf("create invite: %v", err)
-		}
-		if inviteResp == nil || inviteResp.Invite == nil {
-			t.Fatal("create invite returned nil invite")
-		}
-		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, lastSeq, "invite.created")
-
-		claimerID := createAuthUser(t, authAddr, "invite-claimer")
-
-		grantResp, err := authClient.IssueJoinGrant(ctx, &authv1.IssueJoinGrantRequest{
-			UserId:        claimerID,
-			CampaignId:    campaignID,
-			InviteId:      inviteResp.Invite.Id,
-			ParticipantId: participantID,
-		})
-		if err != nil {
-			t.Fatalf("issue join grant: %v", err)
-		}
-		if grantResp == nil || grantResp.JoinGrant == "" {
-			t.Fatal("issue join grant returned empty grant")
-		}
-
-		claimCtx := withUserID(ctx, claimerID)
-		_, err = inviteClient.ClaimInvite(claimCtx, &statev1.ClaimInviteRequest{
-			CampaignId: campaignID,
-			InviteId:   inviteResp.Invite.Id,
-			JoinGrant:  grantResp.JoinGrant,
-		})
-		if err != nil {
-			t.Fatalf("claim invite: %v", err)
-		}
-		requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, lastSeq, "participant.bound", "invite.claimed")
-	})
+	// Invite lifecycle events (invite.created, invite.claimed) are now managed
+	// by the standalone invite service and no longer appear in the game event
+	// journal. The game service only emits participant.bound via BindParticipant.
 
 	t.Run("campaign fork emits event", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())

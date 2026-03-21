@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"google.golang.org/grpc"
 )
@@ -265,61 +266,61 @@ func (f fakeWebSessionClient) EndSession(_ context.Context, req *statev1.EndSess
 }
 
 type fakeWebInviteClient struct {
-	response *statev1.ListInvitesResponse
+	response *invitev1.ListInvitesResponse
 	err      error
 }
 
-func (f fakeWebInviteClient) ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error) {
+func (f fakeWebInviteClient) ListInvites(context.Context, *invitev1.ListInvitesRequest, ...grpc.CallOption) (*invitev1.ListInvitesResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
 	if f.response != nil {
 		return f.response, nil
 	}
-	return &statev1.ListInvitesResponse{}, nil
+	return &invitev1.ListInvitesResponse{}, nil
 }
 
-func (f fakeWebInviteClient) GetPublicInvite(context.Context, *statev1.GetPublicInviteRequest, ...grpc.CallOption) (*statev1.GetPublicInviteResponse, error) {
+func (f fakeWebInviteClient) GetPublicInvite(context.Context, *invitev1.GetPublicInviteRequest, ...grpc.CallOption) (*invitev1.GetPublicInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &statev1.GetPublicInviteResponse{Invite: &statev1.Invite{}}, nil
+	return &invitev1.GetPublicInviteResponse{Invite: &invitev1.Invite{}}, nil
 }
 
-func (f fakeWebInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
+func (f fakeWebInviteClient) CreateInvite(_ context.Context, req *invitev1.CreateInviteRequest, _ ...grpc.CallOption) (*invitev1.CreateInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &statev1.CreateInviteResponse{Invite: &statev1.Invite{
+	return &invitev1.CreateInviteResponse{Invite: &invitev1.Invite{
 		Id:              "inv-created",
 		CampaignId:      strings.TrimSpace(req.GetCampaignId()),
 		ParticipantId:   strings.TrimSpace(req.GetParticipantId()),
 		RecipientUserId: strings.TrimSpace(req.GetRecipientUserId()),
-		Status:          statev1.InviteStatus_PENDING,
+		Status:          invitev1.InviteStatus_PENDING,
 	}}, nil
 }
 
-func (f fakeWebInviteClient) ClaimInvite(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
+func (f fakeWebInviteClient) ClaimInvite(context.Context, *invitev1.ClaimInviteRequest, ...grpc.CallOption) (*invitev1.ClaimInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &statev1.ClaimInviteResponse{}, nil
+	return &invitev1.ClaimInviteResponse{}, nil
 }
 
-func (f fakeWebInviteClient) DeclineInvite(context.Context, *statev1.DeclineInviteRequest, ...grpc.CallOption) (*statev1.DeclineInviteResponse, error) {
+func (f fakeWebInviteClient) DeclineInvite(context.Context, *invitev1.DeclineInviteRequest, ...grpc.CallOption) (*invitev1.DeclineInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &statev1.DeclineInviteResponse{}, nil
+	return &invitev1.DeclineInviteResponse{}, nil
 }
 
-func (f fakeWebInviteClient) RevokeInvite(_ context.Context, req *statev1.RevokeInviteRequest, _ ...grpc.CallOption) (*statev1.RevokeInviteResponse, error) {
+func (f fakeWebInviteClient) RevokeInvite(_ context.Context, req *invitev1.RevokeInviteRequest, _ ...grpc.CallOption) (*invitev1.RevokeInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &statev1.RevokeInviteResponse{Invite: &statev1.Invite{
+	return &invitev1.RevokeInviteResponse{Invite: &invitev1.Invite{
 		Id:     strings.TrimSpace(req.GetInviteId()),
-		Status: statev1.InviteStatus_REVOKED,
+		Status: invitev1.InviteStatus_REVOKED,
 	}}, nil
 }
 

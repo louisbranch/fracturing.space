@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	"google.golang.org/grpc"
 )
 
@@ -81,11 +82,11 @@ func fullFakeDeps() generatorDeps {
 			},
 		},
 		invites: &fakeInviteManager{
-			createInvite: func(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-				return &statev1.CreateInviteResponse{Invite: &statev1.Invite{Id: "inv-1"}}, nil
+			createInvite: func(context.Context, *invitev1.CreateInviteRequest, ...grpc.CallOption) (*invitev1.CreateInviteResponse, error) {
+				return &invitev1.CreateInviteResponse{Invite: &invitev1.Invite{Id: "inv-1"}}, nil
 			},
-			claimInvite: func(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
-				return &statev1.ClaimInviteResponse{}, nil
+			claimInvite: func(context.Context, *invitev1.ClaimInviteRequest, ...grpc.CallOption) (*invitev1.ClaimInviteResponse, error) {
+				return &invitev1.ClaimInviteResponse{}, nil
 			},
 		},
 		characters: &fakeCharacterCreator{

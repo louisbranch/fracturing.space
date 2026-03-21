@@ -1,0 +1,231 @@
+syntax = "proto3";
+
+package invite.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1;invitev1";
+
+// InviteStatus represents the lifecycle state of an invite.
+enum InviteStatus {
+  INVITE_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  CLAIMED = 2;
+  REVOKED = 3;
+  DECLINED = 4;
+}
+
+// Invite represents a seat-targeted campaign invite.
+message Invite {
+  string id = 1;
+  string campaign_id = 2;
+  string participant_id = 3;
+  string recipient_user_id = 4;
+  InviteStatus status = 5;
+  string created_by_participant_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// InviteCampaignSummary is a lightweight campaign view for invite responses.
+// Avoids cross-package proto dependencies on game/v1.
+message InviteCampaignSummary {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+}
+
+// InviteParticipantSummary is a lightweight participant view for invite responses.
+message InviteParticipantSummary {
+  string id = 1;
+  string name = 2;
+  string role = 3;
+  string user_id = 4;
+}
+
+// InviteUserSummary is a lightweight user view for invite responses.
+message InviteUserSummary {
+  string id = 1;
+  string username = 2;
+}
+
+// InviteService provides the invite lifecycle operations.
+service InviteService {
+  // Create a seat-targeted invite.
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse);
+
+  // Claim a seat-targeted invite (binds the user to the participant seat).
+  rpc ClaimInvite(ClaimInviteRequest) returns (ClaimInviteResponse);
+
+  // Decline a seat-targeted invite.
+  rpc DeclineInvite(DeclineInviteRequest) returns (DeclineInviteResponse);
+
+  // Revoke an invite.
+  rpc RevokeInvite(RevokeInviteRequest) returns (RevokeInviteResponse);
+
+  // Get an invite by ID.
+  rpc GetInvite(GetInviteRequest) returns (GetInviteResponse);
+
+  // Get the public landing data for an invite by ID.
+  rpc GetPublicInvite(GetPublicInviteRequest) returns (GetPublicInviteResponse);
+
+  // List invites for a campaign.
+  rpc ListInvites(ListInvitesRequest) returns (ListInvitesResponse);
+
+  // List pending invites for a campaign.
+  rpc ListPendingInvites(ListPendingInvitesRequest) returns (ListPendingInvitesResponse);
+
+  // List pending invites for the current user.
+  rpc ListPendingInvitesForUser(ListPendingInvitesForUserRequest) returns (ListPendingInvitesForUserResponse);
+
+  // Lease due integration outbox events for background worker processing.
+  rpc LeaseIntegrationOutboxEvents(LeaseIntegrationOutboxEventsRequest) returns (LeaseIntegrationOutboxEventsResponse);
+
+  // Acknowledge processing outcome for one leased integration outbox event.
+  rpc AckIntegrationOutboxEvent(AckIntegrationOutboxEventRequest) returns (AckIntegrationOutboxEventResponse);
+}
+
+message CreateInviteRequest {
+  string campaign_id = 1;
+  string participant_id = 2;
+  string recipient_user_id = 3;
+  string created_by_participant_id = 4;
+}
+
+message CreateInviteResponse {
+  Invite invite = 1;
+}
+
+message ClaimInviteRequest {
+  string campaign_id = 1;
+  string invite_id = 2;
+  string join_grant = 3;
+}
+
+message ClaimInviteResponse {
+  Invite invite = 1;
+  InviteParticipantSummary participant = 2;
+}
+
+message DeclineInviteRequest {
+  string invite_id = 1;
+}
+
+message DeclineInviteResponse {
+  Invite invite = 1;
+}
+
+message RevokeInviteRequest {
+  string invite_id = 1;
+}
+
+message RevokeInviteResponse {
+  Invite invite = 1;
+}
+
+message GetInviteRequest {
+  string invite_id = 1;
+}
+
+message GetInviteResponse {
+  Invite invite = 1;
+}
+
+message GetPublicInviteRequest {
+  string invite_id = 1;
+}
+
+message GetPublicInviteResponse {
+  Invite invite = 1;
+  InviteCampaignSummary campaign = 2;
+  InviteParticipantSummary participant = 3;
+  InviteUserSummary created_by_user = 4;
+}
+
+message ListInvitesRequest {
+  string campaign_id = 1;
+  string recipient_user_id = 2;
+  InviteStatus status = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListInvitesResponse {
+  repeated Invite invites = 1;
+  string next_page_token = 2;
+}
+
+message ListPendingInvitesRequest {
+  string campaign_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListPendingInvitesResponse {
+  repeated Invite invites = 1;
+  string next_page_token = 2;
+}
+
+message ListPendingInvitesForUserRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+// PendingInviteForUserEntry wraps a pending invite with enriched campaign and
+// participant summaries for dashboard display.
+message PendingInviteForUserEntry {
+  Invite invite = 1;
+  InviteCampaignSummary campaign = 2;
+  InviteParticipantSummary participant = 3;
+}
+
+message ListPendingInvitesForUserResponse {
+  repeated PendingInviteForUserEntry invites = 1;
+  string next_page_token = 2;
+}
+
+// Integration outbox messages for worker polling.
+
+message IntegrationOutboxEvent {
+  string id = 1;
+  string event_type = 2;
+  string payload_json = 3;
+  string dedupe_key = 4;
+  string status = 5;
+  int32 attempt_count = 6;
+  google.protobuf.Timestamp next_attempt_at = 7;
+  string lease_owner = 8;
+  google.protobuf.Timestamp lease_expires_at = 9;
+  string last_error = 10;
+  google.protobuf.Timestamp processed_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message LeaseIntegrationOutboxEventsRequest {
+  string consumer = 1;
+  int32 limit = 2;
+  int64 lease_ttl_ms = 3;
+  google.protobuf.Timestamp now = 4;
+}
+
+message LeaseIntegrationOutboxEventsResponse {
+  repeated IntegrationOutboxEvent events = 1;
+}
+
+enum IntegrationOutboxAckOutcome {
+  INTEGRATION_OUTBOX_ACK_OUTCOME_UNSPECIFIED = 0;
+  INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED = 1;
+  INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY = 2;
+  INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD = 3;
+}
+
+message AckIntegrationOutboxEventRequest {
+  string event_id = 1;
+  string consumer = 2;
+  IntegrationOutboxAckOutcome outcome = 3;
+  google.protobuf.Timestamp next_attempt_at = 4;
+  string last_error = 5;
+}
+
+message AckIntegrationOutboxEventResponse {}

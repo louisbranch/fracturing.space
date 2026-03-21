@@ -34,6 +34,7 @@ const (
 	ServiceUserHub       = "userhub"
 	ServiceWeb           = "web"
 	ServiceWorker        = "worker"
+	ServiceInvite        = "invite"
 )
 
 // RunOptions controls shared entrypoint behavior for service commands.

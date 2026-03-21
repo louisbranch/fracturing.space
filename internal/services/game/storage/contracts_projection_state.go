@@ -85,12 +85,11 @@ type ProjectionWatermarkStore interface {
 }
 
 // CampaignReadStores groups campaign-oriented projection stores consumed by
-// campaign, participant, invite, character, and fork workflows.
+// campaign, participant, character, and fork workflows.
 type CampaignReadStores interface {
 	CampaignStore
 	ParticipantStore
 	ClaimIndexStore
-	InviteStore
 	CharacterStore
 	CampaignForkStore
 }

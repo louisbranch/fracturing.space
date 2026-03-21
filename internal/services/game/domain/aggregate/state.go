@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
@@ -44,7 +43,6 @@ func NewState() State {
 	return State{
 		Participants: make(map[ids.ParticipantID]participant.State),
 		Characters:   make(map[ids.CharacterID]character.State),
-		Invites:      make(map[ids.InviteID]invite.State),
 		Scenes:       make(map[ids.SceneID]scene.State),
 		Systems:      make(map[module.Key]any),
 	}
@@ -58,7 +56,6 @@ func NewState() State {
 // session lifecycle context,
 // participant rosters,
 // character records,
-// invite records,
 // and system-specific state snapshots.
 //
 // The struct is organized by entity maps for efficient command-time reads and
@@ -74,8 +71,6 @@ type State struct {
 	Participants map[ids.ParticipantID]participant.State
 	// Characters stores compact per-character state keyed by character ID.
 	Characters map[ids.CharacterID]character.State
-	// Invites stores compact invite lifecycle state keyed by invite ID.
-	Invites map[ids.InviteID]invite.State
 	// Scenes stores per-scene state keyed by scene ID.
 	Scenes map[ids.SceneID]scene.State
 	// Systems stores per-game-system runtime state keyed by system module key.

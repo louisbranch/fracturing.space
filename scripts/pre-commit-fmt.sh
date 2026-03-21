@@ -39,4 +39,4 @@ MAKE_CMD="${MAKE_CMD:-make}"
 for file in "${staged_go_files[@]}"; do
   "$MAKE_CMD" fmt "FILE=$file"
 done
-git add -- "${staged_go_files[@]}"
+git add -f -- "${staged_go_files[@]}"

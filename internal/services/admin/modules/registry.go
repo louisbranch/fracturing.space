@@ -3,6 +3,7 @@ package modules
 import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/campaigns"
@@ -26,7 +27,7 @@ type BuildInput struct {
 	CampaignClient           statev1.CampaignServiceClient
 	CharacterClient          statev1.CharacterServiceClient
 	ParticipantClient        statev1.ParticipantServiceClient
-	InviteClient             statev1.InviteServiceClient
+	InviteClient             invitev1.InviteServiceClient
 	SessionClient            statev1.SessionServiceClient
 	EventClient              statev1.EventServiceClient
 	StatisticsClient         statev1.StatisticsServiceClient

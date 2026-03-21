@@ -13,6 +13,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -562,12 +563,12 @@ func TestGRPCGatewayCampaignInvitesMapsInviteRows(t *testing.T) {
 
 	g := campaigngateway.NewInviteReadGateway(
 		campaigngateway.InviteReadDeps{
-			Invite: fakeInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
+			Invite: fakeInviteClient{response: &invitev1.ListInvitesResponse{Invites: []*invitev1.Invite{{
 				Id:              "inv-1",
 				CampaignId:      "c1",
 				ParticipantId:   "p1",
 				RecipientUserId: "user-2",
-				Status:          statev1.InviteStatus_PENDING,
+				Status:          invitev1.InviteStatus_PENDING,
 			}}}},
 			Participant: fakeParticipantClient{},
 			Social:      fakeSocialClient{},
@@ -1153,61 +1154,40 @@ func (f fakeSessionClient) EndSession(_ context.Context, req *statev1.EndSession
 }
 
 type fakeInviteClient struct {
-	response *statev1.ListInvitesResponse
+	response *invitev1.ListInvitesResponse
 	err      error
 }
 
-func (f fakeInviteClient) ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error) {
+func (f fakeInviteClient) ListInvites(context.Context, *invitev1.ListInvitesRequest, ...grpc.CallOption) (*invitev1.ListInvitesResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
 	if f.response != nil {
 		return f.response, nil
 	}
-	return &statev1.ListInvitesResponse{}, nil
+	return &invitev1.ListInvitesResponse{}, nil
 }
 
-func (f fakeInviteClient) GetPublicInvite(context.Context, *statev1.GetPublicInviteRequest, ...grpc.CallOption) (*statev1.GetPublicInviteResponse, error) {
+func (f fakeInviteClient) CreateInvite(_ context.Context, req *invitev1.CreateInviteRequest, _ ...grpc.CallOption) (*invitev1.CreateInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &statev1.GetPublicInviteResponse{Invite: &statev1.Invite{}}, nil
-}
-
-func (f fakeInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return &statev1.CreateInviteResponse{Invite: &statev1.Invite{
+	return &invitev1.CreateInviteResponse{Invite: &invitev1.Invite{
 		Id:              "invite-created",
 		CampaignId:      strings.TrimSpace(req.GetCampaignId()),
 		ParticipantId:   strings.TrimSpace(req.GetParticipantId()),
 		RecipientUserId: strings.TrimSpace(req.GetRecipientUserId()),
-		Status:          statev1.InviteStatus_PENDING,
+		Status:          invitev1.InviteStatus_PENDING,
 	}}, nil
 }
 
-func (f fakeInviteClient) ClaimInvite(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
+func (f fakeInviteClient) RevokeInvite(_ context.Context, req *invitev1.RevokeInviteRequest, _ ...grpc.CallOption) (*invitev1.RevokeInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &statev1.ClaimInviteResponse{}, nil
-}
-
-func (f fakeInviteClient) DeclineInvite(context.Context, *statev1.DeclineInviteRequest, ...grpc.CallOption) (*statev1.DeclineInviteResponse, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return &statev1.DeclineInviteResponse{}, nil
-}
-
-func (f fakeInviteClient) RevokeInvite(_ context.Context, req *statev1.RevokeInviteRequest, _ ...grpc.CallOption) (*statev1.RevokeInviteResponse, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return &statev1.RevokeInviteResponse{Invite: &statev1.Invite{
+	return &invitev1.RevokeInviteResponse{Invite: &invitev1.Invite{
 		Id:     strings.TrimSpace(req.GetInviteId()),
-		Status: statev1.InviteStatus_REVOKED,
+		Status: invitev1.InviteStatus_REVOKED,
 	}}, nil
 }
 

@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -15,8 +14,8 @@ import (
 
 func TestCoreFoldEntries_HasExpectedDomainEntries(t *testing.T) {
 	entries := coreFoldEntries()
-	if len(entries) != 7 {
-		t.Fatalf("coreFoldEntries() len = %d, want 7", len(entries))
+	if len(entries) != 6 {
+		t.Fatalf("coreFoldEntries() len = %d, want 6", len(entries))
 	}
 
 	seen := make(map[event.Type]bool)
@@ -33,13 +32,12 @@ func TestCoreFoldEntries_HasExpectedDomainEntries(t *testing.T) {
 	}
 
 	expected := append(
-		append(append(append(append(append(
+		append(append(append(append(
 			campaign.FoldHandledTypes(),
 			session.FoldHandledTypes()...),
 			action.FoldHandledTypes()...),
 			participant.FoldHandledTypes()...),
 			character.FoldHandledTypes()...),
-			invite.FoldHandledTypes()...),
 		scene.FoldHandledTypes()...)
 	for _, evtType := range expected {
 		if !seen[evtType] {
@@ -98,9 +96,6 @@ func TestCoreFoldEntries_FoldFunctionsApplyRepresentativeEvents(t *testing.T) {
 	}
 	if len(state.Characters) != 1 {
 		t.Fatalf("characters map len = %d, want 1", len(state.Characters))
-	}
-	if len(state.Invites) != 1 {
-		t.Fatalf("invites map len = %d, want 1", len(state.Invites))
 	}
 	if len(state.Scenes) != 1 {
 		t.Fatalf("scenes map len = %d, want 1", len(state.Scenes))
@@ -162,8 +157,6 @@ func representativeCoreFoldEvent(evtType event.Type) event.Event {
 		return event.Event{Type: evtType, EntityID: "part-1", PayloadJSON: []byte(`{}`)}
 	case character.EventTypeCreated:
 		return event.Event{Type: evtType, EntityID: "char-1", PayloadJSON: []byte(`{}`)}
-	case invite.EventTypeCreated:
-		return event.Event{Type: evtType, EntityID: "inv-1", PayloadJSON: []byte(`{}`)}
 	case scene.EventTypeCreated:
 		return event.Event{Type: evtType, EntityID: "scene-1", PayloadJSON: []byte(`{"scene_id":"scene-1","name":"Test","character_ids":["c1"]}`)}
 	default:

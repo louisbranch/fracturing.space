@@ -88,7 +88,6 @@ func main() {
 	}{
 		{dir: filepath.Join(root, "internal/services/game/domain/campaign"), owner: "Core"},
 		{dir: filepath.Join(root, "internal/services/game/domain/character"), owner: "Core"},
-		{dir: filepath.Join(root, "internal/services/game/domain/invite"), owner: "Core"},
 		{dir: filepath.Join(root, "internal/services/game/domain/participant"), owner: "Core"},
 		{dir: filepath.Join(root, "internal/services/game/domain/session"), owner: "Core"},
 		{dir: filepath.Join(root, "internal/services/game/domain/action"), owner: "Core"},
@@ -137,7 +136,6 @@ func main() {
 			{dir: filepath.Join(root, "internal/services/game/domain/action"), owner: "Core"},
 			{dir: filepath.Join(root, "internal/services/game/domain/session"), owner: "Core"},
 			{dir: filepath.Join(root, "internal/services/game/domain/participant"), owner: "Core"},
-			{dir: filepath.Join(root, "internal/services/game/domain/invite"), owner: "Core"},
 			{dir: filepath.Join(root, "internal/services/game/domain/character"), owner: "Core"},
 			{dir: filepath.Join(root, "internal/services/game/domain/scene"), owner: "Core"},
 			{dir: filepath.Join(root, "internal/services/game/domain/systems/daggerheart"), owner: "System"},
