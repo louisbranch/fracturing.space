@@ -25,11 +25,20 @@ const baseProps = {
 
 describe("PlayerHUDShell", () => {
   it("assembles the navbar and on-stage panel into a viewport", () => {
-    render(<PlayerHUDShell activeTab="on-stage" onTabChange={() => {}} {...baseProps} />);
+    render(
+      <PlayerHUDShell
+        activeTab="on-stage"
+        campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
+        isSidebarOpen={false}
+        onSidebarOpenChange={() => {}}
+        onTabChange={() => {}}
+        {...baseProps}
+      />,
+    );
 
     expect(screen.getByLabelText("Player HUD shell")).toBeInTheDocument();
     expect(screen.getByLabelText("Player HUD navigation")).toBeInTheDocument();
-    expect(screen.getByLabelText("On Stage")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "On Stage" })).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
     expect(screen.getByText(/banked lightning/i)).toBeInTheDocument();
     expect(screen.getByText(/if this goes wrong, i need to know which compromise/i)).toBeInTheDocument();
@@ -44,14 +53,68 @@ describe("PlayerHUDShell", () => {
   it("forwards tab changes from the navbar", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<PlayerHUDShell activeTab="on-stage" onTabChange={onChange} {...baseProps} />);
+    render(
+      <PlayerHUDShell
+        activeTab="on-stage"
+        campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
+        isSidebarOpen={false}
+        onSidebarOpenChange={() => {}}
+        onTabChange={onChange}
+        {...baseProps}
+      />,
+    );
 
     await user.click(screen.getByText("Backstage"));
     expect(onChange).toHaveBeenCalledWith("backstage");
   });
 
+  it("forwards sidebar toggle requests from the navbar", async () => {
+    const user = userEvent.setup();
+    const onSidebarOpenChange = vi.fn();
+    render(
+      <PlayerHUDShell
+        activeTab="on-stage"
+        campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
+        isSidebarOpen={false}
+        onSidebarOpenChange={onSidebarOpenChange}
+        onTabChange={() => {}}
+        {...baseProps}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open campaign sidebar" }));
+    expect(onSidebarOpenChange).toHaveBeenCalledWith(true);
+  });
+
+  it("forwards sidebar close requests from the navbar when the drawer is open", async () => {
+    const user = userEvent.setup();
+    const onSidebarOpenChange = vi.fn();
+    render(
+      <PlayerHUDShell
+        activeTab="on-stage"
+        campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
+        isSidebarOpen={true}
+        onSidebarOpenChange={onSidebarOpenChange}
+        onTabChange={() => {}}
+        {...baseProps}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close campaign sidebar" }));
+    expect(onSidebarOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("renders the side chat panel when activeTab is side-chat", () => {
-    render(<PlayerHUDShell activeTab="side-chat" onTabChange={() => {}} {...baseProps} />);
+    render(
+      <PlayerHUDShell
+        activeTab="side-chat"
+        campaignNavigation={playerHUDFixtureCatalog.sideChat.campaignNavigation}
+        isSidebarOpen={false}
+        onSidebarOpenChange={() => {}}
+        onTabChange={() => {}}
+        {...baseProps}
+      />,
+    );
 
     expect(screen.getByLabelText("Side chat")).toBeInTheDocument();
     expect(screen.getByLabelText("Side chat messages")).toBeInTheDocument();
@@ -60,10 +123,35 @@ describe("PlayerHUDShell", () => {
   });
 
   it("renders the Backstage panel when activeTab is backstage", () => {
-    render(<PlayerHUDShell activeTab="backstage" onTabChange={() => {}} {...baseProps} />);
+    render(
+      <PlayerHUDShell
+        activeTab="backstage"
+        campaignNavigation={playerHUDFixtureCatalog.backstage.campaignNavigation}
+        isSidebarOpen={false}
+        onSidebarOpenChange={() => {}}
+        onTabChange={() => {}}
+        {...baseProps}
+      />,
+    );
 
-    expect(screen.getByLabelText("Backstage")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Backstage" })).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage OOC messages")).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage participants")).toBeInTheDocument();
+  });
+
+  it("renders the drawer sidebar when it is open", () => {
+    render(
+      <PlayerHUDShell
+        activeTab="on-stage"
+        campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
+        isSidebarOpen={true}
+        onSidebarOpenChange={() => {}}
+        onTabChange={() => {}}
+        {...baseProps}
+      />,
+    );
+
+    expect(screen.getByLabelText("Player HUD sidebar")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Return to Campaign" })).toBeInTheDocument();
   });
 });

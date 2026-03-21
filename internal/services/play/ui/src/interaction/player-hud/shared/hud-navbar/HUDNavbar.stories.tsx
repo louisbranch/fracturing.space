@@ -3,16 +3,18 @@ import { HUDNavbar } from "./HUDNavbar";
 import { hudNavbarFixtures } from "./fixtures";
 
 const meta = {
-  title: "Interaction/Player HUD/Navbar",
+  title: "Interaction/Player HUD/Shared/Navbar",
   component: HUDNavbar,
   tags: ["autodocs"],
   args: {
+    isSidebarOpen: false,
+    onSidebarOpenChange: () => {},
     onTabChange: () => {},
   },
   parameters: {
     docs: {
       description: {
-        component: "Top-level navigation bar for the player HUD with three tab surfaces.",
+        component: "Top-level navigation bar for the player HUD with a left drawer trigger and three tab surfaces.",
       },
     },
   },
