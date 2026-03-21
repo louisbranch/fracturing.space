@@ -12,7 +12,13 @@ function formatTime(iso: string): string {
 // ChatList renders a scrollable list of grouped chat messages. Consecutive
 // messages from the same participant are visually grouped: the name appears on
 // the first message and the avatar on the last in each run.
-export function ChatList({ messages, participants, viewerParticipantId }: ChatListProps) {
+export function ChatList({
+  messages,
+  participants,
+  viewerParticipantId,
+  ariaLabel = "Side chat messages",
+  emptyLabel = "No messages yet",
+}: ChatListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const participantMap = new Map<string, SideChatParticipant>(
     participants.map((p) => [p.id, p]),
@@ -25,17 +31,17 @@ export function ChatList({ messages, participants, viewerParticipantId }: ChatLi
   if (messages.length === 0) {
     return (
       <div
-        aria-label="Side chat messages"
+        aria-label={ariaLabel}
         className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto"
       >
-        <span className="text-sm text-base-content/50">No messages yet</span>
+        <span className="text-sm text-base-content/50">{emptyLabel}</span>
       </div>
     );
   }
 
   return (
     <div
-      aria-label="Side chat messages"
+      aria-label={ariaLabel}
       className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-2"
     >
       {messages.map((msg, i) => {

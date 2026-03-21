@@ -30,7 +30,7 @@ export const Conversation: Story = {
   args: {
     messages: sideChatMessages,
     participants: sideChatParticipants,
-    viewerParticipantId: "p-viewer",
+    viewerParticipantId: "p-rhea",
   },
 };
 
@@ -38,6 +38,6 @@ export const EmptyChat: Story = {
   args: {
     messages: [],
     participants: sideChatParticipants,
-    viewerParticipantId: "p-viewer",
+    viewerParticipantId: "p-rhea",
   },
 };

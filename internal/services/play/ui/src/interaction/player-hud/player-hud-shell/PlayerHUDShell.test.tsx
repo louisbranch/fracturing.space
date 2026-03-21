@@ -1,10 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { sideChatState } from "../shared/fixtures";
+import { backstageFixtureCatalog, sideChatState } from "../shared/fixtures";
 import { PlayerHUDShell } from "./PlayerHUDShell";
 
 const baseProps = {
+  backstage: backstageFixtureCatalog.openDiscussion,
+  backstageDraft: "",
+  onBackstageDraftChange: () => {},
+  onBackstageSend: () => {},
+  onBackstageReadyToggle: () => {},
   sideChat: sideChatState,
   sideChatDraft: "",
   onSideChatDraftChange: () => {},
@@ -18,6 +23,8 @@ describe("PlayerHUDShell", () => {
     expect(screen.getByLabelText("Player HUD shell")).toBeInTheDocument();
     expect(screen.getByLabelText("Player HUD navigation")).toBeInTheDocument();
     expect(screen.getByText("on-stage — content coming soon")).toBeInTheDocument();
+    expect(screen.getByLabelText("On-stage participants")).toBeInTheDocument();
+    expect(screen.getByLabelText("Guide GM authority")).toBeInTheDocument();
   });
 
   it("forwards tab changes from the navbar", async () => {
@@ -35,6 +42,17 @@ describe("PlayerHUDShell", () => {
     expect(screen.getByLabelText("Side chat")).toBeInTheDocument();
     expect(screen.getByLabelText("Side chat messages")).toBeInTheDocument();
     expect(screen.getByLabelText("Chat message input")).toBeInTheDocument();
+    expect(screen.getByLabelText("Side chat participants")).toBeInTheDocument();
+    // Placeholder should not be shown.
+    expect(screen.queryByText(/content coming soon/)).not.toBeInTheDocument();
+  });
+
+  it("renders the Backstage panel when activeTab is backstage", () => {
+    render(<PlayerHUDShell activeTab="backstage" onTabChange={() => {}} {...baseProps} />);
+
+    expect(screen.getByLabelText("Backstage")).toBeInTheDocument();
+    expect(screen.getByLabelText("Backstage OOC messages")).toBeInTheDocument();
+    expect(screen.getByLabelText("Backstage participants")).toBeInTheDocument();
     // Placeholder should not be shown.
     expect(screen.queryByText(/content coming soon/)).not.toBeInTheDocument();
   });

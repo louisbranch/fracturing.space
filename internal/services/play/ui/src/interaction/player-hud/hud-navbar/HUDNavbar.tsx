@@ -4,8 +4,8 @@ import type { HUDNavbarProps } from "./contract";
 
 const tabs: { id: HUDNavbarTab; label: string; icon: typeof Drama; tooltip: string }[] = [
   { id: "on-stage", label: "On Stage", icon: Drama, tooltip: "Play as your character." },
-  { id: "backstage", label: "Backstage", icon: ClipboardList, tooltip: "Resolve rules and issues." },
-  { id: "side-chat", label: "Side Chat", icon: MessagesSquare, tooltip: "Out-of-character chat." },
+  { id: "backstage", label: "Backstage", icon: ClipboardList, tooltip: "Authoritative OOC pauses, rulings, and coordination." },
+  { id: "side-chat", label: "Side Chat", icon: MessagesSquare, tooltip: "Optional non-authoritative session chat." },
 ];
 
 export function HUDNavbar({ activeTab, onTabChange, tabsWithUpdates }: HUDNavbarProps) {
