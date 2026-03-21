@@ -120,6 +120,7 @@ export type WireCharacterInspection = {
 export type WireRealtimeConfig = {
   url: string;
   protocol_version: number;
+  typing_ttl_ms?: number;
 };
 
 export type WireChatSnapshot = {

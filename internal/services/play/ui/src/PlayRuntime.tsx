@@ -2,11 +2,11 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { fetchBootstrap } from "./api/bootstrap";
 import * as mutations from "./api/mutations";
 import type { WSConnection, WSEvent } from "./api/websocket";
-import { connectWebSocket } from "./api/websocket";
+import { FrameType, connectWebSocket } from "./api/websocket";
 import type { BootstrapResponse, WireChatMessage, WireRoomSnapshot } from "./api/types";
 import type { HUDConnectionState, HUDNavbarTab } from "./interaction/player-hud/shared/contract";
 import { PlayerHUDShell } from "./interaction/player-hud/player-hud-shell/PlayerHUDShell";
-import { mapToPlayerHUDState } from "./state/mapper";
+import { isViewerReadyToResume, mapToPlayerHUDState } from "./state/mapper";
 import type { PlayShellConfig } from "./shell_config";
 
 // --- State ---
@@ -14,6 +14,7 @@ import type { PlayShellConfig } from "./shell_config";
 type RuntimeState = {
   phase: "loading" | "ready" | "error";
   errorMessage?: string;
+  mutationError?: string;
   bootstrap: BootstrapResponse | null;
   snapshot: WireRoomSnapshot | null;
   chatMessages: WireChatMessage[];
@@ -32,6 +33,8 @@ type RuntimeAction =
   | { type: "ws-chat-message"; message: WireChatMessage }
   | { type: "ws-connection"; state: HUDConnectionState }
   | { type: "mutation-snapshot"; snapshot: WireRoomSnapshot }
+  | { type: "mutation-error"; message: string }
+  | { type: "dismiss-mutation-error" }
   | { type: "set-tab"; tab: HUDNavbarTab }
   | { type: "set-on-stage-draft"; value: string }
   | { type: "set-backstage-draft"; value: string }
@@ -60,7 +63,7 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
         ...state,
         phase: "ready",
         bootstrap: action.bootstrap,
-        chatMessages: action.bootstrap.chat.messages.map(wireChatMsg),
+        chatMessages: action.bootstrap.chat.messages,
       };
     case "bootstrap-error":
       return { ...state, phase: "error", errorMessage: action.message };
@@ -71,7 +74,11 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
     case "ws-connection":
       return { ...state, connectionState: action.state };
     case "mutation-snapshot":
-      return { ...state, snapshot: action.snapshot };
+      return { ...state, snapshot: action.snapshot, mutationError: undefined };
+    case "mutation-error":
+      return { ...state, mutationError: action.message };
+    case "dismiss-mutation-error":
+      return { ...state, mutationError: undefined };
     case "set-tab":
       return { ...state, activeTab: action.tab };
     case "set-on-stage-draft":
@@ -83,19 +90,6 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
     case "set-sidebar-open":
       return { ...state, isSidebarOpen: action.open };
   }
-}
-
-function wireChatMsg(m: {
-  message_id: string;
-  campaign_id: string;
-  session_id: string;
-  sequence_id: number;
-  sent_at: string;
-  actor: { participant_id: string; name: string };
-  body: string;
-  client_message_id?: string;
-}): WireChatMessage {
-  return m;
 }
 
 // --- Component ---
@@ -158,16 +152,27 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     dispatch({ type: "mutation-snapshot", snapshot });
   }, []);
 
+  const handleMutationError = useCallback((err: unknown) => {
+    dispatch({ type: "mutation-error", message: err instanceof Error ? err.message : "Something went wrong" });
+  }, []);
+
   const handleOnStageSubmit = useCallback(() => {
     const draft = state.onStageDraft.trim();
     if (!draft) return;
-    mutations.submitScenePlayerPost(campaignId, { summary_text: draft }).then(handleMutationSnapshot).catch(() => {});
     dispatch({ type: "set-on-stage-draft", value: "" });
-  }, [campaignId, state.onStageDraft, handleMutationSnapshot]);
+    mutations
+      .submitScenePlayerPost(campaignId, { summary_text: draft })
+      .then(handleMutationSnapshot)
+      .catch((err) => {
+        dispatch({ type: "set-on-stage-draft", value: draft });
+        handleMutationError(err);
+      });
+  }, [campaignId, state.onStageDraft, handleMutationSnapshot, handleMutationError]);
 
   const handleOnStageSubmitAndYield = useCallback(() => {
     const draft = state.onStageDraft.trim();
     if (!draft) return;
+    dispatch({ type: "set-on-stage-draft", value: "" });
     mutations
       .submitScenePlayerPost(campaignId, { summary_text: draft })
       .then((snap) => {
@@ -175,40 +180,46 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
         return mutations.yieldScenePlayerPhase(campaignId);
       })
       .then(handleMutationSnapshot)
-      .catch(() => {});
-    dispatch({ type: "set-on-stage-draft", value: "" });
-  }, [campaignId, state.onStageDraft, handleMutationSnapshot]);
+      .catch((err) => {
+        dispatch({ type: "set-on-stage-draft", value: draft });
+        handleMutationError(err);
+      });
+  }, [campaignId, state.onStageDraft, handleMutationSnapshot, handleMutationError]);
 
   const handleOnStageYield = useCallback(() => {
-    mutations.yieldScenePlayerPhase(campaignId).then(handleMutationSnapshot).catch(() => {});
-  }, [campaignId, handleMutationSnapshot]);
+    mutations.yieldScenePlayerPhase(campaignId).then(handleMutationSnapshot).catch(handleMutationError);
+  }, [campaignId, handleMutationSnapshot, handleMutationError]);
 
   const handleOnStageUnyield = useCallback(() => {
-    mutations.unyieldScenePlayerPhase(campaignId).then(handleMutationSnapshot).catch(() => {});
-  }, [campaignId, handleMutationSnapshot]);
+    mutations.unyieldScenePlayerPhase(campaignId).then(handleMutationSnapshot).catch(handleMutationError);
+  }, [campaignId, handleMutationSnapshot, handleMutationError]);
 
   const handleBackstageSend = useCallback(() => {
     const draft = state.backstageDraft.trim();
     if (!draft) return;
-    mutations.postSessionOOC(campaignId, { body: draft }).then(handleMutationSnapshot).catch(() => {});
     dispatch({ type: "set-backstage-draft", value: "" });
-  }, [campaignId, state.backstageDraft, handleMutationSnapshot]);
+    mutations
+      .postSessionOOC(campaignId, { body: draft })
+      .then(handleMutationSnapshot)
+      .catch((err) => {
+        dispatch({ type: "set-backstage-draft", value: draft });
+        handleMutationError(err);
+      });
+  }, [campaignId, state.backstageDraft, handleMutationSnapshot, handleMutationError]);
 
   const handleBackstageReadyToggle = useCallback(() => {
-    const bootstrap = state.bootstrap;
-    if (!bootstrap) return;
-    const ooc = state.snapshot?.interaction_state?.ooc ?? bootstrap.interaction_state?.ooc;
-    const viewerPID = bootstrap.viewer?.participant_id ?? "";
-    const isReady = ooc?.ready_to_resume_participant_ids?.includes(viewerPID) ?? false;
-    const fn = isReady ? mutations.clearOOCReadyToResume : mutations.markOOCReadyToResume;
-    fn(campaignId).then(handleMutationSnapshot).catch(() => {});
-  }, [campaignId, state.bootstrap, state.snapshot, handleMutationSnapshot]);
+    if (!state.bootstrap) return;
+    const fn = isViewerReadyToResume(state.bootstrap, state.snapshot)
+      ? mutations.clearOOCReadyToResume
+      : mutations.markOOCReadyToResume;
+    fn(campaignId).then(handleMutationSnapshot).catch(handleMutationError);
+  }, [campaignId, state.bootstrap, state.snapshot, handleMutationSnapshot, handleMutationError]);
 
   const handleSideChatSend = useCallback(() => {
     const draft = state.sideChatDraft.trim();
     if (!draft || !wsRef.current) return;
     wsRef.current.send({
-      type: "play.chat.send",
+      type: FrameType.ChatSend,
       payload: {
         client_message_id: crypto.randomUUID(),
         body: draft,
@@ -252,29 +263,45 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
   );
 
   return (
-    <PlayerHUDShell
-      activeTab={hudState.activeTab}
-      connectionState={hudState.connectionState}
-      campaignNavigation={hudState.campaignNavigation}
-      isSidebarOpen={state.isSidebarOpen}
-      onSidebarOpenChange={(open) => dispatch({ type: "set-sidebar-open", open })}
-      onTabChange={(tab) => dispatch({ type: "set-tab", tab })}
-      onStage={hudState.onStage}
-      onStageDraft={state.onStageDraft}
-      onOnStageDraftChange={(value) => dispatch({ type: "set-on-stage-draft", value })}
-      onOnStageSubmit={handleOnStageSubmit}
-      onOnStageSubmitAndYield={handleOnStageSubmitAndYield}
-      onOnStageYield={handleOnStageYield}
-      onOnStageUnyield={handleOnStageUnyield}
-      backstage={hudState.backstage}
-      backstageDraft={state.backstageDraft}
-      onBackstageDraftChange={(value) => dispatch({ type: "set-backstage-draft", value })}
-      onBackstageSend={handleBackstageSend}
-      onBackstageReadyToggle={handleBackstageReadyToggle}
-      sideChat={hudState.sideChat}
-      sideChatDraft={state.sideChatDraft}
-      onSideChatDraftChange={(value) => dispatch({ type: "set-side-chat-draft", value })}
-      onSideChatSend={handleSideChatSend}
-    />
+    <>
+      <PlayerHUDShell
+        activeTab={hudState.activeTab}
+        connectionState={hudState.connectionState}
+        campaignNavigation={hudState.campaignNavigation}
+        isSidebarOpen={state.isSidebarOpen}
+        onSidebarOpenChange={(open) => dispatch({ type: "set-sidebar-open", open })}
+        onTabChange={(tab) => dispatch({ type: "set-tab", tab })}
+        onStage={hudState.onStage}
+        onStageDraft={state.onStageDraft}
+        onOnStageDraftChange={(value) => dispatch({ type: "set-on-stage-draft", value })}
+        onOnStageSubmit={handleOnStageSubmit}
+        onOnStageSubmitAndYield={handleOnStageSubmitAndYield}
+        onOnStageYield={handleOnStageYield}
+        onOnStageUnyield={handleOnStageUnyield}
+        backstage={hudState.backstage}
+        backstageDraft={state.backstageDraft}
+        onBackstageDraftChange={(value) => dispatch({ type: "set-backstage-draft", value })}
+        onBackstageSend={handleBackstageSend}
+        onBackstageReadyToggle={handleBackstageReadyToggle}
+        sideChat={hudState.sideChat}
+        sideChatDraft={state.sideChatDraft}
+        onSideChatDraftChange={(value) => dispatch({ type: "set-side-chat-draft", value })}
+        onSideChatSend={handleSideChatSend}
+      />
+      {state.mutationError && (
+        <div className="toast toast-end toast-bottom z-50">
+          <div role="alert" className="alert alert-error shadow-lg">
+            <span className="text-sm">{state.mutationError}</span>
+            <button
+              className="btn btn-ghost btn-xs"
+              onClick={() => dispatch({ type: "dismiss-mutation-error" })}
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

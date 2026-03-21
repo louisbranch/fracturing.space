@@ -48,6 +48,19 @@ func (s *realtimeSession) attach(room *campaignRoom, state playprotocol.Interact
 	}
 }
 
+// refreshCampaignState updates campaign-level fields (active session) during
+// broadcast cycles without overwriting the per-session viewer identity that was
+// established during the initial connect handshake.
+func (s *realtimeSession) refreshCampaignState(state playprotocol.InteractionState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if state.ActiveSession != nil {
+		s.activeSessionID = strings.TrimSpace(state.ActiveSession.SessionID)
+	} else {
+		s.activeSessionID = ""
+	}
+}
+
 func (s *realtimeSession) currentRoom() *campaignRoom {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -60,13 +73,27 @@ func (s *realtimeSession) activeSession() string {
 	return s.activeSessionID
 }
 
-func (s *realtimeSession) chatIdentity() (string, string, string, string, bool) {
+// sessionChatIdentity holds the participant context needed to post a chat
+// message so callers don't decipher positional return values.
+type sessionChatIdentity struct {
+	CampaignID      string
+	SessionID       string
+	ParticipantID   string
+	ParticipantName string
+}
+
+func (s *realtimeSession) chatIdentity() (sessionChatIdentity, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.room == nil || s.campaignID == "" || s.activeSessionID == "" || s.participantID == "" {
-		return "", "", "", "", false
+		return sessionChatIdentity{}, false
 	}
-	return s.campaignID, s.activeSessionID, s.participantID, s.participantName, true
+	return sessionChatIdentity{
+		CampaignID:      s.campaignID,
+		SessionID:       s.activeSessionID,
+		ParticipantID:   s.participantID,
+		ParticipantName: s.participantName,
+	}, true
 }
 
 func (s *realtimeSession) resetTypingTimer(frameType string, active bool) {

@@ -39,6 +39,33 @@ import type {
   WireScene,
 } from "../api/types";
 
+// Safe enum validators — fall back to a default when the server sends an unknown value.
+const KNOWN_AI_STATUSES = new Set<string>(["idle", "queued", "running", "failed"]);
+const KNOWN_REVIEW_STATES = new Set<string>(["open", "under-review", "accepted", "changes-requested"]);
+const KNOWN_ROLES = new Set<string>(["player", "gm"]);
+
+function safeAIStatus(raw: string | undefined): OnStageAIStatus {
+  return KNOWN_AI_STATUSES.has(raw ?? "") ? (raw as OnStageAIStatus) : "idle";
+}
+
+function safeReviewState(raw: string | undefined): OnStageSlotReviewState {
+  return KNOWN_REVIEW_STATES.has(raw ?? "") ? (raw as OnStageSlotReviewState) : "open";
+}
+
+function safeRole(raw: string | undefined): "player" | "gm" {
+  return KNOWN_ROLES.has(raw ?? "") ? (raw as "player" | "gm") : "player";
+}
+
+/** Returns whether the viewer has marked themselves "ready to resume" in the current OOC break. */
+export function isViewerReadyToResume(
+  bootstrap: BootstrapResponse,
+  snapshot: WireRoomSnapshot | null,
+): boolean {
+  const ooc = snapshot?.interaction_state?.ooc ?? bootstrap.interaction_state?.ooc;
+  const viewerPID = bootstrap.viewer?.participant_id ?? "";
+  return ooc?.ready_to_resume_participant_ids?.includes(viewerPID) ?? false;
+}
+
 export function mapToPlayerHUDState(
   bootstrap: BootstrapResponse,
   snapshot: WireRoomSnapshot | null,
@@ -50,7 +77,7 @@ export function mapToPlayerHUDState(
   const participants = snapshot?.participants ?? bootstrap.participants ?? [];
   const catalog = snapshot?.character_inspection_catalog ?? bootstrap.character_inspection_catalog ?? {};
   const viewerPID = state.viewer?.participant_id ?? bootstrap.viewer?.participant_id ?? "";
-  const viewerRole = state.viewer?.role ?? bootstrap.viewer?.role ?? "player";
+  const viewerRole = safeRole(state.viewer?.role ?? bootstrap.viewer?.role);
   const backURL = bootstrap.campaign_id
     ? `/app/campaigns/${bootstrap.campaign_id}/game`
     : "/";
@@ -112,6 +139,15 @@ function characterRefsFromIDs(
   }));
 }
 
+function mapBaseParticipant(p: WireParticipant, catalog: PlayerHUDCharacterInspectionCatalog) {
+  return {
+    id: p.id,
+    name: p.name,
+    role: safeRole(p.role),
+    characters: characterRefsFromIDs(p.character_ids ?? [], catalog),
+  };
+}
+
 function mapOnStageState(
   state: WireInteractionState,
   participants: WireParticipant[],
@@ -125,7 +161,7 @@ function mapOnStageState(
   const aiTurn = state.ai_turn;
 
   const mode = deriveOnStageMode(phase, ooc, viewerPID);
-  const aiStatus: OnStageAIStatus = (aiTurn?.status as OnStageAIStatus) ?? "idle";
+  const aiStatus = safeAIStatus(aiTurn?.status);
 
   const onStageParticipants: OnStageParticipant[] = participants.map((p) =>
     mapOnStageParticipant(p, phase, state.gm_authority_participant_id, catalog),
@@ -189,10 +225,7 @@ function mapOnStageParticipant(
   }
 
   return {
-    id: p.id,
-    name: p.name,
-    role: (p.role as "player" | "gm") ?? "player",
-    characters: characterRefsFromIDs(p.character_ids ?? [], catalog),
+    ...mapBaseParticipant(p, catalog),
     railStatus,
     ownsGMAuthority: p.id === gmAuthorityPID ? true : undefined,
   };
@@ -206,7 +239,7 @@ function mapOnStageSlot(s: WirePlayerSlot, catalog: PlayerHUDCharacterInspection
     body: s.summary_text,
     updatedAt: s.updated_at,
     yielded: s.yielded,
-    reviewState: (s.review_status as OnStageSlotReviewState) ?? "open",
+    reviewState: safeReviewState(s.review_status),
     reviewReason: s.review_reason,
   };
 }
@@ -249,10 +282,7 @@ function mapBackstageState(
   const resumeState = deriveBackstageResumeState(ooc, participants, viewerPID);
 
   const backstageParticipants: BackstageParticipant[] = participants.map((p) => ({
-    id: p.id,
-    name: p.name,
-    role: (p.role as "player" | "gm") ?? "player",
-    characters: characterRefsFromIDs(p.character_ids ?? [], catalog),
+    ...mapBaseParticipant(p, catalog),
     readyToResume: ooc?.ready_to_resume_participant_ids?.includes(p.id) ?? false,
   }));
 
@@ -295,12 +325,9 @@ function mapSideChatState(
   chatMessages: WireChatMessage[],
   catalog: PlayerHUDCharacterInspectionCatalog,
 ): SideChatState {
-  const sideChatParticipants: SideChatParticipant[] = participants.map((p) => ({
-    id: p.id,
-    name: p.name,
-    role: (p.role as "player" | "gm") ?? "player",
-    characters: characterRefsFromIDs(p.character_ids ?? [], catalog),
-  }));
+  const sideChatParticipants: SideChatParticipant[] = participants.map((p) =>
+    mapBaseParticipant(p, catalog),
+  );
 
   const messages: SideChatMessage[] = chatMessages.map((m) => ({
     id: m.message_id,

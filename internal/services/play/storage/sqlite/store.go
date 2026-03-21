@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -135,6 +136,9 @@ func (s *Store) AppendMessage(ctx context.Context, req transcript.AppendRequest)
 			return transcript.AppendResult{}, err
 		}
 		lastErr = err
+		// Jitter spreads concurrent retry storms that otherwise collide at the
+		// same instant on BUSY/LOCKED or UNIQUE constraint races.
+		jitterSleep(attempt)
 	}
 	return transcript.AppendResult{}, fmt.Errorf(
 		"append transcript message: exhausted %d retries after concurrent write conflicts: %w",
@@ -318,6 +322,14 @@ func insertMessage(ctx context.Context, tx *sql.Tx, message transcript.Message) 
 		nullableClientID,
 	)
 	return err
+}
+
+// jitterSleep adds a small random pause before the next retry to spread
+// concurrent writers that would otherwise all retry at the same instant.
+func jitterSleep(attempt int) {
+	base := time.Duration(attempt) * time.Millisecond
+	jitter := time.Duration(rand.IntN(int(10 * time.Millisecond)))
+	time.Sleep(base + jitter)
 }
 
 func isAppendRetryable(err error) bool {

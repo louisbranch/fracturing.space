@@ -30,7 +30,7 @@ func TestRealtimeSessionResetTypingTimerUsesInjectedRuntimeTimer(t *testing.T) {
 		},
 	}
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-	hub := newRealtimeHubWithRuntime(server, runtime)
+	hub := newRealtimeHubWithRuntime(hubDepsFromServer(server), runtime)
 	server.realtime = hub
 
 	room := &campaignRoom{
@@ -93,7 +93,7 @@ func TestCampaignRoomProjectionSubscriptionUsesConfiguredRetryDelay(t *testing.T
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
 	events := &failingEventClient{err: errors.New("subscribe failed")}
 	server.events = events
-	hub := newRealtimeHubWithRuntime(server, runtime)
+	hub := newRealtimeHubWithRuntime(hubDepsFromServer(server), runtime)
 	server.realtime = hub
 
 	room := &campaignRoom{

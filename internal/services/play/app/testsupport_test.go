@@ -29,6 +29,15 @@ func playTestState() *gamev1.InteractionState {
 	}
 }
 
+func hubDepsFromServer(s *Server) realtimeHubDeps {
+	return realtimeHubDeps{
+		resolveUserID: s.resolvePlayUserID,
+		application:   s.application,
+		transcripts:   s.transcripts,
+		events:        s.events,
+	}
+}
+
 func newAuthedPlayServer(interaction *recordingInteractionClient, transcripts *scriptTranscriptStore) *Server {
 	server := &Server{
 		auth:            &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},

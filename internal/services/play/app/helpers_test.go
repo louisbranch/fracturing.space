@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -81,8 +80,8 @@ func TestDecodeStrictJSONVariants(t *testing.T) {
 		t.Parallel()
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(strings.Repeat("a", maxJSONBodyBytes+1)))
 		payload := struct{}{}
-		if err := decodeStrictJSON(req, &payload); err != io.ErrUnexpectedEOF {
-			t.Fatalf("decodeStrictJSON(oversized) error = %v, want %v", err, io.ErrUnexpectedEOF)
+		if err := decodeStrictJSON(req, &payload); err != errJSONBodyTooLarge {
+			t.Fatalf("decodeStrictJSON(oversized) error = %v, want %v", err, errJSONBodyTooLarge)
 		}
 	})
 }

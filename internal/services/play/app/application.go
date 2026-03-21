@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
+	"sync"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -59,16 +61,9 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 		Realtime: playprotocol.RealtimeConfig{
 			URL:             "/realtime",
 			ProtocolVersion: playprotocol.RealtimeProtocolVersion,
+			TypingTTLMs:     int(defaultTypingTTL.Milliseconds()),
 		},
 	}, nil
-}
-
-func (a playApplication) roomSnapshot(ctx context.Context, req playRequest, latestGameSeq uint64) (playprotocol.RoomSnapshot, error) {
-	state, err := a.interactionState(ctx, req)
-	if err != nil {
-		return playprotocol.RoomSnapshot{}, err
-	}
-	return a.roomSnapshotFromState(ctx, req.CampaignID, state, latestGameSeq)
 }
 
 func (a playApplication) interactionResponse(ctx context.Context, state *gamev1.InteractionState) (playprotocol.RoomSnapshot, error) {
@@ -258,6 +253,7 @@ func (a playApplication) listAllParticipants(ctx context.Context, campaignID str
 			PageToken:  pageToken,
 		})
 		if err != nil {
+			slog.WarnContext(ctx, "play: participant pagination truncated", "campaign_id", campaignID, "collected", len(all), "error", err)
 			return all
 		}
 		for _, p := range resp.GetParticipants() {
@@ -282,6 +278,7 @@ func (a playApplication) listAllCharacters(ctx context.Context, campaignID strin
 			PageToken:  pageToken,
 		})
 		if err != nil {
+			slog.WarnContext(ctx, "play: character pagination truncated", "campaign_id", campaignID, "collected", len(all), "error", err)
 			return all
 		}
 		all = append(all, resp.GetCharacters()...)
@@ -293,34 +290,57 @@ func (a playApplication) listAllCharacters(ctx context.Context, campaignID strin
 	return all
 }
 
-// buildCharacterInspectionCatalog calls GetCharacterSheet per character and
-// maps via the Daggerheart protocol functions.
+// buildCharacterInspectionCatalog fetches character sheets in parallel and maps
+// them via the Daggerheart protocol functions.
 func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, campaignID string, characters []*gamev1.Character) map[string]playprotocol.CharacterInspection {
 	if len(characters) == 0 {
 		return nil
 	}
-	catalog := make(map[string]playprotocol.CharacterInspection, len(characters))
+
+	type sheetResult struct {
+		charID string
+		char   *gamev1.Character
+		resp   *gamev1.GetCharacterSheetResponse
+	}
+
+	var (
+		mu      sync.Mutex
+		results []sheetResult
+		wg      sync.WaitGroup
+	)
 	for _, char := range characters {
 		charID := strings.TrimSpace(char.GetId())
 		if charID == "" {
 			continue
 		}
-		resp, err := a.characters.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
-			CampaignId:  campaignID,
-			CharacterId: charID,
-		})
-		if err != nil {
-			continue
-		}
-		dhProfile := resp.GetProfile().GetDaggerheart()
-		dhState := resp.GetState().GetDaggerheart()
+		wg.Add(1)
+		go func(c *gamev1.Character, id string) {
+			defer wg.Done()
+			resp, err := a.characters.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+				CampaignId:  campaignID,
+				CharacterId: id,
+			})
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			results = append(results, sheetResult{charID: id, char: c, resp: resp})
+			mu.Unlock()
+		}(char, charID)
+	}
+	wg.Wait()
+
+	catalog := make(map[string]playprotocol.CharacterInspection, len(results))
+	for _, r := range results {
+		dhProfile := r.resp.GetProfile().GetDaggerheart()
+		dhState := r.resp.GetState().GetDaggerheart()
 		if dhProfile == nil && dhState == nil {
 			continue
 		}
-		catalog[charID] = playprotocol.CharacterInspection{
+		catalog[r.charID] = playprotocol.CharacterInspection{
 			System: "daggerheart",
-			Card:   playprotocol.DaggerheartCardFromSheet(char, dhProfile, dhState),
-			Sheet:  playprotocol.DaggerheartSheetFromResponse(char, dhProfile, dhState),
+			Card:   playprotocol.DaggerheartCardFromSheet(r.char, dhProfile, dhState),
+			Sheet:  playprotocol.DaggerheartSheetFromResponse(r.char, dhProfile, dhState),
 		}
 	}
 	if len(catalog) == 0 {

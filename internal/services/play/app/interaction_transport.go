@@ -12,20 +12,6 @@ type interactionStateResponse interface {
 	GetState() *gamev1.InteractionState
 }
 
-// interactionMutationHandler decodes one JSON request body and delegates the
-// actual interaction call while preserving the shared API transport flow.
-func interactionMutationHandler[T any](
-	server *Server,
-	call func(context.Context, string, *T) (*gamev1.InteractionState, error),
-) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req T
-		server.handleInteractionMutation(w, r, &req, func(ctx context.Context, campaignID string) (*gamev1.InteractionState, error) {
-			return call(ctx, campaignID, &req)
-		})
-	}
-}
-
 // rpcInteractionMutationHandler adapts standard interaction RPCs into the shared
 // browser mutation flow so route wiring does not repeat campaign assignment and
 // state extraction boilerplate.
@@ -63,17 +49,6 @@ func rpcInteractionMutationHandlerWithoutBody[TReq any, TResp interactionStateRe
 			}
 			return resp.GetState(), nil
 		})
-	}
-}
-
-// interactionMutationHandlerWithoutBody covers mutation routes whose only input
-// is the authenticated campaign scope.
-func interactionMutationHandlerWithoutBody(
-	server *Server,
-	call func(context.Context, string) (*gamev1.InteractionState, error),
-) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		server.handleInteractionMutation(w, r, nil, call)
 	}
 }
 

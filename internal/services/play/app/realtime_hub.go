@@ -15,8 +15,18 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+// realtimeHubDeps captures the specific dependencies the realtime hub needs,
+// breaking the circular reference on *Server so the hub is testable in
+// isolation and the dependency surface is explicit.
+type realtimeHubDeps struct {
+	resolveUserID func(context.Context, *http.Request) (string, error)
+	application   func() playApplication
+	transcripts   transcript.Store
+	events        eventClient
+}
+
 type realtimeHub struct {
-	server  *Server
+	deps    realtimeHubDeps
 	runtime realtimeRuntime
 
 	mu     sync.Mutex
@@ -25,14 +35,19 @@ type realtimeHub struct {
 }
 
 func newRealtimeHub(server *Server) *realtimeHub {
-	return newRealtimeHubWithRuntime(server, defaultRealtimeRuntime())
+	return newRealtimeHubWithRuntime(realtimeHubDeps{
+		resolveUserID: server.resolvePlayUserID,
+		application:   server.application,
+		transcripts:   server.transcripts,
+		events:        server.events,
+	}, defaultRealtimeRuntime())
 }
 
 // newRealtimeHubWithRuntime injects runtime hooks for deterministic realtime
 // tests while keeping production callers on the default clock and timers.
-func newRealtimeHubWithRuntime(server *Server, runtime realtimeRuntime) *realtimeHub {
+func newRealtimeHubWithRuntime(deps realtimeHubDeps, runtime realtimeRuntime) *realtimeHub {
 	return &realtimeHub{
-		server:  server,
+		deps:    deps,
 		runtime: runtime.normalize(),
 		rooms:   map[string]*campaignRoom{},
 	}
@@ -40,11 +55,11 @@ func newRealtimeHubWithRuntime(server *Server, runtime realtimeRuntime) *realtim
 
 func (h *realtimeHub) handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if h == nil || h.server == nil {
+		if h == nil {
 			http.Error(w, "realtime unavailable", http.StatusServiceUnavailable)
 			return
 		}
-		userID, err := h.server.resolvePlayUserID(r.Context(), r)
+		userID, err := h.deps.resolveUserID(r.Context(), r)
 		if err != nil {
 			http.Error(w, "authentication required", http.StatusUnauthorized)
 			return
@@ -89,6 +104,10 @@ func (h *realtimeHub) broadcastCurrent(campaignID string) {
 
 func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 	defer func() { _ = conn.Close() }()
+
+	// Reject oversized websocket frames at the transport level before the JSON
+	// decoder allocates memory for the full message body.
+	conn.MaxPayloadBytes = maxFramePayloadBytes + 4096
 
 	decoder := json.NewDecoder(conn)
 	session := &realtimeSession{
@@ -161,7 +180,11 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 		return
 	}
 	room := h.room(campaignID)
-	app := h.server.application()
+	if room == nil {
+		_ = session.peer.writeError(frame.RequestID, "unavailable", "service is shutting down", nil)
+		return
+	}
+	app := h.deps.application()
 	state, err := app.interactionState(ctx, playRequest{
 		campaignRequest: campaignRequest{CampaignID: campaignID},
 		UserID:          session.userID,
@@ -219,19 +242,19 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 		return
 	}
 
-	campaignID, sessionID, participantID, participantName, ok := session.chatIdentity()
+	identity, ok := session.chatIdentity()
 	if !ok {
 		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "join an active session before sending chat", nil)
 		return
 	}
-	result, err := h.server.transcripts.AppendMessage(ctx, transcript.AppendRequest{
+	result, err := h.deps.transcripts.AppendMessage(ctx, transcript.AppendRequest{
 		Scope: transcript.Scope{
-			CampaignID: campaignID,
-			SessionID:  sessionID,
+			CampaignID: identity.CampaignID,
+			SessionID:  identity.SessionID,
 		},
 		Actor: transcript.MessageActor{
-			ParticipantID: participantID,
-			Name:          participantName,
+			ParticipantID: identity.ParticipantID,
+			Name:          identity.ParticipantName,
 		},
 		Body:            body,
 		ClientMessageID: clientMessageID,
@@ -240,11 +263,11 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to persist chat message", nil)
 		return
 	}
-	room := session.currentRoom()
-	if room == nil {
+	chatRoom := session.currentRoom()
+	if chatRoom == nil {
 		return
 	}
-	room.broadcastFrame(wsFrame{
+	chatRoom.broadcastFrame(wsFrame{
 		Type:      "play.chat.message",
 		RequestID: frame.RequestID,
 		Payload:   mustJSON(playprotocol.ChatMessageEnvelope{Message: playprotocol.TranscriptMessage(result.Message)}),
@@ -262,15 +285,15 @@ func (h *realtimeHub) handleTyping(session *realtimeSession, frame wsFrame, fram
 		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "join a campaign before sending typing", nil)
 		return
 	}
-	_, sessionID, participantID, participantName, ok := session.chatIdentity()
+	identity, ok := session.chatIdentity()
 	if !ok {
 		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "participant identity unavailable", nil)
 		return
 	}
 	room.broadcastFrame(wsFrame{Type: frameType, Payload: mustJSON(playprotocol.TypingEvent{
-		SessionID:     sessionID,
-		ParticipantID: participantID,
-		Name:          participantName,
+		SessionID:     identity.SessionID,
+		ParticipantID: identity.ParticipantID,
+		Name:          identity.ParticipantName,
 		Active:        payload.Active,
 	})})
 	session.resetTypingTimer(frameType, payload.Active)

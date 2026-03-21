@@ -31,6 +31,7 @@ Exact runtime and contributor-facing contracts.
 - AI service lifecycle terms: [ai-service-lifecycle-terms.md](ai-service-lifecycle-terms.md)
 - Game service contributor map: [game-service-contributor-map.md](game-service-contributor-map.md)
 - Play contributor map: [play-contributor-map.md](play-contributor-map.md)
+- Play WebSocket protocol: [play-websocket-protocol.md](play-websocket-protocol.md)
 - Small services topology: [small-services-topology.md](small-services-topology.md)
 - Icon rendering: [icon-rendering.md](icon-rendering.md)
 - Icon catalog: [icon-catalog.md](icon-catalog.md)

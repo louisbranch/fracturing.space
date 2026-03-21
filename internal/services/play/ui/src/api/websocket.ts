@@ -28,6 +28,21 @@ export type WSConnection = {
   close: () => void;
 };
 
+/** Wire frame types for the play WebSocket protocol. */
+export const FrameType = {
+  Connect: "play.connect",
+  Ready: "play.ready",
+  Ping: "play.ping",
+  Pong: "play.pong",
+  ChatMessage: "play.chat.message",
+  ChatSend: "play.chat.send",
+  ChatTyping: "play.chat.typing",
+  DraftTyping: "play.draft.typing",
+  InteractionUpdated: "play.interaction.updated",
+  Error: "play.error",
+  Resync: "play.resync",
+} as const;
+
 const PING_INTERVAL = 30_000;
 const RECONNECT_BASE = 1_000;
 const RECONNECT_MAX = 30_000;
@@ -46,22 +61,25 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
     return `${protocol}//${loc.host}${opts.realtimeURL}`;
   }
 
+  // Track the latest known sequence so reconnects don't replay already-received
+  // messages. Updated on every chat message and ready snapshot.
+  let currentChatSeq = opts.lastChatSeq;
+
   function connect() {
     if (closed) return;
     ws = new WebSocket(buildURL());
 
     ws.onopen = () => {
-      reconnectDelay = RECONNECT_BASE;
       sendFrame({
-        type: "play.connect",
+        type: FrameType.Connect,
         payload: {
           campaign_id: opts.campaignId,
           last_game_seq: opts.lastGameSeq,
-          last_chat_seq: opts.lastChatSeq,
+          last_chat_seq: currentChatSeq,
         },
       });
       pingTimer = setInterval(() => {
-        sendFrame({ type: "play.ping" });
+        sendFrame({ type: FrameType.Ping });
       }, PING_INTERVAL);
     };
 
@@ -69,7 +87,8 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
       let frame: WSFrame;
       try {
         frame = JSON.parse(event.data as string) as WSFrame;
-      } catch {
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn("play: unparseable ws frame", e);
         return;
       }
       handleFrame(frame);
@@ -94,17 +113,26 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
   function handleFrame(frame: WSFrame) {
     const payload = frame.payload as Record<string, unknown> | undefined;
     switch (frame.type) {
-      case "play.ready":
+      case FrameType.Ready: {
         connected = true;
+        reconnectDelay = RECONNECT_BASE;
+        const snapshot = payload as unknown as WireRoomSnapshot;
+        if (snapshot?.chat?.latest_sequence_id) {
+          currentChatSeq = snapshot.chat.latest_sequence_id;
+        }
         opts.onEvent({ type: "connection", state: "connected" });
-        opts.onEvent({ type: "ready", snapshot: payload as unknown as WireRoomSnapshot });
-        break;
-      case "play.chat.message": {
-        const msg = (payload as { message?: WireChatMessage })?.message;
-        if (msg) opts.onEvent({ type: "chat.message", message: msg });
+        opts.onEvent({ type: "ready", snapshot });
         break;
       }
-      case "play.chat.typing": {
+      case FrameType.ChatMessage: {
+        const msg = (payload as { message?: WireChatMessage })?.message;
+        if (msg) {
+          if (msg.sequence_id > currentChatSeq) currentChatSeq = msg.sequence_id;
+          opts.onEvent({ type: "chat.message", message: msg });
+        }
+        break;
+      }
+      case FrameType.ChatTyping: {
         const te = payload as { participant_id?: string; name?: string; active?: boolean } | undefined;
         if (te) {
           opts.onEvent({
@@ -116,7 +144,7 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
         }
         break;
       }
-      case "play.draft.typing": {
+      case FrameType.DraftTyping: {
         const te = payload as { participant_id?: string; name?: string; active?: boolean } | undefined;
         if (te) {
           opts.onEvent({
@@ -128,9 +156,9 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
         }
         break;
       }
-      case "play.pong":
+      case FrameType.Pong:
         break;
-      case "play.error": {
+      case FrameType.Error: {
         const err = payload as { code?: string; message?: string } | undefined;
         opts.onEvent({
           type: "error",

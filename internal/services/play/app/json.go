@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -11,6 +12,15 @@ import (
 )
 
 const maxJSONBodyBytes = 64 * 1024
+
+var (
+	// errJSONBodyTooLarge reports that the request body exceeded the permitted
+	// size before JSON decoding began.
+	errJSONBodyTooLarge = errors.New("request body exceeds maximum allowed size")
+	// errJSONMultipleValues reports that the request body contained more than
+	// one JSON value where exactly one was expected.
+	errJSONMultipleValues = errors.New("request body must contain exactly one JSON value")
+)
 
 var protoJSONOptions = protojson.MarshalOptions{
 	UseProtoNames:   true,
@@ -22,7 +32,7 @@ func decodeStrictJSON(r *http.Request, target any) error {
 		return nil
 	}
 	if r == nil || r.Body == nil {
-		return io.ErrUnexpectedEOF
+		return errJSONBodyTooLarge
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxJSONBodyBytes+1))
 	if err != nil {
@@ -32,7 +42,7 @@ func decodeStrictJSON(r *http.Request, target any) error {
 		return nil
 	}
 	if len(body) > maxJSONBodyBytes {
-		return io.ErrUnexpectedEOF
+		return errJSONBodyTooLarge
 	}
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.DisallowUnknownFields()
@@ -40,7 +50,7 @@ func decodeStrictJSON(r *http.Request, target any) error {
 		return err
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
-		return io.ErrUnexpectedEOF
+		return errJSONMultipleValues
 	}
 	return nil
 }

@@ -183,8 +183,8 @@ func TestRealtimeRoomLifecycleAndBroadcasts(t *testing.T) {
 	if got := session.activeSession(); got != "s1" {
 		t.Fatalf("activeSession() = %q, want %q", got, "s1")
 	}
-	if campaignID, sessionID, participantID, participantName, ok := session.chatIdentity(); !ok || campaignID != "c1" || sessionID != "s1" || participantID != "p1" || participantName != "Avery" {
-		t.Fatalf("chatIdentity() = (%q, %q, %q, %q, %v)", campaignID, sessionID, participantID, participantName, ok)
+	if identity, ok := session.chatIdentity(); !ok || identity.CampaignID != "c1" || identity.SessionID != "s1" || identity.ParticipantID != "p1" || identity.ParticipantName != "Avery" {
+		t.Fatalf("chatIdentity() = (%+v, %v)", identity, ok)
 	}
 
 	hub.broadcastCurrent("c1")
@@ -223,8 +223,8 @@ func TestRealtimeSessionChatIdentityRequiresActiveSession(t *testing.T) {
 		participantName: "Avery",
 	}
 
-	if campaignID, sessionID, participantID, participantName, ok := session.chatIdentity(); ok {
-		t.Fatalf("chatIdentity() = (%q, %q, %q, %q, %v), want inactive session rejection", campaignID, sessionID, participantID, participantName, ok)
+	if identity, ok := session.chatIdentity(); ok {
+		t.Fatalf("chatIdentity() = (%+v, %v), want inactive session rejection", identity, ok)
 	}
 }
 

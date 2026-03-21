@@ -1,5 +1,7 @@
 import type { WireRoomSnapshot } from "./types";
 
+const MUTATION_TIMEOUT_MS = 15_000;
+
 function interactionURL(campaignId: string, action: string): string {
   return `/api/campaigns/${encodeURIComponent(campaignId)}/interaction/${action}`;
 }
@@ -14,10 +16,10 @@ async function postInteraction(
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(MUTATION_TIMEOUT_MS),
   });
   if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(`mutation ${action} failed: ${resp.status} ${text}`);
+    throw new Error(`Action failed (${resp.status}). Please try again.`);
   }
   return resp.json() as Promise<WireRoomSnapshot>;
 }
