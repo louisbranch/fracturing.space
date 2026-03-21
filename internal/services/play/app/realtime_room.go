@@ -113,12 +113,12 @@ func (r *campaignRoom) broadcastCurrent() {
 			_ = session.peer.writeFrame(wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "interaction state changed; reload required"})})
 			continue
 		}
-		session.attach(r, state)
 		snapshot, err := app.roomSnapshotFromState(r.ctx, r.campaignID, state, r.latestGameSequence())
 		if err != nil {
 			_ = session.peer.writeFrame(wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "interaction state changed; reload required"})})
 			continue
 		}
+		session.attach(r, snapshot.InteractionState)
 		_ = session.peer.writeFrame(wsFrame{Type: "play.interaction.updated", Payload: mustJSON(snapshot)})
 	}
 }

@@ -9,12 +9,19 @@ describe("App", () => {
         mode={{
           kind: "root-placeholder",
         }}
+        shellConfig={{
+          campaignId: "",
+          bootstrapPath: "",
+          realtimePath: "/realtime",
+          backURL: "",
+        }}
       />,
     );
 
     expect(screen.getByText("Play runtime UI deferred")).toBeInTheDocument();
     expect(screen.getByText("npm run storybook")).toBeInTheDocument();
     expect(screen.getByText("http://localhost:6006")).toBeInTheDocument();
+    expect(screen.getByText("/realtime")).toBeInTheDocument();
   });
 
   it("renders the runtime placeholder for campaign routes", () => {
@@ -24,12 +31,20 @@ describe("App", () => {
           kind: "runtime-placeholder",
           campaignId: "guildhouse",
         }}
+        shellConfig={{
+          campaignId: "guildhouse",
+          bootstrapPath: "/api/campaigns/guildhouse/bootstrap",
+          realtimePath: "/realtime",
+          backURL: "/app/campaigns/guildhouse/game",
+        }}
       />,
     );
 
     expect(screen.getByText("Play runtime UI deferred")).toBeInTheDocument();
     expect(screen.getByText("/campaigns/guildhouse")).toBeInTheDocument();
     expect(screen.getByText("http://localhost:6006")).toBeInTheDocument();
+    expect(screen.getByText("/api/campaigns/guildhouse/bootstrap")).toBeInTheDocument();
+    expect(screen.getByText("/app/campaigns/guildhouse/game")).toBeInTheDocument();
   });
 
   it("renders the unsupported route screen for unknown paths", () => {

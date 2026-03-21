@@ -1,5 +1,5 @@
-import { onStageStatusDisplay } from "../shared/status-display";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { onStageStatusBadge } from "../../shared/view-models";
 import { OnStageSceneCard } from "./OnStageSceneCard";
 import { onStageFixtureCatalog } from "./fixtures";
 
@@ -27,24 +27,7 @@ export const FramedBeat: Story = {
     gmOutputText: onStageFixtureCatalog.viewerPosted.gmOutputText,
     frameText: onStageFixtureCatalog.viewerPosted.frameText,
     actingCharacterNames: onStageFixtureCatalog.viewerPosted.actingCharacterNames,
-    statusLabel: onStageStatusDisplay({
-      mode: onStageFixtureCatalog.viewerPosted.mode,
-      aiStatus: onStageFixtureCatalog.viewerPosted.aiStatus,
-      disabledReason: onStageFixtureCatalog.viewerPosted.viewerControls.disabledReason,
-      oocReason: onStageFixtureCatalog.viewerPosted.oocReason,
-    }).badgeLabel,
-    statusClassName: onStageStatusDisplay({
-      mode: onStageFixtureCatalog.viewerPosted.mode,
-      aiStatus: onStageFixtureCatalog.viewerPosted.aiStatus,
-      disabledReason: onStageFixtureCatalog.viewerPosted.viewerControls.disabledReason,
-      oocReason: onStageFixtureCatalog.viewerPosted.oocReason,
-    }).badgeClassName,
-    statusTooltip: onStageStatusDisplay({
-      mode: onStageFixtureCatalog.viewerPosted.mode,
-      aiStatus: onStageFixtureCatalog.viewerPosted.aiStatus,
-      disabledReason: onStageFixtureCatalog.viewerPosted.viewerControls.disabledReason,
-      oocReason: onStageFixtureCatalog.viewerPosted.oocReason,
-    }).message,
+    status: onStageStatusBadge(onStageFixtureCatalog.viewerPosted),
   },
 };
 
@@ -55,23 +38,6 @@ export const WaitingOnGM: Story = {
     gmOutputText: onStageFixtureCatalog.waitingOnGM.gmOutputText,
     frameText: onStageFixtureCatalog.waitingOnGM.frameText,
     actingCharacterNames: onStageFixtureCatalog.waitingOnGM.actingCharacterNames,
-    statusLabel: onStageStatusDisplay({
-      mode: onStageFixtureCatalog.waitingOnGM.mode,
-      aiStatus: onStageFixtureCatalog.waitingOnGM.aiStatus,
-      disabledReason: onStageFixtureCatalog.waitingOnGM.viewerControls.disabledReason,
-      oocReason: onStageFixtureCatalog.waitingOnGM.oocReason,
-    }).badgeLabel,
-    statusClassName: onStageStatusDisplay({
-      mode: onStageFixtureCatalog.waitingOnGM.mode,
-      aiStatus: onStageFixtureCatalog.waitingOnGM.aiStatus,
-      disabledReason: onStageFixtureCatalog.waitingOnGM.viewerControls.disabledReason,
-      oocReason: onStageFixtureCatalog.waitingOnGM.oocReason,
-    }).badgeClassName,
-    statusTooltip: onStageStatusDisplay({
-      mode: onStageFixtureCatalog.waitingOnGM.mode,
-      aiStatus: onStageFixtureCatalog.waitingOnGM.aiStatus,
-      disabledReason: onStageFixtureCatalog.waitingOnGM.viewerControls.disabledReason,
-      oocReason: onStageFixtureCatalog.waitingOnGM.oocReason,
-    }).message,
+    status: onStageStatusBadge(onStageFixtureCatalog.waitingOnGM),
   },
 };

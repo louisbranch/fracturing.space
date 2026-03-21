@@ -12,9 +12,11 @@ describe("OnStageSceneCard", () => {
         gmOutputText={onStageFixtureCatalog.viewerPosted.gmOutputText}
         frameText={onStageFixtureCatalog.viewerPosted.frameText}
         actingCharacterNames={onStageFixtureCatalog.viewerPosted.actingCharacterNames}
-        statusLabel="Your Beat"
-        statusClassName="badge-primary badge-soft"
-        statusTooltip="Commit the next action for your character and yield when you are ready."
+        status={{
+          label: "Your Beat",
+          className: "badge-primary badge-soft",
+          tooltip: "Commit the next action for your character and yield when you are ready.",
+        }}
       />,
     );
 

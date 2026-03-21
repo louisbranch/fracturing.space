@@ -1,8 +1,8 @@
+import type { PlayerHUDStatusBadge } from "../../shared/view-models";
+
 export type BackstageContextCardProps = {
   sceneName?: string;
   pausedPromptText?: string;
   reason?: string;
-  statusLabel: string;
-  statusClassName: string;
-  statusTooltip: string;
+  status: PlayerHUDStatusBadge;
 };

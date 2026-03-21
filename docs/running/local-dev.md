@@ -181,6 +181,16 @@ In devcontainer watcher mode, `make up` now starts Storybook automatically and
 forwards port `6006` to the host. `make down` stops it with the rest of the
 watcher stack.
 
+To verify the UI workspace from a clean checkout without rewriting the checked-in
+bundle under `internal/services/play/ui/dist`, run:
+
+```sh
+make play-ui-check
+```
+
+That command installs the workspace dependencies, runs the Vitest suite, builds
+the Vite bundle, and verifies the Storybook build in one place.
+
 ## Demo data
 
 See [seeding](seeding.md) for `make seed`.

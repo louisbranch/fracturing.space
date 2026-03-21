@@ -1,4 +1,5 @@
 import { ParticipantPortraitRail } from "../../shared/participant-portrait-rail/ParticipantPortraitRail";
+import { sideChatRailParticipants } from "../../shared/view-models";
 import type { SideChatParticipantRailProps } from "./contract";
 
 export function SideChatParticipantRail({
@@ -8,14 +9,7 @@ export function SideChatParticipantRail({
 }: SideChatParticipantRailProps) {
   return (
     <ParticipantPortraitRail
-      participants={participants.map((participant) => ({
-        id: participant.id,
-        name: participant.name,
-        roleLabel: participant.role.toUpperCase(),
-        avatarUrl: participant.avatarUrl,
-        characters: participant.characters,
-        status: participant.typing ? "typing" : "idle",
-      }))}
+      participants={sideChatRailParticipants(participants)}
       viewerParticipantId={viewerParticipantId}
       ariaLabel="Side chat participants"
       onParticipantInspect={onParticipantInspect}

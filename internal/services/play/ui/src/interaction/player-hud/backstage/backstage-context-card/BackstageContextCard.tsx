@@ -4,9 +4,7 @@ export function BackstageContextCard({
   sceneName,
   pausedPromptText,
   reason,
-  statusLabel,
-  statusClassName,
-  statusTooltip,
+  status,
 }: BackstageContextCardProps) {
   if (!sceneName && !pausedPromptText && !reason) {
     return null;
@@ -26,12 +24,12 @@ export function BackstageContextCard({
             ) : null}
           </div>
           <span
-            aria-label={`Backstage status: ${statusLabel}`}
+            aria-label={`Backstage status: ${status.label}`}
             className="tooltip tooltip-left shrink-0"
-            data-tip={statusTooltip}
+            data-tip={status.tooltip}
           >
-            <span className={`badge ${statusClassName}`} tabIndex={0}>
-              {statusLabel}
+            <span className={`badge ${status.className}`} tabIndex={0}>
+              {status.label}
             </span>
           </span>
         </div>

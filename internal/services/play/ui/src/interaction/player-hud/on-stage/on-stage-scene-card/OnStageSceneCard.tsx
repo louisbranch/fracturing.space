@@ -6,9 +6,7 @@ export function OnStageSceneCard({
   gmOutputText,
   frameText,
   actingCharacterNames,
-  statusLabel,
-  statusClassName,
-  statusTooltip,
+  status,
 }: OnStageSceneCardProps) {
   return (
     <section
@@ -22,12 +20,12 @@ export function OnStageSceneCard({
             <h2 className="text-base font-semibold text-base-content">{sceneName}</h2>
           </div>
           <span
-            aria-label={`On-stage status: ${statusLabel}`}
+            aria-label={`On-stage status: ${status.label}`}
             className="tooltip tooltip-left shrink-0"
-            data-tip={statusTooltip}
+            data-tip={status.tooltip}
           >
-            <span className={`badge ${statusClassName}`} tabIndex={0}>
-              {statusLabel}
+            <span className={`badge ${status.className}`} tabIndex={0}>
+              {status.label}
             </span>
           </span>
         </div>

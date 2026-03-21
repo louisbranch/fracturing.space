@@ -1,15 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { backstageStatusDisplay } from "../shared/status-display";
+import { backstageStatusBadge } from "../../shared/view-models";
 import { BackstageContextCard } from "./BackstageContextCard";
 import { backstageFixtureCatalog } from "./fixtures";
 
 function statusArgs(state: typeof backstageFixtureCatalog.openDiscussion) {
-  const viewer = state.participants.find((participant) => participant.id === state.viewerParticipantId);
-  return backstageStatusDisplay({
-    mode: state.mode,
-    resumeState: state.resumeState,
-    viewerReady: Boolean(viewer?.readyToResume),
-  });
+  return backstageStatusBadge(state);
 }
 
 const meta = {
@@ -33,9 +28,7 @@ export const OpenDiscussion: Story = {
     sceneName: backstageFixtureCatalog.openDiscussion.sceneName,
     pausedPromptText: backstageFixtureCatalog.openDiscussion.pausedPromptText,
     reason: backstageFixtureCatalog.openDiscussion.reason,
-    statusLabel: statusArgs(backstageFixtureCatalog.openDiscussion).badgeLabel,
-    statusClassName: statusArgs(backstageFixtureCatalog.openDiscussion).badgeClassName,
-    statusTooltip: statusArgs(backstageFixtureCatalog.openDiscussion).message,
+    status: statusArgs(backstageFixtureCatalog.openDiscussion),
   },
   parameters: {
     docs: {
@@ -50,9 +43,7 @@ export const WithoutReason: Story = {
   args: {
     sceneName: backstageFixtureCatalog.openDiscussion.sceneName,
     pausedPromptText: backstageFixtureCatalog.openDiscussion.pausedPromptText,
-    statusLabel: statusArgs(backstageFixtureCatalog.openDiscussion).badgeLabel,
-    statusClassName: statusArgs(backstageFixtureCatalog.openDiscussion).badgeClassName,
-    statusTooltip: statusArgs(backstageFixtureCatalog.openDiscussion).message,
+    status: statusArgs(backstageFixtureCatalog.openDiscussion),
   },
   parameters: {
     docs: {
@@ -67,8 +58,6 @@ export const Dormant: Story = {
   args: {
     sceneName: backstageFixtureCatalog.dormant.sceneName,
     pausedPromptText: backstageFixtureCatalog.dormant.pausedPromptText,
-    statusLabel: statusArgs(backstageFixtureCatalog.dormant).badgeLabel,
-    statusClassName: statusArgs(backstageFixtureCatalog.dormant).badgeClassName,
-    statusTooltip: statusArgs(backstageFixtureCatalog.dormant).message,
+    status: statusArgs(backstageFixtureCatalog.dormant),
   },
 };

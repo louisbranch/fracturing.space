@@ -1,4 +1,5 @@
 import { ParticipantPortraitRail } from "../../shared/participant-portrait-rail/ParticipantPortraitRail";
+import { onStageRailParticipants } from "../../shared/view-models";
 import type { OnStageParticipantRailProps } from "./contract";
 
 export function OnStageParticipantRail({
@@ -9,15 +10,7 @@ export function OnStageParticipantRail({
 }: OnStageParticipantRailProps) {
   return (
     <ParticipantPortraitRail
-      participants={participants.map((participant) => ({
-        id: participant.id,
-        name: participant.name,
-        avatarUrl: participant.avatarUrl,
-        characters: participant.characters,
-        roleLabel: participant.role.toUpperCase(),
-        status: participant.railStatus === "waiting" ? "idle" : participant.railStatus,
-        ownsGMAuthority: participant.ownsGMAuthority,
-      }))}
+      participants={onStageRailParticipants(participants)}
       viewerParticipantId={viewerParticipantId}
       ariaLabel={ariaLabel}
       onParticipantInspect={onParticipantInspect}

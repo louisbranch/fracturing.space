@@ -10,18 +10,36 @@ import (
 const RealtimeProtocolVersion = 1
 
 type Bootstrap struct {
-	CampaignID       string                    `json:"campaign_id"`
-	Viewer           *gamev1.InteractionViewer `json:"viewer,omitempty"`
-	System           System                    `json:"system"`
-	InteractionState *gamev1.InteractionState  `json:"interaction_state"`
-	Chat             ChatSnapshot              `json:"chat"`
-	Realtime         RealtimeConfig            `json:"realtime"`
+	CampaignID       string             `json:"campaign_id"`
+	Viewer           *InteractionViewer `json:"viewer,omitempty"`
+	System           System             `json:"system"`
+	InteractionState InteractionState   `json:"interaction_state"`
+	Chat             ChatSnapshot       `json:"chat"`
+	Realtime         RealtimeConfig     `json:"realtime"`
 }
 
 type System struct {
 	ID      string `json:"id"`
 	Version string `json:"version"`
 	Name    string `json:"name"`
+}
+
+type InteractionState struct {
+	CampaignID    string              `json:"campaign_id"`
+	CampaignName  string              `json:"campaign_name,omitempty"`
+	Viewer        *InteractionViewer  `json:"viewer,omitempty"`
+	ActiveSession *InteractionSession `json:"active_session,omitempty"`
+}
+
+type InteractionViewer struct {
+	ParticipantID string `json:"participant_id"`
+	Name          string `json:"name"`
+	Role          string `json:"role,omitempty"`
+}
+
+type InteractionSession struct {
+	SessionID string `json:"session_id"`
+	Name      string `json:"name,omitempty"`
 }
 
 type RealtimeConfig struct {
@@ -58,9 +76,9 @@ type HistoryResponse struct {
 }
 
 type RoomSnapshot struct {
-	InteractionState *gamev1.InteractionState `json:"interaction_state"`
-	Chat             ChatSnapshot             `json:"chat"`
-	LatestGameSeq    uint64                   `json:"latest_game_sequence"`
+	InteractionState InteractionState `json:"interaction_state"`
+	Chat             ChatSnapshot     `json:"chat"`
+	LatestGameSeq    uint64           `json:"latest_game_sequence"`
 }
 
 type WSFrame struct {
@@ -112,6 +130,47 @@ type Pong struct {
 	Timestamp string `json:"timestamp,omitempty"`
 }
 
+func InteractionStateFromGameState(state *gamev1.InteractionState) InteractionState {
+	if state == nil {
+		return InteractionState{}
+	}
+	return InteractionState{
+		CampaignID:    strings.TrimSpace(state.GetCampaignId()),
+		CampaignName:  strings.TrimSpace(state.GetCampaignName()),
+		Viewer:        ViewerFromGameViewer(state.GetViewer()),
+		ActiveSession: SessionFromGameSession(state.GetActiveSession()),
+	}
+}
+
+func ViewerFromGameViewer(viewer *gamev1.InteractionViewer) *InteractionViewer {
+	if viewer == nil {
+		return nil
+	}
+	value := &InteractionViewer{
+		ParticipantID: strings.TrimSpace(viewer.GetParticipantId()),
+		Name:          strings.TrimSpace(viewer.GetName()),
+		Role:          interactionRoleString(viewer.GetRole()),
+	}
+	if value.ParticipantID == "" && value.Name == "" && value.Role == "" {
+		return nil
+	}
+	return value
+}
+
+func SessionFromGameSession(session *gamev1.InteractionSession) *InteractionSession {
+	if session == nil {
+		return nil
+	}
+	value := &InteractionSession{
+		SessionID: strings.TrimSpace(session.GetSessionId()),
+		Name:      strings.TrimSpace(session.GetName()),
+	}
+	if value.SessionID == "" && value.Name == "" {
+		return nil
+	}
+	return value
+}
+
 func TranscriptMessage(message transcript.Message) ChatMessage {
 	return ChatMessage{
 		MessageID:       strings.TrimSpace(message.MessageID),
@@ -131,4 +190,13 @@ func TranscriptMessages(messages []transcript.Message) []ChatMessage {
 		values = append(values, TranscriptMessage(message))
 	}
 	return values
+}
+
+func interactionRoleString(value gamev1.ParticipantRole) string {
+	name := strings.TrimSpace(value.String())
+	if name == "" || name == gamev1.ParticipantRole_ROLE_UNSPECIFIED.String() {
+		return ""
+	}
+	name = strings.TrimPrefix(name, "PARTICIPANT_ROLE_")
+	return strings.ToLower(name)
 }

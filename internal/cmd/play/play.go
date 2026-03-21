@@ -15,6 +15,7 @@ import (
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	playapp "github.com/louisbranch/fracturing.space/internal/services/play/app"
 	playsqlite "github.com/louisbranch/fracturing.space/internal/services/play/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -98,15 +99,67 @@ func Run(ctx context.Context, cfg Config) error {
 	})
 }
 
+// runtimeDependencies keeps the concrete resources opened by cmd/play so they
+// can be closed deterministically after the app runtime stops.
 type runtimeDependencies struct {
-	authMC *platformgrpc.ManagedConn
-	gameMC *platformgrpc.ManagedConn
-	store  *playsqlite.Store
+	authMC managedConnResource
+	gameMC managedConnResource
+	store  transcriptStoreResource
 	closed bool
 }
 
 func openRuntimeDependencies(ctx context.Context, cfg Config) (runtimeDependencies, playapp.Dependencies, error) {
-	authMC, err := platformgrpc.NewManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	return openRuntimeDependenciesWith(ctx, cfg, runtimeDependencyOpeners{
+		openManagedConn: func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (managedConnResource, error) {
+			conn, err := platformgrpc.NewManagedConn(ctx, cfg)
+			if err != nil {
+				return nil, err
+			}
+			return managedConnAdapter{conn: conn}, nil
+		},
+		openStore: func(path string) (transcriptStoreResource, error) {
+			return playsqlite.Open(path)
+		},
+	})
+}
+
+type managedConnResource interface {
+	ClientConn() gogrpc.ClientConnInterface
+	Close() error
+}
+
+// managedConnAdapter lets the composition root depend on a narrow dial result
+// contract so dependency opening can be unit-tested without real gRPC dials.
+type managedConnAdapter struct {
+	conn *platformgrpc.ManagedConn
+}
+
+func (a managedConnAdapter) ClientConn() gogrpc.ClientConnInterface {
+	return a.conn.Conn()
+}
+
+func (a managedConnAdapter) Close() error {
+	return a.conn.Close()
+}
+
+// transcriptStoreResource captures the transcript seam plus lifecycle so the
+// composition root can wire and clean up the store through one tested contract.
+type transcriptStoreResource interface {
+	transcript.Store
+	Close() error
+}
+
+// runtimeDependencyOpeners groups the side-effectful constructors owned by the
+// composition root so tests can exercise error handling and cleanup locally.
+type runtimeDependencyOpeners struct {
+	openManagedConn func(context.Context, platformgrpc.ManagedConnConfig) (managedConnResource, error)
+	openStore       func(string) (transcriptStoreResource, error)
+}
+
+// openRuntimeDependenciesWith opens the runtime-owned collaborators through
+// injectable constructors while preserving the production cleanup semantics.
+func openRuntimeDependenciesWith(ctx context.Context, cfg Config, openers runtimeDependencyOpeners) (runtimeDependencies, playapp.Dependencies, error) {
+	authMC, err := openers.openManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "auth",
 		Addr: cfg.AuthAddr,
 		Mode: platformgrpc.ModeRequired,
@@ -114,7 +167,7 @@ func openRuntimeDependencies(ctx context.Context, cfg Config) (runtimeDependenci
 	if err != nil {
 		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("connect auth: %w", err)
 	}
-	gameMC, err := platformgrpc.NewManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	gameMC, err := openers.openManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "game",
 		Addr: cfg.GameAddr,
 		Mode: platformgrpc.ModeRequired,
@@ -128,7 +181,7 @@ func openRuntimeDependencies(ctx context.Context, cfg Config) (runtimeDependenci
 		_ = authMC.Close()
 		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("connect game: %w", err)
 	}
-	store, err := playsqlite.Open(cfg.DBPath)
+	store, err := openers.openStore(cfg.DBPath)
 	if err != nil {
 		_ = gameMC.Close()
 		_ = authMC.Close()
@@ -139,14 +192,20 @@ func openRuntimeDependencies(ctx context.Context, cfg Config) (runtimeDependenci
 		gameMC: gameMC,
 		store:  store,
 	}
-	return resources, playapp.Dependencies{
-		Auth:        authv1.NewAuthServiceClient(authMC.Conn()),
-		Interaction: gamev1.NewInteractionServiceClient(gameMC.Conn()),
-		Campaign:    gamev1.NewCampaignServiceClient(gameMC.Conn()),
-		System:      gamev1.NewSystemServiceClient(gameMC.Conn()),
-		Events:      gamev1.NewEventServiceClient(gameMC.Conn()),
+	return resources, dependenciesFromResources(authMC, gameMC, store), nil
+}
+
+// dependenciesFromResources builds the app-facing dependency graph after the
+// composition root has opened transport/storage resources successfully.
+func dependenciesFromResources(authMC managedConnResource, gameMC managedConnResource, store transcriptStoreResource) playapp.Dependencies {
+	return playapp.Dependencies{
+		Auth:        authv1.NewAuthServiceClient(authMC.ClientConn()),
+		Interaction: gamev1.NewInteractionServiceClient(gameMC.ClientConn()),
+		Campaign:    gamev1.NewCampaignServiceClient(gameMC.ClientConn()),
+		System:      gamev1.NewSystemServiceClient(gameMC.ClientConn()),
+		Events:      gamev1.NewEventServiceClient(gameMC.ClientConn()),
 		Transcripts: store,
-	}, nil
+	}
 }
 
 func (r *runtimeDependencies) Close() error {

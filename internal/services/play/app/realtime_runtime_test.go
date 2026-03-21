@@ -9,6 +9,7 @@ import (
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	gogrpc "google.golang.org/grpc"
 )
 
@@ -45,7 +46,7 @@ func TestRealtimeSessionResetTypingTimerUsesInjectedRuntimeTimer(t *testing.T) {
 		userID: "user-1",
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
 	}
-	session.attach(room, playTestState())
+	session.attach(room, playprotocol.InteractionStateFromGameState(playTestState()))
 	room.add(session)
 
 	session.resetTypingTimer("play.chat.typing", true)
