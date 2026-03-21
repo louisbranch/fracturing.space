@@ -18,12 +18,15 @@ describe("BackstageContextCard", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Backstage context")).toBeInTheDocument();
+    expect(screen.getByLabelText("Backstage context")).toHaveClass("bg-base-300");
     expect(screen.getByLabelText("Backstage status: OOC Open")).toHaveClass(
       "tooltip",
       "tooltip-left",
     );
-    expect(screen.getByText("Sealed Vault")).toBeInTheDocument();
+    const sceneName = screen.getByText("Sealed Vault");
+    const pausedSceneBadge = screen.getByText("Paused Scene");
+    expect(sceneName).toBeInTheDocument();
+    expect(sceneName.compareDocumentPosition(pausedSceneBadge) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText(/The ward crackles/)).toBeInTheDocument();
     expect(screen.getByText("Clarify how the ward reacts to tools.")).toBeInTheDocument();
   });

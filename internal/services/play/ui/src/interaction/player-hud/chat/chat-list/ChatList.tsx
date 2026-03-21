@@ -32,7 +32,7 @@ export function ChatList({
     return (
       <div
         aria-label={ariaLabel}
-        className="flex min-h-full flex-1 flex-col items-center justify-center px-3 py-3"
+        className="flex min-h-full flex-1 flex-col items-center justify-center rounded-box bg-base-200 px-3 py-3"
       >
         <span className="text-sm text-base-content/50">{emptyLabel}</span>
       </div>
@@ -42,7 +42,7 @@ export function ChatList({
   return (
     <div
       aria-label={ariaLabel}
-      className="flex flex-col px-1.5 py-1.5"
+      className="flex min-h-full flex-col rounded-box bg-base-200 px-1.5 py-1.5"
     >
       {messages.map((msg, i) => {
         const prev = messages[i - 1];

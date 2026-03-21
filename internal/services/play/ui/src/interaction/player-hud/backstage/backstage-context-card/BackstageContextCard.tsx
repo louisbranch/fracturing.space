@@ -14,15 +14,15 @@ export function BackstageContextCard({
   return (
     <section
       aria-label="Backstage context"
-      className="border-b border-base-300/70 bg-base-100/80 px-3 py-3"
+      className="border-b border-base-300/70 bg-base-300 px-3 py-3"
     >
       <div className="rounded-box border border-base-300/70 bg-base-100 px-3 py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="badge badge-sm badge-soft">Paused Scene</span>
             {sceneName ? (
               <h2 className="text-base font-semibold text-base-content">{sceneName}</h2>
             ) : null}
+            <span className="badge badge-sm badge-soft">Paused Scene</span>
           </div>
           <PlayerHUDStatusPill
             ariaLabel={`Backstage status: ${status.label}`}

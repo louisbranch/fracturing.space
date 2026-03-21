@@ -28,7 +28,7 @@ export function OnStageCompose({
   }
 
   return (
-    <section aria-label="On-stage actions" className="border-t border-base-300/70 bg-base-100/90 px-3 py-3">
+    <section aria-label="On-stage actions" className="border-t border-base-300/70 bg-base-300 px-3 py-3">
       <div className="space-y-2">
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <textarea

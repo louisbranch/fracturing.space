@@ -89,6 +89,8 @@ describe("PlayerHUDCharacterInspectorDialog", () => {
     );
 
     const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("button", { name: "Aria" })).toHaveClass("cursor-pointer");
+    expect(within(dialog).getByRole("button", { name: "Mira" })).toHaveClass("cursor-pointer");
 
     await user.click(within(dialog).getByRole("button", { name: "Mira" }));
     expect(onCharacterChange).toHaveBeenCalledWith(playerHUDCharacterCatalog.mira.id);

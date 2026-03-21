@@ -95,7 +95,9 @@ export function mapToPlayerHUDState(
   return {
     activeTab,
     connectionState,
-    campaignNavigation: mapCampaignNavigation(returnURL, participants, viewerPID, inspectionCatalog),
+    // Campaign navigation should preserve the durable participant-to-character
+    // ownership from bootstrap even when realtime snapshots omit character IDs.
+    campaignNavigation: mapCampaignNavigation(returnURL, bootstrap.participants ?? [], viewerPID, inspectionCatalog),
     onStage: mapOnStageState(state, participants, viewerPID, viewerRole, inspectionCatalog),
     backstage: mapBackstageState(state, participants, viewerPID, chatMessages, inspectionCatalog),
     sideChat: mapSideChatState(viewerPID, participants, chatMessages, inspectionCatalog),

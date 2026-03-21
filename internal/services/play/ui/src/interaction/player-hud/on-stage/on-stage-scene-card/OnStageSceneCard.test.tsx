@@ -19,7 +19,7 @@ describe("OnStageSceneCard", () => {
       />,
     );
 
-    expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
+    expect(screen.getByLabelText("On-stage scene context")).toHaveClass("bg-base-300");
     expect(screen.getByText("Sealed Vault")).toBeInTheDocument();
     expect(screen.getByText("Active Scene")).toBeInTheDocument();
     expect(screen.getByLabelText("Scene characters: Aria, Corin")).toBeInTheDocument();

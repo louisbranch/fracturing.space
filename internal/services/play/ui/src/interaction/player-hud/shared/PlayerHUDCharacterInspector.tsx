@@ -191,7 +191,7 @@ export function PlayerHUDCharacterInspectorDialog({
                 <button
                   key={character.id}
                   type="button"
-                  className={`flex items-center gap-2 rounded-box border px-2 py-1.5 text-left transition ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-box border px-2 py-1.5 text-left transition ${
                     isActive
                       ? "border-primary bg-primary/10 ring-2 ring-primary/40"
                       : "border-base-300/70 bg-base-200/30 hover:border-primary/50"

@@ -5,7 +5,8 @@ import { ChatCompose } from "./ChatCompose";
 
 describe("ChatCompose", () => {
   it("disables the send button when draft is empty", () => {
-    render(<ChatCompose draft="" onDraftChange={() => {}} onSend={() => {}} />);
+    const { container } = render(<ChatCompose draft="" onDraftChange={() => {}} onSend={() => {}} />);
+    expect(container.firstChild).toHaveClass("bg-base-300");
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
 

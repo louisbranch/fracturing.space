@@ -22,7 +22,7 @@ export function OnStageSceneCard({
   return (
     <section
       aria-label="On-stage scene context"
-      className="min-w-0 border-b border-base-300/70 bg-base-100/80 px-3 py-3"
+      className="min-w-0 border-b border-base-300/70 bg-base-300 px-3 py-3"
     >
       <div className="min-w-0 rounded-box border border-base-300/70 bg-base-100 px-3 py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">

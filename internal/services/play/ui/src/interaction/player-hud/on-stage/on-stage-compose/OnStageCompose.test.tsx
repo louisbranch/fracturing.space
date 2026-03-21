@@ -19,6 +19,7 @@ describe("OnStageCompose", () => {
       />,
     );
 
+    expect(screen.getByLabelText("On-stage actions")).toHaveClass("bg-base-300");
     expect(screen.getByLabelText("On-stage action input")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Submit & Yield" })).toBeInTheDocument();

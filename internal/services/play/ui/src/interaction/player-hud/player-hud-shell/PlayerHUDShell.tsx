@@ -70,7 +70,7 @@ export function PlayerHUDShell({
         onChange={(event) => onSidebarOpenChange(event.currentTarget.checked)}
       />
       <div className="drawer-content">
-        <main aria-label="Player HUD shell" className="play-density-hud flex h-dvh w-full flex-col">
+        <main aria-label="Player HUD shell" className="play-density-hud flex h-dvh w-full flex-col bg-base-300">
           <HUDNavbar
             activeTab={activeTab}
             connectionState={connectionState}

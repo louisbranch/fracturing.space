@@ -37,7 +37,7 @@ describe("PlayerHUDShell", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Player HUD shell")).toBeInTheDocument();
+    expect(screen.getByLabelText("Player HUD shell")).toHaveClass("bg-base-300");
     expect(screen.getByLabelText("Player HUD navigation")).toBeInTheDocument();
     expect(screen.getByLabelText("Connection status: Connected")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "On Stage" })).toBeInTheDocument();
