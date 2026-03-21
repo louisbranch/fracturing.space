@@ -8,7 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
-func (a Applier) applySessionActiveSceneSet(ctx context.Context, evt event.Event, payload session.ActiveSceneSetPayload) error {
+func (a Applier) applySessionSceneActivate(ctx context.Context, evt event.Event, payload session.SceneActivatedPayload) error {
 	updatedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
 		return err

@@ -275,3 +275,17 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	}
 	return newSceneID, nil
 }
+
+func shouldActivateSceneFromCreate(in *campaignv1.CreateSceneRequest) bool {
+	if in == nil || in.Activate == nil {
+		return true
+	}
+	return in.GetActivate()
+}
+
+func shouldActivateSceneFromTransition(in *campaignv1.TransitionSceneRequest) bool {
+	if in == nil || in.Activate == nil {
+		return true
+	}
+	return in.GetActivate()
+}

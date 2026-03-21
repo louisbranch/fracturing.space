@@ -1,0 +1,142 @@
+{
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "captured_at_utc": "2026-03-21T17:33:55Z",
+    "scenario": "ai_gm_campaign_context_review_advance",
+    "source": "live_capture"
+  },
+  "initial_prompt_contains": [
+    "story.md:",
+    "Starter seed: The archive flood is rising around a ledger vault.",
+    "memory.md:",
+    "Remember: Aria is trying to secure the ledger before the room collapses.",
+    "Review-resolution mode",
+    "end that interaction with a prompt beat and open the next player phase in the same call"
+  ],
+  "initial_tool_names": [
+    "campaign_artifact_list",
+    "campaign_artifact_get",
+    "campaign_artifact_upsert",
+    "campaign_memory_section_read",
+    "campaign_memory_section_update",
+    "scene_create",
+    "scene_update",
+    "scene_end",
+    "scene_transition",
+    "scene_add_character",
+    "scene_remove_character",
+    "interaction_activate_scene",
+    "interaction_open_scene_player_phase",
+    "interaction_resolve_scene_player_review",
+    "interaction_record_scene_gm_interaction",
+    "interaction_open_session_ooc",
+    "interaction_session_ooc_resolve",
+    "interaction_post_session_ooc",
+    "interaction_mark_ooc_ready_to_resume",
+    "interaction_clear_ooc_ready_to_resume",
+    "duality_action_roll",
+    "roll_dice",
+    "duality_outcome",
+    "duality_explain",
+    "duality_probability",
+    "duality_rules_version",
+    "system_reference_search",
+    "system_reference_read"
+  ],
+  "steps": [
+    {
+      "id": "resp_032c304c6a299c1f0069bed66c310c81909653e50afab85f31",
+      "tool_calls": [
+        {
+          "call_id": "call_NtzuNF0Ir7sbu0agxu5OnJfu",
+          "name": "campaign_artifact_upsert",
+          "arguments": {
+            "content": "Remember: Aria is trying to secure the ledger before the room collapses.\n\nArchive update (Flooded Archive - ledger vault):\n- Water has crept to ankle/knee height at the ledger vault threshold and is rising.\n- Aria tested the current with a hooked pole and found a steady inward draw toward the vault; the flow is not violently strong but will carry loose folios and light crates inward.\n- The primary ledger of interest is now partially waterlogged at the lower edge but remains readable and intact for the moment.\n- Several loose folios have slipped free and are drifting; some shelves are beginning to soak at their bases.\n- Time pressure: the ledger will be at significant risk of damage if not secured within the next several minutes.\n\nPlayer action note: Aria's probe also dislodged a small stack that is floating toward a sump—this may create an immediate choice to chase drift or protect the ledger.\n",
+            "path": "memory.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_032c304c6a299c1f0069bed67a06a88190bac160da80404591",
+      "tool_calls": [
+        {
+          "call_id": "call_BM8TCscjwsGEOVQhrfwIJadp",
+          "name": "interaction_resolve_scene_player_review",
+          "arguments": {
+            "open_next_player_phase": {
+              "interaction": {
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "text": "Resolution: Aria’s hooked pole cuts through the cold, brackish water and finds a steady inward tug. The pole snags a corner of a floating bundle and, when she eases it, a few loose folios slither free and begin drifting toward the vault’s sump. The ledger you came for sits on the lower shelf; its bottom edge is damp but the spine holds and the pages are largely legible for now.",
+                    "type": "resolution"
+                  },
+                  {
+                    "beat_id": "beat-2",
+                    "text": "Consequence: Water has reached the vault threshold and is soaking the lowest shelves. If the ledger is not moved or elevated soon, the damp will creep deeper into the binding; the drifting folios could be lost down the sump. The current isn’t overpowering yet, but it will carry away unsecured material and make reaching deeper racks trickier.",
+                    "type": "consequence"
+                  },
+                  {
+                    "beat_id": "beat-3",
+                    "text": "Guidance: You can try to retrieve the ledger now—use the pole to hook and slide it free, wade deeper to lift it higher on the shelf, secure it in a waterproof case if you have one, or chase the drifting folios. Each choice trades time and exposure to the current. Describe which action Aria takes and how she attempts it.",
+                    "type": "guidance"
+                  },
+                  {
+                    "beat_id": "beat-4",
+                    "text": "Prompt: Aria, what do you do next in the flooded vault?",
+                    "type": "prompt"
+                  }
+                ],
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "title": "Probe and Pressure"
+              },
+              "next_character_ids": [
+                "{{character_id}}"
+              ]
+            },
+            "request_revisions": {
+              "interaction": {
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "text": "",
+                    "type": "guidance"
+                  }
+                ],
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "title": "placeholder"
+              },
+              "revisions": []
+            },
+            "return_to_gm": {
+              "interaction": {
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "text": "",
+                    "type": "guidance"
+                  }
+                ],
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "title": "placeholder"
+              }
+            },
+            "scene_id": "{{scene_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_032c304c6a299c1f0069bed67fd88881909b941107b6efc6ae",
+      "output_text": "Beats (authoritative GM resolution, then open player phase)\n\n1) Resolution\nAria’s hooked pole cuts through the cold, brackish water and finds a steady inward tug. The pole snags a corner of a floating bundle and, when she eases it, a few loose folios slither free and begin drifting toward the vault’s sump. The ledger you came for sits on the lower shelf; its bottom edge is damp but the spine holds and the pages are largely legible for now.\n\n2) Consequence\nWater has reached the vault threshold and is soaking the lowest shelves. If the ledger is not moved or elevated soon, the damp will creep deeper into the binding; the drifting folios could be lost down the sump. The current isn’t overpowering yet, but it will carry away unsecured material and make reaching deeper racks trickier.\n\n3) Guidance\nYou can try to retrieve the ledger now—use the pole to hook and slide it free, wade deeper to lift it higher on the shelf, secure it in a waterproof case if you have one, or chase the drifting folios. Each choice trades time and exposure to the current. Describe which action Aria takes and how she attempts it.\n\n4) Prompt\nAria, what do you do next in the flooded vault?\n\nMemory.md updated with the archive changes (water level, Aria’s probe findings, ledger condition, drifting folios and time pressure). Players may act next."
+    }
+  ]
+}

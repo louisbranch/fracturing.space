@@ -61,7 +61,7 @@ func foldCreated(state State, evt event.Event) (State, error) {
 	state.SceneID = ids.SceneID(payload.SceneID)
 	state.Name = payload.Name
 	state.Description = payload.Description
-	state.Active = true
+	state.Open = true
 	if state.Characters == nil {
 		state.Characters = make(map[ids.CharacterID]bool)
 	}
@@ -83,7 +83,7 @@ func foldUpdated(state State, evt event.Event) (State, error) {
 }
 
 func foldEnded(state State, _ event.Event) (State, error) {
-	state.Active = false
+	state.Open = false
 	state.GateOpen = false
 	state.GateID = ""
 	state.SpotlightType = ""

@@ -143,7 +143,7 @@ func SceneToProto(rec storage.SceneRecord, characters []storage.SceneCharacterRe
 		SessionId:   rec.SessionID,
 		Name:        rec.Name,
 		Description: rec.Description,
-		Active:      rec.Active,
+		Open:        rec.Open,
 		CreatedAt:   timestamppb.New(rec.CreatedAt),
 		UpdatedAt:   timestamppb.New(rec.UpdatedAt),
 	}

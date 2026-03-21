@@ -305,8 +305,8 @@ local scn = Scenario.new("interaction")
 scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Hand GM authority to a named participant and open a player phase.
-scn:interaction_set_gm_authority({participant = "Guide", as = "Guide"})
-scn:interaction_start_player_phase({
+scn:interaction_set_session_gm_authority({participant = "Guide", as = "Guide"})
+scn:interaction_open_scene_player_phase({
   scene = "The Bridge",
   interaction = {
     title = "Opening Beat",
@@ -315,8 +315,8 @@ scn:interaction_start_player_phase({
   characters = {"Aria", "Corin"},
   as = "Guide",
 })
-scn:interaction_post({summary = "Aria rushes forward.", characters = {"Aria"}, as = "Rhea", yield = true})
-scn:interaction_resume_ooc()
+scn:interaction_submit_scene_player_action({summary = "Aria rushes forward.", characters = {"Aria"}, as = "Rhea", yield = true})
+scn:interaction_resolve_session_ooc({resume_interrupted_phase = true})
 
 return scn
 `)
@@ -328,13 +328,13 @@ return scn
 	if len(scenario.Steps) != 5 {
 		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 5)
 	}
-	if scenario.Steps[1].Kind != "interaction_set_gm_authority" {
+	if scenario.Steps[1].Kind != "interaction_set_session_gm_authority" {
 		t.Fatalf("step[1].Kind = %q", scenario.Steps[1].Kind)
 	}
 	if scenario.Steps[1].Args["participant"] != "Guide" {
 		t.Fatalf("participant = %v, want Guide", scenario.Steps[1].Args["participant"])
 	}
-	if scenario.Steps[2].Kind != "interaction_start_player_phase" {
+	if scenario.Steps[2].Kind != "interaction_open_scene_player_phase" {
 		t.Fatalf("step[2].Kind = %q", scenario.Steps[2].Kind)
 	}
 	interactionArgs, ok := scenario.Steps[2].Args["interaction"].(map[string]any)
@@ -349,13 +349,13 @@ return scn
 	if !ok || beat["text"] != "What do you do?" {
 		t.Fatalf("interaction beat = %#v, want prompt", beats[0])
 	}
-	if scenario.Steps[3].Kind != "interaction_post" {
+	if scenario.Steps[3].Kind != "interaction_submit_scene_player_action" {
 		t.Fatalf("step[3].Kind = %q", scenario.Steps[3].Kind)
 	}
 	if scenario.Steps[3].Args["as"] != "Rhea" {
 		t.Fatalf("as = %v, want Rhea", scenario.Steps[3].Args["as"])
 	}
-	if scenario.Steps[4].Kind != "interaction_resume_ooc" {
+	if scenario.Steps[4].Kind != "interaction_resolve_session_ooc" {
 		t.Fatalf("step[4].Kind = %q", scenario.Steps[4].Kind)
 	}
 }
@@ -366,21 +366,21 @@ local scn = Scenario.new("interaction_all")
 scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Exercise every remaining interaction wrapper once.
-scn:interaction_set_active_scene({scene = "The Bridge"})
-scn:interaction_yield({as = "Rhea"})
-scn:interaction_unyield({as = "Rhea"})
-scn:interaction_end_player_phase({reason = "gm_interrupted"})
-scn:interaction_resolve_review({
+scn:interaction_activate_scene({scene = "The Bridge"})
+scn:interaction_yield_scene_player_phase({as = "Rhea"})
+scn:interaction_withdraw_scene_player_yield({as = "Rhea"})
+scn:interaction_interrupt_scene_player_phase({reason = "gm_interrupted"})
+scn:interaction_resolve_scene_player_review({
   as = "Guide",
   return_to_gm = true,
   interaction = {title = "Resolution", beats = {{type = "resolution", text = "The bridge settles."}}},
 })
-scn:interaction_resolve_review({
+scn:interaction_resolve_scene_player_review({
   as = "Guide",
   interaction = {title = "Clarify", beats = {{type = "guidance", text = "Clarify"}}},
   revisions = {{participant = "Rhea", reason = "Clarify", characters = {"Aria"}}},
 })
-scn:interaction_resolve_review({
+scn:interaction_resolve_scene_player_review({
   as = "Guide",
   interaction = {
     title = "Bridge Buckles",
@@ -391,11 +391,11 @@ scn:interaction_resolve_review({
   },
   characters = {"Aria"},
 })
-scn:interaction_pause_ooc({reason = "clarify the ruling"})
-scn:interaction_post_ooc({as = "Rhea", body = "Question?"})
-scn:interaction_ready_ooc({as = "Rhea"})
-scn:interaction_clear_ready_ooc({as = "Rhea"})
-scn:interaction_resolve_interrupted_phase({as = "Guide", resume_original_phase = true})
+scn:interaction_open_session_ooc({reason = "clarify the ruling"})
+scn:interaction_post_session_ooc({as = "Rhea", body = "Question?"})
+scn:interaction_mark_ooc_ready_to_resume({as = "Rhea"})
+scn:interaction_clear_ooc_ready_to_resume({as = "Rhea"})
+scn:interaction_resolve_session_ooc({as = "Guide", resume_interrupted_phase = true})
 scn:interaction_expect({phase_status = "GM_REVIEW", slots = {}, ooc_posts = {}})
 
 return scn
@@ -408,18 +408,18 @@ return scn
 
 	wantKinds := []string{
 		"campaign",
-		"interaction_set_active_scene",
-		"interaction_yield",
-		"interaction_unyield",
-		"interaction_end_player_phase",
-		"interaction_resolve_review",
-		"interaction_resolve_review",
-		"interaction_resolve_review",
-		"interaction_pause_ooc",
-		"interaction_post_ooc",
-		"interaction_ready_ooc",
-		"interaction_clear_ready_ooc",
-		"interaction_resolve_interrupted_phase",
+		"interaction_activate_scene",
+		"interaction_yield_scene_player_phase",
+		"interaction_withdraw_scene_player_yield",
+		"interaction_interrupt_scene_player_phase",
+		"interaction_resolve_scene_player_review",
+		"interaction_resolve_scene_player_review",
+		"interaction_resolve_scene_player_review",
+		"interaction_open_session_ooc",
+		"interaction_post_session_ooc",
+		"interaction_mark_ooc_ready_to_resume",
+		"interaction_clear_ooc_ready_to_resume",
+		"interaction_resolve_session_ooc",
 		"interaction_expect",
 	}
 	if len(scenario.Steps) != len(wantKinds) {

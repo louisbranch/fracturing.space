@@ -15,7 +15,7 @@ func TestSceneToProto_WithCharacters(t *testing.T) {
 		SessionID:   "s-1",
 		Name:        "Battle",
 		Description: "A fierce battle",
-		Active:      false,
+		Open:        false,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 		EndedAt:     &ended,
@@ -41,7 +41,7 @@ func TestSceneToProto_NoCharacters(t *testing.T) {
 		SceneID:   "sc-1",
 		SessionID: "s-1",
 		Name:      "Tavern",
-		Active:    true,
+		Open:      true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

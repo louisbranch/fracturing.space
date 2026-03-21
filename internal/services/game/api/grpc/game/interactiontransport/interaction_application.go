@@ -115,6 +115,7 @@ func (a interactionApplication) GetInteractionState(ctx context.Context, campaig
 		return nil, err
 	}
 	if activeSession == nil {
+		state.Control = deriveInteractionControlState(actor, storage.SessionInteraction{}, storage.SceneInteraction{})
 		return state, nil
 	}
 
@@ -127,6 +128,7 @@ func (a interactionApplication) GetInteractionState(ctx context.Context, campaig
 	state.AiTurn = aiTurnToProto(sessionInteraction.AITurn)
 
 	if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" {
+		state.Control = deriveInteractionControlState(actor, sessionInteraction, storage.SceneInteraction{})
 		return state, nil
 	}
 
@@ -143,15 +145,16 @@ func (a interactionApplication) GetInteractionState(ctx context.Context, campaig
 	}
 	state.ActiveScene = activeScene
 	state.PlayerPhase = sceneInteractionToProto(sceneInteraction)
+	state.Control = deriveInteractionControlState(actor, sessionInteraction, sceneInteraction)
 	return state, nil
 }
 
-func (a interactionApplication) SetActiveScene(ctx context.Context, campaignID string, in *campaignv1.SetActiveSceneRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) ActivateScene(ctx context.Context, campaignID string, in *campaignv1.ActivateSceneRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
 		return nil, err
 	}
-	campaignRecord, err := a.requireManageSessions(ctx, campaignID)
+	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +166,9 @@ func (a interactionApplication) SetActiveScene(ctx context.Context, campaignID s
 		return nil, err
 	}
 	if err := requireSceneWritesUnblocked(currentInteraction); err != nil {
+		return nil, err
+	}
+	if err := requireAuthoritativeGMActor(actor, currentInteraction); err != nil {
 		return nil, err
 	}
 	targetScene, err := a.stores.Scene.GetScene(ctx, campaignID, sceneID)
@@ -183,11 +189,11 @@ func (a interactionApplication) SetActiveScene(ctx context.Context, campaignID s
 		}
 	}
 
-	payload := session.ActiveSceneSetPayload{
+	payload := session.SceneActivatedPayload{
 		SessionID:     ids.SessionID(activeSession.ID),
 		ActiveSceneID: ids.SceneID(sceneID),
 	}
-	if err := a.executeSessionCommand(ctx, commandTypeSessionActiveSceneSet, campaignID, activeSession.ID, payload, "session.active_scene.set"); err != nil {
+	if err := a.executeSessionCommand(ctx, commandTypeSessionSceneActivate, campaignID, activeSession.ID, payload, "session.scene.activate"); err != nil {
 		return nil, err
 	}
 	return a.GetInteractionState(ctx, campaignID)

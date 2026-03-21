@@ -21,20 +21,19 @@ func TestInteractionMutationHandlersProxyRequests(t *testing.T) {
 		body       string
 		wantMethod string
 	}{
-		{name: "set active scene", path: "/api/campaigns/c1/interaction/set-active-scene", body: `{}`, wantMethod: "SetActiveScene"},
-		{name: "start scene player phase", path: "/api/campaigns/c1/interaction/start-scene-player-phase", body: `{}`, wantMethod: "StartScenePlayerPhase"},
-		{name: "submit scene player post", path: "/api/campaigns/c1/interaction/submit-scene-player-post", body: `{}`, wantMethod: "SubmitScenePlayerPost"},
+		{name: "set active scene", path: "/api/campaigns/c1/interaction/activate-scene", body: `{}`, wantMethod: "ActivateScene"},
+		{name: "start scene player phase", path: "/api/campaigns/c1/interaction/open-scene-player-phase", body: `{}`, wantMethod: "OpenScenePlayerPhase"},
+		{name: "submit scene player post", path: "/api/campaigns/c1/interaction/submit-scene-player-action", body: `{}`, wantMethod: "SubmitScenePlayerAction"},
 		{name: "yield scene player phase", path: "/api/campaigns/c1/interaction/yield-scene-player-phase", body: `{}`, wantMethod: "YieldScenePlayerPhase"},
-		{name: "unyield scene player phase", path: "/api/campaigns/c1/interaction/unyield-scene-player-phase", body: `{}`, wantMethod: "UnyieldScenePlayerPhase"},
-		{name: "end scene player phase", path: "/api/campaigns/c1/interaction/end-scene-player-phase", body: `{}`, wantMethod: "EndScenePlayerPhase"},
-		{name: "commit scene gm interaction", path: "/api/campaigns/c1/interaction/commit-scene-gm-interaction", body: `{}`, wantMethod: "CommitSceneGMInteraction"},
-		{name: "resolve scene player phase review", path: "/api/campaigns/c1/interaction/resolve-scene-player-phase-review", body: `{}`, wantMethod: "ResolveScenePlayerPhaseReview"},
-		{name: "pause session for ooc", path: "/api/campaigns/c1/interaction/pause-session-for-ooc", body: `{}`, wantMethod: "PauseSessionForOOC"},
+		{name: "unyield scene player phase", path: "/api/campaigns/c1/interaction/withdraw-scene-player-yield", body: `{}`, wantMethod: "WithdrawScenePlayerYield"},
+		{name: "end scene player phase", path: "/api/campaigns/c1/interaction/interrupt-scene-player-phase", body: `{}`, wantMethod: "InterruptScenePlayerPhase"},
+		{name: "commit scene gm interaction", path: "/api/campaigns/c1/interaction/record-scene-gm-interaction", body: `{}`, wantMethod: "RecordSceneGMInteraction"},
+		{name: "resolve scene player phase review", path: "/api/campaigns/c1/interaction/resolve-scene-player-review", body: `{}`, wantMethod: "ResolveScenePlayerReview"},
+		{name: "pause session for ooc", path: "/api/campaigns/c1/interaction/open-session-ooc", body: `{}`, wantMethod: "OpenSessionOOC"},
 		{name: "post session ooc", path: "/api/campaigns/c1/interaction/post-session-ooc", body: `{}`, wantMethod: "PostSessionOOC"},
 		{name: "mark ooc ready", path: "/api/campaigns/c1/interaction/mark-ooc-ready-to-resume", wantMethod: "MarkOOCReadyToResume"},
 		{name: "clear ooc ready", path: "/api/campaigns/c1/interaction/clear-ooc-ready-to-resume", wantMethod: "ClearOOCReadyToResume"},
-		{name: "resume from ooc", path: "/api/campaigns/c1/interaction/resume-from-ooc", wantMethod: "ResumeFromOOC"},
-		{name: "resolve interrupted scene phase", path: "/api/campaigns/c1/interaction/resolve-interrupted-scene-phase", body: `{}`, wantMethod: "ResolveInterruptedScenePhase"},
+		{name: "resolve session ooc", path: "/api/campaigns/c1/interaction/resolve-session-ooc", body: `{}`, wantMethod: "ResolveSessionOOC"},
 		{name: "set gm authority", path: "/api/campaigns/c1/interaction/set-session-gm-authority", body: `{}`, wantMethod: "SetSessionGMAuthority"},
 		{name: "retry ai gm turn", path: "/api/campaigns/c1/interaction/retry-ai-gm-turn", body: `{}`, wantMethod: "RetryAIGMTurn"},
 	}
@@ -96,7 +95,7 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 		if err != nil {
 			t.Fatalf("newHandler() error = %v", err)
 		}
-		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/set-active-scene", strings.NewReader(`{"unknown":true}`))
+		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/activate-scene", strings.NewReader(`{"unknown":true}`))
 		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
 		rr := httptest.NewRecorder()
 
@@ -113,7 +112,7 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 		if err != nil {
 			t.Fatalf("newHandler() error = %v", err)
 		}
-		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/set-active-scene", strings.NewReader(`{}`))
+		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/activate-scene", strings.NewReader(`{}`))
 		rr := httptest.NewRecorder()
 
 		handler.ServeHTTP(rr, req)
@@ -131,7 +130,7 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 		if err != nil {
 			t.Fatalf("newHandler() error = %v", err)
 		}
-		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/set-active-scene", strings.NewReader(`{}`))
+		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/activate-scene", strings.NewReader(`{}`))
 		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
 		rr := httptest.NewRecorder()
 
@@ -159,7 +158,7 @@ func TestInteractionMutationResponseKeepsParticipantAndCharacterEnrichment(t *te
 		t.Fatalf("newHandler() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/submit-scene-player-post", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/submit-scene-player-action", strings.NewReader(`{}`))
 	req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
 	rr := httptest.NewRecorder()
 

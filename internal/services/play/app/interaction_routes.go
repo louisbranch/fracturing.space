@@ -21,51 +21,51 @@ func (r interactionRoute) register(rootMux *http.ServeMux) {
 // mutations so contributors can see the full surface in one place.
 func interactionRoutes(server *Server) []interactionRoute {
 	return []interactionRoute{
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/set-active-scene", func() *gamev1.SetActiveSceneRequest {
-			return &gamev1.SetActiveSceneRequest{}
-		}, func(req *gamev1.SetActiveSceneRequest, campaignID string) {
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/activate-scene", func() *gamev1.ActivateSceneRequest {
+			return &gamev1.ActivateSceneRequest{}
+		}, func(req *gamev1.ActivateSceneRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.SetActiveScene),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/start-scene-player-phase", func() *gamev1.StartScenePlayerPhaseRequest {
-			return &gamev1.StartScenePlayerPhaseRequest{}
-		}, func(req *gamev1.StartScenePlayerPhaseRequest, campaignID string) {
+		}, server.interaction.ActivateScene),
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/open-scene-player-phase", func() *gamev1.OpenScenePlayerPhaseRequest {
+			return &gamev1.OpenScenePlayerPhaseRequest{}
+		}, func(req *gamev1.OpenScenePlayerPhaseRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.StartScenePlayerPhase),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/submit-scene-player-post", func() *gamev1.SubmitScenePlayerPostRequest {
-			return &gamev1.SubmitScenePlayerPostRequest{}
-		}, func(req *gamev1.SubmitScenePlayerPostRequest, campaignID string) {
+		}, server.interaction.OpenScenePlayerPhase),
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/submit-scene-player-action", func() *gamev1.SubmitScenePlayerActionRequest {
+			return &gamev1.SubmitScenePlayerActionRequest{}
+		}, func(req *gamev1.SubmitScenePlayerActionRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.SubmitScenePlayerPost),
+		}, server.interaction.SubmitScenePlayerAction),
 		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/yield-scene-player-phase", func() *gamev1.YieldScenePlayerPhaseRequest {
 			return &gamev1.YieldScenePlayerPhaseRequest{}
 		}, func(req *gamev1.YieldScenePlayerPhaseRequest, campaignID string) {
 			req.CampaignId = campaignID
 		}, server.interaction.YieldScenePlayerPhase),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/unyield-scene-player-phase", func() *gamev1.UnyieldScenePlayerPhaseRequest {
-			return &gamev1.UnyieldScenePlayerPhaseRequest{}
-		}, func(req *gamev1.UnyieldScenePlayerPhaseRequest, campaignID string) {
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/withdraw-scene-player-yield", func() *gamev1.WithdrawScenePlayerYieldRequest {
+			return &gamev1.WithdrawScenePlayerYieldRequest{}
+		}, func(req *gamev1.WithdrawScenePlayerYieldRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.UnyieldScenePlayerPhase),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/end-scene-player-phase", func() *gamev1.EndScenePlayerPhaseRequest {
-			return &gamev1.EndScenePlayerPhaseRequest{}
-		}, func(req *gamev1.EndScenePlayerPhaseRequest, campaignID string) {
+		}, server.interaction.WithdrawScenePlayerYield),
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/interrupt-scene-player-phase", func() *gamev1.InterruptScenePlayerPhaseRequest {
+			return &gamev1.InterruptScenePlayerPhaseRequest{}
+		}, func(req *gamev1.InterruptScenePlayerPhaseRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.EndScenePlayerPhase),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/commit-scene-gm-interaction", func() *gamev1.CommitSceneGMInteractionRequest {
-			return &gamev1.CommitSceneGMInteractionRequest{}
-		}, func(req *gamev1.CommitSceneGMInteractionRequest, campaignID string) {
+		}, server.interaction.InterruptScenePlayerPhase),
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/record-scene-gm-interaction", func() *gamev1.RecordSceneGMInteractionRequest {
+			return &gamev1.RecordSceneGMInteractionRequest{}
+		}, func(req *gamev1.RecordSceneGMInteractionRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.CommitSceneGMInteraction),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/resolve-scene-player-phase-review", func() *gamev1.ResolveScenePlayerPhaseReviewRequest {
-			return &gamev1.ResolveScenePlayerPhaseReviewRequest{}
-		}, func(req *gamev1.ResolveScenePlayerPhaseReviewRequest, campaignID string) {
+		}, server.interaction.RecordSceneGMInteraction),
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/resolve-scene-player-review", func() *gamev1.ResolveScenePlayerReviewRequest {
+			return &gamev1.ResolveScenePlayerReviewRequest{}
+		}, func(req *gamev1.ResolveScenePlayerReviewRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.ResolveScenePlayerPhaseReview),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/pause-session-for-ooc", func() *gamev1.PauseSessionForOOCRequest {
-			return &gamev1.PauseSessionForOOCRequest{}
-		}, func(req *gamev1.PauseSessionForOOCRequest, campaignID string) {
+		}, server.interaction.ResolveScenePlayerReview),
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/open-session-ooc", func() *gamev1.OpenSessionOOCRequest {
+			return &gamev1.OpenSessionOOCRequest{}
+		}, func(req *gamev1.OpenSessionOOCRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.PauseSessionForOOC),
+		}, server.interaction.OpenSessionOOC),
 		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/post-session-ooc", func() *gamev1.PostSessionOOCRequest {
 			return &gamev1.PostSessionOOCRequest{}
 		}, func(req *gamev1.PostSessionOOCRequest, campaignID string) {
@@ -77,14 +77,11 @@ func interactionRoutes(server *Server) []interactionRoute {
 		scopeOnlyInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/clear-ooc-ready-to-resume", func(campaignID string) *gamev1.ClearOOCReadyToResumeRequest {
 			return &gamev1.ClearOOCReadyToResumeRequest{CampaignId: campaignID}
 		}, server.interaction.ClearOOCReadyToResume),
-		scopeOnlyInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/resume-from-ooc", func(campaignID string) *gamev1.ResumeFromOOCRequest {
-			return &gamev1.ResumeFromOOCRequest{CampaignId: campaignID}
-		}, server.interaction.ResumeFromOOC),
-		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/resolve-interrupted-scene-phase", func() *gamev1.ResolveInterruptedScenePhaseRequest {
-			return &gamev1.ResolveInterruptedScenePhaseRequest{}
-		}, func(req *gamev1.ResolveInterruptedScenePhaseRequest, campaignID string) {
+		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/resolve-session-ooc", func() *gamev1.ResolveSessionOOCRequest {
+			return &gamev1.ResolveSessionOOCRequest{}
+		}, func(req *gamev1.ResolveSessionOOCRequest, campaignID string) {
 			req.CampaignId = campaignID
-		}, server.interaction.ResolveInterruptedScenePhase),
+		}, server.interaction.ResolveSessionOOC),
 		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/set-session-gm-authority", func() *gamev1.SetSessionGMAuthorityRequest {
 			return &gamev1.SetSessionGMAuthorityRequest{}
 		}, func(req *gamev1.SetSessionGMAuthorityRequest, campaignID string) {

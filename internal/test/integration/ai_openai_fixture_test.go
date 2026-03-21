@@ -39,7 +39,7 @@ func TestTokenizeReplayFixtureReplacesDynamicIDs(t *testing.T) {
 			OutputText: "Scene scene-1 is ready for char-1.",
 			ToolCalls: []openAIReplayToolCall{{
 				CallID: "call-1",
-				Name:   "interaction_active_scene_set",
+				Name:   "interaction_activate_scene",
 				Arguments: map[string]any{
 					"scene_id": "scene-1",
 					"actors":   []any{"char-1"},
@@ -58,7 +58,7 @@ func TestTokenizeReplayFixtureReplacesDynamicIDs(t *testing.T) {
 			OutputText: "Scene {{scene_id}} is ready for {{character_id}}.",
 			ToolCalls: []openAIReplayToolCall{{
 				CallID: "call-1",
-				Name:   "interaction_active_scene_set",
+				Name:   "interaction_activate_scene",
 				Arguments: map[string]any{
 					"scene_id": "{{scene_id}}",
 					"actors":   []any{"{{character_id}}"},

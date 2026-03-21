@@ -7,25 +7,23 @@ last_reviewed: "2026-03-18"
 
 # AI model comparison — GM bootstrap
 
-Comparison of OpenAI models running the campaign GM bootstrap scenario.
-All runs use the same 30-tool profile, strict-mode schemas, and degraded-mode
-prompt builder (no pre-loaded skills or memory-guide instructions).
+Historical comparison of OpenAI models running the campaign GM bootstrap
+scenario before the current transition-oriented interaction-tool rewrite.
 
-Raw captures are committed in
-`internal/test/integration/fixtures/captures/`.
+The durable committed artifact for the current bootstrap contract is
+`internal/test/integration/fixtures/ai_gm_campaign_context_bootstrap_replay.json`.
 
 ## Test scenario
 
 Prompt: _"Open the session, consult the Fear reference first, and update
 memory.md with session notes about the harbor debt."_
 
-The model must:
+The legacy comparison scenario required the model to:
 
 1. Search and read the Daggerheart Fear reference
 2. Update memory.md with session notes
-3. Create and activate a scene
-4. Commit GM narration
-5. Start the first player phase
+3. Create a scene
+4. Open the first player phase
 
 ## Token usage and cost
 
@@ -42,7 +40,7 @@ lower per-token rates keep cost moderate. gpt-5-mini balances quality and cost.
 
 | Model | Runs | Clean runs | Tool errors | Duplicate calls |
 |-------|-----:|:----------:|:-----------:|:---------------:|
-| gpt-4.1-mini | 6 | 3 | OOC precondition, duplicate scene_create, duplicate active_scene_set | Yes |
+| gpt-4.1-mini | 6 | 3 | OOC precondition, duplicate scene_create, duplicate scene_activated | Yes |
 | gpt-5-nano | 1 | 1 | None | No |
 | gpt-5-mini | 4 | 2 | OOC precondition (when memory prompt was ambiguous) | No |
 
@@ -57,13 +55,13 @@ model size for tool calling.
 
 ## Tool sequence
 
-All three models converge on the same 7-step optimal sequence when the run is
-clean:
+Before the control-surface rewrite, clean runs converged on this 7-step
+sequence:
 
 ```
 system_reference_search → system_reference_read → memory_write →
-scene_create → interaction_active_scene_set →
-interaction_scene_gm_interaction_commit → interaction_scene_player_phase_start
+scene_create → interaction_activate_scene →
+interaction_record_scene_gm_interaction → interaction_open_scene_player_phase
 ```
 
 The memory write tool varies: gpt-4.1-mini and gpt-5-nano prefer

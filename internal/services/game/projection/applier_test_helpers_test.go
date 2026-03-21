@@ -357,7 +357,7 @@ func (s *fakeSceneStore) EndScene(_ context.Context, campaignID, sceneID string,
 	if !ok {
 		return storage.ErrNotFound
 	}
-	rec.Active = false
+	rec.Open = false
 	rec.EndedAt = &endedAt
 	rec.UpdatedAt = endedAt
 	s.scenes[key] = rec
@@ -376,11 +376,11 @@ func (s *fakeSceneStore) ListScenes(_ context.Context, _, _ string, _ int, _ str
 	return storage.ScenePage{}, nil
 }
 
-func (s *fakeSceneStore) ListActiveScenes(_ context.Context, _ string) ([]storage.SceneRecord, error) {
+func (s *fakeSceneStore) ListOpenScenes(_ context.Context, _ string) ([]storage.SceneRecord, error) {
 	return nil, nil
 }
 
-func (s *fakeSceneStore) ListVisibleActiveScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
+func (s *fakeSceneStore) ListVisibleOpenScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
 	return nil, nil
 }
 

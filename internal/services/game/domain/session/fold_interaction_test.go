@@ -16,9 +16,9 @@ func TestFold_SessionInteractionLifecycle(t *testing.T) {
 		typ     event.Type
 		payload any
 	}{
-		{typ: EventTypeActiveSceneSet, payload: ActiveSceneSetPayload{ActiveSceneID: "scene-1"}},
+		{typ: EventTypeSceneActivated, payload: SceneActivatedPayload{ActiveSceneID: "scene-1"}},
 		{typ: EventTypeGMAuthoritySet, payload: GMAuthoritySetPayload{ParticipantID: "gm-1"}},
-		{typ: EventTypeOOCPaused, payload: OOCPausedPayload{
+		{typ: EventTypeOOCOpened, payload: OOCOpenedPayload{
 			Reason:                   "rules",
 			RequestedByParticipantID: "gm-1",
 			InterruptedSceneID:       "scene-1",
@@ -28,8 +28,8 @@ func TestFold_SessionInteractionLifecycle(t *testing.T) {
 		{typ: EventTypeOOCPosted, payload: OOCPostedPayload{PostID: "ooc-1", ParticipantID: "p1", Body: "question"}},
 		{typ: EventTypeOOCReadyMarked, payload: OOCReadyMarkedPayload{ParticipantID: "p1"}},
 		{typ: EventTypeOOCReadyCleared, payload: OOCReadyClearedPayload{ParticipantID: "p1"}},
-		{typ: EventTypeOOCResumed, payload: OOCResumedPayload{Reason: "resume"}},
-		{typ: EventTypeOOCInterruptionResolved, payload: OOCInterruptionResolvedPayload{Resolution: "resume_original_phase"}},
+		{typ: EventTypeOOCClosed, payload: OOCClosedPayload{Reason: "resume"}},
+		{typ: EventTypeOOCResolved, payload: OOCResolvedPayload{Resolution: "resume_original_phase"}},
 		{typ: EventTypeAITurnQueued, payload: AITurnQueuedPayload{
 			TurnToken:          "turn-1",
 			OwnerParticipantID: "gm-ai",
@@ -78,9 +78,9 @@ func TestFold_SessionInteractionInvalidPayloadsReturnErrors(t *testing.T) {
 
 	corrupt := []byte(`{`)
 	for _, evtType := range []event.Type{
-		EventTypeActiveSceneSet,
+		EventTypeSceneActivated,
 		EventTypeGMAuthoritySet,
-		EventTypeOOCPaused,
+		EventTypeOOCOpened,
 		EventTypeOOCReadyMarked,
 		EventTypeOOCReadyCleared,
 		EventTypeAITurnQueued,
@@ -93,7 +93,7 @@ func TestFold_SessionInteractionInvalidPayloadsReturnErrors(t *testing.T) {
 	}
 }
 
-func TestFold_OOCResumedSetsResolutionPendingWhenInterruptionExists(t *testing.T) {
+func TestFold_OOCClosedSetsResolutionPendingWhenInterruptionExists(t *testing.T) {
 	t.Parallel()
 
 	next, err := Fold(State{
@@ -101,7 +101,7 @@ func TestFold_OOCResumedSetsResolutionPendingWhenInterruptionExists(t *testing.T
 		OOCInterruptedSceneID: "scene-1",
 		OOCInterruptedPhaseID: "phase-1",
 		OOCReadyParticipants:  map[ids.ParticipantID]bool{"p1": true},
-	}, event.Event{Type: EventTypeOOCResumed})
+	}, event.Event{Type: EventTypeOOCClosed})
 	if err != nil {
 		t.Fatalf("fold resume: %v", err)
 	}

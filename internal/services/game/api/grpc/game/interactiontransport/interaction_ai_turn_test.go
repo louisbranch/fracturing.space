@@ -288,7 +288,7 @@ func TestAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligibl
 		Write:              domainwrite.WritePath{Executor: domain, Runtime: runtime},
 	}, gametest.FixedIDGenerator("unused"))
 
-	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.active_scene_set", "", "")
+	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.scene_activated", "", "")
 	if err != nil {
 		t.Fatalf("QueueAIGMTurn mismatch error = %v", err)
 	}
@@ -304,7 +304,7 @@ func TestAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligibl
 			AITurn:                   storage.SessionAITurn{Status: session.AITurnStatusIdle},
 		},
 	}
-	state, err = app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.active_scene_set", "", "")
+	state, err = app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.scene_activated", "", "")
 	if err != nil {
 		t.Fatalf("QueueAIGMTurn ineligible error = %v", err)
 	}

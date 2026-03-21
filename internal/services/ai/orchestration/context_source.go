@@ -22,22 +22,25 @@ func (s InteractionStateSnapshot) Bootstrap() bool {
 type InteractionTurnMode string
 
 const (
-	InteractionTurnModeBootstrap           InteractionTurnMode = "bootstrap"
-	InteractionTurnModeReviewResolution    InteractionTurnMode = "review_resolution"
-	InteractionTurnModeOOCResumeResolution InteractionTurnMode = "ooc_resume_resolution"
-	InteractionTurnModeGMFrame             InteractionTurnMode = "gm_frame"
+	InteractionTurnModeBootstrap          InteractionTurnMode = "bootstrap"
+	InteractionTurnModeReviewResolution   InteractionTurnMode = "review_resolution"
+	InteractionTurnModeOOCOpen            InteractionTurnMode = "ooc_open"
+	InteractionTurnModeOOCCloseResolution InteractionTurnMode = "ooc_resume_resolution"
+	InteractionTurnModeActiveScene        InteractionTurnMode = "active_scene"
 )
 
 func (s InteractionStateSnapshot) TurnMode() InteractionTurnMode {
 	switch {
 	case s.Bootstrap():
 		return InteractionTurnModeBootstrap
+	case s.OOCOpen:
+		return InteractionTurnModeOOCOpen
 	case s.OOCResolutionPending:
-		return InteractionTurnModeOOCResumeResolution
-	case strings.TrimSpace(s.PlayerPhaseStatus) == "gm_review":
+		return InteractionTurnModeOOCCloseResolution
+	case strings.EqualFold(strings.TrimSpace(s.PlayerPhaseStatus), "gm_review"):
 		return InteractionTurnModeReviewResolution
 	default:
-		return InteractionTurnModeGMFrame
+		return InteractionTurnModeActiveScene
 	}
 }
 
@@ -63,7 +66,7 @@ func (b SessionBrief) Bootstrap() bool {
 
 func (b SessionBrief) TurnMode() InteractionTurnMode {
 	if b.InteractionState == nil {
-		return InteractionTurnModeGMFrame
+		return InteractionTurnModeActiveScene
 	}
 	return b.InteractionState.TurnMode()
 }

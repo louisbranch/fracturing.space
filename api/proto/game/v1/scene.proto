@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package game.v1;
 
+import "game/v1/interaction.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
@@ -14,7 +15,7 @@ service SceneService {
   // Update scene metadata (name, description).
   rpc UpdateScene(UpdateSceneRequest) returns (UpdateSceneResponse);
 
-  // End an active scene.
+  // End an open scene.
   rpc EndScene(EndSceneRequest) returns (EndSceneResponse);
 
   // Add a character to a scene.
@@ -57,10 +58,12 @@ message CreateSceneRequest {
   string name = 3;
   string description = 4;
   repeated string character_ids = 5;
+  optional bool activate = 6;
 }
 
 message CreateSceneResponse {
   string scene_id = 1;
+  InteractionState interaction_state = 2;
 }
 
 message UpdateSceneRequest {
@@ -110,10 +113,12 @@ message TransitionSceneRequest {
   string source_scene_id = 2;
   string name = 3;
   string description = 4;
+  optional bool activate = 5;
 }
 
 message TransitionSceneResponse {
   string new_scene_id = 1;
+  InteractionState interaction_state = 2;
 }
 
 message OpenSceneGateRequest {
@@ -167,7 +172,7 @@ message Scene {
   string session_id = 2;
   string name = 3;
   string description = 4;
-  bool active = 5;
+  bool open = 5;
   repeated string character_ids = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;

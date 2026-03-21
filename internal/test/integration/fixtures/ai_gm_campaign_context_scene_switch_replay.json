@@ -1,0 +1,116 @@
+{
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "captured_at_utc": "2026-03-21T17:41:50Z",
+    "scenario": "ai_gm_campaign_context_scene_switch",
+    "source": "live_capture"
+  },
+  "initial_prompt_contains": [
+    "story.md:",
+    "Starter seed: A split party presses on from the gatehouse to the drainage tunnel.",
+    "memory.md:",
+    "Remember: Aria holds the gate while the next beat should move to the tunnel.",
+    "Active scene mode",
+    "call interaction_open_scene_player_phase with explicit acting character_ids"
+  ],
+  "initial_tool_names": [
+    "campaign_artifact_list",
+    "campaign_artifact_get",
+    "campaign_artifact_upsert",
+    "campaign_memory_section_read",
+    "campaign_memory_section_update",
+    "scene_create",
+    "scene_update",
+    "scene_end",
+    "scene_transition",
+    "scene_add_character",
+    "scene_remove_character",
+    "interaction_activate_scene",
+    "interaction_open_scene_player_phase",
+    "interaction_resolve_scene_player_review",
+    "interaction_record_scene_gm_interaction",
+    "interaction_open_session_ooc",
+    "interaction_session_ooc_resolve",
+    "interaction_post_session_ooc",
+    "interaction_mark_ooc_ready_to_resume",
+    "interaction_clear_ooc_ready_to_resume",
+    "duality_action_roll",
+    "roll_dice",
+    "duality_outcome",
+    "duality_explain",
+    "duality_probability",
+    "duality_rules_version",
+    "system_reference_search",
+    "system_reference_read"
+  ],
+  "steps": [
+    {
+      "id": "resp_0b359c80a132d00b0069bed82f24cc819392fb5acfb9c477f1",
+      "tool_calls": [
+        {
+          "call_id": "call_zZnII3zmIos05qXOBewvO7zk",
+          "name": "interaction_activate_scene",
+          "arguments": {
+            "scene_id": "{{target_scene_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_0b359c80a132d00b0069bed851f6b88193b9816a1309a0f911",
+      "tool_calls": [
+        {
+          "call_id": "call_x98chgwT9BLU5dxxYaQpB6us",
+          "name": "campaign_artifact_upsert",
+          "arguments": {
+            "content": "Remember: Aria holds the gate while the next beat should move to the tunnel.\n\n## Party Split\n- North Gate: Aria (holding position, watching the guard rotation above the gate)\n- South Tunnel: Remaining party (approaching the drainage tunnel beneath the keep)\n\nStatus: SPLIT PARTY — one or more characters are separated across scenes. Track actions and communications across the North Gate and South Tunnel scenes.",
+            "path": "memory.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_0b359c80a132d00b0069bed854b5dc8193b396ae574df439f0",
+      "tool_calls": [
+        {
+          "call_id": "call_5hq7BzAWLzy15v9UjCdE2Pe8",
+          "name": "interaction_open_scene_player_phase",
+          "arguments": {
+            "character_ids": [
+              "{{character_id}}"
+            ],
+            "interaction": {
+              "beats": [
+                {
+                  "beat_id": "fiction-1",
+                  "text": "You slip into the South Tunnel. The stone narrows, and the light from above shrinks to a thin, distant coin. The tunnel smells of rain and iron; a low channel of water whispers along one side, swallowing footsteps. Aria crouches at the tunnel mouth beneath the keep, keeping watch on the guard rotation from below—she remains at the North Gate holding position while you press onward.",
+                  "type": "fiction"
+                },
+                {
+                  "beat_id": "guidance-1",
+                  "text": "The party is split: Aria holds the North Gate, while you operate within the confined, dim South Tunnel. Here you face tight passage, poor light, and one main route that forks ahead. One branch slopes down into a darker channel; another climbs toward a barred service door with rusted hinges. You can move forward carefully, inspect the fork, try to signal Aria, set a light, or take some other action. Pick one—describe how Readiness Character 1 proceeds.",
+                  "type": "guidance"
+                },
+                {
+                  "beat_id": "prompt-1",
+                  "text": "What does Readiness Character 1 do next in the South Tunnel?",
+                  "type": "prompt"
+                }
+              ],
+              "character_ids": [
+                "{{character_id}}"
+              ],
+              "title": "South Tunnel — Arrival"
+            },
+            "scene_id": "{{target_scene_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_0b359c80a132d00b0069bed85a61548193b795ebb9b807927f",
+      "output_text": "You slip into the South Tunnel. The stone narrows, and the light from above shrinks to a thin, distant coin. The tunnel smells of rain and iron; a low channel of water whispers along one side, swallowing footsteps. Aria crouches at the tunnel mouth beneath the keep, keeping watch on the guard rotation from below—she remains at the North Gate holding position while you press onward.\n\nThe party is split: Aria holds the North Gate, while you operate within the confined, dim South Tunnel. Here you face tight passage, poor light, and one main route that forks ahead. One branch slopes down into a darker channel; another climbs toward a barred service door with rusted hinges. You can move forward carefully, inspect the fork, try to signal Aria, set a light, or take some other action. Pick one—describe how Readiness Character 1 proceeds.\n\nWhat does Readiness Character 1 do next in the South Tunnel?"
+    }
+  ]
+}

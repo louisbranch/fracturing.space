@@ -19,32 +19,42 @@ type openAIReplayServer struct {
 
 	mu           sync.Mutex
 	step         int
-	campaignID   string
-	sessionID    string
-	characterID  string
-	sceneID      string
+	tokens       map[string]string
 	firstErr     error
 	callOutputs  map[string]string
 	requestDebug []string
 }
 
-// TestAIGMCampaignContextReplayBootstrap keeps the committed fixture exercising the real orchestration tool loop.
 func TestAIGMCampaignContextReplayBootstrap(t *testing.T) {
-	replay := loadOpenAIReplayFixture(t, "ai_gm_campaign_context_bootstrap_replay.json")
+	runAIGMCampaignContextReplayScenario(t, aiGMBootstrapScenario)
+}
+
+func TestAIGMCampaignContextReplayReviewAdvance(t *testing.T) {
+	runAIGMCampaignContextReplayScenario(t, aiGMReviewAdvanceScenario)
+}
+
+func TestAIGMCampaignContextReplayOOCReplace(t *testing.T) {
+	runAIGMCampaignContextReplayScenario(t, aiGMOOCReplaceScenario)
+}
+
+func TestAIGMCampaignContextReplaySceneSwitch(t *testing.T) {
+	runAIGMCampaignContextReplayScenario(t, aiGMSceneSwitchScenario)
+}
+
+func runAIGMCampaignContextReplayScenario(t *testing.T, spec aiGMCampaignScenarioSpec) aiGMCampaignScenarioResult {
+	t.Helper()
+	replay := loadOpenAIReplayFixture(t, spec.FixtureFile)
 	replayServer := &openAIReplayServer{fixture: replay}
 	httpServer := httptest.NewServer(replayServer)
 	t.Cleanup(httpServer.Close)
 
-	var result aiGMBootstrapResult
-	result = runAIGMCampaignContextBootstrapScenario(t, aiGMBootstrapScenarioOptions{
+	result := runAIGMCampaignContextScenario(t, spec, aiGMCampaignScenarioOptions{
 		ResponsesURL:     httpServer.URL,
 		Model:            "gpt-4.1-mini",
 		CredentialSecret: "test-openai-token",
 		AgentLabel:       "replay-gm",
-		BeforeRun: func(setup aiGMBootstrapSetup) {
-			replayServer.campaignID = setup.CampaignID
-			replayServer.sessionID = setup.SessionID
-			replayServer.characterID = setup.CharacterID
+		BeforeRun: func(setup aiGMCampaignScenarioSetup) {
+			replayServer.tokens = mapsClone(setup.ReplayTokens)
 		},
 	})
 	if got := strings.TrimSpace(result.OutputText); got != replayFixtureFinalOutputText(t, replay) {
@@ -65,21 +75,23 @@ func TestAIGMCampaignContextReplayBootstrap(t *testing.T) {
 	if !result.SkillsReadOnly {
 		t.Fatal("expected skills.md to be read-only")
 	}
-	if result.SceneCount != 1 {
-		t.Fatalf("len(scenes) = %d, want 1", result.SceneCount)
+	fixtureToolNames := openAIReplayFixtureToolNames(replay)
+	if err := requiredToolSetPresent(fixtureToolNames, spec.RequiredToolSet...); err != nil {
+		t.Fatalf("fixture tool coverage: %v", err)
 	}
-	if !result.SceneIsActive {
-		t.Fatal("expected created scene to be active")
+	if err := requiredToolSetPresent(fixtureToolNames, "campaign_artifact_upsert"); err != nil {
+		if err := requiredToolSetPresent(fixtureToolNames, "campaign_memory_section_update"); err != nil {
+			t.Fatal("fixture tool coverage: missing memory write tool (campaign_artifact_upsert or campaign_memory_section_update)")
+		}
 	}
-	if !result.PlayerPhaseOpen {
-		t.Fatal("expected bootstrap replay to leave the first player phase open")
-	}
+	spec.Assert(t, result)
 	if err := replayServer.Err(); err != nil {
 		t.Fatalf("openai replay server: %v\nreplay outputs:\n%s", err, replayServer.DebugString())
 	}
 	if got, want := replayServer.StepCount(), len(replay.Steps); got != want {
 		t.Fatalf("replay step count = %d, want %d", got, want)
 	}
+	return result
 }
 
 // ServeHTTP emulates the minimal Responses API surface needed by the deterministic replay lane.
@@ -114,7 +126,12 @@ func (s *openAIReplayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.captureRequestMetadata(payload)
 	s.captureCallOutputs(payload)
 	if sceneID := extractSceneID(payload); sceneID != "" {
-		s.sceneID = sceneID
+		if s.tokens == nil {
+			s.tokens = map[string]string{}
+		}
+		if strings.TrimSpace(s.tokens["scene_id"]) == "" {
+			s.tokens["scene_id"] = sceneID
+		}
 	}
 	if s.step >= len(s.fixture.Steps) {
 		s.firstErr = fmt.Errorf("unexpected extra replay request %d", s.step)
@@ -124,12 +141,7 @@ func (s *openAIReplayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	step := s.fixture.Steps[s.step]
 	s.step++
 
-	responseBody, err := json.Marshal(buildOpenAIReplayResponse(step, map[string]string{
-		"campaign_id":  s.campaignID,
-		"session_id":   s.sessionID,
-		"character_id": s.characterID,
-		"scene_id":     s.sceneID,
-	}))
+	responseBody, err := json.Marshal(buildOpenAIReplayResponse(step, s.tokens))
 	if err != nil {
 		s.firstErr = fmt.Errorf("marshal replay response: %w", err)
 		http.Error(w, "marshal replay response", http.StatusInternalServerError)

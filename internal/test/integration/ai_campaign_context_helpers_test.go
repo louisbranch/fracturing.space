@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,28 +15,14 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
-	aiapp "github.com/louisbranch/fracturing.space/internal/services/ai/app"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
-	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	aistorage "github.com/louisbranch/fracturing.space/internal/services/ai/storage"
-	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
 	daggerheartReferenceRoot            = "/home/louis/code/daggerheart/reference-corpus/v1/reference"
-	aiGMBootstrapScenarioName           = "ai_gm_campaign_context_bootstrap"
-	aiGMBootstrapFixtureFile            = "ai_gm_campaign_context_bootstrap_replay.json"
-	aiGMBootstrapPrompt                 = "Open the session, consult the Fear reference first, and update memory.md with session notes about the harbor debt."
-	aiGMBootstrapStorySeed              = "Starter seed: The Black Lantern warns of a debt collected at dawn."
-	aiGMBootstrapMemorySeed             = "Remember: the harbor master owes the party a favor."
 	integrationOpenAIAPIKeyEnv          = "INTEGRATION_OPENAI_API_KEY"
 	integrationAIModelEnv               = "INTEGRATION_AI_MODEL"
 	integrationAIReasoningEffortEnv     = "INTEGRATION_AI_REASONING_EFFORT"
@@ -175,245 +160,36 @@ type aiGMBootstrapScenarioOptions struct {
 // runAIGMCampaignContextBootstrapScenario exercises the full GM bootstrap seam against real game, AI, and MCP services.
 func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapScenarioOptions) aiGMBootstrapResult {
 	t.Helper()
-	aiAddr := pickUnusedAddress(t)
-	t.Setenv("FRACTURING_SPACE_AI_ADDR", aiAddr)
-	fixture := newSuiteFixture(t)
-	userID := fixture.newUserID(t, uniqueTestUsername(t, "ai-gm-context"))
-
-	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
-	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
-	t.Setenv("FRACTURING_SPACE_GAME_ADDR", fixture.grpcAddr)
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL", strings.TrimSpace(opts.ResponsesURL))
-	t.Setenv("FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT", daggerheartReferenceRoot)
-
-	aiCtx, cancelAI := context.WithCancel(context.Background())
-	aiServer, err := aiapp.New(aiCtx, aiAddr)
-	if err != nil {
-		cancelAI()
-		t.Fatalf("new ai server: %v", err)
-	}
-	aiServeErr := make(chan error, 1)
-	go func() {
-		aiServeErr <- aiServer.Serve(aiCtx)
-	}()
-	t.Cleanup(func() {
-		cancelAI()
-		select {
-		case err := <-aiServeErr:
-			if err != nil {
-				t.Fatalf("ai server error: %v", err)
+	result := runAIGMCampaignContextScenario(t, aiGMBootstrapScenario, aiGMCampaignScenarioOptions{
+		ResponsesURL:     opts.ResponsesURL,
+		Model:            opts.Model,
+		ReasoningEffort:  opts.ReasoningEffort,
+		CredentialSecret: opts.CredentialSecret,
+		AgentLabel:       opts.AgentLabel,
+		BeforeRun: func(setup aiGMCampaignScenarioSetup) {
+			if opts.BeforeRun != nil {
+				opts.BeforeRun(aiGMBootstrapSetup{
+					CampaignID:        setup.CampaignID,
+					SessionID:         setup.SessionID,
+					CharacterID:       setup.CharacterID,
+					AIGMParticipantID: setup.AIGMParticipantID,
+				})
 			}
-		case <-time.After(5 * time.Second):
-			t.Fatal("timed out waiting for ai server to stop")
-		}
+		},
 	})
-	waitForGRPCHealth(t, aiAddr)
-
-	gameConn := dialGRPCForIntegration(t, fixture.grpcAddr)
-	defer gameConn.Close()
-	aiConn := dialGRPCForIntegration(t, aiAddr)
-	defer aiConn.Close()
-	// The DirectDialer's artifact and reference clients go over the wire to the
-	// AI server, which requires a service identity header for campaign context
-	// validation.  In production the server uses in-process adapters that bypass
-	// gRPC interceptors; in the integration test we need a connection that
-	// carries the service identity so the campaign context validator passes.
-	aiInternalConn := dialGRPCWithServiceID(t, aiAddr, serviceaddr.ServiceAI)
-	defer aiInternalConn.Close()
-
-	credentialClient := aiv1.NewCredentialServiceClient(aiConn)
-	agentClient := aiv1.NewAgentServiceClient(aiConn)
-	artifactClient := aiv1.NewCampaignArtifactServiceClient(aiConn)
-	campaignClient := gamev1.NewCampaignServiceClient(gameConn)
-	participantClient := gamev1.NewParticipantServiceClient(gameConn)
-	characterClient := gamev1.NewCharacterServiceClient(gameConn)
-	sessionClient := gamev1.NewSessionServiceClient(gameConn)
-	sceneClient := gamev1.NewSceneServiceClient(gameConn)
-	interactionClient := gamev1.NewInteractionServiceClient(gameConn)
-
-	ctxWithUser := grpcauthctx.WithUserID(context.Background(), userID)
-
-	credentialResp, err := credentialClient.CreateCredential(ctxWithUser, &aiv1.CreateCredentialRequest{
-		Provider: aiv1.Provider_PROVIDER_OPENAI,
-		Label:    "Replay credential",
-		Secret:   strings.TrimSpace(opts.CredentialSecret),
-	})
-	if err != nil {
-		t.Fatalf("create credential: %v", err)
-	}
-	agentResp, err := agentClient.CreateAgent(ctxWithUser, &aiv1.CreateAgentRequest{
-		Label:        strings.TrimSpace(opts.AgentLabel),
-		Provider:     aiv1.Provider_PROVIDER_OPENAI,
-		Model:        strings.TrimSpace(opts.Model),
-		CredentialId: credentialResp.GetCredential().GetId(),
-	})
-	if err != nil {
-		t.Fatalf("create agent: %v", err)
-	}
-	campaignResp, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
-		Name:        "Replay Harbor",
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:      gamev1.GmMode_AI,
-		ThemePrompt: "A debt comes due at the harbor.",
-	})
-	if err != nil {
-		t.Fatalf("create campaign: %v", err)
-	}
-	campaignID := campaignResp.GetCampaign().GetId()
-	if _, err := campaignClient.SetCampaignAIBinding(ctxWithUser, &gamev1.SetCampaignAIBindingRequest{
-		CampaignId: campaignID,
-		AiAgentId:  agentResp.GetAgent().GetId(),
-	}); err != nil {
-		t.Fatalf("set campaign ai binding: %v", err)
-	}
-	participantsResp, err := participantClient.ListParticipants(ctxWithUser, &gamev1.ListParticipantsRequest{
-		CampaignId: campaignID,
-		PageSize:   50,
-	})
-	if err != nil {
-		t.Fatalf("list participants: %v", err)
-	}
-	aiGMParticipantID := ""
-	for _, participant := range participantsResp.GetParticipants() {
-		if participant.GetRole() == gamev1.ParticipantRole_GM && participant.GetController() == gamev1.Controller_CONTROLLER_AI {
-			aiGMParticipantID = strings.TrimSpace(participant.GetId())
-			break
-		}
-	}
-	if aiGMParticipantID == "" {
-		t.Fatal("expected ai gm participant")
-	}
-	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, campaignResp.GetOwnerParticipant().GetId())
-	charactersResp, err := characterClient.ListCharacters(ctxWithUser, &gamev1.ListCharactersRequest{
-		CampaignId: campaignID,
-		PageSize:   20,
-	})
-	if err != nil {
-		t.Fatalf("list characters: %v", err)
-	}
-	if len(charactersResp.GetCharacters()) == 0 || strings.TrimSpace(charactersResp.GetCharacters()[0].GetId()) == "" {
-		t.Fatal("expected at least one campaign character for replay bootstrap")
-	}
-	characterID := strings.TrimSpace(charactersResp.GetCharacters()[0].GetId())
-	if _, err := artifactClient.EnsureCampaignArtifacts(ctxWithUser, &aiv1.EnsureCampaignArtifactsRequest{
-		CampaignId:        campaignID,
-		StorySeedMarkdown: aiGMBootstrapStorySeed,
-	}); err != nil {
-		t.Fatalf("ensure campaign artifacts: %v", err)
-	}
-	if _, err := artifactClient.UpsertCampaignArtifact(ctxWithUser, &aiv1.UpsertCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       "memory.md",
-		Content:    aiGMBootstrapMemorySeed,
-	}); err != nil {
-		t.Fatalf("seed memory artifact: %v", err)
-	}
-
-	startResp, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Opening Night",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
-	sessionID := startResp.GetSession().GetId()
-
-	if opts.BeforeRun != nil {
-		opts.BeforeRun(aiGMBootstrapSetup{
-			CampaignID:        campaignID,
-			SessionID:         sessionID,
-			CharacterID:       characterID,
-			AIGMParticipantID: aiGMParticipantID,
-		})
-	}
-
-	provider := openaiprovider.NewInvokeAdapter(openaiprovider.InvokeConfig{
-		ResponsesURL: strings.TrimSpace(opts.ResponsesURL),
-	})
-	dialer := gametools.NewDirectDialer(gametools.Clients{
-		Interaction: gamev1.NewInteractionServiceClient(gameConn),
-		Scene:       gamev1.NewSceneServiceClient(gameConn),
-		Campaign:    campaignClient,
-		Participant: participantClient,
-		Character:   characterClient,
-		Session:     sessionClient,
-		Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
-		Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
-		Artifact:    &grpcArtifactAdapter{client: aiv1.NewCampaignArtifactServiceClient(aiInternalConn)},
-		Reference:   &grpcReferenceAdapter{client: aiv1.NewSystemReferenceServiceClient(aiInternalConn)},
-	})
-	runner := orchestration.NewRunner(orchestration.RunnerConfig{
-		Dialer:   dialer,
-		MaxSteps: 16,
-	})
-	runResp, err := runner.Run(context.Background(), orchestration.Input{
-		CampaignID:       campaignID,
-		SessionID:        sessionID,
-		ParticipantID:    aiGMParticipantID,
-		Input:            aiGMBootstrapPrompt,
-		Model:            strings.TrimSpace(opts.Model),
-		ReasoningEffort:  strings.TrimSpace(opts.ReasoningEffort),
-		CredentialSecret: strings.TrimSpace(opts.CredentialSecret),
-		Provider:         provider,
-	})
-	if err != nil {
-		t.Fatalf("run campaign turn: %v", err)
-	}
-
-	skillsResp, err := artifactClient.GetCampaignArtifact(ctxWithUser, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       "skills.md",
-	})
-	if err != nil {
-		t.Fatalf("get skills artifact: %v", err)
-	}
-	memoryResp, err := artifactClient.GetCampaignArtifact(ctxWithUser, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       "memory.md",
-	})
-	if err != nil {
-		t.Fatalf("get memory artifact: %v", err)
-	}
-	scenesResp, err := sceneClient.ListScenes(ctxWithUser, &gamev1.ListScenesRequest{
-		CampaignId: campaignID,
-		SessionId:  sessionID,
-		PageSize:   10,
-	})
-	if err != nil {
-		t.Fatalf("list scenes: %v", err)
-	}
-	interactionResp, err := interactionClient.GetInteractionState(ctxWithUser, &gamev1.GetInteractionStateRequest{
-		CampaignId: campaignID,
-	})
-	if err != nil {
-		t.Fatalf("get interaction state: %v", err)
-	}
-	activeSceneID := ""
-	if interactionResp.GetState() != nil {
-		activeSceneID = strings.TrimSpace(interactionResp.GetState().GetActiveScene().GetSceneId())
-	}
-	if activeSceneID == "" {
-		t.Fatal("expected active interaction scene")
-	}
-	sceneIsActive := false
-	if len(scenesResp.GetScenes()) != 0 {
-		sceneIsActive = scenesResp.GetScenes()[0].GetActive()
-	}
-	playerPhaseOpen := interactionResp.GetState() != nil &&
-		interactionResp.GetState().GetPlayerPhase().GetStatus() == gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_PLAYERS
 
 	return aiGMBootstrapResult{
-		CampaignID:      campaignID,
-		SessionID:       sessionID,
-		CharacterID:     characterID,
-		AIGMParticipant: aiGMParticipantID,
-		OutputText:      strings.TrimSpace(runResp.OutputText),
-		MemoryContent:   strings.TrimSpace(memoryResp.GetArtifact().GetContent()),
-		SkillsReadOnly:  skillsResp.GetArtifact().GetReadOnly(),
-		ActiveSceneID:   activeSceneID,
-		SceneCount:      len(scenesResp.GetScenes()),
-		SceneIsActive:   sceneIsActive,
-		PlayerPhaseOpen: playerPhaseOpen,
+		CampaignID:      result.CampaignID,
+		SessionID:       result.SessionID,
+		CharacterID:     result.CharacterID,
+		AIGMParticipant: result.AIGMParticipantID,
+		OutputText:      result.OutputText,
+		MemoryContent:   result.MemoryContent,
+		SkillsReadOnly:  result.SkillsReadOnly,
+		ActiveSceneID:   activeSceneID(result.InteractionState),
+		SceneCount:      len(result.Scenes),
+		SceneIsActive:   sceneOpenByID(result.Scenes, activeSceneID(result.InteractionState)),
+		PlayerPhaseOpen: playerPhaseOpen(result.InteractionState),
 	}
 }
 
@@ -463,16 +239,6 @@ func writeOpenAIReplayFixture(t *testing.T, name string, fixture openAIReplayFix
 // These must be emitted by the default (degraded) prompt builder, which has no
 // pre-loaded instruction content — so they come from artifacts, context sources,
 // and the inline interaction contract fallback.
-func bootstrapPromptContains() []string {
-	return []string{
-		"story.md:",
-		aiGMBootstrapStorySeed,
-		"memory.md:",
-		aiGMBootstrapMemorySeed,
-		"Bootstrap mode",
-	}
-}
-
 // artifactListContains keeps artifact presence assertions readable in the integration tests.
 func artifactListContains(artifacts []*aiv1.CampaignArtifact, path string) bool {
 	for _, artifact := range artifacts {

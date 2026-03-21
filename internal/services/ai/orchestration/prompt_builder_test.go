@@ -6,6 +6,41 @@ import (
 	"testing"
 )
 
+func TestInteractionStateSnapshotTurnModePrefersOOCCloseResolution(t *testing.T) {
+	snapshot := InteractionStateSnapshot{
+		ActiveSceneID:        "scene-1",
+		PlayerPhaseStatus:    "gm_review",
+		OOCResolutionPending: true,
+	}
+
+	if got := snapshot.TurnMode(); got != InteractionTurnModeOOCCloseResolution {
+		t.Fatalf("TurnMode() = %q, want %q", got, InteractionTurnModeOOCCloseResolution)
+	}
+}
+
+func TestInteractionStateSnapshotTurnModePrefersOOCOpenBeforeReview(t *testing.T) {
+	snapshot := InteractionStateSnapshot{
+		ActiveSceneID:     "scene-1",
+		PlayerPhaseStatus: "GM_REVIEW",
+		OOCOpen:           true,
+	}
+
+	if got := snapshot.TurnMode(); got != InteractionTurnModeOOCOpen {
+		t.Fatalf("TurnMode() = %q, want %q", got, InteractionTurnModeOOCOpen)
+	}
+}
+
+func TestInteractionStateSnapshotTurnModeTreatsReviewStatusCaseInsensitively(t *testing.T) {
+	snapshot := InteractionStateSnapshot{
+		ActiveSceneID:     "scene-1",
+		PlayerPhaseStatus: "GM_REVIEW",
+	}
+
+	if got := snapshot.TurnMode(); got != InteractionTurnModeReviewResolution {
+		t.Fatalf("TurnMode() = %q, want %q", got, InteractionTurnModeReviewResolution)
+	}
+}
+
 func TestPromptBuilderUsesBootstrapModeWithoutActiveScene(t *testing.T) {
 	sess := &fakeSession{resources: baseSessionResources("gm-1", "")}
 	sess.resources["campaign://camp-1/artifacts/memory.md"] = "Session memory."
@@ -20,6 +55,18 @@ func TestPromptBuilderUsesBootstrapModeWithoutActiveScene(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Bootstrap mode: there is no active scene yet.") {
 		t.Fatalf("prompt missing bootstrap instructions: %q", prompt)
+	}
+	if !strings.Contains(prompt, "Each interaction is an ordered set of beats.") {
+		t.Fatalf("prompt missing beat guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "A beat is a coherent GM move or information unit, not a paragraph container.") {
+		t.Fatalf("prompt missing beat granularity guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "end that interaction with a prompt beat before opening the first player phase") {
+		t.Fatalf("prompt missing bootstrap prompt-beat guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "scene_create activates a new scene by default") {
+		t.Fatalf("prompt missing bootstrap default-active guidance: %q", prompt)
 	}
 }
 
@@ -162,8 +209,11 @@ func TestPromptBuilderActiveSceneMode(t *testing.T) {
 	if !strings.Contains(prompt, "Active scene mode") {
 		t.Fatalf("prompt missing active scene mode")
 	}
-	if strings.Contains(prompt, "Bootstrap mode") {
-		t.Fatalf("prompt should not have bootstrap mode in active scene")
+	if !strings.Contains(prompt, "resolution and consequence beats before any new player-facing prompt beat") {
+		t.Fatalf("prompt missing active-scene beat ordering guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "Keep related prose in one beat even across multiple paragraphs") {
+		t.Fatalf("prompt missing active-scene beat granularity guidance: %q", prompt)
 	}
 }
 
@@ -190,6 +240,106 @@ func TestBriefPromptRendererUsesExplicitClosingInstruction(t *testing.T) {
 	prompt := renderer.Render(SessionBrief{}, PromptInput{})
 	if !strings.Contains(prompt, "Stop after the authoritative GM commit.") {
 		t.Fatalf("prompt missing explicit closing instruction: %q", prompt)
+	}
+}
+
+func TestBriefPromptRendererDefaultsClosingInstructionWhenBlank(t *testing.T) {
+	renderer := NewBriefPromptRenderer(BriefPromptRendererConfig{
+		Policy: PromptRenderPolicy{},
+	})
+
+	prompt := renderer.Render(SessionBrief{}, PromptInput{})
+	if !strings.Contains(prompt, DefaultPromptRenderPolicy().ClosingInstruction) {
+		t.Fatalf("prompt missing default closing instruction: %q", prompt)
+	}
+}
+
+func TestBriefPromptRendererFallbackInteractionContractIncludesBeatModel(t *testing.T) {
+	renderer := NewBriefPromptRenderer(BriefPromptRendererConfig{
+		Policy: DefaultPromptRenderPolicy(),
+	})
+
+	prompt := renderer.Render(SessionBrief{}, PromptInput{})
+	if !strings.Contains(prompt, "You author one structured GM interaction at a time.") {
+		t.Fatalf("prompt missing structured interaction fallback: %q", prompt)
+	}
+	if !strings.Contains(prompt, "A beat is a coherent GM move or information unit, not a paragraph container.") {
+		t.Fatalf("prompt missing beat granularity fallback guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "Do not split narration and player handoff into separate frame artifacts.") {
+		t.Fatalf("prompt missing frame-artifact fallback guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "interaction_open_session_ooc, interaction_post_session_ooc, interaction_mark_ooc_ready_to_resume, interaction_clear_ooc_ready_to_resume, and interaction_session_ooc_resolve") {
+		t.Fatalf("prompt missing explicit OOC tool family guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "Once interaction_open_scene_player_phase") {
+		t.Fatalf("prompt missing turn-completion guidance: %q", prompt)
+	}
+}
+
+func TestBriefPromptRendererReviewResolutionModeIncludesBeatGuidance(t *testing.T) {
+	renderer := NewBriefPromptRenderer(BriefPromptRendererConfig{
+		Policy: DefaultPromptRenderPolicy(),
+	})
+
+	prompt := renderer.Render(SessionBrief{
+		InteractionState: &InteractionStateSnapshot{
+			ActiveSceneID:     "scene-1",
+			PlayerPhaseStatus: "gm_review",
+		},
+	}, PromptInput{})
+	if !strings.Contains(prompt, "end that interaction with a prompt beat and open the next player phase in the same call") {
+		t.Fatalf("prompt missing review-resolution beat guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "If open_next_player_phase or request_revisions succeeds, return final text") {
+		t.Fatalf("prompt missing review-resolution completion guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "keep participant-specific revision reasons in the tool payload") {
+		t.Fatalf("prompt missing review-resolution revision guidance: %q", prompt)
+	}
+}
+
+func TestBriefPromptRendererOOCCloseModeIncludesBeatGuidance(t *testing.T) {
+	renderer := NewBriefPromptRenderer(BriefPromptRendererConfig{
+		Policy: DefaultPromptRenderPolicy(),
+	})
+
+	prompt := renderer.Render(SessionBrief{
+		InteractionState: &InteractionStateSnapshot{
+			ActiveSceneID:        "scene-1",
+			OOCResolutionPending: true,
+		},
+	}, PromptInput{})
+	if !strings.Contains(prompt, "replace it with a newly opened player phase") {
+		t.Fatalf("prompt missing OOC resume interaction guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "After the interrupted player phase is resumed or replaced successfully, return final text") {
+		t.Fatalf("prompt missing OOC resume completion guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "ends with a prompt beat for the replacement player phase") {
+		t.Fatalf("prompt missing OOC resume prompt-beat guidance: %q", prompt)
+	}
+}
+
+func TestBriefPromptRendererOOCOpenModeIncludesResolutionGuidance(t *testing.T) {
+	renderer := NewBriefPromptRenderer(BriefPromptRendererConfig{
+		Policy: DefaultPromptRenderPolicy(),
+	})
+
+	prompt := renderer.Render(SessionBrief{
+		InteractionState: &InteractionStateSnapshot{
+			ActiveSceneID: "scene-1",
+			OOCOpen:       true,
+		},
+	}, PromptInput{})
+	if !strings.Contains(prompt, "OOC-open mode: the session is paused for out-of-character discussion.") {
+		t.Fatalf("prompt missing OOC-open mode guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "use interaction_session_ooc_resolve to close the pause") {
+		t.Fatalf("prompt missing OOC-open resolution guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "ends with a prompt beat for the replacement player phase") {
+		t.Fatalf("prompt missing OOC-open prompt-beat guidance: %q", prompt)
 	}
 }
 

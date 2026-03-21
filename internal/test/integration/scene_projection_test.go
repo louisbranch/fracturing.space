@@ -108,8 +108,8 @@ func TestSceneProjectionLifecycle(t *testing.T) {
 	if scene.GetSessionId() != sessionID {
 		t.Errorf("scene session_id = %q, want %q", scene.GetSessionId(), sessionID)
 	}
-	if !scene.GetActive() {
-		t.Error("expected scene to be active")
+	if !scene.GetOpen() {
+		t.Error("expected scene to be open")
 	}
 	if len(scene.GetCharacterIds()) != 1 || scene.GetCharacterIds()[0] != char1ID {
 		t.Errorf("scene character_ids = %v, want [%s]", scene.GetCharacterIds(), char1ID)
@@ -216,8 +216,8 @@ func TestSceneProjectionLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get scene after end: %v", err)
 	}
-	if getResp.GetScene().GetActive() {
-		t.Error("expected scene to be inactive after end")
+	if getResp.GetScene().GetOpen() {
+		t.Error("expected scene to be closed after end")
 	}
 	if getResp.GetScene().GetEndedAt() == nil {
 		t.Error("expected ended_at to be set")

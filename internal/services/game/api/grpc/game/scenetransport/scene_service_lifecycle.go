@@ -19,12 +19,23 @@ func (s *Service) CreateScene(ctx context.Context, in *campaignv1.CreateSceneReq
 		return nil, err
 	}
 
-	sceneID, err := newSceneApplication(s).CreateScene(ctx, campaignID, in)
+	app := newSceneApplication(s)
+	sceneID, err := app.CreateScene(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
 
-	return &campaignv1.CreateSceneResponse{SceneId: sceneID}, nil
+	var interactionState *campaignv1.InteractionState
+	if shouldActivateSceneFromCreate(in) {
+		interactionState, err = app.activateScene(ctx, campaignID, sceneID)
+	} else {
+		interactionState, err = app.interactionState(ctx, campaignID)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &campaignv1.CreateSceneResponse{SceneId: sceneID, InteractionState: interactionState}, nil
 }
 
 // UpdateScene updates scene metadata.
@@ -73,10 +84,21 @@ func (s *Service) TransitionScene(ctx context.Context, in *campaignv1.Transition
 		return nil, err
 	}
 
-	newSceneID, err := newSceneApplication(s).TransitionScene(ctx, campaignID, in)
+	app := newSceneApplication(s)
+	newSceneID, err := app.TransitionScene(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
 
-	return &campaignv1.TransitionSceneResponse{NewSceneId: newSceneID}, nil
+	var interactionState *campaignv1.InteractionState
+	if shouldActivateSceneFromTransition(in) {
+		interactionState, err = app.activateScene(ctx, campaignID, newSceneID)
+	} else {
+		interactionState, err = app.interactionState(ctx, campaignID)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &campaignv1.TransitionSceneResponse{NewSceneId: newSceneID, InteractionState: interactionState}, nil
 }

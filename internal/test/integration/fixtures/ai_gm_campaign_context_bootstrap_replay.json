@@ -2,7 +2,7 @@
   "metadata": {
     "provider": "openai",
     "model": "gpt-5-mini",
-    "captured_at_utc": "2026-03-18T00:13:19Z",
+    "captured_at_utc": "2026-03-21T14:56:34Z",
     "scenario": "ai_gm_campaign_context_bootstrap",
     "source": "live_capture"
   },
@@ -11,7 +11,9 @@
     "Starter seed: The Black Lantern warns of a debt collected at dawn.",
     "memory.md:",
     "Remember: the harbor master owes the party a favor.",
-    "Bootstrap mode"
+    "Bootstrap mode",
+    "Each interaction is an ordered set of beats.",
+    "end that interaction with a prompt beat before opening the first player phase"
   ],
   "initial_tool_names": [
     "campaign_artifact_list",
@@ -25,16 +27,15 @@
     "scene_transition",
     "scene_add_character",
     "scene_remove_character",
-    "interaction_active_scene_set",
-    "interaction_scene_player_phase_start",
-    "interaction_scene_review_resolve",
-    "interaction_scene_gm_interaction_commit",
-    "interaction_ooc_pause",
-    "interaction_scene_interrupt_resolution",
-    "interaction_ooc_post",
-    "interaction_ooc_ready_mark",
-    "interaction_ooc_ready_clear",
-    "interaction_ooc_resume",
+    "interaction_activate_scene",
+    "interaction_open_scene_player_phase",
+    "interaction_resolve_scene_player_review",
+    "interaction_record_scene_gm_interaction",
+    "interaction_open_session_ooc",
+    "interaction_session_ooc_resolve",
+    "interaction_post_session_ooc",
+    "interaction_mark_ooc_ready_to_resume",
+    "interaction_clear_ooc_ready_to_resume",
     "duality_action_roll",
     "roll_dice",
     "duality_outcome",
@@ -46,115 +47,98 @@
   ],
   "steps": [
     {
-      "id": "resp_089b3231a52e9d610069b9edf32fbc8193bb4f204bba6456ce",
+      "id": "resp_06d3c4ce50326e720069beb1736bb08194bbebc8f7696219d7",
       "tool_calls": [
         {
-          "call_id": "call_NkAaQIEfZyiDT2c7uzhNIllV",
+          "call_id": "call_vl3yk9nBUBKskT5bqnzwjctK",
           "name": "system_reference_search",
           "arguments": {
             "max_results": 5,
-            "query": "Fear die Duality Fear reference Daggerheart",
+            "query": "Fear",
             "system": "daggerheart"
           }
         }
       ]
     },
     {
-      "id": "resp_089b3231a52e9d610069b9edf9ad8c81938c542b91914364a8",
+      "id": "resp_06d3c4ce50326e720069beb177ef1c8194ababb93373565425",
       "tool_calls": [
         {
-          "call_id": "call_pZeUXyhomxrKQCO8R6XCRMA9",
+          "call_id": "call_xWdbE6BpNkfld8qQg3XQaRha",
           "name": "system_reference_read",
           "arguments": {
-            "document_id": "running-an-adventure",
+            "document_id": "glossary-fear",
             "system": "daggerheart"
           }
         }
       ]
     },
     {
-      "id": "resp_089b3231a52e9d610069b9edfb7d6c81938474d1c70fa3f16c",
+      "id": "resp_06d3c4ce50326e720069beb17a07088194ad6010163577d729",
       "tool_calls": [
         {
-          "call_id": "call_cCw2cO4zSliz13HiAOMSk9aB",
+          "call_id": "call_hBf9W8ugYK8zV4iLdOR7TJ2U",
           "name": "campaign_artifact_upsert",
           "arguments": {
-            "content": "Remember: the harbor master owes the party a favor.\n\nSession notes — Opening Night (2026-03-18):\n- The Black Lantern warned the party that a debt will be collected at dawn.\n- Harbor debt: an unnamed creditor (or collectors) is expected to come to the harbor to collect; the debt is due and may involve coercion or violence.\n- The harbor master is indebted to the party — this can be used as leverage, a friendly contact, or a plot hook.\n- GM intent: open the scene at the harbor before dawn, with the party positioned to intervene or negotiate. Track any countdowns or Fear spent if collectors escalate the situation.\n",
+            "content": "Remember: the harbor master owes the party a favor.\n\nSession notes (Opening Night 2026-03-21):\n- The harbor debt collection is imminent; a ledger notice demands repayment at dawn.\n- The harbor master is currently absent; dockhands and small crews are anxious; someone else is collecting.\n- Starting Fear: 1 (one PC in the party). Track Fear across sessions for interrupt and GM-move uses.\n",
             "path": "memory.md"
           }
         }
       ]
     },
     {
-      "id": "resp_089b3231a52e9d610069b9ee0086448193aa6ac7b69254c472",
+      "id": "resp_06d3c4ce50326e720069beb1897b048194a3b8a660807955fa",
       "tool_calls": [
         {
-          "call_id": "call_o20EOpn6hKvHkeYrEcXzo9VL",
+          "call_id": "call_3kTlty5NfENfvskQcCXWNoPu",
           "name": "scene_create",
           "arguments": {
             "character_ids": [
               "{{character_id}}"
             ],
-            "description": "Pre-dawn at the eastern quay of Replay Harbor. Salt-slick planks, stacked crates, and the low murmur of watchmen. Lantern light pools in rings; gulls roost on rigging. The Black Lantern's warning hangs in the air: a debt is to be collected at dawn. Tension and possible collectors arriving should be immediately present. The harbor master is a known ally of the party and may be found near his office by the docks.",
-            "name": "Dawn at the Quay"
+            "description": "Fog and salt-sour air at the Ledger Wharf. The Black Lantern's warning—'a debt collected at dawn'—still burns in memory. A chained ledger chest sits near the pilings; dockhands whisper that the harbor master is absent and someone else has come to collect. The scene opens as a courier in a mud-streaked coat approaches with a sealed note.",
+            "name": "Ledger Wharf at Dawn"
           }
         }
       ]
     },
     {
-      "id": "resp_089b3231a52e9d610069b9ee08751c8193b85ecb0001367d57",
+      "id": "resp_06d3c4ce50326e720069beb18e922c8194ba0d6f8b06ae47e2",
       "tool_calls": [
         {
-          "call_id": "call_UnEy30dxq48lucscfWO1eETh",
-          "name": "interaction_active_scene_set",
-          "arguments": {
-            "scene_id": "{{scene_id}}"
-          }
-        }
-      ]
-    },
-    {
-      "id": "resp_089b3231a52e9d610069b9ee0a2d748193b40ad63202e83695",
-      "tool_calls": [
-        {
-          "call_id": "call_eZc8Q6ANV6R2zMFtxz58e6aL",
-          "name": "interaction_scene_gm_interaction_commit",
-          "arguments": {
-            "scene_id": "{{scene_id}}",
-            "interaction": {
-              "title": "Dawn At The Quay",
-              "beats": [
-                {
-                  "type": "fiction",
-                  "text": "The quay breathes in slow, salt-sour gusts beneath a pale, thinning sky. Lanterns wobble along the planks; crates cast long, spidery shadows. Near the harbor master's office, a broad-shouldered man leans on the rail, eyes red-rimmed with worry — the same harbor master who owes you a favor. He gives you a quick, guilty nod when he sees you.\n\nFrom the east, the Black Lantern's warning hangs like a smear in your head: a debt is due at dawn. Voices — low, hard — drift across the water. Footsteps on the gangway. Someone has come to collect.\n\nYou have a few breaths before the collectors make their presence known. You can step forward to speak with the harbor master, confront whoever arrives, set a trap, try to learn who the collectors answer to, or take some other preparation. Choose your approach and describe what your character does."
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "resp_089b3231a52e9d610069b9ee1163b48193af43ee82c0a57c6e",
-      "tool_calls": [
-        {
-          "call_id": "call_o0Q9L0uyvOfhMB78gW9YOmi1",
-          "name": "interaction_scene_player_phase_start",
+          "call_id": "call_G1OPH3TvexDwXxdOONLQVJwB",
+          "name": "interaction_open_scene_player_phase",
           "arguments": {
             "character_ids": [
               "{{character_id}}"
             ],
             "interaction": {
-              "title": "Readiness At The Quay",
+              "beats": [
+                {
+                  "beat_id": "f1",
+                  "text": "Night fog clings to the Ledger Wharf. Lantern light pools on slick planks. A courier in a mud-streaked coat stops before the chained ledger chest and breaks a black-waxed seal—its emblem: a lantern. He lifts his head and says without preamble, 'The ledger says the debt is due at first light. No exceptions.' Dockhands fall silent; two rope-scarred men shift their weight, hands near belts.",
+                  "type": "fiction"
+                },
+                {
+                  "beat_id": "f2",
+                  "text": "A torn scrap of the harbor master's tunic flutters from a nearby piling. The harbor master himself is not here; his favor to you is a rumor on the wind. The courier's gloved hand rests on the hilt of a knife. The ledger chest is chained but not yet opened. The air tastes of salt and impatience.",
+                  "type": "fiction"
+                },
+                {
+                  "beat_id": "g1",
+                  "text": "You have options: try to defuse this with words (appeal to the harbor master’s favor or negotiate), search the chest or nearby pilings for clues or leverage, seek the harbor master (if you can find him before dawn), or prepare for a confrontation with the courier and his men. Tell me which approach Readiness Character 1 takes and describe your first action.",
+                  "type": "guidance"
+                },
+                {
+                  "beat_id": "p1",
+                  "text": "What does Readiness Character 1 do? State your approach (Diplomacy, Investigation, Seek the Harbor Master, or Combat/Prepare) and describe the first action you take.",
+                  "type": "prompt"
+                }
+              ],
               "character_ids": [
                 "{{character_id}}"
               ],
-              "beats": [
-                {
-                  "type": "prompt",
-                  "text": "Player phase — Readiness Character 1: You're on the quay before dawn. Describe your approach (speak to the harbor master, confront arrivals, hide, set a trap, gather information, etc.). If your action requires a roll, describe how you want to attempt it; I'll set the Difficulty and call for a roll when needed."
-                }
-              ]
+              "title": "Dawn Debt"
             },
             "scene_id": "{{scene_id}}"
           }
@@ -162,8 +146,8 @@
       ]
     },
     {
-      "id": "resp_089b3231a52e9d610069b9ee15b05c8193900ad5092f7c9f4f",
-      "output_text": "OOC — I consulted the Daggerheart \"Running an Adventure\" guidance (Fear usage and GM moves) and updated campaign memory with session notes about the harbor debt.\n\nSession memory updated (memory.md):\n- Existing: \"Remember: the harbor master owes the party a favor.\"\n- Added session notes: The Black Lantern warned the party that a debt will be collected at dawn; unnamed collectors are expected; harbor master is an ally/lever; GM intends to open at the quay before dawn and track countdowns/Fear as collectors escalate.\n\nActive scene created and set:\n- Scene: Dawn at the Quay (pre-dawn on the eastern quay; harbor master present; collectors expected)\n\nAuthoritative in-character narration (committed to the scene):\n\"The quay breathes in slow, salt-sour gusts beneath a pale, thinning sky. Lanterns wobble along the planks; crates cast long, spidery shadows. Near the harbor master's office, a broad-shouldered man leans on the rail, eyes red-rimmed with worry — the same harbor master who owes you a favor. He gives you a quick, guilty nod when he sees you.\n\nFrom the east, the Black Lantern's warning hangs like a smear in your head: a debt is due at dawn. Voices — low, hard — drift across the water. Footsteps on the gangway. Someone has come to collect.\n\nYou have a few breaths before the collectors make their presence known. You can step forward to speak with the harbor master, confront whoever arrives, set a trap, try to learn who the collectors answer to, or take some other preparation. Choose your approach and describe what your character does.\"\n\nPlayer phase started (acting character: Readiness Character 1)\nGM prompt to the player: Describe your approach (speak to the harbor master, confront arrivals, hide, set a trap, gather information, etc.). If your action requires a roll, describe how you want to attempt it and I will set the Difficulty and call for the roll when needed.\n\nIf you want any OOC notes, to pause the session, or to adjust fear/countdown bookkeeping before the player acts, tell me now."
+      "id": "resp_06d3c4ce50326e720069beb19ad46481948ed9ce692787e54a",
+      "output_text": "Done.\n\nI consulted the Fear reference (Daggerheart: Fear glossary) and updated campaign memory with session notes about the harbor debt. I then created and activated the opening scene and opened the first player phase.\n\nSummary of authoritative changes made:\n- Consulted Fear rules: Fear is a GM metacurrency; starting Fear is 1 per PC.\n- Updated memory.md with session notes:\n  - Reminder that the harbor master owes the party a favor.\n  - Notes that the harbor debt collection is imminent, the harbor master is absent, dockhands are anxious, and starting Fear is 1.\n- Created and set active scene:\n  - Scene ID: {{scene_id}}\n  - Name: Ledger Wharf at Dawn\n  - Description: Foggy wharf, Black Lantern warning, chained ledger chest, courier arrives.\n  - Included character: Readiness Character 1 ({{character_id}})\n- Committed opening GM interaction and opened the player phase (players may now act). Interaction title: \"Dawn Debt\".\n\nCurrent player-facing fiction (first beats):\n- Night fog clings to the Ledger Wharf. A courier breaks a black-waxed seal and declares, “The ledger says the debt is due at first light. No exceptions.” Dockhands grow silent; two rope-scarred men shift, hands near belts.\n- A torn scrap of the harbor master's tunic flutters from a piling—he is not here. The courier’s hand rests on a knife; the ledger chest is chained but not opened. Tension tastes of salt and impatience.\n- Guidance: Options include negotiating (appeal to the harbor master’s favor), investigating the chest/pilings for leverage, seeking the harbor master before dawn, or preparing for a confrontation.\n\nPlayer prompt (action handoff):\n- What does Readiness Character 1 do? State your approach (Diplomacy, Investigation, Seek the Harbor Master, or Combat/Prepare) and describe the first action you take.\n\nIt’s now the players’ turn (acting character: Readiness Character 1)."
     }
   ]
 }

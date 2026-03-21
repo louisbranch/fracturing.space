@@ -285,12 +285,11 @@ describe("PlayRuntime", () => {
       scene_id: "sc1",
       character_ids: [playerHUDCharacterCatalog.aria.id],
       summary_text: "Aria forces the door.",
-      yield_after_post: undefined,
     });
     expect(yieldScenePlayerPhaseMock).not.toHaveBeenCalled();
   });
 
-  it("submits and yields on-stage actions in a single request", async () => {
+  it("submits and yields on-stage actions as sequential transitions", async () => {
     const user = userEvent.setup();
     fetchBootstrapMock.mockResolvedValue(runtimeBootstrap());
 
@@ -314,9 +313,9 @@ describe("PlayRuntime", () => {
       scene_id: "sc1",
       character_ids: [playerHUDCharacterCatalog.aria.id],
       summary_text: "Aria forces the door.",
-      yield_after_post: true,
     });
-    expect(yieldScenePlayerPhaseMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(yieldScenePlayerPhaseMock).toHaveBeenCalledTimes(1));
+    expect(yieldScenePlayerPhaseMock).toHaveBeenCalledWith("c1", { scene_id: "sc1" });
   });
 
   it("yields the current scene with explicit scene context", async () => {

@@ -169,11 +169,11 @@ func (interactionSceneStoreStub) ListScenes(context.Context, string, string, int
 	return storage.ScenePage{}, nil
 }
 
-func (interactionSceneStoreStub) ListActiveScenes(context.Context, string) ([]storage.SceneRecord, error) {
+func (interactionSceneStoreStub) ListOpenScenes(context.Context, string) ([]storage.SceneRecord, error) {
 	return nil, nil
 }
 
-func (interactionSceneStoreStub) ListVisibleActiveScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
+func (interactionSceneStoreStub) ListVisibleOpenScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
 	return nil, nil
 }
 

@@ -455,10 +455,10 @@ func (f *fakeProjectionStore) GetScene(context.Context, string, string) (storage
 func (f *fakeProjectionStore) ListScenes(context.Context, string, string, int, string) (storage.ScenePage, error) {
 	return storage.ScenePage{}, fmt.Errorf("not implemented")
 }
-func (f *fakeProjectionStore) ListActiveScenes(context.Context, string) ([]storage.SceneRecord, error) {
+func (f *fakeProjectionStore) ListOpenScenes(context.Context, string) ([]storage.SceneRecord, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (f *fakeProjectionStore) ListVisibleActiveScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
+func (f *fakeProjectionStore) ListVisibleOpenScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

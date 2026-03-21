@@ -21,7 +21,7 @@ func activeScene(id ids.SceneID, characters ...ids.CharacterID) State {
 	}
 	return State{
 		SceneID:    id,
-		Active:     true,
+		Open:       true,
 		Characters: chars,
 	}
 }
@@ -150,7 +150,7 @@ func TestDecideUpdate_EmitsUpdatedEvent(t *testing.T) {
 }
 
 func TestDecideUpdate_SceneNotActive_Rejects(t *testing.T) {
-	scenes := scenesMap(State{SceneID: "s1", Active: false})
+	scenes := scenesMap(State{SceneID: "s1", Open: false})
 	d := Decide(scenes, cmd(CommandTypeUpdate, `{"scene_id":"s1","name":"x"}`), nowFunc)
 	requireRejected(t, d, rejectionCodeSceneNotActive)
 }
@@ -172,7 +172,7 @@ func TestDecideEnd_EmitsEndedEvent(t *testing.T) {
 }
 
 func TestDecideEnd_SceneNotActive_Rejects(t *testing.T) {
-	scenes := scenesMap(State{SceneID: "s1", Active: false})
+	scenes := scenesMap(State{SceneID: "s1", Open: false})
 	d := Decide(scenes, cmd(CommandTypeEnd, `{"scene_id":"s1"}`), nowFunc)
 	requireRejected(t, d, rejectionCodeSceneNotActive)
 }

@@ -122,13 +122,13 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
 			{Name: "scene_create"},
-			{Name: "interaction_active_scene_set"},
-			{Name: "interaction_scene_gm_interaction_commit"},
+			{Name: "interaction_activate_scene"},
+			{Name: playerPhaseStartToolName},
 			{Name: "roll_dice"},
 		},
 		resources: baseSessionResources("gm-1", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_gm_interaction_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			playerPhaseStartToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	sess.resources["campaign://camp-1/artifacts/memory.md"] = "Remember the lighthouse omen."
@@ -141,8 +141,8 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 				Usage:          providerpkg.Usage{InputTokens: 10, OutputTokens: 4, ReasoningTokens: 1, TotalTokens: 14},
 				ToolCalls: []ProviderToolCall{{
 					CallID:    "call-1",
-					Name:      "interaction_scene_gm_interaction_commit",
-					Arguments: `{"scene_id":"scene-1","interaction":{"title":"Ruined City","beats":[{"type":"fiction","text":"The GM describes the ruined city."}]}}`,
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Ruined City","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The GM describes the ruined city."},{"type":"prompt","text":"Theron, what do you do?"}]}}`,
 				}},
 			},
 			{
@@ -169,10 +169,10 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	if res.OutputText != "The GM describes the ruined city." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if !reflect.DeepEqual(sess.calls, []string{"interaction_scene_gm_interaction_commit"}) {
+	if !reflect.DeepEqual(sess.calls, []string{playerPhaseStartToolName}) {
 		t.Fatalf("tool calls = %#v", sess.calls)
 	}
-	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"scene_create", "interaction_active_scene_set", "interaction_scene_gm_interaction_commit", "roll_dice"}) {
+	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"scene_create", "interaction_activate_scene", playerPhaseStartToolName, "roll_dice"}) {
 		t.Fatalf("filtered tools = %#v", got)
 	}
 	if provider.calls[1].ConversationID != "resp-1" {
@@ -186,6 +186,57 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	}
 }
 
+func TestRunnerAcceptsPlayerPhaseStartAsCompletedTurn(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{
+			{Name: playerPhaseStartToolName},
+		},
+		resources: baseSessionResources("gm-1", "scene-1"),
+		results: map[string]ToolResult{
+			playerPhaseStartToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
+		},
+	}
+
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-1",
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Wet Rope","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The lantern light catches on wet rope."},{"type":"prompt","text":"The shed door stands open. What do you do?"}]}}`,
+				}},
+			},
+			{
+				ConversationID: "resp-2",
+				OutputText:     "The lantern light catches on wet rope.",
+			},
+		},
+	}
+
+	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-1",
+		Input:            "Open the scene.",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "The lantern light catches on wet rope." {
+		t.Fatalf("output = %q", res.OutputText)
+	}
+	if !reflect.DeepEqual(sess.calls, []string{playerPhaseStartToolName}) {
+		t.Fatalf("tool calls = %#v", sess.calls)
+	}
+	if len(provider.calls) != 2 || strings.TrimSpace(provider.calls[1].FollowUpPrompt) != "" {
+		t.Fatalf("provider calls = %#v", provider.calls)
+	}
+}
+
 func TestRunnerAcceptsReviewResolverAsCommittedTurn(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
@@ -193,7 +244,7 @@ func TestRunnerAcceptsReviewResolverAsCommittedTurn(t *testing.T) {
 		},
 		resources: baseSessionResources("gm-1", "scene-1"),
 		results: map[string]ToolResult{
-			reviewResolveToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-2","status":"players"}}`},
+			reviewResolveToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-2","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	sess.resources["campaign://camp-1/interaction"] = `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"gm_review"}}`
@@ -205,7 +256,7 @@ func TestRunnerAcceptsReviewResolverAsCommittedTurn(t *testing.T) {
 				ToolCalls: []ProviderToolCall{{
 					CallID:    "call-1",
 					Name:      reviewResolveToolName,
-					Arguments: `{"scene_id":"scene-1","advance_to_players":{"interaction":{"title":"Wet Rope","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The lantern light catches on wet rope."},{"type":"prompt","text":"The shed door stands open. What do you do?"}]},"next_character_ids":["char-1"]}}`,
+					Arguments: `{"scene_id":"scene-1","open_next_player_phase":{"interaction":{"title":"Wet Rope","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The lantern light catches on wet rope."},{"type":"prompt","text":"The shed door stands open. What do you do?"}]},"next_character_ids":["char-1"]}}`,
 				}},
 			},
 			{
@@ -238,6 +289,69 @@ func TestRunnerAcceptsReviewResolverAsCommittedTurn(t *testing.T) {
 	}
 }
 
+func TestRunnerRequestsTurnCompletionAfterCommitWithoutPlayerHandoff(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{
+			{Name: "interaction_record_scene_gm_interaction"},
+			{Name: playerPhaseStartToolName},
+		},
+		resources: baseSessionResources("gm-1", "scene-1"),
+		results: map[string]ToolResult{
+			"interaction_record_scene_gm_interaction": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"status":"gm"}}`},
+			playerPhaseStartToolName:                  {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
+		},
+	}
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-1",
+					Name:      "interaction_record_scene_gm_interaction",
+					Arguments: `{"scene_id":"scene-1","interaction":{"title":"Harbor Fog","beats":[{"type":"fiction","text":"The harbor groans in the fog."}]}}`,
+				}},
+			},
+			{
+				ConversationID: "resp-2",
+				OutputText:     "The harbor groans in the fog.",
+			},
+			{
+				ConversationID: "resp-3",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-2",
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Theron's Turn","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The harbor groans in the fog."},{"type":"prompt","text":"Theron, what do you do next?"}]}}`,
+				}},
+			},
+			{
+				ConversationID: "resp-4",
+				OutputText:     "The harbor groans in the fog.",
+			},
+		},
+	}
+
+	res, err := newTestRunner(&fakeDialer{sess: sess}, 5).Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-1",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "The harbor groans in the fog." {
+		t.Fatalf("output = %q", res.OutputText)
+	}
+	if !strings.Contains(provider.calls[2].FollowUpPrompt, "Return final text only after the next player phase is open") {
+		t.Fatalf("follow-up prompt = %q", provider.calls[2].FollowUpPrompt)
+	}
+	if !reflect.DeepEqual(sess.calls, []string{"interaction_record_scene_gm_interaction", playerPhaseStartToolName}) {
+		t.Fatalf("tool calls = %#v", sess.calls)
+	}
+}
+
 func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 	sess := &fakeSession{
 		tools:     []Tool{{Name: "campaign"}},
@@ -261,7 +375,7 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 	if !errors.Is(err, ErrNarrationNotCommitted) {
 		t.Fatalf("err = %v, want %v", err, ErrNarrationNotCommitted)
 	}
-	if !strings.Contains(provider.calls[1].FollowUpPrompt, "interaction_scene_gm_interaction_commit") {
+	if !strings.Contains(provider.calls[1].FollowUpPrompt, "interaction_record_scene_gm_interaction") {
 		t.Fatalf("follow-up prompt = %q", provider.calls[1].FollowUpPrompt)
 	}
 }
@@ -269,13 +383,13 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 func TestRunnerRequestsPlayerPhaseRestartWhenNarrationEndsAfterPhaseStart(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
-			{Name: "interaction_scene_player_phase_start"},
-			{Name: "interaction_scene_gm_interaction_commit"},
+			{Name: "interaction_open_scene_player_phase"},
+			{Name: "interaction_record_scene_gm_interaction"},
 		},
 		resources: baseSessionResources("gm-1", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_player_phase_start":    {Output: `{"player_phase":{"phase_id":"phase-1"}}`},
-			"interaction_scene_gm_interaction_commit": {Output: `{"active_scene":{"scene_id":"scene-1"}}`},
+			"interaction_open_scene_player_phase":     {Output: `{"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
+			"interaction_record_scene_gm_interaction": {Output: `{"active_scene":{"scene_id":"scene-1"},"player_phase":{"status":"gm"}}`},
 		},
 	}
 	provider := &fakeProvider{
@@ -283,8 +397,8 @@ func TestRunnerRequestsPlayerPhaseRestartWhenNarrationEndsAfterPhaseStart(t *tes
 			{
 				ConversationID: "resp-1",
 				ToolCalls: []ProviderToolCall{
-					{CallID: "call-1", Name: "interaction_scene_player_phase_start", Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Next Move","character_ids":["char-1"],"beats":[{"type":"prompt","text":"What do you do next?"}]}}`},
-					{CallID: "call-2", Name: "interaction_scene_gm_interaction_commit", Arguments: `{"scene_id":"scene-1","interaction":{"title":"Harbor Fog","beats":[{"type":"fiction","text":"The harbor groans in the fog."}]}}`},
+					{CallID: "call-1", Name: "interaction_open_scene_player_phase", Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Next Move","character_ids":["char-1"],"beats":[{"type":"prompt","text":"What do you do next?"}]}}`},
+					{CallID: "call-2", Name: "interaction_record_scene_gm_interaction", Arguments: `{"scene_id":"scene-1","interaction":{"title":"Harbor Fog","beats":[{"type":"fiction","text":"The harbor groans in the fog."}]}}`},
 				},
 			},
 			{
@@ -294,7 +408,7 @@ func TestRunnerRequestsPlayerPhaseRestartWhenNarrationEndsAfterPhaseStart(t *tes
 			{
 				ConversationID: "resp-3",
 				ToolCalls: []ProviderToolCall{
-					{CallID: "call-3", Name: "interaction_scene_player_phase_start", Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Mira's Turn","character_ids":["char-1"],"beats":[{"type":"prompt","text":"Mira, what do you do next?"}]}}`},
+					{CallID: "call-3", Name: "interaction_open_scene_player_phase", Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Mira's Turn","character_ids":["char-1"],"beats":[{"type":"prompt","text":"Mira, what do you do next?"}]}}`},
 				},
 			},
 			{
@@ -318,12 +432,12 @@ func TestRunnerRequestsPlayerPhaseRestartWhenNarrationEndsAfterPhaseStart(t *tes
 	if res.OutputText != "The harbor groans in the fog." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if !strings.Contains(provider.calls[2].FollowUpPrompt, "interaction_scene_player_phase_start") {
+	if !strings.Contains(provider.calls[2].FollowUpPrompt, "interaction_open_scene_player_phase") {
 		t.Fatalf("follow-up prompt = %q", provider.calls[2].FollowUpPrompt)
 	}
 	if !reflect.DeepEqual(
 		sess.calls,
-		[]string{"interaction_scene_player_phase_start", "interaction_scene_gm_interaction_commit", "interaction_scene_player_phase_start"},
+		[]string{"interaction_open_scene_player_phase", "interaction_record_scene_gm_interaction", "interaction_open_scene_player_phase"},
 	) {
 		t.Fatalf("tool calls = %#v", sess.calls)
 	}
@@ -333,11 +447,11 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
 			{Name: "scene_create"},
-			{Name: "interaction_scene_gm_interaction_commit"},
+			{Name: playerPhaseStartToolName},
 		},
 		resources: baseSessionResources("gm-1", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_gm_interaction_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			playerPhaseStartToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	provider := &fakeProvider{
@@ -346,7 +460,7 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 				ConversationID: "resp-1",
 				ToolCalls: []ProviderToolCall{
 					{CallID: "call-1", Name: "campaign_create", Arguments: `{"name":"Nope"}`},
-					{CallID: "call-2", Name: "interaction_scene_gm_interaction_commit", Arguments: `{"scene_id":"scene-1","interaction":{"title":"Scene Opens","beats":[{"type":"fiction","text":"The scene opens."}]}}`},
+					{CallID: "call-2", Name: playerPhaseStartToolName, Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Scene Opens","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The scene opens."},{"type":"prompt","text":"What do you do?"}]}}`},
 				},
 			},
 			{ConversationID: "resp-2", OutputText: "The scene opens."},
@@ -367,7 +481,7 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 	if res.OutputText != "The scene opens." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if !reflect.DeepEqual(sess.calls, []string{"interaction_scene_gm_interaction_commit"}) {
+	if !reflect.DeepEqual(sess.calls, []string{playerPhaseStartToolName}) {
 		t.Fatalf("tool calls = %#v", sess.calls)
 	}
 	if !provider.calls[1].Results[0].IsError || !strings.Contains(provider.calls[1].Results[0].Output, "not allowed") {
@@ -380,11 +494,11 @@ func TestRunnerFiltersSessionToolsThroughConfiguredPolicy(t *testing.T) {
 		tools: []Tool{
 			{Name: "scene_create"},
 			{Name: "campaign_create"},
-			{Name: "interaction_scene_gm_interaction_commit"},
+			{Name: playerPhaseStartToolName},
 		},
 		resources: baseSessionResources("gm-1", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_gm_interaction_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			playerPhaseStartToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	provider := &fakeProvider{
@@ -393,8 +507,8 @@ func TestRunnerFiltersSessionToolsThroughConfiguredPolicy(t *testing.T) {
 				ConversationID: "resp-1",
 				ToolCalls: []ProviderToolCall{{
 					CallID:    "call-1",
-					Name:      "interaction_scene_gm_interaction_commit",
-					Arguments: `{"scene_id":"scene-1","interaction":{"title":"Scene Opens","beats":[{"type":"fiction","text":"The scene opens."}]}}`,
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Scene Opens","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The scene opens."},{"type":"prompt","text":"What do you do?"}]}}`,
 				}},
 			},
 			{ConversationID: "resp-2", OutputText: "The scene opens."},
@@ -404,7 +518,7 @@ func TestRunnerFiltersSessionToolsThroughConfiguredPolicy(t *testing.T) {
 	runner := NewRunner(RunnerConfig{
 		Dialer:     &fakeDialer{sess: sess},
 		MaxSteps:   4,
-		ToolPolicy: NewStaticToolPolicy([]string{"scene_create", "interaction_scene_gm_interaction_commit"}),
+		ToolPolicy: NewStaticToolPolicy([]string{"scene_create", playerPhaseStartToolName}),
 	})
 	res, err := runner.Run(context.Background(), Input{
 		CampaignID:       "camp-1",
@@ -420,17 +534,17 @@ func TestRunnerFiltersSessionToolsThroughConfiguredPolicy(t *testing.T) {
 	if res.OutputText != "The scene opens." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"scene_create", "interaction_scene_gm_interaction_commit"}) {
+	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"scene_create", playerPhaseStartToolName}) {
 		t.Fatalf("filtered tools = %#v", got)
 	}
 }
 
 func TestRunnerPassesPromptSpecificInputToPromptBuilder(t *testing.T) {
 	sess := &fakeSession{
-		tools:     []Tool{{Name: "interaction_scene_gm_interaction_commit"}},
+		tools:     []Tool{{Name: playerPhaseStartToolName}},
 		resources: baseSessionResources("gm-1", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_gm_interaction_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			playerPhaseStartToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	builder := &fakePromptBuilder{prompt: "Prompt"}
@@ -440,8 +554,8 @@ func TestRunnerPassesPromptSpecificInputToPromptBuilder(t *testing.T) {
 				ConversationID: "resp-1",
 				ToolCalls: []ProviderToolCall{{
 					CallID:    "call-1",
-					Name:      "interaction_scene_gm_interaction_commit",
-					Arguments: `{"scene_id":"scene-1","interaction":{"title":"Scene Opens","beats":[{"type":"fiction","text":"The scene opens."}]}}`,
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Scene Opens","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The scene opens."},{"type":"prompt","text":"What do you do?"}]}}`,
 				}},
 			},
 			{ConversationID: "resp-2", OutputText: "The scene opens."},
@@ -483,14 +597,14 @@ func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
 			{Name: "scene_create"},
-			{Name: "interaction_active_scene_set"},
-			{Name: "interaction_scene_gm_interaction_commit"},
+			{Name: "interaction_activate_scene"},
+			{Name: playerPhaseStartToolName},
 		},
 		resources: baseSessionResources("gm-ai", ""),
 		results: map[string]ToolResult{
-			"scene_create":                            {Output: `{"scene_id":"scene-1","campaign_id":"camp-1","session_id":"sess-1"}`},
-			"interaction_active_scene_set":            {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
-			"interaction_scene_gm_interaction_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			"scene_create":               {Output: `{"scene_id":"scene-1","campaign_id":"camp-1","session_id":"sess-1"}`},
+			"interaction_activate_scene": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			playerPhaseStartToolName:     {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	sess.resources["campaign://camp-1/sessions/sess-1/scenes"] = `{"scenes":[]}`
@@ -501,8 +615,8 @@ func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 				ConversationID: "resp-1",
 				ToolCalls: []ProviderToolCall{
 					{CallID: "call-1", Name: "scene_create", Arguments: `{"name":"Opening","description":"Night fog","character_ids":["char-1"]}`},
-					{CallID: "call-2", Name: "interaction_active_scene_set", Arguments: `{"scene_id":"scene-1"}`},
-					{CallID: "call-3", Name: "interaction_scene_gm_interaction_commit", Arguments: `{"scene_id":"scene-1","interaction":{"title":"Foggy Opening","beats":[{"type":"fiction","text":"The scene opens in fog."}]}}`},
+					{CallID: "call-2", Name: "interaction_activate_scene", Arguments: `{"scene_id":"scene-1"}`},
+					{CallID: "call-3", Name: playerPhaseStartToolName, Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Foggy Opening","character_ids":["char-1"],"beats":[{"type":"fiction","text":"The scene opens in fog."},{"type":"prompt","text":"What do you do in the fog?"}]}}`},
 				},
 			},
 			{ConversationID: "resp-2", OutputText: "The scene opens in fog."},
@@ -523,17 +637,18 @@ func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 	if res.OutputText != "The scene opens in fog." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if !reflect.DeepEqual(sess.calls, []string{"scene_create", "interaction_active_scene_set", "interaction_scene_gm_interaction_commit"}) {
+	if !reflect.DeepEqual(sess.calls, []string{"scene_create", "interaction_activate_scene", playerPhaseStartToolName}) {
 		t.Fatalf("tool calls = %#v", sess.calls)
 	}
 }
 
 func TestRunnerPromptsProviderToCommitDraftNarration(t *testing.T) {
 	sess := &fakeSession{
-		tools:     []Tool{{Name: "interaction_scene_gm_interaction_commit"}},
+		tools:     []Tool{{Name: "interaction_record_scene_gm_interaction"}, {Name: playerPhaseStartToolName}},
 		resources: baseSessionResources("gm-ai", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_gm_interaction_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			"interaction_record_scene_gm_interaction": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"status":"gm"}}`},
+			playerPhaseStartToolName:                  {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	provider := &fakeProvider{
@@ -543,15 +658,24 @@ func TestRunnerPromptsProviderToCommitDraftNarration(t *testing.T) {
 				ConversationID: "resp-2",
 				ToolCalls: []ProviderToolCall{{
 					CallID:    "call-1",
-					Name:      "interaction_scene_gm_interaction_commit",
+					Name:      "interaction_record_scene_gm_interaction",
 					Arguments: `{"scene_id":"scene-1","interaction":{"title":"Pier Fog","beats":[{"type":"fiction","text":"Fog gathers at the pier."}]}}`,
 				}},
 			},
 			{ConversationID: "resp-3", OutputText: "Fog gathers at the pier."},
+			{
+				ConversationID: "resp-4",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-2",
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Pier Fog","character_ids":["char-1"],"beats":[{"type":"fiction","text":"Fog gathers at the pier."},{"type":"prompt","text":"Theron, what do you do?"}]}}`,
+				}},
+			},
+			{ConversationID: "resp-5", OutputText: "Fog gathers at the pier."},
 		},
 	}
 
-	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
+	res, err := newTestRunner(&fakeDialer{sess: sess}, 6).Run(context.Background(), Input{
 		CampaignID:       "camp-1",
 		SessionID:        "sess-1",
 		ParticipantID:    "gm-ai",
@@ -568,14 +692,17 @@ func TestRunnerPromptsProviderToCommitDraftNarration(t *testing.T) {
 	if len(provider.calls) < 2 || !strings.Contains(provider.calls[1].FollowUpPrompt, "Fog gathers at the pier.") {
 		t.Fatalf("follow-up prompt = %#v", provider.calls)
 	}
+	if len(provider.calls) < 4 || !strings.Contains(provider.calls[3].FollowUpPrompt, "Return final text only after the next player phase is open") {
+		t.Fatalf("completion follow-up prompt = %#v", provider.calls)
+	}
 }
 
 func TestRunnerAppliesToolResultBudget(t *testing.T) {
 	sess := &fakeSession{
-		tools:     []Tool{{Name: "interaction_scene_gm_interaction_commit"}},
+		tools:     []Tool{{Name: playerPhaseStartToolName}},
 		resources: baseSessionResources("gm-ai", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_gm_interaction_commit": {Output: strings.Repeat("x", 256)},
+			playerPhaseStartToolName: {Output: `{"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]},"padding":"` + strings.Repeat("x", 256) + `"}`},
 		},
 	}
 	provider := &fakeProvider{
@@ -584,8 +711,8 @@ func TestRunnerAppliesToolResultBudget(t *testing.T) {
 				ConversationID: "resp-1",
 				ToolCalls: []ProviderToolCall{{
 					CallID:    "call-1",
-					Name:      "interaction_scene_gm_interaction_commit",
-					Arguments: `{"scene_id":"scene-1","interaction":{"title":"Budget Test","beats":[{"type":"fiction","text":"Budget test."}]}}`,
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Budget Test","character_ids":["char-1"],"beats":[{"type":"fiction","text":"Budget test."},{"type":"prompt","text":"What do you do?"}]}}`,
 				}},
 			},
 			{ConversationID: "resp-2", OutputText: "Budget test."},
@@ -621,7 +748,7 @@ func TestRunnerAppliesToolResultBudget(t *testing.T) {
 
 func TestRunnerHonorsTurnTimeout(t *testing.T) {
 	sess := &fakeSession{
-		tools:     []Tool{{Name: "interaction_scene_gm_interaction_commit"}},
+		tools:     []Tool{{Name: "interaction_record_scene_gm_interaction"}},
 		resources: baseSessionResources("gm-ai", "scene-1"),
 	}
 	provider := &fakeProvider{
@@ -652,7 +779,7 @@ func TestRunnerHonorsTurnTimeout(t *testing.T) {
 }
 
 func TestRunnerWrapsPromptBuildFailures(t *testing.T) {
-	sess := &fakeSession{tools: []Tool{{Name: "interaction_scene_gm_interaction_commit"}}}
+	sess := &fakeSession{tools: []Tool{{Name: "interaction_record_scene_gm_interaction"}}}
 	_, err := NewRunner(RunnerConfig{
 		Dialer:        &fakeDialer{sess: sess},
 		PromptBuilder: &fakePromptBuilder{err: errors.New("boom")},
@@ -681,10 +808,10 @@ func TestRunnerEmitsSpansForRunAndToolCalls(t *testing.T) {
 	}()
 
 	sess := &fakeSession{
-		tools:     []Tool{{Name: "interaction_scene_gm_interaction_commit"}},
+		tools:     []Tool{{Name: playerPhaseStartToolName}},
 		resources: baseSessionResources("gm-ai", "scene-1"),
 		results: map[string]ToolResult{
-			"interaction_scene_gm_interaction_commit": {Output: `{"ok":true}`},
+			playerPhaseStartToolName: {Output: `{"ok":true,"player_phase":{"phase_id":"phase-1","status":"players","acting_participant_ids":["p-1"]}}`},
 		},
 	}
 	provider := &fakeProvider{
@@ -693,8 +820,8 @@ func TestRunnerEmitsSpansForRunAndToolCalls(t *testing.T) {
 				ConversationID: "resp-1",
 				ToolCalls: []ProviderToolCall{{
 					CallID:    "call-1",
-					Name:      "interaction_scene_gm_interaction_commit",
-					Arguments: `{"scene_id":"scene-1","interaction":{"title":"Span Test","beats":[{"type":"fiction","text":"Span test."}]}}`,
+					Name:      playerPhaseStartToolName,
+					Arguments: `{"scene_id":"scene-1","character_ids":["char-1"],"interaction":{"title":"Span Test","character_ids":["char-1"],"beats":[{"type":"fiction","text":"Span test."},{"type":"prompt","text":"What do you do?"}]}}`,
 				}},
 			},
 			{ConversationID: "resp-2", OutputText: "Span test."},

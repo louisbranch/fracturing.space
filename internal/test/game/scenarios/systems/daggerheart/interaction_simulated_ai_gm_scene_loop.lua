@@ -20,9 +20,9 @@ scn:create_scene{
   description = "Rain lashes the ropes and the planks sway over the gorge.",
   characters = {"Aria", "Corin"}
 }
-scn:interaction_set_gm_authority({participant = "Guide"})
-scn:interaction_set_active_scene({scene = "The Bridge"})
-scn:interaction_start_player_phase{
+scn:interaction_set_session_gm_authority({participant = "Guide"})
+scn:interaction_open_scene_player_phase{
+  as = "Guide",
   scene = "The Bridge",
   interaction = {
     title = "Bridge In The Rain",
@@ -43,7 +43,7 @@ scn:interaction_expect{
 }
 
 -- Let the first player commit an action summary without yielding the phase.
-scn:interaction_post{
+scn:interaction_submit_scene_player_action{
   as = "Rhea",
   summary = "Aria drops low and grabs the near rope to steady the span for everyone else.",
   characters = {"Aria"}
@@ -58,7 +58,7 @@ scn:interaction_expect{
 }
 
 -- Let the second player post and yield while the first player still owns the beat.
-scn:interaction_post{
+scn:interaction_submit_scene_player_action{
   as = "Bryn",
   summary = "Corin cups the lantern and edges toward the midpoint before the wind can snuff it out.",
   characters = {"Corin"},
@@ -73,7 +73,7 @@ scn:interaction_expect{
 }
 
 -- Yield the final acting participant and hand the beat into GM review.
-scn:interaction_yield({as = "Rhea"})
+scn:interaction_yield_scene_player_phase({as = "Rhea"})
 scn:interaction_expect{
   phase_status = "GM_REVIEW",
   slots = {
@@ -82,7 +82,7 @@ scn:interaction_expect{
   },
   gm_authority = "Guide"
 }
-scn:interaction_resolve_review{
+scn:interaction_resolve_scene_player_review{
   as = "Guide",
   interaction = {
     title = "Lantern Over The Gorge",

@@ -52,7 +52,7 @@ func TestApplySceneCreated(t *testing.T) {
 	if rec.Description != "Fierce" {
 		t.Errorf("description = %q, want %q", rec.Description, "Fierce")
 	}
-	if !rec.Active {
+	if !rec.Open {
 		t.Error("expected active")
 	}
 	if rec.SessionID != "sess-1" {
@@ -114,7 +114,7 @@ func TestApplySceneUpdated(t *testing.T) {
 	sceneStore := newFakeSceneStore()
 	sceneStore.scenes["camp-1:sc-1"] = storage.SceneRecord{
 		CampaignID: "camp-1", SceneID: "sc-1", SessionID: "sess-1",
-		Name: "Old", Description: "Old desc", Active: true,
+		Name: "Old", Description: "Old desc", Open: true,
 		CreatedAt: sceneStamp, UpdatedAt: sceneStamp,
 	}
 	applier := Applier{Scene: sceneStore}
@@ -153,7 +153,7 @@ func TestApplySceneEnded(t *testing.T) {
 	ctx := context.Background()
 	sceneStore := newFakeSceneStore()
 	sceneStore.scenes["camp-1:sc-1"] = storage.SceneRecord{
-		CampaignID: "camp-1", SceneID: "sc-1", Active: true,
+		CampaignID: "camp-1", SceneID: "sc-1", Open: true,
 		CreatedAt: sceneStamp, UpdatedAt: sceneStamp,
 	}
 	spotlightStore := newFakeSceneSpotlightStore()
@@ -167,7 +167,7 @@ func TestApplySceneEnded(t *testing.T) {
 		t.Fatalf("apply: %v", err)
 	}
 	rec, _ := sceneStore.GetScene(ctx, "camp-1", "sc-1")
-	if rec.Active {
+	if rec.Open {
 		t.Error("expected inactive")
 	}
 	if rec.EndedAt == nil {

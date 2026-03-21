@@ -21,9 +21,9 @@ scn:create_scene{
   description = "A storm tears at the cliff path while a trapped scout clings to the far ledge.",
   characters = {"Aria", "Corin"}
 }
-scn:interaction_set_gm_authority({participant = "Guide"})
-scn:interaction_set_active_scene({scene = "Storm Ledge"})
-scn:interaction_start_player_phase{
+scn:interaction_set_session_gm_authority({participant = "Guide"})
+scn:interaction_open_scene_player_phase{
+  as = "Guide",
   scene = "Storm Ledge",
   interaction = {
     title = "Scout On The Ledge",
@@ -35,7 +35,7 @@ scn:interaction_start_player_phase{
 }
 
 -- Have the first player commit intent and execute a real action roll during the same beat.
-scn:interaction_post{
+scn:interaction_submit_scene_player_action{
   as = "Rhea",
   summary = "Aria darts for the loose mooring pin before the rope line tears free.",
   characters = {"Aria"}
@@ -47,10 +47,10 @@ dh:action_roll{
   difficulty = 12,
   outcome = "success_fear"
 }
-scn:interaction_yield({as = "Rhea"})
+scn:interaction_yield_scene_player_phase({as = "Rhea"})
 
 -- Let the second player respond in-character and close the shared player phase.
-scn:interaction_post{
+scn:interaction_submit_scene_player_action{
   as = "Bryn",
   summary = "Corin braces the line and shouts directions to the trapped scout.",
   characters = {"Corin"},
@@ -64,7 +64,7 @@ scn:interaction_expect{
     {participant = "Rhea", summary = "Aria darts for the loose mooring pin before the rope line tears free.", characters = {"Aria"}, yielded = true, review_status = "UNDER_REVIEW"}
   }
 }
-scn:interaction_resolve_review({
+scn:interaction_resolve_scene_player_review({
   as = "Guide",
   return_to_gm = true,
   interaction = {
@@ -76,7 +76,8 @@ scn:interaction_resolve_review({
 })
 
 -- Simulate the AI GM reacting to the result by narrowing the next beat to one player.
-scn:interaction_start_player_phase{
+scn:interaction_open_scene_player_phase{
+  as = "Guide",
   scene = "Storm Ledge",
   interaction = {
     title = "Talk The Scout Through It",
@@ -92,7 +93,7 @@ scn:interaction_expect{
   acting_participants = {"Bryn"},
   prompt = "Aria has the line, but the scout is panicking. Corin, what do you say to keep them moving?"
 }
-scn:interaction_post{
+scn:interaction_submit_scene_player_action{
   as = "Bryn",
   summary = "Corin calls out a steady cadence and points the scout toward Aria's line.",
   characters = {"Corin"},

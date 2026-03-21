@@ -57,7 +57,6 @@ type ScenePlayerPostRequest = {
   scene_id: string;
   character_ids: string[];
   summary_text: string;
-  yield_after_post?: boolean;
 };
 
 type SceneScopedRequest = {
@@ -184,7 +183,6 @@ function buildScenePlayerPostRequest(
   bootstrap: BootstrapResponse | null,
   snapshot: WireRoomSnapshot | null,
   draft: string,
-  yieldAfterPost = false,
 ): ScenePlayerPostRequest | null {
   const interactionState = snapshot?.interaction_state ?? bootstrap?.interaction_state;
   const viewerParticipantID = interactionState?.viewer?.participant_id ?? bootstrap?.viewer?.participant_id ?? "";
@@ -206,7 +204,6 @@ function buildScenePlayerPostRequest(
     scene_id: sceneID,
     character_ids: viewerCharacterIDs,
     summary_text: draft,
-    yield_after_post: yieldAfterPost ? true : undefined,
   };
 }
 
@@ -444,7 +441,7 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
   const handleOnStageSubmitAndYield = useCallback(() => {
     const draft = state.onStageDraft.trim();
     if (!draft) return;
-    const request = buildScenePlayerPostRequest(state.bootstrap, state.snapshot, draft, true);
+    const request = buildScenePlayerPostRequest(state.bootstrap, state.snapshot, draft);
     if (!request) {
       handleMutationError(new Error("Scene context is missing for this action."));
       return;
@@ -453,6 +450,13 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     setTypingSource("on-stage", false);
     mutations
       .submitScenePlayerPost(campaignId, request)
+      .then(() => {
+        const yieldRequest = buildSceneScopedRequest(state.bootstrap, state.snapshot);
+        if (!yieldRequest) {
+          throw new Error("Scene context is missing for this action.");
+        }
+        return mutations.yieldScenePlayerPhase(campaignId, yieldRequest);
+      })
       .then(handleMutationSnapshot)
       .catch((err) => {
         dispatch({ type: "set-on-stage-draft", value: draft });

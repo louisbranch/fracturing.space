@@ -38,49 +38,49 @@ func (s *InteractionService) GetInteractionState(ctx context.Context, in *campai
 	return &campaignv1.GetInteractionStateResponse{State: state}, nil
 }
 
-func (s *InteractionService) SetActiveScene(ctx context.Context, in *campaignv1.SetActiveSceneRequest) (*campaignv1.SetActiveSceneResponse, error) {
+func (s *InteractionService) ActivateScene(ctx context.Context, in *campaignv1.ActivateSceneRequest) (*campaignv1.ActivateSceneResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "set active scene request is required")
+		return nil, status.Error(codes.InvalidArgument, "activate scene request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.SetActiveScene(ctx, campaignID, in)
+	state, err := s.app.ActivateScene(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.SetActiveSceneResponse{State: state}, nil
+	return &campaignv1.ActivateSceneResponse{State: state}, nil
 }
 
-func (s *InteractionService) StartScenePlayerPhase(ctx context.Context, in *campaignv1.StartScenePlayerPhaseRequest) (*campaignv1.StartScenePlayerPhaseResponse, error) {
+func (s *InteractionService) OpenScenePlayerPhase(ctx context.Context, in *campaignv1.OpenScenePlayerPhaseRequest) (*campaignv1.OpenScenePlayerPhaseResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "start scene player phase request is required")
+		return nil, status.Error(codes.InvalidArgument, "open scene player phase request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.StartScenePlayerPhase(ctx, campaignID, in)
+	state, err := s.app.OpenScenePlayerPhase(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.StartScenePlayerPhaseResponse{State: state}, nil
+	return &campaignv1.OpenScenePlayerPhaseResponse{State: state}, nil
 }
 
-func (s *InteractionService) SubmitScenePlayerPost(ctx context.Context, in *campaignv1.SubmitScenePlayerPostRequest) (*campaignv1.SubmitScenePlayerPostResponse, error) {
+func (s *InteractionService) SubmitScenePlayerAction(ctx context.Context, in *campaignv1.SubmitScenePlayerActionRequest) (*campaignv1.SubmitScenePlayerActionResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "submit scene player post request is required")
+		return nil, status.Error(codes.InvalidArgument, "submit scene player action request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.SubmitScenePlayerPost(ctx, campaignID, in)
+	state, err := s.app.SubmitScenePlayerAction(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.SubmitScenePlayerPostResponse{State: state}, nil
+	return &campaignv1.SubmitScenePlayerActionResponse{State: state}, nil
 }
 
 func (s *InteractionService) YieldScenePlayerPhase(ctx context.Context, in *campaignv1.YieldScenePlayerPhaseRequest) (*campaignv1.YieldScenePlayerPhaseResponse, error) {
@@ -98,79 +98,79 @@ func (s *InteractionService) YieldScenePlayerPhase(ctx context.Context, in *camp
 	return &campaignv1.YieldScenePlayerPhaseResponse{State: state}, nil
 }
 
-func (s *InteractionService) UnyieldScenePlayerPhase(ctx context.Context, in *campaignv1.UnyieldScenePlayerPhaseRequest) (*campaignv1.UnyieldScenePlayerPhaseResponse, error) {
+func (s *InteractionService) WithdrawScenePlayerYield(ctx context.Context, in *campaignv1.WithdrawScenePlayerYieldRequest) (*campaignv1.WithdrawScenePlayerYieldResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "unyield scene player phase request is required")
+		return nil, status.Error(codes.InvalidArgument, "withdraw scene player yield request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.UnyieldScenePlayerPhase(ctx, campaignID, in)
+	state, err := s.app.WithdrawScenePlayerYield(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.UnyieldScenePlayerPhaseResponse{State: state}, nil
+	return &campaignv1.WithdrawScenePlayerYieldResponse{State: state}, nil
 }
 
-func (s *InteractionService) EndScenePlayerPhase(ctx context.Context, in *campaignv1.EndScenePlayerPhaseRequest) (*campaignv1.EndScenePlayerPhaseResponse, error) {
+func (s *InteractionService) InterruptScenePlayerPhase(ctx context.Context, in *campaignv1.InterruptScenePlayerPhaseRequest) (*campaignv1.InterruptScenePlayerPhaseResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "end scene player phase request is required")
+		return nil, status.Error(codes.InvalidArgument, "interrupt scene player phase request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.EndScenePlayerPhase(ctx, campaignID, in)
+	state, err := s.app.InterruptScenePlayerPhase(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.EndScenePlayerPhaseResponse{State: state}, nil
+	return &campaignv1.InterruptScenePlayerPhaseResponse{State: state}, nil
 }
 
-func (s *InteractionService) CommitSceneGMInteraction(ctx context.Context, in *campaignv1.CommitSceneGMInteractionRequest) (*campaignv1.CommitSceneGMInteractionResponse, error) {
+func (s *InteractionService) RecordSceneGMInteraction(ctx context.Context, in *campaignv1.RecordSceneGMInteractionRequest) (*campaignv1.RecordSceneGMInteractionResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "commit scene gm interaction request is required")
+		return nil, status.Error(codes.InvalidArgument, "record scene gm interaction request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.CommitSceneGMInteraction(ctx, campaignID, in)
+	state, err := s.app.RecordSceneGMInteraction(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.CommitSceneGMInteractionResponse{State: state}, nil
+	return &campaignv1.RecordSceneGMInteractionResponse{State: state}, nil
 }
 
-func (s *InteractionService) ResolveScenePlayerPhaseReview(ctx context.Context, in *campaignv1.ResolveScenePlayerPhaseReviewRequest) (*campaignv1.ResolveScenePlayerPhaseReviewResponse, error) {
+func (s *InteractionService) ResolveScenePlayerReview(ctx context.Context, in *campaignv1.ResolveScenePlayerReviewRequest) (*campaignv1.ResolveScenePlayerReviewResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "resolve scene player phase review request is required")
+		return nil, status.Error(codes.InvalidArgument, "resolve scene player review request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.ResolveScenePlayerPhaseReview(ctx, campaignID, in)
+	state, err := s.app.ResolveScenePlayerReview(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.ResolveScenePlayerPhaseReviewResponse{State: state}, nil
+	return &campaignv1.ResolveScenePlayerReviewResponse{State: state}, nil
 }
 
-func (s *InteractionService) PauseSessionForOOC(ctx context.Context, in *campaignv1.PauseSessionForOOCRequest) (*campaignv1.PauseSessionForOOCResponse, error) {
+func (s *InteractionService) OpenSessionOOC(ctx context.Context, in *campaignv1.OpenSessionOOCRequest) (*campaignv1.OpenSessionOOCResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "pause session for ooc request is required")
+		return nil, status.Error(codes.InvalidArgument, "open session ooc request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.PauseSessionForOOC(ctx, campaignID, in)
+	state, err := s.app.OpenSessionOOC(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.PauseSessionForOOCResponse{State: state}, nil
+	return &campaignv1.OpenSessionOOCResponse{State: state}, nil
 }
 
 func (s *InteractionService) PostSessionOOC(ctx context.Context, in *campaignv1.PostSessionOOCRequest) (*campaignv1.PostSessionOOCResponse, error) {
@@ -218,34 +218,19 @@ func (s *InteractionService) ClearOOCReadyToResume(ctx context.Context, in *camp
 	return &campaignv1.ClearOOCReadyToResumeResponse{State: state}, nil
 }
 
-func (s *InteractionService) ResumeFromOOC(ctx context.Context, in *campaignv1.ResumeFromOOCRequest) (*campaignv1.ResumeFromOOCResponse, error) {
+func (s *InteractionService) ResolveSessionOOC(ctx context.Context, in *campaignv1.ResolveSessionOOCRequest) (*campaignv1.ResolveSessionOOCResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "resume from ooc request is required")
+		return nil, status.Error(codes.InvalidArgument, "resolve session ooc request is required")
 	}
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.app.ResumeFromOOC(ctx, campaignID, in)
+	state, err := s.app.ResolveSessionOOC(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.ResumeFromOOCResponse{State: state}, nil
-}
-
-func (s *InteractionService) ResolveInterruptedScenePhase(ctx context.Context, in *campaignv1.ResolveInterruptedScenePhaseRequest) (*campaignv1.ResolveInterruptedScenePhaseResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "resolve interrupted scene phase request is required")
-	}
-	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
-	if err != nil {
-		return nil, err
-	}
-	state, err := s.app.ResolveInterruptedScenePhase(ctx, campaignID, in)
-	if err != nil {
-		return nil, err
-	}
-	return &campaignv1.ResolveInterruptedScenePhaseResponse{State: state}, nil
+	return &campaignv1.ResolveSessionOOCResponse{State: state}, nil
 }
 
 func (s *InteractionService) SetSessionGMAuthority(ctx context.Context, in *campaignv1.SetSessionGMAuthorityRequest) (*campaignv1.SetSessionGMAuthorityResponse, error) {

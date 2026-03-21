@@ -50,7 +50,7 @@ func TestGetScene_ReturnsScene(t *testing.T) {
 				SceneID:    "sc-1",
 				SessionID:  "s-1",
 				Name:       "Battle",
-				Active:     true,
+				Open:       true,
 				CreatedAt:  time.Unix(1000, 0),
 				UpdatedAt:  time.Unix(1000, 0),
 			},
@@ -74,8 +74,8 @@ func TestGetScene_ReturnsScene(t *testing.T) {
 	if resp.GetScene().GetName() != "Battle" {
 		t.Errorf("name = %q, want %q", resp.GetScene().GetName(), "Battle")
 	}
-	if !resp.GetScene().GetActive() {
-		t.Error("expected active")
+	if !resp.GetScene().GetOpen() {
+		t.Error("expected open")
 	}
 }
 
@@ -131,7 +131,7 @@ func TestListScenes_ReturnsScenes(t *testing.T) {
 				SceneID:    "sc-1",
 				SessionID:  "s-1",
 				Name:       "Battle",
-				Active:     true,
+				Open:       true,
 				CreatedAt:  time.Unix(1000, 0),
 				UpdatedAt:  time.Unix(1000, 0),
 			},
@@ -140,7 +140,7 @@ func TestListScenes_ReturnsScenes(t *testing.T) {
 				SceneID:    "sc-2",
 				SessionID:  "s-1",
 				Name:       "Tavern",
-				Active:     true,
+				Open:       true,
 				CreatedAt:  time.Unix(2000, 0),
 				UpdatedAt:  time.Unix(2000, 0),
 			},

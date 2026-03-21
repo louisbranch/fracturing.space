@@ -41,7 +41,7 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 	_, err = s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO session_interactions (
 			campaign_id, session_id, active_scene_id, gm_authority_participant_id,
-			ooc_paused, ooc_requested_by_participant_id, ooc_reason,
+			ooc_opened, ooc_requested_by_participant_id, ooc_reason,
 			ooc_interrupted_scene_id, ooc_interrupted_phase_id, ooc_interrupted_phase_status,
 			ooc_resolution_pending, ooc_posts_json, ready_to_resume_json,
 			ai_turn_status, ai_turn_token, ai_turn_owner_participant_id,
@@ -51,7 +51,7 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 		ON CONFLICT (campaign_id, session_id) DO UPDATE SET
 			active_scene_id = excluded.active_scene_id,
 			gm_authority_participant_id = excluded.gm_authority_participant_id,
-			ooc_paused = excluded.ooc_paused,
+			ooc_opened = excluded.ooc_opened,
 			ooc_requested_by_participant_id = excluded.ooc_requested_by_participant_id,
 			ooc_reason = excluded.ooc_reason,
 			ooc_interrupted_scene_id = excluded.ooc_interrupted_scene_id,
@@ -133,7 +133,7 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 		updatedAt                   int64
 	)
 	err := s.projectionQueryable().QueryRowContext(ctx,
-		`SELECT active_scene_id, gm_authority_participant_id, ooc_paused,
+		`SELECT active_scene_id, gm_authority_participant_id, ooc_opened,
 		        ooc_requested_by_participant_id, ooc_reason, ooc_interrupted_scene_id,
 		        ooc_interrupted_phase_id, ooc_interrupted_phase_status, ooc_resolution_pending,
 		        ooc_posts_json, ready_to_resume_json,

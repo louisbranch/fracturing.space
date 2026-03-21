@@ -10,7 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func (a Applier) applySessionOOCPaused(ctx context.Context, evt event.Event, payload session.OOCPausedPayload) error {
+func (a Applier) applySessionOOCOpened(ctx context.Context, evt event.Event, payload session.OOCOpenedPayload) error {
 	updatedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (a Applier) applySessionOOCReadyCleared(ctx context.Context, evt event.Even
 	return a.SessionInteraction.PutSessionInteraction(ctx, current)
 }
 
-func (a Applier) applySessionOOCResumed(ctx context.Context, evt event.Event, _ session.OOCResumedPayload) error {
+func (a Applier) applySessionOOCClosed(ctx context.Context, evt event.Event, _ session.OOCClosedPayload) error {
 	updatedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (a Applier) applySessionOOCResumed(ctx context.Context, evt event.Event, _ 
 	return a.SessionInteraction.PutSessionInteraction(ctx, current)
 }
 
-func (a Applier) applySessionOOCInterruptionResolved(ctx context.Context, evt event.Event, _ session.OOCInterruptionResolvedPayload) error {
+func (a Applier) applySessionOOCResolved(ctx context.Context, evt event.Event, _ session.OOCResolvedPayload) error {
 	updatedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
 		return err

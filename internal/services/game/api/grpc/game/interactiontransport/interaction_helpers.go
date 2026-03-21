@@ -117,11 +117,11 @@ func (a interactionApplication) clearOOCResolutionIfPending(ctx context.Context,
 	if !sessionInteraction.OOCResolutionPending {
 		return nil
 	}
-	payload := session.OOCInterruptionResolvedPayload{
+	payload := session.OOCResolvedPayload{
 		SessionID:  ids.SessionID(sessionID),
 		Resolution: strings.TrimSpace(resolution),
 	}
-	return a.executeSessionCommand(ctx, commandTypeSessionOOCInterruptionResolve, campaignID, sessionID, payload, "session.ooc.interruption_resolve")
+	return a.executeSessionCommand(ctx, commandTypeSessionOOCResolve, campaignID, sessionID, payload, "session.ooc.resolve")
 }
 
 func (a interactionApplication) buildGMInteractionPayload(

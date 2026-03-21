@@ -252,7 +252,7 @@ func requireOpenPlayerPhase(scenes map[ids.SceneID]State, cmd command.Command) (
 			Message: "scene not found",
 		}
 	}
-	if !current.Active {
+	if !current.Open {
 		return State{}, "", &command.Rejection{
 			Code:    rejectionCodeSceneNotActive,
 			Message: "scene is not active",

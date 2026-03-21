@@ -19,12 +19,17 @@ import (
 func TestRunStepInteractionPostUsesExplicitActor(t *testing.T) {
 	fixture := testEnv()
 	var gotParticipantID string
-	var gotRequest *gamev1.SubmitScenePlayerPostRequest
+	var gotRequest *gamev1.SubmitScenePlayerActionRequest
+	var yielded bool
 	fixture.env.interactionClient = &fakeInteractionClient{
-		submitPlayerPost: func(ctx context.Context, req *gamev1.SubmitScenePlayerPostRequest, _ ...grpc.CallOption) (*gamev1.SubmitScenePlayerPostResponse, error) {
+		submitPlayerPost: func(ctx context.Context, req *gamev1.SubmitScenePlayerActionRequest, _ ...grpc.CallOption) (*gamev1.SubmitScenePlayerActionResponse, error) {
 			gotParticipantID = outgoingParticipantID(t, ctx)
 			gotRequest = req
-			return &gamev1.SubmitScenePlayerPostResponse{}, nil
+			return &gamev1.SubmitScenePlayerActionResponse{}, nil
+		},
+		yieldPlayerPhase: func(context.Context, *gamev1.YieldScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.YieldScenePlayerPhaseResponse, error) {
+			yielded = true
+			return &gamev1.YieldScenePlayerPhaseResponse{}, nil
 		},
 	}
 
@@ -36,7 +41,7 @@ func TestRunStepInteractionPostUsesExplicitActor(t *testing.T) {
 	state.actors = map[string]string{"Aria": "character-aria"}
 
 	step := Step{
-		Kind: "interaction_post",
+		Kind: "interaction_submit_scene_player_action",
 		Args: map[string]any{
 			"as":         "Rhea",
 			"summary":    "Aria braces the rope bridge for the others.",
@@ -45,13 +50,13 @@ func TestRunStepInteractionPostUsesExplicitActor(t *testing.T) {
 		},
 	}
 	if err := runner.runStep(context.Background(), state, step); err != nil {
-		t.Fatalf("runStep(interaction_post): %v", err)
+		t.Fatalf("runStep(interaction_submit_scene_player_action): %v", err)
 	}
 	if gotParticipantID != "participant-rhea" {
 		t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "participant-rhea")
 	}
 	if gotRequest == nil {
-		t.Fatal("expected SubmitScenePlayerPost request")
+		t.Fatal("expected SubmitScenePlayerAction request")
 	}
 	if gotRequest.GetSceneId() != "scene-1" {
 		t.Fatalf("scene_id = %q, want %q", gotRequest.GetSceneId(), "scene-1")
@@ -62,8 +67,8 @@ func TestRunStepInteractionPostUsesExplicitActor(t *testing.T) {
 	if len(gotRequest.GetCharacterIds()) != 1 || gotRequest.GetCharacterIds()[0] != "character-aria" {
 		t.Fatalf("character_ids = %v, want [character-aria]", gotRequest.GetCharacterIds())
 	}
-	if !gotRequest.GetYieldAfterPost() {
-		t.Fatal("yield_after_post = false, want true")
+	if yielded != true {
+		t.Fatal("expected interaction_submit_scene_player_action with yield=true to call YieldScenePlayerPhase")
 	}
 }
 
@@ -87,14 +92,14 @@ func TestRunStepInteractionSetGMAuthorityUsesExplicitActor(t *testing.T) {
 	}
 
 	step := Step{
-		Kind: "interaction_set_gm_authority",
+		Kind: "interaction_set_session_gm_authority",
 		Args: map[string]any{
 			"as":          "Owner",
 			"participant": "Guide",
 		},
 	}
 	if err := runner.runStep(context.Background(), state, step); err != nil {
-		t.Fatalf("runStep(interaction_set_gm_authority): %v", err)
+		t.Fatalf("runStep(interaction_set_session_gm_authority): %v", err)
 	}
 	if gotParticipantID != "owner-1" {
 		t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "owner-1")
@@ -110,15 +115,15 @@ func TestRunStepInteractionSetGMAuthorityUsesExplicitActor(t *testing.T) {
 	}
 }
 
-func TestRunStepInteractionSetActiveSceneUsesResolvedScene(t *testing.T) {
+func TestRunStepInteractionActivateSceneUsesResolvedScene(t *testing.T) {
 	fixture := testEnv()
 	var gotParticipantID string
-	var gotRequest *gamev1.SetActiveSceneRequest
+	var gotRequest *gamev1.ActivateSceneRequest
 	fixture.env.interactionClient = &fakeInteractionClient{
-		setActiveScene: func(ctx context.Context, req *gamev1.SetActiveSceneRequest, _ ...grpc.CallOption) (*gamev1.SetActiveSceneResponse, error) {
+		setActiveScene: func(ctx context.Context, req *gamev1.ActivateSceneRequest, _ ...grpc.CallOption) (*gamev1.ActivateSceneResponse, error) {
 			gotParticipantID = outgoingParticipantID(t, ctx)
 			gotRequest = req
-			return &gamev1.SetActiveSceneResponse{}, nil
+			return &gamev1.ActivateSceneResponse{}, nil
 		},
 	}
 
@@ -128,20 +133,20 @@ func TestRunStepInteractionSetActiveSceneUsesResolvedScene(t *testing.T) {
 	state.scenes = map[string]string{"The Bridge": "scene-1"}
 
 	step := Step{
-		Kind: "interaction_set_active_scene",
+		Kind: "interaction_activate_scene",
 		Args: map[string]any{
 			"as":    "Guide",
 			"scene": "The Bridge",
 		},
 	}
 	if err := runner.runStep(context.Background(), state, step); err != nil {
-		t.Fatalf("runStep(interaction_set_active_scene): %v", err)
+		t.Fatalf("runStep(interaction_activate_scene): %v", err)
 	}
 	if gotParticipantID != "participant-guide" {
 		t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "participant-guide")
 	}
 	if gotRequest == nil {
-		t.Fatal("expected SetActiveScene request")
+		t.Fatal("expected ActivateScene request")
 	}
 	if gotRequest.GetSceneId() != "scene-1" {
 		t.Fatalf("scene_id = %q, want %q", gotRequest.GetSceneId(), "scene-1")
@@ -154,12 +159,12 @@ func TestRunStepInteractionSetActiveSceneUsesResolvedScene(t *testing.T) {
 func TestRunStepInteractionStartPlayerPhaseUsesExplicitActor(t *testing.T) {
 	fixture := testEnv()
 	var gotParticipantID string
-	var gotRequest *gamev1.StartScenePlayerPhaseRequest
+	var gotRequest *gamev1.OpenScenePlayerPhaseRequest
 	fixture.env.interactionClient = &fakeInteractionClient{
-		startPlayerPhase: func(ctx context.Context, req *gamev1.StartScenePlayerPhaseRequest, _ ...grpc.CallOption) (*gamev1.StartScenePlayerPhaseResponse, error) {
+		startPlayerPhase: func(ctx context.Context, req *gamev1.OpenScenePlayerPhaseRequest, _ ...grpc.CallOption) (*gamev1.OpenScenePlayerPhaseResponse, error) {
 			gotParticipantID = outgoingParticipantID(t, ctx)
 			gotRequest = req
-			return &gamev1.StartScenePlayerPhaseResponse{}, nil
+			return &gamev1.OpenScenePlayerPhaseResponse{}, nil
 		},
 	}
 
@@ -173,7 +178,7 @@ func TestRunStepInteractionStartPlayerPhaseUsesExplicitActor(t *testing.T) {
 	}
 
 	step := Step{
-		Kind: "interaction_start_player_phase",
+		Kind: "interaction_open_scene_player_phase",
 		Args: map[string]any{
 			"as": "Guide",
 			"interaction": map[string]any{
@@ -186,13 +191,13 @@ func TestRunStepInteractionStartPlayerPhaseUsesExplicitActor(t *testing.T) {
 		},
 	}
 	if err := runner.runStep(context.Background(), state, step); err != nil {
-		t.Fatalf("runStep(interaction_start_player_phase): %v", err)
+		t.Fatalf("runStep(interaction_open_scene_player_phase): %v", err)
 	}
 	if gotParticipantID != "participant-guide" {
 		t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "participant-guide")
 	}
 	if gotRequest == nil {
-		t.Fatal("expected StartScenePlayerPhase request")
+		t.Fatal("expected OpenScenePlayerPhase request")
 	}
 	if gotRequest.GetSceneId() != "scene-1" {
 		t.Fatalf("scene_id = %q, want %q", gotRequest.GetSceneId(), "scene-1")
@@ -221,17 +226,17 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 		state.participants = map[string]string{"Guide": "participant-guide"}
 
 		var gotParticipantID string
-		var gotRequest *gamev1.ResolveScenePlayerPhaseReviewRequest
+		var gotRequest *gamev1.ResolveScenePlayerReviewRequest
 		runner.env.interactionClient = &fakeInteractionClient{
-			resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
+			resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerReviewResponse, error) {
 				gotParticipantID = outgoingParticipantID(t, ctx)
 				gotRequest = req
-				return &gamev1.ResolveScenePlayerPhaseReviewResponse{}, nil
+				return &gamev1.ResolveScenePlayerReviewResponse{}, nil
 			},
 		}
 
 		if err := runner.runStep(context.Background(), state, Step{
-			Kind: "interaction_resolve_review",
+			Kind: "interaction_resolve_scene_player_review",
 			Args: map[string]any{
 				"as":           "Guide",
 				"return_to_gm": true,
@@ -243,7 +248,7 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 				},
 			},
 		}); err != nil {
-			t.Fatalf("runStep(interaction_resolve_review return_to_gm): %v", err)
+			t.Fatalf("runStep(interaction_resolve_scene_player_review return_to_gm): %v", err)
 		}
 		if gotParticipantID != "participant-guide" {
 			t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "participant-guide")
@@ -251,7 +256,7 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 		if gotRequest == nil || gotRequest.GetCampaignId() != "campaign-1" || gotRequest.GetSceneId() != "scene-1" {
 			t.Fatalf("accept request = %#v", gotRequest)
 		}
-		resolution, ok := gotRequest.GetResolution().(*gamev1.ResolveScenePlayerPhaseReviewRequest_ReturnToGm)
+		resolution, ok := gotRequest.GetResolution().(*gamev1.ResolveScenePlayerReviewRequest_ReturnToGm)
 		if !ok || resolution.ReturnToGm == nil || resolution.ReturnToGm.GetInteraction() == nil {
 			t.Fatalf("resolution = %#v, want return_to_gm interaction", gotRequest.GetResolution())
 		}
@@ -264,17 +269,17 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 		state.actors = map[string]string{"Aria": "character-aria"}
 
 		var gotParticipantID string
-		var gotRequest *gamev1.ResolveScenePlayerPhaseReviewRequest
+		var gotRequest *gamev1.ResolveScenePlayerReviewRequest
 		runner.env.interactionClient = &fakeInteractionClient{
-			resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
+			resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerReviewResponse, error) {
 				gotParticipantID = outgoingParticipantID(t, ctx)
 				gotRequest = req
-				return &gamev1.ResolveScenePlayerPhaseReviewResponse{}, nil
+				return &gamev1.ResolveScenePlayerReviewResponse{}, nil
 			},
 		}
 
 		if err := runner.runStep(context.Background(), state, Step{
-			Kind: "interaction_resolve_review",
+			Kind: "interaction_resolve_scene_player_review",
 			Args: map[string]any{
 				"as": "Guide",
 				"interaction": map[string]any{
@@ -292,7 +297,7 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 				},
 			},
 		}); err != nil {
-			t.Fatalf("runStep(interaction_resolve_review revisions): %v", err)
+			t.Fatalf("runStep(interaction_resolve_scene_player_review revisions): %v", err)
 		}
 		if gotParticipantID != "participant-guide" {
 			t.Fatalf("participant metadata = %q, want %q", gotParticipantID, "participant-guide")
@@ -300,7 +305,7 @@ func TestRunStepInteractionReviewFlowUsesExplicitActor(t *testing.T) {
 		if gotRequest == nil || gotRequest.GetCampaignId() != "campaign-1" || gotRequest.GetSceneId() != "scene-1" {
 			t.Fatalf("revision request = %#v", gotRequest)
 		}
-		resolution, ok := gotRequest.GetResolution().(*gamev1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions)
+		resolution, ok := gotRequest.GetResolution().(*gamev1.ResolveScenePlayerReviewRequest_RequestRevisions)
 		if !ok || resolution.RequestRevisions == nil {
 			t.Fatalf("resolution = %#v, want request_revisions", gotRequest.GetResolution())
 		}
@@ -372,7 +377,7 @@ func TestRunStepRejectsUnknownExplicitActor(t *testing.T) {
 	runner := quietRunner(testEnv().env)
 	state := testState()
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "interaction_ready_ooc",
+		Kind: "interaction_mark_ooc_ready_to_resume",
 		Args: map[string]any{"as": "Nobody"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "unknown participant") {
@@ -383,7 +388,7 @@ func TestRunStepRejectsUnknownExplicitActor(t *testing.T) {
 func TestRunStepExpectedErrorMatchesGRPCCodeAndMessage(t *testing.T) {
 	fixture := testEnv()
 	fixture.env.interactionClient = &fakeInteractionClient{
-		resumeOOC: func(context.Context, *gamev1.ResumeFromOOCRequest, ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
+		resolveSessionOOC: func(context.Context, *gamev1.ResolveSessionOOCRequest, ...grpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error) {
 			return nil, status.Error(codes.FailedPrecondition, "session is not paused for out-of-character discussion")
 		},
 	}
@@ -391,35 +396,37 @@ func TestRunStepExpectedErrorMatchesGRPCCodeAndMessage(t *testing.T) {
 	runner := quietRunner(fixture.env)
 	state := testState()
 	if err := runner.runStep(context.Background(), state, Step{
-		Kind: "interaction_resume_ooc",
+		Kind: "interaction_resolve_session_ooc",
 		Args: map[string]any{
+			"resume_interrupted_phase": true,
 			"expect_error": map[string]any{
 				"code":     "FAILED_PRECONDITION",
 				"contains": "not paused for out-of-character discussion",
 			},
 		},
 	}); err != nil {
-		t.Fatalf("runStep(interaction_resume_ooc with expect_error): %v", err)
+		t.Fatalf("runStep(interaction_resolve_session_ooc with expect_error): %v", err)
 	}
 }
 
 func TestRunStepExpectedErrorFailsWhenStepSucceeds(t *testing.T) {
 	fixture := testEnv()
 	fixture.env.interactionClient = &fakeInteractionClient{
-		resumeOOC: func(context.Context, *gamev1.ResumeFromOOCRequest, ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
-			return &gamev1.ResumeFromOOCResponse{}, nil
+		resolveSessionOOC: func(context.Context, *gamev1.ResolveSessionOOCRequest, ...grpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error) {
+			return &gamev1.ResolveSessionOOCResponse{}, nil
 		},
 	}
 
 	runner := quietRunner(fixture.env)
 	state := testState()
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "interaction_resume_ooc",
+		Kind: "interaction_resolve_session_ooc",
 		Args: map[string]any{
-			"expect_error": map[string]any{"code": "FAILED_PRECONDITION"},
+			"resume_interrupted_phase": true,
+			"expect_error":             map[string]any{"code": "FAILED_PRECONDITION"},
 		},
 	})
-	if err == nil || !strings.Contains(err.Error(), "expected interaction_resume_ooc to fail with gRPC code FailedPrecondition") {
+	if err == nil || !strings.Contains(err.Error(), "expected interaction_resolve_session_ooc to fail with gRPC code FailedPrecondition") {
 		t.Fatalf("expected success mismatch error, got %v", err)
 	}
 }
@@ -427,7 +434,7 @@ func TestRunStepExpectedErrorFailsWhenStepSucceeds(t *testing.T) {
 func TestRunStepExpectedErrorFailsWhenCodeMismatches(t *testing.T) {
 	fixture := testEnv()
 	fixture.env.interactionClient = &fakeInteractionClient{
-		resumeOOC: func(context.Context, *gamev1.ResumeFromOOCRequest, ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
+		resolveSessionOOC: func(context.Context, *gamev1.ResolveSessionOOCRequest, ...grpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error) {
 			return nil, status.Error(codes.PermissionDenied, "not allowed")
 		},
 	}
@@ -435,9 +442,10 @@ func TestRunStepExpectedErrorFailsWhenCodeMismatches(t *testing.T) {
 	runner := quietRunner(fixture.env)
 	state := testState()
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "interaction_resume_ooc",
+		Kind: "interaction_resolve_session_ooc",
 		Args: map[string]any{
-			"expect_error": map[string]any{"code": "FAILED_PRECONDITION"},
+			"resume_interrupted_phase": true,
+			"expect_error":             map[string]any{"code": "FAILED_PRECONDITION"},
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "expected gRPC code FailedPrecondition, got PermissionDenied") {
@@ -448,7 +456,7 @@ func TestRunStepExpectedErrorFailsWhenCodeMismatches(t *testing.T) {
 func TestRunStepExpectedErrorFailsForNonGRPCError(t *testing.T) {
 	fixture := testEnv()
 	fixture.env.interactionClient = &fakeInteractionClient{
-		resumeOOC: func(context.Context, *gamev1.ResumeFromOOCRequest, ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
+		resolveSessionOOC: func(context.Context, *gamev1.ResolveSessionOOCRequest, ...grpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error) {
 			return nil, errors.New("boom")
 		},
 	}
@@ -456,9 +464,10 @@ func TestRunStepExpectedErrorFailsForNonGRPCError(t *testing.T) {
 	runner := quietRunner(fixture.env)
 	state := testState()
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "interaction_resume_ooc",
+		Kind: "interaction_resolve_session_ooc",
 		Args: map[string]any{
-			"expect_error": map[string]any{"code": "FAILED_PRECONDITION"},
+			"resume_interrupted_phase": true,
+			"expect_error":             map[string]any{"code": "FAILED_PRECONDITION"},
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "expected gRPC code FailedPrecondition but step returned non-gRPC error") {
@@ -470,9 +479,10 @@ func TestRunStepExpectedErrorRejectsMissingCode(t *testing.T) {
 	runner := quietRunner(testEnv().env)
 	state := testState()
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "interaction_resume_ooc",
+		Kind: "interaction_resolve_session_ooc",
 		Args: map[string]any{
-			"expect_error": map[string]any{},
+			"resume_interrupted_phase": true,
+			"expect_error":             map[string]any{},
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "expect_error code is required") {
@@ -501,7 +511,7 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 	}{
 		{
 			name: "yield",
-			step: Step{Kind: "interaction_yield", Args: map[string]any{"as": "Rhea"}},
+			step: Step{Kind: "interaction_yield_scene_player_phase", Args: map[string]any{"as": "Rhea"}},
 			setup: func(state *scenarioState) {
 				state.activeSceneID = "scene-1"
 				state.participants = map[string]string{"Rhea": "participant-rhea"}
@@ -528,18 +538,18 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 		},
 		{
 			name: "unyield",
-			step: Step{Kind: "interaction_unyield", Args: map[string]any{"as": "Rhea"}},
+			step: Step{Kind: "interaction_withdraw_scene_player_yield", Args: map[string]any{"as": "Rhea"}},
 			setup: func(state *scenarioState) {
 				state.activeSceneID = "scene-1"
 				state.participants = map[string]string{"Rhea": "participant-rhea"}
 			},
 			client: func(capture *interactionCapture) *fakeInteractionClient {
 				return &fakeInteractionClient{
-					unyieldPlayerPhase: func(ctx context.Context, req *gamev1.UnyieldScenePlayerPhaseRequest, _ ...grpc.CallOption) (*gamev1.UnyieldScenePlayerPhaseResponse, error) {
+					unyieldPlayerPhase: func(ctx context.Context, req *gamev1.WithdrawScenePlayerYieldRequest, _ ...grpc.CallOption) (*gamev1.WithdrawScenePlayerYieldResponse, error) {
 						capture.participantID = outgoingParticipantID(t, ctx)
 						capture.campaignID = req.GetCampaignId()
 						capture.sceneID = req.GetSceneId()
-						return &gamev1.UnyieldScenePlayerPhaseResponse{}, nil
+						return &gamev1.WithdrawScenePlayerYieldResponse{}, nil
 					},
 				}
 			},
@@ -555,19 +565,19 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 		},
 		{
 			name: "end_player_phase",
-			step: Step{Kind: "interaction_end_player_phase", Args: map[string]any{"as": "Guide", "reason": "gm_interrupted"}},
+			step: Step{Kind: "interaction_interrupt_scene_player_phase", Args: map[string]any{"as": "Guide", "reason": "gm_interrupted"}},
 			setup: func(state *scenarioState) {
 				state.activeSceneID = "scene-1"
 				state.participants = map[string]string{"Guide": "participant-guide"}
 			},
 			client: func(capture *interactionCapture) *fakeInteractionClient {
 				return &fakeInteractionClient{
-					endPlayerPhase: func(ctx context.Context, req *gamev1.EndScenePlayerPhaseRequest, _ ...grpc.CallOption) (*gamev1.EndScenePlayerPhaseResponse, error) {
+					endPlayerPhase: func(ctx context.Context, req *gamev1.InterruptScenePlayerPhaseRequest, _ ...grpc.CallOption) (*gamev1.InterruptScenePlayerPhaseResponse, error) {
 						capture.participantID = outgoingParticipantID(t, ctx)
 						capture.campaignID = req.GetCampaignId()
 						capture.sceneID = req.GetSceneId()
 						capture.reason = req.GetReason()
-						return &gamev1.EndScenePlayerPhaseResponse{}, nil
+						return &gamev1.InterruptScenePlayerPhaseResponse{}, nil
 					},
 				}
 			},
@@ -583,7 +593,7 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 		},
 		{
 			name: "resolve_review_return_to_gm",
-			step: Step{Kind: "interaction_resolve_review", Args: map[string]any{
+			step: Step{Kind: "interaction_resolve_scene_player_review", Args: map[string]any{
 				"as":           "Guide",
 				"return_to_gm": true,
 				"interaction": map[string]any{
@@ -599,11 +609,11 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 			},
 			client: func(capture *interactionCapture) *fakeInteractionClient {
 				return &fakeInteractionClient{
-					resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
+					resolveReview: func(ctx context.Context, req *gamev1.ResolveScenePlayerReviewRequest, _ ...grpc.CallOption) (*gamev1.ResolveScenePlayerReviewResponse, error) {
 						capture.participantID = outgoingParticipantID(t, ctx)
 						capture.campaignID = req.GetCampaignId()
 						capture.sceneID = req.GetSceneId()
-						return &gamev1.ResolveScenePlayerPhaseReviewResponse{}, nil
+						return &gamev1.ResolveScenePlayerReviewResponse{}, nil
 					},
 				}
 			},
@@ -619,17 +629,17 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 		},
 		{
 			name: "pause_ooc",
-			step: Step{Kind: "interaction_pause_ooc", Args: map[string]any{"as": "Guide", "reason": "clarify the ruling"}},
+			step: Step{Kind: "interaction_open_session_ooc", Args: map[string]any{"as": "Guide", "reason": "clarify the ruling"}},
 			setup: func(state *scenarioState) {
 				state.participants = map[string]string{"Guide": "participant-guide"}
 			},
 			client: func(capture *interactionCapture) *fakeInteractionClient {
 				return &fakeInteractionClient{
-					pauseOOC: func(ctx context.Context, req *gamev1.PauseSessionForOOCRequest, _ ...grpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error) {
+					pauseOOC: func(ctx context.Context, req *gamev1.OpenSessionOOCRequest, _ ...grpc.CallOption) (*gamev1.OpenSessionOOCResponse, error) {
 						capture.participantID = outgoingParticipantID(t, ctx)
 						capture.campaignID = req.GetCampaignId()
 						capture.reason = req.GetReason()
-						return &gamev1.PauseSessionForOOCResponse{}, nil
+						return &gamev1.OpenSessionOOCResponse{}, nil
 					},
 				}
 			},
@@ -645,7 +655,7 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 		},
 		{
 			name: "post_ooc",
-			step: Step{Kind: "interaction_post_ooc", Args: map[string]any{"as": "Rhea", "body": "Question?"}},
+			step: Step{Kind: "interaction_post_session_ooc", Args: map[string]any{"as": "Rhea", "body": "Question?"}},
 			setup: func(state *scenarioState) {
 				state.participants = map[string]string{"Rhea": "participant-rhea"}
 			},
@@ -671,7 +681,7 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 		},
 		{
 			name: "ready_ooc",
-			step: Step{Kind: "interaction_ready_ooc", Args: map[string]any{"as": "Rhea"}},
+			step: Step{Kind: "interaction_mark_ooc_ready_to_resume", Args: map[string]any{"as": "Rhea"}},
 			setup: func(state *scenarioState) {
 				state.participants = map[string]string{"Rhea": "participant-rhea"}
 			},
@@ -696,7 +706,7 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 		},
 		{
 			name: "clear_ready_ooc",
-			step: Step{Kind: "interaction_clear_ready_ooc", Args: map[string]any{"as": "Rhea"}},
+			step: Step{Kind: "interaction_clear_ooc_ready_to_resume", Args: map[string]any{"as": "Rhea"}},
 			setup: func(state *scenarioState) {
 				state.participants = map[string]string{"Rhea": "participant-rhea"}
 			},
@@ -720,17 +730,17 @@ func TestRunStepInteractionParticipantCallsUseExplicitActor(t *testing.T) {
 			},
 		},
 		{
-			name: "resume_ooc",
-			step: Step{Kind: "interaction_resume_ooc", Args: map[string]any{"as": "Guide"}},
+			name: "resolve_session_ooc",
+			step: Step{Kind: "interaction_resolve_session_ooc", Args: map[string]any{"as": "Guide", "resume_interrupted_phase": true}},
 			setup: func(state *scenarioState) {
 				state.participants = map[string]string{"Guide": "participant-guide"}
 			},
 			client: func(capture *interactionCapture) *fakeInteractionClient {
 				return &fakeInteractionClient{
-					resumeOOC: func(ctx context.Context, req *gamev1.ResumeFromOOCRequest, _ ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
+					resolveSessionOOC: func(ctx context.Context, req *gamev1.ResolveSessionOOCRequest, _ ...grpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error) {
 						capture.participantID = outgoingParticipantID(t, ctx)
 						capture.campaignID = req.GetCampaignId()
-						return &gamev1.ResumeFromOOCResponse{}, nil
+						return &gamev1.ResolveSessionOOCResponse{}, nil
 					},
 				}
 			},

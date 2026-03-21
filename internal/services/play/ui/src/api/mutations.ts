@@ -56,9 +56,8 @@ export function submitScenePlayerPost(campaignId: string, body: {
   scene_id: string;
   character_ids: string[];
   summary_text: string;
-  yield_after_post?: boolean;
 }): Promise<WireRoomSnapshot> {
-  return postInteraction(campaignId, "submit-scene-player-post", body);
+  return postInteraction(campaignId, "submit-scene-player-action", body);
 }
 
 export function yieldScenePlayerPhase(campaignId: string, body: { scene_id: string }): Promise<WireRoomSnapshot> {
@@ -66,7 +65,7 @@ export function yieldScenePlayerPhase(campaignId: string, body: { scene_id: stri
 }
 
 export function unyieldScenePlayerPhase(campaignId: string, body: { scene_id: string }): Promise<WireRoomSnapshot> {
-  return postInteraction(campaignId, "unyield-scene-player-phase", body);
+  return postInteraction(campaignId, "withdraw-scene-player-yield", body);
 }
 
 export function postSessionOOC(campaignId: string, body: { body: string }): Promise<WireRoomSnapshot> {

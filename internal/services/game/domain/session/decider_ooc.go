@@ -10,15 +10,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
-// decideOOCPause opens the out-of-character coordination surface for the session.
-func decideOOCPause(state State, cmd command.Command, now func() time.Time) command.Decision {
+// decideOOCOpen opens the out-of-character coordination surface for the session.
+func decideOOCOpen(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if state.OOCPaused {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeSessionOOCAlreadyOpen,
 			Message: "session is already paused for out-of-character discussion",
 		})
 	}
-	var payload OOCPausedPayload
+	var payload OOCOpenedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 	}
@@ -29,7 +29,7 @@ func decideOOCPause(state State, cmd command.Command, now func() time.Time) comm
 	payload.InterruptedPhaseID = strings.TrimSpace(payload.InterruptedPhaseID)
 	payload.InterruptedPhaseStatus = strings.TrimSpace(payload.InterruptedPhaseStatus)
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeOOCPaused, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
+	evt := command.NewEvent(cmd, EventTypeOOCOpened, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 	evt.SessionID = cmd.SessionID
 	return command.Accept(evt)
 }
@@ -127,42 +127,42 @@ func decideOOCReadyClear(state State, cmd command.Command, now func() time.Time)
 	return command.Accept(evt)
 }
 
-// decideOOCResume closes the OOC pause and returns the session to play.
-func decideOOCResume(state State, cmd command.Command, now func() time.Time) command.Decision {
+// decideOOCClose closes the OOC pause and returns the session to play.
+func decideOOCClose(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if !state.OOCPaused {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeSessionOOCNotOpen,
 			Message: "session is not paused for out-of-character discussion",
 		})
 	}
-	var payload OOCResumedPayload
+	var payload OOCClosedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 	}
 	payload.SessionID = ids.SessionID(cmd.SessionID)
 	payload.Reason = strings.TrimSpace(payload.Reason)
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeOOCResumed, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
+	evt := command.NewEvent(cmd, EventTypeOOCClosed, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 	evt.SessionID = cmd.SessionID
 	return command.Accept(evt)
 }
 
-// decideOOCInterruptionResolve clears the pending GM resolution gate after OOC.
-func decideOOCInterruptionResolve(state State, cmd command.Command, now func() time.Time) command.Decision {
+// decideOOCResolve clears the pending GM resolution gate after OOC.
+func decideOOCResolve(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if state.OOCPaused || !state.OOCResolutionPending {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeSessionOOCResolutionNotPending,
 			Message: "session is not waiting for post-ooc resolution",
 		})
 	}
-	var payload OOCInterruptionResolvedPayload
+	var payload OOCResolvedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 	}
 	payload.SessionID = ids.SessionID(cmd.SessionID)
 	payload.Resolution = strings.TrimSpace(payload.Resolution)
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeOOCInterruptionResolved, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
+	evt := command.NewEvent(cmd, EventTypeOOCResolved, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 	evt.SessionID = cmd.SessionID
 	return command.Accept(evt)
 }
