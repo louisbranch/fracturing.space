@@ -2,6 +2,10 @@
 //
 // Sealing is isolated so core domain models stay transport-agnostic while storage
 // boundaries own the concrete crypto and key lifecycle.
+//
+// Key rotation: AESGCMSealer uses a single key. Changing the key invalidates all
+// existing sealed values. Callers that need rotation should re-seal stored values
+// under the new key before discarding the old one.
 package secret
 
 import (
@@ -12,6 +16,12 @@ import (
 	"fmt"
 	"io"
 )
+
+// Sealer encrypts and decrypts secret values at service boundaries.
+type Sealer interface {
+	Seal(value string) (string, error)
+	Open(sealed string) (string, error)
+}
 
 // AESGCMSealer seals and opens secrets using AES-GCM.
 type AESGCMSealer struct {

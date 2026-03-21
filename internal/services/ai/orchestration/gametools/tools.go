@@ -21,7 +21,10 @@ type productionToolRegistry struct {
 	byName      map[string]productionToolDefinition
 }
 
-var registry = newProductionToolRegistry()
+// defaultRegistry is the standard production registry used by NewDirectDialer.
+// Kept as a package-level cache since the definitions are static; injection
+// happens at the DirectDialer/DirectSession level so tests can substitute.
+var defaultRegistry = newProductionToolRegistry()
 
 func newProductionToolRegistry() productionToolRegistry {
 	definitions := []productionToolDefinition{
@@ -419,8 +422,8 @@ func (r productionToolRegistry) lookup(name string) (productionToolDefinition, b
 // ProductionToolNames returns the concrete production tool profile owned by
 // the direct game-tools bridge.
 func ProductionToolNames() []string {
-	names := make([]string, 0, len(registry.definitions))
-	for _, definition := range registry.definitions {
+	names := make([]string, 0, len(defaultRegistry.definitions))
+	for _, definition := range defaultRegistry.definitions {
 		names = append(names, definition.Tool.Name)
 	}
 	return names

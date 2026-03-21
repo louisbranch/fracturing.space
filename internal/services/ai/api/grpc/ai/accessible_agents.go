@@ -10,6 +10,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// InvokeAuthorizationResult captures the outcome of one invoke authorization
+// check so callers do not juggle positional booleans.
+type InvokeAuthorizationResult struct {
+	Authorized      bool
+	SharedAccess    bool
+	AccessRequestID string
+}
+
 // accessibleAgentResolver centralizes owner/shared invoke visibility so agent
 // lookup and invocation share one access policy source.
 type accessibleAgentResolver struct {
@@ -24,20 +32,20 @@ func newAccessibleAgentResolver(agentStore storage.AgentStore, accessRequestStor
 	}
 }
 
-func (r accessibleAgentResolver) isAuthorizedToInvokeAgent(ctx context.Context, callerUserID string, agentRecord storage.AgentRecord) (bool, bool, string, error) {
+func (r accessibleAgentResolver) isAuthorizedToInvokeAgent(ctx context.Context, callerUserID string, agentRecord storage.AgentRecord) (InvokeAuthorizationResult, error) {
 	ownerUserID := strings.TrimSpace(agentRecord.OwnerUserID)
 	if ownerUserID == "" {
-		return false, false, "", status.Error(codes.FailedPrecondition, "agent owner is unavailable")
+		return InvokeAuthorizationResult{}, status.Error(codes.FailedPrecondition, "agent owner is unavailable")
 	}
 	callerUserID = strings.TrimSpace(callerUserID)
 	if callerUserID == "" {
-		return false, false, "", nil
+		return InvokeAuthorizationResult{}, nil
 	}
 	if callerUserID == ownerUserID {
-		return true, false, "", nil
+		return InvokeAuthorizationResult{Authorized: true}, nil
 	}
 	if r.accessRequestStore == nil {
-		return false, false, "", nil
+		return InvokeAuthorizationResult{}, nil
 	}
 	rec, err := r.accessRequestStore.GetApprovedInvokeAccessByRequesterForAgent(
 		ctx,
@@ -47,11 +55,15 @@ func (r accessibleAgentResolver) isAuthorizedToInvokeAgent(ctx context.Context, 
 	)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return false, false, "", nil
+			return InvokeAuthorizationResult{}, nil
 		}
-		return false, false, "", status.Errorf(codes.Internal, "get approved invoke access request: %v", err)
+		return InvokeAuthorizationResult{}, status.Errorf(codes.Internal, "get approved invoke access request: %v", err)
 	}
-	return true, true, strings.TrimSpace(rec.ID), nil
+	return InvokeAuthorizationResult{
+		Authorized:      true,
+		SharedAccess:    true,
+		AccessRequestID: strings.TrimSpace(rec.ID),
+	}, nil
 }
 
 func (r accessibleAgentResolver) collectAccessibleAgents(ctx context.Context, userID string) ([]storage.AgentRecord, error) {

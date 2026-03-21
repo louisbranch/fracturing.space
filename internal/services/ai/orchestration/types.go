@@ -12,6 +12,10 @@ type CampaignTurnRunner interface {
 	Run(ctx context.Context, input Input) (Result, error)
 }
 
+// DefaultCommitToolName is the tool name that signals a committed narration
+// output during a campaign turn. Callers may override via RunnerConfig.
+const DefaultCommitToolName = "interaction_scene_gm_output_commit"
+
 // RunnerConfig defines orchestration runtime policy for campaign turns.
 type RunnerConfig struct {
 	Dialer             Dialer
@@ -20,6 +24,9 @@ type RunnerConfig struct {
 	MaxSteps           int
 	TurnTimeout        time.Duration
 	ToolResultMaxBytes int
+	// CommitToolName identifies which tool call signals a committed narration.
+	// Defaults to DefaultCommitToolName when empty.
+	CommitToolName string
 }
 
 // PromptBuilder assembles the prompt for one campaign turn.

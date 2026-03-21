@@ -279,6 +279,22 @@ func Revoke(request AccessRequest, input RevokeInput, now func() time.Time) (Acc
 	return request, nil
 }
 
+// ParseStatus trims and normalizes one persisted access-request status.
+func ParseStatus(raw string) Status {
+	switch Status(strings.ToLower(strings.TrimSpace(raw))) {
+	case StatusPending:
+		return StatusPending
+	case StatusApproved:
+		return StatusApproved
+	case StatusDenied:
+		return StatusDenied
+	case StatusRevoked:
+		return StatusRevoked
+	default:
+		return ""
+	}
+}
+
 func normalizeScope(scope Scope) (Scope, error) {
 	normalized := Scope(strings.ToLower(strings.TrimSpace(string(scope))))
 	if normalized == "" {

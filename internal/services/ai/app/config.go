@@ -54,6 +54,9 @@ type runtimeConfig struct {
 // Validate rejects incomplete runtime configuration before server
 // construction allocates listeners, stores, or client connections.
 func (cfg runtimeConfig) Validate() error {
+	if strings.TrimSpace(cfg.DBPath) == "" {
+		return fmt.Errorf("FRACTURING_SPACE_AI_DB_PATH is required")
+	}
 	if strings.TrimSpace(cfg.EncryptionKey) == "" {
 		return fmt.Errorf("FRACTURING_SPACE_AI_ENCRYPTION_KEY is required")
 	}
@@ -129,18 +132,9 @@ func (cfg runtimeConfig) campaignTurnRunnerConfig(dialer orchestration.Dialer) o
 	}
 }
 
-// openAIOAuthConfigFromEnv loads optional OpenAI OAuth config.
-//
-// If all OpenAI OAuth variables are present they are wired in together; partial
-// configuration is rejected to avoid accidental half-configured runtime.
-func openAIOAuthConfigFromEnv() (*openaiprovider.OAuthConfig, error) {
-	env, err := loadServerEnv()
-	if err != nil {
-		return nil, fmt.Errorf("load AI runtime env: %w", err)
-	}
-	return openAIOAuthConfig(env)
-}
-
+// openAIOAuthConfig loads optional OpenAI OAuth config from the parsed server
+// env. If all OpenAI OAuth variables are present they are wired in together;
+// partial configuration is rejected to avoid accidental half-configured runtime.
 func openAIOAuthConfig(env serverEnv) (*openaiprovider.OAuthConfig, error) {
 	authURL := strings.TrimSpace(env.OpenAIOAuthAuthURL)
 	tokenURL := strings.TrimSpace(env.OpenAIOAuthTokenURL)

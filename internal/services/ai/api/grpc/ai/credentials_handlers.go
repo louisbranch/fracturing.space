@@ -173,11 +173,11 @@ func (h *CredentialHandlers) RevokeCredential(ctx context.Context, in *aiv1.Revo
 	if strings.TrimSpace(record.OwnerUserID) != userID {
 		return nil, status.Error(codes.NotFound, "credential not found")
 	}
-	revoked, err := credential.Revoke(credentialFromRecord(record), h.clock)
+	revoked, err := credential.Revoke(credential.FromRecord(record), h.clock)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
-	applyCredentialLifecycle(&record, revoked)
+	credential.ApplyLifecycle(&record, revoked)
 	if err := h.credentialStore.PutCredential(ctx, record); err != nil {
 		return nil, status.Errorf(codes.Internal, "put credential: %v", err)
 	}

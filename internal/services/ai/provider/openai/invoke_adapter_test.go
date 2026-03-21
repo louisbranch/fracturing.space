@@ -14,7 +14,7 @@ import (
 )
 
 func TestInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
-	adapter := &invokeAdapter{cfg: InvokeConfig{
+	adapter := &InvokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -39,15 +39,11 @@ func TestInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
 
 func TestNewInvokeAdapterDefaults(t *testing.T) {
 	adapter := NewInvokeAdapter(InvokeConfig{})
-	typed, ok := adapter.(*invokeAdapter)
-	if !ok {
-		t.Fatalf("adapter type = %T, want *invokeAdapter", adapter)
-	}
-	if typed.cfg.HTTPClient == nil {
+	if adapter.cfg.HTTPClient == nil {
 		t.Fatal("expected non-nil HTTP client")
 	}
-	if typed.cfg.ResponsesURL != "https://api.openai.com/v1/responses" {
-		t.Fatalf("responses_url = %q", typed.cfg.ResponsesURL)
+	if adapter.cfg.ResponsesURL != "https://api.openai.com/v1/responses" {
+		t.Fatalf("responses_url = %q", adapter.cfg.ResponsesURL)
 	}
 }
 
@@ -83,7 +79,7 @@ func TestInvokeAdapterInvokeValidation(t *testing.T) {
 		{name: "missing input", input: provider.InvokeInput{Model: "gpt-4o-mini", CredentialSecret: "sk-1"}, want: "input is required"},
 	}
 
-	adapter := &invokeAdapter{cfg: InvokeConfig{
+	adapter := &InvokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -104,7 +100,7 @@ func TestInvokeAdapterInvokeValidation(t *testing.T) {
 }
 
 func TestInvokeAdapterInvokeProviderError(t *testing.T) {
-	adapter := &invokeAdapter{cfg: InvokeConfig{
+	adapter := &InvokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -136,7 +132,7 @@ func TestInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := &invokeAdapter{cfg: InvokeConfig{
+			adapter := &InvokeAdapter{cfg: InvokeConfig{
 				ResponsesURL: "https://provider.example.com/v1/responses",
 				HTTPClient: &http.Client{
 					Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -231,11 +227,7 @@ func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 		t.Fatalf("usage = %#v", got.Usage)
 	}
 
-	modelAdapter, ok := adapter.(provider.ModelAdapter)
-	if !ok {
-		t.Fatalf("adapter type %T does not implement provider.ModelAdapter", adapter)
-	}
-	models, err := modelAdapter.ListModels(context.Background(), provider.ListModelsInput{CredentialSecret: "sk-1"})
+	models, err := adapter.ListModels(context.Background(), provider.ListModelsInput{CredentialSecret: "sk-1"})
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
@@ -251,7 +243,7 @@ func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 }
 
 func TestInvokeAdapterListModelsValidationAndError(t *testing.T) {
-	adapter := &invokeAdapter{cfg: InvokeConfig{
+	adapter := &InvokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -329,7 +321,7 @@ func TestInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 	}))
 	defer server.Close()
 
-	adapter := &invokeAdapter{cfg: InvokeConfig{
+	adapter := &InvokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: server.URL + "/v1/responses",
 		HTTPClient:   server.Client(),
 	}}
@@ -404,7 +396,7 @@ func TestInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
 	}))
 	defer server.Close()
 
-	adapter := &invokeAdapter{cfg: InvokeConfig{
+	adapter := &InvokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: server.URL + "/v1/responses",
 		HTTPClient:   server.Client(),
 	}}

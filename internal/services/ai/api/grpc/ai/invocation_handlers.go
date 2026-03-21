@@ -45,11 +45,11 @@ func (h *InvocationHandlers) InvokeAgent(ctx context.Context, in *aiv1.InvokeAge
 		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
 	}
 
-	authorized, sharedAccess, accessRequestID, err := newAccessibleAgentResolver(h.agentStore, h.accessRequestStore).isAuthorizedToInvokeAgent(ctx, userID, agentRecord)
+	authResult, err := newAccessibleAgentResolver(h.agentStore, h.accessRequestStore).isAuthorizedToInvokeAgent(ctx, userID, agentRecord)
 	if err != nil {
 		return nil, err
 	}
-	if !authorized {
+	if !authResult.Authorized {
 		return nil, status.Error(codes.NotFound, "agent not found")
 	}
 
@@ -77,14 +77,14 @@ func (h *InvocationHandlers) InvokeAgent(ctx context.Context, in *aiv1.InvokeAge
 	if outputText == "" {
 		return nil, status.Error(codes.Internal, "provider returned empty output")
 	}
-	if sharedAccess {
+	if authResult.SharedAccess {
 		if err := putAuditEvent(ctx, h.auditEventStore, storage.AuditEventRecord{
 			EventName:       "agent.invoke.shared",
 			ActorUserID:     userID,
 			OwnerUserID:     strings.TrimSpace(agentRecord.OwnerUserID),
 			RequesterUserID: userID,
 			AgentID:         strings.TrimSpace(agentRecord.ID),
-			AccessRequestID: accessRequestID,
+			AccessRequestID: authResult.AccessRequestID,
 			Outcome:         "success",
 			CreatedAt:       h.clock().UTC(),
 		}); err != nil {

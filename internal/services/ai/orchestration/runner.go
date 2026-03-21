@@ -24,6 +24,7 @@ type runner struct {
 	max                int
 	turnTimeout        time.Duration
 	toolResultMaxBytes int
+	commitToolName     string
 }
 
 // NewRunner builds a campaign-turn runner over one dialer and one explicit
@@ -49,6 +50,10 @@ func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 	if toolPolicy == nil {
 		toolPolicy = AllowAllToolPolicy()
 	}
+	commitToolName := strings.TrimSpace(cfg.CommitToolName)
+	if commitToolName == "" {
+		commitToolName = DefaultCommitToolName
+	}
 	return &runner{
 		dialer:             cfg.Dialer,
 		promptBuilder:      promptBuilder,
@@ -56,6 +61,7 @@ func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 		max:                maxSteps,
 		turnTimeout:        turnTimeout,
 		toolResultMaxBytes: toolResultMaxBytes,
+		commitToolName:     commitToolName,
 	}
 }
 
@@ -242,7 +248,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				})
 				continue
 			}
-			if call.Name == "interaction_scene_gm_output_commit" && !res.IsError {
+			if call.Name == r.commitToolName && !res.IsError {
 				committed = true
 			}
 			outputText, truncated := truncateToolResultOutput(res.Output, r.toolResultMaxBytes)

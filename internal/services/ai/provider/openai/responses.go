@@ -35,7 +35,7 @@ type openAIResponsesPayload struct {
 	} `json:"output"`
 }
 
-func (a *invokeAdapter) invokeResponsesAPI(ctx context.Context, input provider.InvokeInput) (provider.InvokeResult, error) {
+func (a *InvokeAdapter) invokeResponsesAPI(ctx context.Context, input provider.InvokeInput) (provider.InvokeResult, error) {
 	requestPayload := map[string]any{
 		"model": input.Model,
 		"input": input.Input,
@@ -75,7 +75,7 @@ func (a *invokeAdapter) invokeResponsesAPI(ctx context.Context, input provider.I
 	}, nil
 }
 
-func (a *invokeAdapter) responsesRequest(ctx context.Context, body map[string]any, secret string) (openAIResponsesPayload, error) {
+func (a *InvokeAdapter) responsesRequest(ctx context.Context, body map[string]any, secret string) (openAIResponsesPayload, error) {
 	requestBody, err := json.Marshal(body)
 	if err != nil {
 		return openAIResponsesPayload{}, fmt.Errorf("marshal invoke request: %w", err)

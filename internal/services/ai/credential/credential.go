@@ -13,6 +13,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // Status represents credential lifecycle state.
@@ -159,6 +160,30 @@ func (s Status) IsActive() bool {
 // IsRevoked reports whether the credential is explicitly revoked.
 func (s Status) IsRevoked() bool {
 	return ParseStatus(string(s)) == StatusRevoked
+}
+
+// FromRecord reconstructs a domain credential from a storage record for
+// lifecycle and usability checks.
+func FromRecord(record storage.CredentialRecord) Credential {
+	normalizedProvider, _ := provider.Normalize(record.Provider)
+	return Credential{
+		ID:          record.ID,
+		OwnerUserID: record.OwnerUserID,
+		Provider:    normalizedProvider,
+		Label:       record.Label,
+		Status:      ParseStatus(record.Status),
+		CreatedAt:   record.CreatedAt,
+		UpdatedAt:   record.UpdatedAt,
+		RevokedAt:   record.RevokedAt,
+	}
+}
+
+// ApplyLifecycle writes domain-owned lifecycle fields back into the persisted
+// record without reopening storage ownership of ciphertext handling.
+func ApplyLifecycle(record *storage.CredentialRecord, value Credential) {
+	record.Status = string(value.Status)
+	record.UpdatedAt = value.UpdatedAt
+	record.RevokedAt = value.RevokedAt
 }
 
 // IsUsableBy reports whether the credential is active, owned by the caller, and

@@ -10,7 +10,7 @@ import (
 	anyllmopenai "github.com/mozilla-ai/any-llm-go/providers/openai"
 )
 
-func (a *invokeAdapter) ListModels(ctx context.Context, input provider.ListModelsInput) ([]provider.Model, error) {
+func (a *InvokeAdapter) ListModels(ctx context.Context, input provider.ListModelsInput) ([]provider.Model, error) {
 	credentialSecret := strings.TrimSpace(input.CredentialSecret)
 	if credentialSecret == "" {
 		return nil, fmt.Errorf("credential secret is required")
@@ -38,7 +38,7 @@ func (a *invokeAdapter) ListModels(ctx context.Context, input provider.ListModel
 	return models, nil
 }
 
-func (a *invokeAdapter) providerClient(credentialSecret string) (*anyllmopenai.Provider, error) {
+func (a *InvokeAdapter) providerClient(credentialSecret string) (*anyllmopenai.Provider, error) {
 	opts := []anyllm.Option{
 		anyllm.WithAPIKey(credentialSecret),
 		anyllm.WithHTTPClient(a.cfg.HTTPClient),

@@ -29,18 +29,26 @@ type Clients struct {
 // DirectSession implements orchestration.Session by calling game gRPC
 // services directly.
 type DirectSession struct {
-	clients Clients
-	sc      sessionContext
+	clients  Clients
+	registry productionToolRegistry
+	sc       SessionContext
 }
 
-// NewDirectSession creates a session bound to fixed campaign authority.
-func NewDirectSession(clients Clients, sc sessionContext) *DirectSession {
-	return &DirectSession{clients: clients, sc: sc}
+// NewDirectSession creates a session bound to fixed campaign authority using the
+// default production tool registry. Prefer NewDirectDialer for production use;
+// this constructor is useful in tests that need a standalone session.
+func NewDirectSession(clients Clients, sc SessionContext) *DirectSession {
+	return newDirectSession(clients, defaultRegistry, sc)
+}
+
+// newDirectSession creates a session with an explicit registry.
+func newDirectSession(clients Clients, reg productionToolRegistry, sc SessionContext) *DirectSession {
+	return &DirectSession{clients: clients, registry: reg, sc: sc}
 }
 
 // ListTools returns the production tool definitions owned by the registry.
 func (s *DirectSession) ListTools(_ context.Context) ([]orchestration.Tool, error) {
-	return registry.tools(), nil
+	return s.registry.tools(), nil
 }
 
 // CallTool dispatches a tool call by name to the correct gRPC handler.
@@ -50,7 +58,7 @@ func (s *DirectSession) CallTool(ctx context.Context, name string, args any) (or
 		return orchestration.ToolResult{}, fmt.Errorf("marshal tool arguments: %w", err)
 	}
 
-	definition, ok := registry.lookup(name)
+	definition, ok := s.registry.lookup(name)
 	if !ok {
 		return orchestration.ToolResult{
 			Output:  fmt.Sprintf("unknown tool %q", name),

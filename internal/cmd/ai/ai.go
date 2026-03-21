@@ -4,6 +4,7 @@ package ai
 import (
 	"context"
 	"flag"
+	"fmt"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
@@ -43,6 +44,6 @@ func Run(ctx context.Context, cfg Config) error {
 		)
 		defer stopReporter()
 
-		return server.Run(ctx, cfg.Port)
+		return server.Run(ctx, fmt.Sprintf(":%d", cfg.Port))
 	})
 }

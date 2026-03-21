@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 )
 
 // OAuthConfig configures OpenAI OAuth endpoints and credentials.
@@ -68,7 +69,7 @@ func (a *oauthAdapter) BuildAuthorizationURL(input provider.AuthorizationURLInpu
 	q.Set("state", state)
 	q.Set("code_challenge", challenge)
 	q.Set("code_challenge_method", "S256")
-	scopes := strings.TrimSpace(strings.Join(normalizeScopes(input.RequestedScopes), " "))
+	scopes := strings.TrimSpace(strings.Join(providergrant.NormalizeScopes(input.RequestedScopes), " "))
 	if scopes != "" {
 		q.Set("scope", scopes)
 	}
@@ -158,24 +159,4 @@ func (a *oauthAdapter) tokenRequest(ctx context.Context, form url.Values) (provi
 		RefreshSupported: strings.TrimSpace(payload.RefreshToken) != "",
 		ExpiresAt:        expiresAt,
 	}, nil
-}
-
-func normalizeScopes(scopes []string) []string {
-	if len(scopes) == 0 {
-		return nil
-	}
-	items := make([]string, 0, len(scopes))
-	seen := make(map[string]struct{}, len(scopes))
-	for _, raw := range scopes {
-		scope := strings.TrimSpace(raw)
-		if scope == "" {
-			continue
-		}
-		if _, exists := seen[scope]; exists {
-			continue
-		}
-		seen[scope] = struct{}{}
-		items = append(items, scope)
-	}
-	return items
 }
