@@ -13,7 +13,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -97,7 +98,7 @@ func (h *Handler) ApplyStatModifiers(ctx context.Context, in *pb.DaggerheartAppl
 	before := ProjectionStatModifiersToDomain(state.StatModifiers)
 
 	// Compute after = (current - removed) + added.
-	afterMap := make(map[string]daggerheart.StatModifierState, len(before)+len(normalizedAdd))
+	afterMap := make(map[string]rules.StatModifierState, len(before)+len(normalizedAdd))
 	for _, m := range before {
 		afterMap[m.ID] = m
 	}
@@ -107,23 +108,23 @@ func (h *Handler) ApplyStatModifiers(ctx context.Context, in *pb.DaggerheartAppl
 	for _, m := range normalizedAdd {
 		afterMap[m.ID] = m
 	}
-	after := make([]daggerheart.StatModifierState, 0, len(afterMap))
+	after := make([]rules.StatModifierState, 0, len(afterMap))
 	for _, m := range afterMap {
 		after = append(after, m)
 	}
-	after, err = daggerheart.NormalizeStatModifiers(after)
+	after, err = rules.NormalizeStatModifiers(after)
 	if err != nil {
 		return StatModifiersResult{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	if daggerheart.StatModifiersEqual(before, after) {
+	if rules.StatModifiersEqual(before, after) {
 		return StatModifiersResult{}, status.Error(codes.FailedPrecondition, "no stat modifier changes to apply")
 	}
 
-	added, removed := daggerheart.DiffStatModifiers(before, after)
+	added, removed := rules.DiffStatModifiers(before, after)
 
 	source := strings.TrimSpace(in.GetSource())
-	payloadJSON, _ := json.Marshal(daggerheart.StatModifierChangePayload{
+	payloadJSON, _ := json.Marshal(daggerheartpayload.StatModifierChangePayload{
 		CharacterID:     ids.CharacterID(characterID),
 		ModifiersBefore: before,
 		ModifiersAfter:  after,

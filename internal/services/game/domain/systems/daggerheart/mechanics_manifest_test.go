@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"testing"
 
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
@@ -77,8 +79,8 @@ func TestManifest_AllRegisteredCommandsAreCoveredByManifest(t *testing.T) {
 		}
 	}
 	exempt := map[command.Type]struct{}{
-		commandTypeCharacterProfileReplace: {},
-		commandTypeCharacterProfileDelete:  {},
+		daggerheartdecider.CommandTypeCharacterProfileReplace: {},
+		daggerheartdecider.CommandTypeCharacterProfileDelete:  {},
 	}
 
 	for _, def := range daggerheartCommandDefinitions {

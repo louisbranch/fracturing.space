@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection/testevent"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -237,9 +238,9 @@ func TestApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	_ = adapters.Register(daggerheartsys.NewAdapter(dhStore))
 	applier := Applier{Adapters: adapters}
 
-	payload := daggerheartsys.CharacterProfileReplacedPayload{
+	payload := daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: "char-1",
-		Profile: daggerheartsys.CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -255,7 +256,7 @@ func TestApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 			Instinct:        1,
 			Presence:        0,
 			Knowledge:       -1,
-			Experiences: []daggerheartsys.CharacterProfileExperience{
+			Experiences: []daggerheartstate.CharacterProfileExperience{
 				{Name: "Ranger", Modifier: 2},
 			},
 			Description: "Tall, patient, and heavily armored.",
@@ -298,9 +299,9 @@ func TestApplyDaggerheartCharacterProfileReplaced_RoutedThroughAdapter(t *testin
 	}
 	applier := Applier{Adapters: adapters}
 
-	payload := daggerheartsys.CharacterProfileReplacedPayload{
+	payload := daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: "char-1",
-		Profile: daggerheartsys.CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -316,7 +317,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_RoutedThroughAdapter(t *testin
 			Instinct:        1,
 			Presence:        0,
 			Knowledge:       -1,
-			Experiences: []daggerheartsys.CharacterProfileExperience{
+			Experiences: []daggerheartstate.CharacterProfileExperience{
 				{Name: "Ranger", Modifier: 2},
 			},
 		},
@@ -345,9 +346,9 @@ func TestApplyDaggerheartCharacterProfileReplaced_RoutedThroughAdapter(t *testin
 
 func TestApplyDaggerheartCharacterProfileReplaced_MissingStore(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(daggerheartsys.CharacterProfileReplacedPayload{
+	data, _ := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: "char-1",
-		Profile:     daggerheartsys.CharacterProfile{},
+		Profile:     daggerheartstate.CharacterProfile{},
 	})
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
@@ -364,9 +365,9 @@ func TestApplyDaggerheartCharacterProfileReplaced_MissingStore(t *testing.T) {
 
 func TestApplyDaggerheartCharacterProfileReplaced_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(daggerheartsys.CharacterProfileReplacedPayload{
+	data, _ := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: "char-1",
-		Profile:     daggerheartsys.CharacterProfile{},
+		Profile:     daggerheartstate.CharacterProfile{},
 	})
 	evt := testevent.Event{
 		CampaignID:    "camp-1",

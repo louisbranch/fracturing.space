@@ -7,8 +7,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -44,13 +45,13 @@ func applyStressVulnerableCondition(
 		return nil
 	}
 
-	normalized, err := daggerheart.NormalizeConditions(conditions)
+	normalized, err := rules.NormalizeConditions(conditions)
 	if err != nil {
 		return grpcerror.Internal("invalid stored conditions", err)
 	}
 	hasVulnerable := false
 	for _, value := range normalized {
-		if value == daggerheart.ConditionVulnerable {
+		if value == rules.ConditionVulnerable {
 			hasVulnerable = true
 			break
 		}
@@ -67,20 +68,20 @@ func applyStressVulnerableCondition(
 		afterSet[value] = struct{}{}
 	}
 	if shouldAdd {
-		afterSet[daggerheart.ConditionVulnerable] = struct{}{}
+		afterSet[rules.ConditionVulnerable] = struct{}{}
 	}
 	if shouldRemove {
-		delete(afterSet, daggerheart.ConditionVulnerable)
+		delete(afterSet, rules.ConditionVulnerable)
 	}
 	afterList := make([]string, 0, len(afterSet))
 	for value := range afterSet {
 		afterList = append(afterList, value)
 	}
-	after, err := daggerheart.NormalizeConditions(afterList)
+	after, err := rules.NormalizeConditions(afterList)
 	if err != nil {
 		return grpcerror.Internal("invalid condition set", err)
 	}
-	added, removed := daggerheart.DiffConditions(normalized, after)
+	added, removed := rules.DiffConditions(normalized, after)
 	if len(added) == 0 && len(removed) == 0 {
 		return nil
 	}
@@ -101,7 +102,7 @@ func applyStressVulnerableCondition(
 		return grpcerror.Internal("invalid condition set", err)
 	}
 
-	payload := daggerheart.ConditionChangePayload{
+	payload := daggerheartpayload.ConditionChangePayload{
 		CharacterID:      ids.CharacterID(characterID),
 		ConditionsBefore: beforeStates,
 		ConditionsAfter:  afterStates,
@@ -126,13 +127,13 @@ func applyStressVulnerableCondition(
 	return nil
 }
 
-func conditionStatesFromCodes(values []string) ([]daggerheart.ConditionState, error) {
+func conditionStatesFromCodes(values []string) ([]rules.ConditionState, error) {
 	if len(values) == 0 {
 		return nil, nil
 	}
-	result := make([]daggerheart.ConditionState, 0, len(values))
+	result := make([]rules.ConditionState, 0, len(values))
 	for _, value := range values {
-		state, err := daggerheart.StandardConditionState(value)
+		state, err := rules.StandardConditionState(value)
 		if err != nil {
 			return nil, err
 		}

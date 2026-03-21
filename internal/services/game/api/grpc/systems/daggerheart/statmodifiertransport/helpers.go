@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 // StatModifierView is the transport-layer representation of a stat modifier.
@@ -30,7 +30,7 @@ func StatModifierFromProto(m *pb.DaggerheartStatModifier) (*StatModifierView, er
 		return nil, fmt.Errorf("stat modifier id is required")
 	}
 	target := strings.TrimSpace(m.GetTarget())
-	if !daggerheart.ValidStatModifierTarget(target) {
+	if !rules.ValidStatModifierTarget(target) {
 		return nil, fmt.Errorf("stat modifier target %q is invalid", target)
 	}
 	for _, trigger := range m.GetClearTriggers() {
@@ -66,18 +66,18 @@ func StatModifiersFromProto(values []*pb.DaggerheartStatModifier) ([]*StatModifi
 }
 
 // StatModifierViewsToDomain converts transport views to domain stat modifiers.
-func StatModifierViewsToDomain(views []*StatModifierView) []daggerheart.StatModifierState {
+func StatModifierViewsToDomain(views []*StatModifierView) []rules.StatModifierState {
 	if len(views) == 0 {
 		return nil
 	}
-	result := make([]daggerheart.StatModifierState, 0, len(views))
+	result := make([]rules.StatModifierState, 0, len(views))
 	for _, v := range views {
 		if v == nil {
 			continue
 		}
-		entry := daggerheart.StatModifierState{
+		entry := rules.StatModifierState{
 			ID:       v.ID,
-			Target:   daggerheart.StatModifierTarget(v.Target),
+			Target:   rules.StatModifierTarget(v.Target),
 			Delta:    v.Delta,
 			Label:    v.Label,
 			Source:   v.Source,
@@ -92,7 +92,7 @@ func StatModifierViewsToDomain(views []*StatModifierView) []daggerheart.StatModi
 }
 
 // DomainStatModifiersToViews converts domain stat modifiers to transport views.
-func DomainStatModifiersToViews(values []daggerheart.StatModifierState) []*StatModifierView {
+func DomainStatModifiersToViews(values []rules.StatModifierState) []*StatModifierView {
 	if len(values) == 0 {
 		return nil
 	}
@@ -155,22 +155,22 @@ func ProjectionStatModifiersToViews(values []projectionstore.DaggerheartStatModi
 }
 
 // ProjectionStatModifiersToDomain converts projection stat modifiers to domain form.
-func ProjectionStatModifiersToDomain(values []projectionstore.DaggerheartStatModifier) []daggerheart.StatModifierState {
+func ProjectionStatModifiersToDomain(values []projectionstore.DaggerheartStatModifier) []rules.StatModifierState {
 	if len(values) == 0 {
 		return nil
 	}
-	result := make([]daggerheart.StatModifierState, 0, len(values))
+	result := make([]rules.StatModifierState, 0, len(values))
 	for _, v := range values {
-		entry := daggerheart.StatModifierState{
+		entry := rules.StatModifierState{
 			ID:       v.ID,
-			Target:   daggerheart.StatModifierTarget(v.Target),
+			Target:   rules.StatModifierTarget(v.Target),
 			Delta:    v.Delta,
 			Label:    v.Label,
 			Source:   v.Source,
 			SourceID: v.SourceID,
 		}
 		for _, trigger := range v.ClearTriggers {
-			entry.ClearTriggers = append(entry.ClearTriggers, daggerheart.ConditionClearTrigger(strings.TrimSpace(trigger)))
+			entry.ClearTriggers = append(entry.ClearTriggers, rules.ConditionClearTrigger(strings.TrimSpace(trigger)))
 		}
 		result = append(result, entry)
 	}
@@ -184,23 +184,23 @@ func ProjectionStatModifiersToProto(values []projectionstore.DaggerheartStatModi
 
 // clearTriggerFromProto reuses the condition clear trigger enum for stat
 // modifier durations (same lifecycle semantics).
-func clearTriggerFromProto(trigger pb.DaggerheartConditionClearTrigger) daggerheart.ConditionClearTrigger {
+func clearTriggerFromProto(trigger pb.DaggerheartConditionClearTrigger) rules.ConditionClearTrigger {
 	switch trigger {
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST:
-		return daggerheart.ConditionClearTriggerShortRest
+		return rules.ConditionClearTriggerShortRest
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_LONG_REST:
-		return daggerheart.ConditionClearTriggerLongRest
+		return rules.ConditionClearTriggerLongRest
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SESSION_END:
-		return daggerheart.ConditionClearTriggerSessionEnd
+		return rules.ConditionClearTriggerSessionEnd
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_DAMAGE_TAKEN:
-		return daggerheart.ConditionClearTriggerDamageTaken
+		return rules.ConditionClearTriggerDamageTaken
 	default:
 		return ""
 	}
 }
 
 // domainClearTriggersToProto converts domain clear triggers to proto enum.
-func domainClearTriggersToProto(values []daggerheart.ConditionClearTrigger) []pb.DaggerheartConditionClearTrigger {
+func domainClearTriggersToProto(values []rules.ConditionClearTrigger) []pb.DaggerheartConditionClearTrigger {
 	if len(values) == 0 {
 		return nil
 	}
@@ -218,20 +218,20 @@ func projectionClearTriggersToProto(values []string) []pb.DaggerheartConditionCl
 	}
 	result := make([]pb.DaggerheartConditionClearTrigger, 0, len(values))
 	for _, v := range values {
-		result = append(result, domainClearTriggerToProto(daggerheart.ConditionClearTrigger(strings.TrimSpace(v))))
+		result = append(result, domainClearTriggerToProto(rules.ConditionClearTrigger(strings.TrimSpace(v))))
 	}
 	return result
 }
 
-func domainClearTriggerToProto(value daggerheart.ConditionClearTrigger) pb.DaggerheartConditionClearTrigger {
+func domainClearTriggerToProto(value rules.ConditionClearTrigger) pb.DaggerheartConditionClearTrigger {
 	switch value {
-	case daggerheart.ConditionClearTriggerShortRest:
+	case rules.ConditionClearTriggerShortRest:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST
-	case daggerheart.ConditionClearTriggerLongRest:
+	case rules.ConditionClearTriggerLongRest:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_LONG_REST
-	case daggerheart.ConditionClearTriggerSessionEnd:
+	case rules.ConditionClearTriggerSessionEnd:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SESSION_END
-	case daggerheart.ConditionClearTriggerDamageTaken:
+	case rules.ConditionClearTriggerDamageTaken:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_DAMAGE_TAKEN
 	default:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_UNSPECIFIED

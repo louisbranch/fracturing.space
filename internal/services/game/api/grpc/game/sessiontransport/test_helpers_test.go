@@ -1,6 +1,7 @@
 package sessiontransport
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"testing"
@@ -8,8 +9,14 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -69,4 +76,55 @@ func testApplier(deps Deps) projection.Applier {
 func newTestSessionService(deps Deps, clock func() time.Time, idGenerator func() (string, error)) *SessionService {
 	deps.Applier = testApplier(deps)
 	return newSessionServiceWithDependencies(deps, clock, idGenerator)
+}
+
+func sessionManagerParticipantStore(campaignID string) *gametest.FakeParticipantStore {
+	store := gametest.NewFakeParticipantStore()
+	record := gametest.ManagerParticipantRecord(campaignID, "manager-1")
+	record.Role = participant.RoleGM
+	record.Controller = participant.ControllerHuman
+	store.Participants[campaignID] = map[string]storage.ParticipantRecord{"manager-1": record}
+	return store
+}
+
+type fakeDomainEngine struct {
+	store         storage.EventStore
+	result        engine.Result
+	resultsByType map[command.Type]engine.Result
+	calls         int
+	lastCommand   command.Command
+	commands      []command.Command
+}
+
+func (f *fakeDomainEngine) Execute(ctx context.Context, cmd command.Command) (engine.Result, error) {
+	f.calls++
+	f.lastCommand = cmd
+	f.commands = append(f.commands, cmd)
+
+	result := f.result
+	if len(f.resultsByType) > 0 {
+		if selected, ok := f.resultsByType[cmd.Type]; ok {
+			result = selected
+		}
+	}
+	if f.store == nil {
+		return result, nil
+	}
+	if len(result.Decision.Events) == 0 {
+		return result, nil
+	}
+	stored := make([]event.Event, 0, len(result.Decision.Events))
+	for _, evt := range result.Decision.Events {
+		storedEvent, err := f.store.AppendEvent(ctx, evt)
+		if err != nil {
+			return engine.Result{}, err
+		}
+		stored = append(stored, storedEvent)
+	}
+	result.Decision.Events = stored
+	return result, nil
+}
+
+func testWritePath(executor domainwrite.Executor) domainwriteexec.WritePath {
+	return domainwriteexec.WritePath{Executor: executor, Runtime: testRuntime}
 }

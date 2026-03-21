@@ -178,7 +178,10 @@ func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessChecker(t *testing.
 		t.Fatalf("register stub module: %v", err)
 	}
 
-	decision := CoreDecider{Systems: systems}.Decide(
+	decision := CoreDecider{
+		systemCommands: newSystemCommandDispatcher(systems),
+		coreCommands:   coreCommandRouter{systems: systems},
+	}.Decide(
 		aggregate.State{
 			Campaign: campaign.State{Created: true, Status: campaign.StatusActive, GameSystem: "stub"},
 			Participants: map[ids.ParticipantID]participant.State{

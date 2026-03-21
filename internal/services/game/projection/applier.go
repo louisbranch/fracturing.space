@@ -15,9 +15,6 @@ import (
 
 // Applier applies event journal entries to projection stores.
 type Applier struct {
-	// BuildErr captures applier construction failure for fail-fast behavior
-	// when callers used Applier() convenience wrappers.
-	BuildErr error
 	// Events resolves type aliases before routing.
 	Events *event.Registry
 	// Campaign writes campaign metadata read models.
@@ -70,9 +67,6 @@ type Applier struct {
 // query use-cases: every event that changes campaign/world state in the domain
 // gets mirrored here according to projection semantics.
 func (a Applier) Apply(ctx context.Context, evt event.Event) error {
-	if a.BuildErr != nil {
-		return fmt.Errorf("projection applier initialization failed: %w", a.BuildErr)
-	}
 	resolvedEvent, shouldProject := a.prepareEventForProjection(evt)
 	if !shouldProject {
 		return nil

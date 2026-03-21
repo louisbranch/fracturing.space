@@ -11,9 +11,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,9 +50,9 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		return "", projectionstore.DaggerheartCharacterProfile{}, err
 	}
 
-	var mutationSource *daggerheart.MutationSource
+	var mutationSource *daggerheartstate.MutationSource
 	if src := in.GetMutationSource(); src != nil {
-		mutationSource = &daggerheart.MutationSource{
+		mutationSource = &daggerheartstate.MutationSource{
 			Type:        src.GetType().String(),
 			Description: src.GetDescription(),
 			SourceID:    src.GetSourceId(),
@@ -63,7 +63,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		ID:     campaignRecord.ID,
 		System: handler.SystemIDFromCampaignRecord(campaignRecord),
 		Status: campaignRecord.Status,
-	}, characterID, daggerheart.CharacterProfileFromStorage(dhProfile), mutationSource); err != nil {
+	}, characterID, daggerheartstate.CharacterProfileFromStorage(dhProfile), mutationSource); err != nil {
 		return "", projectionstore.DaggerheartCharacterProfile{}, err
 	}
 

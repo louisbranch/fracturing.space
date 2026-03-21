@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func ValidateAdversaryCreatePayload(raw json.RawMessage) error {

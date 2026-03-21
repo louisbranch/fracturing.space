@@ -7,6 +7,11 @@ import (
 	"testing"
 	"time"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -58,7 +63,7 @@ func TestCharacterProfileFromStorage_CopiesAllFields(t *testing.T) {
 		GoldChests:           3,
 	}
 
-	profile := CharacterProfileFromStorage(stored)
+	profile := daggerheartstate.CharacterProfileFromStorage(stored)
 
 	if profile.Level != stored.Level || profile.Description != stored.Description || profile.Connections != stored.Connections {
 		t.Fatalf("profile fields not copied: %+v", profile)
@@ -95,7 +100,7 @@ func TestModuleCharacterReady_ReportsInvalidStateAndMissingProfile(t *testing.T)
 		t.Fatalf("invalid state readiness = (%t, %q), want false and invalid-state reason", ready, reason)
 	}
 
-	ready, reason = systemModule.CharacterReady(SnapshotState{}, character.State{CharacterID: "char-1"})
+	ready, reason = systemModule.CharacterReady(daggerheartstate.SnapshotState{}, character.State{CharacterID: "char-1"})
 	if ready || reason != "daggerheart profile is missing" {
 		t.Fatalf("missing profile readiness = (%t, %q), want false and missing-profile reason", ready, reason)
 	}
@@ -103,9 +108,9 @@ func TestModuleCharacterReady_ReportsInvalidStateAndMissingProfile(t *testing.T)
 
 func TestDecideCharacterProfileReplace_NormalizesCharacterIDAndProfile(t *testing.T) {
 	now := func() time.Time { return time.Date(2026, time.March, 9, 15, 4, 5, 0, time.FixedZone("EST", -5*60*60)) }
-	payloadJSON, err := json.Marshal(CharacterProfileReplacePayload{
+	payloadJSON, err := json.Marshal(daggerheartstate.CharacterProfileReplacePayload{
 		CharacterID: ids.CharacterID(" char-1 "),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           0,
 			HpMax:           6,
 			StressMax:       6,
@@ -121,9 +126,9 @@ func TestDecideCharacterProfileReplace_NormalizesCharacterIDAndProfile(t *testin
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	decision := decideCharacterProfileReplace(command.Command{
+	decision := daggerheartdecider.DecideCharacterProfileReplace(command.Command{
 		CampaignID:    ids.CampaignID("camp-1"),
-		Type:          commandTypeCharacterProfileReplace,
+		Type:          daggerheartdecider.CommandTypeCharacterProfileReplace,
 		ActorType:     command.ActorTypeParticipant,
 		ActorID:       "user-1",
 		SystemID:      SystemID,
@@ -138,14 +143,14 @@ func TestDecideCharacterProfileReplace_NormalizesCharacterIDAndProfile(t *testin
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != EventTypeCharacterProfileReplaced || evt.EntityID != "char-1" {
+	if evt.Type != daggerheartpayload.EventTypeCharacterProfileReplaced || evt.EntityID != "char-1" {
 		t.Fatalf("event envelope = %+v, want trimmed character profile replaced event", evt)
 	}
 	if !evt.Timestamp.Equal(now().UTC()) {
 		t.Fatalf("event timestamp = %v, want %v", evt.Timestamp, now().UTC())
 	}
 
-	var payload CharacterProfileReplacedPayload
+	var payload daggerheartstate.CharacterProfileReplacedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal emitted payload: %v", err)
 	}
@@ -160,9 +165,9 @@ func TestDecideCharacterProfileReplace_NormalizesCharacterIDAndProfile(t *testin
 func TestFoldCharacterProfileReplaced_NormalizesLevelAndSeedsState(t *testing.T) {
 	folder := NewFolder()
 
-	payloadJSON, err := json.Marshal(CharacterProfileReplacedPayload{
+	payloadJSON, err := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: ids.CharacterID("char-1"),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           0,
 			HpMax:           6,
 			StressMax:       6,
@@ -183,7 +188,7 @@ func TestFoldCharacterProfileReplaced_NormalizesLevelAndSeedsState(t *testing.T)
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   payloadJSON,
 	})
 	if err != nil {
@@ -206,9 +211,9 @@ func TestAdapterAndFolder_LevelUpAppliedStayInParity(t *testing.T) {
 	adapter := NewAdapter(store)
 	folder := NewFolder()
 
-	profileJSON, err := json.Marshal(CharacterProfileReplacedPayload{
+	profileJSON, err := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
 		CharacterID: ids.CharacterID("char-1"),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -228,7 +233,7 @@ func TestAdapterAndFolder_LevelUpAppliedStayInParity(t *testing.T) {
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   profileJSON,
 	}
 	if err := adapter.Apply(context.Background(), replaceEvent); err != nil {
@@ -239,11 +244,11 @@ func TestAdapterAndFolder_LevelUpAppliedStayInParity(t *testing.T) {
 		t.Fatalf("fold replace: %v", err)
 	}
 
-	levelUpJSON, err := json.Marshal(LevelUpAppliedPayload{
+	levelUpJSON, err := json.Marshal(daggerheartpayload.LevelUpAppliedPayload{
 		CharacterID:    ids.CharacterID("char-1"),
 		Level:          2,
 		ThresholdDelta: 1,
-		Advancements: []LevelUpAdvancementPayload{
+		Advancements: []daggerheartpayload.LevelUpAdvancementPayload{
 			{Type: "add_hp_slots"},
 			{Type: "add_stress_slots"},
 		},
@@ -256,7 +261,7 @@ func TestAdapterAndFolder_LevelUpAppliedStayInParity(t *testing.T) {
 		EntityID:      "char-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeLevelUpApplied,
+		Type:          daggerheartpayload.EventTypeLevelUpApplied,
 		PayloadJSON:   levelUpJSON,
 	}
 	if err := adapter.Apply(context.Background(), levelUpEvent); err != nil {
@@ -282,7 +287,7 @@ func TestAdapterAndFolder_LevelUpAppliedStayInParity(t *testing.T) {
 
 func TestDecideCharacterProfileDelete_TrimsReasonAndPreservesActorType(t *testing.T) {
 	now := func() time.Time { return time.Date(2026, time.March, 9, 15, 5, 6, 0, time.UTC) }
-	payloadJSON, err := json.Marshal(CharacterProfileDeletePayload{
+	payloadJSON, err := json.Marshal(daggerheartstate.CharacterProfileDeletePayload{
 		CharacterID: ids.CharacterID("char-1"),
 		Reason:      "  reset workflow  ",
 	})
@@ -290,9 +295,9 @@ func TestDecideCharacterProfileDelete_TrimsReasonAndPreservesActorType(t *testin
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	decision := decideCharacterProfileDelete(command.Command{
+	decision := daggerheartdecider.DecideCharacterProfileDelete(command.Command{
 		CampaignID:    ids.CampaignID("camp-1"),
-		Type:          commandTypeCharacterProfileDelete,
+		Type:          daggerheartdecider.CommandTypeCharacterProfileDelete,
 		ActorType:     command.ActorTypeGM,
 		ActorID:       "gm-1",
 		SystemID:      SystemID,
@@ -307,11 +312,11 @@ func TestDecideCharacterProfileDelete_TrimsReasonAndPreservesActorType(t *testin
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != EventTypeCharacterProfileDeleted || evt.ActorType != event.ActorType(command.ActorTypeGM) {
+	if evt.Type != daggerheartpayload.EventTypeCharacterProfileDeleted || evt.ActorType != event.ActorType(command.ActorTypeGM) {
 		t.Fatalf("event envelope = %+v, want character profile deleted with GM actor type", evt)
 	}
 
-	var payload CharacterProfileDeletedPayload
+	var payload daggerheartstate.CharacterProfileDeletedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal emitted payload: %v", err)
 	}
@@ -321,9 +326,9 @@ func TestDecideCharacterProfileDelete_TrimsReasonAndPreservesActorType(t *testin
 }
 
 func TestDecideCharacterProfileCommands_RejectBlankCharacterID(t *testing.T) {
-	replacePayloadJSON, err := json.Marshal(CharacterProfileReplacePayload{
+	replacePayloadJSON, err := json.Marshal(daggerheartstate.CharacterProfileReplacePayload{
 		CharacterID: ids.CharacterID("   "),
-		Profile: CharacterProfile{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -339,27 +344,27 @@ func TestDecideCharacterProfileCommands_RejectBlankCharacterID(t *testing.T) {
 		t.Fatalf("marshal replace payload: %v", err)
 	}
 
-	replaceDecision := decideCharacterProfileReplace(command.Command{
-		Type:        commandTypeCharacterProfileReplace,
+	replaceDecision := daggerheartdecider.DecideCharacterProfileReplace(command.Command{
+		Type:        daggerheartdecider.CommandTypeCharacterProfileReplace,
 		PayloadJSON: replacePayloadJSON,
 	}, time.Now)
-	if len(replaceDecision.Rejections) != 1 || replaceDecision.Rejections[0].Code != rejectionCodePayloadDecodeFailed {
+	if len(replaceDecision.Rejections) != 1 || replaceDecision.Rejections[0].Code != daggerheartdecider.RejectionCodePayloadDecodeFailed {
 		t.Fatalf("replace rejection = %+v, want payload decode failure", replaceDecision.Rejections)
 	}
 	if replaceDecision.Rejections[0].Message != "character_id is required" {
 		t.Fatalf("replace rejection message = %q, want character_id is required", replaceDecision.Rejections[0].Message)
 	}
 
-	deletePayloadJSON, err := json.Marshal(CharacterProfileDeletePayload{CharacterID: ids.CharacterID(" ")})
+	deletePayloadJSON, err := json.Marshal(daggerheartstate.CharacterProfileDeletePayload{CharacterID: ids.CharacterID(" ")})
 	if err != nil {
 		t.Fatalf("marshal delete payload: %v", err)
 	}
 
-	deleteDecision := decideCharacterProfileDelete(command.Command{
-		Type:        commandTypeCharacterProfileDelete,
+	deleteDecision := daggerheartdecider.DecideCharacterProfileDelete(command.Command{
+		Type:        daggerheartdecider.CommandTypeCharacterProfileDelete,
 		PayloadJSON: deletePayloadJSON,
 	}, time.Now)
-	if len(deleteDecision.Rejections) != 1 || deleteDecision.Rejections[0].Code != rejectionCodePayloadDecodeFailed {
+	if len(deleteDecision.Rejections) != 1 || deleteDecision.Rejections[0].Code != daggerheartdecider.RejectionCodePayloadDecodeFailed {
 		t.Fatalf("delete rejection = %+v, want payload decode failure", deleteDecision.Rejections)
 	}
 	if deleteDecision.Rejections[0].Message != "character_id is required" {
@@ -371,8 +376,8 @@ func TestApplyCharacterProfileEvents_FallBackToEntityIDWhenPayloadCharacterIDMis
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	replacePayloadJSON, err := json.Marshal(CharacterProfileReplacedPayload{
-		Profile: CharacterProfile{
+	replacePayloadJSON, err := json.Marshal(daggerheartstate.CharacterProfileReplacedPayload{
+		Profile: daggerheartstate.CharacterProfile{
 			Level:           1,
 			HpMax:           6,
 			StressMax:       6,
@@ -393,7 +398,7 @@ func TestApplyCharacterProfileEvents_FallBackToEntityIDWhenPayloadCharacterIDMis
 		EntityID:      "char-from-event",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		PayloadJSON:   replacePayloadJSON,
 	}); err != nil {
 		t.Fatalf("apply replace fallback: %v", err)
@@ -408,7 +413,7 @@ func TestApplyCharacterProfileEvents_FallBackToEntityIDWhenPayloadCharacterIDMis
 		EntityID:      "char-from-event",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		Type:          EventTypeCharacterProfileDeleted,
+		Type:          daggerheartpayload.EventTypeCharacterProfileDeleted,
 		PayloadJSON:   []byte(`{}`),
 	}); err != nil {
 		t.Fatalf("apply delete fallback: %v", err)

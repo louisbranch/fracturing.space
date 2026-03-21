@@ -11,9 +11,10 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -41,7 +42,7 @@ func (h *Handler) SwapEquipment(ctx context.Context, in *pb.DaggerheartSwapEquip
 		return nil, err
 	}
 
-	payload := daggerheart.EquipmentSwapPayload{
+	payload := daggerheartpayload.EquipmentSwapPayload{
 		CharacterID: ids.CharacterID(characterID),
 		ItemID:      itemID,
 		ItemType:    strings.TrimSpace(in.GetItemType()),
@@ -73,7 +74,7 @@ func (h *Handler) SwapEquipment(ctx context.Context, in *pb.DaggerheartSwapEquip
 	return &pb.DaggerheartSwapEquipmentResponse{CharacterId: characterID}, nil
 }
 
-func (h *Handler) enrichArmorSwapPayload(ctx context.Context, campaignID string, profile projectionstore.DaggerheartCharacterProfile, payload *daggerheart.EquipmentSwapPayload) error {
+func (h *Handler) enrichArmorSwapPayload(ctx context.Context, campaignID string, profile projectionstore.DaggerheartCharacterProfile, payload *daggerheartpayload.EquipmentSwapPayload) error {
 	if payload == nil || payload.ItemType != "armor" {
 		return nil
 	}
@@ -103,8 +104,8 @@ func (h *Handler) enrichArmorSwapPayload(ctx context.Context, campaignID string,
 		nextArmor = &armor
 	}
 
-	base := daggerheart.RemoveArmorPassiveEffects(profile, currentArmor)
-	nextProfile := daggerheart.ApplyArmorProfileEffects(profile.Level, base, nextArmor)
+	base := rules.RemoveArmorPassiveEffects(profile, currentArmor)
+	nextProfile := rules.ApplyArmorProfileEffects(profile.Level, base, nextArmor)
 	nextArmorScore := nextProfile.ArmorScore
 	nextArmorMax := nextProfile.ArmorMax
 	nextEvasion := nextProfile.Evasion
@@ -117,7 +118,7 @@ func (h *Handler) enrichArmorSwapPayload(ctx context.Context, campaignID string,
 	nextInstinct := nextProfile.Instinct
 	nextPresence := nextProfile.Presence
 	nextKnowledge := nextProfile.Knowledge
-	nextArmorTotal := daggerheart.RemapArmorCurrent(state, profile.ArmorMax, nextArmorMax)
+	nextArmorTotal := rules.RemapArmorCurrent(state, profile.ArmorMax, nextArmorMax)
 
 	payload.EquippedArmorID = strings.TrimSpace(nextProfile.EquippedArmorID)
 	payload.EvasionAfter = &nextEvasion

@@ -7,7 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
+	"github.com/louisbranch/fracturing.space/internal/services/game/app"
 )
 
 // Config holds game command configuration.
@@ -37,8 +37,8 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceGame, func(context.Context) error {
 		if cfg.Addr != "" {
-			return server.RunWithAddr(ctx, cfg.Addr)
+			return app.RunWithAddr(ctx, cfg.Addr)
 		}
-		return server.Run(ctx, cfg.Port)
+		return app.Run(ctx, cfg.Port)
 	})
 }

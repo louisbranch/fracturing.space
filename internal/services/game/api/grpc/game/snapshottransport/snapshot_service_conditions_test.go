@@ -13,7 +13,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
@@ -21,10 +23,10 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
 	dhStore := gametest.NewFakeDaggerheartStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	payload := daggerheart.ConditionChangedPayload{
+	payload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "ch1",
-		Conditions:  []daggerheart.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
-		Added:       []daggerheart.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
+		Conditions:  []rules.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
+		Added:       []rules.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -86,10 +88,10 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
 	dhStore := gametest.NewFakeDaggerheartStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	payload := daggerheart.ConditionChangedPayload{
+	payload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "ch1",
 		Conditions:  nil,
-		Removed:     []daggerheart.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
+		Removed:     []rules.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -212,9 +214,9 @@ func containsCondition(conditions []projectionstore.DaggerheartConditionState, t
 	return false
 }
 
-func mustStandardSnapshotCondition(t *testing.T, code string) daggerheart.ConditionState {
+func mustStandardSnapshotCondition(t *testing.T, code string) rules.ConditionState {
 	t.Helper()
-	state, err := daggerheart.StandardConditionState(code)
+	state, err := rules.StandardConditionState(code)
 	if err != nil {
 		t.Fatalf("standard condition state %q: %v", code, err)
 	}

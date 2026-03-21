@@ -8,16 +8,16 @@ import (
 
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/projection"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // LevelUpApplier applies level-up progression to a character profile.
-type LevelUpApplier func(*snapstate.CharacterProfile, payload.LevelUpAppliedPayload)
+type LevelUpApplier func(*daggerheartstate.CharacterProfile, payload.LevelUpAppliedPayload)
 
 // Adapter applies Daggerheart-specific events to system projections.
 type Adapter struct {
@@ -25,6 +25,11 @@ type Adapter struct {
 	Router       *module.AdapterRouter
 	applyLevelUp LevelUpApplier
 }
+
+const (
+	systemID      = "daggerheart"
+	systemVersion = "1.0.0"
+)
 
 // NewAdapter creates a Daggerheart adapter with all handlers registered.
 func NewAdapter(store projectionstore.Store, applyLevelUp LevelUpApplier) *Adapter {
@@ -35,12 +40,12 @@ func NewAdapter(store projectionstore.Store, applyLevelUp LevelUpApplier) *Adapt
 
 // ID returns the Daggerheart system identifier.
 func (a *Adapter) ID() string {
-	return snapstate.SystemID
+	return systemID
 }
 
 // Version returns the Daggerheart system version.
 func (a *Adapter) Version() string {
-	return snapstate.SystemVersion
+	return systemVersion
 }
 
 // HandledTypes returns the event types this adapter's Apply handles.
@@ -167,7 +172,7 @@ func (a *Adapter) HandleBeastformTransformed(ctx context.Context, evt event.Even
 	if err != nil {
 		return err
 	}
-	nextClassState := snapstate.WithActiveBeastform(ClassStateFromProjection(state.ClassState), p.ActiveBeastform)
+	nextClassState := daggerheartstate.WithActiveBeastform(ClassStateFromProjection(state.ClassState), p.ActiveBeastform)
 	return a.ApplyStatePatch(ctx, string(evt.CampaignID), p.CharacterID.String(), nil, p.Hope, nil, p.Stress, nil, nil, &nextClassState, nil, nil, nil)
 }
 
@@ -176,7 +181,7 @@ func (a *Adapter) HandleBeastformDropped(ctx context.Context, evt event.Event, p
 	if err != nil {
 		return err
 	}
-	nextClassState := snapstate.WithActiveBeastform(ClassStateFromProjection(state.ClassState), nil)
+	nextClassState := daggerheartstate.WithActiveBeastform(ClassStateFromProjection(state.ClassState), nil)
 	return a.ApplyStatePatch(ctx, string(evt.CampaignID), p.CharacterID.String(), nil, nil, nil, nil, nil, nil, &nextClassState, nil, nil, nil)
 }
 
@@ -211,8 +216,8 @@ func (a *Adapter) HandleAdversaryConditionChanged(ctx context.Context, evt event
 }
 
 func (a *Adapter) HandleGMFearChanged(ctx context.Context, evt event.Event, p payload.GMFearChangedPayload) error {
-	if p.Value < snapstate.GMFearMin || p.Value > snapstate.GMFearMax {
-		return fmt.Errorf("gm_fear_changed value must be in range %d..%d", snapstate.GMFearMin, snapstate.GMFearMax)
+	if p.Value < daggerheartstate.GMFearMin || p.Value > daggerheartstate.GMFearMax {
+		return fmt.Errorf("gm_fear_changed value must be in range %d..%d", daggerheartstate.GMFearMin, daggerheartstate.GMFearMax)
 	}
 	shortRests := a.SnapshotShortRests(ctx, string(evt.CampaignID))
 	return a.PutSnapshot(ctx, string(evt.CampaignID), p.Value, shortRests)
@@ -413,7 +418,7 @@ func (a *Adapter) HandleLevelUpApplied(ctx context.Context, evt event.Event, p p
 		}
 		return nil
 	}
-	profile := snapstate.CharacterProfileFromStorage(storedProfile)
+	profile := daggerheartstate.CharacterProfileFromStorage(storedProfile)
 	a.applyLevelUp(&profile, p)
 	return a.store.PutDaggerheartCharacterProfile(ctx, profile.ToStorage(string(evt.CampaignID), characterID))
 }
@@ -442,7 +447,7 @@ func (a *Adapter) HandleDomainCardAcquired(ctx context.Context, evt event.Event,
 		}
 		return nil
 	}
-	profile.DomainCardIDs = snapstate.AppendUnique(profile.DomainCardIDs, strings.TrimSpace(p.CardID))
+	profile.DomainCardIDs = daggerheartstate.AppendUnique(profile.DomainCardIDs, strings.TrimSpace(p.CardID))
 	return a.store.PutDaggerheartCharacterProfile(ctx, profile)
 }
 
@@ -536,7 +541,7 @@ func (a *Adapter) HandleStatModifierChanged(ctx context.Context, evt event.Event
 	return a.PutCharacterState(ctx, state)
 }
 
-func (a *Adapter) ApplyStatePatch(ctx context.Context, campaignID, characterID string, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *snapstate.CharacterClassState, subclassStateAfter *snapstate.CharacterSubclassState, companionStateAfter *snapstate.CharacterCompanionState, impenetrableUsedThisShortRestAfter *bool) error {
+func (a *Adapter) ApplyStatePatch(ctx context.Context, campaignID, characterID string, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *daggerheartstate.CharacterClassState, subclassStateAfter *daggerheartstate.CharacterSubclassState, companionStateAfter *daggerheartstate.CharacterCompanionState, impenetrableUsedThisShortRestAfter *bool) error {
 	state, err := a.GetCharacterStateOrDefault(ctx, campaignID, characterID)
 	if err != nil {
 		return err
@@ -590,8 +595,8 @@ func (a *Adapter) ApplyAdversaryConditionPatch(ctx context.Context, campaignID, 
 	return nil
 }
 
-func SubclassStateToProjection(value *snapstate.CharacterSubclassState) *projectionstore.DaggerheartSubclassState {
-	normalized := snapstate.NormalizedSubclassStatePtr(value)
+func SubclassStateToProjection(value *daggerheartstate.CharacterSubclassState) *projectionstore.DaggerheartSubclassState {
+	normalized := daggerheartstate.NormalizedSubclassStatePtr(value)
 	if normalized == nil {
 		return nil
 	}
@@ -620,7 +625,7 @@ func SubclassStateToProjection(value *snapstate.CharacterSubclassState) *project
 	}
 }
 
-func ClassStateToProjection(value *snapstate.CharacterClassState) *projectionstore.DaggerheartClassState {
+func ClassStateToProjection(value *daggerheartstate.CharacterClassState) *projectionstore.DaggerheartClassState {
 	if value == nil {
 		return nil
 	}
@@ -644,8 +649,8 @@ func ClassStateToProjection(value *snapstate.CharacterClassState) *projectionsto
 	}
 }
 
-func CompanionStateToProjection(value *snapstate.CharacterCompanionState) *projectionstore.DaggerheartCompanionState {
-	normalized := snapstate.NormalizedCompanionStatePtr(value)
+func CompanionStateToProjection(value *daggerheartstate.CharacterCompanionState) *projectionstore.DaggerheartCompanionState {
+	normalized := daggerheartstate.NormalizedCompanionStatePtr(value)
 	if normalized == nil {
 		return nil
 	}
@@ -655,8 +660,8 @@ func CompanionStateToProjection(value *snapstate.CharacterCompanionState) *proje
 	}
 }
 
-func ActiveBeastformToProjection(value *snapstate.CharacterActiveBeastformState) *projectionstore.DaggerheartActiveBeastformState {
-	normalized := snapstate.NormalizedActiveBeastformPtr(value)
+func ActiveBeastformToProjection(value *daggerheartstate.CharacterActiveBeastformState) *projectionstore.DaggerheartActiveBeastformState {
+	normalized := daggerheartstate.NormalizedActiveBeastformPtr(value)
 	if normalized == nil {
 		return nil
 	}
@@ -679,15 +684,15 @@ func ActiveBeastformToProjection(value *snapstate.CharacterActiveBeastformState)
 	}
 }
 
-func ClassStateFromProjection(value projectionstore.DaggerheartClassState) snapstate.CharacterClassState {
-	damageDice := []snapstate.CharacterDamageDie(nil)
-	active := snapstate.NormalizedActiveBeastformPtr(nil)
+func ClassStateFromProjection(value projectionstore.DaggerheartClassState) daggerheartstate.CharacterClassState {
+	damageDice := []daggerheartstate.CharacterDamageDie(nil)
+	active := daggerheartstate.NormalizedActiveBeastformPtr(nil)
 	if value.ActiveBeastform != nil {
-		damageDice = make([]snapstate.CharacterDamageDie, 0, len(value.ActiveBeastform.DamageDice))
+		damageDice = make([]daggerheartstate.CharacterDamageDie, 0, len(value.ActiveBeastform.DamageDice))
 		for _, die := range value.ActiveBeastform.DamageDice {
-			damageDice = append(damageDice, snapstate.CharacterDamageDie{Count: die.Count, Sides: die.Sides})
+			damageDice = append(damageDice, daggerheartstate.CharacterDamageDie{Count: die.Count, Sides: die.Sides})
 		}
-		active = &snapstate.CharacterActiveBeastformState{
+		active = &daggerheartstate.CharacterActiveBeastformState{
 			BeastformID:            value.ActiveBeastform.BeastformID,
 			BaseTrait:              value.ActiveBeastform.BaseTrait,
 			AttackTrait:            value.ActiveBeastform.AttackTrait,
@@ -701,7 +706,7 @@ func ClassStateFromProjection(value projectionstore.DaggerheartClassState) snaps
 			DropOnAnyHPMark:        value.ActiveBeastform.DropOnAnyHPMark,
 		}
 	}
-	return snapstate.CharacterClassState{
+	return daggerheartstate.CharacterClassState{
 		AttackBonusUntilRest:            value.AttackBonusUntilRest,
 		EvasionBonusUntilHitOrRest:      value.EvasionBonusUntilHitOrRest,
 		DifficultyPenaltyUntilRest:      value.DifficultyPenaltyUntilRest,
@@ -711,7 +716,7 @@ func ClassStateFromProjection(value projectionstore.DaggerheartClassState) snaps
 		RallyDice:                       append([]int(nil), value.RallyDice...),
 		PrayerDice:                      append([]int(nil), value.PrayerDice...),
 		ChannelRawPowerUsedThisLongRest: value.ChannelRawPowerUsedThisLongRest,
-		Unstoppable: snapstate.CharacterUnstoppableState{
+		Unstoppable: daggerheartstate.CharacterUnstoppableState{
 			Active:           value.Unstoppable.Active,
 			CurrentValue:     value.Unstoppable.CurrentValue,
 			DieSides:         value.Unstoppable.DieSides,
@@ -720,11 +725,11 @@ func ClassStateFromProjection(value projectionstore.DaggerheartClassState) snaps
 	}.Normalized()
 }
 
-func SubclassStateFromProjection(value *projectionstore.DaggerheartSubclassState) *snapstate.CharacterSubclassState {
+func SubclassStateFromProjection(value *projectionstore.DaggerheartSubclassState) *daggerheartstate.CharacterSubclassState {
 	if value == nil {
 		return nil
 	}
-	return snapstate.NormalizedSubclassStatePtr(&snapstate.CharacterSubclassState{
+	return daggerheartstate.NormalizedSubclassStatePtr(&daggerheartstate.CharacterSubclassState{
 		BattleRitualUsedThisLongRest:           value.BattleRitualUsedThisLongRest,
 		GiftedPerformerRelaxingSongUses:        value.GiftedPerformerRelaxingSongUses,
 		GiftedPerformerEpicSongUses:            value.GiftedPerformerEpicSongUses,
@@ -749,11 +754,11 @@ func SubclassStateFromProjection(value *projectionstore.DaggerheartSubclassState
 	})
 }
 
-func CompanionStateFromProjection(value *projectionstore.DaggerheartCompanionState) *snapstate.CharacterCompanionState {
+func CompanionStateFromProjection(value *projectionstore.DaggerheartCompanionState) *daggerheartstate.CharacterCompanionState {
 	if value == nil {
 		return nil
 	}
-	return snapstate.NormalizedCompanionStatePtr(&snapstate.CharacterCompanionState{
+	return daggerheartstate.NormalizedCompanionStatePtr(&daggerheartstate.CharacterCompanionState{
 		Status:             value.Status,
 		ActiveExperienceID: value.ActiveExperienceID,
 	})

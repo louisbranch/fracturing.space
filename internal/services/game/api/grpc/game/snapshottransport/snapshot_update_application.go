@@ -17,7 +17,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,8 +40,8 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 	// Handle Daggerheart snapshot update
 	if dhUpdate := in.GetDaggerheart(); dhUpdate != nil {
 		gmFear := int(dhUpdate.GetGmFear())
-		if gmFear < daggerheart.GMFearMin || gmFear > daggerheart.GMFearMax {
-			return projectionstore.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheart.GMFearMin, daggerheart.GMFearMax)
+		if gmFear < daggerheartstate.GMFearMin || gmFear > daggerheartstate.GMFearMax {
+			return projectionstore.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheartstate.GMFearMin, daggerheartstate.GMFearMax)
 		}
 		existingSnap, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
@@ -48,7 +50,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		if errors.Is(err, storage.ErrNotFound) {
 			existingSnap = projectionstore.DaggerheartSnapshot{
 				CampaignID: campaignID,
-				GMFear:     daggerheart.GMFearDefault,
+				GMFear:     daggerheartstate.GMFearDefault,
 			}
 		}
 		if existingSnap.GMFear == gmFear {
@@ -60,7 +62,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		requestID := grpcmeta.RequestIDFromContext(ctx)
 		invocationID := grpcmeta.InvocationIDFromContext(ctx)
 		after := gmFear
-		payload := daggerheart.GMFearSetPayload{After: &after}
+		payload := daggerheartpayload.GMFearSetPayload{After: &after}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
 			return projectionstore.DaggerheartSnapshot{}, grpcerror.Internal("encode payload", err)

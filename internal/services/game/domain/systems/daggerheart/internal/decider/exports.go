@@ -1,7 +1,8 @@
 package decider
 
-// Exported wrappers for root-package alias access. The decider package lives
-// under internal/ so these exports have no external visibility.
+// Exported wrappers for root package wiring and root-package tests. The
+// decider package lives under internal/ so these exports stay scoped to the
+// Daggerheart implementation tree.
 
 // DecisionHandler is the exported form of the decision handler type.
 type DecisionHandler = decisionHandler
@@ -9,7 +10,7 @@ type DecisionHandler = decisionHandler
 // DecisionHandlers is the exported form of the handler map.
 var DecisionHandlers = decisionHandlers
 
-// --- Exported decision functions called by root tests ---
+// --- Exported decision functions used by root-package tests ---
 
 var (
 	DecideRestTake                = decideRestTake
@@ -17,7 +18,7 @@ var (
 	DecideCharacterProfileDelete  = decideCharacterProfileDelete
 )
 
-// --- Exported helper functions called by root tests ---
+// --- Exported helper functions used by root-package tests ---
 
 var (
 	IsCharacterStatePatchNoMutation      = isCharacterStatePatchNoMutation
@@ -119,14 +120,17 @@ const (
 	ConsumableStackMax = consumableStackMax
 )
 
-// NormalizedClassStatePtr is the exported form for root alias access.
+// NormalizedClassStatePtr exposes class-state normalization for root tests.
 var NormalizedClassStatePtr = normalizedClassStatePtr
 
-// CompanionStatePtrValue is the exported form for root alias access.
+// CompanionStatePtrValue exposes companion-state pointer normalization for
+// root tests.
 var CompanionStatePtrValue = companionStatePtrValue
 
-// SnapshotEnvironmentEntityState is exported for root alias access.
+// SnapshotEnvironmentEntityState exposes environment snapshot lookup for root
+// tests.
 var SnapshotEnvironmentEntityState = snapshotEnvironmentEntityState
 
-// CountdownUpdateSnapshotRejection is exported for root alias access.
+// CountdownUpdateSnapshotRejection exposes countdown precondition logic for
+// root tests.
 var CountdownUpdateSnapshotRejection = countdownUpdateSnapshotRejection

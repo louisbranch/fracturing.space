@@ -15,9 +15,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -94,7 +95,7 @@ func (h *Handler) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateA
 	if err != nil {
 		return nil, grpcerror.Internal("generate adversary id", err)
 	}
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryCreatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryCreatePayload{
 		AdversaryID:      ids.AdversaryID(adversaryID),
 		AdversaryEntryID: adversaryEntryID,
 		Name:             entry.Name,
@@ -110,7 +111,7 @@ func (h *Handler) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateA
 		Major:            entry.MajorThreshold,
 		Severe:           entry.SevereThreshold,
 		Armor:            entry.Armor,
-		FeatureStates:    []daggerheart.AdversaryFeatureState{},
+		FeatureStates:    []rules.AdversaryFeatureState{},
 	})
 	if err != nil {
 		return nil, grpcerror.Internal("encode adversary payload", err)
@@ -192,7 +193,7 @@ func (h *Handler) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateA
 	}
 	sessionID := current.SessionID
 
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryUpdatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryUpdatePayload{
 		AdversaryID:       ids.AdversaryID(adversaryID),
 		AdversaryEntryID:  current.AdversaryEntryID,
 		Name:              current.Name,
@@ -279,7 +280,7 @@ func (h *Handler) DeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteA
 			return nil, err
 		}
 	}
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryDeletePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryDeletePayload{
 		AdversaryID: ids.AdversaryID(adversaryID),
 		Reason:      strings.TrimSpace(in.GetReason()),
 	})
@@ -361,8 +362,8 @@ func (h *Handler) ApplyAdversaryFeature(ctx context.Context, in *pb.DaggerheartA
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "adversary feature %q was not found on adversary entry %q", featureID, adversary.AdversaryEntryID)
 	}
-	automationStatus, rule := daggerheart.ResolveAdversaryFeatureRuntime(feature)
-	if automationStatus != daggerheart.AdversaryFeatureAutomationStatusSupported || rule == nil {
+	automationStatus, rule := rules.ResolveAdversaryFeatureRuntime(feature)
+	if automationStatus != rules.AdversaryFeatureAutomationStatusSupported || rule == nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "adversary feature %q is not runtime-supported", featureID)
 	}
 	if strings.EqualFold(strings.TrimSpace(feature.CostType), "fear") {
@@ -378,12 +379,12 @@ func (h *Handler) ApplyAdversaryFeature(ctx context.Context, in *pb.DaggerheartA
 		}
 		nextStress -= feature.Cost
 	}
-	nextFeatureStates := upsertAdversaryFeatureState(adversary.FeatureStates, daggerheart.AdversaryFeatureState{
+	nextFeatureStates := upsertAdversaryFeatureState(adversary.FeatureStates, rules.AdversaryFeatureState{
 		FeatureID:       featureID,
 		Status:          featureApplyStateStatus(rule),
 		FocusedTargetID: strings.TrimSpace(in.GetTargetCharacterId()),
 	})
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryFeatureApplyPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryFeatureApplyPayload{
 		ActorAdversaryID:        ids.AdversaryID(adversaryID),
 		AdversaryID:             ids.AdversaryID(adversaryID),
 		FeatureID:               featureID,
@@ -511,16 +512,16 @@ func findEntryFeature(entry contentstore.DaggerheartAdversaryEntry, featureID st
 	return contentstore.DaggerheartAdversaryFeature{}, false
 }
 
-func featureApplyStateStatus(rule *daggerheart.AdversaryFeatureRule) string {
+func featureApplyStateStatus(rule *rules.AdversaryFeatureRule) string {
 	switch rule.Kind {
-	case daggerheart.AdversaryFeatureRuleKindRetaliatoryDamageOnCloseHit:
+	case rules.AdversaryFeatureRuleKindRetaliatoryDamageOnCloseHit:
 		return "ready"
 	default:
 		return "active"
 	}
 }
 
-func upsertAdversaryFeatureState(current []projectionstore.DaggerheartAdversaryFeatureState, next daggerheart.AdversaryFeatureState) []projectionstore.DaggerheartAdversaryFeatureState {
+func upsertAdversaryFeatureState(current []projectionstore.DaggerheartAdversaryFeatureState, next rules.AdversaryFeatureState) []projectionstore.DaggerheartAdversaryFeatureState {
 	updated := make([]projectionstore.DaggerheartAdversaryFeatureState, 0, len(current)+1)
 	seen := false
 	for _, state := range current {
@@ -545,10 +546,10 @@ func upsertAdversaryFeatureState(current []projectionstore.DaggerheartAdversaryF
 	return updated
 }
 
-func toBridgeAdversaryFeatureStates(in []projectionstore.DaggerheartAdversaryFeatureState) []daggerheart.AdversaryFeatureState {
-	out := make([]daggerheart.AdversaryFeatureState, 0, len(in))
+func toBridgeAdversaryFeatureStates(in []projectionstore.DaggerheartAdversaryFeatureState) []rules.AdversaryFeatureState {
+	out := make([]rules.AdversaryFeatureState, 0, len(in))
 	for _, state := range in {
-		out = append(out, daggerheart.AdversaryFeatureState{
+		out = append(out, rules.AdversaryFeatureState{
 			FeatureID:       strings.TrimSpace(state.FeatureID),
 			Status:          strings.TrimSpace(state.Status),
 			FocusedTargetID: strings.TrimSpace(state.FocusedTargetID),
@@ -557,11 +558,11 @@ func toBridgeAdversaryFeatureStates(in []projectionstore.DaggerheartAdversaryFea
 	return out
 }
 
-func toBridgeAdversaryPendingExperience(in *projectionstore.DaggerheartAdversaryPendingExperience) *daggerheart.AdversaryPendingExperience {
+func toBridgeAdversaryPendingExperience(in *projectionstore.DaggerheartAdversaryPendingExperience) *rules.AdversaryPendingExperience {
 	if in == nil {
 		return nil
 	}
-	return &daggerheart.AdversaryPendingExperience{
+	return &rules.AdversaryPendingExperience{
 		Name:     strings.TrimSpace(in.Name),
 		Modifier: in.Modifier,
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,7 +41,7 @@ func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps characterw
 		profile = projectionstore.DaggerheartCharacterProfile{CampaignID: campaignContext.ID, CharacterID: characterID}
 	}
 
-	progress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
+	progress := daggerheart.EvaluateCreationProgress(daggerheartstate.CharacterProfileFromStorage(profile).CreationProfile())
 	return progressFromDaggerheart(progress), nil
 }
 
@@ -77,7 +78,7 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps characterwor
 		profile = ensureProfileDefaults(profile, characterRecord.Kind)
 	}
 
-	currentProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
+	currentProgress := daggerheart.EvaluateCreationProgress(daggerheartstate.CharacterProfileFromStorage(profile).CreationProfile())
 	if currentProgress.Ready {
 		return nil, characterworkflow.Progress{}, status.Error(codes.FailedPrecondition, "character creation workflow is already complete")
 	}
@@ -98,11 +99,11 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps characterwor
 		return nil, characterworkflow.Progress{}, err
 	}
 
-	if err := deps.ExecuteProfileReplace(ctx, campaignContext, characterID, daggerheart.CharacterProfileFromStorage(profile)); err != nil {
+	if err := deps.ExecuteProfileReplace(ctx, campaignContext, characterID, daggerheartstate.CharacterProfileFromStorage(profile)); err != nil {
 		return nil, characterworkflow.Progress{}, err
 	}
 
-	nextProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
+	nextProgress := daggerheart.EvaluateCreationProgress(daggerheartstate.CharacterProfileFromStorage(profile).CreationProfile())
 	return deps.ProfileToProto(campaignContext.ID, characterID, profile), progressFromDaggerheart(nextProgress), nil
 }
 
@@ -144,7 +145,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps characte
 
 	for idx, stepInput := range steps {
 		expectedStep := int32(idx + 1)
-		currentProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
+		currentProgress := daggerheart.EvaluateCreationProgress(daggerheartstate.CharacterProfileFromStorage(profile).CreationProfile())
 		if currentProgress.Ready {
 			return nil, characterworkflow.Progress{}, status.Error(codes.FailedPrecondition, "character creation workflow is already complete")
 		}
@@ -166,7 +167,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps characte
 		}
 	}
 
-	finalProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
+	finalProgress := daggerheart.EvaluateCreationProgress(daggerheartstate.CharacterProfileFromStorage(profile).CreationProfile())
 	if !finalProgress.Ready {
 		if len(finalProgress.UnmetReasons) > 0 {
 			return nil, characterworkflow.Progress{}, status.Errorf(codes.FailedPrecondition, "character creation workflow is incomplete: %s", finalProgress.UnmetReasons[0])
@@ -174,7 +175,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps characte
 		return nil, characterworkflow.Progress{}, status.Error(codes.FailedPrecondition, "character creation workflow is incomplete")
 	}
 
-	if err := deps.ExecuteProfileReplace(ctx, campaignContext, characterID, daggerheart.CharacterProfileFromStorage(profile)); err != nil {
+	if err := deps.ExecuteProfileReplace(ctx, campaignContext, characterID, daggerheartstate.CharacterProfileFromStorage(profile)); err != nil {
 		return nil, characterworkflow.Progress{}, err
 	}
 
@@ -194,5 +195,5 @@ func (CreationWorkflowProvider) Reset(ctx context.Context, deps characterworkflo
 		return characterworkflow.Progress{}, err
 	}
 
-	return progressFromDaggerheart(daggerheart.EvaluateCreationProgress(daggerheart.CreationProfile{})), nil
+	return progressFromDaggerheart(daggerheart.EvaluateCreationProgress(daggerheartstate.CreationProfile{})), nil
 }

@@ -27,9 +27,9 @@
 //
 // Reading order for contributors:
 //  1. `service.go` for the root service shape,
-//  2. the relevant `workflow_*handler.go`, `content_service.go`, or
-//     `asset_service.go` wrapper,
-//  3. the sibling package that owns the actual behavior,
+//  2. the sibling package that owns the actual behavior, starting with that
+//     package's `doc.go` and the relevant `handler_*.go` workflow file,
+//  3. root `workflow_*` wrappers only when tracing public gRPC method wiring,
 //  4. `internal/services/game/domain/systems/daggerheart/...` when the change
 //     affects system commands, events, or replay rules.
 //

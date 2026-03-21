@@ -9,12 +9,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func decideCharacterProfileReplace(cmd command.Command, now func() time.Time) command.Decision {
-	var p snapstate.CharacterProfileReplacePayload
+	var p daggerheartstate.CharacterProfileReplacePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &p); err != nil {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodePayloadDecodeFailed,
@@ -36,7 +36,7 @@ func decideCharacterProfileReplace(cmd command.Command, now func() time.Time) co
 		})
 	}
 
-	normalized := snapstate.CharacterProfileReplacePayload{
+	normalized := daggerheartstate.CharacterProfileReplacePayload{
 		CharacterID: ids.CharacterID(characterID),
 		Profile:     p.Profile.Normalized(),
 	}
@@ -46,7 +46,7 @@ func decideCharacterProfileReplace(cmd command.Command, now func() time.Time) co
 }
 
 func decideCharacterProfileDelete(cmd command.Command, now func() time.Time) command.Decision {
-	var p snapstate.CharacterProfileDeletePayload
+	var p daggerheartstate.CharacterProfileDeletePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &p); err != nil {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodePayloadDecodeFailed,
@@ -62,7 +62,7 @@ func decideCharacterProfileDelete(cmd command.Command, now func() time.Time) com
 		})
 	}
 
-	normalized := snapstate.CharacterProfileDeletePayload{
+	normalized := daggerheartstate.CharacterProfileDeletePayload{
 		CharacterID: ids.CharacterID(characterID),
 		Reason:      strings.TrimSpace(p.Reason),
 	}

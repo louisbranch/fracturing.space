@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -35,11 +36,12 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 	}
 
 	app := newCampaignAIOrchestrationApplicationWithDependencies(
-		Stores{
+		CampaignAIOrchestrationDeps{
 			Campaign:           campaignStore,
 			Session:            sessionStore,
 			Participant:        participantStore,
 			SessionInteraction: sessionInteractionStore,
+			Applier:            projection.Applier{},
 		},
 		gametest.FixedIDGenerator("unused"),
 	)

@@ -75,13 +75,13 @@ var curatedAssessments = map[string]curatedAssessment{
 		SemanticMatch: "matched",
 		FinalStatus:   "covered",
 		EvidenceCode: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/rest.go",
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/downtime.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/rest.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/downtime.go",
 			"internal/services/game/domain/systems/daggerheart/compat_conditions.go",
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/death.go",
 		},
 		EvidenceTests: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death_rest_downtime_branches_test.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/death_rest_downtime_branches_test.go",
 			"internal/services/game/domain/systems/daggerheart/compat_conditions_branches_test.go",
 		},
 		EvidenceDocs: []string{
@@ -122,11 +122,11 @@ var curatedAssessments = map[string]curatedAssessment{
 		SemanticMatch: "matched",
 		FinalStatus:   "covered",
 		EvidenceCode: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/death.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler.go",
 		},
 		EvidenceTests: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death_rest_downtime_branches_test.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/death_rest_downtime_branches_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/actions_death_blaze_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler_test.go",
 			"internal/test/game/scenarios/systems/daggerheart/death_move_last_hope_slot.lua",
@@ -145,14 +145,14 @@ var curatedAssessments = map[string]curatedAssessment{
 		SemanticMatch: "matched",
 		FinalStatus:   "covered",
 		EvidenceCode: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/rest.go",
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/downtime.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/rest.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/downtime.go",
 			"internal/services/game/domain/systems/daggerheart/rest_package.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler.go",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
 		EvidenceTests: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death_rest_downtime_branches_test.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/death_rest_downtime_branches_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/actions_rest_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler_test.go",
 			"internal/test/game/scenarios/systems/daggerheart/rest_and_downtime.lua",
@@ -234,12 +234,12 @@ var curatedAssessments = map[string]curatedAssessment{
 		SemanticMatch: "matched",
 		FinalStatus:   "covered",
 		EvidenceCode: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/character_state.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/character_state.go",
 			"internal/services/game/api/grpc/systems/daggerheart/workfloweffects/handler.go",
 			"internal/services/game/api/grpc/systems/daggerheart/actions_swap_loadout_test.go",
 		},
 		EvidenceTests: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/character_state_branches_test.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/character_state_branches_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/workfloweffects/handler_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/actions_swap_loadout_test.go",
 		},
@@ -292,14 +292,14 @@ var curatedAssessments = map[string]curatedAssessment{
 		SemanticMatch: "matched",
 		FinalStatus:   "covered",
 		EvidenceCode: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/rest.go",
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/downtime.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/rest.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/downtime.go",
 			"internal/services/game/domain/systems/daggerheart/rest_package.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler.go",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
 		EvidenceTests: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death_rest_downtime_branches_test.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/death_rest_downtime_branches_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler_test.go",
 			"internal/services/game/api/grpc/systems/daggerheart/actions_rest_test.go",
 			"internal/test/game/scenarios/systems/daggerheart/rest_and_downtime.lua",

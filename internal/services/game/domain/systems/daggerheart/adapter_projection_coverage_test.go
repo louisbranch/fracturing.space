@@ -3,21 +3,25 @@ package daggerheart
 import (
 	"testing"
 
+	daggerheartadapter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestSubclassStateToProjection(t *testing.T) {
 	// nil returns nil.
-	if got := subclassStateToProjection(nil); got != nil {
+	if got := daggerheartadapter.SubclassStateToProjection(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Non-nil converts.
-	state := &CharacterSubclassState{
+	state := &daggerheartstate.CharacterSubclassState{
 		BattleRitualUsedThisLongRest: true,
 		ElementalChannel:             "fire",
 		NemesisTargetID:              "adv-1",
 	}
-	got := subclassStateToProjection(state)
+	got := daggerheartadapter.SubclassStateToProjection(state)
 	if got == nil {
 		t.Fatal("expected non-nil projection")
 	}
@@ -34,7 +38,7 @@ func TestSubclassStateToProjection(t *testing.T) {
 
 func TestSubclassStateFromProjection(t *testing.T) {
 	// nil returns nil.
-	if got := subclassStateFromProjection(nil); got != nil {
+	if got := daggerheartadapter.SubclassStateFromProjection(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Non-nil round-trips correctly.
@@ -43,7 +47,7 @@ func TestSubclassStateFromProjection(t *testing.T) {
 		ElementalChannel:             "fire",
 		NemesisTargetID:              "adv-1",
 	}
-	got := subclassStateFromProjection(value)
+	got := daggerheartadapter.SubclassStateFromProjection(value)
 	if got == nil {
 		t.Fatal("expected non-nil result")
 	}
@@ -57,29 +61,29 @@ func TestSubclassStateFromProjection(t *testing.T) {
 
 func TestConditionStatesToProjection(t *testing.T) {
 	// nil returns nil.
-	if got := conditionStatesToProjection(nil); got != nil {
+	if got := daggerheartadapter.ConditionStatesToProjection(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Converts with clear triggers.
-	states := []ConditionState{
+	states := []rules.ConditionState{
 		{
 			ID:            "hidden",
-			Class:         ConditionClassStandard,
+			Class:         rules.ConditionClassStandard,
 			Standard:      "hidden",
 			Code:          "hidden",
 			Label:         "Hidden",
 			Source:        "spell",
 			SourceID:      "spell-1",
-			ClearTriggers: []ConditionClearTrigger{ConditionClearTriggerShortRest, ConditionClearTriggerDamageTaken},
+			ClearTriggers: []rules.ConditionClearTrigger{rules.ConditionClearTriggerShortRest, rules.ConditionClearTriggerDamageTaken},
 		},
 		{
 			ID:    "burning",
-			Class: ConditionClassSpecial,
+			Class: rules.ConditionClassSpecial,
 			Code:  "burning",
 			Label: "Burning",
 		},
 	}
-	got := conditionStatesToProjection(states)
+	got := daggerheartadapter.ConditionStatesToProjection(states)
 	if len(got) != 2 {
 		t.Fatalf("len = %d, want 2", len(got))
 	}
@@ -95,11 +99,11 @@ func TestConditionStatesToProjection(t *testing.T) {
 }
 
 func TestToProjectionAdversaryFeatureStates(t *testing.T) {
-	in := []AdversaryFeatureState{
+	in := []rules.AdversaryFeatureState{
 		{FeatureID: " f1 ", Status: " active ", FocusedTargetID: " char-1 "},
 		{FeatureID: "f2", Status: "used"},
 	}
-	got := toProjectionAdversaryFeatureStates(in)
+	got := daggerheartadapter.ToProjectionAdversaryFeatureStates(in)
 	if len(got) != 2 {
 		t.Fatalf("len = %d, want 2", len(got))
 	}
@@ -110,12 +114,12 @@ func TestToProjectionAdversaryFeatureStates(t *testing.T) {
 
 func TestToProjectionAdversaryPendingExperience(t *testing.T) {
 	// nil returns nil.
-	if got := toProjectionAdversaryPendingExperience(nil); got != nil {
+	if got := daggerheartadapter.ToProjectionAdversaryPendingExperience(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Non-nil converts.
-	in := &AdversaryPendingExperience{Name: " xp ", Modifier: 10}
-	got := toProjectionAdversaryPendingExperience(in)
+	in := &rules.AdversaryPendingExperience{Name: " xp ", Modifier: 10}
+	got := daggerheartadapter.ToProjectionAdversaryPendingExperience(in)
 	if got == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -126,21 +130,21 @@ func TestToProjectionAdversaryPendingExperience(t *testing.T) {
 
 func TestClassStateToProjection(t *testing.T) {
 	// nil returns nil.
-	if got := classStateToProjection(nil); got != nil {
+	if got := daggerheartadapter.ClassStateToProjection(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Non-nil converts correctly.
-	state := &CharacterClassState{
+	state := &daggerheartstate.CharacterClassState{
 		AttackBonusUntilRest: 2,
 		FocusTargetID:        "char-1",
 		RallyDice:            []int{6, 8},
-		Unstoppable: CharacterUnstoppableState{
+		Unstoppable: daggerheartstate.CharacterUnstoppableState{
 			Active:       true,
 			CurrentValue: 3,
 			DieSides:     6,
 		},
 	}
-	got := classStateToProjection(state)
+	got := daggerheartadapter.ClassStateToProjection(state)
 	if got == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -157,34 +161,34 @@ func TestClassStateToProjection(t *testing.T) {
 
 func TestCompanionStateToProjection(t *testing.T) {
 	// nil returns nil.
-	if got := companionStateToProjection(nil); got != nil {
+	if got := daggerheartadapter.CompanionStateToProjection(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Non-nil converts.
-	state := &CharacterCompanionState{Status: CompanionStatusAway, ActiveExperienceID: "exp-1"}
-	got := companionStateToProjection(state)
+	state := &daggerheartstate.CharacterCompanionState{Status: daggerheartstate.CompanionStatusAway, ActiveExperienceID: "exp-1"}
+	got := daggerheartadapter.CompanionStateToProjection(state)
 	if got == nil {
 		t.Fatal("expected non-nil")
 	}
-	if got.Status != CompanionStatusAway || got.ActiveExperienceID != "exp-1" {
+	if got.Status != daggerheartstate.CompanionStatusAway || got.ActiveExperienceID != "exp-1" {
 		t.Fatalf("got = %+v, want away/exp-1", got)
 	}
 }
 
 func TestActiveBeastformToProjection(t *testing.T) {
 	// nil returns nil.
-	if got := activeBeastformToProjection(nil); got != nil {
+	if got := daggerheartadapter.ActiveBeastformToProjection(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Non-nil converts with damage dice.
-	state := &CharacterActiveBeastformState{
+	state := &daggerheartstate.CharacterActiveBeastformState{
 		BeastformID: "bf-1",
 		BaseTrait:   "strength",
 		AttackTrait: "strength",
-		DamageDice:  []CharacterDamageDie{{Count: 2, Sides: 6}},
+		DamageDice:  []daggerheartstate.CharacterDamageDie{{Count: 2, Sides: 6}},
 		DamageType:  "physical",
 	}
-	got := activeBeastformToProjection(state)
+	got := daggerheartadapter.ActiveBeastformToProjection(state)
 	if got == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -202,7 +206,7 @@ func TestClassStateFromProjection(t *testing.T) {
 		AttackBonusUntilRest: 2,
 		RallyDice:            []int{6},
 	}
-	got := classStateFromProjection(value)
+	got := daggerheartadapter.ClassStateFromProjection(value)
 	if got.AttackBonusUntilRest != 2 {
 		t.Fatalf("attack bonus = %d, want 2", got.AttackBonusUntilRest)
 	}
@@ -215,7 +219,7 @@ func TestClassStateFromProjection(t *testing.T) {
 		BeastformID: "bf-1",
 		DamageDice:  []projectionstore.DaggerheartDamageDie{{Count: 1, Sides: 8}},
 	}
-	got = classStateFromProjection(value)
+	got = daggerheartadapter.ClassStateFromProjection(value)
 	if got.ActiveBeastform == nil || got.ActiveBeastform.BeastformID != "bf-1" {
 		t.Fatalf("beastform = %+v, want bf-1", got.ActiveBeastform)
 	}

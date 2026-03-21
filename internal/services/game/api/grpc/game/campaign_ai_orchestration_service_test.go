@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
@@ -17,7 +18,7 @@ import (
 func TestNewCampaignAIOrchestrationServiceRejectsInvalidRequests(t *testing.T) {
 	t.Parallel()
 
-	svc := NewCampaignAIOrchestrationService(Stores{})
+	svc := NewCampaignAIOrchestrationService(CampaignAIOrchestrationDeps{})
 	ctx := context.Background()
 
 	tests := []struct {
@@ -81,11 +82,12 @@ func TestCampaignAIOrchestrationServiceQueueReturnsIdleWhenSessionIsNotEligible(
 		},
 	}
 
-	svc := NewCampaignAIOrchestrationService(Stores{
+	svc := NewCampaignAIOrchestrationService(CampaignAIOrchestrationDeps{
 		Campaign:           campaignStore,
 		Session:            sessionStore,
 		Participant:        participantStore,
 		SessionInteraction: sessionInteractionStore,
+		Applier:            projection.Applier{},
 	})
 
 	resp, err := svc.QueueAIGMTurn(context.Background(), &gamev1.QueueAIGMTurnRequest{
@@ -129,10 +131,11 @@ func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *te
 	}
 	sessionStore.ActiveSession["c1"] = "sess-1"
 
-	svc := NewCampaignAIOrchestrationService(Stores{
+	svc := NewCampaignAIOrchestrationService(CampaignAIOrchestrationDeps{
 		Campaign:           campaignStore,
 		Session:            sessionStore,
 		SessionInteraction: sessionInteractionStore,
+		Applier:            projection.Applier{},
 	})
 
 	_, err := svc.StartAIGMTurn(context.Background(), &gamev1.StartAIGMTurnRequest{
@@ -161,7 +164,7 @@ func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *te
 func TestCampaignAIOrchestrationApplicationCampaignSupportsAI(t *testing.T) {
 	t.Parallel()
 
-	app := newCampaignAIOrchestrationApplicationWithDependencies(Stores{}, gametest.FixedIDGenerator("unused"))
+	app := newCampaignAIOrchestrationApplicationWithDependencies(CampaignAIOrchestrationDeps{}, gametest.FixedIDGenerator("unused"))
 	if !app.CampaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeAI}) {
 		t.Fatal("gm mode ai should be supported")
 	}

@@ -7,6 +7,12 @@
 // Projection is the persistence seam: write-side decisions emit events, projection
 // code transforms those events into query-friendly tables and materialized views.
 //
+// Applier construction is projection-owned: callers bind grouped store concerns
+// plus system adapters here instead of rebuilding projection write surfaces in
+// transport packages. Core handler registration is also split by concern so
+// campaign, participant, invite, session, and scene projection edits do not
+// share one mandatory registration file.
+//
 // # Handler Ordering
 //
 // Projection handlers assume strict event sequence order within a campaign

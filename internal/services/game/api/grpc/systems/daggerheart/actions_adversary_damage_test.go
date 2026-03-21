@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func TestApplyAdversaryDamage_Success(t *testing.T) {
@@ -32,7 +33,7 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 	hpAfter := result.HPAfter
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := workflowtransport.NormalizeTargets(damage.GetSourceCharacterIds())
-	payload := daggerheart.AdversaryDamageAppliedPayload{
+	payload := daggerheartpayload.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
 		Hp:                 &hpAfter,
 		Armor:              &armorAfter,
@@ -111,7 +112,7 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 	hpAfter := result.HPAfter
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := workflowtransport.NormalizeTargets(damage.GetSourceCharacterIds())
-	payload := daggerheart.AdversaryDamageAppliedPayload{
+	payload := daggerheartpayload.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
 		Hp:                 &hpAfter,
 		Armor:              &armorAfter,
@@ -216,7 +217,7 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 	hpAfter := result.HPAfter
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := workflowtransport.NormalizeTargets(damage.GetSourceCharacterIds())
-	payload := daggerheart.AdversaryDamageAppliedPayload{
+	payload := daggerheartpayload.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
 		Hp:                 &hpAfter,
 		Armor:              &armorAfter,

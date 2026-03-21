@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func ValidateGMFearSetPayload(raw json.RawMessage) error {
@@ -20,7 +20,7 @@ func ValidateGMFearSetPayload(raw json.RawMessage) error {
 	if p.After == nil {
 		return errors.New("after is required")
 	}
-	if err := RequireRange(*p.After, snapstate.GMFearMin, snapstate.GMFearMax, "after"); err != nil {
+	if err := RequireRange(*p.After, daggerheartstate.GMFearMin, daggerheartstate.GMFearMax, "after"); err != nil {
 		return err
 	}
 	return nil
@@ -31,8 +31,8 @@ func ValidateGMFearChangedPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return err
 	}
-	if p.Value < snapstate.GMFearMin || p.Value > snapstate.GMFearMax {
-		return fmt.Errorf("value must be in range %d..%d", snapstate.GMFearMin, snapstate.GMFearMax)
+	if p.Value < daggerheartstate.GMFearMin || p.Value > daggerheartstate.GMFearMax {
+		return fmt.Errorf("value must be in range %d..%d", daggerheartstate.GMFearMin, daggerheartstate.GMFearMax)
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func ValidateGMMoveTarget(target payload.GMMoveTarget) error {
 }
 
 func ValidateCharacterProfileReplacePayload(raw json.RawMessage) error {
-	var p snapstate.CharacterProfileReplacePayload
+	var p daggerheartstate.CharacterProfileReplacePayload
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func ValidateCharacterProfileReplacePayload(raw json.RawMessage) error {
 }
 
 func ValidateCharacterProfileReplacedPayload(raw json.RawMessage) error {
-	var p snapstate.CharacterProfileReplacedPayload
+	var p daggerheartstate.CharacterProfileReplacedPayload
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func ValidateCharacterProfileReplacedPayload(raw json.RawMessage) error {
 }
 
 func ValidateCharacterProfileDeletePayload(raw json.RawMessage) error {
-	var p snapstate.CharacterProfileDeletePayload
+	var p daggerheartstate.CharacterProfileDeletePayload
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func ValidateCharacterProfileDeletePayload(raw json.RawMessage) error {
 }
 
 func ValidateCharacterProfileDeletedPayload(raw json.RawMessage) error {
-	var p snapstate.CharacterProfileDeletedPayload
+	var p daggerheartstate.CharacterProfileDeletedPayload
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func ValidateBeastformTransformedPayload(raw json.RawMessage) error {
 	if strings.TrimSpace(p.BeastformID) == "" {
 		return errors.New("beastform_id is required")
 	}
-	if snapstate.NormalizedActiveBeastformPtr(p.ActiveBeastform) == nil {
+	if daggerheartstate.NormalizedActiveBeastformPtr(p.ActiveBeastform) == nil {
 		return errors.New("active_beastform is required")
 	}
 	return nil
@@ -361,7 +361,7 @@ func ValidateCompanionExperienceBegunPayload(raw json.RawMessage) error {
 	if strings.TrimSpace(p.ExperienceID) == "" {
 		return errors.New("experience_id is required")
 	}
-	if snapstate.NormalizedCompanionStatePtr(p.CompanionState) == nil {
+	if daggerheartstate.NormalizedCompanionStatePtr(p.CompanionState) == nil {
 		return errors.New("companion_state is required")
 	}
 	return nil
@@ -378,7 +378,7 @@ func ValidateCompanionReturnedPayload(raw json.RawMessage) error {
 	if strings.TrimSpace(p.Resolution) == "" {
 		return errors.New("resolution is required")
 	}
-	if snapstate.NormalizedCompanionStatePtr(p.CompanionState) == nil {
+	if daggerheartstate.NormalizedCompanionStatePtr(p.CompanionState) == nil {
 		return errors.New("companion_state is required")
 	}
 	return nil
@@ -525,8 +525,8 @@ func ValidateRestTakenPayload(raw json.RawMessage) error {
 	if err := RequireTrimmedValue(p.RestType, "rest_type"); err != nil {
 		return err
 	}
-	if p.GMFear < snapstate.GMFearMin || p.GMFear > snapstate.GMFearMax {
-		return fmt.Errorf("gm_fear_after must be in range %d..%d", snapstate.GMFearMin, snapstate.GMFearMax)
+	if p.GMFear < daggerheartstate.GMFearMin || p.GMFear > daggerheartstate.GMFearMax {
+		return fmt.Errorf("gm_fear_after must be in range %d..%d", daggerheartstate.GMFearMin, daggerheartstate.GMFearMax)
 	}
 	if len(p.Participants) == 0 {
 		return errors.New("participants are required")
@@ -737,7 +737,7 @@ func HasCharacterStateChange(p payload.CharacterStatePatchPayload) bool {
 		HasBoolFieldChange(p.ImpenetrableUsedThisShortRestBefore, p.ImpenetrableUsedThisShortRestAfter)
 }
 
-func HasClassStateFieldChange(before, after *snapstate.CharacterClassState) bool {
+func HasClassStateFieldChange(before, after *daggerheartstate.CharacterClassState) bool {
 	if before == nil && after == nil {
 		return false
 	}
@@ -747,7 +747,7 @@ func HasClassStateFieldChange(before, after *snapstate.CharacterClassState) bool
 	return !reflect.DeepEqual(before.Normalized(), after.Normalized())
 }
 
-func HasCompanionStateFieldChange(before, after *snapstate.CharacterCompanionState) bool {
+func HasCompanionStateFieldChange(before, after *daggerheartstate.CharacterCompanionState) bool {
 	if before == nil && after == nil {
 		return false
 	}
@@ -757,7 +757,7 @@ func HasCompanionStateFieldChange(before, after *snapstate.CharacterCompanionSta
 	return !reflect.DeepEqual(before.Normalized(), after.Normalized())
 }
 
-func HasSubclassStateFieldChange(before, after *snapstate.CharacterSubclassState) bool {
+func HasSubclassStateFieldChange(before, after *daggerheartstate.CharacterSubclassState) bool {
 	if before == nil && after == nil {
 		return false
 	}

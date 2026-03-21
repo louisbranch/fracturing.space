@@ -6,8 +6,11 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -42,22 +45,22 @@ func buildDaggerheartCharacterStatePatch(
 	if hopeMax == 0 {
 		hopeMax = current.HopeMax
 		if hopeMax == 0 {
-			hopeMax = daggerheart.HopeMax
+			hopeMax = mechanics.HopeMax
 		}
 	}
-	if hopeMax < daggerheart.HopeMin || hopeMax > daggerheart.HopeMax {
+	if hopeMax < mechanics.HopeMin || hopeMax > mechanics.HopeMax {
 		return daggerheartCharacterStatePatch{}, status.Errorf(
 			codes.InvalidArgument,
 			"hope_max %d exceeds range %d..%d",
 			hopeMax,
-			daggerheart.HopeMin,
-			daggerheart.HopeMax,
+			mechanics.HopeMin,
+			mechanics.HopeMax,
 		)
 	}
 
 	hope := int(patch.Hope)
-	if hope < daggerheart.HopeMin || hope > hopeMax {
-		return daggerheartCharacterStatePatch{}, status.Errorf(codes.InvalidArgument, "hope %d exceeds range %d..%d", hope, daggerheart.HopeMin, hopeMax)
+	if hope < mechanics.HopeMin || hope > hopeMax {
+		return daggerheartCharacterStatePatch{}, status.Errorf(codes.InvalidArgument, "hope %d exceeds range %d..%d", hope, mechanics.HopeMin, hopeMax)
 	}
 
 	stress := int(patch.Stress)
@@ -85,7 +88,7 @@ func buildDaggerheartCharacterStatePatch(
 		if err != nil {
 			return daggerheartCharacterStatePatch{}, status.Error(codes.InvalidArgument, err.Error())
 		}
-		normalizedConditions, err = daggerheart.NormalizeConditions(conditions)
+		normalizedConditions, err = rules.NormalizeConditions(conditions)
 		if err != nil {
 			return daggerheartCharacterStatePatch{}, status.Error(codes.InvalidArgument, err.Error())
 		}
@@ -100,7 +103,7 @@ func buildDaggerheartCharacterStatePatch(
 		}
 	}
 	if lifeState == "" {
-		lifeState = daggerheart.LifeStateAlive
+		lifeState = daggerheartstate.LifeStateAlive
 	}
 
 	return daggerheartCharacterStatePatch{
@@ -140,7 +143,7 @@ func protoConditionCodes(states []*daggerheartv1.DaggerheartConditionState) ([]s
 func (p daggerheartCharacterStatePatch) stateUnchanged(current projectionstore.DaggerheartCharacterState) bool {
 	lifeStateBefore := current.LifeState
 	if lifeStateBefore == "" {
-		lifeStateBefore = daggerheart.LifeStateAlive
+		lifeStateBefore = daggerheartstate.LifeStateAlive
 	}
 	return current.Hp == p.hp &&
 		current.Hope == p.hope &&
@@ -150,7 +153,7 @@ func (p daggerheartCharacterStatePatch) stateUnchanged(current projectionstore.D
 		lifeStateBefore == p.lifeState
 }
 
-func (p daggerheartCharacterStatePatch) payload(characterID string, current projectionstore.DaggerheartCharacterState) daggerheart.CharacterStatePatchPayload {
+func (p daggerheartCharacterStatePatch) payload(characterID string, current projectionstore.DaggerheartCharacterState) daggerheartpayload.CharacterStatePatchPayload {
 	hpBefore := current.Hp
 	hpAfter := p.hp
 	hopeBefore := current.Hope
@@ -163,11 +166,11 @@ func (p daggerheartCharacterStatePatch) payload(characterID string, current proj
 	armorAfter := p.armor
 	lifeStateBefore := current.LifeState
 	if lifeStateBefore == "" {
-		lifeStateBefore = daggerheart.LifeStateAlive
+		lifeStateBefore = daggerheartstate.LifeStateAlive
 	}
 	lifeStateAfter := p.lifeState
 
-	return daggerheart.CharacterStatePatchPayload{
+	return daggerheartpayload.CharacterStatePatchPayload{
 		CharacterID:     ids.CharacterID(characterID),
 		HPBefore:        &hpBefore,
 		HPAfter:         &hpAfter,

@@ -55,6 +55,10 @@ func (s *DaggerheartService) outcomeHandler() *outcometransport.Handler {
 			})
 		},
 		ExecuteCoreCommand: func(ctx context.Context, in outcometransport.CoreCommandInput) error {
+			applier, err := s.resolvedApplier()
+			if err != nil {
+				return err
+			}
 			cmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
 				CampaignID:    in.CampaignID,
 				Type:          in.CommandType,
@@ -67,7 +71,7 @@ func (s *DaggerheartService) outcomeHandler() *outcometransport.Handler {
 				EntityID:      in.EntityID,
 				PayloadJSON:   in.PayloadJSON,
 			})
-			_, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, s.stores.Applier(), cmd, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, in.ApplyErrMessage))
+			_, err = workflowwrite.ExecuteAndApply(ctx, s.stores.Write, applier, cmd, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, in.ApplyErrMessage))
 			return err
 		},
 		ApplyStressVulnerableCondition: func(ctx context.Context, in outcometransport.ApplyStressVulnerableConditionInput) error {

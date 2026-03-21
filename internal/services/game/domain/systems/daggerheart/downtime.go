@@ -1,6 +1,9 @@
 package daggerheart
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+)
 
 type DowntimeMove = mechanics.DowntimeMove
 
@@ -15,6 +18,6 @@ type DowntimeOptions = mechanics.DowntimeOptions
 type DowntimeResult = mechanics.DowntimeResult
 
 // ApplyDowntimeMove applies a downtime move to the character state.
-func ApplyDowntimeMove(state *CharacterState, move DowntimeMove, opts DowntimeOptions) DowntimeResult {
+func ApplyDowntimeMove(state *daggerheartstate.CharacterState, move DowntimeMove, opts DowntimeOptions) DowntimeResult {
 	return mechanics.ApplyDowntimeMove(state, move, opts)
 }

@@ -7,15 +7,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func decideBeastformTransform(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideBeastformTransform(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeBeastformTransformed, "character",
 		func(p *payload.BeastformTransformPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(s snapstate.SnapshotState, hasState bool, p *payload.BeastformTransformPayload, _ func() time.Time) *command.Rejection {
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.BeastformTransformPayload, _ func() time.Time) *command.Rejection {
 			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.BeastformID = strings.TrimSpace(p.BeastformID)
@@ -42,10 +42,10 @@ func decideBeastformTransform(snapshotState snapstate.SnapshotState, hasSnapshot
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.BeastformTransformPayload) payload.BeastformTransformedPayload {
-			var active *snapstate.CharacterActiveBeastformState
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.BeastformTransformPayload) payload.BeastformTransformedPayload {
+			var active *daggerheartstate.CharacterActiveBeastformState
 			if p.ClassStateAfter != nil {
-				active = snapstate.NormalizedActiveBeastformPtr(p.ClassStateAfter.ActiveBeastform)
+				active = daggerheartstate.NormalizedActiveBeastformPtr(p.ClassStateAfter.ActiveBeastform)
 			}
 			return payload.BeastformTransformedPayload{
 				CharacterID:     p.CharacterID,
@@ -59,11 +59,11 @@ func decideBeastformTransform(snapshotState snapstate.SnapshotState, hasSnapshot
 		now)
 }
 
-func decideBeastformDrop(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideBeastformDrop(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeBeastformDropped, "character",
 		func(p *payload.BeastformDropPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(s snapstate.SnapshotState, hasState bool, p *payload.BeastformDropPayload, _ func() time.Time) *command.Rejection {
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.BeastformDropPayload, _ func() time.Time) *command.Rejection {
 			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.BeastformID = strings.TrimSpace(p.BeastformID)
@@ -86,7 +86,7 @@ func decideBeastformDrop(snapshotState snapstate.SnapshotState, hasSnapshot bool
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.BeastformDropPayload) payload.BeastformDroppedPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.BeastformDropPayload) payload.BeastformDroppedPayload {
 			source := strings.TrimSpace(p.Source)
 			if source == "" {
 				source = "beastform.drop"

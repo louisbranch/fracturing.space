@@ -11,7 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -38,7 +38,7 @@ func (h *Handler) UseConsumable(ctx context.Context, in *pb.DaggerheartUseConsum
 		return nil, err
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.ConsumableUsePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.ConsumableUsePayload{
 		CharacterID:    ids.CharacterID(characterID),
 		ConsumableID:   consumableID,
 		QuantityBefore: int(in.GetQuantityBefore()),
@@ -86,7 +86,7 @@ func (h *Handler) AcquireConsumable(ctx context.Context, in *pb.DaggerheartAcqui
 		return nil, err
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.ConsumableAcquirePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.ConsumableAcquirePayload{
 		CharacterID:    ids.CharacterID(characterID),
 		ConsumableID:   consumableID,
 		QuantityBefore: int(in.GetQuantityBefore()),

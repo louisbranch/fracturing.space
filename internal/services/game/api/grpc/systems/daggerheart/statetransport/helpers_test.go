@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestCharacterStateToProto(t *testing.T) {
@@ -16,13 +17,13 @@ func TestCharacterStateToProto(t *testing.T) {
 		Stress:  3,
 		Armor:   1,
 		Conditions: standardProjectionConditions(
-			daggerheart.ConditionHidden,
-			daggerheart.ConditionVulnerable,
+			rules.ConditionHidden,
+			rules.ConditionVulnerable,
 		),
 		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{
 			{Source: "spell", Duration: "scene", SourceID: "src-1", Amount: 2},
 		},
-		LifeState: daggerheart.LifeStateUnconscious,
+		LifeState: mechanics.LifeStateUnconscious,
 	}
 
 	got := CharacterStateToProto(state)

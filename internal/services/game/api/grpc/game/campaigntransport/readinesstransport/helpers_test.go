@@ -18,6 +18,7 @@ import (
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -225,7 +226,7 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) 
 	if !ok {
 		t.Fatal("daggerheart system state not found")
 	}
-	snapshot, ok := systemState.(daggerheartdomain.SnapshotState)
+	snapshot, ok := systemState.(daggerheartstate.SnapshotState)
 	if !ok {
 		t.Fatalf("daggerheart system state type = %T, want SnapshotState", systemState)
 	}

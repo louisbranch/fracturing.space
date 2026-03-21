@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
 func TestHandlerResolveBlazeOfGlorySuccess(t *testing.T) {
 	store := &testDaggerheartStore{
 		states: map[string]projectionstore.DaggerheartCharacterState{
-			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Hp: 0, Hope: 0, HopeMax: 2, Stress: 0, LifeState: daggerheart.LifeStateBlazeOfGlory},
+			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Hp: 0, Hope: 0, HopeMax: 2, Stress: 0, LifeState: mechanics.LifeStateBlazeOfGlory},
 		},
 	}
 	var deleted CharacterDeleteInput

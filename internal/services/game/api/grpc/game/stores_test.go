@@ -8,22 +8,32 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestStoresValidate(t *testing.T) {
 	t.Run("all fields set returns nil", func(t *testing.T) {
-		s := validStores()
-		if err := s.Validate(); err != nil {
+		groups := validRootStoreGroups()
+		if err := ValidateRootStoreGroups(
+			groups.projection,
+			groups.system,
+			groups.infrastructure,
+			groups.content,
+			groups.runtime,
+		); err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
 	})
 
 	t.Run("zero value returns error listing all fields", func(t *testing.T) {
-		s := Stores{}
-		err := s.Validate()
+		err := ValidateRootStoreGroups(
+			ProjectionStores{},
+			SystemStores{},
+			InfrastructureStores{},
+			ContentStores{},
+			RuntimeStores{},
+		)
 		if err == nil {
 			t.Fatal("expected error for empty stores")
 		}
@@ -35,7 +45,7 @@ func TestStoresValidate(t *testing.T) {
 			"SceneGate", "SceneSpotlight", "SceneInteraction",
 			"Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
-			"Write.Executor", "Write.Runtime", "Events",
+			"Write.Executor", "Write.Runtime",
 		} {
 			if !strings.Contains(msg, name) {
 				t.Errorf("error should mention %q, got: %s", name, msg)
@@ -44,9 +54,15 @@ func TestStoresValidate(t *testing.T) {
 	})
 
 	t.Run("single nil field returns error", func(t *testing.T) {
-		s := validStores()
-		s.Event = nil
-		err := s.Validate()
+		groups := validRootStoreGroups()
+		groups.infrastructure.Event = nil
+		err := ValidateRootStoreGroups(
+			groups.projection,
+			groups.system,
+			groups.infrastructure,
+			groups.content,
+			groups.runtime,
+		)
 		if err == nil {
 			t.Fatal("expected error for nil Event store")
 		}
@@ -56,7 +72,7 @@ func TestStoresValidate(t *testing.T) {
 	})
 }
 
-func TestNewStoresFromProjection(t *testing.T) {
+func TestRootStoreConcernBuilders(t *testing.T) {
 	projectionStore := &projectionStoreBundleStub{
 		CampaignStore:            gametest.NewFakeCampaignStore(),
 		ParticipantStore:         gametest.NewFakeParticipantStore(),
@@ -76,34 +92,44 @@ func TestNewStoresFromProjection(t *testing.T) {
 		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
 	}
 
-	stores := NewStoresFromProjection(StoresFromProjectionConfig{
-		ProjectionStore: projectionStore,
-		SystemStores:    SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}},
+	systemStores := SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}}
+	infrastructure := NewInfrastructureStores(projectionStore, StoresInfrastructureConfig{
 		EventStore: eventAuditStoreStub{
 			EventStore:      gametest.NewFakeEventStore(),
 			AuditEventStore: stubAudit{},
 		},
+		AuditStore: stubAudit{},
+	})
+	content := NewContentStores(StoresContentConfig{
 		ContentStore: stubDaggerheartContent{},
+	})
+	runtime := NewRuntimeStores(StoresRuntimeConfig{
 		Domain:       fakeDomainExecutor{},
 		WriteRuntime: domainwrite.NewRuntime(),
-		Events:       event.NewRegistry(),
+	}, infrastructure.Audit)
+	projection := NewProjectionStores(StoresProjectionConfig{
+		ProjectionStore: projectionStore,
+		SystemStores:    systemStores,
 	})
 
-	if stores.Campaign == nil || stores.Participant == nil || stores.Character == nil {
+	if projection.Campaign == nil || projection.Participant == nil || projection.Character == nil {
 		t.Fatal("expected projection-backed stores to be populated")
 	}
-	if stores.SystemStores.Daggerheart == nil {
+	if systemStores.Daggerheart == nil {
 		t.Fatal("expected Daggerheart system store to be set from config")
 	}
-	if stores.Audit == nil {
-		t.Fatal("expected audit store to be inferred from event store when compatible")
+	if infrastructure.Audit == nil {
+		t.Fatal("expected audit store to be propagated explicitly")
 	}
-	if stores.Write.Executor == nil || stores.Write.Runtime == nil || stores.Events == nil {
+	if content.DaggerheartContent == nil {
+		t.Fatal("expected content store to be propagated explicitly")
+	}
+	if runtime.Write.Executor == nil || runtime.Write.Runtime == nil {
 		t.Fatal("expected runtime dependencies to be propagated")
 	}
 }
 
-func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
+func TestNewRuntimeStores_AuditWiring(t *testing.T) {
 	projectionStore := &projectionStoreBundleStub{
 		CampaignStore:            gametest.NewFakeCampaignStore(),
 		ParticipantStore:         gametest.NewFakeParticipantStore(),
@@ -123,101 +149,81 @@ func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
 		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
 	}
 
-	t.Run("explicit audit store wins", func(t *testing.T) {
+	t.Run("explicit audit store is used for stores and write path", func(t *testing.T) {
 		explicitAudit := stubAudit{}
-		stores := NewStoresFromProjection(StoresFromProjectionConfig{
-			ProjectionStore: projectionStore,
-			EventStore:      gametest.NewFakeEventStore(),
-			AuditStore:      explicitAudit,
+		infrastructure := NewInfrastructureStores(projectionStore, StoresInfrastructureConfig{
+			EventStore: gametest.NewFakeEventStore(),
+			AuditStore: explicitAudit,
 		})
+		runtime := NewRuntimeStores(StoresRuntimeConfig{}, infrastructure.Audit)
 
-		if _, ok := stores.Audit.(stubAudit); !ok {
-			t.Fatalf("stores.Audit type = %T, want %T", stores.Audit, explicitAudit)
+		if _, ok := infrastructure.Audit.(stubAudit); !ok {
+			t.Fatalf("infrastructure.Audit type = %T, want %T", infrastructure.Audit, explicitAudit)
+		}
+		if _, ok := runtime.Write.Audit.(stubAudit); !ok {
+			t.Fatalf("runtime.Write.Audit type = %T, want %T", runtime.Write.Audit, explicitAudit)
 		}
 	})
 
-	t.Run("non-audit event store does not infer audit store", func(t *testing.T) {
-		stores := NewStoresFromProjection(StoresFromProjectionConfig{
-			ProjectionStore: projectionStore,
-			EventStore:      gametest.NewFakeEventStore(),
+	t.Run("event store does not imply audit store", func(t *testing.T) {
+		infrastructure := NewInfrastructureStores(projectionStore, StoresInfrastructureConfig{
+			EventStore: eventAuditStoreStub{
+				EventStore:      gametest.NewFakeEventStore(),
+				AuditEventStore: stubAudit{},
+			},
 		})
-		if stores.Audit != nil {
-			t.Fatalf("stores.Audit = %T, want nil", stores.Audit)
+		runtime := NewRuntimeStores(StoresRuntimeConfig{}, infrastructure.Audit)
+		if infrastructure.Audit != nil {
+			t.Fatalf("infrastructure.Audit = %T, want nil", infrastructure.Audit)
+		}
+		if runtime.Write.Audit != nil {
+			t.Fatalf("runtime.Write.Audit = %T, want nil", runtime.Write.Audit)
 		}
 	})
 }
 
-// validStores returns a Stores with all fields populated using minimal stubs.
-func validStores() Stores {
-	return Stores{
-		Campaign:           gametest.NewFakeCampaignStore(),
-		Participant:        gametest.NewFakeParticipantStore(),
-		ClaimIndex:         stubClaimIndex{},
-		Invite:             gametest.NewFakeInviteStore(),
-		Character:          gametest.NewFakeCharacterStore(),
-		SystemStores:       SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}},
-		Session:            gametest.NewFakeSessionStore(),
-		SessionGate:        &gametest.FakeSessionGateStore{},
-		SessionSpotlight:   &gametest.FakeSessionSpotlightStore{},
-		SessionInteraction: &gametest.FakeSessionInteractionStore{},
-		Scene:              stubSceneStore{},
-		SceneCharacter:     stubSceneCharacterStore{},
-		SceneGate:          stubSceneGateStore{},
-		SceneSpotlight:     stubSceneSpotlightStore{},
-		SceneInteraction:   stubSceneInteractionStore{},
-		Event:              gametest.NewFakeEventStore(),
-		Audit:              stubAudit{},
-		Statistics:         &gametest.FakeStatisticsStore{},
-		Snapshot:           stubSnapshot{},
-		CampaignFork:       &gametest.FakeCampaignForkStore{},
-		DaggerheartContent: stubDaggerheartContent{},
-		Write:              domainwriteexec.WritePath{Executor: fakeDomainExecutor{}, Runtime: domainwrite.NewRuntime()},
-		Events:             event.NewRegistry(),
-	}
+type rootStoreGroupsFixture struct {
+	projection     ProjectionStores
+	system         SystemStores
+	infrastructure InfrastructureStores
+	content        ContentStores
+	runtime        RuntimeStores
 }
 
-func TestStoresApplier(t *testing.T) {
-	s := validStores()
-	if err := s.Validate(); err != nil {
-		t.Fatalf("validate stores: %v", err)
-	}
-	applier := s.Applier()
-
-	if applier.Campaign == nil {
-		t.Error("expected Campaign to be set")
-	}
-	if applier.Participant == nil {
-		t.Error("expected Participant to be set")
-	}
-	if applier.Character == nil {
-		t.Error("expected Character to be set")
-	}
-	if applier.ClaimIndex == nil {
-		t.Error("expected ClaimIndex to be set")
-	}
-	if applier.Invite == nil {
-		t.Error("expected Invite to be set")
-	}
-	if applier.Adapters == nil {
-		t.Error("expected Adapters to be set")
-	}
-	if applier.Events == nil {
-		t.Error("expected Events registry to be set")
-	}
-	if applier.Session == nil {
-		t.Error("expected Session to be set")
-	}
-	if applier.SessionGate == nil {
-		t.Error("expected SessionGate to be set")
-	}
-	if applier.SessionSpotlight == nil {
-		t.Error("expected SessionSpotlight to be set")
-	}
-	if applier.CampaignFork == nil {
-		t.Error("expected CampaignFork to be set")
-	}
-	if applier.Adapters == nil {
-		t.Error("expected Adapters to be set")
+// validRootStoreGroups returns fully configured root store concerns using
+// minimal stubs so validation tests can exercise one missing dependency at a time.
+func validRootStoreGroups() rootStoreGroupsFixture {
+	return rootStoreGroupsFixture{
+		projection: ProjectionStores{
+			Campaign:           gametest.NewFakeCampaignStore(),
+			Participant:        gametest.NewFakeParticipantStore(),
+			ClaimIndex:         stubClaimIndex{},
+			Invite:             gametest.NewFakeInviteStore(),
+			Character:          gametest.NewFakeCharacterStore(),
+			Session:            gametest.NewFakeSessionStore(),
+			SessionGate:        &gametest.FakeSessionGateStore{},
+			SessionSpotlight:   &gametest.FakeSessionSpotlightStore{},
+			SessionInteraction: &gametest.FakeSessionInteractionStore{},
+			Scene:              stubSceneStore{},
+			SceneCharacter:     stubSceneCharacterStore{},
+			SceneGate:          stubSceneGateStore{},
+			SceneSpotlight:     stubSceneSpotlightStore{},
+			SceneInteraction:   stubSceneInteractionStore{},
+			CampaignFork:       &gametest.FakeCampaignForkStore{},
+		},
+		system: SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}},
+		infrastructure: InfrastructureStores{
+			Event:      gametest.NewFakeEventStore(),
+			Audit:      stubAudit{},
+			Statistics: &gametest.FakeStatisticsStore{},
+			Snapshot:   stubSnapshot{},
+		},
+		content: ContentStores{
+			DaggerheartContent: stubDaggerheartContent{},
+		},
+		runtime: RuntimeStores{
+			Write: domainwriteexec.WritePath{Executor: fakeDomainExecutor{}, Runtime: domainwrite.NewRuntime()},
+		},
 	}
 }
 

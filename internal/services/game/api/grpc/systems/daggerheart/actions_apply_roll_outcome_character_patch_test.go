@@ -12,6 +12,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
@@ -52,7 +54,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	hopeBefore := state.Hope
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
-		hopeMax = daggerheart.HopeMax
+		hopeMax = mechanics.HopeMax
 	}
 	hopeAfter := hopeBefore + 1
 	if hopeAfter > hopeMax {
@@ -61,7 +63,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	stressBefore := state.Stress
 	stressAfter := stressBefore
 
-	patchPayload := daggerheart.CharacterStatePatchedPayload{
+	patchPayload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		Hope:        &hopeAfter,
 		Stress:      &stressAfter,

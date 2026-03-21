@@ -1,6 +1,6 @@
 package daggerheart
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics"
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 
 type RestType = mechanics.RestType
 

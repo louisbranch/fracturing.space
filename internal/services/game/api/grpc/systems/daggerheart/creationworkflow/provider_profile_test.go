@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 func TestDefaultProfileForCharacter(t *testing.T) {
@@ -51,14 +51,14 @@ func TestEnsureProfileDefaults_NPC(t *testing.T) {
 }
 
 func TestSystemProfileMap_Empty(t *testing.T) {
-	profile := daggerheart.CharacterProfileFromStorage(projectionstore.DaggerheartCharacterProfile{})
+	profile := daggerheartstate.CharacterProfileFromStorage(projectionstore.DaggerheartCharacterProfile{})
 	if profile.Level != 0 {
 		t.Fatalf("Level = %d, want 0", profile.Level)
 	}
 }
 
 func TestCharacterProfileFromStorage_IncludesDescription(t *testing.T) {
-	profile := daggerheart.CharacterProfileFromStorage(projectionstore.DaggerheartCharacterProfile{
+	profile := daggerheartstate.CharacterProfileFromStorage(projectionstore.DaggerheartCharacterProfile{
 		Description: "Tall, patient, and heavily armored.",
 	})
 	if got := profile.Description; got != "Tall, patient, and heavily armored." {
@@ -67,7 +67,7 @@ func TestCharacterProfileFromStorage_IncludesDescription(t *testing.T) {
 }
 
 func TestCreationProfileFromStorage_PreservesDescription(t *testing.T) {
-	profile := daggerheart.CharacterProfileFromStorage(projectionstore.DaggerheartCharacterProfile{
+	profile := daggerheartstate.CharacterProfileFromStorage(projectionstore.DaggerheartCharacterProfile{
 		Description: "A calm veteran with a scarred shield.",
 	}).CreationProfile()
 

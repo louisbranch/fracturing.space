@@ -11,7 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -34,7 +34,7 @@ func (h *Handler) UpdateGold(ctx context.Context, in *pb.DaggerheartUpdateGoldRe
 		return nil, err
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.GoldUpdatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.GoldUpdatePayload{
 		CharacterID:    ids.CharacterID(characterID),
 		HandfulsBefore: int(in.GetHandfulsBefore()),
 		HandfulsAfter:  int(in.GetHandfulsAfter()),

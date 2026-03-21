@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -102,7 +103,7 @@ func TestExtractScope(t *testing.T) {
 }
 
 func TestAuditInterceptorNoStore(t *testing.T) {
-	interceptor := AuditInterceptor(nil)
+	interceptor := AuditInterceptor(audit.DisabledPolicy())
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 	called := false
 
@@ -120,7 +121,7 @@ func TestAuditInterceptorNoStore(t *testing.T) {
 
 func TestAuditInterceptorEmitsEventForRead(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := AuditInterceptor(store)
+	interceptor := AuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
@@ -154,7 +155,7 @@ func TestAuditInterceptorEmitsEventForRead(t *testing.T) {
 
 func TestAuditInterceptorErrorSeverity(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := AuditInterceptor(store)
+	interceptor := AuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
@@ -176,7 +177,7 @@ func TestAuditInterceptorErrorSeverity(t *testing.T) {
 
 func TestAuditInterceptorEmitsEventForWrite(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := AuditInterceptor(store)
+	interceptor := AuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_CreateCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
@@ -198,7 +199,7 @@ func TestAuditInterceptorEmitsEventForWrite(t *testing.T) {
 
 func TestAuditInterceptorSystemActor(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := AuditInterceptor(store)
+	interceptor := AuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
@@ -217,7 +218,7 @@ func TestAuditInterceptorSystemActor(t *testing.T) {
 
 func TestAuditInterceptorOTelTraceContext(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := AuditInterceptor(store)
+	interceptor := AuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	// Create an OTel span so the context carries a valid trace/span ID.
@@ -248,7 +249,7 @@ func TestAuditInterceptorOTelTraceContext(t *testing.T) {
 
 func TestAuditInterceptorNoSpanEmptyIDs(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := AuditInterceptor(store)
+	interceptor := AuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	// No OTel span in context — trace/span IDs should remain empty.
@@ -268,7 +269,7 @@ func TestAuditInterceptorNoSpanEmptyIDs(t *testing.T) {
 
 func TestAuditInterceptorStoreErrorIgnored(t *testing.T) {
 	store := &fakeAuditStore{err: context.Canceled}
-	interceptor := AuditInterceptor(store)
+	interceptor := AuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
@@ -291,7 +292,7 @@ type fakeServerStream struct {
 func (s *fakeServerStream) Context() context.Context { return s.ctx }
 
 func TestStreamAuditInterceptorNoStore(t *testing.T) {
-	interceptor := StreamAuditInterceptor(nil)
+	interceptor := StreamAuditInterceptor(audit.DisabledPolicy())
 	stream := &fakeServerStream{ctx: context.Background()}
 	info := &grpc.StreamServerInfo{FullMethod: campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName}
 	called := false
@@ -310,7 +311,7 @@ func TestStreamAuditInterceptorNoStore(t *testing.T) {
 
 func TestStreamAuditInterceptorEmitsEvent(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := StreamAuditInterceptor(store)
+	interceptor := StreamAuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.StreamServerInfo{FullMethod: campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
@@ -344,7 +345,7 @@ func TestStreamAuditInterceptorEmitsEvent(t *testing.T) {
 
 func TestStreamAuditInterceptorErrorSeverity(t *testing.T) {
 	store := &fakeAuditStore{}
-	interceptor := StreamAuditInterceptor(store)
+	interceptor := StreamAuditInterceptor(audit.EnabledPolicy(store))
 	info := &grpc.StreamServerInfo{FullMethod: campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName}
 	stream := &fakeServerStream{ctx: context.Background()}
 

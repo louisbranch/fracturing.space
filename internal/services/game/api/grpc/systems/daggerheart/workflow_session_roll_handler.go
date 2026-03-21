@@ -12,8 +12,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func (s *DaggerheartService) sessionRollHandler() *sessionrolltransport.Handler {
@@ -51,6 +52,10 @@ func (s *DaggerheartService) sessionRollHandler() *sessionrolltransport.Handler 
 }
 
 func (s *DaggerheartService) executeSessionRollResolve(ctx context.Context, in sessionrolltransport.RollResolveInput) (uint64, error) {
+	applier, err := s.resolvedApplier()
+	if err != nil {
+		return 0, err
+	}
 	cmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
 		CampaignID:   in.CampaignID,
 		Type:         commandTypeActionRollResolve,
@@ -62,7 +67,7 @@ func (s *DaggerheartService) executeSessionRollResolve(ctx context.Context, in s
 		EntityID:     in.EntityID,
 		PayloadJSON:  in.PayloadJSON,
 	})
-	domainResult, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, s.stores.Applier(), cmd, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, "execute domain command"))
+	domainResult, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, applier, cmd, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, "execute domain command"))
 	if err != nil {
 		return 0, err
 	}
@@ -71,7 +76,7 @@ func (s *DaggerheartService) executeSessionRollResolve(ctx context.Context, in s
 
 func (s *DaggerheartService) executeSessionHopeSpend(ctx context.Context, in sessionrolltransport.HopeSpendInput) error {
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
-	payloadJSON, err := json.Marshal(daggerheart.HopeSpendPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.HopeSpendPayload{
 		CharacterID: ids.CharacterID(in.CharacterID),
 		Amount:      in.Amount,
 		Before:      in.HopeBefore,
@@ -99,7 +104,7 @@ func (s *DaggerheartService) executeSessionHopeSpend(ctx context.Context, in ses
 
 func (s *DaggerheartService) executeArmorBackedHopeSpend(ctx context.Context, in sessionrolltransport.ArmorBackedHopeSpendInput) error {
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
-	payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.CharacterStatePatchPayload{
 		CharacterID: ids.CharacterID(in.CharacterID),
 		Source:      "armor.hopeful",
 		ArmorBefore: &in.ArmorBefore,
@@ -125,26 +130,26 @@ func (s *DaggerheartService) executeArmorBackedHopeSpend(ctx context.Context, in
 
 func (s *DaggerheartService) executeSessionRollAdversaryFeatureApply(ctx context.Context, in sessionrolltransport.AdversaryFeatureApplyInput) error {
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryFeatureApplyPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryFeatureApplyPayload{
 		ActorAdversaryID:    ids.AdversaryID(in.Adversary.AdversaryID),
 		AdversaryID:         ids.AdversaryID(in.Adversary.AdversaryID),
 		FeatureID:           in.FeatureID,
 		FeatureStatesBefore: nil,
 		FeatureStatesAfter:  nil,
-		PendingExperienceBefore: func() *daggerheart.AdversaryPendingExperience {
+		PendingExperienceBefore: func() *rules.AdversaryPendingExperience {
 			if in.PendingExperienceBefore == nil {
 				return nil
 			}
-			return &daggerheart.AdversaryPendingExperience{
+			return &rules.AdversaryPendingExperience{
 				Name:     in.PendingExperienceBefore.Name,
 				Modifier: in.PendingExperienceBefore.Modifier,
 			}
 		}(),
-		PendingExperienceAfter: func() *daggerheart.AdversaryPendingExperience {
+		PendingExperienceAfter: func() *rules.AdversaryPendingExperience {
 			if in.PendingExperienceAfter == nil {
 				return nil
 			}
-			return &daggerheart.AdversaryPendingExperience{
+			return &rules.AdversaryPendingExperience{
 				Name:     in.PendingExperienceAfter.Name,
 				Modifier: in.PendingExperienceAfter.Modifier,
 			}

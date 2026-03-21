@@ -11,7 +11,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
@@ -76,7 +78,7 @@ func TestApplyAdversaryConditions_ConflictAddRemoveSame(t *testing.T) {
 		CampaignId:         "camp-1",
 		AdversaryId:        "adv-1",
 		AddConditions:      []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
-		RemoveConditionIds: []string{daggerheart.ConditionVulnerable},
+		RemoveConditionIds: []string{rules.ConditionVulnerable},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -84,10 +86,10 @@ func TestApplyAdversaryConditions_ConflictAddRemoveSame(t *testing.T) {
 func TestApplyAdversaryConditions_AddCondition_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	payload := daggerheart.AdversaryConditionChangedPayload{
+	payload := daggerheartpayload.AdversaryConditionChangedPayload{
 		AdversaryID: "adv-1",
-		Conditions:  []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
-		Added:       []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
+		Conditions:  []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
+		Added:       []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -133,13 +135,13 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 	// Pre-populate a condition on the adversary.
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
 	adv := dhStore.adversaries["camp-1:adv-1"]
-	adv.Conditions = []projectionstore.DaggerheartConditionState{projectionStandardConditionState(daggerheart.ConditionVulnerable)}
+	adv.Conditions = []projectionstore.DaggerheartConditionState{projectionStandardConditionState(rules.ConditionVulnerable)}
 	dhStore.adversaries["camp-1:adv-1"] = adv
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	payload := daggerheart.AdversaryConditionChangedPayload{
+	payload := daggerheartpayload.AdversaryConditionChangedPayload{
 		AdversaryID: "adv-1",
 		Conditions:  nil,
-		Removed:     []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
+		Removed:     []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -167,7 +169,7 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 	resp, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:         "camp-1",
 		AdversaryId:        "adv-1",
-		RemoveConditionIds: []string{daggerheart.ConditionVulnerable},
+		RemoveConditionIds: []string{rules.ConditionVulnerable},
 	})
 	if err != nil {
 		t.Fatalf("ApplyAdversaryConditions returned error: %v", err)
@@ -182,10 +184,10 @@ func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
 
-	payload := daggerheart.AdversaryConditionChangedPayload{
+	payload := daggerheartpayload.AdversaryConditionChangedPayload{
 		AdversaryID: "adv-1",
-		Conditions:  []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
-		Added:       []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
+		Conditions:  []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
+		Added:       []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
 		Source:      "test",
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -238,8 +240,8 @@ func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
 	}
 	var got struct {
-		AdversaryID     string                       `json:"adversary_id"`
-		ConditionsAfter []daggerheart.ConditionState `json:"conditions_after"`
+		AdversaryID     string                 `json:"adversary_id"`
+		ConditionsAfter []rules.ConditionState `json:"conditions_after"`
 	}
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode adversary condition command payload: %v", err)
@@ -247,8 +249,8 @@ func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
 	if got.AdversaryID != "adv-1" {
 		t.Fatalf("command adversary id = %s, want %s", got.AdversaryID, "adv-1")
 	}
-	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0].Code != daggerheart.ConditionVulnerable {
-		t.Fatalf("command conditions_after = %v, want [%s]", got.ConditionsAfter, daggerheart.ConditionVulnerable)
+	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0].Code != rules.ConditionVulnerable {
+		t.Fatalf("command conditions_after = %v, want [%s]", got.ConditionsAfter, rules.ConditionVulnerable)
 	}
 }
 
@@ -257,7 +259,7 @@ func TestApplyAdversaryConditions_NoChanges(t *testing.T) {
 	// Pre-populate a condition that we try to re-add.
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
 	adv := dhStore.adversaries["camp-1:adv-1"]
-	adv.Conditions = []projectionstore.DaggerheartConditionState{projectionStandardConditionState(daggerheart.ConditionVulnerable)}
+	adv.Conditions = []projectionstore.DaggerheartConditionState{projectionStandardConditionState(rules.ConditionVulnerable)}
 	dhStore.adversaries["camp-1:adv-1"] = adv
 
 	ctx := contextWithSessionID("sess-1")

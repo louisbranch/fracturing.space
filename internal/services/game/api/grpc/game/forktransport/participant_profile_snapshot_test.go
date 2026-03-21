@@ -9,6 +9,7 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/testclients"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -38,7 +39,7 @@ func TestApplyParticipantProfileSnapshot_AvatarlessSnapshotSkipsCharacterSync(t 
 		projection.Applier{},
 		participantStore,
 		characterStore,
-		&gametest.FakeSocialClient{Profile: &socialv1.UserProfile{
+		&testclients.FakeSocialClient{Profile: &socialv1.UserProfile{
 			UserId:   "user-1",
 			Name:     "Ariadne",
 			Pronouns: sharedpronouns.ToProto("she/her"),
@@ -201,7 +202,7 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenParticipantUpdate
 		projection.Applier{},
 		participantStore,
 		characterStore,
-		&gametest.FakeSocialClient{Profile: &socialv1.UserProfile{
+		&testclients.FakeSocialClient{Profile: &socialv1.UserProfile{
 			UserId:        "user-1",
 			AvatarSetId:   "avatar-set-1",
 			AvatarAssetId: "avatar-asset-1",

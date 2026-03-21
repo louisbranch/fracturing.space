@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
@@ -19,17 +18,18 @@ type CampaignAIOrchestrationService struct {
 	app interactiontransport.AIOrchestrationApplication
 }
 
-func NewCampaignAIOrchestrationService(stores Stores) *CampaignAIOrchestrationService {
-	return newCampaignAIOrchestrationServiceWithDependencies(stores, time.Now, id.NewID)
+// NewCampaignAIOrchestrationService creates the internal AI GM turn
+// orchestration service from explicit capability-owned dependencies.
+func NewCampaignAIOrchestrationService(deps CampaignAIOrchestrationDeps) *CampaignAIOrchestrationService {
+	return newCampaignAIOrchestrationServiceWithDependencies(deps, id.NewID)
 }
 
 func newCampaignAIOrchestrationServiceWithDependencies(
-	stores Stores,
-	_ func() time.Time,
+	deps CampaignAIOrchestrationDeps,
 	idGenerator func() (string, error),
 ) *CampaignAIOrchestrationService {
 	return &CampaignAIOrchestrationService{
-		app: newCampaignAIOrchestrationApplicationWithDependencies(stores, idGenerator),
+		app: newCampaignAIOrchestrationApplicationWithDependencies(deps, idGenerator),
 	}
 }
 

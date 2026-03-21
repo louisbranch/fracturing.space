@@ -16,9 +16,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,10 +31,10 @@ type Handler struct {
 }
 
 type gmMoveResolution struct {
-	target                  daggerheart.GMMoveTarget
+	target                  daggerheartpayload.GMMoveTarget
 	opensGMConsequence      bool
 	spotlightAdversary      *projectionstore.DaggerheartAdversary
-	adversaryFeaturePayload *daggerheart.AdversaryFeatureApplyPayload
+	adversaryFeaturePayload *daggerheartpayload.AdversaryFeatureApplyPayload
 }
 
 // NewHandler builds a Daggerheart GM-move transport handler from explicit
@@ -103,14 +104,14 @@ func (h *Handler) ApplyGmMove(ctx context.Context, in *pb.DaggerheartApplyGmMove
 		gmFearAfter = snap.GMFear
 	}
 
-	before, after, err := daggerheart.ApplyGMFearSpend(gmFearBefore, fearSpent)
+	before, after, err := rules.ApplyGMFearSpend(gmFearBefore, fearSpent)
 	if err != nil {
 		return Result{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	gmFearBefore = before
 	gmFearAfter = after
 
-	payloadJSON, err := json.Marshal(daggerheart.GMMoveApplyPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.GMMoveApplyPayload{
 		Target:    resolution.target,
 		FearSpent: fearSpent,
 	})
@@ -215,37 +216,37 @@ func (h *Handler) gmConsequenceDependencies() gmconsequence.Dependencies {
 	}
 }
 
-func gmMoveKindFromProto(kind pb.DaggerheartGmMoveKind) (daggerheart.GMMoveKind, error) {
+func gmMoveKindFromProto(kind pb.DaggerheartGmMoveKind) (rules.GMMoveKind, error) {
 	switch kind {
 	case pb.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_INTERRUPT_AND_MOVE:
-		return daggerheart.GMMoveKindInterruptAndMove, nil
+		return rules.GMMoveKindInterruptAndMove, nil
 	case pb.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE:
-		return daggerheart.GMMoveKindAdditionalMove, nil
+		return rules.GMMoveKindAdditionalMove, nil
 	default:
-		return daggerheart.GMMoveKindUnspecified, status.Error(codes.InvalidArgument, "gm move kind is required")
+		return rules.GMMoveKindUnspecified, status.Error(codes.InvalidArgument, "gm move kind is required")
 	}
 }
 
-func gmMoveShapeFromProto(shape pb.DaggerheartGmMoveShape) (daggerheart.GMMoveShape, error) {
+func gmMoveShapeFromProto(shape pb.DaggerheartGmMoveShape) (rules.GMMoveShape, error) {
 	switch shape {
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHOW_WORLD_REACTION:
-		return daggerheart.GMMoveShapeShowWorldReaction, nil
+		return rules.GMMoveShapeShowWorldReaction, nil
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_REVEAL_DANGER:
-		return daggerheart.GMMoveShapeRevealDanger, nil
+		return rules.GMMoveShapeRevealDanger, nil
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_FORCE_SPLIT:
-		return daggerheart.GMMoveShapeForceSplit, nil
+		return rules.GMMoveShapeForceSplit, nil
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_MARK_STRESS:
-		return daggerheart.GMMoveShapeMarkStress, nil
+		return rules.GMMoveShapeMarkStress, nil
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT:
-		return daggerheart.GMMoveShapeShiftEnvironment, nil
+		return rules.GMMoveShapeShiftEnvironment, nil
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SPOTLIGHT_ADVERSARY:
-		return daggerheart.GMMoveShapeSpotlightAdversary, nil
+		return rules.GMMoveShapeSpotlightAdversary, nil
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_CAPTURE_IMPORTANT_TARGET:
-		return daggerheart.GMMoveShapeCaptureImportantTarget, nil
+		return rules.GMMoveShapeCaptureImportantTarget, nil
 	case pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_CUSTOM:
-		return daggerheart.GMMoveShapeCustom, nil
+		return rules.GMMoveShapeCustom, nil
 	default:
-		return daggerheart.GMMoveShapeUnspecified, status.Error(codes.InvalidArgument, "gm move shape is required")
+		return rules.GMMoveShapeUnspecified, status.Error(codes.InvalidArgument, "gm move shape is required")
 	}
 }
 
@@ -261,19 +262,19 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 			return gmMoveResolution{}, err
 		}
 		description := strings.TrimSpace(target.DirectMove.GetDescription())
-		if shape == daggerheart.GMMoveShapeCustom && description == "" {
+		if shape == rules.GMMoveShapeCustom && description == "" {
 			return gmMoveResolution{}, status.Error(codes.InvalidArgument, "gm move description is required for custom shape")
 		}
 		resolution := gmMoveResolution{
-			target: daggerheart.GMMoveTarget{
-				Type:        daggerheart.GMMoveTargetTypeDirectMove,
+			target: daggerheartpayload.GMMoveTarget{
+				Type:        rules.GMMoveTargetTypeDirectMove,
 				Kind:        kind,
 				Shape:       shape,
 				Description: description,
 			},
-			opensGMConsequence: kind == daggerheart.GMMoveKindInterruptAndMove,
+			opensGMConsequence: kind == rules.GMMoveKindInterruptAndMove,
 		}
-		if shape == daggerheart.GMMoveShapeSpotlightAdversary {
+		if shape == rules.GMMoveShapeSpotlightAdversary {
 			adversaryID, err := validate.RequiredID(target.DirectMove.GetAdversaryId(), "adversary_id")
 			if err != nil {
 				return gmMoveResolution{}, err
@@ -313,8 +314,8 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 		if int(in.GetFearSpent()) != feature.Cost {
 			return gmMoveResolution{}, status.Errorf(codes.InvalidArgument, "fear_spent must equal adversary feature cost %d", feature.Cost)
 		}
-		resolution := gmMoveResolution{target: daggerheart.GMMoveTarget{
-			Type:        daggerheart.GMMoveTargetTypeAdversaryFeature,
+		resolution := gmMoveResolution{target: daggerheartpayload.GMMoveTarget{
+			Type:        rules.GMMoveTargetTypeAdversaryFeature,
 			AdversaryID: ids.AdversaryID(adversaryID),
 			FeatureID:   featureID,
 			Description: strings.TrimSpace(target.AdversaryFeature.GetDescription()),
@@ -343,8 +344,8 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 		if _, ok := findEnvironmentFeature(env, featureID); !ok {
 			return gmMoveResolution{}, status.Errorf(codes.InvalidArgument, "environment feature %q was not found on environment %q", featureID, environmentEntity.EnvironmentID)
 		}
-		return gmMoveResolution{target: daggerheart.GMMoveTarget{
-			Type:                daggerheart.GMMoveTargetTypeEnvironmentFeature,
+		return gmMoveResolution{target: daggerheartpayload.GMMoveTarget{
+			Type:                rules.GMMoveTargetTypeEnvironmentFeature,
 			EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
 			EnvironmentID:       environmentEntity.EnvironmentID,
 			FeatureID:           featureID,
@@ -374,19 +375,19 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 		if in.GetFearSpent() != 1 {
 			return gmMoveResolution{}, status.Error(codes.InvalidArgument, "adversary experience spends must spend exactly 1 fear")
 		}
-		return gmMoveResolution{target: daggerheart.GMMoveTarget{
-			Type:           daggerheart.GMMoveTargetTypeAdversaryExperience,
+		return gmMoveResolution{target: daggerheartpayload.GMMoveTarget{
+			Type:           rules.GMMoveTargetTypeAdversaryExperience,
 			AdversaryID:    ids.AdversaryID(adversaryID),
 			ExperienceName: experienceName,
 			Description:    strings.TrimSpace(target.AdversaryExperience.GetDescription()),
-		}, adversaryFeaturePayload: &daggerheart.AdversaryFeatureApplyPayload{
+		}, adversaryFeaturePayload: &daggerheartpayload.AdversaryFeatureApplyPayload{
 			ActorAdversaryID:        ids.AdversaryID(adversaryID),
 			AdversaryID:             ids.AdversaryID(adversaryID),
 			FeatureID:               "experience:" + experienceName,
 			FeatureStatesBefore:     toBridgeAdversaryFeatureStates(adversary.FeatureStates),
 			FeatureStatesAfter:      toBridgeAdversaryFeatureStates(adversary.FeatureStates),
 			PendingExperienceBefore: toBridgeAdversaryPendingExperience(adversary.PendingExperience),
-			PendingExperienceAfter: &daggerheart.AdversaryPendingExperience{
+			PendingExperienceAfter: &rules.AdversaryPendingExperience{
 				Name:     experience.Name,
 				Modifier: experience.Modifier,
 			},
@@ -433,7 +434,7 @@ func (h *Handler) validateAdversarySpotlight(ctx context.Context, campaignID, se
 	if gateOpen && strings.TrimSpace(adversary.SpotlightGateID) == gate.GateID {
 		nextCount = adversary.SpotlightCount + 1
 	}
-	if nextCount > daggerheart.AdversarySpotlightCap(entry) {
+	if nextCount > rules.AdversarySpotlightCap(entry) {
 		return status.Errorf(codes.FailedPrecondition, "adversary spotlight cap reached for gate %s", gate.GateID)
 	}
 	return nil
@@ -444,7 +445,7 @@ func (h *Handler) recordAdversarySpotlight(ctx context.Context, campaignID, sess
 	if strings.TrimSpace(adversary.SpotlightGateID) == strings.TrimSpace(gateID) {
 		nextCount = adversary.SpotlightCount + 1
 	}
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryUpdatePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryUpdatePayload{
 		AdversaryID:      ids.AdversaryID(adversary.AdversaryID),
 		AdversaryEntryID: adversary.AdversaryEntryID,
 		Name:             adversary.Name,
@@ -609,13 +610,13 @@ func findAdversaryExperience(entry contentstore.DaggerheartAdversaryEntry, exper
 	return contentstore.DaggerheartAdversaryExperience{}, false
 }
 
-func stagedFearFeaturePayload(adversary projectionstore.DaggerheartAdversary, feature contentstore.DaggerheartAdversaryFeature, focusedTargetID string) *daggerheart.AdversaryFeatureApplyPayload {
-	automationStatus, rule := daggerheart.ResolveAdversaryFeatureRuntime(feature)
-	if automationStatus != daggerheart.AdversaryFeatureAutomationStatusSupported || rule == nil {
+func stagedFearFeaturePayload(adversary projectionstore.DaggerheartAdversary, feature contentstore.DaggerheartAdversaryFeature, focusedTargetID string) *daggerheartpayload.AdversaryFeatureApplyPayload {
+	automationStatus, rule := rules.ResolveAdversaryFeatureRuntime(feature)
+	if automationStatus != rules.AdversaryFeatureAutomationStatusSupported || rule == nil {
 		return nil
 	}
 	switch rule.Kind {
-	case daggerheart.AdversaryFeatureRuleKindHiddenUntilNextAttack, daggerheart.AdversaryFeatureRuleKindDifficultyBonusWhileActive, daggerheart.AdversaryFeatureRuleKindRetaliatoryDamageOnCloseHit, daggerheart.AdversaryFeatureRuleKindFocusTargetDisadvantage:
+	case rules.AdversaryFeatureRuleKindHiddenUntilNextAttack, rules.AdversaryFeatureRuleKindDifficultyBonusWhileActive, rules.AdversaryFeatureRuleKindRetaliatoryDamageOnCloseHit, rules.AdversaryFeatureRuleKindFocusTargetDisadvantage:
 	default:
 		return nil
 	}
@@ -624,7 +625,7 @@ func stagedFearFeaturePayload(adversary projectionstore.DaggerheartAdversary, fe
 		Status:          stageStatusForRule(rule),
 		FocusedTargetID: strings.TrimSpace(focusedTargetID),
 	})
-	return &daggerheart.AdversaryFeatureApplyPayload{
+	return &daggerheartpayload.AdversaryFeatureApplyPayload{
 		ActorAdversaryID:        ids.AdversaryID(adversary.AdversaryID),
 		AdversaryID:             ids.AdversaryID(adversary.AdversaryID),
 		FeatureID:               strings.TrimSpace(feature.ID),
@@ -635,9 +636,9 @@ func stagedFearFeaturePayload(adversary projectionstore.DaggerheartAdversary, fe
 	}
 }
 
-func stageStatusForRule(rule *daggerheart.AdversaryFeatureRule) string {
+func stageStatusForRule(rule *rules.AdversaryFeatureRule) string {
 	switch rule.Kind {
-	case daggerheart.AdversaryFeatureRuleKindRetaliatoryDamageOnCloseHit:
+	case rules.AdversaryFeatureRuleKindRetaliatoryDamageOnCloseHit:
 		return "ready"
 	default:
 		return "active"
@@ -661,10 +662,10 @@ func upsertFeatureState(current []projectionstore.DaggerheartAdversaryFeatureSta
 	return updated
 }
 
-func toBridgeAdversaryFeatureStates(in []projectionstore.DaggerheartAdversaryFeatureState) []daggerheart.AdversaryFeatureState {
-	out := make([]daggerheart.AdversaryFeatureState, 0, len(in))
+func toBridgeAdversaryFeatureStates(in []projectionstore.DaggerheartAdversaryFeatureState) []rules.AdversaryFeatureState {
+	out := make([]rules.AdversaryFeatureState, 0, len(in))
 	for _, state := range in {
-		out = append(out, daggerheart.AdversaryFeatureState{
+		out = append(out, rules.AdversaryFeatureState{
 			FeatureID:       strings.TrimSpace(state.FeatureID),
 			Status:          strings.TrimSpace(state.Status),
 			FocusedTargetID: strings.TrimSpace(state.FocusedTargetID),
@@ -673,11 +674,11 @@ func toBridgeAdversaryFeatureStates(in []projectionstore.DaggerheartAdversaryFea
 	return out
 }
 
-func toBridgeAdversaryPendingExperience(in *projectionstore.DaggerheartAdversaryPendingExperience) *daggerheart.AdversaryPendingExperience {
+func toBridgeAdversaryPendingExperience(in *projectionstore.DaggerheartAdversaryPendingExperience) *rules.AdversaryPendingExperience {
 	if in == nil {
 		return nil
 	}
-	return &daggerheart.AdversaryPendingExperience{
+	return &rules.AdversaryPendingExperience{
 		Name:     strings.TrimSpace(in.Name),
 		Modifier: in.Modifier,
 	}

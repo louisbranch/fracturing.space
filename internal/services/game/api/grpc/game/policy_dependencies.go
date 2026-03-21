@@ -9,16 +9,8 @@ import (
 )
 
 // policyDependencies keeps write-path auth scoped to the stores actually needed
-// for capability enforcement instead of carrying the full Stores bundle.
+// for capability enforcement instead of carrying a root transport bag.
 type policyDependencies = gameauthz.PolicyDeps
-
-func newPolicyDependencies(stores Stores) policyDependencies {
-	return gameauthz.PolicyDeps{
-		Participant: stores.Participant,
-		Character:   stores.Character,
-		Audit:       stores.Audit,
-	}
-}
 
 func requirePolicyWithDependencies(
 	ctx context.Context,

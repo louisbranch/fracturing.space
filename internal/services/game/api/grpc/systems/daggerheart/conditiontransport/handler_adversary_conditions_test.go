@@ -8,8 +8,8 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,7 +26,7 @@ func TestHandlerApplyAdversaryConditionsSuccess(t *testing.T) {
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
 				SessionID:   "sess-1",
-				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: rules.ConditionHidden}},
 			}, nil
 		},
 	})
@@ -64,7 +64,7 @@ func TestHandlerApplyAdversaryConditionsRejectsSessionMismatch(t *testing.T) {
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
 				SessionID:   "sess-1",
-				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: rules.ConditionHidden}},
 			}, nil
 		},
 	})

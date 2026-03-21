@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	sqlitecoreprojection "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/coreprojection"
 	sqlitedaggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartcontent"
@@ -36,51 +35,6 @@ func NewWithAddr(addr string) (*Server, error) {
 // NewWithAddrContext creates a configured game server listening on the provided address.
 func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
 	return newServerBootstrap().NewWithAddr(ctx, addr)
-}
-
-func buildProjectionApplyOutboxApply(projectionStore storage.ProjectionApplyExactlyOnceStore, eventRegistry *event.Registry) (func(context.Context, event.Event) error, error) {
-	if projectionStore == nil {
-		return nil, nil
-	}
-	// Build a base adapter registry once at closure creation. Per-transaction
-	// callbacks rebind it with the transaction-scoped store so each adapter
-	// operates within the exactly-once transaction boundary.
-	baseAdapters, err := systemmanifest.AdapterRegistry(projectionStore)
-	if err != nil {
-		return nil, fmt.Errorf("build base adapter registry: %w", err)
-	}
-	return func(ctx context.Context, evt event.Event) error {
-		_, err := projectionStore.ApplyProjectionEventExactlyOnce(
-			ctx,
-			evt,
-			func(applyCtx context.Context, applyEvt event.Event, txStore storage.ProjectionApplyTxStore) error {
-				systemAdapters, err := systemmanifest.RebindAdapterRegistry(baseAdapters, txStore)
-				if err != nil {
-					return fmt.Errorf("rebind projection system adapter registry: %w", err)
-				}
-				txApplier := projection.Applier{
-					Events:           eventRegistry,
-					Campaign:         txStore,
-					Character:        txStore,
-					CampaignFork:     txStore,
-					ClaimIndex:       txStore,
-					Invite:           txStore,
-					Participant:      txStore,
-					Session:          txStore,
-					SessionGate:      txStore,
-					SessionSpotlight: txStore,
-					Scene:            txStore,
-					SceneCharacter:   txStore,
-					SceneGate:        txStore,
-					SceneSpotlight:   txStore,
-					Adapters:         systemAdapters,
-					Watermarks:       txStore,
-				}
-				return txApplier.Apply(applyCtx, applyEvt)
-			},
-		)
-		return err
-	}, nil
 }
 
 func buildSystemRegistry() (*bridge.MetadataRegistry, error) {
@@ -111,7 +65,7 @@ func openStorageBundle(ctx context.Context, srvEnv serverEnv, eventRegistry *eve
 	if err != nil {
 		return nil, err
 	}
-	projStore, err := openProjectionStore(srvEnv.ProjectionsDBPath)
+	projStore, systemStores, err := openProjectionStore(srvEnv.ProjectionsDBPath)
 	if err != nil {
 		_ = eventStore.Close()
 		return nil, err
@@ -123,9 +77,10 @@ func openStorageBundle(ctx context.Context, srvEnv serverEnv, eventRegistry *eve
 		return nil, err
 	}
 	return &storageBundle{
-		events:      eventStore,
-		projections: projStore,
-		content:     contentStore,
+		events:       eventStore,
+		projections:  projStore,
+		systemStores: systemStores,
+		content:      contentStore,
 	}, nil
 }
 
@@ -155,15 +110,15 @@ func openEventStore(ctx context.Context, path string, projectionApplyOutboxEnabl
 }
 
 // openProjectionStore opens the materialized views database.
-func openProjectionStore(path string) (projectionBackend, error) {
+func openProjectionStore(path string) (projectionBackend, systemmanifest.ProjectionStores, error) {
 	if err := ensureDir(path); err != nil {
-		return nil, err
+		return nil, systemmanifest.ProjectionStores{}, err
 	}
 	store, err := sqlitecoreprojection.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open projections store: %w", err)
+		return nil, systemmanifest.ProjectionStores{}, fmt.Errorf("open projections store: %w", err)
 	}
-	return store, nil
+	return store, store.ProjectionStores(), nil
 }
 
 // openContentStore opens the content reference database.

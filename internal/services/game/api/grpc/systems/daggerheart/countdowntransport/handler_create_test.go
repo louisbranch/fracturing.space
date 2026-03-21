@@ -7,8 +7,8 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -137,10 +137,10 @@ func TestHandlerCreateCountdownSuccess(t *testing.T) {
 				CampaignID:  "camp-1",
 				CountdownID: "generated-id",
 				Name:        "Clock",
-				Kind:        daggerheart.CountdownKindProgress,
+				Kind:        rules.CountdownKindProgress,
 				Current:     0,
 				Max:         4,
-				Direction:   daggerheart.CountdownDirectionIncrease,
+				Direction:   rules.CountdownDirectionIncrease,
 			}
 			return nil
 		},

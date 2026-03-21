@@ -10,8 +10,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
-type daggerheartProjectionStoreProvider interface {
-	DaggerheartProjectionStore() projectionstore.Store
+// ProjectionStores groups the built-in system projection stores available for
+// startup-time adapter registration and replay-time rebinding.
+type ProjectionStores struct {
+	Daggerheart projectionstore.Store
+}
+
+// ProjectionStoresProvider exposes a built-in system projection-store bundle
+// from a concrete store source such as the SQLite root projections store.
+type ProjectionStoresProvider interface {
+	ProjectionStores() ProjectionStores
 }
 
 // SystemDescriptor declares one built-in system and how each startup surface should
@@ -22,11 +30,10 @@ type SystemDescriptor struct {
 	Version             string
 	BuildModule         func() domainsystem.Module
 	BuildMetadataSystem func() domainbridge.GameSystem
-	// BuildAdapter receives the concrete store source available at startup or
-	// replay time. Each system owns any extraction logic needed to obtain its
-	// projection backend from that source. Return nil to skip adapter
+	// BuildAdapter receives the explicit built-in system projection stores
+	// available at startup or replay time. Return nil to skip adapter
 	// registration when the required store is absent.
-	BuildAdapter func(storeSource any) domainbridge.Adapter
+	BuildAdapter func(ProjectionStores) domainbridge.Adapter
 }
 
 var builtInSystems = []SystemDescriptor{
@@ -35,24 +42,26 @@ var builtInSystems = []SystemDescriptor{
 		Version:             strings.TrimSpace(daggerheart.SystemVersion),
 		BuildModule:         func() domainsystem.Module { return daggerheart.NewModule() },
 		BuildMetadataSystem: func() domainbridge.GameSystem { return daggerheart.NewRegistrySystem() },
-		BuildAdapter:        daggerheartAdapterFromStoreSource,
+		BuildAdapter:        daggerheartAdapterFromStores,
 	},
 }
 
-func daggerheartAdapterFromStoreSource(storeSource any) domainbridge.Adapter {
-	store := daggerheartProjectionStoreFromSource(storeSource)
+func daggerheartAdapterFromStores(stores ProjectionStores) domainbridge.Adapter {
+	store := stores.Daggerheart
 	if store == nil {
 		return nil
 	}
 	return daggerheart.NewAdapter(store)
 }
 
-func daggerheartProjectionStoreFromSource(storeSource any) projectionstore.Store {
-	if provider, ok := storeSource.(daggerheartProjectionStoreProvider); ok {
-		return provider.DaggerheartProjectionStore()
+// ProjectionStoresFromSource recovers the built-in system projection bundle
+// from a concrete source when the caller only has the source dynamically.
+func ProjectionStoresFromSource(storeSource any) ProjectionStores {
+	if provider, ok := storeSource.(ProjectionStoresProvider); ok {
+		return provider.ProjectionStores()
 	}
 	store, _ := storeSource.(projectionstore.Store)
-	return store
+	return ProjectionStores{Daggerheart: store}
 }
 
 // ValidateSystemDescriptors verifies that every built-in system descriptor
@@ -116,8 +125,8 @@ func MetadataSystems() []domainbridge.GameSystem {
 // AdapterRegistry returns a registry populated with built-in system adapters.
 // It returns an error if any adapter registration fails, turning silent runtime
 // failures into startup failures.
-func AdapterRegistry(storeSource any) (*domainbridge.AdapterRegistry, error) {
-	return buildAdapterRegistry(storeSource)
+func AdapterRegistry(stores ProjectionStores) (*domainbridge.AdapterRegistry, error) {
+	return buildAdapterRegistry(stores)
 }
 
 // RebindAdapterRegistry creates a new adapter registry with swapped stores.
@@ -126,21 +135,21 @@ func AdapterRegistry(storeSource any) (*domainbridge.AdapterRegistry, error) {
 // accepted (and validated as non-nil) to make call sites explicit about the
 // intended pattern: build a base registry once at startup, then rebind
 // per-transaction with transaction-scoped stores.
-func RebindAdapterRegistry(base *domainbridge.AdapterRegistry, storeSource any) (*domainbridge.AdapterRegistry, error) {
+func RebindAdapterRegistry(base *domainbridge.AdapterRegistry, stores ProjectionStores) (*domainbridge.AdapterRegistry, error) {
 	if base == nil {
 		return nil, fmt.Errorf("base adapter registry is required for rebinding")
 	}
-	return buildAdapterRegistry(storeSource)
+	return buildAdapterRegistry(stores)
 }
 
 // buildAdapterRegistry constructs an adapter registry from system descriptors.
-func buildAdapterRegistry(storeSource any) (*domainbridge.AdapterRegistry, error) {
+func buildAdapterRegistry(stores ProjectionStores) (*domainbridge.AdapterRegistry, error) {
 	registry := domainbridge.NewAdapterRegistry()
 	for _, descriptor := range SystemDescriptors() {
 		if descriptor.BuildAdapter == nil {
 			continue
 		}
-		adapter := descriptor.BuildAdapter(storeSource)
+		adapter := descriptor.BuildAdapter(stores)
 		if adapter == nil {
 			continue
 		}

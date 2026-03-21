@@ -28,7 +28,7 @@
       "description": "Daggerheart system module, fold, and projection adapter path."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules",
       "floor": 79.0,
       "description": "Pure Daggerheart game-rule types and functions extracted from root."
     },

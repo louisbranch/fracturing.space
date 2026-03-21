@@ -21,7 +21,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -73,10 +72,6 @@ type envConfig struct {
 	EventsDBPath      string        `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
 	ProjectionsDBPath string        `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
 	Timeout           time.Duration `env:"FRACTURING_SPACE_MAINTENANCE_TIMEOUT" envDefault:"10m"`
-}
-
-type daggerheartProjectionStoreProvider interface {
-	DaggerheartProjectionStore() projectionstore.Store
 }
 
 // ParseConfig parses flags into a Config.
@@ -140,14 +135,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}
 	cfg.Command = command
 	return cfg, nil
-}
-
-func daggerheartProjectionStoreFromSource(storeSource any) projectionstore.Store {
-	if provider, ok := storeSource.(daggerheartProjectionStoreProvider); ok {
-		return provider.DaggerheartProjectionStore()
-	}
-	store, _ := storeSource.(projectionstore.Store)
-	return store
 }
 
 func defaultConfig() (Config, error) {
@@ -602,7 +589,7 @@ func runCampaign(ctx context.Context, eventStore storage.EventStore, projStore s
 		result.ExitCode = 1
 		return result
 	}
-	systemAdapters, err := systemmanifest.AdapterRegistry(projStore)
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStoresFromSource(projStore))
 	if err != nil {
 		result.Error = fmt.Sprintf("build projection adapters: %v", err)
 		result.ExitCode = 1
@@ -1156,7 +1143,7 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 		return report, warnings, fmt.Errorf("seed campaign: %w", err)
 	}
 
-	systemAdapters, err := systemmanifest.AdapterRegistry(scratch)
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStoresFromSource(scratch))
 	if err != nil {
 		return report, warnings, fmt.Errorf("build projection adapters: %w", err)
 	}
@@ -1170,8 +1157,8 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 	}
 	report.LastSeq = lastSeq
 
-	sourceDH := daggerheartProjectionStoreFromSource(source)
-	scratchDH := daggerheartProjectionStoreFromSource(scratch)
+	sourceDH := systemmanifest.ProjectionStoresFromSource(source).Daggerheart
+	scratchDH := systemmanifest.ProjectionStoresFromSource(scratch).Daggerheart
 	if sourceDH == nil || scratchDH == nil {
 		return report, warnings, nil
 	}
@@ -1285,7 +1272,7 @@ func runGapRepair(ctx context.Context, eventStore storage.EventStore, projStore 
 		errOut = io.Discard
 	}
 
-	systemAdapters, err := systemmanifest.AdapterRegistry(projStore)
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStoresFromSource(projStore))
 	if err != nil {
 		return fmt.Errorf("build projection adapters: %w", err)
 	}

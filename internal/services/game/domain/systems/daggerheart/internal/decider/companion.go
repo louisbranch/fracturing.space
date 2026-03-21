@@ -7,17 +7,17 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func decideCompanionExperienceBegin(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideCompanionExperienceBegin(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeCompanionExperienceBegun, "character",
 		func(p *payload.CompanionExperienceBeginPayload) string {
 			return strings.TrimSpace(p.CharacterID.String())
 		},
-		func(_ snapstate.SnapshotState, _ bool, p *payload.CompanionExperienceBeginPayload, _ func() time.Time) *command.Rejection {
+		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.CompanionExperienceBeginPayload, _ func() time.Time) *command.Rejection {
 			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.ExperienceID = strings.TrimSpace(p.ExperienceID)
@@ -36,7 +36,7 @@ func decideCompanionExperienceBegin(snapshotState snapstate.SnapshotState, hasSn
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.CompanionExperienceBeginPayload) payload.CompanionExperienceBegunPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CompanionExperienceBeginPayload) payload.CompanionExperienceBegunPayload {
 			return payload.CompanionExperienceBegunPayload{
 				CharacterID:    p.CharacterID,
 				ExperienceID:   p.ExperienceID,
@@ -47,11 +47,11 @@ func decideCompanionExperienceBegin(snapshotState snapstate.SnapshotState, hasSn
 		now)
 }
 
-func decideCompanionReturn(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideCompanionReturn(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeCompanionReturned, "character",
 		func(p *payload.CompanionReturnPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(_ snapstate.SnapshotState, _ bool, p *payload.CompanionReturnPayload, _ func() time.Time) *command.Rejection {
+		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.CompanionReturnPayload, _ func() time.Time) *command.Rejection {
 			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.Resolution = strings.TrimSpace(p.Resolution)
@@ -72,7 +72,7 @@ func decideCompanionReturn(snapshotState snapstate.SnapshotState, hasSnapshot bo
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.CompanionReturnPayload) payload.CompanionReturnedPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CompanionReturnPayload) payload.CompanionReturnedPayload {
 			return payload.CompanionReturnedPayload{
 				CharacterID:    p.CharacterID,
 				Resolution:     p.Resolution,
@@ -84,7 +84,7 @@ func decideCompanionReturn(snapshotState snapstate.SnapshotState, hasSnapshot bo
 		now)
 }
 
-func companionStatePtrValue(value *snapstate.CharacterCompanionState) *snapstate.CharacterCompanionState {
+func companionStatePtrValue(value *daggerheartstate.CharacterCompanionState) *daggerheartstate.CharacterCompanionState {
 	if value == nil {
 		return nil
 	}

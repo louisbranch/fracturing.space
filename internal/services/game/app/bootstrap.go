@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
@@ -18,7 +17,6 @@ import (
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // serverBootstrap configures each startup phase for the game server.
@@ -41,7 +39,7 @@ type serverBootstrapConfig struct {
 	loadEnv                     func() (serverEnv, error)
 	listen                      func(network, address string) (net.Listener, error)
 	openStorageBundle           storageBundleOpener
-	configureDomain             func(serverEnv, *gamegrpc.Stores, engine.Registries) error
+	configureDomain             func(serverEnv, *gamegrpc.InfrastructureStores, *gamegrpc.RuntimeStores, engine.Registries) error
 	systemsBootstrapper         systemsBootstrapper
 	dependencyDialer            dependencyDialer
 	transportBootstrapper       transportBootstrapper
@@ -155,19 +153,19 @@ func (d managedConnDependencyDialer) Dial(
 // projectionRuntimeConfigurer owns startup-time projection worker and
 // inline-apply runtime configuration.
 type projectionRuntimeConfigurer interface {
-	Configure(serverEnv, *gamegrpc.Stores, storage.ProjectionApplyExactlyOnceStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
+	Configure(serverEnv, *gamegrpc.RuntimeStores, projection.ExactlyOnceStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
 }
 
 type defaultProjectionRuntimeConfigurer struct {
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
 	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
-	buildProjectionApplyOutboxApply func(storage.ProjectionApplyExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error)
+	buildProjectionApplyOutboxApply func(projection.ExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error)
 }
 
 func (c defaultProjectionRuntimeConfigurer) Configure(
 	srvEnv serverEnv,
-	stores *gamegrpc.Stores,
-	projectionStore storage.ProjectionApplyExactlyOnceStore,
+	runtimeStores *gamegrpc.RuntimeStores,
+	projectionStore projection.ExactlyOnceStore,
 	registries engine.Registries,
 	adapters *bridge.AdapterRegistry,
 ) (projectionRuntimeState, error) {
@@ -175,8 +173,8 @@ func (c defaultProjectionRuntimeConfigurer) Configure(
 	if err != nil {
 		return projectionRuntimeState{}, err
 	}
-	if stores != nil && stores.Write.Runtime != nil {
-		stores.Write.Runtime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
+	if runtimeStores != nil && runtimeStores.Write.Runtime != nil {
+		runtimeStores.Write.Runtime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
 	}
 	slog.Info("projection apply mode resolved", "mode", projectionApplyMode)
 
@@ -184,8 +182,8 @@ func (c defaultProjectionRuntimeConfigurer) Configure(
 	if err != nil {
 		return projectionRuntimeState{}, err
 	}
-	if stores != nil && stores.Write.Runtime != nil {
-		stores.Write.Runtime.SetIntentFilter(projectionRegistries)
+	if runtimeStores != nil && runtimeStores.Write.Runtime != nil {
+		runtimeStores.Write.Runtime.SetIntentFilter(projectionRegistries)
 	}
 
 	applyOutbox, err := c.buildProjectionApplyOutboxApply(projectionStore, projectionRegistries)
@@ -247,7 +245,7 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 		cfg.projectionRuntimeConfigurer = defaultProjectionRuntimeConfigurer{
 			resolveProjectionApplyModes:     resolveProjectionApplyOutboxModes,
 			buildProjectionRegistries:       buildProjectionRegistries,
-			buildProjectionApplyOutboxApply: buildProjectionApplyOutboxApply,
+			buildProjectionApplyOutboxApply: projection.BuildExactlyOnceApply,
 		}
 	}
 	return cfg
@@ -263,9 +261,13 @@ func startupContext(ctx context.Context, timeout time.Duration) (context.Context
 	return ctx, func() {}
 }
 
-type configuredStores struct {
-	stores  gamegrpc.Stores
-	applier projection.Applier
+type configuredDomainState struct {
+	projectionStores     gamegrpc.ProjectionStores
+	systemStores         gamegrpc.SystemStores
+	infrastructureStores gamegrpc.InfrastructureStores
+	contentStores        gamegrpc.ContentStores
+	runtimeStores        gamegrpc.RuntimeStores
+	applier              projection.Applier
 }
 
 type projectionRuntimeState struct {
@@ -284,29 +286,49 @@ func (b *serverBootstrap) configureStoresAndApplier(
 	srvEnv serverEnv,
 	bundle *storageBundle,
 	registries engine.Registries,
-) (configuredStores, error) {
+) (configuredDomainState, error) {
 	writeRuntime := gamegrpc.NewWriteRuntime()
-	stores := gamegrpc.NewStoresFromProjection(gamegrpc.StoresFromProjectionConfig{
-		ProjectionStore: bundle.projections,
-		SystemStores:    gamegrpc.SystemStores{Daggerheart: bundle.projections.DaggerheartProjectionStore()},
-		EventStore:      bundle.events,
-		ContentStore:    bundle.content,
-		WriteRuntime:    writeRuntime,
-		Events:          registries.Events,
+	storeGroups := buildStoreGroupsFromSources(storesConstructionSources{
+		projectionStore: bundle.projections,
+		systemStores:    bundle.systemStores,
+		eventStore:      bundle.events,
+		auditStore:      bundle.events,
+		contentStore:    bundle.content,
+		runtimeConfig: gamegrpc.StoresRuntimeConfig{
+			WriteRuntime: writeRuntime,
+		},
 	})
-	if err := b.config.configureDomain(srvEnv, &stores, registries); err != nil {
-		return configuredStores{}, err
+	if err := b.config.configureDomain(srvEnv, &storeGroups.infrastructure, &storeGroups.runtime, registries); err != nil {
+		return configuredDomainState{}, err
 	}
-	if err := stores.Validate(); err != nil {
-		return configuredStores{}, err
+	if err := gamegrpc.ValidateRootStoreGroups(
+		storeGroups.projection,
+		storeGroups.system,
+		storeGroups.infrastructure,
+		storeGroups.content,
+		storeGroups.runtime,
+	); err != nil {
+		return configuredDomainState{}, err
 	}
-	applier, err := stores.TryApplier()
+	applier, err := buildApplierFromSources(applierConstructionSources{
+		projectionStore: bundle.projections,
+		systemStores:    storeGroups.system,
+		auditStore:      storeGroups.infrastructure.Audit,
+		events:          registries.Events,
+	})
 	if err != nil {
-		return configuredStores{}, err
+		return configuredDomainState{}, err
 	}
-	return configuredStores{
-		stores:  stores,
-		applier: applier,
+	if err := applier.ValidateStorePreconditions(); err != nil {
+		return configuredDomainState{}, err
+	}
+	return configuredDomainState{
+		projectionStores:     storeGroups.projection,
+		systemStores:         storeGroups.system,
+		infrastructureStores: storeGroups.infrastructure,
+		contentStores:        storeGroups.content,
+		runtimeStores:        storeGroups.runtime,
+		applier:              applier,
 	}, nil
 }
 
@@ -333,9 +355,9 @@ func nilCatalogReadinessStore(bundle *storageBundle) contentstore.DaggerheartCat
 
 // NewWithAddr builds a game server using named startup phases.
 func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server *Server, err error) {
-	srvEnv, err := b.config.loadEnv()
+	srvEnv, err := b.loadEnvPhase()
 	if err != nil {
-		return nil, wrapStartupError(startupPhaseRegistries, "load server env", err)
+		return nil, err
 	}
 	startupCtx, startupCancel := startupContext(ctx, srvEnv.StartupTimeout)
 	defer startupCancel()
@@ -346,99 +368,72 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		}
 	}()
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := b.buildRegistriesPhase()
 	if err != nil {
-		return nil, wrapStartupError(startupPhaseRegistries, "build registries", err)
+		return nil, err
 	}
 
-	listener, err := b.config.listen("tcp", addr)
+	listener, err := b.openListenerPhase(addr, &rollback)
 	if err != nil {
-		return nil, wrapStartupError(startupPhaseNetwork, fmt.Sprintf("listen on %s", addr), err)
+		return nil, err
 	}
-	rollback.add(func() {
-		_ = listener.Close()
+
+	bundle, err := b.openStoragePhase(startupCtx, srvEnv, registries.Events, &rollback)
+	if err != nil {
+		return nil, err
+	}
+
+	domainState, err := b.configureStoresPhase(startupCtx, srvEnv, bundle, registries)
+	if err != nil {
+		return nil, err
+	}
+
+	systemState, err := b.bootstrapSystemsPhase(startupCtx, bundle, registries, domainState.applier)
+	if err != nil {
+		return nil, err
+	}
+
+	reporter, catalogState := b.prepareStatusPhase(startupCtx, bundle)
+
+	deps, err := b.dialDependenciesPhase(startupCtx, srvEnv, reporter, &rollback)
+	if err != nil {
+		return nil, err
+	}
+	attachDependencyClients(&domainState.contentStores, deps)
+	registration := buildRegistrationAssemblies(registrationAssemblySources{
+		bundle:          bundle,
+		projectionStore: bundle.projections,
+		contentStore:    bundle.content,
+		eventStore:      bundle.events,
+		domainState:     domainState,
+		authClient:      newAuthServiceClient(deps.auth.Conn()),
+		aiAgentClient:   newAIAgentServiceClient(deps.ai.Conn()),
+		systemRegistry:  systemState.systemRegistry,
 	})
 
-	bundle, err := b.config.openStorageBundle.Open(startupCtx, srvEnv, registries.Events)
-	if err != nil {
-		return nil, wrapStartupError(startupPhaseStorage, "open storage bundle", err)
-	}
-	rollback.add(func() {
-		bundle.Close()
-	})
-
-	storeState, err := b.configureStoresAndApplier(startupCtx, srvEnv, bundle, registries)
-	if err != nil {
-		return nil, wrapStartupError(startupPhaseDomain, "configure stores and applier", err)
-	}
-	stores := storeState.stores
-
-	systemState, err := b.config.systemsBootstrapper.Bootstrap(startupCtx, bundle, registries, storeState.applier)
-	if err != nil {
-		return nil, wrapStartupError(startupPhaseSystems, "bootstrap systems phase", err)
-	}
-
-	// Status reporter — starts with nil client; bound later when statusMc is ready.
-	reporter := platformstatus.NewReporter("game", nil)
-	reporter.Register(capabilityGameCampaignService, platformstatus.Operational)
-
-	catalogState := evaluateCatalogCapabilityState(startupCtx, nilCatalogReadinessStore(bundle))
-	applyCatalogCapabilityState(reporter, catalogState)
-
-	deps, err := b.config.dependencyDialer.Dial(startupCtx, srvEnv, reporter)
-	if err != nil {
-		return nil, wrapStartupError(startupPhaseDependencies, "dial dependencies", err)
-	}
-	rollback.add(func() {
-		closeManagedConn(deps.status, "status")
-		closeManagedConn(deps.ai, "ai")
-		closeManagedConn(deps.social, "social")
-		closeManagedConn(deps.auth, "auth")
-	})
-
-	// Build gRPC clients from managed connections — conn is always non-nil.
-	stores.Social = socialv1.NewSocialServiceClient(deps.social.Conn())
-
-	transportState, err := b.config.transportBootstrapper.Bootstrap(
+	transportState, err := b.bootstrapTransportPhase(
 		bundle,
 		srvEnv,
-		stores,
-		newAuthServiceClient(deps.auth.Conn()),
-		newAIAgentServiceClient(deps.ai.Conn()),
-		systemState.systemRegistry,
+		registration.daggerheart,
+		registration.campaign,
+		registration.session,
+		registration.infrastructure,
 	)
 	if err != nil {
-		return nil, wrapStartupError(startupPhaseTransport, "bootstrap transport phase", err)
+		return nil, err
 	}
 
-	projectionRuntime, err := b.config.projectionRuntimeConfigurer.Configure(
+	projectionRuntime, err := b.configureProjectionRuntimePhase(
 		srvEnv,
-		&stores,
+		&domainState.runtimeStores,
 		bundle.projections,
 		registries,
-		storeState.applier.Adapters,
+		domainState.applier.Adapters,
 	)
 	if err != nil {
-		return nil, wrapStartupError(startupPhaseRuntime, "configure projection runtime", err)
+		return nil, err
 	}
-
-	server = &Server{
-		listener:                                 listener,
-		grpcServer:                               transportState.grpcServer,
-		health:                                   transportState.healthServer,
-		stores:                                   bundle,
-		authMc:                                   deps.auth,
-		socialMc:                                 deps.social,
-		aiMc:                                     deps.ai,
-		statusMc:                                 deps.status,
-		statusBindDone:                           deps.statusBindDone,
-		statusBindCancel:                         deps.statusBindCancel,
-		projectionApplyOutboxWorkerEnabled:       projectionRuntime.enableApplyWorker,
-		projectionApplyOutboxApply:               projectionRuntime.applyOutbox,
-		projectionApplyOutboxShadowWorkerEnabled: projectionRuntime.enableShadowWorker,
-		statusReporter:                           reporter,
-		catalogReadyAtStartup:                    catalogState.Ready,
-	}
+	server = buildServerPhase(listener, bundle, deps, transportState, projectionRuntime, reporter, catalogState)
 	rollback.release()
 	return server, nil
 }

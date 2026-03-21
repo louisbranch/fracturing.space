@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 // ValidateStatModifierChangePayload validates a stat_modifier.change command payload.

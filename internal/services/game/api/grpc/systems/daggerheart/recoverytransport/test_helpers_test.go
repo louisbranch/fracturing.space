@@ -7,7 +7,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	gmetadata "google.golang.org/grpc/metadata"
@@ -100,7 +100,7 @@ func newTestHandler(deps Dependencies) *Handler {
 				"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Level: 1, HpMax: 5, StressMax: 3},
 			},
 			states: map[string]projectionstore.DaggerheartCharacterState{
-				"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Hp: 0, Hope: 1, HopeMax: 2, Stress: 2, Armor: 0, LifeState: daggerheart.LifeStateBlazeOfGlory},
+				"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Hp: 0, Hope: 1, HopeMax: 2, Stress: 2, Armor: 0, LifeState: mechanics.LifeStateBlazeOfGlory},
 			},
 		}
 	}

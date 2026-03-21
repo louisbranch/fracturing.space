@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -26,17 +27,25 @@ func TestEmitterNoopWhenNil(t *testing.T) {
 	}
 }
 
-func TestEmitterNoopWhenStoreNil(t *testing.T) {
-	emitter := &Emitter{}
+func TestEmitterNoopWhenPolicyDisabled(t *testing.T) {
+	emitter := NewEmitter(DisabledPolicy())
 	if err := emitter.Emit(context.Background(), storage.AuditEvent{}); err != nil {
 		t.Fatalf("expected nil error, got %v", err)
+	}
+}
+
+func TestEmitterEnabledWithoutStoreFails(t *testing.T) {
+	emitter := NewEmitter(EnabledPolicy(nil))
+	err := emitter.Emit(context.Background(), storage.AuditEvent{})
+	if !errors.Is(err, errEnabledAuditStoreRequired) {
+		t.Fatalf("emit error = %v, want %v", err, errEnabledAuditStoreRequired)
 	}
 }
 
 func TestEmitterAddsTimestamp(t *testing.T) {
 	store := &fakeAuditStore{}
 	clockTime := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
-	emitter := &Emitter{store: store, clock: func() time.Time { return clockTime }}
+	emitter := &Emitter{policy: EnabledPolicy(store), clock: func() time.Time { return clockTime }}
 
 	if err := emitter.Emit(context.Background(), storage.AuditEvent{EventName: "test"}); err != nil {
 		t.Fatalf("emit: %v", err)
@@ -56,7 +65,7 @@ func TestEmitterPreservesTimestamp(t *testing.T) {
 	store := &fakeAuditStore{}
 	clockTime := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	setTime := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
-	emitter := &Emitter{store: store, clock: func() time.Time { return clockTime }}
+	emitter := &Emitter{policy: EnabledPolicy(store), clock: func() time.Time { return clockTime }}
 
 	if err := emitter.Emit(context.Background(), storage.AuditEvent{EventName: "test", Timestamp: setTime}); err != nil {
 		t.Fatalf("emit: %v", err)
@@ -71,7 +80,7 @@ func TestEmitterPreservesTimestamp(t *testing.T) {
 
 func TestEmitterUsesTimeNowWhenClockNil(t *testing.T) {
 	store := &fakeAuditStore{}
-	emitter := &Emitter{store: store, clock: nil}
+	emitter := &Emitter{policy: EnabledPolicy(store), clock: nil}
 
 	if err := emitter.Emit(context.Background(), storage.AuditEvent{EventName: "test"}); err != nil {
 		t.Fatalf("emit: %v", err)

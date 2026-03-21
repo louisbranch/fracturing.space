@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func (a *Adapter) HandleCharacterProfileReplaced(ctx context.Context, evt event.Event, p snapstate.CharacterProfileReplacedPayload) error {
+func (a *Adapter) HandleCharacterProfileReplaced(ctx context.Context, evt event.Event, p daggerheartstate.CharacterProfileReplacedPayload) error {
 	characterID := strings.TrimSpace(p.CharacterID.String())
 	if characterID == "" {
 		characterID = strings.TrimSpace(evt.EntityID)
@@ -18,7 +18,7 @@ func (a *Adapter) HandleCharacterProfileReplaced(ctx context.Context, evt event.
 	return a.PutCharacterProfile(ctx, string(evt.CampaignID), characterID, p.Profile)
 }
 
-func (a *Adapter) HandleCharacterProfileDeleted(ctx context.Context, evt event.Event, p snapstate.CharacterProfileDeletedPayload) error {
+func (a *Adapter) HandleCharacterProfileDeleted(ctx context.Context, evt event.Event, p daggerheartstate.CharacterProfileDeletedPayload) error {
 	characterID := strings.TrimSpace(p.CharacterID.String())
 	if characterID == "" {
 		characterID = strings.TrimSpace(evt.EntityID)
@@ -29,7 +29,7 @@ func (a *Adapter) HandleCharacterProfileDeleted(ctx context.Context, evt event.E
 	return nil
 }
 
-func (a *Adapter) PutCharacterProfile(ctx context.Context, campaignID, characterID string, profile snapstate.CharacterProfile) error {
+func (a *Adapter) PutCharacterProfile(ctx context.Context, campaignID, characterID string, profile daggerheartstate.CharacterProfile) error {
 	if a == nil || a.store == nil {
 		return fmt.Errorf("daggerheart store is not configured")
 	}
@@ -53,20 +53,20 @@ func (a *Adapter) PutCharacterProfile(ctx context.Context, campaignID, character
 		CampaignID:     campaignID,
 		CharacterID:    characterID,
 		Hp:             profile.HpMax,
-		Hope:           snapstate.HopeDefault,
-		HopeMax:        snapstate.HopeMaxDefault,
-		Stress:         snapstate.StressDefault,
+		Hope:           daggerheartstate.HopeDefault,
+		HopeMax:        daggerheartstate.HopeMaxDefault,
+		Stress:         daggerheartstate.StressDefault,
 		Armor:          profile.ArmorMax,
-		LifeState:      snapstate.LifeStateAlive,
+		LifeState:      daggerheartstate.LifeStateAlive,
 		CompanionState: CompanionProjectionStateFromProfile(profile),
 	})
 }
 
 // CompanionProjectionStateFromProfile derives companion projection state from
 // a character profile's companion sheet presence.
-func CompanionProjectionStateFromProfile(profile snapstate.CharacterProfile) *projectionstore.DaggerheartCompanionState {
+func CompanionProjectionStateFromProfile(profile daggerheartstate.CharacterProfile) *projectionstore.DaggerheartCompanionState {
 	if profile.CompanionSheet == nil {
 		return nil
 	}
-	return &projectionstore.DaggerheartCompanionState{Status: snapstate.CompanionStatusPresent}
+	return &projectionstore.DaggerheartCompanionState{Status: daggerheartstate.CompanionStatusPresent}
 }

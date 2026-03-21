@@ -3,13 +3,20 @@ package daggerheart
 import (
 	"testing"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestSnapshotEnvironmentEntityState_Branches(t *testing.T) {
-	snapshot := SnapshotState{
+	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		EnvironmentStates: map[ids.EnvironmentEntityID]EnvironmentEntityState{
+		EnvironmentStates: map[ids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState{
 			"ee-1": {
 				EnvironmentID: "env-1",
 				Name:          "Trap",
@@ -21,7 +28,7 @@ func TestSnapshotEnvironmentEntityState_Branches(t *testing.T) {
 	}
 
 	// Valid lookup.
-	got, ok := snapshotEnvironmentEntityState(snapshot, "ee-1")
+	got, ok := daggerheartdecider.SnapshotEnvironmentEntityState(snapshot, "ee-1")
 	if !ok {
 		t.Fatal("expected environment entity to be found")
 	}
@@ -36,28 +43,28 @@ func TestSnapshotEnvironmentEntityState_Branches(t *testing.T) {
 	}
 
 	// Trimmed lookup.
-	got, ok = snapshotEnvironmentEntityState(snapshot, " ee-1 ")
+	got, ok = daggerheartdecider.SnapshotEnvironmentEntityState(snapshot, " ee-1 ")
 	if !ok {
 		t.Fatal("expected trimmed environment entity to be found")
 	}
 
 	// Empty ID returns false.
-	_, ok = snapshotEnvironmentEntityState(snapshot, "  ")
+	_, ok = daggerheartdecider.SnapshotEnvironmentEntityState(snapshot, "  ")
 	if ok {
 		t.Fatal("expected empty ID to return false")
 	}
 
 	// Missing entity returns false.
-	_, ok = snapshotEnvironmentEntityState(snapshot, "ee-missing")
+	_, ok = daggerheartdecider.SnapshotEnvironmentEntityState(snapshot, "ee-missing")
 	if ok {
 		t.Fatal("expected missing entity to return false")
 	}
 }
 
 func TestIsEnvironmentEntityCreateNoMutation_Branches(t *testing.T) {
-	snapshot := SnapshotState{
+	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		EnvironmentStates: map[ids.EnvironmentEntityID]EnvironmentEntityState{
+		EnvironmentStates: map[ids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState{
 			"ee-1": {
 				EnvironmentID: "env-1",
 				Name:          "Trap",
@@ -72,7 +79,7 @@ func TestIsEnvironmentEntityCreateNoMutation_Branches(t *testing.T) {
 	}
 
 	// Exact match → no mutation.
-	payload := EnvironmentEntityCreatePayload{
+	payload := daggerheartpayload.EnvironmentEntityCreatePayload{
 		EnvironmentEntityID: "ee-1",
 		EnvironmentID:       "env-1",
 		Name:                "Trap",
@@ -83,39 +90,39 @@ func TestIsEnvironmentEntityCreateNoMutation_Branches(t *testing.T) {
 		SceneID:             "scene-1",
 		Notes:               "Watch out",
 	}
-	if !isEnvironmentEntityCreateNoMutation(snapshot, payload) {
+	if !daggerheartdecider.IsEnvironmentEntityCreateNoMutation(snapshot, payload) {
 		t.Fatal("expected no mutation for identical payload")
 	}
 
 	// Different name → mutation.
 	payload.Name = "New Trap"
-	if isEnvironmentEntityCreateNoMutation(snapshot, payload) {
+	if daggerheartdecider.IsEnvironmentEntityCreateNoMutation(snapshot, payload) {
 		t.Fatal("expected mutation for different name")
 	}
 
 	// Missing entity → mutation.
 	payload.EnvironmentEntityID = "ee-missing"
-	if isEnvironmentEntityCreateNoMutation(snapshot, payload) {
+	if daggerheartdecider.IsEnvironmentEntityCreateNoMutation(snapshot, payload) {
 		t.Fatal("expected mutation for missing entity")
 	}
 }
 
 func TestIsAdversaryFeatureApplyNoMutation_Branches(t *testing.T) {
-	xp := &AdversaryPendingExperience{Name: "xp", Modifier: 10}
-	snapshot := SnapshotState{
+	xp := &rules.AdversaryPendingExperience{Name: "xp", Modifier: 10}
+	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
-				FeatureStates:     []AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
+				FeatureStates:     []rules.AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
 				PendingExperience: xp,
 			},
 		},
 	}
 
 	// Exact match → no mutation.
-	if !isAdversaryFeatureApplyNoMutation(snapshot, AdversaryFeatureApplyPayload{
+	if !daggerheartdecider.IsAdversaryFeatureApplyNoMutation(snapshot, daggerheartpayload.AdversaryFeatureApplyPayload{
 		AdversaryID:            "adv-1",
-		FeatureStatesAfter:     []AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
+		FeatureStatesAfter:     []rules.AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
 		PendingExperienceAfter: xp,
 	}) {
 		t.Fatal("expected no mutation for identical state")
@@ -123,35 +130,35 @@ func TestIsAdversaryFeatureApplyNoMutation_Branches(t *testing.T) {
 
 	// Stress change → mutation.
 	stressBefore, stressAfter := 0, 2
-	if isAdversaryFeatureApplyNoMutation(snapshot, AdversaryFeatureApplyPayload{
+	if daggerheartdecider.IsAdversaryFeatureApplyNoMutation(snapshot, daggerheartpayload.AdversaryFeatureApplyPayload{
 		AdversaryID:        "adv-1",
 		StressBefore:       &stressBefore,
 		StressAfter:        &stressAfter,
-		FeatureStatesAfter: []AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
+		FeatureStatesAfter: []rules.AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
 	}) {
 		t.Fatal("expected mutation for stress change")
 	}
 
 	// Feature state change → mutation.
-	if isAdversaryFeatureApplyNoMutation(snapshot, AdversaryFeatureApplyPayload{
+	if daggerheartdecider.IsAdversaryFeatureApplyNoMutation(snapshot, daggerheartpayload.AdversaryFeatureApplyPayload{
 		AdversaryID:        "adv-1",
-		FeatureStatesAfter: []AdversaryFeatureState{{FeatureID: "f1", Status: "used"}},
+		FeatureStatesAfter: []rules.AdversaryFeatureState{{FeatureID: "f1", Status: "used"}},
 	}) {
 		t.Fatal("expected mutation for feature state change")
 	}
 
 	// Pending experience change → mutation.
-	newXP := &AdversaryPendingExperience{Name: "xp", Modifier: 20}
-	if isAdversaryFeatureApplyNoMutation(snapshot, AdversaryFeatureApplyPayload{
+	newXP := &rules.AdversaryPendingExperience{Name: "xp", Modifier: 20}
+	if daggerheartdecider.IsAdversaryFeatureApplyNoMutation(snapshot, daggerheartpayload.AdversaryFeatureApplyPayload{
 		AdversaryID:            "adv-1",
-		FeatureStatesAfter:     []AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
+		FeatureStatesAfter:     []rules.AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
 		PendingExperienceAfter: newXP,
 	}) {
 		t.Fatal("expected mutation for pending experience change")
 	}
 
 	// Missing adversary → mutation.
-	if isAdversaryFeatureApplyNoMutation(snapshot, AdversaryFeatureApplyPayload{
+	if daggerheartdecider.IsAdversaryFeatureApplyNoMutation(snapshot, daggerheartpayload.AdversaryFeatureApplyPayload{
 		AdversaryID: "adv-missing",
 	}) {
 		t.Fatal("expected mutation for missing adversary")
@@ -160,30 +167,30 @@ func TestIsAdversaryFeatureApplyNoMutation_Branches(t *testing.T) {
 
 func TestCompanionStatePtrValue(t *testing.T) {
 	// nil returns nil.
-	if got := companionStatePtrValue(nil); got != nil {
+	if got := daggerheartdecider.CompanionStatePtrValue(nil); got != nil {
 		t.Fatal("expected nil for nil input")
 	}
 	// Non-nil returns normalized copy.
-	state := &CharacterCompanionState{Status: " AWAY ", ActiveExperienceID: " exp-1 "}
-	got := companionStatePtrValue(state)
+	state := &daggerheartstate.CharacterCompanionState{Status: " AWAY ", ActiveExperienceID: " exp-1 "}
+	got := daggerheartdecider.CompanionStatePtrValue(state)
 	if got == nil {
 		t.Fatal("expected non-nil")
 	}
-	if got.Status != CompanionStatusAway || got.ActiveExperienceID != "exp-1" {
+	if got.Status != daggerheartstate.CompanionStatusAway || got.ActiveExperienceID != "exp-1" {
 		t.Fatalf("got = %+v, want normalized away state", got)
 	}
 }
 
 func TestSnapshotAdversaryState_Branches(t *testing.T) {
-	snapshot := SnapshotState{
+	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {Name: "Goblin"},
 		},
 	}
 
 	// Valid lookup.
-	got, ok := snapshotAdversaryState(snapshot, "adv-1")
+	got, ok := daggerheartdecider.SnapshotAdversaryState(snapshot, "adv-1")
 	if !ok {
 		t.Fatal("expected adversary to be found")
 	}
@@ -192,13 +199,13 @@ func TestSnapshotAdversaryState_Branches(t *testing.T) {
 	}
 
 	// Empty ID returns false.
-	_, ok = snapshotAdversaryState(snapshot, "  ")
+	_, ok = daggerheartdecider.SnapshotAdversaryState(snapshot, "  ")
 	if ok {
 		t.Fatal("expected empty id to return false")
 	}
 
 	// Missing returns false.
-	_, ok = snapshotAdversaryState(snapshot, "adv-missing")
+	_, ok = daggerheartdecider.SnapshotAdversaryState(snapshot, "adv-missing")
 	if ok {
 		t.Fatal("expected missing to return false")
 	}

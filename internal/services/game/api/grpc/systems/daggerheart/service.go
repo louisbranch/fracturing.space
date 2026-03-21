@@ -7,12 +7,14 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/gameplaystores"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/mechanicstransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 )
 
 // DaggerheartService implements the Daggerheart gRPC API.
 type DaggerheartService struct {
 	pb.UnimplementedDaggerheartServiceServer
 	stores   gameplaystores.Stores
+	applier  projection.Applier
 	seedFunc func() (int64, error) // Generates per-request random seeds.
 }
 
@@ -24,7 +26,28 @@ func NewDaggerheartService(stores gameplaystores.Stores, seedFunc func() (int64,
 	if seedFunc == nil {
 		return nil, fmt.Errorf("seed generator is required")
 	}
-	return &DaggerheartService{stores: stores, seedFunc: seedFunc}, nil
+	applier, err := stores.TryApplier()
+	if err != nil {
+		return nil, fmt.Errorf("build projection applier: %w", err)
+	}
+	return &DaggerheartService{stores: stores, applier: applier, seedFunc: seedFunc}, nil
+}
+
+func (s *DaggerheartService) resolvedApplier() (projection.Applier, error) {
+	if s.applier.Adapters != nil ||
+		s.applier.Campaign != nil ||
+		s.applier.Character != nil ||
+		s.applier.Session != nil ||
+		s.applier.SessionGate != nil ||
+		s.applier.SessionSpotlight != nil {
+		return s.applier, nil
+	}
+	applier, err := s.stores.TryApplier()
+	if err != nil {
+		return projection.Applier{}, fmt.Errorf("build projection applier: %w", err)
+	}
+	s.applier = applier
+	return s.applier, nil
 }
 
 func (s *DaggerheartService) mechanicsHandler() *mechanicstransport.Handler {

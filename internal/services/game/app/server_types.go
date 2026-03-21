@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -59,9 +60,8 @@ type projectionBackend interface {
 	storage.SceneGateStore
 	storage.SceneSpotlightStore
 	storage.SceneInteractionStore
-	storage.ProjectionApplyExactlyOnceStore
+	projection.ExactlyOnceStore
 	Close() error
-	DaggerheartProjectionStore() projectionstore.Store
 }
 
 type contentBackend interface {
@@ -80,12 +80,14 @@ const (
 
 // storageBundle groups the three SQLite stores and manages their lifecycle.
 //
-// Events are the source of truth, projections feed APIs, and content stores
-// enrich projection reads for system-specific metadata.
+// Events are the source of truth, projections feed APIs, systemStores bind the
+// built-in system query backends from the opened projection database, and
+// content stores enrich projection reads for system-specific metadata.
 type storageBundle struct {
-	events      eventBackend
-	projections projectionBackend
-	content     contentBackend
+	events       eventBackend
+	projections  projectionBackend
+	systemStores systemmanifest.ProjectionStores
+	content      contentBackend
 }
 
 // Close closes all stores in the bundle, logging any errors.

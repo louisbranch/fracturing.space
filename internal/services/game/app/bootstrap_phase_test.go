@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -7,8 +7,7 @@ import (
 	"testing"
 	"time"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -100,6 +99,7 @@ func TestDefaultSystemsBootstrapperWrapsFailures(t *testing.T) {
 }
 
 func TestDefaultTransportBootstrapperBuildsServersAndRegistersServices(t *testing.T) {
+	bundle := &storageBundle{}
 	grpcServer := grpc.NewServer()
 	healthServer := health.NewServer()
 	systemRegistry := bridge.NewMetadataRegistry()
@@ -131,11 +131,10 @@ func TestDefaultTransportBootstrapperBuildsServersAndRegistersServices(t *testin
 		registerServices: transportServiceRegistrarFunc(func(
 			gotGRPC *grpc.Server,
 			gotHealth *health.Server,
-			_ gamegrpc.Stores,
-			gotBundle *storageBundle,
-			authClient authv1.AuthServiceClient,
-			_ aiv1.AgentServiceClient,
-			gotRegistry *bridge.MetadataRegistry,
+			_ daggerheartRegistrationDeps,
+			gotCampaign campaignRegistrationDeps,
+			_ sessionRegistrationDeps,
+			gotInfrastructure infrastructureRegistrationDeps,
 			gotConfig aisessiongrant.Config,
 		) error {
 			called = true
@@ -145,14 +144,14 @@ func TestDefaultTransportBootstrapperBuildsServersAndRegistersServices(t *testin
 			if gotHealth != healthServer {
 				t.Fatal("expected health server from transport bootstrapper")
 			}
-			if gotBundle == nil {
-				t.Fatal("expected storage bundle to flow to service registration")
-			}
-			if authClient != nil {
+			if gotCampaign.authClient != nil {
 				t.Fatal("expected nil auth client in focused collaborator test")
 			}
-			if gotRegistry != systemRegistry {
-				t.Fatal("expected system registry to flow to service registration")
+			if gotInfrastructure.bundle != bundle {
+				t.Fatal("expected infrastructure deps to keep the startup storage bundle")
+			}
+			if gotInfrastructure.systemRegistry != systemRegistry {
+				t.Fatal("expected system registry to flow through infrastructure deps")
 			}
 			if !reflect.DeepEqual(gotConfig, wantConfig) {
 				t.Fatalf("session grant config = %#v, want %#v", gotConfig, wantConfig)
@@ -161,7 +160,14 @@ func TestDefaultTransportBootstrapperBuildsServersAndRegistersServices(t *testin
 		}),
 	}
 
-	state, err := bootstrapper.Bootstrap(&storageBundle{}, serverEnv{}, gamegrpc.Stores{}, nil, nil, systemRegistry)
+	state, err := bootstrapper.Bootstrap(
+		bundle,
+		serverEnv{},
+		daggerheartRegistrationDeps{},
+		campaignRegistrationDeps{},
+		sessionRegistrationDeps{},
+		infrastructureRegistrationDeps{bundle: bundle, systemRegistry: systemRegistry},
+	)
 	if err != nil {
 		t.Fatalf("bootstrap transport: %v", err)
 	}
@@ -190,22 +196,48 @@ func TestDefaultTransportBootstrapperWrapsServiceRegistrationFailure(t *testing.
 		registerServices: transportServiceRegistrarFunc(func(
 			*grpc.Server,
 			*health.Server,
-			gamegrpc.Stores,
-			*storageBundle,
-			authv1.AuthServiceClient,
-			aiv1.AgentServiceClient,
-			*bridge.MetadataRegistry,
+			daggerheartRegistrationDeps,
+			campaignRegistrationDeps,
+			sessionRegistrationDeps,
+			infrastructureRegistrationDeps,
 			aisessiongrant.Config,
 		) error {
 			return errors.New("register failed")
 		}),
 	}
 
-	_, err := bootstrapper.Bootstrap(&storageBundle{}, serverEnv{}, gamegrpc.Stores{}, nil, nil, nil)
+	_, err := bootstrapper.Bootstrap(
+		&storageBundle{},
+		serverEnv{},
+		daggerheartRegistrationDeps{},
+		campaignRegistrationDeps{},
+		sessionRegistrationDeps{},
+		infrastructureRegistrationDeps{},
+	)
 	if err == nil {
 		t.Fatal("expected wrapped transport bootstrap error")
 	}
 	if got := err.Error(); got != "register gRPC services: register failed" {
 		t.Fatalf("transport bootstrap error = %q, want wrapped registration failure", got)
+	}
+}
+
+func TestAttachDependencyClientsSetsSocialOnContentStores(t *testing.T) {
+	mc, err := platformgrpc.NewManagedConn(context.Background(), platformgrpc.ManagedConnConfig{
+		Name: "social-test",
+		Addr: "dns:///127.0.0.1:1",
+		Mode: platformgrpc.ModeOptional,
+	})
+	if err != nil {
+		t.Fatalf("new managed conn: %v", err)
+	}
+	defer func() { _ = mc.Close() }()
+
+	contentStores := &gamegrpc.ContentStores{}
+
+	attachDependencyClients(contentStores, dependencyConns{social: mc})
+
+	if contentStores.Social == nil {
+		t.Fatal("expected social client to be attached")
 	}
 }

@@ -4,20 +4,20 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestDamageSeverityString(t *testing.T) {
 	tests := []struct {
-		severity daggerheart.DamageSeverity
+		severity rules.DamageSeverity
 		want     string
 	}{
-		{daggerheart.DamageMinor, "minor"},
-		{daggerheart.DamageMajor, "major"},
-		{daggerheart.DamageSevere, "severe"},
-		{daggerheart.DamageMassive, "massive"},
-		{daggerheart.DamageSeverity(99), "none"},
+		{rules.DamageMinor, "minor"},
+		{rules.DamageMajor, "major"},
+		{rules.DamageSevere, "severe"},
+		{rules.DamageMassive, "massive"},
+		{rules.DamageSeverity(99), "none"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.want, func(t *testing.T) {

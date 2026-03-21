@@ -10,6 +10,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
@@ -91,13 +93,13 @@ func TestCreateCountdown_RequiresDomainEngine(t *testing.T) {
 func TestCreateCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	countdownPayload := daggerheart.CountdownCreatedPayload{
+	countdownPayload := daggerheartpayload.CountdownCreatedPayload{
 		CountdownID: "cd-1",
 		Name:        "Test Countdown",
-		Kind:        daggerheart.CountdownKindProgress,
+		Kind:        rules.CountdownKindProgress,
 		Current:     0,
 		Max:         4,
-		Direction:   daggerheart.CountdownDirectionIncrease,
+		Direction:   rules.CountdownDirectionIncrease,
 		Looping:     false,
 	}
 	countdownPayloadJSON, err := json.Marshal(countdownPayload)
@@ -146,13 +148,13 @@ func TestCreateCountdown_Success(t *testing.T) {
 func TestCreateCountdown_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	countdownPayload := daggerheart.CountdownCreatedPayload{
+	countdownPayload := daggerheartpayload.CountdownCreatedPayload{
 		CountdownID: "cd-1",
 		Name:        "Signal",
-		Kind:        daggerheart.CountdownKindProgress,
+		Kind:        rules.CountdownKindProgress,
 		Current:     1,
 		Max:         4,
-		Direction:   daggerheart.CountdownDirectionIncrease,
+		Direction:   rules.CountdownDirectionIncrease,
 		Looping:     true,
 	}
 	countdownPayloadJSON, err := json.Marshal(countdownPayload)

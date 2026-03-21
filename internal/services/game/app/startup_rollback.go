@@ -1,4 +1,4 @@
-package server
+package app
 
 // startupRollback tracks startup-time resources that should be closed when
 // bootstrap fails. Closers run in reverse registration order.

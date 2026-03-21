@@ -15,7 +15,6 @@ import (
 	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/integrationoutbox"
 )
@@ -226,7 +225,7 @@ func openTestIntegrationOutboxStore(t *testing.T) (*integrationoutbox.Store, *sq
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	root, err := storagesqlite.OpenEvents(path, testKeyring(t), registries.Events)
+	root, err := sqliteeventjournal.Open(path, testKeyring(t), registries.Events)
 	if err != nil {
 		t.Fatalf("open events store: %v", err)
 	}

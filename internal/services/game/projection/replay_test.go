@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -325,7 +326,7 @@ func newParticipantJoinedEvent(campaignID, participantID string, seq uint64) eve
 }
 
 func newGMFearChangedEvent(campaignID string, seq uint64, gmFear int) event.Event {
-	payload := daggerheart.GMFearChangedPayload{Value: gmFear}
+	payload := daggerheartpayload.GMFearChangedPayload{Value: gmFear}
 	data, _ := json.Marshal(payload)
 	return event.Event{
 		CampaignID:    ids.CampaignID(campaignID),
@@ -341,7 +342,7 @@ func newGMFearChangedEvent(campaignID string, seq uint64, gmFear int) event.Even
 }
 
 func newCharacterStateChangedEvent(campaignID, characterID string, seq uint64, hp, hope, stress int) event.Event {
-	payload := daggerheart.CharacterStatePatchedPayload{
+	payload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: ids.CharacterID(characterID),
 		HP:          &hp,
 		Hope:        &hope,
@@ -362,7 +363,7 @@ func newCharacterStateChangedEvent(campaignID, characterID string, seq uint64, h
 }
 
 func newDamageAppliedEvent(campaignID, characterID string, seq uint64, hp, armor int) event.Event {
-	payload := daggerheart.DamageAppliedPayload{
+	payload := daggerheartpayload.DamageAppliedPayload{
 		CharacterID: ids.CharacterID(characterID),
 		Hp:          &hp,
 		Armor:       &armor,
@@ -384,7 +385,7 @@ func newDamageAppliedEvent(campaignID, characterID string, seq uint64, hp, armor
 }
 
 func newRestTakenEvent(campaignID, characterID string, seq uint64) event.Event {
-	payload := daggerheart.RestTakenPayload{
+	payload := daggerheartpayload.RestTakenPayload{
 		RestType:     "short",
 		Interrupted:  false,
 		GMFear:       2,
@@ -408,7 +409,7 @@ func newRestTakenEvent(campaignID, characterID string, seq uint64) event.Event {
 
 func newDowntimeMoveAppliedEvent(campaignID, characterID string, seq uint64) event.Event {
 	hope := 3
-	payload := daggerheart.DowntimeMoveAppliedPayload{
+	payload := daggerheartpayload.DowntimeMoveAppliedPayload{
 		ActorCharacterID:  ids.CharacterID(characterID),
 		TargetCharacterID: ids.CharacterID(characterID),
 		Move:              "prepare",
@@ -431,7 +432,7 @@ func newDowntimeMoveAppliedEvent(campaignID, characterID string, seq uint64) eve
 
 func newLoadoutSwappedEvent(campaignID, characterID string, seq uint64) event.Event {
 	stress := 2
-	payload := daggerheart.LoadoutSwappedPayload{
+	payload := daggerheartpayload.LoadoutSwappedPayload{
 		CharacterID: ids.CharacterID(characterID),
 		CardID:      "card-1",
 		From:        "vault",

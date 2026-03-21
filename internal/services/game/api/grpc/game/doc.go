@@ -1,6 +1,6 @@
-// Package game provides the transport dependency injection container (Stores),
-// domain-layer adapters, and a small set of infrastructure-level gRPC services
-// (integration, statistics, system) for the game service.
+// Package game provides root transport concern builders, domain-layer adapters,
+// and a small set of infrastructure-level gRPC services (integration,
+// statistics, system) for the game service.
 //
 // Entity-scoped gRPC services live in subpackages:
 //
@@ -22,8 +22,11 @@
 //	gametest/   shared test infrastructure (fakes, fixtures, runtime)
 //
 // Root files:
-//   - stores*.go: transport dependency container and startup construction
-//   - domain_adapter.go, system_adapters.go: domain/system bridge adapters
+//   - stores*.go: explicit projection/infrastructure/content/runtime concern
+//     builders plus root validation for startup wiring
+//   - campaign_ai_orchestration_*.go: explicit AI GM turn orchestration
+//     boundary using root-game deps instead of a broad root bag
+//   - domain_adapter.go: domain/system bridge adapters
 //   - integration_service.go, statistics_service.go, system_service.go:
 //     infrastructure services without entity-specific application layers
 //   - write_path_architecture_test.go: architectural governance tests

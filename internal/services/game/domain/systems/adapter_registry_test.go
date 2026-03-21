@@ -1,4 +1,4 @@
-package bridge_test
+package systems_test
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	systems "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
-// stubAdapter is a minimal bridge.Adapter for testing registry operations.
+// stubAdapter is a minimal systems.Adapter for testing registry operations.
 type stubAdapter struct {
 	id      string
 	version string
@@ -22,7 +22,7 @@ func (s *stubAdapter) Snapshot(_ context.Context, _ string) (any, error) { retur
 func (s *stubAdapter) HandledTypes() []event.Type                        { return nil }
 
 func TestAdapterRegistryHas(t *testing.T) {
-	reg := bridge.NewAdapterRegistry()
+	reg := systems.NewAdapterRegistry()
 	adapter := &stubAdapter{id: "test_system", version: "1.0"}
 	if err := reg.Register(adapter); err != nil {
 		t.Fatalf("register: %v", err)
@@ -41,7 +41,7 @@ func TestAdapterRegistryHas(t *testing.T) {
 	})
 
 	t.Run("nil registry returns false", func(t *testing.T) {
-		var nilReg *bridge.AdapterRegistry
+		var nilReg *systems.AdapterRegistry
 		if nilReg.Has("test_system", "1.0") {
 			t.Error("Has() = true on nil registry, want false")
 		}
@@ -55,19 +55,19 @@ func TestAdapterRegistryHas(t *testing.T) {
 }
 
 func TestAdapterRegistryRegister_EmptyIDRejected(t *testing.T) {
-	reg := bridge.NewAdapterRegistry()
+	reg := systems.NewAdapterRegistry()
 	adapter := &stubAdapter{id: "", version: "1.0"}
 	err := reg.Register(adapter)
 	if err == nil {
 		t.Fatal("expected error for adapter with empty ID")
 	}
-	if !errors.Is(err, bridge.ErrAdapterIDRequired) {
-		t.Fatalf("error = %v, want %v", err, bridge.ErrAdapterIDRequired)
+	if !errors.Is(err, systems.ErrAdapterIDRequired) {
+		t.Fatalf("error = %v, want %v", err, systems.ErrAdapterIDRequired)
 	}
 }
 
 func TestAdapterRegistryGetOptional(t *testing.T) {
-	reg := bridge.NewAdapterRegistry()
+	reg := systems.NewAdapterRegistry()
 	adapter := &stubAdapter{id: "test_system", version: "1.0"}
 	if err := reg.Register(adapter); err != nil {
 		t.Fatalf("register: %v", err)
@@ -94,7 +94,7 @@ func TestAdapterRegistryGetOptional(t *testing.T) {
 	})
 
 	t.Run("nil registry returns nil and false", func(t *testing.T) {
-		var nilReg *bridge.AdapterRegistry
+		var nilReg *systems.AdapterRegistry
 		got, ok := nilReg.GetOptional("test_system", "1.0")
 		if ok {
 			t.Error("GetOptional() ok = true on nil registry, want false")

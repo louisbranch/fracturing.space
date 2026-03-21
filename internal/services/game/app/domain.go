@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -29,19 +29,27 @@ func (disabledDomain) Execute(context.Context, command.Command) (engine.Result, 
 //
 // This is intentionally guarded by config so deployments can run without domain
 // execution in specific environments (for example, projection-only workflows).
-func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores, registries engine.Registries) error {
-	if stores == nil {
-		return errors.New("stores are required")
+func configureDomain(
+	srvEnv serverEnv,
+	infrastructure *gamegrpc.InfrastructureStores,
+	runtimeStores *gamegrpc.RuntimeStores,
+	registries engine.Registries,
+) error {
+	if infrastructure == nil {
+		return errors.New("infrastructure stores are required")
+	}
+	if runtimeStores == nil {
+		return errors.New("runtime stores are required")
 	}
 	if !srvEnv.DomainEnabled {
-		stores.Write.Executor = disabledDomain{}
+		runtimeStores.Write.Executor = disabledDomain{}
 		return nil
 	}
-	domainEngine, err := buildDomainEngine(stores.Event, registries)
+	domainEngine, err := buildDomainEngine(infrastructure.Event, registries)
 	if err != nil {
 		return fmt.Errorf("build domain engine: %w", err)
 	}
-	stores.Write.Executor = domainEngine
+	runtimeStores.Write.Executor = domainEngine
 	return nil
 }
 

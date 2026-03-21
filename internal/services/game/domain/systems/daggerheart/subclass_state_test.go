@@ -1,45 +1,49 @@
 package daggerheart
 
-import "testing"
+import (
+	"testing"
+
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+)
 
 func TestCharacterSubclassState_IsZero(t *testing.T) {
-	if !(CharacterSubclassState{}).IsZero() {
+	if !(daggerheartstate.CharacterSubclassState{}).IsZero() {
 		t.Fatal("zero-value subclass state should be IsZero")
 	}
-	if (CharacterSubclassState{BattleRitualUsedThisLongRest: true}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{BattleRitualUsedThisLongRest: true}).IsZero() {
 		t.Fatal("state with battle ritual used should not be IsZero")
 	}
-	if (CharacterSubclassState{GiftedPerformerRelaxingSongUses: 1}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{GiftedPerformerRelaxingSongUses: 1}).IsZero() {
 		t.Fatal("state with song uses should not be IsZero")
 	}
-	if (CharacterSubclassState{TranscendenceActive: true}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{TranscendenceActive: true}).IsZero() {
 		t.Fatal("state with transcendence active should not be IsZero")
 	}
-	if (CharacterSubclassState{ElementalChannel: ElementalChannelFire}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{ElementalChannel: daggerheartstate.ElementalChannelFire}).IsZero() {
 		t.Fatal("state with elemental channel should not be IsZero")
 	}
-	if (CharacterSubclassState{NemesisTargetID: "adv-1"}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{NemesisTargetID: "adv-1"}).IsZero() {
 		t.Fatal("state with nemesis target should not be IsZero")
 	}
-	if (CharacterSubclassState{RousingSpeechUsedThisLongRest: true}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{RousingSpeechUsedThisLongRest: true}).IsZero() {
 		t.Fatal("state with rousing speech used should not be IsZero")
 	}
-	if (CharacterSubclassState{WardensProtectionUsedThisLongRest: true}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{WardensProtectionUsedThisLongRest: true}).IsZero() {
 		t.Fatal("state with wardens protection used should not be IsZero")
 	}
-	if (CharacterSubclassState{ContactsEverywhereUsesThisSession: 2}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{ContactsEverywhereUsesThisSession: 2}).IsZero() {
 		t.Fatal("state with contacts everywhere should not be IsZero")
 	}
-	if (CharacterSubclassState{SparingTouchUsesThisLongRest: 1}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{SparingTouchUsesThisLongRest: 1}).IsZero() {
 		t.Fatal("state with sparing touch should not be IsZero")
 	}
-	if (CharacterSubclassState{ClarityOfNatureUsedThisLongRest: true}).IsZero() {
+	if (daggerheartstate.CharacterSubclassState{ClarityOfNatureUsedThisLongRest: true}).IsZero() {
 		t.Fatal("state with clarity of nature should not be IsZero")
 	}
 }
 
 func TestCharacterSubclassState_Normalized_ClampsNegatives(t *testing.T) {
-	state := CharacterSubclassState{
+	state := daggerheartstate.CharacterSubclassState{
 		GiftedPerformerRelaxingSongUses:        -1,
 		GiftedPerformerEpicSongUses:            -5,
 		GiftedPerformerHeartbreakingSongUses:   -3,
@@ -73,7 +77,7 @@ func TestCharacterSubclassState_Normalized_ClampsNegatives(t *testing.T) {
 }
 
 func TestCharacterSubclassState_Normalized_TranscendenceInactive(t *testing.T) {
-	state := CharacterSubclassState{
+	state := daggerheartstate.CharacterSubclassState{
 		TranscendenceActive:               false,
 		TranscendenceTraitBonusTarget:     "agility",
 		TranscendenceTraitBonusValue:      2,
@@ -95,12 +99,12 @@ func TestCharacterSubclassState_Normalized_TranscendenceInactive(t *testing.T) {
 
 func TestCharacterSubclassState_Normalized_ElementalChannel(t *testing.T) {
 	// Valid channel preserved.
-	got := CharacterSubclassState{ElementalChannel: " Fire "}.Normalized()
-	if got.ElementalChannel != ElementalChannelFire {
-		t.Fatalf("elemental channel = %q, want %q", got.ElementalChannel, ElementalChannelFire)
+	got := daggerheartstate.CharacterSubclassState{ElementalChannel: " Fire "}.Normalized()
+	if got.ElementalChannel != daggerheartstate.ElementalChannelFire {
+		t.Fatalf("elemental channel = %q, want %q", got.ElementalChannel, daggerheartstate.ElementalChannelFire)
 	}
 	// Invalid channel cleared.
-	got = CharacterSubclassState{ElementalChannel: "lightning"}.Normalized()
+	got = daggerheartstate.CharacterSubclassState{ElementalChannel: "lightning"}.Normalized()
 	if got.ElementalChannel != "" {
 		t.Fatalf("invalid elemental channel = %q, want empty", got.ElementalChannel)
 	}

@@ -11,8 +11,8 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -2023,7 +2023,7 @@ func TestAssertDamageFlags_NoExpectations(t *testing.T) {
 }
 
 func TestAssertDamageFlagsMatchesLatestDamageEvent(t *testing.T) {
-	payloadJSON, _ := json.Marshal(daggerheart.DamageAppliedPayload{
+	payloadJSON, _ := json.Marshal(daggerheartpayload.DamageAppliedPayload{
 		CharacterID:    ids.CharacterID("char-1"),
 		ResistPhysical: true,
 		ResistMagic:    false,
@@ -2032,7 +2032,7 @@ func TestAssertDamageFlagsMatchesLatestDamageEvent(t *testing.T) {
 	})
 	eventClient := &fakeEventClient{
 		listEvents: func(_ context.Context, req *gamev1.ListEventsRequest, _ ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
-			if !strings.Contains(req.GetFilter(), string(daggerheart.EventTypeDamageApplied)) {
+			if !strings.Contains(req.GetFilter(), string(daggerheartpayload.EventTypeDamageApplied)) {
 				t.Fatalf("filter = %q, want damage_applied filter", req.GetFilter())
 			}
 			return &gamev1.ListEventsResponse{
@@ -2057,7 +2057,7 @@ func TestAssertDamageFlagsMatchesLatestDamageEvent(t *testing.T) {
 }
 
 func TestAssertDamageFlagsRejectsMismatch(t *testing.T) {
-	payloadJSON, _ := json.Marshal(daggerheart.DamageAppliedPayload{
+	payloadJSON, _ := json.Marshal(daggerheartpayload.DamageAppliedPayload{
 		CharacterID:    ids.CharacterID("char-1"),
 		ResistPhysical: false,
 	})

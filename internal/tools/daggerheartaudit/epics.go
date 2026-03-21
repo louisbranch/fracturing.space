@@ -184,7 +184,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Enforce the terminal outcome when scars remove the final hope slot so death-move semantics fully match the reference.",
 		Boundary: "Death-move resolution and post-scar character lifecycle.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/death.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler.go",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
@@ -202,8 +202,8 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Bring the downtime move menu, short-rest versus long-rest behavior, and project advancement semantics into parity with the reference across domain and transport surfaces.",
 		Boundary: "Rest and downtime move coverage.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/rest.go",
-			"internal/services/game/domain/systems/daggerheart/internal/mechanics/downtime.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/rest.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics/downtime.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},

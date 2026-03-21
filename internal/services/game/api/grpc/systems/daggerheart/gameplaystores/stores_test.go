@@ -54,7 +54,10 @@ func TestStoresApplier(t *testing.T) {
 	if err := s.Validate(); err != nil {
 		t.Fatalf("validate stores: %v", err)
 	}
-	applier := s.Applier()
+	applier, err := s.TryApplier()
+	if err != nil {
+		t.Fatalf("try applier: %v", err)
+	}
 
 	if applier.Campaign == nil {
 		t.Error("expected Campaign to be set")
@@ -136,7 +139,7 @@ func TestStoresAdapterRegistryMatchesManifest(t *testing.T) {
 		t.Fatalf("try applier: %v", err)
 	}
 
-	manifestRegistry, err := systemmanifest.AdapterRegistry(daggerheartStore)
+	manifestRegistry, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: daggerheartStore})
 	if err != nil {
 		t.Fatalf("manifest adapter registry: %v", err)
 	}

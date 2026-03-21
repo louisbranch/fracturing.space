@@ -10,13 +10,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
-func mustStandardConditionState(t *testing.T, code string) daggerheart.ConditionState {
+func mustStandardConditionState(t *testing.T, code string) rules.ConditionState {
 	t.Helper()
-	state, err := daggerheart.StandardConditionState(code)
+	state, err := rules.StandardConditionState(code)
 	if err != nil {
 		t.Fatalf("standard condition state %q: %v", code, err)
 	}
@@ -27,13 +29,13 @@ func protoStandardConditionState(condition pb.DaggerheartCondition) *pb.Daggerhe
 	code := ""
 	switch condition {
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN:
-		code = daggerheart.ConditionHidden
+		code = rules.ConditionHidden
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED:
-		code = daggerheart.ConditionRestrained
+		code = rules.ConditionRestrained
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE:
-		code = daggerheart.ConditionVulnerable
+		code = rules.ConditionVulnerable
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_CLOAKED:
-		code = daggerheart.ConditionCloaked
+		code = rules.ConditionCloaked
 	}
 	return &pb.DaggerheartConditionState{
 		Id:       code,
@@ -59,10 +61,10 @@ func projectionStandardConditionState(code string) projectionstore.DaggerheartCo
 func TestApplyConditions_AddCondition_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	conditionPayload := daggerheart.ConditionChangedPayload{
+	conditionPayload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "char-1",
-		Conditions:  []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionHidden)},
-		Added:       []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionHidden)},
+		Conditions:  []rules.ConditionState{mustStandardConditionState(t, rules.ConditionHidden)},
+		Added:       []rules.ConditionState{mustStandardConditionState(t, rules.ConditionHidden)},
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {
@@ -105,15 +107,15 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	state := dhStore.States["camp-1:char-1"]
 	state.Conditions = []projectionstore.DaggerheartConditionState{
-		projectionStandardConditionState(daggerheart.ConditionHidden),
-		projectionStandardConditionState(daggerheart.ConditionVulnerable),
+		projectionStandardConditionState(rules.ConditionHidden),
+		projectionStandardConditionState(rules.ConditionVulnerable),
 	}
 	dhStore.States["camp-1:char-1"] = state
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	conditionPayload := daggerheart.ConditionChangedPayload{
+	conditionPayload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "char-1",
-		Conditions:  []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
-		Removed:     []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionHidden)},
+		Conditions:  []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
+		Removed:     []rules.ConditionState{mustStandardConditionState(t, rules.ConditionHidden)},
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {
@@ -141,7 +143,7 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:         "camp-1",
 		CharacterId:        "char-1",
-		RemoveConditionIds: []string{daggerheart.ConditionHidden},
+		RemoveConditionIds: []string{rules.ConditionHidden},
 	})
 	if err != nil {
 		t.Fatalf("ApplyConditions returned error: %v", err)
@@ -156,15 +158,15 @@ func TestApplyConditions_AddAndRemove(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	state := dhStore.States["camp-1:char-1"]
 	state.Conditions = []projectionstore.DaggerheartConditionState{
-		projectionStandardConditionState(daggerheart.ConditionHidden),
+		projectionStandardConditionState(rules.ConditionHidden),
 	}
 	dhStore.States["camp-1:char-1"] = state
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	conditionPayload := daggerheart.ConditionChangedPayload{
+	conditionPayload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "char-1",
-		Conditions:  []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
-		Added:       []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
-		Removed:     []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionHidden)},
+		Conditions:  []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
+		Added:       []rules.ConditionState{mustStandardConditionState(t, rules.ConditionVulnerable)},
+		Removed:     []rules.ConditionState{mustStandardConditionState(t, rules.ConditionHidden)},
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {
@@ -193,7 +195,7 @@ func TestApplyConditions_AddAndRemove(t *testing.T) {
 		CampaignId:         "camp-1",
 		CharacterId:        "char-1",
 		AddConditions:      []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
-		RemoveConditionIds: []string{daggerheart.ConditionHidden},
+		RemoveConditionIds: []string{rules.ConditionHidden},
 	})
 	if err != nil {
 		t.Fatalf("ApplyConditions returned error: %v", err)
@@ -213,7 +215,7 @@ func TestApplyConditions_ConflictAddRemoveSame(t *testing.T) {
 		CampaignId:         "camp-1",
 		CharacterId:        "char-1",
 		AddConditions:      []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
-		RemoveConditionIds: []string{daggerheart.ConditionHidden},
+		RemoveConditionIds: []string{rules.ConditionHidden},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }

@@ -25,18 +25,18 @@ any mismatches between the registered pieces automatically.
 | Component | Interface | Purpose |
 |-----------|-----------|---------|
 | Module | `module.Module` | Commands, events, decider, folder, state factory |
-| Metadata System | `bridge.GameSystem` | Registry metadata, name, version, optional state/outcome hooks |
-| Adapter | `bridge.Adapter` | Projection event handlers, snapshot, profile adapter |
+| Metadata System | `systems.GameSystem` | Registry metadata, name, version, optional state/outcome hooks |
+| Adapter | `systems.Adapter` | Projection event handlers, snapshot, profile adapter |
 | Manifest Entry | `manifest.SystemDescriptor` | Unifying builder that wires the three above |
 
-## Module vs bridge
+## Module vs systems
 
 The component split above reflects a CQRS boundary. A **module** owns the
 write path: it implements command handling (Decider), event folding (Folder),
 and state initialization (StateFactory), giving the system its command-execution
-and event-replay behavior. A **bridge adapter** owns the read path: it
+and event-replay behavior. A **systems adapter** owns the read path: it
 implements projection application (Apply) and snapshot materialization, turning
-committed events into queryable state. The companion `bridge.GameSystem`
+committed events into queryable state. The companion `systems.GameSystem`
 provides system metadata for the read-side registry.
 
 Both sides are registered together through a single `SystemDescriptor` in the
@@ -73,14 +73,14 @@ coverage and durable write-path behavior.
 
 ## Step 3: Implement the Metadata System
 
-Implement `bridge.GameSystem` for system name/version metadata and any optional
+Implement `systems.GameSystem` for system name/version metadata and any optional
 state-handler or outcome-application hooks. `StateHandlerFactory` and
 `OutcomeApplier` may be `nil`, but only when the system truly does not expose
 those surfaces yet; document that choice in package comments.
 
 ## Step 4: Implement the Adapter
 
-Implement `bridge.Adapter` with explicit handled event types and idempotent
+Implement `systems.Adapter` with explicit handled event types and idempotent
 projection apply behavior. If the system supports character profiles, model
 them as typed system-owned commands/events; do not route profile writes through
 core `map[string]any` envelopes.
@@ -95,8 +95,8 @@ In `internal/services/game/domain/systems/manifest/manifest.go`, add a
     ID:                  <system>.SystemID,
     Version:             <system>.SystemVersion,
     BuildModule:         func() domainsystem.Module { return <system>.NewModule() },
-    BuildMetadataSystem: func() domainbridge.GameSystem { return <system>.NewRegistrySystem() },
-    BuildAdapter: func(storeSource any) domainbridge.Adapter {
+    BuildMetadataSystem: func() domainsystems.GameSystem { return <system>.NewRegistrySystem() },
+    BuildAdapter: func(storeSource any) domainsystems.Adapter {
         store := <system>.ProjectionStoreFromSource(storeSource)
         if store == nil { return nil }
         return <system>.NewAdapter(store)

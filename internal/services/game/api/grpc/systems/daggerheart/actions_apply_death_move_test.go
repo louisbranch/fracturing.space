@@ -11,8 +11,11 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 )
 
@@ -103,7 +106,7 @@ func TestApplyDeathMove_AlreadyDead(t *testing.T) {
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
-		LifeState:   daggerheart.LifeStateDead,
+		LifeState:   mechanics.LifeStateDead,
 	}
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
@@ -122,9 +125,9 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 		CharacterID: "char-1",
 		Hp:          0,
 		Hope:        2,
-		HopeMax:     daggerheart.HopeMax,
+		HopeMax:     mechanics.HopeMax,
 		Stress:      1,
-		LifeState:   daggerheart.LifeStateAlive,
+		LifeState:   daggerheartstate.LifeStateAlive,
 	}
 	profile := dhStore.Profiles["camp-1:char-1"]
 	move := daggerheart.DeathMoveAvoidDeath
@@ -136,7 +139,7 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	if stressMax < 0 {
 		stressMax = 0
 	}
-	hopeMax := daggerheart.HopeMax
+	hopeMax := mechanics.HopeMax
 	level := profile.Level
 	if level == 0 {
 		level = daggerheartprofile.PCLevelDefault
@@ -155,7 +158,7 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve death move: %v", err)
 	}
-	payload := daggerheart.CharacterStatePatchedPayload{
+	payload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		LifeState:   &result.LifeState,
 		HP:          &result.HPAfter,
@@ -213,9 +216,9 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 		CharacterID: "char-1",
 		Hp:          0,
 		Hope:        2,
-		HopeMax:     daggerheart.HopeMax,
+		HopeMax:     mechanics.HopeMax,
 		Stress:      1,
-		LifeState:   daggerheart.LifeStateAlive,
+		LifeState:   daggerheartstate.LifeStateAlive,
 	}
 	dhStore.States["camp-1:char-1"] = state
 	profile := dhStore.Profiles["camp-1:char-1"]
@@ -231,7 +234,7 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 	}
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
-		hopeMax = daggerheart.HopeMax
+		hopeMax = mechanics.HopeMax
 	}
 	level := profile.Level
 	if level == 0 {
@@ -253,7 +256,7 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("resolve death move: %v", err)
 	}
 
-	payload := daggerheart.CharacterStatePatchedPayload{
+	payload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		LifeState:   &result.LifeState,
 		HP:          &result.HPAfter,

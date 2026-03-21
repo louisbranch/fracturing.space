@@ -15,9 +15,11 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -105,32 +107,32 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 	impenetrableBefore := state.ImpenetrableUsedThisShortRest
 	impenetrableAfter := impenetrableBefore
 	if armor != nil && in.GetArmorReaction() != nil {
-		rules := daggerheart.EffectiveArmorRules(armor)
+		armorRules := rules.EffectiveArmorRules(armor)
 		switch reaction := in.GetArmorReaction().GetReaction().(type) {
 		case *pb.DaggerheartDamageArmorReaction_Resilient:
 			_ = reaction
 			if h.deps.SeedFunc == nil {
 				return CharacterDamageResult{}, status.Error(codes.Internal, "seed generator is not configured")
 			}
-			if rules.ResilientDieSides <= 0 {
+			if armorRules.ResilientDieSides <= 0 {
 				return CharacterDamageResult{}, status.Error(codes.FailedPrecondition, "equipped armor does not support resilient")
 			}
 			if in.GetDamage().GetDirect() {
 				return CharacterDamageResult{}, status.Error(codes.FailedPrecondition, "resilient cannot apply to direct damage")
 			}
-			if !daggerheart.IsLastBaseArmorSlot(state, profile.ArmorMax) || result.ArmorSpent == 0 {
+			if !rules.IsLastBaseArmorSlot(state, profile.ArmorMax) || result.ArmorSpent == 0 {
 				return CharacterDamageResult{}, status.Error(codes.FailedPrecondition, "resilient requires spending the last base armor slot")
 			}
-			roll, err := rollArmorFeatureDie(h.deps.SeedFunc, reaction.Resilient.GetRng(), rules.ResilientDieSides)
+			roll, err := rollArmorFeatureDie(h.deps.SeedFunc, reaction.Resilient.GetRng(), armorRules.ResilientDieSides)
 			if err != nil {
 				return CharacterDamageResult{}, err
 			}
-			if roll >= rules.ResilientSuccessOnOrAbove {
+			if roll >= armorRules.ResilientSuccessOnOrAbove {
 				result.ArmorAfter = result.ArmorBefore
 				result.ArmorSpent = 0
 			}
 		case *pb.DaggerheartDamageArmorReaction_Impenetrable:
-			if rules.ImpenetrableUsesPerShortRest <= 0 || rules.ImpenetrableStressCost <= 0 {
+			if armorRules.ImpenetrableUsesPerShortRest <= 0 || armorRules.ImpenetrableStressCost <= 0 {
 				return CharacterDamageResult{}, status.Error(codes.FailedPrecondition, "equipped armor does not support impenetrable")
 			}
 			if impenetrableBefore {
@@ -139,7 +141,7 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 			if result.HPBefore != 1 || result.HPAfter != 0 {
 				return CharacterDamageResult{}, status.Error(codes.FailedPrecondition, "impenetrable only applies when damage would mark the last hit point")
 			}
-			stressAfter := state.Stress + rules.ImpenetrableStressCost
+			stressAfter := state.Stress + armorRules.ImpenetrableStressCost
 			if stressAfter > profile.StressMax {
 				return CharacterDamageResult{}, status.Error(codes.FailedPrecondition, "impenetrable requires available stress")
 			}
@@ -188,7 +190,7 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 		}
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.DamageApplyPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.DamageApplyPayload{
 		CharacterID:        ids.CharacterID(characterID),
 		HpBefore:           &hpBefore,
 		HpAfter:            &hpAfter,
@@ -230,7 +232,7 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 		return CharacterDamageResult{}, err
 	}
 	if impenetrableAfter != impenetrableBefore {
-		payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchPayload{
+		payloadJSON, err := json.Marshal(daggerheartpayload.CharacterStatePatchPayload{
 			CharacterID:                         ids.CharacterID(characterID),
 			Source:                              "armor.impenetrable",
 			ImpenetrableUsedThisShortRestBefore: &impenetrableBefore,
@@ -326,7 +328,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 	if err != nil {
 		return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
 	}
-	if daggerheart.AdversaryIsMinion(entry) && in.Damage.Amount > 0 {
+	if rules.AdversaryIsMinion(entry) && in.Damage.Amount > 0 {
 		result.HPAfter = 0
 	}
 
@@ -371,7 +373,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 		}
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryDamageApplyPayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryDamageApplyPayload{
 		AdversaryID:        ids.AdversaryID(adversaryID),
 		HpBefore:           &hpBefore,
 		HpAfter:            &hpAfter,
@@ -411,7 +413,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 	}); err != nil {
 		return AdversaryDamageResult{}, err
 	}
-	if daggerheart.AdversaryIsMinion(entry) && in.Damage.Amount > 0 {
+	if rules.AdversaryIsMinion(entry) && in.Damage.Amount > 0 {
 		if err := h.deleteAdversary(ctx, campaignID, sessionID, sceneID, adversary.AdversaryID, "minion_defeated"); err != nil {
 			return AdversaryDamageResult{}, err
 		}
@@ -480,8 +482,8 @@ func (h *Handler) autoDropBeastform(ctx context.Context, campaignID, sessionID, 
 	default:
 		return nil
 	}
-	nextClassState := daggerheart.WithActiveBeastform(classState, nil)
-	payloadJSON, err := json.Marshal(daggerheart.BeastformDropPayload{
+	nextClassState := daggerheartstate.WithActiveBeastform(classState, nil)
+	payloadJSON, err := json.Marshal(daggerheartpayload.BeastformDropPayload{
 		ActorCharacterID: ids.CharacterID(characterID),
 		CharacterID:      ids.CharacterID(characterID),
 		BeastformID:      active.BeastformID,
@@ -507,8 +509,8 @@ func (h *Handler) autoDropBeastform(ctx context.Context, campaignID, sessionID, 
 	})
 }
 
-func classStateFromProjection(state projectionstore.DaggerheartClassState) daggerheart.CharacterClassState {
-	return daggerheart.CharacterClassState{
+func classStateFromProjection(state projectionstore.DaggerheartClassState) daggerheartstate.CharacterClassState {
+	return daggerheartstate.CharacterClassState{
 		AttackBonusUntilRest:            state.AttackBonusUntilRest,
 		EvasionBonusUntilHitOrRest:      state.EvasionBonusUntilHitOrRest,
 		DifficultyPenaltyUntilRest:      state.DifficultyPenaltyUntilRest,
@@ -518,7 +520,7 @@ func classStateFromProjection(state projectionstore.DaggerheartClassState) dagge
 		RallyDice:                       append([]int(nil), state.RallyDice...),
 		PrayerDice:                      append([]int(nil), state.PrayerDice...),
 		ChannelRawPowerUsedThisLongRest: state.ChannelRawPowerUsedThisLongRest,
-		Unstoppable: daggerheart.CharacterUnstoppableState{
+		Unstoppable: daggerheartstate.CharacterUnstoppableState{
 			Active:           state.Unstoppable.Active,
 			CurrentValue:     state.Unstoppable.CurrentValue,
 			DieSides:         state.Unstoppable.DieSides,
@@ -527,20 +529,20 @@ func classStateFromProjection(state projectionstore.DaggerheartClassState) dagge
 	}.Normalized()
 }
 
-func classStatePtr(state daggerheart.CharacterClassState) *daggerheart.CharacterClassState {
+func classStatePtr(state daggerheartstate.CharacterClassState) *daggerheartstate.CharacterClassState {
 	normalized := state.Normalized()
 	return &normalized
 }
 
-func activeBeastformFromProjection(state *projectionstore.DaggerheartActiveBeastformState) *daggerheart.CharacterActiveBeastformState {
+func activeBeastformFromProjection(state *projectionstore.DaggerheartActiveBeastformState) *daggerheartstate.CharacterActiveBeastformState {
 	if state == nil {
 		return nil
 	}
-	damageDice := make([]daggerheart.CharacterDamageDie, 0, len(state.DamageDice))
+	damageDice := make([]daggerheartstate.CharacterDamageDie, 0, len(state.DamageDice))
 	for _, die := range state.DamageDice {
-		damageDice = append(damageDice, daggerheart.CharacterDamageDie{Count: die.Count, Sides: die.Sides})
+		damageDice = append(damageDice, daggerheartstate.CharacterDamageDie{Count: die.Count, Sides: die.Sides})
 	}
-	return &daggerheart.CharacterActiveBeastformState{
+	return &daggerheartstate.CharacterActiveBeastformState{
 		BeastformID:            state.BeastformID,
 		BaseTrait:              state.BaseTrait,
 		AttackTrait:            state.AttackTrait,
@@ -560,7 +562,7 @@ func (h *Handler) applyMinionSpillover(ctx context.Context, campaignID, sessionI
 	if err != nil {
 		return status.Errorf(codes.FailedPrecondition, "adversary entry %q not found", primary.AdversaryEntryID)
 	}
-	defeats := daggerheart.AdversaryMinionSpilloverDefeats(primaryEntry, damageAmount)
+	defeats := rules.AdversaryMinionSpilloverDefeats(primaryEntry, damageAmount)
 	if defeats <= 0 {
 		return nil
 	}
@@ -580,7 +582,7 @@ func (h *Handler) applyMinionSpillover(ctx context.Context, campaignID, sessionI
 		if err != nil {
 			return status.Errorf(codes.FailedPrecondition, "adversary entry %q not found", candidate.AdversaryEntryID)
 		}
-		if !daggerheart.AdversaryIsMinion(entry) {
+		if !rules.AdversaryIsMinion(entry) {
 			continue
 		}
 		if err := h.deleteAdversary(ctx, campaignID, sessionID, sceneID, candidate.AdversaryID, "minion_defeated"); err != nil {
@@ -592,7 +594,7 @@ func (h *Handler) applyMinionSpillover(ctx context.Context, campaignID, sessionI
 }
 
 func (h *Handler) deleteAdversary(ctx context.Context, campaignID, sessionID, sceneID, adversaryID, reason string) error {
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryDeletePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryDeletePayload{
 		AdversaryID: ids.AdversaryID(adversaryID),
 		Reason:      reason,
 	})

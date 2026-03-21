@@ -7,16 +7,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func decideLevelUpApply(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideLevelUpApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeLevelUpApplied, "character",
 		func(p *payload.LevelUpApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(_ snapstate.SnapshotState, _ bool, p *payload.LevelUpApplyPayload, _ func() time.Time) *command.Rejection {
+		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.LevelUpApplyPayload, _ func() time.Time) *command.Rejection {
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 
 			// Convert payload advancements to domain model.
@@ -64,7 +64,7 @@ func decideLevelUpApply(snapshotState snapstate.SnapshotState, hasSnapshot bool,
 			p.ThresholdDelta = result.ThresholdDelta
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.LevelUpApplyPayload) payload.LevelUpAppliedPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.LevelUpApplyPayload) payload.LevelUpAppliedPayload {
 			return payload.LevelUpAppliedPayload{
 				CharacterID:                  p.CharacterID,
 				Level:                        p.LevelAfter,

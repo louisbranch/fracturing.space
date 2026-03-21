@@ -51,7 +51,7 @@ func TestCoreDeciderDecide_RoutesSystemCommandOnSuccess(t *testing.T) {
 		t.Fatalf("register system module: %v", err)
 	}
 
-	decision := CoreDecider{Systems: systemRegistry}.Decide(
+	decision := CoreDecider{systemCommands: newSystemCommandDispatcher(systemRegistry)}.Decide(
 		aggregate.State{},
 		command.Command{
 			CampaignID:    "camp-1",
@@ -71,7 +71,7 @@ func TestCoreDeciderDecide_RoutesSystemCommandOnSuccess(t *testing.T) {
 
 func TestSessionStartRoute_ReturnsSessionStartRejectionImmediately(t *testing.T) {
 	decision := sessionStartRoute(
-		CoreDecider{},
+		coreCommandRouter{},
 		readySessionStartAggregateState(campaign.StatusDraft),
 		command.Command{
 			CampaignID:  "camp-1",
@@ -92,7 +92,7 @@ func TestSessionStartRoute_ReturnsSessionStartRejectionImmediately(t *testing.T)
 
 func TestSessionStartRoute_BlankCampaignStatusFailsClosed(t *testing.T) {
 	decision := sessionStartRoute(
-		CoreDecider{},
+		coreCommandRouter{},
 		readySessionStartAggregateState(""),
 		command.Command{
 			CampaignID:  "camp-1",
@@ -123,7 +123,7 @@ func TestSessionStartRoute_ActiveSessionRejectedByReadiness(t *testing.T) {
 	state.Session.Started = true
 
 	decision := sessionStartRoute(
-		CoreDecider{},
+		coreCommandRouter{},
 		state,
 		command.Command{
 			CampaignID:  "camp-1",
@@ -152,7 +152,7 @@ func TestSessionStartRoute_ActiveSessionRejectedByReadiness(t *testing.T) {
 
 func TestSessionStartRoute_NonDraftCampaignReturnsSessionStartOnly(t *testing.T) {
 	decision := sessionStartRoute(
-		CoreDecider{},
+		coreCommandRouter{},
 		readySessionStartAggregateState(campaign.StatusActive),
 		command.Command{
 			CampaignID:  "camp-1",

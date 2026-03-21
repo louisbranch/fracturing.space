@@ -5,15 +5,23 @@ import (
 	"testing"
 	"time"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {
 				CharacterID: "char-1",
 				HP:          0,
@@ -21,7 +29,7 @@ func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 				HopeMax:     6,
 				Stress:      1,
 				Armor:       1,
-				LifeState:   LifeStateAlive,
+				LifeState:   daggerheartstate.LifeStateAlive,
 			},
 		},
 	}
@@ -32,12 +40,12 @@ func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		payload CharacterStatePatchPayload
+		payload daggerheartpayload.CharacterStatePatchPayload
 		want    bool
 	}{
 		{
 			name: "missing character is never no-mutation",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID: "missing",
 				HopeAfter:   &two,
 			},
@@ -45,7 +53,7 @@ func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 		},
 		{
 			name: "unchanged fields is no-mutation",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID:  "char-1",
 				HPAfter:      &zero,
 				HopeAfter:    &two,
@@ -57,7 +65,7 @@ func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 		},
 		{
 			name: "hp before mismatch branch when current hp is zero",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID: "char-1",
 				HPBefore:    &one,
 			},
@@ -65,9 +73,9 @@ func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 		},
 		{
 			name: "life state change is mutation",
-			payload: CharacterStatePatchPayload{
+			payload: daggerheartpayload.CharacterStatePatchPayload{
 				CharacterID:    "char-1",
-				LifeStateAfter: strPtr(LifeStateDead),
+				LifeStateAfter: strPtr(mechanics.LifeStateDead),
 			},
 			want: false,
 		},
@@ -75,67 +83,67 @@ func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := isCharacterStatePatchNoMutation(state, tc.payload)
+			got := daggerheartdecider.IsCharacterStatePatchNoMutation(state, tc.payload)
 			if got != tc.want {
-				t.Fatalf("isCharacterStatePatchNoMutation() = %v, want %v", got, tc.want)
+				t.Fatalf("daggerheartdecider.IsCharacterStatePatchNoMutation() = %v, want %v", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestIsConditionChangeNoMutation_NormalizationErrorBranches(t *testing.T) {
-	stateInvalidCurrent := SnapshotState{
-		CharacterStates: map[ids.CharacterID]CharacterState{
+	stateInvalidCurrent := daggerheartstate.SnapshotState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {CharacterID: "char-1", Conditions: []string{""}},
 		},
 	}
-	if got := isConditionChangeNoMutation(stateInvalidCurrent, ConditionChangePayload{
+	if got := daggerheartdecider.IsConditionChangeNoMutation(stateInvalidCurrent, daggerheartpayload.ConditionChangePayload{
 		CharacterID:     "char-1",
-		ConditionsAfter: []ConditionState{mustConditionState("hidden")},
+		ConditionsAfter: []rules.ConditionState{mustConditionState("hidden")},
 	}); got {
 		t.Fatal("expected false when current conditions fail normalization")
 	}
 
-	stateValid := SnapshotState{
-		CharacterStates: map[ids.CharacterID]CharacterState{
+	stateValid := daggerheartstate.SnapshotState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {CharacterID: "char-1", Conditions: []string{"hidden"}},
 		},
 	}
-	if got := isConditionChangeNoMutation(stateValid, ConditionChangePayload{
+	if got := daggerheartdecider.IsConditionChangeNoMutation(stateValid, daggerheartpayload.ConditionChangePayload{
 		CharacterID:     "char-1",
-		ConditionsAfter: []ConditionState{{Code: ""}},
+		ConditionsAfter: []rules.ConditionState{{Code: ""}},
 	}); got {
 		t.Fatal("expected false when payload conditions fail normalization")
 	}
 }
 
 func TestSnapshotCharacterState_DefaultsLifeStateAndCampaignID(t *testing.T) {
-	snapshot := SnapshotState{
+	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {CharacterID: "char-1", HP: 5},
 		},
 	}
 
-	character, ok := snapshotCharacterState(snapshot, ids.CharacterID(" char-1 "))
+	character, ok := daggerheartdecider.SnapshotCharacterState(snapshot, ids.CharacterID(" char-1 "))
 	if !ok {
-		t.Fatal("expected snapshotCharacterState to resolve character")
+		t.Fatal("expected daggerheartdecider.SnapshotCharacterState to resolve character")
 	}
 	if character.CampaignID != "camp-1" {
 		t.Fatalf("CampaignID = %s, want camp-1", character.CampaignID)
 	}
-	if character.LifeState != LifeStateAlive {
-		t.Fatalf("LifeState = %s, want %s", character.LifeState, LifeStateAlive)
+	if character.LifeState != daggerheartstate.LifeStateAlive {
+		t.Fatalf("LifeState = %s, want %s", character.LifeState, daggerheartstate.LifeStateAlive)
 	}
 }
 
 func TestIsCountdownUpdateNoMutation_LoopedBranch(t *testing.T) {
-	snapshot := SnapshotState{
-		CountdownStates: map[ids.CountdownID]CountdownState{
+	snapshot := daggerheartstate.SnapshotState{
+		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Looping: false},
 		},
 	}
-	if got := isCountdownUpdateNoMutation(snapshot, CountdownUpdatePayload{
+	if got := daggerheartdecider.IsCountdownUpdateNoMutation(snapshot, daggerheartpayload.CountdownUpdatePayload{
 		CountdownID: "cd-1",
 		After:       3,
 		Looped:      true,
@@ -145,7 +153,7 @@ func TestIsCountdownUpdateNoMutation_LoopedBranch(t *testing.T) {
 }
 
 func TestSnapshotCountdownState_BlankIDReturnsFalse(t *testing.T) {
-	if _, ok := snapshotCountdownState(SnapshotState{}, ids.CountdownID("  ")); ok {
+	if _, ok := daggerheartdecider.SnapshotCountdownState(daggerheartstate.SnapshotState{}, ids.CountdownID("  ")); ok {
 		t.Fatal("expected blank countdown id to return false")
 	}
 }
@@ -155,7 +163,7 @@ func strPtr(v string) *string {
 }
 
 func TestApplyLevelUpToCharacterProfile_AllAdvancementBranches(t *testing.T) {
-	profile := &CharacterProfile{
+	profile := &daggerheartstate.CharacterProfile{
 		Level:           1,
 		HpMax:           6,
 		StressMax:       6,
@@ -166,10 +174,10 @@ func TestApplyLevelUpToCharacterProfile_AllAdvancementBranches(t *testing.T) {
 		DomainCardIDs:   []string{"card-existing"},
 	}
 
-	applyLevelUpToCharacterProfile(profile, LevelUpAppliedPayload{
+	applyLevelUpToCharacterProfile(profile, daggerheartpayload.LevelUpAppliedPayload{
 		Level:          2,
 		ThresholdDelta: 1,
-		Advancements: []LevelUpAdvancementPayload{
+		Advancements: []daggerheartpayload.LevelUpAdvancementPayload{
 			{Type: "trait_increase", Trait: "agility"},
 			{Type: "add_hp_slots"},
 			{Type: "add_stress_slots"},
@@ -179,7 +187,7 @@ func TestApplyLevelUpToCharacterProfile_AllAdvancementBranches(t *testing.T) {
 			{Type: "domain_card", DomainCardID: "card-2"},
 			{Type: "upgraded_subclass"},
 		},
-		Rewards: []LevelUpRewardPayload{{Type: "domain_card", DomainCardID: "card-3", DomainCardLevel: 2}},
+		Rewards: []daggerheartpayload.LevelUpRewardPayload{{Type: "domain_card", DomainCardID: "card-3", DomainCardLevel: 2}},
 	})
 
 	if profile.Level != 2 || profile.HpMax != 7 || profile.StressMax != 7 || profile.Evasion != 11 || profile.Proficiency != 2 {
@@ -195,19 +203,19 @@ func TestApplyLevelUpToCharacterProfile_AllAdvancementBranches(t *testing.T) {
 		t.Fatalf("domain card count = %d, want 3", len(profile.DomainCardIDs))
 	}
 
-	applyLevelUpToCharacterProfile(nil, LevelUpAppliedPayload{Level: 3})
+	applyLevelUpToCharacterProfile(nil, daggerheartpayload.LevelUpAppliedPayload{Level: 3})
 }
 
 func TestDecideRestTake_EmitsDowntimeMoveEventsAndTrimsFields(t *testing.T) {
 	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
-	payloadJSON, err := json.Marshal(RestTakePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.RestTakePayload{
 		RestType:         " short ",
 		GMFearBefore:     1,
 		GMFearAfter:      2,
 		ShortRestsBefore: 0,
 		ShortRestsAfter:  1,
 		Participants:     []ids.CharacterID{"char-1"},
-		DowntimeMoves: []DowntimeMoveAppliedPayload{{
+		DowntimeMoves: []daggerheartpayload.DowntimeMoveAppliedPayload{{
 			ActorCharacterID:  " char-1 ",
 			TargetCharacterID: " char-2 ",
 			Move:              " prepare ",
@@ -220,7 +228,7 @@ func TestDecideRestTake_EmitsDowntimeMoveEventsAndTrimsFields(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	decision := decideRestTake(SnapshotState{}, command.Command{
+	decision := daggerheartdecider.DecideRestTake(daggerheartstate.SnapshotState{}, command.Command{
 		CampaignID:    "camp-1",
 		Type:          command.Type("sys.daggerheart.rest.take"),
 		ActorType:     command.ActorTypeSystem,
@@ -239,14 +247,14 @@ func TestDecideRestTake_EmitsDowntimeMoveEventsAndTrimsFields(t *testing.T) {
 	}
 
 	move := decision.Events[1]
-	if move.Type != event.Type(EventTypeDowntimeMoveApplied) {
-		t.Fatalf("downtime event type = %s, want %s", move.Type, EventTypeDowntimeMoveApplied)
+	if move.Type != event.Type(daggerheartpayload.EventTypeDowntimeMoveApplied) {
+		t.Fatalf("downtime event type = %s, want %s", move.Type, daggerheartpayload.EventTypeDowntimeMoveApplied)
 	}
 	if move.EntityType != "character" || move.EntityID != "char-1" {
 		t.Fatalf("downtime event entity = (%s, %s), want (character, char-1)", move.EntityType, move.EntityID)
 	}
 
-	var payload DowntimeMoveAppliedPayload
+	var payload daggerheartpayload.DowntimeMoveAppliedPayload
 	if err := json.Unmarshal(move.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal move payload: %v", err)
 	}

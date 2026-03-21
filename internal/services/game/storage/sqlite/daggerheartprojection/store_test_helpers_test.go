@@ -33,7 +33,7 @@ func openTestStore(t *testing.T) *testStore {
 		}
 	})
 
-	projection := root.DaggerheartProjectionStore()
+	projection := root.ProjectionStores().Daggerheart
 	if projection == nil {
 		t.Fatal("expected Daggerheart projection backend")
 	}

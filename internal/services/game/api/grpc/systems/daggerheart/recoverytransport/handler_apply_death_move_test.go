@@ -7,6 +7,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
@@ -49,7 +50,7 @@ func TestHandlerApplyDeathMoveRiskItAllDeathAppendsDeleteEvent(t *testing.T) {
 	if result.CharacterID != "char-1" {
 		t.Fatalf("character id = %q, want char-1", result.CharacterID)
 	}
-	if result.Outcome.LifeState != daggerheart.LifeStateDead {
+	if result.Outcome.LifeState != mechanics.LifeStateDead {
 		t.Fatalf("life state = %q, want dead", result.Outcome.LifeState)
 	}
 	if deleted.CharacterID != "char-1" {
@@ -77,7 +78,7 @@ func findRiskItAllDeathSeed(t *testing.T) int64 {
 		if err != nil {
 			t.Fatalf("ResolveDeathMove seed=%d: %v", seed, err)
 		}
-		if outcome.LifeState == daggerheart.LifeStateDead {
+		if outcome.LifeState == mechanics.LifeStateDead {
 			return seed
 		}
 	}

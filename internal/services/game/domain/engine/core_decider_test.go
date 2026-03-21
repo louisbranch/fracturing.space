@@ -26,10 +26,10 @@ func TestNewCoreDecider_BuildsRoutesForRegisteredCoreDefinitions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCoreDecider returned error: %v", err)
 	}
-	if len(decider.routes) != len(definitions) {
-		t.Fatalf("routes = %d, want %d", len(decider.routes), len(definitions))
+	if len(decider.coreCommands.routes) != len(definitions) {
+		t.Fatalf("routes = %d, want %d", len(decider.coreCommands.routes), len(definitions))
 	}
-	if decider.SessionStartWorkflow == nil {
+	if decider.coreCommands.sessionStart == nil {
 		t.Fatal("expected session-start workflow to be initialized")
 	}
 }
@@ -118,10 +118,12 @@ func TestCoreDeciderDecide_UsesInjectedRouteTable(t *testing.T) {
 	called := false
 
 	decision := CoreDecider{
-		routes: map[command.Type]coreCommandRoute{
-			customType: func(_ CoreDecider, _ aggregate.State, _ command.Command, _ func() time.Time) command.Decision {
-				called = true
-				return command.Accept(event.Event{Type: event.Type("custom.routed")})
+		coreCommands: coreCommandRouter{
+			routes: map[command.Type]coreCommandRoute{
+				customType: func(_ coreCommandRouter, _ aggregate.State, _ command.Command, _ func() time.Time) command.Decision {
+					called = true
+					return command.Accept(event.Event{Type: event.Type("custom.routed")})
+				},
 			},
 		},
 	}.Decide(&aggregate.State{Campaign: campaign.State{Created: true}}, command.Command{Type: customType}, time.Now)
@@ -155,7 +157,7 @@ func TestSessionStartRoute_UsesInjectedSessionStartWorkflow(t *testing.T) {
 	}
 
 	decision := sessionStartRoute(
-		CoreDecider{SessionStartWorkflow: workflow},
+		coreCommandRouter{sessionStart: workflow},
 		aggregate.State{},
 		command.Command{Type: session.CommandTypeStart},
 		time.Now,
@@ -259,7 +261,7 @@ func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			decision := tc.route(CoreDecider{}, state, tc.cmd, now)
+			decision := tc.route(coreCommandRouter{}, state, tc.cmd, now)
 			if len(decision.Rejections) != 1 {
 				t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
 			}

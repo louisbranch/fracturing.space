@@ -8,13 +8,13 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func decideSubclassFeatureApply(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideSubclassFeatureApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncMulti(cmd, snapshotState, hasSnapshot,
-		func(s snapstate.SnapshotState, hasState bool, p *payload.SubclassFeatureApplyPayload, _ func() time.Time) *command.Rejection {
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.SubclassFeatureApplyPayload, _ func() time.Time) *command.Rejection {
 			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
 			p.Feature = strings.TrimSpace(p.Feature)
 			if p.ActorCharacterID == "" {
@@ -70,7 +70,7 @@ func decideSubclassFeatureApply(snapshotState snapstate.SnapshotState, hasSnapsh
 			}
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.SubclassFeatureApplyPayload, _ func() time.Time) ([]module.EventSpec, error) {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.SubclassFeatureApplyPayload, _ func() time.Time) ([]module.EventSpec, error) {
 			source := fmt.Sprintf("subclass_feature:%s:%s", p.Feature, strings.TrimSpace(p.ActorCharacterID.String()))
 			specs := make([]module.EventSpec, 0, len(p.Targets)+len(p.CharacterConditionTargets)+len(p.AdversaryConditionTargets))
 			for _, targetPatch := range p.Targets {
@@ -86,7 +86,7 @@ func decideSubclassFeatureApply(snapshotState snapstate.SnapshotState, hasSnapsh
 						Stress:        targetPatch.StressAfter,
 						Armor:         targetPatch.ArmorAfter,
 						ClassState:    normalizedClassStatePtr(targetPatch.ClassStateAfter),
-						SubclassState: snapstate.NormalizedSubclassStatePtr(targetPatch.SubclassStateAfter),
+						SubclassState: daggerheartstate.NormalizedSubclassStatePtr(targetPatch.SubclassStateAfter),
 					},
 				})
 			}

@@ -11,7 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -38,7 +38,7 @@ func (h *Handler) AcquireDomainCard(ctx context.Context, in *pb.DaggerheartAcqui
 		return nil, err
 	}
 
-	payload := daggerheart.DomainCardAcquirePayload{
+	payload := daggerheartpayload.DomainCardAcquirePayload{
 		CharacterID: ids.CharacterID(characterID),
 		CardID:      cardID,
 		CardLevel:   int(in.GetCardLevel()),

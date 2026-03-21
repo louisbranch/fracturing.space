@@ -5,32 +5,26 @@ import (
 	"strings"
 )
 
-// Validate checks that every store field is non-nil and eagerly builds the
-// adapter registry. Call this at service construction time so that handlers
-// do not need per-method nil guards and adapter registration errors surface
-// at startup instead of at runtime.
-func (s *Stores) Validate() error {
+// ValidateRootStoreGroups checks that every root store concern is configured
+// before service construction so handlers do not need per-method nil guards.
+func ValidateRootStoreGroups(
+	projection ProjectionStores,
+	systemStores SystemStores,
+	infrastructure InfrastructureStores,
+	content ContentStores,
+	runtime RuntimeStores,
+) error {
 	var missing []string
-	missing = appendMissingRequirements(missing, s.projectionRequirements()...)
-	missing = appendMissingRequirements(missing, s.infrastructureRequirements()...)
-	missing = appendMissingRequirements(missing, s.contentRequirements()...)
-	missing = appendMissingRequirements(missing, s.runtimeRequirements()...)
+	missing = appendMissingRequirements(missing, projection.requirements()...)
+	missing = appendMissingRequirements(missing, dependencyRequirement{
+		name:       "SystemStores.Daggerheart",
+		configured: systemStores.Daggerheart != nil,
+	})
+	missing = appendMissingRequirements(missing, infrastructure.requirements()...)
+	missing = appendMissingRequirements(missing, content.requirements()...)
+	missing = appendMissingRequirements(missing, runtime.requirements()...)
 	if len(missing) > 0 {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
-	}
-
-	adapters, err := TryAdapterRegistryForSystemStores(s.SystemStores)
-	if err != nil {
-		return fmt.Errorf("build adapter registry: %w", err)
-	}
-	s.adapters = adapters
-
-	applier, err := s.TryApplier()
-	if err != nil {
-		return fmt.Errorf("build projection applier: %w", err)
-	}
-	if err := applier.ValidateStorePreconditions(); err != nil {
-		return err
 	}
 	return nil
 }
@@ -49,14 +43,13 @@ func appendMissingRequirements(missing []string, requirements ...dependencyRequi
 	return missing
 }
 
-func (s Stores) projectionRequirements() []dependencyRequirement {
+func (s ProjectionStores) requirements() []dependencyRequirement {
 	return []dependencyRequirement{
 		{name: "Campaign", configured: s.Campaign != nil},
 		{name: "Participant", configured: s.Participant != nil},
 		{name: "ClaimIndex", configured: s.ClaimIndex != nil},
 		{name: "Invite", configured: s.Invite != nil},
 		{name: "Character", configured: s.Character != nil},
-		{name: "SystemStores.Daggerheart", configured: s.SystemStores.Daggerheart != nil},
 		{name: "Session", configured: s.Session != nil},
 		{name: "SessionGate", configured: s.SessionGate != nil},
 		{name: "SessionSpotlight", configured: s.SessionSpotlight != nil},
@@ -70,7 +63,7 @@ func (s Stores) projectionRequirements() []dependencyRequirement {
 	}
 }
 
-func (s Stores) infrastructureRequirements() []dependencyRequirement {
+func (s InfrastructureStores) requirements() []dependencyRequirement {
 	return []dependencyRequirement{
 		{name: "Event", configured: s.Event != nil},
 		{name: "Audit", configured: s.Audit != nil},
@@ -79,16 +72,15 @@ func (s Stores) infrastructureRequirements() []dependencyRequirement {
 	}
 }
 
-func (s Stores) contentRequirements() []dependencyRequirement {
+func (s ContentStores) requirements() []dependencyRequirement {
 	return []dependencyRequirement{
 		{name: "DaggerheartContent", configured: s.DaggerheartContent != nil},
 	}
 }
 
-func (s Stores) runtimeRequirements() []dependencyRequirement {
+func (s RuntimeStores) requirements() []dependencyRequirement {
 	return []dependencyRequirement{
 		{name: "Write.Executor", configured: s.Write.Executor != nil},
 		{name: "Write.Runtime", configured: s.Write.Runtime != nil},
-		{name: "Events", configured: s.Events != nil},
 	}
 }

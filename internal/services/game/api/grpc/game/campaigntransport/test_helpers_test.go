@@ -5,18 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -239,6 +243,163 @@ func (s *orderedCampaignStore) List(_ context.Context, pageSize int, pageToken s
 		page.NextPageToken = s.Campaigns[end-1].ID
 	}
 	return page, nil
+}
+
+type readinessServiceFixtureStores struct {
+	campaign    *gametest.FakeCampaignStore
+	participant *gametest.FakeParticipantStore
+	character   *gametest.FakeCharacterStore
+	session     *gametest.FakeSessionStore
+}
+
+type readinessServiceFixtureConfig struct {
+	status            campaign.Status
+	gmMode            campaign.GmMode
+	aiAgentID         string
+	locale            string
+	includeHumanGM    bool
+	includeAIGM       bool
+	includePlayerSeat bool
+}
+
+func newReadinessServiceFixture(config readinessServiceFixtureConfig) (*CampaignService, readinessServiceFixtureStores) {
+	stores := readinessServiceFixtureStores{
+		campaign:    gametest.NewFakeCampaignStore(),
+		participant: gametest.NewFakeParticipantStore(),
+		character:   gametest.NewFakeCharacterStore(),
+		session:     gametest.NewFakeSessionStore(),
+	}
+
+	status := config.status
+	if status == "" {
+		status = campaign.StatusActive
+	}
+	gmMode := config.gmMode
+	if gmMode == "" {
+		gmMode = campaign.GmModeHuman
+	}
+	locale := config.locale
+	if locale == "" {
+		locale = "en-US"
+	}
+	stores.campaign.Campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Campaign One",
+		Locale:    locale,
+		Status:    status,
+		GmMode:    gmMode,
+		AIAgentID: strings.TrimSpace(config.aiAgentID),
+	}
+
+	includeHumanGM := config.includeHumanGM
+	includePlayerSeat := config.includePlayerSeat
+	if !includeHumanGM && !config.includeAIGM {
+		includeHumanGM = true
+	}
+	if !includePlayerSeat {
+		includePlayerSeat = true
+	}
+
+	participants := map[string]storage.ParticipantRecord{}
+	if includeHumanGM {
+		participants["gm-1"] = storage.ParticipantRecord{
+			ID:             "gm-1",
+			CampaignID:     "c1",
+			UserID:         "user-gm-1",
+			Name:           "GM One",
+			Role:           participant.RoleGM,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessOwner,
+		}
+	}
+	if config.includeAIGM {
+		participants["ai-gm-1"] = storage.ParticipantRecord{
+			ID:             "ai-gm-1",
+			CampaignID:     "c1",
+			Role:           participant.RoleGM,
+			Controller:     participant.ControllerAI,
+			CampaignAccess: participant.CampaignAccessOwner,
+		}
+	}
+	if includePlayerSeat {
+		participants["player-1"] = storage.ParticipantRecord{
+			ID:             "player-1",
+			CampaignID:     "c1",
+			UserID:         "user-player-1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+		}
+	}
+	stores.participant.Participants["c1"] = participants
+
+	stores.character.Characters["c1"] = map[string]storage.CharacterRecord{
+		"char-1": {
+			ID:            "char-1",
+			CampaignID:    "c1",
+			ParticipantID: "player-1",
+		},
+	}
+
+	service := NewCampaignService(Deps{
+		Campaign:    stores.campaign,
+		Participant: stores.participant,
+		Character:   stores.character,
+		Session:     stores.session,
+		Daggerheart: gametest.NewFakeDaggerheartStore(),
+	})
+	return service, stores
+}
+
+func assertReadinessHasBlockerCode(t *testing.T, report *statev1.CampaignSessionReadiness, code string) {
+	t.Helper()
+	if report == nil {
+		t.Fatal("readiness report is nil")
+	}
+	if report.GetReady() {
+		t.Fatalf("readiness.ready = true, want false with blocker %s", code)
+	}
+	for _, blocker := range report.GetBlockers() {
+		if strings.TrimSpace(blocker.GetCode()) == code {
+			return
+		}
+	}
+	t.Fatalf("expected blocker code %q, got %v", code, readinessBlockerCodes(report.GetBlockers()))
+}
+
+func findReadinessBlocker(t *testing.T, report *statev1.CampaignSessionReadiness, code string) *statev1.CampaignSessionReadinessBlocker {
+	t.Helper()
+	if report == nil {
+		t.Fatal("readiness report is nil")
+	}
+	for _, blocker := range report.GetBlockers() {
+		if strings.TrimSpace(blocker.GetCode()) == code {
+			return blocker
+		}
+	}
+	t.Fatalf("expected blocker code %q, got %v", code, readinessBlockerCodes(report.GetBlockers()))
+	return nil
+}
+
+func readinessBlockerCodes(blockers []*statev1.CampaignSessionReadinessBlocker) []string {
+	codes := make([]string, 0, len(blockers))
+	for _, blocker := range blockers {
+		codes = append(codes, strings.TrimSpace(blocker.GetCode()))
+	}
+	return codes
+}
+
+func assertStringSliceEqual(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("slice len = %d, want %d; got=%v want=%v", len(got), len(want), got, want)
+	}
+	for idx := range want {
+		if got[idx] != want[idx] {
+			t.Fatalf("slice[%d] = %q, want %q; got=%v want=%v", idx, got[idx], want[idx], got, want)
+		}
+	}
 }
 
 // newTestCampaignService wraps newCampaignServiceWithDependencies with

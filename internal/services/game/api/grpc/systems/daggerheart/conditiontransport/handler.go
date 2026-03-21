@@ -14,6 +14,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -82,7 +85,7 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 	}
 	lifeStateBefore := state.LifeState
 	if lifeStateBefore == "" {
-		lifeStateBefore = daggerheart.LifeStateAlive
+		lifeStateBefore = daggerheartstate.LifeStateAlive
 	}
 	lifeStateChanged := false
 	if lifeStateProvided {
@@ -109,7 +112,7 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 		return CharacterConditionsResult{}, status.Error(codes.InvalidArgument, "conditions or life_state are required")
 	}
 
-	normalizedAdd := []daggerheart.ConditionState{}
+	normalizedAdd := []rules.ConditionState{}
 	if len(addConditions) > 0 {
 		normalizedAdd, err = ConditionStateViewsToDomain(addConditions)
 		if err != nil {
@@ -126,18 +129,18 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 		}
 	}
 
-	var before []daggerheart.ConditionState
-	var after []daggerheart.ConditionState
-	var added []daggerheart.ConditionState
-	var removed []daggerheart.ConditionState
+	var before []rules.ConditionState
+	var after []rules.ConditionState
+	var added []rules.ConditionState
+	var removed []rules.ConditionState
 	conditionChanged := false
 	if len(normalizedAdd) > 0 || len(removeConditions) > 0 {
-		before, err = daggerheart.NormalizeConditionStates(ProjectionConditionStatesToDomain(state.Conditions))
+		before, err = rules.NormalizeConditionStates(ProjectionConditionStatesToDomain(state.Conditions))
 		if err != nil {
 			return CharacterConditionsResult{}, grpcerror.Internal("invalid stored conditions", err)
 		}
 
-		afterSet := make(map[string]daggerheart.ConditionState, len(before)+len(normalizedAdd))
+		afterSet := make(map[string]rules.ConditionState, len(before)+len(normalizedAdd))
 		for _, value := range before {
 			afterSet[value.ID] = value
 		}
@@ -148,16 +151,16 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 			afterSet[value.ID] = value
 		}
 
-		afterList := make([]daggerheart.ConditionState, 0, len(afterSet))
+		afterList := make([]rules.ConditionState, 0, len(afterSet))
 		for _, value := range afterSet {
 			afterList = append(afterList, value)
 		}
-		after, err = daggerheart.NormalizeConditionStates(afterList)
+		after, err = rules.NormalizeConditionStates(afterList)
 		if err != nil {
 			return CharacterConditionsResult{}, grpcerror.Internal("invalid condition set", err)
 		}
 
-		added, removed = daggerheart.DiffConditionStates(before, after)
+		added, removed = rules.DiffConditionStates(before, after)
 		conditionChanged = len(added) > 0 || len(removed) > 0
 		if !conditionChanged && !lifeStateChanged {
 			return CharacterConditionsResult{}, status.Error(codes.FailedPrecondition, "no condition or life_state changes to apply")
@@ -175,7 +178,7 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 	source := strings.TrimSpace(in.GetSource())
 
 	if conditionChanged {
-		payloadJSON, err := json.Marshal(daggerheart.ConditionChangePayload{
+		payloadJSON, err := json.Marshal(daggerheartpayload.ConditionChangePayload{
 			CharacterID:      ids.CharacterID(characterID),
 			ConditionsBefore: before,
 			ConditionsAfter:  after,
@@ -205,7 +208,7 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 	}
 
 	if lifeStateChanged {
-		payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchPayload{
+		payloadJSON, err := json.Marshal(daggerheartpayload.CharacterStatePatchPayload{
 			CharacterID:     ids.CharacterID(characterID),
 			LifeStateBefore: &lifeStateBefore,
 			LifeStateAfter:  &lifeStateAfter,
@@ -292,7 +295,7 @@ func (h *Handler) ApplyAdversaryConditions(ctx context.Context, in *pb.Daggerhea
 		return AdversaryConditionsResult{}, status.Error(codes.InvalidArgument, "conditions to add or remove are required")
 	}
 
-	normalizedAdd := []daggerheart.ConditionState{}
+	normalizedAdd := []rules.ConditionState{}
 	if len(addConditions) > 0 {
 		normalizedAdd, err = ConditionStateViewsToDomain(addConditions)
 		if err != nil {
@@ -313,12 +316,12 @@ func (h *Handler) ApplyAdversaryConditions(ctx context.Context, in *pb.Daggerhea
 	if err != nil {
 		return AdversaryConditionsResult{}, err
 	}
-	before, err := daggerheart.NormalizeConditionStates(ProjectionConditionStatesToDomain(adversary.Conditions))
+	before, err := rules.NormalizeConditionStates(ProjectionConditionStatesToDomain(adversary.Conditions))
 	if err != nil {
 		return AdversaryConditionsResult{}, grpcerror.Internal("invalid stored conditions", err)
 	}
 
-	afterSet := make(map[string]daggerheart.ConditionState, len(before)+len(normalizedAdd))
+	afterSet := make(map[string]rules.ConditionState, len(before)+len(normalizedAdd))
 	for _, value := range before {
 		afterSet[value.ID] = value
 	}
@@ -329,16 +332,16 @@ func (h *Handler) ApplyAdversaryConditions(ctx context.Context, in *pb.Daggerhea
 		afterSet[value.ID] = value
 	}
 
-	afterList := make([]daggerheart.ConditionState, 0, len(afterSet))
+	afterList := make([]rules.ConditionState, 0, len(afterSet))
 	for _, value := range afterSet {
 		afterList = append(afterList, value)
 	}
-	after, err := daggerheart.NormalizeConditionStates(afterList)
+	after, err := rules.NormalizeConditionStates(afterList)
 	if err != nil {
 		return AdversaryConditionsResult{}, grpcerror.Internal("invalid condition set", err)
 	}
 
-	added, removed := daggerheart.DiffConditionStates(before, after)
+	added, removed := rules.DiffConditionStates(before, after)
 	if len(added) == 0 && len(removed) == 0 {
 		return AdversaryConditionsResult{}, status.Error(codes.FailedPrecondition, "no condition changes to apply")
 	}
@@ -347,7 +350,7 @@ func (h *Handler) ApplyAdversaryConditions(ctx context.Context, in *pb.Daggerhea
 		return AdversaryConditionsResult{}, err
 	}
 
-	payloadJSON, err := json.Marshal(daggerheart.AdversaryConditionChangePayload{
+	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryConditionChangePayload{
 		AdversaryID:      ids.AdversaryID(adversaryID),
 		ConditionsBefore: before,
 		ConditionsAfter:  after,

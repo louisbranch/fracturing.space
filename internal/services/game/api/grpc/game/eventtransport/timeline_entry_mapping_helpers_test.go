@@ -9,7 +9,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func TestEventDomainFromType(t *testing.T) {
@@ -101,7 +101,7 @@ func TestTimelineChangeFieldsUnknownType(t *testing.T) {
 
 func TestTimelineEntryFromEventAddsChangeProjectionWithoutResolverDisplay(t *testing.T) {
 	hp := 6
-	payload := daggerheart.CharacterStatePatchedPayload{HP: &hp}
+	payload := daggerheartpayload.CharacterStatePatchedPayload{HP: &hp}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)

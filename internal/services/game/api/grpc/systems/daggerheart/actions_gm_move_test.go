@@ -10,7 +10,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
@@ -111,18 +113,18 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.Snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	gmMovePayloadJSON, err := json.Marshal(daggerheart.GMMoveAppliedPayload{
-		Target: daggerheart.GMMoveTarget{
-			Type:  daggerheart.GMMoveTargetTypeDirectMove,
-			Kind:  daggerheart.GMMoveKindAdditionalMove,
-			Shape: daggerheart.GMMoveShapeShiftEnvironment,
+	gmMovePayloadJSON, err := json.Marshal(daggerheartpayload.GMMoveAppliedPayload{
+		Target: daggerheartpayload.GMMoveTarget{
+			Type:  rules.GMMoveTargetTypeDirectMove,
+			Kind:  rules.GMMoveKindAdditionalMove,
+			Shape: rules.GMMoveShapeShiftEnvironment,
 		},
 		FearSpent: 1,
 	})
 	if err != nil {
 		t.Fatalf("encode gm move payload: %v", err)
 	}
-	gmFearPayloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 2, Reason: "gm_move"})
+	gmFearPayloadJSON, err := json.Marshal(daggerheartpayload.GMFearChangedPayload{Value: 2, Reason: "gm_move"})
 	if err != nil {
 		t.Fatalf("encode gm fear payload: %v", err)
 	}

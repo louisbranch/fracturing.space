@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 func TestSwapLoadout_UsesDomainEngineForLoadoutSwap(t *testing.T) {
@@ -151,7 +152,7 @@ func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 		t.Fatalf("encode loadout payload: %v", err)
 	}
 
-	spendPayload := daggerheart.CharacterStatePatchedPayload{
+	spendPayload := daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		Stress:      &stressAfter,
 	}

@@ -8,9 +8,11 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -170,8 +172,8 @@ func daggerheartActiveSubclassFeaturesToProto(content contentstore.DaggerheartCo
 	if content == nil || len(profile.SubclassTracks) == 0 {
 		return nil
 	}
-	typed := daggerheart.CharacterProfileFromStorage(profile)
-	sets, err := daggerheart.ActiveSubclassTrackFeaturesFromStore(context.Background(), content, typed.SubclassTracks)
+	typed := daggerheartstate.CharacterProfileFromStorage(profile)
+	sets, err := daggerheartstate.ActiveSubclassTrackFeaturesFromStore(context.Background(), content, typed.SubclassTracks)
 	if err != nil {
 		return nil
 	}
@@ -408,13 +410,13 @@ func DaggerheartProjectionConditionStatesToProto(conditions []projectionstore.Da
 			entry.Class = daggerheartv1.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_SPECIAL
 		}
 		switch strings.TrimSpace(condition.Standard) {
-		case daggerheart.ConditionHidden:
+		case rules.ConditionHidden:
 			entry.Standard = daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN
-		case daggerheart.ConditionRestrained:
+		case rules.ConditionRestrained:
 			entry.Standard = daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED
-		case daggerheart.ConditionVulnerable:
+		case rules.ConditionVulnerable:
 			entry.Standard = daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE
-		case daggerheart.ConditionCloaked:
+		case rules.ConditionCloaked:
 			entry.Standard = daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_CLOAKED
 		}
 		for _, trigger := range condition.ClearTriggers {
@@ -447,11 +449,11 @@ func DaggerheartConditionsFromProto(conditions []daggerheartv1.DaggerheartCondit
 		case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_UNSPECIFIED:
 			return nil, fmt.Errorf("condition is required")
 		case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN:
-			result = append(result, daggerheart.ConditionHidden)
+			result = append(result, rules.ConditionHidden)
 		case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED:
-			result = append(result, daggerheart.ConditionRestrained)
+			result = append(result, rules.ConditionRestrained)
 		case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE:
-			result = append(result, daggerheart.ConditionVulnerable)
+			result = append(result, rules.ConditionVulnerable)
 		default:
 			return nil, fmt.Errorf("condition %v is invalid", condition)
 		}
@@ -468,11 +470,11 @@ func DaggerheartConditionsToProto(conditions []string) []daggerheartv1.Daggerhea
 	result := make([]daggerheartv1.DaggerheartCondition, 0, len(conditions))
 	for _, condition := range conditions {
 		switch condition {
-		case daggerheart.ConditionHidden:
+		case rules.ConditionHidden:
 			result = append(result, daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)
-		case daggerheart.ConditionRestrained:
+		case rules.ConditionRestrained:
 			result = append(result, daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED)
-		case daggerheart.ConditionVulnerable:
+		case rules.ConditionVulnerable:
 			result = append(result, daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)
 		}
 	}
@@ -486,13 +488,13 @@ func DaggerheartLifeStateFromProto(state daggerheartv1.DaggerheartLifeState) (st
 	case daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED:
 		return "", fmt.Errorf("life_state is required")
 	case daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE:
-		return daggerheart.LifeStateAlive, nil
+		return daggerheartstate.LifeStateAlive, nil
 	case daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS:
-		return daggerheart.LifeStateUnconscious, nil
+		return mechanics.LifeStateUnconscious, nil
 	case daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY:
-		return daggerheart.LifeStateBlazeOfGlory, nil
+		return mechanics.LifeStateBlazeOfGlory, nil
 	case daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD:
-		return daggerheart.LifeStateDead, nil
+		return mechanics.LifeStateDead, nil
 	default:
 		return "", fmt.Errorf("life_state %v is invalid", state)
 	}
@@ -502,13 +504,13 @@ func DaggerheartLifeStateFromProto(state daggerheartv1.DaggerheartLifeState) (st
 // protobuf enum.
 func DaggerheartLifeStateToProto(state string) daggerheartv1.DaggerheartLifeState {
 	switch state {
-	case daggerheart.LifeStateAlive:
+	case daggerheartstate.LifeStateAlive:
 		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE
-	case daggerheart.LifeStateUnconscious:
+	case mechanics.LifeStateUnconscious:
 		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS
-	case daggerheart.LifeStateBlazeOfGlory:
+	case mechanics.LifeStateBlazeOfGlory:
 		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY
-	case daggerheart.LifeStateDead:
+	case mechanics.LifeStateDead:
 		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD
 	default:
 		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED

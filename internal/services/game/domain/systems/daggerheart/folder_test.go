@@ -4,35 +4,40 @@ import (
 	"encoding/json"
 	"testing"
 
+	daggerheartfolder "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/folder"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
-// assertTestSnapshotState extracts a *SnapshotState from an any value returned
+// assertTestSnapshotState extracts a *daggerheartstate.SnapshotState from an any value returned
 // by a fold, accepting both value and pointer types for test convenience.
-func assertTestSnapshotState(t *testing.T, v any) SnapshotState {
+func assertTestSnapshotState(t *testing.T, v any) daggerheartstate.SnapshotState {
 	t.Helper()
 	switch typed := v.(type) {
-	case SnapshotState:
+	case daggerheartstate.SnapshotState:
 		return typed
-	case *SnapshotState:
+	case *daggerheartstate.SnapshotState:
 		if typed != nil {
 			return *typed
 		}
 	}
-	t.Fatalf("expected SnapshotState or *SnapshotState, got %T", v)
-	return SnapshotState{}
+	t.Fatalf("expected daggerheartstate.SnapshotState or *daggerheartstate.SnapshotState, got %T", v)
+	return daggerheartstate.SnapshotState{}
 }
 
 func TestSnapshotOrDefault_NilReturnsFactoryDefaults(t *testing.T) {
-	s, hasState := snapshotOrDefault(nil)
+	s, hasState := daggerheartstate.SnapshotOrDefault(nil)
 	if hasState {
 		t.Fatal("expected hasState=false for nil input")
 	}
-	if s.GMFear != GMFearDefault {
-		t.Fatalf("gm fear = %d, want %d", s.GMFear, GMFearDefault)
+	if s.GMFear != daggerheartstate.GMFearDefault {
+		t.Fatalf("gm fear = %d, want %d", s.GMFear, daggerheartstate.GMFearDefault)
 	}
 	if s.CharacterStates == nil {
 		t.Fatal("CharacterStates should be initialized")
@@ -46,8 +51,8 @@ func TestSnapshotOrDefault_NilReturnsFactoryDefaults(t *testing.T) {
 }
 
 func TestSnapshotOrDefault_ValueReturnsState(t *testing.T) {
-	input := SnapshotState{CampaignID: "camp-1", GMFear: 5}
-	s, hasState := snapshotOrDefault(input)
+	input := daggerheartstate.SnapshotState{CampaignID: "camp-1", GMFear: 5}
+	s, hasState := daggerheartstate.SnapshotOrDefault(input)
 	if !hasState {
 		t.Fatal("expected hasState=true for value input")
 	}
@@ -60,8 +65,8 @@ func TestSnapshotOrDefault_ValueReturnsState(t *testing.T) {
 }
 
 func TestSnapshotOrDefault_PointerReturnsState(t *testing.T) {
-	input := &SnapshotState{CampaignID: "camp-2", GMFear: 3}
-	s, hasState := snapshotOrDefault(input)
+	input := &daggerheartstate.SnapshotState{CampaignID: "camp-2", GMFear: 3}
+	s, hasState := daggerheartstate.SnapshotOrDefault(input)
 	if !hasState {
 		t.Fatal("expected hasState=true for pointer input")
 	}
@@ -74,13 +79,13 @@ func TestSnapshotOrDefault_PointerReturnsState(t *testing.T) {
 }
 
 func TestSnapshotOrDefault_NilPointerReturnsFactoryDefaults(t *testing.T) {
-	var input *SnapshotState
-	s, hasState := snapshotOrDefault(input)
+	var input *daggerheartstate.SnapshotState
+	s, hasState := daggerheartstate.SnapshotOrDefault(input)
 	if hasState {
 		t.Fatal("expected hasState=false for nil pointer input")
 	}
-	if s.GMFear != GMFearDefault {
-		t.Fatalf("gm fear = %d, want %d", s.GMFear, GMFearDefault)
+	if s.GMFear != daggerheartstate.GMFearDefault {
+		t.Fatalf("gm fear = %d, want %d", s.GMFear, daggerheartstate.GMFearDefault)
 	}
 	if s.CharacterStates == nil {
 		t.Fatal("CharacterStates should be initialized")
@@ -89,9 +94,9 @@ func TestSnapshotOrDefault_NilPointerReturnsFactoryDefaults(t *testing.T) {
 
 func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
 	projector := NewFolder()
-	state := SnapshotState{CampaignID: "camp-1", GMFear: 2}
+	state := daggerheartstate.SnapshotState{CampaignID: "camp-1", GMFear: 2}
 
-	payload, err := json.Marshal(GMFearChangedPayload{Value: 5, Reason: "shift"})
+	payload, err := json.Marshal(daggerheartpayload.GMFearChangedPayload{Value: 5, Reason: "shift"})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
@@ -118,7 +123,7 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 	projector := NewFolder()
 	hp := 6
 	hope := 2
-	payload, err := json.Marshal(CharacterStatePatchedPayload{
+	payload, err := json.Marshal(daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 		HP:          &hp,
 		Hope:        &hope,
@@ -127,9 +132,9 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated, err := projector.Fold(SnapshotState{CampaignID: "camp-1"}, event.Event{
+	updated, err := projector.Fold(daggerheartstate.SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          EventTypeCharacterStatePatched,
+		Type:          daggerheartpayload.EventTypeCharacterStatePatched,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -158,16 +163,16 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 
 func TestFolderApplyCharacterStatePatched_DoesNotMutateWithoutAfterFields(t *testing.T) {
 	projector := NewFolder()
-	payload, err := json.Marshal(CharacterStatePatchedPayload{
+	payload, err := json.Marshal(daggerheartpayload.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
 	})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated, err := projector.Fold(SnapshotState{
+	updated, err := projector.Fold(daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {
 				CampaignID:  "camp-1",
 				CharacterID: "char-1",
@@ -176,7 +181,7 @@ func TestFolderApplyCharacterStatePatched_DoesNotMutateWithoutAfterFields(t *tes
 		},
 	}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          EventTypeCharacterStatePatched,
+		Type:          daggerheartpayload.EventTypeCharacterStatePatched,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -196,9 +201,9 @@ func TestFolderApplyCharacterStatePatched_DoesNotMutateWithoutAfterFields(t *tes
 
 func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 	projector := NewFolder()
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
@@ -218,7 +223,7 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 		},
 	}
 
-	payload, err := json.Marshal(AdversaryUpdatedPayload{
+	payload, err := json.Marshal(daggerheartpayload.AdversaryUpdatedPayload{
 		AdversaryID: "adv-1",
 		Name:        "Goblin",
 		Kind:        "",
@@ -239,7 +244,7 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 
 	updated, err := projector.Fold(state, event.Event{
 		CampaignID:    "camp-1",
-		Type:          EventTypeAdversaryUpdated,
+		Type:          daggerheartpayload.EventTypeAdversaryUpdated,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -282,9 +287,9 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 }
 
 func TestFoldEquipmentSwapped_ArmorUpdatesProfileAndState(t *testing.T) {
-	state := SnapshotState{
+	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+		CharacterProfiles: map[ids.CharacterID]daggerheartstate.CharacterProfile{
 			"char-1": {
 				Evasion:         10,
 				MajorThreshold:  3,
@@ -299,7 +304,7 @@ func TestFoldEquipmentSwapped_ArmorUpdatesProfileAndState(t *testing.T) {
 				Knowledge:       1,
 			},
 		},
-		CharacterStates: map[ids.CharacterID]CharacterState{
+		CharacterStates: map[ids.CharacterID]daggerheartstate.CharacterState{
 			"char-1": {
 				CampaignID:  "camp-1",
 				CharacterID: "char-1",
@@ -309,7 +314,7 @@ func TestFoldEquipmentSwapped_ArmorUpdatesProfileAndState(t *testing.T) {
 		},
 	}
 
-	err := foldEquipmentSwapped(&state, EquipmentSwappedPayload{
+	err := daggerheartfolder.FoldEquipmentSwapped(&state, daggerheartpayload.EquipmentSwappedPayload{
 		CharacterID:             "char-1",
 		ItemType:                "armor",
 		EquippedArmorID:         "armor.chainmail-armor",
@@ -355,7 +360,7 @@ func TestFoldEquipmentSwapped_ArmorUpdatesProfileAndState(t *testing.T) {
 
 func TestFolderApplyGoldUpdated_UpdatesProfileWhenPresent(t *testing.T) {
 	projector := NewFolder()
-	payload, err := json.Marshal(GoldUpdatedPayload{
+	payload, err := json.Marshal(daggerheartpayload.GoldUpdatedPayload{
 		CharacterID: "char-1",
 		Handfuls:    3,
 		Bags:        2,
@@ -365,14 +370,14 @@ func TestFolderApplyGoldUpdated_UpdatesProfileWhenPresent(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated, err := projector.Fold(SnapshotState{
+	updated, err := projector.Fold(daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+		CharacterProfiles: map[ids.CharacterID]daggerheartstate.CharacterProfile{
 			"char-1": {},
 		},
 	}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          EventTypeGoldUpdated,
+		Type:          daggerheartpayload.EventTypeGoldUpdated,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -390,7 +395,7 @@ func TestFolderApplyGoldUpdated_UpdatesProfileWhenPresent(t *testing.T) {
 
 func TestFolderApplyDomainCardAcquired_AppendsToProfileWhenPresent(t *testing.T) {
 	projector := NewFolder()
-	payload, err := json.Marshal(DomainCardAcquiredPayload{
+	payload, err := json.Marshal(daggerheartpayload.DomainCardAcquiredPayload{
 		CharacterID: "char-1",
 		CardID:      "card-2",
 	})
@@ -398,16 +403,16 @@ func TestFolderApplyDomainCardAcquired_AppendsToProfileWhenPresent(t *testing.T)
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated, err := projector.Fold(SnapshotState{
+	updated, err := projector.Fold(daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+		CharacterProfiles: map[ids.CharacterID]daggerheartstate.CharacterProfile{
 			"char-1": {
 				DomainCardIDs: []string{"card-1"},
 			},
 		},
 	}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          EventTypeDomainCardAcquired,
+		Type:          daggerheartpayload.EventTypeDomainCardAcquired,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -425,18 +430,18 @@ func TestFolderApplyDomainCardAcquired_AppendsToProfileWhenPresent(t *testing.T)
 
 func TestFolderApplyRestTaken_RejectsOutOfRangeGMFear(t *testing.T) {
 	projector := NewFolder()
-	payload, err := json.Marshal(RestTakenPayload{
+	payload, err := json.Marshal(daggerheartpayload.RestTakenPayload{
 		RestType:     "short",
-		GMFear:       GMFearMax + 1,
+		GMFear:       daggerheartstate.GMFearMax + 1,
 		Participants: []ids.CharacterID{"char-1"},
 	})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	_, err = projector.Fold(SnapshotState{CampaignID: "camp-1"}, event.Event{
+	_, err = projector.Fold(daggerheartstate.SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          EventTypeRestTaken,
+		Type:          daggerheartpayload.EventTypeRestTaken,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -454,15 +459,15 @@ func TestFolderApplyHandlesAllRegisteredEvents(t *testing.T) {
 		}
 		t.Run(string(def.Type), func(t *testing.T) {
 			payloadJSON := []byte(`{}`)
-			if def.Type == EventTypeGMFearChanged {
-				payload, err := json.Marshal(GMFearChangedPayload{Value: 2})
+			if def.Type == daggerheartpayload.EventTypeGMFearChanged {
+				payload, err := json.Marshal(daggerheartpayload.GMFearChangedPayload{Value: 2})
 				if err != nil {
 					t.Fatalf("marshal payload: %v", err)
 				}
 				payloadJSON = payload
 			}
 
-			updated, err := projector.Fold(SnapshotState{CampaignID: "camp-1", GMFear: 1}, event.Event{
+			updated, err := projector.Fold(daggerheartstate.SnapshotState{CampaignID: "camp-1", GMFear: 1}, event.Event{
 				CampaignID:    "camp-1",
 				Type:          def.Type,
 				SystemID:      SystemID,
@@ -484,7 +489,7 @@ func TestFolderApply_RejectsAggregateState(t *testing.T) {
 	folder := NewFolder()
 	aggState := aggregate.State{
 		Systems: map[module.Key]any{
-			{ID: SystemID, Version: SystemVersion}: SnapshotState{
+			{ID: SystemID, Version: SystemVersion}: daggerheartstate.SnapshotState{
 				CampaignID: "camp-1",
 				GMFear:     3,
 			},
@@ -492,7 +497,7 @@ func TestFolderApply_RejectsAggregateState(t *testing.T) {
 	}
 	_, err := folder.Fold(aggState, event.Event{
 		CampaignID:    "camp-1",
-		Type:          EventTypeGMFearChanged,
+		Type:          daggerheartpayload.EventTypeGMFearChanged,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   []byte(`{"before":3,"after":5}`),
@@ -504,7 +509,7 @@ func TestFolderApply_RejectsAggregateState(t *testing.T) {
 
 func TestFolderApplyUnknownEventReturnsError(t *testing.T) {
 	projector := NewFolder()
-	_, err := projector.Fold(SnapshotState{CampaignID: "camp-1"}, event.Event{
+	_, err := projector.Fold(daggerheartstate.SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
 		Type:          event.Type("sys.daggerheart.unknown"),
 		SystemID:      SystemID,

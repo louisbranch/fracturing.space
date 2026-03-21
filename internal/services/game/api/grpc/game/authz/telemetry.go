@@ -72,7 +72,11 @@ func EmitDecisionTelemetry(ctx context.Context, evt DecisionEvent) {
 		attributes[key] = value
 	}
 
-	emitter := audit.NewEmitter(evt.Store)
+	policy := audit.DisabledPolicy()
+	if evt.Store != nil {
+		policy = audit.EnabledPolicy(evt.Store)
+	}
+	emitter := audit.NewEmitter(policy)
 	if err := emitter.Emit(ctx, storage.AuditEvent{
 		EventName:    EventDecisionName,
 		Severity:     string(severity),

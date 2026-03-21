@@ -8,7 +8,8 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,22 +18,22 @@ import (
 func TestConditionStatesFromProto(t *testing.T) {
 	got, err := ConditionStatesFromProto([]*pb.DaggerheartConditionState{
 		{
-			Id:       daggerheart.ConditionHidden,
+			Id:       rules.ConditionHidden,
 			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
 			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN,
-			Code:     daggerheart.ConditionHidden,
+			Code:     rules.ConditionHidden,
 		},
 		{
-			Id:       daggerheart.ConditionVulnerable,
+			Id:       rules.ConditionVulnerable,
 			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
 			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE,
-			Code:     daggerheart.ConditionVulnerable,
+			Code:     rules.ConditionVulnerable,
 		},
 	})
 	if err != nil {
 		t.Fatalf("ConditionStatesFromProto returned error: %v", err)
 	}
-	if codes := ConditionStateViewsToCodes(got); len(codes) != 2 || codes[0] != daggerheart.ConditionHidden || codes[1] != daggerheart.ConditionVulnerable {
+	if codes := ConditionStateViewsToCodes(got); len(codes) != 2 || codes[0] != rules.ConditionHidden || codes[1] != rules.ConditionVulnerable {
 		t.Fatalf("ConditionStateViewsToCodes = %v, want hidden/vulnerable", codes)
 	}
 	if _, err := ConditionStatesFromProto([]*pb.DaggerheartConditionState{{}}); err == nil {
@@ -46,8 +47,8 @@ func TestConditionsToProto(t *testing.T) {
 	}
 
 	proto := ConditionsToProto([]string{
-		daggerheart.ConditionHidden,
-		daggerheart.ConditionVulnerable,
+		rules.ConditionHidden,
+		rules.ConditionVulnerable,
 		"unknown",
 	})
 	if len(proto) != 3 {
@@ -69,8 +70,8 @@ func TestLifeStateFromProto(t *testing.T) {
 	if err != nil {
 		t.Fatalf("lifeStateFromProto returned error: %v", err)
 	}
-	if got != daggerheart.LifeStateBlazeOfGlory {
-		t.Fatalf("lifeStateFromProto = %q, want %q", got, daggerheart.LifeStateBlazeOfGlory)
+	if got != mechanics.LifeStateBlazeOfGlory {
+		t.Fatalf("lifeStateFromProto = %q, want %q", got, mechanics.LifeStateBlazeOfGlory)
 	}
 	if _, err := lifeStateFromProto(pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED); err == nil {
 		t.Fatal("expected unspecified life_state error")
@@ -78,7 +79,7 @@ func TestLifeStateFromProto(t *testing.T) {
 }
 
 func TestLifeStateToProto(t *testing.T) {
-	if got := LifeStateToProto(daggerheart.LifeStateDead); got != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD {
+	if got := LifeStateToProto(mechanics.LifeStateDead); got != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD {
 		t.Fatalf("LifeStateToProto(dead) = %v, want dead", got)
 	}
 	if got := LifeStateToProto("unknown"); got != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED {

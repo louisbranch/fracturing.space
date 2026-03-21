@@ -1,51 +1,57 @@
 package daggerheart
 
-import "testing"
+import (
+	"testing"
+
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
+)
 
 func TestNormalizedDiceValues(t *testing.T) {
 	// nil input returns nil.
-	if got := normalizedDiceValues(nil); got != nil {
-		t.Fatalf("normalizedDiceValues(nil) = %v, want nil", got)
+	if got := daggerheartstate.NormalizedDiceValues(nil); got != nil {
+		t.Fatalf("daggerheartstate.NormalizedDiceValues(nil) = %v, want nil", got)
 	}
 	// All zero/negative returns nil.
-	if got := normalizedDiceValues([]int{0, -1, -2}); got != nil {
-		t.Fatalf("normalizedDiceValues(all invalid) = %v, want nil", got)
+	if got := daggerheartstate.NormalizedDiceValues([]int{0, -1, -2}); got != nil {
+		t.Fatalf("daggerheartstate.NormalizedDiceValues(all invalid) = %v, want nil", got)
 	}
 	// Mixed input filters out non-positive values.
-	got := normalizedDiceValues([]int{6, 0, 8, -1, 12})
+	got := daggerheartstate.NormalizedDiceValues([]int{6, 0, 8, -1, 12})
 	if len(got) != 3 || got[0] != 6 || got[1] != 8 || got[2] != 12 {
-		t.Fatalf("normalizedDiceValues(mixed) = %v, want [6 8 12]", got)
+		t.Fatalf("daggerheartstate.NormalizedDiceValues(mixed) = %v, want [6 8 12]", got)
 	}
 }
 
 func TestCharacterClassState_IsZero(t *testing.T) {
-	if !(CharacterClassState{}).IsZero() {
+	if !(daggerheartstate.CharacterClassState{}).IsZero() {
 		t.Fatal("zero-value class state should be IsZero")
 	}
-	if (CharacterClassState{AttackBonusUntilRest: 1}).IsZero() {
+	if (daggerheartstate.CharacterClassState{AttackBonusUntilRest: 1}).IsZero() {
 		t.Fatal("state with attack bonus should not be IsZero")
 	}
-	if (CharacterClassState{RallyDice: []int{6}}).IsZero() {
+	if (daggerheartstate.CharacterClassState{RallyDice: []int{6}}).IsZero() {
 		t.Fatal("state with rally dice should not be IsZero")
 	}
-	if (CharacterClassState{PrayerDice: []int{8}}).IsZero() {
+	if (daggerheartstate.CharacterClassState{PrayerDice: []int{8}}).IsZero() {
 		t.Fatal("state with prayer dice should not be IsZero")
 	}
-	if (CharacterClassState{Unstoppable: CharacterUnstoppableState{Active: true}}).IsZero() {
+	if (daggerheartstate.CharacterClassState{Unstoppable: daggerheartstate.CharacterUnstoppableState{Active: true}}).IsZero() {
 		t.Fatal("state with unstoppable active should not be IsZero")
 	}
-	if (CharacterClassState{ChannelRawPowerUsedThisLongRest: true}).IsZero() {
+	if (daggerheartstate.CharacterClassState{ChannelRawPowerUsedThisLongRest: true}).IsZero() {
 		t.Fatal("state with channel raw power used should not be IsZero")
 	}
 }
 
 func TestCharacterClassState_Normalized_ClampsNegatives(t *testing.T) {
-	state := CharacterClassState{
+	state := daggerheartstate.CharacterClassState{
 		AttackBonusUntilRest:       -1,
 		EvasionBonusUntilHitOrRest: -2,
 		DifficultyPenaltyUntilRest: 3, // positive should be clamped to 0
 		StrangePatternsNumber:      -1,
-		Unstoppable: CharacterUnstoppableState{
+		Unstoppable: daggerheartstate.CharacterUnstoppableState{
 			CurrentValue: -5,
 			DieSides:     -4,
 		},
@@ -72,26 +78,26 @@ func TestCharacterClassState_Normalized_ClampsNegatives(t *testing.T) {
 }
 
 func TestDerefInt(t *testing.T) {
-	if got := derefInt(nil, 42); got != 42 {
+	if got := daggerheartdecider.DerefInt(nil, 42); got != 42 {
 		t.Fatalf("derefInt(nil, 42) = %d, want 42", got)
 	}
 	v := 7
-	if got := derefInt(&v, 42); got != 7 {
+	if got := daggerheartdecider.DerefInt(&v, 42); got != 7 {
 		t.Fatalf("derefInt(&7, 42) = %d, want 7", got)
 	}
 }
 
 func TestWithActiveBeastform(t *testing.T) {
-	state := CharacterClassState{}
-	active := &CharacterActiveBeastformState{
+	state := daggerheartstate.CharacterClassState{}
+	active := &daggerheartstate.CharacterActiveBeastformState{
 		BeastformID: "bf-1",
 		BaseTrait:   "strength",
 		AttackTrait: "strength",
 		TraitBonus:  2,
-		DamageDice:  []CharacterDamageDie{{Count: 1, Sides: 8}},
+		DamageDice:  []daggerheartstate.CharacterDamageDie{{Count: 1, Sides: 8}},
 		DamageType:  "physical",
 	}
-	got := WithActiveBeastform(state, active)
+	got := daggerheartstate.WithActiveBeastform(state, active)
 	if got.ActiveBeastform == nil {
 		t.Fatal("expected active beastform to be set")
 	}
@@ -100,7 +106,7 @@ func TestWithActiveBeastform(t *testing.T) {
 	}
 
 	// Nil beastform clears active.
-	got = WithActiveBeastform(got, nil)
+	got = daggerheartstate.WithActiveBeastform(got, nil)
 	if got.ActiveBeastform != nil {
 		t.Fatal("expected active beastform to be nil after clearing")
 	}
@@ -108,7 +114,7 @@ func TestWithActiveBeastform(t *testing.T) {
 
 func TestNormalizedActiveBeastform_EmptyID(t *testing.T) {
 	// Empty beastform ID normalizes to nil.
-	got := normalizedActiveBeastformPtr(&CharacterActiveBeastformState{BeastformID: "  "})
+	got := daggerheartstate.NormalizedActiveBeastformPtr(&daggerheartstate.CharacterActiveBeastformState{BeastformID: "  "})
 	if got != nil {
 		t.Fatal("expected nil for empty beastform ID")
 	}

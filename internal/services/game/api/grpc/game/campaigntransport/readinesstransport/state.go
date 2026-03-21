@@ -18,6 +18,7 @@ import (
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -117,13 +118,13 @@ func campaignReadinessAggregateState(
 		if daggerheartStore == nil {
 			return aggregate.State{}, status.Error(codes.Internal, "daggerheart projection store is not configured")
 		}
-		snapshot := daggerheartdomain.SnapshotState{
+		snapshot := daggerheartstate.SnapshotState{
 			CampaignID:        ids.CampaignID(campaignRecord.ID),
-			GMFear:            daggerheartdomain.GMFearDefault,
-			CharacterProfiles: make(map[ids.CharacterID]daggerheartdomain.CharacterProfile),
-			CharacterStates:   make(map[ids.CharacterID]daggerheartdomain.CharacterState),
-			AdversaryStates:   make(map[ids.AdversaryID]daggerheartdomain.AdversaryState),
-			CountdownStates:   make(map[ids.CountdownID]daggerheartdomain.CountdownState),
+			GMFear:            daggerheartstate.GMFearDefault,
+			CharacterProfiles: make(map[ids.CharacterID]daggerheartstate.CharacterProfile),
+			CharacterStates:   make(map[ids.CharacterID]daggerheartstate.CharacterState),
+			AdversaryStates:   make(map[ids.AdversaryID]daggerheartstate.AdversaryState),
+			CountdownStates:   make(map[ids.CountdownID]daggerheartstate.CountdownState),
 		}
 		for characterID, characterState := range state.Characters {
 			profile, err := daggerheartStore.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, string(characterID))
@@ -133,7 +134,7 @@ func campaignReadinessAggregateState(
 				}
 				return aggregate.State{}, grpcerror.Internal(fmt.Sprintf("get daggerheart character profile %s", characterID), err)
 			}
-			snapshot.CharacterProfiles[characterID] = daggerheartdomain.CharacterProfileFromStorage(profile)
+			snapshot.CharacterProfiles[characterID] = daggerheartstate.CharacterProfileFromStorage(profile)
 			state.Characters[characterID] = characterState
 		}
 		state.Systems[module.Key{ID: daggerheartdomain.SystemID, Version: daggerheartdomain.SystemVersion}] = snapshot

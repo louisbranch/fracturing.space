@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
 type ConditionStateView struct {
@@ -86,15 +88,15 @@ func ProjectionConditionStatesToViews(states []projectionstore.DaggerheartCondit
 	return result
 }
 
-func ProjectionConditionStatesToDomain(states []projectionstore.DaggerheartConditionState) []daggerheart.ConditionState {
+func ProjectionConditionStatesToDomain(states []projectionstore.DaggerheartConditionState) []rules.ConditionState {
 	if len(states) == 0 {
 		return nil
 	}
-	result := make([]daggerheart.ConditionState, 0, len(states))
+	result := make([]rules.ConditionState, 0, len(states))
 	for _, state := range states {
-		entry := daggerheart.ConditionState{
+		entry := rules.ConditionState{
 			ID:       state.ID,
-			Class:    daggerheart.ConditionClass(strings.TrimSpace(state.Class)),
+			Class:    rules.ConditionClass(strings.TrimSpace(state.Class)),
 			Standard: strings.TrimSpace(state.Standard),
 			Code:     strings.TrimSpace(state.Code),
 			Label:    strings.TrimSpace(state.Label),
@@ -102,14 +104,14 @@ func ProjectionConditionStatesToDomain(states []projectionstore.DaggerheartCondi
 			SourceID: strings.TrimSpace(state.SourceID),
 		}
 		for _, trigger := range state.ClearTriggers {
-			entry.ClearTriggers = append(entry.ClearTriggers, daggerheart.ConditionClearTrigger(strings.TrimSpace(trigger)))
+			entry.ClearTriggers = append(entry.ClearTriggers, rules.ConditionClearTrigger(strings.TrimSpace(trigger)))
 		}
 		result = append(result, entry)
 	}
 	return result
 }
 
-func DomainConditionStatesToViews(states []daggerheart.ConditionState) []*ConditionStateView {
+func DomainConditionStatesToViews(states []rules.ConditionState) []*ConditionStateView {
 	if len(states) == 0 {
 		return nil
 	}
@@ -129,16 +131,16 @@ func DomainConditionStatesToViews(states []daggerheart.ConditionState) []*Condit
 	return result
 }
 
-func ConditionStateViewsToDomain(states []*ConditionStateView) ([]daggerheart.ConditionState, error) {
+func ConditionStateViewsToDomain(states []*ConditionStateView) ([]rules.ConditionState, error) {
 	if len(states) == 0 {
 		return nil, nil
 	}
-	result := make([]daggerheart.ConditionState, 0, len(states))
+	result := make([]rules.ConditionState, 0, len(states))
 	for _, state := range states {
 		if state == nil {
 			continue
 		}
-		entry := daggerheart.ConditionState{
+		entry := rules.ConditionState{
 			ID:       strings.TrimSpace(state.ID),
 			Class:    conditionClassFromProto(state.Class),
 			Code:     strings.TrimSpace(state.Code),
@@ -146,7 +148,7 @@ func ConditionStateViewsToDomain(states []*ConditionStateView) ([]daggerheart.Co
 			Source:   strings.TrimSpace(state.Source),
 			SourceID: strings.TrimSpace(state.SourceID),
 		}
-		if entry.Class == daggerheart.ConditionClassStandard {
+		if entry.Class == rules.ConditionClassStandard {
 			standard, err := standardConditionCode(state.Standard)
 			if err != nil {
 				return nil, err
@@ -165,7 +167,7 @@ func ConditionStateViewsToDomain(states []*ConditionStateView) ([]daggerheart.Co
 		}
 		result = append(result, entry)
 	}
-	return daggerheart.NormalizeConditionStates(result)
+	return rules.NormalizeConditionStates(result)
 }
 
 func ConditionsToViews(conditions []string, source string) []*ConditionStateView {
@@ -267,13 +269,13 @@ func conditionStateFromProto(state *pb.DaggerheartConditionState) (*ConditionSta
 func standardConditionCode(condition pb.DaggerheartCondition) (string, error) {
 	switch condition {
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN:
-		return daggerheart.ConditionHidden, nil
+		return rules.ConditionHidden, nil
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED:
-		return daggerheart.ConditionRestrained, nil
+		return rules.ConditionRestrained, nil
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE:
-		return daggerheart.ConditionVulnerable, nil
+		return rules.ConditionVulnerable, nil
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_CLOAKED:
-		return daggerheart.ConditionCloaked, nil
+		return rules.ConditionCloaked, nil
 	case pb.DaggerheartCondition_DAGGERHEART_CONDITION_UNSPECIFIED:
 		return "", fmt.Errorf("condition standard is required")
 	default:
@@ -283,13 +285,13 @@ func standardConditionCode(condition pb.DaggerheartCondition) (string, error) {
 
 func standardConditionProto(condition string) (pb.DaggerheartCondition, error) {
 	switch condition {
-	case daggerheart.ConditionHidden:
+	case rules.ConditionHidden:
 		return pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN, nil
-	case daggerheart.ConditionRestrained:
+	case rules.ConditionRestrained:
 		return pb.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED, nil
-	case daggerheart.ConditionVulnerable:
+	case rules.ConditionVulnerable:
 		return pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE, nil
-	case daggerheart.ConditionCloaked:
+	case rules.ConditionCloaked:
 		return pb.DaggerheartCondition_DAGGERHEART_CONDITION_CLOAKED, nil
 	default:
 		return pb.DaggerheartCondition_DAGGERHEART_CONDITION_UNSPECIFIED, fmt.Errorf("condition %q is invalid", condition)
@@ -306,40 +308,40 @@ func standardConditionProtoOrZero(condition string) pb.DaggerheartCondition {
 
 func conditionClassToProto(value string) pb.DaggerheartConditionClass {
 	switch strings.TrimSpace(value) {
-	case string(daggerheart.ConditionClassStandard):
+	case string(rules.ConditionClassStandard):
 		return pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD
-	case string(daggerheart.ConditionClassTag):
+	case string(rules.ConditionClassTag):
 		return pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_TAG
-	case string(daggerheart.ConditionClassSpecial):
+	case string(rules.ConditionClassSpecial):
 		return pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_SPECIAL
 	default:
 		return pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_UNSPECIFIED
 	}
 }
 
-func conditionClassFromProto(value pb.DaggerheartConditionClass) daggerheart.ConditionClass {
+func conditionClassFromProto(value pb.DaggerheartConditionClass) rules.ConditionClass {
 	switch value {
 	case pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD:
-		return daggerheart.ConditionClassStandard
+		return rules.ConditionClassStandard
 	case pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_TAG:
-		return daggerheart.ConditionClassTag
+		return rules.ConditionClassTag
 	case pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_SPECIAL:
-		return daggerheart.ConditionClassSpecial
+		return rules.ConditionClassSpecial
 	default:
 		return ""
 	}
 }
 
-func clearTriggerFromProto(trigger pb.DaggerheartConditionClearTrigger) (daggerheart.ConditionClearTrigger, error) {
+func clearTriggerFromProto(trigger pb.DaggerheartConditionClearTrigger) (rules.ConditionClearTrigger, error) {
 	switch trigger {
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST:
-		return daggerheart.ConditionClearTriggerShortRest, nil
+		return rules.ConditionClearTriggerShortRest, nil
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_LONG_REST:
-		return daggerheart.ConditionClearTriggerLongRest, nil
+		return rules.ConditionClearTriggerLongRest, nil
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SESSION_END:
-		return daggerheart.ConditionClearTriggerSessionEnd, nil
+		return rules.ConditionClearTriggerSessionEnd, nil
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_DAMAGE_TAKEN:
-		return daggerheart.ConditionClearTriggerDamageTaken, nil
+		return rules.ConditionClearTriggerDamageTaken, nil
 	case pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_UNSPECIFIED:
 		return "", fmt.Errorf("condition clear trigger is required")
 	default:
@@ -353,12 +355,12 @@ func projectionClearTriggersToProto(values []string) []pb.DaggerheartConditionCl
 	}
 	result := make([]pb.DaggerheartConditionClearTrigger, 0, len(values))
 	for _, value := range values {
-		result = append(result, domainClearTriggerToProto(daggerheart.ConditionClearTrigger(strings.TrimSpace(value))))
+		result = append(result, domainClearTriggerToProto(rules.ConditionClearTrigger(strings.TrimSpace(value))))
 	}
 	return result
 }
 
-func domainClearTriggersToProto(values []daggerheart.ConditionClearTrigger) []pb.DaggerheartConditionClearTrigger {
+func domainClearTriggersToProto(values []rules.ConditionClearTrigger) []pb.DaggerheartConditionClearTrigger {
 	if len(values) == 0 {
 		return nil
 	}
@@ -369,15 +371,15 @@ func domainClearTriggersToProto(values []daggerheart.ConditionClearTrigger) []pb
 	return result
 }
 
-func domainClearTriggerToProto(value daggerheart.ConditionClearTrigger) pb.DaggerheartConditionClearTrigger {
+func domainClearTriggerToProto(value rules.ConditionClearTrigger) pb.DaggerheartConditionClearTrigger {
 	switch value {
-	case daggerheart.ConditionClearTriggerShortRest:
+	case rules.ConditionClearTriggerShortRest:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST
-	case daggerheart.ConditionClearTriggerLongRest:
+	case rules.ConditionClearTriggerLongRest:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_LONG_REST
-	case daggerheart.ConditionClearTriggerSessionEnd:
+	case rules.ConditionClearTriggerSessionEnd:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SESSION_END
-	case daggerheart.ConditionClearTriggerDamageTaken:
+	case rules.ConditionClearTriggerDamageTaken:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_DAMAGE_TAKEN
 	default:
 		return pb.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_UNSPECIFIED
@@ -389,13 +391,13 @@ func lifeStateFromProto(state pb.DaggerheartLifeState) (string, error) {
 	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED:
 		return "", fmt.Errorf("life_state is required")
 	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE:
-		return daggerheart.LifeStateAlive, nil
+		return daggerheartstate.LifeStateAlive, nil
 	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS:
-		return daggerheart.LifeStateUnconscious, nil
+		return mechanics.LifeStateUnconscious, nil
 	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY:
-		return daggerheart.LifeStateBlazeOfGlory, nil
+		return mechanics.LifeStateBlazeOfGlory, nil
 	case pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD:
-		return daggerheart.LifeStateDead, nil
+		return mechanics.LifeStateDead, nil
 	default:
 		return "", fmt.Errorf("life_state %v is invalid", state)
 	}
@@ -405,13 +407,13 @@ func lifeStateFromProto(state pb.DaggerheartLifeState) (string, error) {
 // root response shaping does not retain duplicate life-state helpers.
 func LifeStateToProto(state string) pb.DaggerheartLifeState {
 	switch state {
-	case daggerheart.LifeStateAlive:
+	case daggerheartstate.LifeStateAlive:
 		return pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE
-	case daggerheart.LifeStateUnconscious:
+	case mechanics.LifeStateUnconscious:
 		return pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS
-	case daggerheart.LifeStateBlazeOfGlory:
+	case mechanics.LifeStateBlazeOfGlory:
 		return pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY
-	case daggerheart.LifeStateDead:
+	case mechanics.LifeStateDead:
 		return pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD
 	default:
 		return pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED

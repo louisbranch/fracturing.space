@@ -10,8 +10,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -48,10 +48,10 @@ func TestHandlerUpdateCountdownSuccess(t *testing.T) {
 				CampaignID:  "camp-1",
 				CountdownID: "cd-1",
 				Name:        "Clock",
-				Kind:        daggerheart.CountdownKindProgress,
+				Kind:        rules.CountdownKindProgress,
 				Current:     1,
 				Max:         4,
-				Direction:   daggerheart.CountdownDirectionIncrease,
+				Direction:   rules.CountdownDirectionIncrease,
 			},
 		},
 	}
@@ -64,10 +64,10 @@ func TestHandlerUpdateCountdownSuccess(t *testing.T) {
 				CampaignID:  "camp-1",
 				CountdownID: "cd-1",
 				Name:        "Clock",
-				Kind:        daggerheart.CountdownKindProgress,
+				Kind:        rules.CountdownKindProgress,
 				Current:     2,
 				Max:         4,
-				Direction:   daggerheart.CountdownDirectionIncrease,
+				Direction:   rules.CountdownDirectionIncrease,
 			}
 			return nil
 		},

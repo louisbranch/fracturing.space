@@ -11,7 +11,7 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/coreevent"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -50,7 +50,7 @@ func (r *Runner) runAdversaryStep(ctx context.Context, state *scenarioState, ste
 	}
 	state.adversaries[name] = response.GetAdversary().GetId()
 	r.logf("adversary created: name=%s id=%s", name, state.adversaries[name])
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryCreated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryCreated)
 }
 
 func (r *Runner) ensureDefaultScene(ctx context.Context, state *scenarioState) error {
@@ -408,7 +408,7 @@ func (r *Runner) runGroupReactionStep(ctx context.Context, state *scenarioState,
 			if err != nil {
 				return fmt.Errorf("group_reaction apply damage: %w", err)
 			}
-			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, beforeDamage, daggerheart.EventTypeDamageApplied); err != nil {
+			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, beforeDamage, daggerheartpayload.EventTypeDamageApplied); err != nil {
 				return err
 			}
 		}
@@ -462,8 +462,8 @@ func (r *Runner) runGMSpendFearStep(ctx context.Context, state *scenarioState, s
 		ctx,
 		state,
 		before,
-		daggerheart.EventTypeGMMoveApplied,
-		daggerheart.EventTypeGMFearChanged,
+		daggerheartpayload.EventTypeGMMoveApplied,
+		daggerheartpayload.EventTypeGMFearChanged,
 	); err != nil {
 		return err
 	}
@@ -726,14 +726,14 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 		}
 		eventTypes := []event.Type{}
 		if len(add) > 0 || len(remove) > 0 {
-			converted, err := convertDaggerheartEventTypes(daggerheart.EventTypeConditionChanged)
+			converted, err := convertDaggerheartEventTypes(daggerheartpayload.EventTypeConditionChanged)
 			if err != nil {
 				return err
 			}
 			eventTypes = append(eventTypes, converted...)
 		}
 		if lifeState != "" {
-			converted, err := convertDaggerheartEventTypes(daggerheart.EventTypeCharacterStatePatched)
+			converted, err := convertDaggerheartEventTypes(daggerheartpayload.EventTypeCharacterStatePatched)
 			if err != nil {
 				return err
 			}
@@ -759,7 +759,7 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 	if len(add) == 0 && len(remove) == 0 {
 		return nil
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryConditionChanged)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryConditionChanged)
 }
 
 func (r *Runner) runGroupActionStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -1011,7 +1011,7 @@ func (r *Runner) runTemporaryArmorStep(ctx context.Context, state *scenarioState
 	if err != nil {
 		return fmt.Errorf("temporary_armor: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterTemporaryArmorApplied); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCharacterTemporaryArmorApplied); err != nil {
 		return err
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
@@ -1075,12 +1075,12 @@ func (r *Runner) runRestStep(ctx context.Context, state *scenarioState, step Ste
 	if err != nil {
 		return fmt.Errorf("rest: %w", err)
 	}
-	expectedEvents := []any{daggerheart.EventTypeRestTaken}
+	expectedEvents := []any{daggerheartpayload.EventTypeRestTaken}
 	if restContainsDowntimeMoves(participants) {
-		expectedEvents = append(expectedEvents, daggerheart.EventTypeDowntimeMoveApplied)
+		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeDowntimeMoveApplied)
 	}
 	if restContainsProjectWork(participants) {
-		expectedEvents = append(expectedEvents, daggerheart.EventTypeCountdownUpdated)
+		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeCountdownUpdated)
 	}
 	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, expectedEvents...); err != nil {
 		return err
@@ -1307,7 +1307,7 @@ func (r *Runner) runDeathMoveStep(ctx context.Context, state *scenarioState, ste
 	if err != nil {
 		return fmt.Errorf("death_move: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterStatePatched); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCharacterStatePatched); err != nil {
 		return err
 	}
 	if err := r.assertExpectedDeathMove(response, expectedDeath); err != nil {
@@ -1428,7 +1428,7 @@ func (r *Runner) runBlazeOfGloryStep(ctx context.Context, state *scenarioState, 
 	if err != nil {
 		return fmt.Errorf("blaze_of_glory: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterStatePatched); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCharacterStatePatched); err != nil {
 		return err
 	}
 	return r.requireAnyEventTypesAfterSeq(ctx, state, before, event.TypeCharacterDeleted)
@@ -1521,7 +1521,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 			return err
 		}
 		if response.GetDamageApplied() != nil {
-			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeDamageApplied); err != nil {
 				return err
 			}
 			if err := r.assertDamageFlags(ctx, state, before, targetID, step.Args); err != nil {
@@ -1614,7 +1614,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 			return err
 		}
 		if applied {
-			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryDamageApplied); err != nil {
+			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryDamageApplied); err != nil {
 				return err
 			}
 		}
@@ -1752,7 +1752,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 					return err
 				}
 				if applied {
-					if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryDamageApplied); err != nil {
+					if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryDamageApplied); err != nil {
 						return err
 					}
 				}
@@ -1773,7 +1773,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 			if err != nil {
 				return fmt.Errorf("multi_attack apply damage: %w", err)
 			}
-			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeDamageApplied); err != nil {
 				return err
 			}
 			if err := r.assertDamageFlags(ctx, state, before, target.id, step.Args); err != nil {
@@ -1876,7 +1876,7 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 		if err != nil {
 			return fmt.Errorf("combined_damage apply damage: %w", err)
 		}
-		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeDamageApplied); err != nil {
 			return err
 		}
 		if err := r.assertDamageFlags(ctx, state, before, targetID, step.Args); err != nil {
@@ -1914,7 +1914,7 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 	if err != nil {
 		return fmt.Errorf("combined_damage apply adversary damage: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryDamageApplied); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryDamageApplied); err != nil {
 		return err
 	}
 	return r.assertExpectedAdversaryDeltas(ctx, state, expectedAdversarySpec, expectedAdversaryBefore)
@@ -2029,7 +2029,7 @@ damageChecks:
 		damageApplications = []*daggerheartv1.DaggerheartApplyDamageResponse{response.GetDamageApplied()}
 	}
 	if len(damageApplications) > 0 {
-		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeDamageApplied); err != nil {
 			return err
 		}
 		if err := r.assertDamageFlags(ctx, state, before, expectationTargetID, step.Args); err != nil {
@@ -2104,7 +2104,7 @@ func (r *Runner) runAdversaryReactionStep(ctx context.Context, state *scenarioSt
 		if _, err := r.env.daggerheartClient.UpdateAdversary(ctxWithSession, update); err != nil {
 			return fmt.Errorf("adversary_reaction refresh: %w", err)
 		}
-		return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated)
+		return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryUpdated)
 	}
 
 	if !optionalBool(step.Args, "available", true) {
@@ -2132,7 +2132,7 @@ func (r *Runner) runAdversaryReactionStep(ctx context.Context, state *scenarioSt
 	if err != nil {
 		return fmt.Errorf("adversary_reaction apply damage: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeDamageApplied); err != nil {
 		return err
 	}
 
@@ -2145,7 +2145,7 @@ func (r *Runner) runAdversaryReactionStep(ctx context.Context, state *scenarioSt
 	if _, err := r.env.daggerheartClient.UpdateAdversary(ctxWithSession, update); err != nil {
 		return fmt.Errorf("adversary_reaction cooldown: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryUpdated); err != nil {
 		return err
 	}
 	return nil
@@ -2192,7 +2192,7 @@ func (r *Runner) runAdversaryFeatureStep(ctx context.Context, state *scenarioSta
 	if _, err := r.env.daggerheartClient.ApplyAdversaryFeature(withSessionID(ctx, state.sessionID), req); err != nil {
 		return fmt.Errorf("adversary_feature: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryUpdated)
 }
 
 func (r *Runner) runAdversaryUpdateStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2262,7 +2262,7 @@ func (r *Runner) runAdversaryUpdateStep(ctx context.Context, state *scenarioStat
 	if _, err := r.env.daggerheartClient.UpdateAdversary(withSessionID(ctx, state.sessionID), update); err != nil {
 		return fmt.Errorf("adversary_update: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeAdversaryUpdated)
 }
 
 func (r *Runner) runSwapLoadoutStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2301,7 +2301,7 @@ func (r *Runner) runSwapLoadoutStep(ctx context.Context, state *scenarioState, s
 	if err != nil {
 		return fmt.Errorf("swap_loadout: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeLoadoutSwapped)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeLoadoutSwapped)
 }
 
 func (r *Runner) runCountdownCreateStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2357,7 +2357,7 @@ func (r *Runner) runCountdownCreateStep(ctx context.Context, state *scenarioStat
 	}
 	state.countdowns[name] = response.GetCountdown().GetCountdownId()
 	r.logf("countdown created: name=%s id=%s", name, state.countdowns[name])
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCountdownCreated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCountdownCreated)
 }
 
 func (r *Runner) runCountdownUpdateStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2399,7 +2399,7 @@ func (r *Runner) runCountdownUpdateStep(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return fmt.Errorf("countdown_update: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCountdownUpdated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCountdownUpdated)
 }
 
 func (r *Runner) runCountdownDeleteStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2428,7 +2428,7 @@ func (r *Runner) runCountdownDeleteStep(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return fmt.Errorf("countdown_delete: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCountdownDeleted); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCountdownDeleted); err != nil {
 		return err
 	}
 	if name := optionalString(step.Args, "name", ""); name != "" {
@@ -2985,7 +2985,7 @@ func (r *Runner) runApplyStatModifierStep(ctx context.Context, state *scenarioSt
 		return fmt.Errorf("apply_stat_modifier: %w", err)
 	}
 
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeStatModifierChanged); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeStatModifierChanged); err != nil {
 		return err
 	}
 

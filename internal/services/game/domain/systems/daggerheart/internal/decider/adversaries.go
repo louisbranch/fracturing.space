@@ -7,18 +7,18 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func decideAdversaryConditionChange(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideAdversaryConditionChange(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeAdversaryConditionChanged, "adversary",
 		func(p *payload.AdversaryConditionChangePayload) string {
 			return strings.TrimSpace(p.AdversaryID.String())
 		},
-		func(s snapstate.SnapshotState, hasState bool, p *payload.AdversaryConditionChangePayload, _ func() time.Time) *command.Rejection {
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.AdversaryConditionChangePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if hasMissingAdversaryConditionRemovals(s, *p) {
 					return &command.Rejection{
@@ -37,7 +37,7 @@ func decideAdversaryConditionChange(snapshotState snapstate.SnapshotState, hasSn
 			p.Source = strings.TrimSpace(p.Source)
 			return nil
 		},
-		func(_ snapstate.SnapshotState, _ bool, p payload.AdversaryConditionChangePayload) payload.AdversaryConditionChangedPayload {
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.AdversaryConditionChangePayload) payload.AdversaryConditionChangedPayload {
 			return payload.AdversaryConditionChangedPayload{
 				AdversaryID: p.AdversaryID,
 				Conditions:  p.ConditionsAfter,
@@ -50,10 +50,10 @@ func decideAdversaryConditionChange(snapshotState snapstate.SnapshotState, hasSn
 		now)
 }
 
-func decideAdversaryCreate(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideAdversaryCreate(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, payload.EventTypeAdversaryCreated, "adversary",
 		func(p *payload.AdversaryCreatePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
-		func(s snapstate.SnapshotState, hasState bool, p *payload.AdversaryCreatePayload, _ func() time.Time) *command.Rejection {
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.AdversaryCreatePayload, _ func() time.Time) *command.Rejection {
 			if hasState && isAdversaryCreateNoMutation(s, *p) {
 				return &command.Rejection{
 					Code:    rejectionCodeAdversaryCreateNoMutation,
@@ -88,11 +88,11 @@ func decideAdversaryUpdate(cmd command.Command, now func() time.Time) command.De
 		}, now)
 }
 
-func decideAdversaryFeatureApply(snapshotState snapstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+func decideAdversaryFeatureApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeAdversaryUpdated, "adversary",
 		func(p *payload.AdversaryFeatureApplyPayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
-		func(s snapstate.SnapshotState, hasState bool, p *payload.AdversaryFeatureApplyPayload, _ func() time.Time) *command.Rejection {
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.AdversaryFeatureApplyPayload, _ func() time.Time) *command.Rejection {
 			if hasState && isAdversaryFeatureApplyNoMutation(s, *p) {
 				return &command.Rejection{
 					Code:    rejectionCodeAdversaryFeatureApplyNoMutation,
@@ -106,7 +106,7 @@ func decideAdversaryFeatureApply(snapshotState snapstate.SnapshotState, hasSnaps
 			p.TargetAdversaryID = ids.AdversaryID(strings.TrimSpace(p.TargetAdversaryID.String()))
 			return nil
 		},
-		func(s snapstate.SnapshotState, _ bool, p payload.AdversaryFeatureApplyPayload) payload.AdversaryUpdatedPayload {
+		func(s daggerheartstate.SnapshotState, _ bool, p payload.AdversaryFeatureApplyPayload) payload.AdversaryUpdatedPayload {
 			current, _ := snapshotAdversaryState(s, p.AdversaryID)
 			updatedStress := current.Stress
 			if p.StressAfter != nil {
@@ -157,7 +157,7 @@ func decideAdversaryDelete(cmd command.Command, now func() time.Time) command.De
 
 // ── File-local helpers ─────────────────────────────────────────────────
 
-func isAdversaryConditionChangeNoMutation(snapshot snapstate.SnapshotState, p payload.AdversaryConditionChangePayload) bool {
+func isAdversaryConditionChangeNoMutation(snapshot daggerheartstate.SnapshotState, p payload.AdversaryConditionChangePayload) bool {
 	adversary, hasAdversary := snapshotAdversaryState(snapshot, p.AdversaryID)
 	if !hasAdversary {
 		return false
@@ -174,7 +174,7 @@ func isAdversaryConditionChangeNoMutation(snapshot snapstate.SnapshotState, p pa
 	return rules.ConditionsEqual(current, after)
 }
 
-func hasMissingAdversaryConditionRemovals(snapshot snapstate.SnapshotState, p payload.AdversaryConditionChangePayload) bool {
+func hasMissingAdversaryConditionRemovals(snapshot daggerheartstate.SnapshotState, p payload.AdversaryConditionChangePayload) bool {
 	if len(p.Removed) == 0 {
 		return false
 	}
@@ -185,7 +185,7 @@ func hasMissingAdversaryConditionRemovals(snapshot snapstate.SnapshotState, p pa
 	return hasMissingConditionRemovals(adversary.Conditions, rules.ConditionCodes(p.Removed))
 }
 
-func isAdversaryCreateNoMutation(snapshot snapstate.SnapshotState, p payload.AdversaryCreatePayload) bool {
+func isAdversaryCreateNoMutation(snapshot daggerheartstate.SnapshotState, p payload.AdversaryCreatePayload) bool {
 	adversary, hasAdversary := snapshotAdversaryState(snapshot, p.AdversaryID)
 	if !hasAdversary {
 		return false
@@ -210,7 +210,7 @@ func isAdversaryCreateNoMutation(snapshot snapstate.SnapshotState, p payload.Adv
 		adversary.SpotlightCount == p.SpotlightCount
 }
 
-func isAdversaryFeatureApplyNoMutation(snapshot snapstate.SnapshotState, p payload.AdversaryFeatureApplyPayload) bool {
+func isAdversaryFeatureApplyNoMutation(snapshot daggerheartstate.SnapshotState, p payload.AdversaryFeatureApplyPayload) bool {
 	adversary, hasAdversary := snapshotAdversaryState(snapshot, p.AdversaryID)
 	if !hasAdversary {
 		return false

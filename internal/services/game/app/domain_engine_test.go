@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
 )
 
 func TestDomainCampaignUpdateAfterCreate(t *testing.T) {
@@ -27,7 +27,7 @@ func TestDomainCampaignUpdateAfterCreate(t *testing.T) {
 	}
 
 	eventPath := filepath.Join(t.TempDir(), "game-events.db")
-	store, err := storagesqlite.OpenEvents(eventPath, keyring, registries.Events)
+	store, err := sqliteeventjournal.Open(eventPath, keyring, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}

@@ -22,7 +22,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
+	"github.com/louisbranch/fracturing.space/internal/services/game/app"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 	"google.golang.org/grpc"
@@ -136,7 +136,7 @@ func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	grpcServer, err := server.NewWithAddr("127.0.0.1:0")
+	grpcServer, err := app.NewWithAddr("127.0.0.1:0")
 	if err != nil {
 		cancel()
 		stopAuth()
@@ -187,7 +187,7 @@ func sharedSuiteFixture(t *testing.T) suiteFixture {
 		}
 
 		ctx := context.Background()
-		grpcServer, err := server.NewWithAddr("127.0.0.1:0")
+		grpcServer, err := app.NewWithAddr("127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("new shared game server: %v", err)
 		}

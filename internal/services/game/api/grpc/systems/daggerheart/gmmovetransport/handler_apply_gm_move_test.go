@@ -8,8 +8,9 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -108,15 +109,15 @@ func TestHandlerApplyGmMoveWithFearSpent(t *testing.T) {
 	if commandInput.RequestID != "req-1" || commandInput.InvocationID != "inv-1" {
 		t.Fatalf("request metadata = (%q,%q), want (req-1,inv-1)", commandInput.RequestID, commandInput.InvocationID)
 	}
-	var payload daggerheart.GMMoveApplyPayload
+	var payload daggerheartpayload.GMMoveApplyPayload
 	if err := json.Unmarshal(commandInput.PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
 	if payload.FearSpent != 1 {
 		t.Fatalf("payload fear_spent = %d, want 1", payload.FearSpent)
 	}
-	if payload.Target.Type != daggerheart.GMMoveTargetTypeDirectMove {
-		t.Fatalf("payload target type = %q, want %q", payload.Target.Type, daggerheart.GMMoveTargetTypeDirectMove)
+	if payload.Target.Type != rules.GMMoveTargetTypeDirectMove {
+		t.Fatalf("payload target type = %q, want %q", payload.Target.Type, rules.GMMoveTargetTypeDirectMove)
 	}
 }
 

@@ -7,8 +7,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/metadata"
 )
@@ -64,14 +65,14 @@ func newTestHandler(deps Dependencies) *Handler {
 			state: projectionstore.DaggerheartCharacterState{
 				CampaignID:  "camp-1",
 				CharacterID: "char-1",
-				LifeState:   daggerheart.LifeStateAlive,
-				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
+				LifeState:   daggerheartstate.LifeStateAlive,
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: rules.ConditionHidden}},
 			},
 			adversary: projectionstore.DaggerheartAdversary{
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
 				SessionID:   "sess-1",
-				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: rules.ConditionHidden}},
 			},
 		}
 	}

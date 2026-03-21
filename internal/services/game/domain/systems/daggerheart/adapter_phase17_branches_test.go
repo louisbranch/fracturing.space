@@ -7,8 +7,13 @@ import (
 	"testing"
 	"time"
 
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestAdapterSnapshot_ReturnsStoredSnapshot(t *testing.T) {
@@ -41,7 +46,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		store.getCharacterStateErr = errors.New("character read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
+		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DowntimeMoveAppliedPayload{
 			ActorCharacterID:  "char-1",
 			TargetCharacterID: "char-1",
 			Move:              "prepare",
@@ -65,7 +70,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		}
 		store.getCharacterProfileErr = errors.New("profile read failed")
 
-		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
+		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DowntimeMoveAppliedPayload{
 			ActorCharacterID:  "char-1",
 			TargetCharacterID: "char-1",
 			Move:              "prepare",
@@ -80,7 +85,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		store := newParityDaggerheartStore()
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
+		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DowntimeMoveAppliedPayload{
 			ActorCharacterID:  "char-1",
 			TargetCharacterID: "char-1",
 			Move:              "prepare",
@@ -96,7 +101,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		store.putCharacterStateErr = errors.New("character write failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
+		err := adapter.HandleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.DowntimeMoveAppliedPayload{
 			ActorCharacterID:  "char-1",
 			TargetCharacterID: "char-1",
 			Move:              "prepare",
@@ -114,7 +119,7 @@ func TestHandleCharacterTemporaryArmorApplied_ErrorBranches(t *testing.T) {
 		store.getCharacterStateErr = errors.New("character read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, CharacterTemporaryArmorAppliedPayload{
+		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CharacterTemporaryArmorAppliedPayload{
 			CharacterID: "char-1",
 			Source:      "ritual",
 			Duration:    "short_rest",
@@ -137,7 +142,7 @@ func TestHandleCharacterTemporaryArmorApplied_ErrorBranches(t *testing.T) {
 		}
 		store.getCharacterProfileErr = errors.New("profile read failed")
 
-		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, CharacterTemporaryArmorAppliedPayload{
+		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CharacterTemporaryArmorAppliedPayload{
 			CharacterID: "char-1",
 			Source:      "ritual",
 			Duration:    "short_rest",
@@ -152,7 +157,7 @@ func TestHandleCharacterTemporaryArmorApplied_ErrorBranches(t *testing.T) {
 		store := newParityDaggerheartStore()
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, CharacterTemporaryArmorAppliedPayload{
+		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CharacterTemporaryArmorAppliedPayload{
 			CharacterID: "char-1",
 			Source:      "ritual",
 			Duration:    "short_rest",
@@ -168,7 +173,7 @@ func TestHandleCharacterTemporaryArmorApplied_ErrorBranches(t *testing.T) {
 		store.putCharacterStateErr = errors.New("character write failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, CharacterTemporaryArmorAppliedPayload{
+		err := adapter.HandleCharacterTemporaryArmorApplied(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CharacterTemporaryArmorAppliedPayload{
 			CharacterID: "char-1",
 			Source:      "ritual",
 			Duration:    "short_rest",
@@ -182,8 +187,8 @@ func TestHandleCharacterTemporaryArmorApplied_ErrorBranches(t *testing.T) {
 
 func TestHandleGMFearChanged_RejectsOutOfRangeAfter(t *testing.T) {
 	adapter := NewAdapter(newParityDaggerheartStore())
-	err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, GMFearChangedPayload{
-		Value: GMFearMax + 1,
+	err := adapter.HandleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.GMFearChangedPayload{
+		Value: daggerheartstate.GMFearMax + 1,
 	})
 	if err == nil || !strings.Contains(err.Error(), "gm_fear_changed value must be in range") {
 		t.Fatalf("handleGMFearChanged() error = %v, want out-of-range error", err)
@@ -192,7 +197,7 @@ func TestHandleGMFearChanged_RejectsOutOfRangeAfter(t *testing.T) {
 
 func TestHandleAdversaryCreated_RejectsInvalidStats(t *testing.T) {
 	adapter := NewAdapter(newParityDaggerheartStore())
-	err := adapter.HandleAdversaryCreated(context.Background(), event.Event{CampaignID: "camp-1", Timestamp: time.Unix(0, 0).UTC()}, AdversaryCreatedPayload{
+	err := adapter.HandleAdversaryCreated(context.Background(), event.Event{CampaignID: "camp-1", Timestamp: time.Unix(0, 0).UTC()}, daggerheartpayload.AdversaryCreatedPayload{
 		AdversaryID: "adv-1",
 		Name:        "Goblin",
 		Kind:        "bruiser",
@@ -213,7 +218,7 @@ func TestHandleAdversaryCreated_RejectsInvalidStats(t *testing.T) {
 func TestHandleAdversaryUpdated_ErrorBranches(t *testing.T) {
 	t.Run("stats validation error", func(t *testing.T) {
 		adapter := NewAdapter(newParityDaggerheartStore())
-		err := adapter.HandleAdversaryUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, AdversaryUpdatedPayload{
+		err := adapter.HandleAdversaryUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.AdversaryUpdatedPayload{
 			AdversaryID: "adv-1",
 			Name:        "Goblin",
 			HP:          5,
@@ -234,7 +239,7 @@ func TestHandleAdversaryUpdated_ErrorBranches(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		store.getAdversaryErr = errors.New("adversary read failed")
 		adapter := NewAdapter(store)
-		err := adapter.HandleAdversaryUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, AdversaryUpdatedPayload{
+		err := adapter.HandleAdversaryUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.AdversaryUpdatedPayload{
 			AdversaryID: "adv-1",
 			Name:        "Goblin",
 			HP:          5,
@@ -276,7 +281,7 @@ func TestHandleAdversaryUpdated_ErrorBranches(t *testing.T) {
 		err := adapter.HandleAdversaryUpdated(context.Background(), event.Event{
 			CampaignID: "camp-1",
 			Timestamp:  time.Unix(10, 0).UTC(),
-		}, AdversaryUpdatedPayload{
+		}, daggerheartpayload.AdversaryUpdatedPayload{
 			AdversaryID: "adv-1",
 			Name:        "Goblin Captain",
 			Kind:        "leader",
@@ -301,7 +306,7 @@ func TestApplyConditionPatch_ErrorBranches(t *testing.T) {
 		store.getCharacterStateErr = errors.New("character read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []ConditionState{mustTestConditionState(t, "hidden")})
+		err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []rules.ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character state: character read failed") {
 			t.Fatalf("applyConditionPatch() error = %v, want wrapped read error", err)
 		}
@@ -319,7 +324,7 @@ func TestApplyConditionPatch_ErrorBranches(t *testing.T) {
 		}
 		store.getCharacterProfileErr = errors.New("profile read failed")
 
-		err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []ConditionState{mustTestConditionState(t, "hidden")})
+		err := adapter.ApplyConditionPatch(context.Background(), "camp-1", "char-1", []rules.ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character profile: profile read failed") {
 			t.Fatalf("applyConditionPatch() error = %v, want wrapped profile read error", err)
 		}

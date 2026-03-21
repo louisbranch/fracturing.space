@@ -7,7 +7,8 @@
 // and returns a replayable decision/result for downstream handlers.
 //
 // Session start remains the one intentional cross-aggregate exception inside
-// the core write path. CoreDecider reaches that behavior through a
-// readiness-owned workflow seam so the engine stays focused on routing rather
-// than owning readiness and campaign-activation orchestration directly.
+// the core write path. CoreDecider stays thin by delegating core-owned routing
+// to a dedicated core router and system-owned envelopes to a system dispatcher,
+// while the readiness-owned workflow seam keeps campaign activation logic out of
+// the engine entrypoint.
 package engine

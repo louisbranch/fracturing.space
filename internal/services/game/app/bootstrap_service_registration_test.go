@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -83,7 +83,7 @@ func TestBuildServiceDescriptors_ExcludesLegacyInteractionTransport(t *testing.T
 	}
 }
 
-func TestBuildServiceDescriptors_RegistersCampaignAIOrchestrationService(t *testing.T) {
+func TestBuildServiceDescriptors_DoesNotReintroduceTransportRegistrationBag(t *testing.T) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
@@ -95,13 +95,111 @@ func TestBuildServiceDescriptors_RegistersCampaignAIOrchestrationService(t *test
 	}
 	source := string(content)
 	for _, marker := range []string{
+		"type transportRegistrationDeps struct",
+		"newTransportRegistrationDeps(",
+	} {
+		if strings.Contains(source, marker) {
+			t.Fatalf("%s unexpectedly contains removed transport-wide registration marker %q", filepath.Base(path), marker)
+		}
+	}
+}
+
+func TestBuildServiceDescriptors_RegistersCampaignAIOrchestrationService(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "bootstrap_service_builders.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	for _, marker := range []string{
 		`healthService: "game.v1.CampaignAIOrchestrationService"`,
 		"RegisterCampaignAIOrchestrationServiceServer",
-		"NewCampaignAIOrchestrationService(stores)",
-		"SessionInteraction: stores.SessionInteraction",
+		"NewCampaignAIOrchestrationService(gamegrpc.CampaignAIOrchestrationDeps{",
+		"SessionInteraction: deps.sessionInteraction",
 	} {
 		if !strings.Contains(source, marker) {
 			t.Fatalf("%s missing %q", filepath.Base(path), marker)
 		}
+	}
+}
+
+func TestRegistrationFamilyBuilders_DoNotTakeRootStoresContainer(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "bootstrap_service_builders.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	for _, marker := range []string{
+		"func newCampaignRegistrationDeps(\n\tstores gamegrpc.Stores,",
+		"func newSessionRegistrationDeps(stores gamegrpc.Stores,",
+		"func newInfrastructureRegistrationDeps(\n\tbundle *storageBundle,\n\tstores gamegrpc.Stores,",
+	} {
+		if strings.Contains(source, marker) {
+			t.Fatalf("%s unexpectedly contains removed root-store builder marker %q", filepath.Base(path), marker)
+		}
+	}
+}
+
+func TestCampaignAndSessionRegistrationBuilders_DoNotTakeConcernGroups(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "bootstrap_service_builders.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	for _, marker := range []string{
+		"func newCampaignRegistrationDeps(\n\tprojectionStores gamegrpc.ProjectionStores,\n\tsystemStores gamegrpc.SystemStores,\n\tinfrastructureStores gamegrpc.InfrastructureStores,\n\tcontentStores gamegrpc.ContentStores,\n\truntimeStores gamegrpc.RuntimeStores,",
+		"func newSessionRegistrationDeps(\n\tprojectionStores gamegrpc.ProjectionStores,\n\tinfrastructureStores gamegrpc.InfrastructureStores,\n\tcontentStores gamegrpc.ContentStores,\n\truntimeStores gamegrpc.RuntimeStores,",
+	} {
+		if strings.Contains(source, marker) {
+			t.Fatalf("%s unexpectedly contains removed concern-group builder marker %q", filepath.Base(path), marker)
+		}
+	}
+}
+
+func TestInfrastructureRegistrationBuilder_DoesNotTakeConcernGroups(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "bootstrap_service_builders.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	marker := "func newInfrastructureRegistrationDeps(\n\tbundle *storageBundle,\n\tprojectionStores gamegrpc.ProjectionStores,\n\tinfrastructureStores gamegrpc.InfrastructureStores,\n\tsystemRegistry *bridge.MetadataRegistry,"
+	if strings.Contains(source, marker) {
+		t.Fatalf("%s unexpectedly contains removed infrastructure concern-group marker %q", filepath.Base(path), marker)
+	}
+}
+
+func TestDaggerheartRegistrationBuilder_DoesNotTakeBundleStyleInputs(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "bootstrap_service_builders.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	marker := "func newDaggerheartRegistrationDeps(\n\tbundle *storageBundle,\n\tsystemStores gamegrpc.SystemStores,\n\twritePath gamegrpc.WritePath,\n\tapplier projection.Applier,"
+	if strings.Contains(source, marker) {
+		t.Fatalf("%s unexpectedly contains removed Daggerheart bundle-style marker %q", filepath.Base(path), marker)
 	}
 }

@@ -3,7 +3,7 @@ package daggerheart
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
 
 const (
@@ -40,13 +40,13 @@ const (
 const (
 	eventTypeActionOutcomeApplied           = action.EventTypeOutcomeApplied
 	eventTypeActionRollResolved             = action.EventTypeRollResolved
-	eventTypeDaggerheartCharacterStatePatch = bridge.EventTypeCharacterStatePatched
-	eventTypeDaggerheartConditionChanged    = bridge.EventTypeConditionChanged
-	eventTypeDaggerheartGMFearChanged       = bridge.EventTypeGMFearChanged
-	eventTypeDaggerheartLevelUpApplied      = bridge.EventTypeLevelUpApplied
-	eventTypeDaggerheartGoldUpdated         = bridge.EventTypeGoldUpdated
-	eventTypeDaggerheartDomainCardAcquired  = bridge.EventTypeDomainCardAcquired
-	eventTypeDaggerheartEquipmentSwapped    = bridge.EventTypeEquipmentSwapped
-	eventTypeDaggerheartConsumableUsed      = bridge.EventTypeConsumableUsed
-	eventTypeDaggerheartConsumableAcquired  = bridge.EventTypeConsumableAcquired
+	eventTypeDaggerheartCharacterStatePatch = daggerheartpayload.EventTypeCharacterStatePatched
+	eventTypeDaggerheartConditionChanged    = daggerheartpayload.EventTypeConditionChanged
+	eventTypeDaggerheartGMFearChanged       = daggerheartpayload.EventTypeGMFearChanged
+	eventTypeDaggerheartLevelUpApplied      = daggerheartpayload.EventTypeLevelUpApplied
+	eventTypeDaggerheartGoldUpdated         = daggerheartpayload.EventTypeGoldUpdated
+	eventTypeDaggerheartDomainCardAcquired  = daggerheartpayload.EventTypeDomainCardAcquired
+	eventTypeDaggerheartEquipmentSwapped    = daggerheartpayload.EventTypeEquipmentSwapped
+	eventTypeDaggerheartConsumableUsed      = daggerheartpayload.EventTypeConsumableUsed
+	eventTypeDaggerheartConsumableAcquired  = daggerheartpayload.EventTypeConsumableAcquired
 )

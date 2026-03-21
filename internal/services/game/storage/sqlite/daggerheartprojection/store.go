@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -39,7 +40,7 @@ func Bind(sqlDB *sql.DB, q *db.Queries) *Store {
 	}
 }
 
-func domainConditionStatesToProjection(values []daggerheart.ConditionState) []projectionstore.DaggerheartConditionState {
+func domainConditionStatesToProjection(values []rules.ConditionState) []projectionstore.DaggerheartConditionState {
 	if len(values) == 0 {
 		return []projectionstore.DaggerheartConditionState{}
 	}
@@ -63,19 +64,19 @@ func domainConditionStatesToProjection(values []daggerheart.ConditionState) []pr
 	return items
 }
 
-func projectionConditionStatesToDomain(values []projectionstore.DaggerheartConditionState) []daggerheart.ConditionState {
+func projectionConditionStatesToDomain(values []projectionstore.DaggerheartConditionState) []rules.ConditionState {
 	if len(values) == 0 {
-		return []daggerheart.ConditionState{}
+		return []rules.ConditionState{}
 	}
-	items := make([]daggerheart.ConditionState, 0, len(values))
+	items := make([]rules.ConditionState, 0, len(values))
 	for _, value := range values {
-		triggers := make([]daggerheart.ConditionClearTrigger, 0, len(value.ClearTriggers))
+		triggers := make([]rules.ConditionClearTrigger, 0, len(value.ClearTriggers))
 		for _, trigger := range value.ClearTriggers {
-			triggers = append(triggers, daggerheart.ConditionClearTrigger(trigger))
+			triggers = append(triggers, rules.ConditionClearTrigger(trigger))
 		}
-		items = append(items, daggerheart.ConditionState{
+		items = append(items, rules.ConditionState{
 			ID:            value.ID,
-			Class:         daggerheart.ConditionClass(value.Class),
+			Class:         rules.ConditionClass(value.Class),
 			Standard:      value.Standard,
 			Code:          value.Code,
 			Label:         value.Label,
@@ -101,11 +102,11 @@ func decodeProjectionConditionStates(raw string) ([]projectionstore.DaggerheartC
 	}
 	items := make([]projectionstore.DaggerheartConditionState, 0, len(legacy))
 	for _, code := range legacy {
-		state, err := daggerheart.StandardConditionState(code)
+		state, err := rules.StandardConditionState(code)
 		if err != nil {
 			return nil, err
 		}
-		items = append(items, domainConditionStatesToProjection([]daggerheart.ConditionState{state})...)
+		items = append(items, domainConditionStatesToProjection([]rules.ConditionState{state})...)
 	}
 	return items, nil
 }
@@ -422,12 +423,12 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
-		hopeMax = daggerheart.HopeMaxDefault
+		hopeMax = daggerheartstate.HopeMaxDefault
 	}
 
 	lifeState := state.LifeState
 	if strings.TrimSpace(lifeState) == "" {
-		lifeState = daggerheart.LifeStateAlive
+		lifeState = daggerheartstate.LifeStateAlive
 	}
 
 	return s.q.PutDaggerheartCharacterState(ctx, db.PutDaggerheartCharacterStateParams{
@@ -513,7 +514,7 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 
 	lifeState := row.LifeState
 	if strings.TrimSpace(lifeState) == "" {
-		lifeState = daggerheart.LifeStateAlive
+		lifeState = daggerheartstate.LifeStateAlive
 	}
 	var statModifiers []projectionstore.DaggerheartStatModifier
 	if row.StatModifiersJson != "" && row.StatModifiersJson != "[]" {

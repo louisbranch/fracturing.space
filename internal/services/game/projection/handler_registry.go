@@ -5,13 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
 // idRequirement specifies which event envelope fields a handler requires.
@@ -164,78 +158,12 @@ var coreRouter = buildCoreRouter()
 // via HandleProjection/HandleProjectionRaw.
 func buildCoreRouter() *CoreRouter {
 	r := NewCoreRouter()
-
-	// campaign
-	HandleProjection(r, campaign.EventTypeCreated, requirements(needsStores(storeCampaign), needsEnvelope(fieldEntityID)), Applier.applyCampaignCreated)
-	HandleProjection(r, campaign.EventTypeUpdated, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignUpdated)
-	HandleProjection(r, campaign.EventTypeAIBound, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignAIBound)
-	HandleProjection(r, campaign.EventTypeAIUnbound, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignAIUnbound)
-	HandleProjection(r, campaign.EventTypeAIAuthRotated, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignAIAuthRotated)
-	HandleProjection(r, campaign.EventTypeForked, requirements(needsStores(storeCampaignFork), needsEnvelope(fieldCampaignID)), Applier.applyCampaignForked)
-
-	// participant
-	HandleProjection(r, participant.EventTypeJoined, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantJoined)
-	HandleProjection(r, participant.EventTypeUpdated, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantUpdated)
-	HandleProjectionRaw(r, participant.EventTypeLeft, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantLeft)
-	HandleProjection(r, participant.EventTypeBound, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantBound)
-	HandleProjection(r, participant.EventTypeUnbound, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantUnbound)
-	HandleProjection(r, participant.EventTypeSeatReassigned, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applySeatReassigned)
-
-	// character
-	HandleProjection(r, character.EventTypeCreated, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterCreated)
-	HandleProjection(r, character.EventTypeUpdated, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterUpdated)
-	HandleProjection(r, character.EventTypeDeleted, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterDeleted)
-
-	// invite — InviteID comes from payload with EntityID fallback for created/updated.
-	HandleProjection(r, invite.EventTypeCreated, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyInviteCreated)
-	HandleProjection(r, invite.EventTypeClaimed, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyInviteClaimed)
-	HandleProjection(r, invite.EventTypeDeclined, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyInviteDeclined)
-	HandleProjection(r, invite.EventTypeRevoked, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyInviteRevoked)
-	HandleProjection(r, invite.EventTypeUpdated, requirements(needsStores(storeInvite)), Applier.applyInviteUpdated)
-
-	// session — SessionID from payload with EntityID fallback, so EntityID
-	// is not a hard envelope requirement for started/ended.
-	HandleProjection(r, session.EventTypeStarted, requirements(needsStores(storeSession), needsEnvelope(fieldCampaignID)), Applier.applySessionStarted)
-	HandleProjection(r, session.EventTypeEnded, requirements(needsStores(storeSession), needsEnvelope(fieldCampaignID)), Applier.applySessionEnded)
-	// Gate handlers derive GateID from payload with EntityID fallback.
-	HandleProjection(r, session.EventTypeGateOpened, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateOpened)
-	HandleProjection(r, session.EventTypeGateResponseRecorded, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateResponseRecorded)
-	HandleProjection(r, session.EventTypeGateResolved, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateResolved)
-	HandleProjection(r, session.EventTypeGateAbandoned, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateAbandoned)
-	HandleProjection(r, session.EventTypeSpotlightSet, requirements(needsStores(storeSessionSpotlight), needsEnvelope(fieldSessionID)), Applier.applySessionSpotlightSet)
-	HandleProjectionRaw(r, session.EventTypeSpotlightCleared, requirements(needsStores(storeSessionSpotlight), needsEnvelope(fieldSessionID)), Applier.applySessionSpotlightCleared)
-	HandleProjection(r, session.EventTypeActiveSceneSet, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionActiveSceneSet)
-	HandleProjection(r, session.EventTypeGMAuthoritySet, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGMAuthoritySet)
-	HandleProjection(r, session.EventTypeOOCPaused, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCPaused)
-	HandleProjection(r, session.EventTypeOOCPosted, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCPosted)
-	HandleProjection(r, session.EventTypeOOCReadyMarked, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCReadyMarked)
-	HandleProjection(r, session.EventTypeOOCReadyCleared, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCReadyCleared)
-	HandleProjection(r, session.EventTypeOOCResumed, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCResumed)
-	HandleProjection(r, session.EventTypeAITurnQueued, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnQueued)
-	HandleProjection(r, session.EventTypeAITurnRunning, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnRunning)
-	HandleProjection(r, session.EventTypeAITurnFailed, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnFailed)
-	HandleProjection(r, session.EventTypeAITurnCleared, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnCleared)
-
-	// scene
-	HandleProjection(r, scene.EventTypeCreated, requirements(needsStores(storeScene, storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCreated)
-	HandleProjection(r, scene.EventTypeUpdated, requirements(needsStores(storeScene), needsEnvelope(fieldCampaignID)), Applier.applySceneUpdated)
-	HandleProjection(r, scene.EventTypeEnded, requirements(needsStores(storeScene, storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneEnded)
-	HandleProjection(r, scene.EventTypeCharacterAdded, requirements(needsStores(storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCharacterAdded)
-	HandleProjection(r, scene.EventTypeCharacterRemoved, requirements(needsStores(storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCharacterRemoved)
-	HandleProjection(r, scene.EventTypeGateOpened, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateOpened)
-	HandleProjection(r, scene.EventTypeGateResolved, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateResolved)
-	HandleProjection(r, scene.EventTypeGateAbandoned, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateAbandoned)
-	HandleProjection(r, scene.EventTypeSpotlightSet, requirements(needsStores(storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneSpotlightSet)
-	HandleProjection(r, scene.EventTypeSpotlightCleared, requirements(needsStores(storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneSpotlightCleared)
-	HandleProjection(r, scene.EventTypePlayerPhaseStarted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseStarted)
-	HandleProjection(r, scene.EventTypePlayerPhasePosted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhasePosted)
-	HandleProjection(r, scene.EventTypePlayerPhaseYielded, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseYielded)
-	HandleProjection(r, scene.EventTypePlayerPhaseReviewStarted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseReviewStarted)
-	HandleProjection(r, scene.EventTypePlayerPhaseUnyielded, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseUnyielded)
-	HandleProjection(r, scene.EventTypePlayerPhaseRevisionsRequested, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseRevisionsRequested)
-	HandleProjection(r, scene.EventTypePlayerPhaseAccepted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseAccepted)
-	HandleProjection(r, scene.EventTypePlayerPhaseEnded, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseEnded)
-	HandleProjection(r, scene.EventTypeGMOutputCommitted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applySceneGMOutputCommitted)
+	registerCampaignProjectionHandlers(r)
+	registerParticipantProjectionHandlers(r)
+	registerCharacterProjectionHandlers(r)
+	registerInviteProjectionHandlers(r)
+	registerSessionProjectionHandlers(r)
+	registerSceneProjectionHandlers(r)
 
 	return r
 }
@@ -299,9 +227,6 @@ func checkMissingStores(required storeRequirement, a Applier) []string {
 // whenever the event registry contains system-owned event types, since those
 // events are routed through the adapter path rather than the core router.
 func (a Applier) ValidateStorePreconditions() error {
-	if a.BuildErr != nil {
-		return fmt.Errorf("projection applier initialization failed: %w", a.BuildErr)
-	}
 	// Collect the union of all store requirements across router entries.
 	var required storeRequirement
 	for _, h := range coreRouter.handlers {
