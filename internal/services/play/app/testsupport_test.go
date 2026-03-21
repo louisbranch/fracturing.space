@@ -35,6 +35,8 @@ func newAuthedPlayServer(interaction *recordingInteractionClient, transcripts *s
 		interaction:     interaction,
 		campaign:        fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
 		system:          fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+		participants:    fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+		characters:      fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
 		transcripts:     transcripts,
 		shellAssets:     shellAssets{devServerURL: "http://localhost:5173"},
 		httpServer:      &http.Server{},

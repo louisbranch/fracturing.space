@@ -28,7 +28,7 @@ describe("app mode resolution", () => {
     });
   });
 
-  it("keeps campaign routes on the runtime placeholder path", () => {
+  it("resolves campaign routes to the runtime mode", () => {
     const resolution = resolveAppLocation({
       pathname: "/campaigns/the-guildhouse",
       search: "",
@@ -37,7 +37,7 @@ describe("app mode resolution", () => {
     expect(resolution).toEqual({
       kind: "render",
       mode: {
-        kind: "runtime-placeholder",
+        kind: "runtime",
         campaignId: "the-guildhouse",
       },
     });

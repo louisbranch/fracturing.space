@@ -199,12 +199,14 @@ func openRuntimeDependenciesWith(ctx context.Context, cfg Config, openers runtim
 // composition root has opened transport/storage resources successfully.
 func dependenciesFromResources(authMC managedConnResource, gameMC managedConnResource, store transcriptStoreResource) playapp.Dependencies {
 	return playapp.Dependencies{
-		Auth:        authv1.NewAuthServiceClient(authMC.ClientConn()),
-		Interaction: gamev1.NewInteractionServiceClient(gameMC.ClientConn()),
-		Campaign:    gamev1.NewCampaignServiceClient(gameMC.ClientConn()),
-		System:      gamev1.NewSystemServiceClient(gameMC.ClientConn()),
-		Events:      gamev1.NewEventServiceClient(gameMC.ClientConn()),
-		Transcripts: store,
+		Auth:         authv1.NewAuthServiceClient(authMC.ClientConn()),
+		Interaction:  gamev1.NewInteractionServiceClient(gameMC.ClientConn()),
+		Campaign:     gamev1.NewCampaignServiceClient(gameMC.ClientConn()),
+		System:       gamev1.NewSystemServiceClient(gameMC.ClientConn()),
+		Participants: gamev1.NewParticipantServiceClient(gameMC.ClientConn()),
+		Characters:   gamev1.NewCharacterServiceClient(gameMC.ClientConn()),
+		Events:       gamev1.NewEventServiceClient(gameMC.ClientConn()),
+		Transcripts:  store,
 	}
 }
 

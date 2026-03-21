@@ -33,12 +33,14 @@ type Config struct {
 
 // Dependencies defines the runtime collaborators required by the play service.
 type Dependencies struct {
-	Auth        authClient
-	Interaction interactionClient
-	Campaign    campaignClient
-	System      systemClient
-	Events      eventClient
-	Transcripts transcript.Store
+	Auth         authClient
+	Interaction  interactionClient
+	Campaign     campaignClient
+	System       systemClient
+	Participants participantClient
+	Characters   characterClient
+	Events       eventClient
+	Transcripts  transcript.Store
 }
 
 type authClient interface {
@@ -74,6 +76,15 @@ type systemClient interface {
 	GetGameSystem(context.Context, *gamev1.GetGameSystemRequest, ...gogrpc.CallOption) (*gamev1.GetGameSystemResponse, error)
 }
 
+type participantClient interface {
+	ListParticipants(context.Context, *gamev1.ListParticipantsRequest, ...gogrpc.CallOption) (*gamev1.ListParticipantsResponse, error)
+}
+
+type characterClient interface {
+	ListCharacters(context.Context, *gamev1.ListCharactersRequest, ...gogrpc.CallOption) (*gamev1.ListCharactersResponse, error)
+	GetCharacterSheet(context.Context, *gamev1.GetCharacterSheetRequest, ...gogrpc.CallOption) (*gamev1.GetCharacterSheetResponse, error)
+}
+
 type eventClient interface {
 	SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[gamev1.CampaignUpdate], error)
 }
@@ -89,6 +100,8 @@ type Server struct {
 	interaction         interactionClient
 	campaign            campaignClient
 	system              systemClient
+	participants        participantClient
+	characters          characterClient
 	events              eventClient
 	transcripts         transcript.Store
 	shellAssets         shellAssets
@@ -121,6 +134,8 @@ func NewServer(cfg Config, deps Dependencies) (*Server, error) {
 		interaction:         deps.Interaction,
 		campaign:            deps.Campaign,
 		system:              deps.System,
+		participants:        deps.Participants,
+		characters:          deps.Characters,
 		events:              deps.Events,
 		transcripts:         deps.Transcripts,
 		shellAssets:         shellAssets,
@@ -152,6 +167,12 @@ func (d Dependencies) validate() error {
 	}
 	if d.System == nil {
 		return errors.New("system dependency is required")
+	}
+	if d.Participants == nil {
+		return errors.New("participant dependency is required")
+	}
+	if d.Characters == nil {
+		return errors.New("character dependency is required")
 	}
 	if d.Events == nil {
 		return errors.New("event dependency is required")

@@ -15,18 +15,22 @@ import (
 // playApplication owns browser-facing state assembly so transport handlers and
 // realtime orchestration can reuse one application seam.
 type playApplication struct {
-	interaction interactionClient
-	campaign    campaignClient
-	system      systemClient
-	transcripts transcript.Store
+	interaction  interactionClient
+	campaign     campaignClient
+	system       systemClient
+	participants participantClient
+	characters   characterClient
+	transcripts  transcript.Store
 }
 
 func (s *Server) application() playApplication {
 	return playApplication{
-		interaction: s.interaction,
-		campaign:    s.campaign,
-		system:      s.system,
-		transcripts: s.transcripts,
+		interaction:  s.interaction,
+		campaign:     s.campaign,
+		system:       s.system,
+		participants: s.participants,
+		characters:   s.characters,
+		transcripts:  s.transcripts,
 	}
 }
 
@@ -43,12 +47,15 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 	if err != nil {
 		return playprotocol.Bootstrap{}, err
 	}
+	participants, catalog := a.enrichedData(ctx, req)
 	return playprotocol.Bootstrap{
-		CampaignID:       strings.TrimSpace(req.CampaignID),
-		Viewer:           playprotocol.ViewerFromGameViewer(state.GetViewer()),
-		System:           system,
-		InteractionState: playprotocol.InteractionStateFromGameState(state),
-		Chat:             chat,
+		CampaignID:                 strings.TrimSpace(req.CampaignID),
+		Viewer:                     playprotocol.ViewerFromGameViewer(state.GetViewer()),
+		System:                     system,
+		InteractionState:           playprotocol.InteractionStateFromGameState(state),
+		Participants:               participants,
+		CharacterInspectionCatalog: catalog,
+		Chat:                       chat,
 		Realtime: playprotocol.RealtimeConfig{
 			URL:             "/realtime",
 			ProtocolVersion: playprotocol.RealtimeProtocolVersion,
@@ -73,10 +80,13 @@ func (a playApplication) roomSnapshotFromState(ctx context.Context, campaignID s
 	if err != nil {
 		return playprotocol.RoomSnapshot{}, err
 	}
+	participants, catalog := a.enrichedDataForCampaign(ctx, campaignID)
 	return playprotocol.RoomSnapshot{
-		InteractionState: playprotocol.InteractionStateFromGameState(state),
-		Chat:             chat,
-		LatestGameSeq:    latestGameSeq,
+		InteractionState:           playprotocol.InteractionStateFromGameState(state),
+		Participants:               participants,
+		CharacterInspectionCatalog: catalog,
+		Chat:                       chat,
+		LatestGameSeq:              latestGameSeq,
 	}, nil
 }
 
@@ -204,4 +214,117 @@ func gameSystemIDString(value commonv1.GameSystem) string {
 	}
 	name = strings.TrimPrefix(name, "GAME_SYSTEM_")
 	return strings.ToLower(name)
+}
+
+// enrichedData loads participant and character data for the bootstrap response
+// which has an authenticated playRequest available.
+func (a playApplication) enrichedData(ctx context.Context, req playRequest) ([]playprotocol.Participant, map[string]playprotocol.CharacterInspection) {
+	return a.enrichedDataForCampaign(req.authContext(ctx), req.CampaignID)
+}
+
+// enrichedDataForCampaign loads participant and character data using a raw
+// context and campaign ID — used by room snapshot paths where playRequest is
+// not always available.
+func (a playApplication) enrichedDataForCampaign(ctx context.Context, campaignID string) ([]playprotocol.Participant, map[string]playprotocol.CharacterInspection) {
+	participants := a.listAllParticipants(ctx, campaignID)
+	characters := a.listAllCharacters(ctx, campaignID)
+
+	// Associate characters with participants via participant_id.
+	charsByParticipant := map[string][]string{}
+	for _, c := range characters {
+		pid := strings.TrimSpace(c.GetParticipantId().GetValue())
+		if pid != "" {
+			charsByParticipant[pid] = append(charsByParticipant[pid], strings.TrimSpace(c.GetId()))
+		}
+	}
+	for i := range participants {
+		participants[i].CharacterIDs = charsByParticipant[participants[i].ID]
+	}
+
+	catalog := a.buildCharacterInspectionCatalog(ctx, campaignID, characters)
+	return participants, catalog
+}
+
+const enrichmentPageSize = 10
+
+// listAllParticipants paginates through all participants in a campaign.
+func (a playApplication) listAllParticipants(ctx context.Context, campaignID string) []playprotocol.Participant {
+	var all []playprotocol.Participant
+	pageToken := ""
+	for {
+		resp, err := a.participants.ListParticipants(ctx, &gamev1.ListParticipantsRequest{
+			CampaignId: campaignID,
+			PageSize:   enrichmentPageSize,
+			PageToken:  pageToken,
+		})
+		if err != nil {
+			return all
+		}
+		for _, p := range resp.GetParticipants() {
+			all = append(all, playprotocol.ParticipantFromGameParticipant(p))
+		}
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			break
+		}
+	}
+	return all
+}
+
+// listAllCharacters paginates through all characters in a campaign.
+func (a playApplication) listAllCharacters(ctx context.Context, campaignID string) []*gamev1.Character {
+	var all []*gamev1.Character
+	pageToken := ""
+	for {
+		resp, err := a.characters.ListCharacters(ctx, &gamev1.ListCharactersRequest{
+			CampaignId: campaignID,
+			PageSize:   enrichmentPageSize,
+			PageToken:  pageToken,
+		})
+		if err != nil {
+			return all
+		}
+		all = append(all, resp.GetCharacters()...)
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			break
+		}
+	}
+	return all
+}
+
+// buildCharacterInspectionCatalog calls GetCharacterSheet per character and
+// maps via the Daggerheart protocol functions.
+func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, campaignID string, characters []*gamev1.Character) map[string]playprotocol.CharacterInspection {
+	if len(characters) == 0 {
+		return nil
+	}
+	catalog := make(map[string]playprotocol.CharacterInspection, len(characters))
+	for _, char := range characters {
+		charID := strings.TrimSpace(char.GetId())
+		if charID == "" {
+			continue
+		}
+		resp, err := a.characters.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+			CampaignId:  campaignID,
+			CharacterId: charID,
+		})
+		if err != nil {
+			continue
+		}
+		dhProfile := resp.GetProfile().GetDaggerheart()
+		dhState := resp.GetState().GetDaggerheart()
+		if dhProfile == nil && dhState == nil {
+			continue
+		}
+		catalog[charID] = playprotocol.CharacterInspection{
+			System: "daggerheart",
+			Card:   playprotocol.DaggerheartCardFromSheet(char, dhProfile, dhState),
+			Sheet:  playprotocol.DaggerheartSheetFromResponse(char, dhProfile, dhState),
+		}
+	}
+	if len(catalog) == 0 {
+		return nil
+	}
+	return catalog
 }
