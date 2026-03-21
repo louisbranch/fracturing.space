@@ -56,6 +56,7 @@ type InteractionSession struct {
 type RealtimeConfig struct {
 	URL             string `json:"url"`
 	ProtocolVersion int    `json:"protocol_version"`
+	TypingTTLMs     int    `json:"typing_ttl_ms,omitempty"`
 }
 
 type ChatSnapshot struct {

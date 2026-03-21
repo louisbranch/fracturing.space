@@ -1,9 +1,10 @@
 package app
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 
 	gogrpccodes "google.golang.org/grpc/codes"
@@ -17,6 +18,21 @@ func loggerOrDefault(logger *slog.Logger) *slog.Logger {
 	return logger
 }
 
+// rpcErrorMessages maps gRPC status codes to safe, user-facing error messages
+// so upstream implementation details (field names, proto paths) are never
+// leaked to the browser.
+var rpcErrorMessages = map[gogrpccodes.Code]struct {
+	httpStatus int
+	message    string
+}{
+	gogrpccodes.InvalidArgument:    {http.StatusBadRequest, "invalid request"},
+	gogrpccodes.PermissionDenied:   {http.StatusForbidden, "permission denied"},
+	gogrpccodes.NotFound:           {http.StatusNotFound, "resource not found"},
+	gogrpccodes.FailedPrecondition: {http.StatusConflict, "action not allowed in current state"},
+	gogrpccodes.Aborted:            {http.StatusConflict, "action not allowed in current state"},
+	gogrpccodes.Unauthenticated:    {http.StatusUnauthorized, "authentication required"},
+}
+
 func writeRPCError(w http.ResponseWriter, err error) {
 	if w == nil {
 		return
@@ -26,36 +42,23 @@ func writeRPCError(w http.ResponseWriter, err error) {
 		return
 	}
 	code := gogrpcstatus.Code(err)
-	switch code {
-	case gogrpccodes.InvalidArgument:
-		writeJSONError(w, http.StatusBadRequest, gogrpcstatus.Convert(err).Message())
-	case gogrpccodes.PermissionDenied:
-		writeJSONError(w, http.StatusForbidden, gogrpcstatus.Convert(err).Message())
-	case gogrpccodes.NotFound:
-		writeJSONError(w, http.StatusNotFound, gogrpcstatus.Convert(err).Message())
-	case gogrpccodes.FailedPrecondition, gogrpccodes.Aborted:
-		writeJSONError(w, http.StatusConflict, gogrpcstatus.Convert(err).Message())
-	case gogrpccodes.Unauthenticated:
-		writeJSONError(w, http.StatusUnauthorized, gogrpcstatus.Convert(err).Message())
-	default:
-		writeJSONError(w, http.StatusBadGateway, "upstream request failed")
+	if mapped, ok := rpcErrorMessages[code]; ok {
+		writeJSONError(w, mapped.httpStatus, mapped.message)
+		return
 	}
+	writeJSONError(w, http.StatusBadGateway, "upstream request failed")
 }
 
 func parseInt64(value string) (int64, error) {
-	var parsed int64
-	_, err := fmt.Sscan(strings.TrimSpace(value), &parsed)
-	return parsed, err
+	return strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 }
 
 func parseInt(value string) (int, error) {
-	var parsed int
-	_, err := fmt.Sscan(strings.TrimSpace(value), &parsed)
-	return parsed, err
+	return strconv.Atoi(strings.TrimSpace(value))
 }
 
 func pathForCampaignAPI(campaignID string, suffix string) string {
-	campaignID = strings.TrimSpace(campaignID)
+	campaignID = url.PathEscape(strings.TrimSpace(campaignID))
 	suffix = strings.Trim(strings.TrimSpace(suffix), "/")
 	if suffix == "" {
 		return "/api/campaigns/" + campaignID

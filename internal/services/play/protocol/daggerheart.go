@@ -247,15 +247,6 @@ func characterKindString(value gamev1.CharacterKind) string {
 	return strings.ToLower(name)
 }
 
-func controllerString(value gamev1.Controller) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == gamev1.Controller_CONTROLLER_UNSPECIFIED.String() {
-		return ""
-	}
-	name = strings.TrimPrefix(name, "CONTROLLER_")
-	return strings.ToLower(name)
-}
-
 // resolveClassNames extracts the class and subclass display names from active
 // features already on the profile. The first active class feature at level 1
 // carries the class name; the first active subclass feature provides the

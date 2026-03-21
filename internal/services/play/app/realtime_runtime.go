@@ -7,13 +7,15 @@ import (
 )
 
 const (
-	maxFramePayloadBytes      = 32 * 1024
-	maxFramesPerSecond        = 50
-	maxDecodeErrorsPerConn    = 3
-	maxMessageBodyRunes       = 12000
-	maxClientMessageIDLen     = 128
-	defaultTypingTTL          = 3 * time.Second
-	defaultProjectionRetryTTL = time.Second
+	maxFramePayloadBytes        = 32 * 1024
+	maxFramesPerSecond          = 50
+	maxDecodeErrorsPerConn      = 3
+	maxMessageBodyRunes         = 12000
+	maxClientMessageIDLen       = 128
+	defaultTypingTTL            = 3 * time.Second
+	defaultProjectionRetryTTL   = time.Second
+	maxProjectionRetryTTL       = 30 * time.Second
+	projectionBackoffMultiplier = 2.0
 )
 
 type wsFrame struct {
@@ -92,8 +94,18 @@ func (r realtimeRuntime) newTimer(delay time.Duration, callback func()) realtime
 	return r.afterFunc(delay, callback)
 }
 
-func (r realtimeRuntime) retry(ctx context.Context) bool {
-	return r.sleepUntilRetry(ctx, r.projectionRetryTTL)
+func (r realtimeRuntime) retryWithDelay(ctx context.Context, delay time.Duration) bool {
+	return r.sleepUntilRetry(ctx, delay)
+}
+
+// backoff doubles the delay up to maxProjectionRetryTTL for exponential backoff
+// on projection subscription reconnects.
+func (r realtimeRuntime) backoff(current time.Duration) time.Duration {
+	next := time.Duration(float64(current) * projectionBackoffMultiplier)
+	if next > maxProjectionRetryTTL {
+		next = maxProjectionRetryTTL
+	}
+	return next
 }
 
 func sleepUntilRetry(ctx context.Context, delay time.Duration) bool {

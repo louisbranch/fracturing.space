@@ -5,6 +5,7 @@ import { SideChatParticipantRail } from "../chat/side-chat-participant-rail/Side
 import { OnStagePanel } from "../on-stage/on-stage-panel/OnStagePanel";
 import { OnStageParticipantRail } from "../on-stage/on-stage-participant-rail/OnStageParticipantRail";
 import { HUDNavbar } from "../shared/hud-navbar/HUDNavbar";
+import { PanelErrorBoundary } from "../shared/PanelErrorBoundary";
 import { PlayerHUDDrawerSidebar } from "../shared/player-hud-drawer-sidebar/PlayerHUDDrawerSidebar";
 import type { PlayerHUDShellProps } from "./contract";
 
@@ -81,31 +82,37 @@ export function PlayerHUDShell({
           <div className="flex min-h-0 flex-1">
             <div className="flex min-h-0 flex-1">
               {activeTab === "on-stage" ? (
-                <OnStagePanel
-                  state={onStage}
-                  draft={onStageDraft}
-                  onDraftChange={onOnStageDraftChange}
-                  onSubmit={onOnStageSubmit}
-                  onSubmitAndYield={onOnStageSubmitAndYield}
-                  onYield={onOnStageYield}
-                  onUnyield={onOnStageUnyield}
-                  onCharacterInspect={onCharacterInspect}
-                />
+                <PanelErrorBoundary panelName="On Stage">
+                  <OnStagePanel
+                    state={onStage}
+                    draft={onStageDraft}
+                    onDraftChange={onOnStageDraftChange}
+                    onSubmit={onOnStageSubmit}
+                    onSubmitAndYield={onOnStageSubmitAndYield}
+                    onYield={onOnStageYield}
+                    onUnyield={onOnStageUnyield}
+                    onCharacterInspect={onCharacterInspect}
+                  />
+                </PanelErrorBoundary>
               ) : activeTab === "backstage" ? (
-                <BackstagePanel
-                  state={backstage}
-                  draft={backstageDraft}
-                  onDraftChange={onBackstageDraftChange}
-                  onSend={onBackstageSend}
-                  onReadyToggle={onBackstageReadyToggle}
-                />
+                <PanelErrorBoundary panelName="Backstage">
+                  <BackstagePanel
+                    state={backstage}
+                    draft={backstageDraft}
+                    onDraftChange={onBackstageDraftChange}
+                    onSend={onBackstageSend}
+                    onReadyToggle={onBackstageReadyToggle}
+                  />
+                </PanelErrorBoundary>
               ) : activeTab === "side-chat" ? (
-                <SideChatPanel
-                  state={sideChat}
-                  draft={sideChatDraft}
-                  onDraftChange={onSideChatDraftChange}
-                  onSend={onSideChatSend}
-                />
+                <PanelErrorBoundary panelName="Side Chat">
+                  <SideChatPanel
+                    state={sideChat}
+                    draft={sideChatDraft}
+                    onDraftChange={onSideChatDraftChange}
+                    onSend={onSideChatSend}
+                  />
+                </PanelErrorBoundary>
               ) : (
                 <div />
               )}

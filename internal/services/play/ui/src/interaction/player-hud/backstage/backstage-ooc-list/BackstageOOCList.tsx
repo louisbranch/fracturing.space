@@ -52,7 +52,7 @@ export function BackstageOOCList({
               <div className={`w-8 rounded-full ${isLastInRun ? "bg-base-300" : ""}`}>
                 {isLastInRun ? (
                   participant?.avatarUrl ? (
-                    <img src={participant.avatarUrl} alt={name.charAt(0)} />
+                    <img src={participant.avatarUrl} alt={name} />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-xs font-medium">
                       {name.charAt(0)}

@@ -137,6 +137,6 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 
 		handler.ServeHTTP(rr, req)
 
-		assertJSONError(t, rr, http.StatusBadRequest, "bad scene")
+		assertJSONError(t, rr, http.StatusBadRequest, "invalid request")
 	})
 }
