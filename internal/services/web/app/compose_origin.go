@@ -9,7 +9,9 @@ import (
 )
 
 // requireCookieSessionSameOrigin enforces same-origin proof for cookie-backed
-// mutation requests and leaves read requests untouched.
+// mutation requests and leaves read requests untouched. HTMX mutation requests
+// are subject to the same check — the proof token must be present regardless of
+// whether the request originates from a full page form or an HTMX swap.
 func requireCookieSessionSameOrigin(policy requestmeta.SchemePolicy) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if next == nil {

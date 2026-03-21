@@ -41,7 +41,7 @@ func NewRegistryBuilder() RegistryBuilder {
 func (Registry) Build(input RegistryInput) RegistryOutput {
 	publicOptions := input.PublicOptions
 	protectedOptions := input.ProtectedOptions
-	shared := newSharedServices(input.Dependencies, registryLogger(publicOptions.Logger, protectedOptions.Logger))
+	shared := newSharedServices(input.Dependencies, registryLogger(protectedOptions.Logger, publicOptions.Logger))
 	if publicOptions.DashboardSync == nil {
 		publicOptions.DashboardSync = shared.dashboardSync
 	}
@@ -87,10 +87,14 @@ type ProtectedModuleOptions struct {
 	Logger *slog.Logger
 }
 
-// registryLogger chooses the root-owned runtime logger for registry-built helpers.
-func registryLogger(publicLogger, protectedLogger *slog.Logger) *slog.Logger {
-	if protectedLogger != nil {
-		return protectedLogger
+// registryLogger resolves the single runtime logger for registry-built shared
+// helpers. Both module option sets carry the same logger from composition; this
+// picks the first non-nil value.
+func registryLogger(loggers ...*slog.Logger) *slog.Logger {
+	for _, l := range loggers {
+		if l != nil {
+			return l
+		}
 	}
-	return publicLogger
+	return slog.Default()
 }

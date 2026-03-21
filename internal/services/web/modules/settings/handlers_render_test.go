@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler/modulehandlertest"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
@@ -69,7 +69,7 @@ func TestLoadAIKeyRowsUsesServiceResult(t *testing.T) {
 			aiKeys:   true,
 			aiAgents: true,
 		},
-		Base:   modulehandler.NewTestBase(),
+		Base:   modulehandlertest.NewBase(),
 		Policy: requestmeta.SchemePolicy{},
 	})
 
@@ -120,7 +120,7 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 			aiKeys:   true,
 			aiAgents: true,
 		},
-		Base:   modulehandler.NewTestBase(),
+		Base:   modulehandlertest.NewBase(),
 		Policy: requestmeta.SchemePolicy{},
 	})
 

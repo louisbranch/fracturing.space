@@ -8,7 +8,7 @@ import (
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler/modulehandlertest"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -342,5 +342,5 @@ func TestWithCampaignAndSessionIDReturnsNotFoundForMissingSessionID(t *testing.T
 // --- helpers ---
 
 func newTestHandlers(gw fakeGateway) handlers {
-	return newHandlersFromConfig(serviceConfigsWithGateway(gw), modulehandler.NewTestBase(), nil)
+	return newHandlersFromConfig(serviceConfigsWithGateway(gw), modulehandlertest.NewBase(), nil)
 }

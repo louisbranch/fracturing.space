@@ -84,24 +84,23 @@ func applyDependencyAddressDefaults(cfg *Config) {
 }
 
 // dependencyAddressBindingNames returns startup dependency names in the canonical
-// descriptor order, skipping blank/unknown entries.
+// descriptor order, skipping unknown entries.
 func dependencyAddressBindingNames() []string {
 	descriptors := web.StartupDependencyDescriptors()
 	names := make([]string, 0, len(descriptors))
 	seen := map[string]struct{}{}
 	for _, descriptor := range descriptors {
-		name := strings.TrimSpace(descriptor.Name)
-		if name == "" {
+		if descriptor.Name == "" {
 			continue
 		}
-		if _, ok := dependencyAddressBindingForName(name); !ok {
+		if _, ok := dependencyAddressBindingForName(descriptor.Name); !ok {
 			continue
 		}
-		if _, duplicate := seen[name]; duplicate {
+		if _, duplicate := seen[descriptor.Name]; duplicate {
 			continue
 		}
-		seen[name] = struct{}{}
-		names = append(names, name)
+		seen[descriptor.Name] = struct{}{}
+		names = append(names, descriptor.Name)
 	}
 	return names
 }
@@ -125,12 +124,11 @@ func applyDependencyAddressFlags(fs *flag.FlagSet, cfg *Config) {
 // dependencyAddressFlagName maps one canonical dependency name to CLI flag key
 // naming.
 func dependencyAddressFlagName(name string) string {
-	return fmt.Sprintf("%s-addr", strings.TrimSpace(name))
+	return fmt.Sprintf("%s-addr", name)
 }
 
 // dependencyAddressFlagUsage returns the usage text for one dependency flag.
 func dependencyAddressFlagUsage(name string) string {
-	name = strings.TrimSpace(name)
 	if name == "" {
 		return "dependency gRPC address"
 	}
@@ -140,7 +138,7 @@ func dependencyAddressFlagUsage(name string) string {
 // dependencyAddressBindingForName resolves one binding from a canonical dependency
 // name.
 func dependencyAddressBindingForName(name string) (dependencyAddressBinding, bool) {
-	descriptor, ok := web.LookupStartupDependencyDescriptor(strings.TrimSpace(name))
+	descriptor, ok := web.LookupStartupDependencyDescriptor(name)
 	if !ok {
 		return dependencyAddressBinding{}, false
 	}
@@ -154,13 +152,13 @@ func dependencyAddressBindingForDescriptor(descriptor web.StartupDependencyDescr
 		descriptor: descriptor,
 		address:    dependencyAddressField(descriptor.Name),
 	}
-	return binding, binding.address != nil && strings.TrimSpace(binding.descriptor.DefaultGRPCService) != ""
+	return binding, binding.address != nil && binding.descriptor.DefaultGRPCService != ""
 }
 
 // dependencyAddressField maps a service-owned startup dependency name to the
 // command config field that stores its gRPC address.
 func dependencyAddressField(name string) func(*Config) *string {
-	switch strings.TrimSpace(name) {
+	switch name {
 	case web.DependencyNameAuth:
 		return func(cfg *Config) *string { return &cfg.AuthAddr }
 	case web.DependencyNameSocial:
@@ -214,15 +212,14 @@ func dependencyAddressResolverDefaults() map[string]dependencyAddressResolver {
 	descriptors := web.StartupDependencyDescriptors()
 	resolvers := make(map[string]dependencyAddressResolver, len(descriptors))
 	for _, descriptor := range descriptors {
-		name := strings.TrimSpace(descriptor.Name)
-		if name == "" {
+		if descriptor.Name == "" {
 			continue
 		}
-		resolve := dependencyAddressResolverForName(name)
+		resolve := dependencyAddressResolverForName(descriptor.Name)
 		if resolve == nil {
 			continue
 		}
-		resolvers[name] = resolve
+		resolvers[descriptor.Name] = resolve
 	}
 	return resolvers
 }
@@ -264,7 +261,7 @@ func dependencyRequirementsWithResolvers(
 			return nil, err
 		}
 		if descriptor.Policy == web.StartupDependencyRequired && strings.TrimSpace(address) == "" {
-			missingRequiredAddresses = append(missingRequiredAddresses, strings.TrimSpace(descriptor.Name))
+			missingRequiredAddresses = append(missingRequiredAddresses, descriptor.Name)
 		}
 		requirements = append(requirements, dependencyRequirement{
 			name:       descriptor.Name,
@@ -292,7 +289,7 @@ func dependencyRequirementsWithResolvers(
 func dependencyAddress(cfg Config, name string, resolvers map[string]dependencyAddressResolver) (string, error) {
 	resolve, ok := resolvers[name]
 	if !ok {
-		return "", fmt.Errorf("web startup dependency %q is missing a command-layer address resolver", strings.TrimSpace(name))
+		return "", fmt.Errorf("web startup dependency %q is missing a command-layer address resolver", name)
 	}
 	return resolve(cfg), nil
 }
@@ -309,27 +306,24 @@ func validateDependencyAddressResolversCoverageWithResolvers(resolvers map[strin
 	descriptors := web.StartupDependencyDescriptors()
 	descriptorByName := make(map[string]struct{}, len(descriptors))
 	for _, descriptor := range descriptors {
-		name := strings.TrimSpace(descriptor.Name)
-		if name == "" {
+		if descriptor.Name == "" {
 			continue
 		}
-		descriptorByName[name] = struct{}{}
+		descriptorByName[descriptor.Name] = struct{}{}
 	}
 
 	missing := make([]string, 0, len(descriptorByName))
 	for _, descriptor := range descriptors {
-		name := strings.TrimSpace(descriptor.Name)
-		if name == "" {
+		if descriptor.Name == "" {
 			continue
 		}
-		if _, ok := resolvers[name]; !ok {
-			missing = append(missing, name)
+		if _, ok := resolvers[descriptor.Name]; !ok {
+			missing = append(missing, descriptor.Name)
 		}
 	}
 
 	extra := make([]string, 0, len(resolvers))
 	for name := range resolvers {
-		name = strings.TrimSpace(name)
 		if name == "" {
 			continue
 		}
@@ -390,7 +384,7 @@ func bootstrapDependencies(
 ) (web.DependencyBundle, managedConns, error) {
 	bundle := web.NewDependencyBundle(assetBaseURL)
 	var conns managedConns
-	logger = defaultLogger(logger)
+	logger = web.LoggerOrDefault(logger)
 	if newConn == nil {
 		newConn = platformgrpc.NewManagedConn
 	}
@@ -427,14 +421,6 @@ func bootstrapDependencies(
 	return bundle, conns, nil
 }
 
-// defaultLogger normalizes nil logger inputs to the process default logger.
-func defaultLogger(logger *slog.Logger) *slog.Logger {
-	if logger == nil {
-		return slog.Default()
-	}
-	return logger
-}
-
 // closeManagedConns closes all ManagedConn instances.
 func closeManagedConns(conns managedConns, logger *slog.Logger) {
 	for _, mc := range conns {
@@ -448,6 +434,6 @@ func closeManagedConn(mc closableManagedConn, name string, logger *slog.Logger) 
 		return
 	}
 	if err := mc.Close(); err != nil {
-		defaultLogger(logger).Error("close web managed conn", "name", name, "error", err)
+		web.LoggerOrDefault(logger).Error("close web managed conn", "name", name, "error", err)
 	}
 }

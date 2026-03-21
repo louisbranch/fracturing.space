@@ -24,6 +24,16 @@ func testPrincipalResolver(
 	return principal.NewPrincipal(nil, nil, resolveUserID, resolveLanguage, resolveViewer)
 }
 
+// newTestBase builds a handler base with no-op resolvers for tests that do not
+// exercise user resolution, localization, or viewer state.
+func newTestBase() Base {
+	return NewBase(
+		func(*http.Request) string { return "" },
+		func(*http.Request) string { return "" },
+		func(*http.Request) module.Viewer { return module.Viewer{} },
+	)
+}
+
 func TestNewBaseExtractsResolvers(t *testing.T) {
 	t.Parallel()
 
@@ -191,7 +201,7 @@ func TestRequestContextAndUserIDReturnsContext(t *testing.T) {
 func TestNewTestBaseResolversReturnZeroValues(t *testing.T) {
 	t.Parallel()
 
-	base := NewTestBase()
+	base := newTestBase()
 	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 
 	if got := base.RequestUserID(req); got != "" {
@@ -234,7 +244,7 @@ func TestRequestLocaleTagUsesResolvedLanguage(t *testing.T) {
 func TestWriteNotFoundRendersAppErrorPage(t *testing.T) {
 	t.Parallel()
 
-	base := NewTestBase()
+	base := newTestBase()
 	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/missing", nil)
 	rr := httptest.NewRecorder()
 	base.WriteNotFound(rr, req)
@@ -250,7 +260,7 @@ func TestWriteNotFoundRendersAppErrorPage(t *testing.T) {
 func TestWriteErrorRendersStyledPageForBadRequest(t *testing.T) {
 	t.Parallel()
 
-	base := NewTestBase()
+	base := newTestBase()
 	req := httptest.NewRequest(http.MethodPost, "/app/settings/profile", nil)
 	rr := httptest.NewRecorder()
 	base.WriteError(rr, req, apperrors.E(apperrors.KindInvalidInput, "sensitive parse failure"))
@@ -271,7 +281,7 @@ func TestWriteErrorRendersStyledPageForBadRequest(t *testing.T) {
 func TestWritePageRendersHTMXFragment(t *testing.T) {
 	t.Parallel()
 
-	base := NewTestBase()
+	base := newTestBase()
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
@@ -292,7 +302,7 @@ func TestWritePageRendersHTMXFragment(t *testing.T) {
 func TestWritePageFallsBackToWriteErrorWhenRenderFails(t *testing.T) {
 	t.Parallel()
 
-	base := NewTestBase()
+	base := newTestBase()
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	rr := httptest.NewRecorder()
 

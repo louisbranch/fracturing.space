@@ -209,9 +209,6 @@ func TestServeMuxPatternConstants(t *testing.T) {
 func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
 	t.Parallel()
 
-	if got := AppNotificationsOpen("n1"); got != "/app/notifications/n1" {
-		t.Fatalf("AppNotificationsOpen() = %q", got)
-	}
 	if got := AppNotification("n1"); got != "/app/notifications/n1" {
 		t.Fatalf("AppNotification() = %q", got)
 	}
@@ -291,9 +288,6 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppSettingsAIKeyRevoke("cred/1"); got != "/app/settings/ai-keys/cred%2F1/revoke" {
 		t.Fatalf("AppSettingsAIKeyRevoke() escaped = %q", got)
-	}
-	if got := AppNotificationsOpen("note/1"); got != "/app/notifications/note%2F1" {
-		t.Fatalf("AppNotificationsOpen() escaped = %q", got)
 	}
 	if got := AppNotificationOpen("note/1"); got != "/app/notifications/note%2F1/open" {
 		t.Fatalf("AppNotificationOpen() escaped = %q", got)

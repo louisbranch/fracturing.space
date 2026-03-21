@@ -93,31 +93,33 @@ func newServer(cfg Config, handler http.Handler) (*Server, error) {
 			Handler:           handler,
 			ReadHeaderTimeout: timeouts.ReadHeader,
 		},
-		logger: loggerOrDefault(cfg.Logger),
+		logger: LoggerOrDefault(cfg.Logger),
 	}, nil
 }
 
-// copyDependencyBundle returns a value copy of the configured dependency
+// snapshotDependencyBundle returns a value copy of the configured dependency
 // bundle, or the zero bundle when no dependencies were supplied.
-func copyDependencyBundle(bundle *DependencyBundle) DependencyBundle {
+func snapshotDependencyBundle(bundle *DependencyBundle) DependencyBundle {
 	if bundle == nil {
 		return DependencyBundle{}
 	}
 	return *bundle
 }
 
-// requiredDependencyBundle validates and copies the production dependency
-// bundle before handler composition.
-func requiredDependencyBundle(bundle *DependencyBundle) (DependencyBundle, error) {
+// validatedDependencyBundle validates required startup dependencies and
+// returns a value copy for handler composition. Production callers must use
+// this path; test callers that accept partial bundles use snapshotDependencyBundle
+// directly.
+func validatedDependencyBundle(bundle *DependencyBundle) (DependencyBundle, error) {
 	if err := validateRequiredDependencyBundle(bundle); err != nil {
 		return DependencyBundle{}, err
 	}
-	return copyDependencyBundle(bundle), nil
+	return snapshotDependencyBundle(bundle), nil
 }
 
 // NewHandler builds a root handler from default module registry groups.
 func NewHandler(cfg Config) (http.Handler, error) {
-	deps, err := requiredDependencyBundle(cfg.Dependencies)
+	deps, err := validatedDependencyBundle(cfg.Dependencies)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +135,8 @@ func NewServer(_ context.Context, cfg Config) (*Server, error) {
 	return newServer(cfg, handler)
 }
 
-// loggerOrDefault normalizes nil logger inputs to the process default logger.
-func loggerOrDefault(logger *slog.Logger) *slog.Logger {
+// LoggerOrDefault normalizes nil logger inputs to the process default logger.
+func LoggerOrDefault(logger *slog.Logger) *slog.Logger {
 	if logger == nil {
 		return slog.Default()
 	}
@@ -151,7 +153,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 
 	serveErr := make(chan error, 1)
-	logger := loggerOrDefault(s.logger)
+	logger := LoggerOrDefault(s.logger)
 	logger.Info("web server listening", "addr", s.httpAddr)
 	go func() {
 		serveErr <- s.httpServer.ListenAndServe()

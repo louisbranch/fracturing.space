@@ -30,7 +30,10 @@ func requireAuth(authenticated func(*http.Request) bool) func(http.Handler) http
 }
 
 // loginRedirectPath preserves the blocked destination so auth can resume the
-// original protected request after the user signs in.
+// original protected request after the user signs in. The full request URI
+// (path + query) is URL-encoded into a "next" query parameter on the login
+// path. The login handler is responsible for reading "next" after successful
+// authentication and redirecting the user back to the original destination.
 func loginRedirectPath(r *http.Request) string {
 	if r == nil || r.URL == nil {
 		return defaultLoginPath

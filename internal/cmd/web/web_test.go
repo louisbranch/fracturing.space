@@ -233,11 +233,11 @@ func TestBootstrapRuntimeDependenciesReturnsMissingAddressError(t *testing.T) {
 	cfg.SocialAddr = " "
 	cfg.GameAddr = ""
 
-	_, err := bootstrapRuntimeDependenciesWithConnFactory(
+	_, err := bootstrapRuntimeDependencies(
 		context.Background(),
 		cfg,
 		platformstatus.NewReporter("web", nil),
-		testManagedConnFactory(t),
+		&bootstrapOptions{NewConn: testManagedConnFactory(t)},
 	)
 	if err == nil {
 		t.Fatal("expected missing required address error")
@@ -245,7 +245,7 @@ func TestBootstrapRuntimeDependenciesReturnsMissingAddressError(t *testing.T) {
 
 	var missing MissingRequiredStartupDependencyAddressesError
 	if !errors.As(err, &missing) {
-		t.Fatalf("bootstrapRuntimeDependenciesWithConnFactory() error type = %T, want MissingRequiredStartupDependencyAddressesError", err)
+		t.Fatalf("bootstrapRuntimeDependencies() error type = %T, want MissingRequiredStartupDependencyAddressesError", err)
 	}
 
 	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameSocial}
@@ -258,12 +258,11 @@ func TestBootstrapRuntimeDependenciesReturnsResolverContractErrorOnCoverageDrift
 	drifted := copyDependencyAddressResolvers()
 	delete(drifted, web.DependencyNameSocial)
 
-	_, err := bootstrapRuntimeDependenciesWithConnFactoryWithResolvers(
+	_, err := bootstrapRuntimeDependencies(
 		context.Background(),
 		testDependencyConfig(),
 		platformstatus.NewReporter("web", nil),
-		testManagedConnFactory(t),
-		drifted,
+		&bootstrapOptions{NewConn: testManagedConnFactory(t), Resolvers: drifted},
 	)
 	if err == nil {
 		t.Fatal("expected dependency resolver contract mismatch error")
@@ -271,7 +270,7 @@ func TestBootstrapRuntimeDependenciesReturnsResolverContractErrorOnCoverageDrift
 
 	var contractErr DependencyAddressResolverContractError
 	if !errors.As(err, &contractErr) {
-		t.Fatalf("bootstrapRuntimeDependenciesWithConnFactory() error type = %T, want DependencyAddressResolverContractError", err)
+		t.Fatalf("bootstrapRuntimeDependencies() error type = %T, want DependencyAddressResolverContractError", err)
 	}
 	if !slices.Equal(contractErr.Missing, []string{web.DependencyNameSocial}) {
 		t.Fatalf("resolver contract mismatch = %#v, want missing [%q]", contractErr, web.DependencyNameSocial)
@@ -427,14 +426,14 @@ func TestDependencyAddressResolverDefaultsAreSnapshotSafe(t *testing.T) {
 		t.Fatalf("dependencyRequirements() should use stable defaults; got error = %v", err)
 	}
 
-	deps, err := bootstrapRuntimeDependenciesWithConnFactory(
+	deps, err := bootstrapRuntimeDependencies(
 		context.Background(),
 		testDependencyConfig(),
 		platformstatus.NewReporter("web", nil),
-		testManagedConnFactory(t),
+		&bootstrapOptions{NewConn: testManagedConnFactory(t)},
 	)
 	if err != nil {
-		t.Fatalf("bootstrapRuntimeDependenciesWithConnFactory() should use stable defaults; got error = %v", err)
+		t.Fatalf("bootstrapRuntimeDependencies() should use stable defaults; got error = %v", err)
 	}
 	defer deps.close()
 }
@@ -695,7 +694,7 @@ func TestBootstrapRuntimeDependenciesWiresStatusClientIntoDashboard(t *testing.T
 	cfg := testDependencyConfig()
 	reporter := platformstatus.NewReporter("web", nil)
 
-	runtimeDeps, err := bootstrapRuntimeDependenciesWithConnFactory(context.Background(), cfg, reporter, testManagedConnFactory(t))
+	runtimeDeps, err := bootstrapRuntimeDependencies(context.Background(), cfg, reporter, &bootstrapOptions{NewConn: testManagedConnFactory(t)})
 	if err != nil {
 		t.Fatalf("bootstrapRuntimeDependencies() error = %v", err)
 	}

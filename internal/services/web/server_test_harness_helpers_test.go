@@ -54,7 +54,7 @@ func newDependencyBundle(principalDeps principal.Dependencies, moduleDeps module
 }
 
 func newTestHandler(cfg Config) (http.Handler, error) {
-	return composeHandler(cfg, copyDependencyBundle(cfg.Dependencies))
+	return composeHandler(cfg, snapshotDependencyBundle(cfg.Dependencies))
 }
 
 func newTestServer(cfg Config) (*Server, error) {

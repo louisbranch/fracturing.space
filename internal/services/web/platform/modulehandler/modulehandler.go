@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx"
@@ -43,18 +42,6 @@ func NewBaseFromPrincipal(resolver principal.PrincipalResolver) Base {
 	return Base{
 		Base:          principal.NewBaseFromPageResolver(resolver),
 		resolveUserID: resolveUserID,
-	}
-}
-
-// NewTestBase builds a handler base with no-op resolvers suitable for tests
-// that do not exercise user resolution, localization, or viewer state.
-func NewTestBase() Base {
-	return Base{
-		Base: principal.NewBase(
-			func(*http.Request) string { return "" },
-			func(*http.Request) module.Viewer { return module.Viewer{} },
-		),
-		resolveUserID: func(*http.Request) string { return "" },
 	}
 }
 
