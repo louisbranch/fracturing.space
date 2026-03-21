@@ -263,6 +263,27 @@ func CurrentBaseArmor(state projectionstore.DaggerheartCharacterState, armorMax 
 	return rules.CurrentBaseArmor(state, armorMax)
 }
 
+// --- Stat modifier types and constants ---
+
+type StatModifierTarget = rules.StatModifierTarget
+type StatModifierState = rules.StatModifierState
+
+const (
+	StatModifierTargetEvasion         = rules.StatModifierTargetEvasion
+	StatModifierTargetMajorThreshold  = rules.StatModifierTargetMajorThreshold
+	StatModifierTargetSevereThreshold = rules.StatModifierTargetSevereThreshold
+	StatModifierTargetProficiency     = rules.StatModifierTargetProficiency
+	StatModifierTargetArmorScore      = rules.StatModifierTargetArmorScore
+)
+
+var (
+	ValidStatModifierTarget     = rules.ValidStatModifierTarget
+	NormalizeStatModifiers      = rules.NormalizeStatModifiers
+	StatModifiersEqual          = rules.StatModifiersEqual
+	DiffStatModifiers           = rules.DiffStatModifiers
+	ClearStatModifiersByTrigger = rules.ClearStatModifiersByTrigger
+)
+
 var (
 	EffectiveArmorRules       = rules.EffectiveArmorRules
 	RemoveArmorPassiveEffects = rules.RemoveArmorPassiveEffects

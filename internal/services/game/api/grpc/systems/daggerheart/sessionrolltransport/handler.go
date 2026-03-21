@@ -116,6 +116,16 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 	}
 
 	modifierTotal, modifierList := normalizeActionModifiers(in.GetModifiers())
+	for _, mod := range state.StatModifiers {
+		if strings.EqualFold(mod.Target, trait) {
+			modifierTotal, modifierList = appendActionModifier(
+				modifierTotal,
+				modifierList,
+				"stat_modifier:"+mod.ID,
+				mod.Delta,
+			)
+		}
+	}
 	if strings.EqualFold(trait, "spellcast") {
 		modifierTotal, modifierList = appendActionModifier(
 			modifierTotal,

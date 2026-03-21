@@ -69,3 +69,7 @@ func (s *DaggerheartService) UseConsumable(ctx context.Context, in *pb.Daggerhea
 func (s *DaggerheartService) AcquireConsumable(ctx context.Context, in *pb.DaggerheartAcquireConsumableRequest) (*pb.DaggerheartAcquireConsumableResponse, error) {
 	return s.characterMutationHandler().AcquireConsumable(ctx, in)
 }
+
+func (s *DaggerheartService) ApplyCharacterStatePatch(ctx context.Context, in *pb.DaggerheartApplyCharacterStatePatchRequest) (*pb.DaggerheartApplyCharacterStatePatchResponse, error) {
+	return s.characterMutationHandler().ApplyCharacterStatePatch(ctx, in)
+}

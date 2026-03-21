@@ -316,6 +316,8 @@ func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, s
 		return r.runGMSpendFearStep(ctx, state, step)
 	case "apply_condition":
 		return r.runApplyConditionStep(ctx, state, step)
+	case "apply_stat_modifier":
+		return r.runApplyStatModifierStep(ctx, state, step)
 	case "group_action":
 		return r.runGroupActionStep(ctx, state, step)
 	case "tag_team":

@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "generated_at": "2026-03-17T13:11:28Z",
+  "reference_root": "/home/louis/code/daggerheart/reference-corpus/v1/reference",
+  "gap_row_count": 9,
+  "epic_count": 1,
+  "epics": [
+    {
+      "id": "item-use-modeling",
+      "title": "Item Use Modeling",
+      "priority": "p3",
+      "summary": "Promote mechanically meaningful item and consumable entries into explicit runtime item-use behavior rather than leaving them as descriptive catalog text.",
+      "boundary": "Inventory- and item-use semantics for Daggerheart content rows.",
+      "contracts_to_touch": [
+        "internal/services/game/domain/systems/daggerheart/",
+        "internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/",
+        "api/proto/systems/daggerheart/v1/content.proto",
+        "api/proto/systems/daggerheart/v1/state.proto"
+      ],
+      "tests_required": [
+        "Domain tests for representative item/consumable effect execution.",
+        "Transport tests for inventory mutation and item-use commands.",
+        "Importer/content tests for any new structured item effect fields."
+      ],
+      "removal_criteria": [
+        "Remove content-only handling for mechanical items once runtime item-use commands or explicit non-goals replace it."
+      ],
+      "row_count": 9,
+      "counts_by_kind": [
+        {
+          "key": "consumable",
+          "count": 1
+        },
+        {
+          "key": "item",
+          "count": 8
+        }
+      ],
+      "counts_by_audit_area": [
+        {
+          "key": "equipment_items",
+          "count": 9
+        }
+      ],
+      "counts_by_gap_class": [
+        {
+          "key": "missing_model",
+          "count": 9
+        }
+      ],
+      "sample_reference_ids": [
+        "consumable-potion-of-stability",
+        "item-bloodstone",
+        "item-greatstone",
+        "item-minor-health-potion-recipe",
+        "item-minor-stamina-potion-recipe",
+        "item-mythic-dust-recipe",
+        "item-paragon-s-chain",
+        "item-premium-bedroll"
+      ],
+      "evidence_code": [
+        "api/proto/systems/daggerheart/v1/content.proto",
+        "internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
+        "internal/tools/importer/content/daggerheart/v1/"
+      ],
+      "evidence_tests": [
+        "internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
+        "internal/services/game/storage/sqlite/daggerheartcontent/store_content_test.go",
+        "internal/test/game/scenarios/systems/daggerheart/companion_experience_stress_clear.lua"
+      ],
+      "evidence_docs": [
+        "docs/product/daggerheart-PRD.md"
+      ]
+    }
+  ]
+}

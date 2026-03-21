@@ -46,6 +46,7 @@ type CharacterHeritage = snapstate.CharacterHeritage
 type CharacterCompanionExperience = snapstate.CharacterCompanionExperience
 type CharacterCompanionSheet = snapstate.CharacterCompanionSheet
 type CharacterSubclassTrack = snapstate.CharacterSubclassTrack
+type MutationSource = snapstate.MutationSource
 type CharacterProfileReplacePayload = snapstate.CharacterProfileReplacePayload
 type CharacterProfileReplacedPayload = snapstate.CharacterProfileReplacedPayload
 type CharacterProfileDeletePayload = snapstate.CharacterProfileDeletePayload

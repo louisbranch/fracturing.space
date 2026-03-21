@@ -26,6 +26,14 @@ func ResolveCharacterDamage(req *pb.DaggerheartDamageRequest, profile projection
 			target.SevereThreshold += profile.Proficiency
 		}
 	}
+	for _, mod := range state.StatModifiers {
+		switch mod.Target {
+		case "major_threshold":
+			target.MajorThreshold += mod.Delta
+		case "severe_threshold":
+			target.SevereThreshold += mod.Delta
+		}
+	}
 	if armor != nil {
 		rules := daggerheart.EffectiveArmorRules(armor)
 		baseArmor := daggerheart.CurrentBaseArmor(state, profile.ArmorMax)

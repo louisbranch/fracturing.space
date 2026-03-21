@@ -85,6 +85,7 @@ func (f *Folder) registerFoldHandlers(r *module.FoldRouter[*snapstate.SnapshotSt
 	module.HandleFold(r, payload.EventTypeEquipmentSwapped, f.foldEquipmentSwapped)
 	module.HandleFold(r, payload.EventTypeConsumableUsed, f.foldConsumableUsed)
 	module.HandleFold(r, payload.EventTypeConsumableAcquired, f.foldConsumableAcquired)
+	module.HandleFold(r, payload.EventTypeStatModifierChanged, f.foldStatModifierChanged)
 }
 
 func (f *Folder) foldGMFearChanged(state *snapstate.SnapshotState, p payload.GMFearChangedPayload) error {
@@ -199,6 +200,7 @@ func (f *Folder) foldRestTaken(state *snapstate.SnapshotState, p payload.RestTak
 		if p.RefreshRest || p.RefreshLongRest {
 			clearRestTemporaryArmor(state, participantID.String(), p.RefreshRest, p.RefreshLongRest)
 		}
+		clearRestStatModifiers(state, participantID, p.RefreshRest, p.RefreshLongRest)
 	}
 	return nil
 }
@@ -399,6 +401,15 @@ func (f *Folder) foldConsumableUsed(state *snapstate.SnapshotState, p payload.Co
 
 func (f *Folder) foldConsumableAcquired(state *snapstate.SnapshotState, p payload.ConsumableAcquiredPayload) error {
 	touchCharacter(state, p.CharacterID)
+	return nil
+}
+
+func (f *Folder) foldStatModifierChanged(state *snapstate.SnapshotState, p payload.StatModifierChangedPayload) error {
+	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	if characterID == "" {
+		return nil
+	}
+	state.CharacterStatModifiers[characterID] = p.Modifiers
 	return nil
 }
 
@@ -620,6 +631,24 @@ func applyAdversaryUpdated(state *snapstate.SnapshotState, p payload.AdversaryUp
 	adversaryState.SpotlightGateID = p.SpotlightGateID
 	adversaryState.SpotlightCount = p.SpotlightCount
 	state.AdversaryStates[adversaryID] = adversaryState
+}
+
+func clearRestStatModifiers(state *snapstate.SnapshotState, rawID ids.CharacterID, clearShortRest, clearLongRest bool) {
+	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
+	if characterID == "" {
+		return
+	}
+	modifiers := state.CharacterStatModifiers[characterID]
+	if len(modifiers) == 0 {
+		return
+	}
+	if clearShortRest {
+		modifiers, _ = rules.ClearStatModifiersByTrigger(modifiers, rules.ConditionClearTriggerShortRest)
+	}
+	if clearLongRest {
+		modifiers, _ = rules.ClearStatModifiersByTrigger(modifiers, rules.ConditionClearTriggerLongRest)
+	}
+	state.CharacterStatModifiers[characterID] = modifiers
 }
 
 func applyAdversaryConditionsChanged(state *snapstate.SnapshotState, rawID ids.AdversaryID, after []rules.ConditionState) {

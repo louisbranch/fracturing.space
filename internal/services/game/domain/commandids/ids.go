@@ -112,4 +112,5 @@ const (
 	DaggerheartEquipmentSwap                command.Type = "sys.daggerheart.equipment.swap"
 	DaggerheartConsumableUse                command.Type = "sys.daggerheart.consumable.use"
 	DaggerheartConsumableAcquire            command.Type = "sys.daggerheart.consumable.acquire"
+	DaggerheartStatModifierChange           command.Type = "sys.daggerheart.stat_modifier.change"
 )

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -109,4 +110,36 @@ func (a *Adapter) ClearRestTemporaryArmor(ctx context.Context, campaignID, chara
 		return err
 	}
 	return nil
+}
+
+// ClearRestStatModifiers removes stat modifiers with matching rest triggers.
+func (a *Adapter) ClearRestStatModifiers(ctx context.Context, campaignID, characterID string, clearShortRest, clearLongRest bool) error {
+	state, exists, err := a.GetCharacterStateIfExists(ctx, campaignID, characterID)
+	if err != nil {
+		return err
+	}
+	if !exists || len(state.StatModifiers) == 0 {
+		return nil
+	}
+	modifiers := StatModifiersFromProjection(state.StatModifiers)
+	changed := false
+	if clearShortRest {
+		remaining, _ := rules.ClearStatModifiersByTrigger(modifiers, rules.ConditionClearTriggerShortRest)
+		if len(remaining) != len(modifiers) {
+			modifiers = remaining
+			changed = true
+		}
+	}
+	if clearLongRest {
+		remaining, _ := rules.ClearStatModifiersByTrigger(modifiers, rules.ConditionClearTriggerLongRest)
+		if len(remaining) != len(modifiers) {
+			modifiers = remaining
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	state.StatModifiers = StatModifiersToProjection(modifiers)
+	return a.PutCharacterState(ctx, state)
 }

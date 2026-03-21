@@ -149,6 +149,7 @@ func ApplyStatePatch(
 	if impenetrableUsedThisShortRestAfter != nil {
 		next.ImpenetrableUsedThisShortRest = *impenetrableUsedThisShortRestAfter
 	}
+	next.StatModifiers = state.StatModifiers
 	return next, nil
 }
 
@@ -162,6 +163,7 @@ func ApplyConditionPatch(state projectionstore.DaggerheartCharacterState, armorM
 	next.SubclassState = state.SubclassState
 	next.CompanionState = state.CompanionState
 	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
+	next.StatModifiers = state.StatModifiers
 	return next
 }
 
@@ -187,6 +189,7 @@ func ApplyTemporaryArmor(
 	next.SubclassState = state.SubclassState
 	next.CompanionState = state.CompanionState
 	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
+	next.StatModifiers = state.StatModifiers
 	return next, nil
 }
 
@@ -207,6 +210,7 @@ func ApplyDowntimeMove(
 	next.SubclassState = state.SubclassState
 	next.CompanionState = state.CompanionState
 	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
+	next.StatModifiers = state.StatModifiers
 	return next, nil
 }
 
@@ -236,6 +240,13 @@ func ClearRestTemporaryArmor(
 	}
 	if clearLongRest {
 		next.Conditions = clearProjectionConditionsByTrigger(next.Conditions, "long_rest")
+	}
+	next.StatModifiers = append([]projectionstore.DaggerheartStatModifier(nil), state.StatModifiers...)
+	if clearShortRest {
+		next.StatModifiers = clearProjectionStatModifiersByTrigger(next.StatModifiers, "short_rest")
+	}
+	if clearLongRest {
+		next.StatModifiers = clearProjectionStatModifiersByTrigger(next.StatModifiers, "long_rest")
 	}
 	next.ClassState = state.ClassState
 	next.SubclassState = state.SubclassState
@@ -327,6 +338,28 @@ func clearProjectionConditionsByTrigger(values []projectionstore.DaggerheartCond
 }
 
 func projectionConditionHasTrigger(value projectionstore.DaggerheartConditionState, trigger string) bool {
+	for _, current := range value.ClearTriggers {
+		if strings.EqualFold(strings.TrimSpace(current), trigger) {
+			return true
+		}
+	}
+	return false
+}
+
+func clearProjectionStatModifiersByTrigger(values []projectionstore.DaggerheartStatModifier, trigger string) []projectionstore.DaggerheartStatModifier {
+	if len(values) == 0 || strings.TrimSpace(trigger) == "" {
+		return append([]projectionstore.DaggerheartStatModifier(nil), values...)
+	}
+	result := make([]projectionstore.DaggerheartStatModifier, 0, len(values))
+	for _, value := range values {
+		if !projectionStatModifierHasTrigger(value, trigger) {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func projectionStatModifierHasTrigger(value projectionstore.DaggerheartStatModifier, trigger string) bool {
 	for _, current := range value.ClearTriggers {
 		if strings.EqualFold(strings.TrimSpace(current), trigger) {
 			return true

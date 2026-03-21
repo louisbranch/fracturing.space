@@ -131,6 +131,17 @@ type DaggerheartCharacterProfilePage struct {
 	NextPageToken string
 }
 
+// DaggerheartStatModifier stores a runtime stat modifier applied to a character.
+type DaggerheartStatModifier struct {
+	ID            string
+	Target        string
+	Delta         int
+	Label         string
+	Source        string
+	SourceID      string
+	ClearTriggers []string
+}
+
 // DaggerheartCharacterState stores Daggerheart combat state needed by outcome workflows.
 type DaggerheartCharacterState struct {
 	CampaignID                    string
@@ -147,6 +158,7 @@ type DaggerheartCharacterState struct {
 	SubclassState                 *DaggerheartSubclassState
 	CompanionState                *DaggerheartCompanionState
 	ImpenetrableUsedThisShortRest bool
+	StatModifiers                 []DaggerheartStatModifier
 }
 
 // DaggerheartCompanionState stores mutable companion-owned runtime state in read form.

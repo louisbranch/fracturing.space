@@ -100,6 +100,7 @@ func (a *Adapter) buildRouter() *module.AdapterRouter {
 	module.HandleAdapter(r, payload.EventTypeEquipmentSwapped, a.HandleEquipmentSwapped)
 	module.HandleAdapter(r, payload.EventTypeConsumableUsed, a.HandleConsumableUsed)
 	module.HandleAdapter(r, payload.EventTypeConsumableAcquired, a.HandleConsumableAcquired)
+	module.HandleAdapter(r, payload.EventTypeStatModifierChanged, a.HandleStatModifierChanged)
 	return r
 }
 
@@ -117,6 +118,9 @@ func (a *Adapter) HandleRestTaken(ctx context.Context, evt event.Event, p payloa
 			if err := a.ClearRestTemporaryArmor(ctx, string(evt.CampaignID), characterID, p.RefreshRest, p.RefreshLongRest); err != nil {
 				return err
 			}
+		}
+		if err := a.ClearRestStatModifiers(ctx, string(evt.CampaignID), characterID, p.RefreshRest, p.RefreshLongRest); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -522,6 +526,16 @@ func (a *Adapter) HandleConsumableAcquired(_ context.Context, _ event.Event, _ p
 	return nil
 }
 
+func (a *Adapter) HandleStatModifierChanged(ctx context.Context, evt event.Event, p payload.StatModifierChangedPayload) error {
+	characterID := strings.TrimSpace(p.CharacterID.String())
+	state, err := a.GetCharacterStateOrDefault(ctx, string(evt.CampaignID), characterID)
+	if err != nil {
+		return err
+	}
+	state.StatModifiers = StatModifiersToProjection(p.Modifiers)
+	return a.PutCharacterState(ctx, state)
+}
+
 func (a *Adapter) ApplyStatePatch(ctx context.Context, campaignID, characterID string, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *snapstate.CharacterClassState, subclassStateAfter *snapstate.CharacterSubclassState, companionStateAfter *snapstate.CharacterCompanionState, impenetrableUsedThisShortRestAfter *bool) error {
 	state, err := a.GetCharacterStateOrDefault(ctx, campaignID, characterID)
 	if err != nil {
@@ -743,6 +757,52 @@ func CompanionStateFromProjection(value *projectionstore.DaggerheartCompanionSta
 		Status:             value.Status,
 		ActiveExperienceID: value.ActiveExperienceID,
 	})
+}
+
+// StatModifiersToProjection converts domain stat modifiers to projection form.
+func StatModifiersToProjection(values []rules.StatModifierState) []projectionstore.DaggerheartStatModifier {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]projectionstore.DaggerheartStatModifier, 0, len(values))
+	for _, value := range values {
+		entry := projectionstore.DaggerheartStatModifier{
+			ID:       value.ID,
+			Target:   string(value.Target),
+			Delta:    value.Delta,
+			Label:    value.Label,
+			Source:   value.Source,
+			SourceID: value.SourceID,
+		}
+		for _, trigger := range value.ClearTriggers {
+			entry.ClearTriggers = append(entry.ClearTriggers, string(trigger))
+		}
+		result = append(result, entry)
+	}
+	return result
+}
+
+// StatModifiersFromProjection converts projection stat modifiers to domain form.
+func StatModifiersFromProjection(values []projectionstore.DaggerheartStatModifier) []rules.StatModifierState {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]rules.StatModifierState, 0, len(values))
+	for _, value := range values {
+		entry := rules.StatModifierState{
+			ID:       value.ID,
+			Target:   rules.StatModifierTarget(value.Target),
+			Delta:    value.Delta,
+			Label:    value.Label,
+			Source:   value.Source,
+			SourceID: value.SourceID,
+		}
+		for _, trigger := range value.ClearTriggers {
+			entry.ClearTriggers = append(entry.ClearTriggers, rules.ConditionClearTrigger(trigger))
+		}
+		result = append(result, entry)
+	}
+	return result
 }
 
 func ConditionStatesToProjection(values []rules.ConditionState) []projectionstore.DaggerheartConditionState {

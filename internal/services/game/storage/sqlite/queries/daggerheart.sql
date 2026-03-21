@@ -68,14 +68,14 @@ WHERE campaign_id = ? AND character_id = ?;
 -- Character State Extensions
 
 -- name: GetDaggerheartCharacterState :one
-SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest
+SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest, stat_modifiers_json
 FROM daggerheart_character_states
 WHERE campaign_id = ? AND character_id = ?;
 
 -- name: PutDaggerheartCharacterState :exec
 INSERT INTO daggerheart_character_states (
-    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state, class_state_json, subclass_state_json, companion_state_json, impenetrable_used_this_short_rest, stat_modifiers_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     hp = excluded.hp,
     hope = excluded.hope,
@@ -88,11 +88,12 @@ ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     class_state_json = excluded.class_state_json,
     subclass_state_json = excluded.subclass_state_json,
     companion_state_json = excluded.companion_state_json,
-    impenetrable_used_this_short_rest = excluded.impenetrable_used_this_short_rest;
+    impenetrable_used_this_short_rest = excluded.impenetrable_used_this_short_rest,
+    stat_modifiers_json = excluded.stat_modifiers_json;
 
 -- name: UpdateDaggerheartCharacterState :exec
 UPDATE daggerheart_character_states
-SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, temporary_armor_json = ?, life_state = ?, class_state_json = ?, subclass_state_json = ?, companion_state_json = ?, impenetrable_used_this_short_rest = ?
+SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, temporary_armor_json = ?, life_state = ?, class_state_json = ?, subclass_state_json = ?, companion_state_json = ?, impenetrable_used_this_short_rest = ?, stat_modifiers_json = ?
 WHERE campaign_id = ? AND character_id = ?;
 
 -- name: UpdateDaggerheartCharacterStateHopeStress :exec

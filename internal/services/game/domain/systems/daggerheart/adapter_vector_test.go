@@ -66,6 +66,7 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 		EventTypeEquipmentSwapped,
 		EventTypeConsumableUsed,
 		EventTypeConsumableAcquired,
+		EventTypeStatModifierChanged,
 	}
 	if got, want := len(sequence), countProjectionAndReplayDefinitions(); got != want {
 		t.Fatalf("event sequence = %d, projection/replay definitions = %d", got, want)
@@ -375,6 +376,12 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			ConsumableID: "scroll-1",
 			Quantity:     1,
 		},
+		EventTypeStatModifierChanged: StatModifierChangedPayload{
+			CharacterID: "char-1",
+			Modifiers: []StatModifierState{
+				{ID: "mod-1", Target: StatModifierTargetEvasion, Delta: 2, Label: "Test Modifier", Source: "test"},
+			},
+		},
 	}
 }
 
@@ -606,6 +613,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		CharacterClassStates:    make(map[ids.CharacterID]CharacterClassState),
 		CharacterSubclassStates: make(map[ids.CharacterID]CharacterSubclassState),
 		CharacterCompanions:     make(map[ids.CharacterID]CharacterCompanionState),
+		CharacterStatModifiers:  make(map[ids.CharacterID][]StatModifierState),
 		AdversaryStates:         make(map[ids.AdversaryID]AdversaryState),
 		EnvironmentStates:       make(map[ids.EnvironmentEntityID]EnvironmentEntityState),
 		CountdownStates:         make(map[ids.CountdownID]CountdownState),
@@ -641,6 +649,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		subclassState := subclassStateFromProjection(stored.SubclassState)
 		if subclassState != nil && !subclassState.IsZero() {
 			state.CharacterSubclassStates[ids.CharacterID(character.CharacterID)] = *subclassState
+		}
+		if mods := statModifiersFromProjection(stored.StatModifiers); len(mods) > 0 {
+			state.CharacterStatModifiers[ids.CharacterID(character.CharacterID)] = mods
 		}
 	}
 	for key, stored := range m.adversaries {
@@ -728,6 +739,7 @@ func cloneCharacterStateStorage(state projectionstore.DaggerheartCharacterState)
 	out := state
 	out.Conditions = append([]projectionstore.DaggerheartConditionState(nil), state.Conditions...)
 	out.TemporaryArmor = append([]projectionstore.DaggerheartTemporaryArmor(nil), state.TemporaryArmor...)
+	out.StatModifiers = append([]projectionstore.DaggerheartStatModifier(nil), state.StatModifiers...)
 	return out
 }
 

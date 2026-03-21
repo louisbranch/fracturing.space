@@ -76,6 +76,8 @@ type ConsumableUsePayload = payload.ConsumableUsePayload
 type ConsumableUsedPayload = payload.ConsumableUsedPayload
 type ConsumableAcquirePayload = payload.ConsumableAcquirePayload
 type ConsumableAcquiredPayload = payload.ConsumableAcquiredPayload
+type StatModifierChangePayload = payload.StatModifierChangePayload
+type StatModifierChangedPayload = payload.StatModifierChangedPayload
 
 // --- Event type constant aliases ---
 
@@ -112,4 +114,5 @@ const (
 	EventTypeEquipmentSwapped               = payload.EventTypeEquipmentSwapped
 	EventTypeConsumableUsed                 = payload.EventTypeConsumableUsed
 	EventTypeConsumableAcquired             = payload.EventTypeConsumableAcquired
+	EventTypeStatModifierChanged            = payload.EventTypeStatModifierChanged
 )

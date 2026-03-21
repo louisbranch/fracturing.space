@@ -416,6 +416,19 @@ message DaggerheartConditionState {
   repeated DaggerheartConditionClearTrigger clear_triggers = 8;
 }
 
+// DaggerheartStatModifier represents a runtime stat modifier applied to a
+// character, tracking source and duration-based clearing.
+message DaggerheartStatModifier {
+  string id = 1;
+  // Target stat: "evasion", "major_threshold", "severe_threshold", "proficiency", "armor_score".
+  string target = 2;
+  int32 delta = 3;
+  string label = 4;
+  string source = 5;
+  string source_id = 6;
+  repeated DaggerheartConditionClearTrigger clear_triggers = 7;
+}
+
 // DaggerheartLifeState represents a character's life state.
 enum DaggerheartLifeState {
   DAGGERHEART_LIFE_STATE_UNSPECIFIED = 0;
@@ -460,6 +473,8 @@ message DaggerheartCharacterState {
   DaggerheartCompanionState companion_state = 11;
   // Mutable subclass-owned runtime state.
   DaggerheartSubclassState subclass_state = 12;
+  // Active stat modifiers applied by domain cards, class features, etc.
+  repeated DaggerheartStatModifier stat_modifiers = 13;
 }
 
 // DaggerheartTemporaryArmorBucket tracks a temporary armor source.
@@ -580,4 +595,29 @@ message DaggerheartLoadoutSwapRequest {
   string card_id = 1;
   int32 recall_cost = 2;
   bool in_rest = 3;
+}
+
+// DaggerheartMutationSourceType categorizes why a mutation happened.
+enum DaggerheartMutationSourceType {
+  DAGGERHEART_MUTATION_SOURCE_TYPE_UNSPECIFIED = 0;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_DOMAIN_CARD = 1;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_CLASS_FEATURE = 2;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_SUBCLASS_FEATURE = 3;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_GM_ADJUSTMENT = 4;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_ARMOR_EFFECT = 5;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_ITEM_EFFECT = 6;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_REST_DOWNTIME = 7;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_ADVERSARY_FEATURE = 8;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_ENVIRONMENT_FEATURE = 9;
+  DAGGERHEART_MUTATION_SOURCE_TYPE_OTHER = 10;
+}
+
+// DaggerheartMutationSource records the reason a character mutation occurred,
+// enabling source attribution in the audit trail and event journal.
+message DaggerheartMutationSource {
+  DaggerheartMutationSourceType type = 1;
+  // Human-readable description of the source (e.g., "Bare Bones domain card").
+  string description = 2;
+  // Stable identifier for the source entity (e.g., domain card ID, feature ID).
+  string source_id = 3;
 }

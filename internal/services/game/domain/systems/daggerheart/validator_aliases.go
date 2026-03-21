@@ -94,6 +94,8 @@ var (
 	validateConsumableUsedPayload           = validator.ValidateConsumableUsedPayload
 	validateConsumableAcquirePayload        = validator.ValidateConsumableAcquirePayload
 	validateConsumableAcquiredPayload       = validator.ValidateConsumableAcquiredPayload
+	validateStatModifierChangePayload       = validator.ValidateStatModifierChangePayload
+	validateStatModifierChangedPayload      = validator.ValidateStatModifierChangedPayload
 )
 
 // Damage validators

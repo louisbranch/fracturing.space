@@ -164,6 +164,17 @@ func MechanicsManifest() []Mechanic {
 			Notes:        "Core conditions with add/remove lifecycle.",
 		},
 		{
+			ID:           "stat-modifiers",
+			Name:         "Stat Modifiers (Evasion/Thresholds/Proficiency/Armor)",
+			Category:     CategoryCharacterModel,
+			Status:       MechanicImplemented,
+			Requirement:  Optional,
+			Commands:     []command.Type{commandTypeStatModifierChange},
+			Events:       []event.Type{EventTypeStatModifierChanged},
+			ScenarioTags: []string{"stat_modifier_lifecycle"},
+			Notes:        "Runtime stat modifier application with duration-based clearing via ClearTriggers.",
+		},
+		{
 			ID:           "loadout-swap",
 			Name:         "Loadout Swap",
 			Category:     CategoryCharacterModel,

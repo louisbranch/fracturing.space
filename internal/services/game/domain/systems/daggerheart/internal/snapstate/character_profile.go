@@ -210,11 +210,20 @@ type CharacterProfile struct {
 	GoldChests                   int                          `json:"gold_chests,omitempty"`
 }
 
+// MutationSource records the reason a profile mutation happened so callers
+// can attribute changes to domain cards, features, or GM adjustments.
+type MutationSource struct {
+	Type        string `json:"type,omitempty"`
+	Description string `json:"description,omitempty"`
+	SourceID    string `json:"source_id,omitempty"`
+}
+
 // CharacterProfileReplacePayload captures the payload for
 // sys.daggerheart.character_profile.replace commands.
 type CharacterProfileReplacePayload struct {
-	CharacterID ids.CharacterID  `json:"character_id"`
-	Profile     CharacterProfile `json:"profile"`
+	CharacterID    ids.CharacterID  `json:"character_id"`
+	Profile        CharacterProfile `json:"profile"`
+	MutationSource *MutationSource  `json:"mutation_source,omitempty"`
 }
 
 // CharacterProfileReplacedPayload captures the payload for

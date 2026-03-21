@@ -1124,6 +1124,41 @@ func writeScenarioSeedData(ctx context.Context, store contentstore.DaggerheartCo
 	}
 
 	if err := putAdversary(contentstore.DaggerheartAdversaryEntry{
+		ID:              "adversary.vault-guardian-sentinel",
+		Name:            "Vault Guardian Sentinel",
+		Tier:            2,
+		Role:            "standard",
+		Description:     "Scenario seed adversary for Box In focus-target disadvantage coverage.",
+		Motives:         "Guard the vault entrance; pin intruders.",
+		Difficulty:      17,
+		MajorThreshold:  7,
+		SevereThreshold: 14,
+		HP:              8,
+		Stress:          3,
+		Armor:           1,
+		AttackModifier:  2,
+		StandardAttack: contentstore.DaggerheartAdversaryAttack{
+			Name:        "Halberd Sweep",
+			Range:       "melee",
+			DamageDice:  []contentstore.DaggerheartDamageDie{{Sides: 10, Count: 1}},
+			DamageBonus: 2,
+			DamageType:  "physical",
+		},
+		Features: []contentstore.DaggerheartAdversaryFeature{
+			{
+				ID:          "adversary-feature.vault-guardian-sentinel-box-in",
+				Name:        "Box In",
+				Kind:        "passive",
+				Description: "Mark a target. That target has disadvantage on their next action roll against this adversary.",
+			},
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		return err
+	}
+
+	if err := putAdversary(contentstore.DaggerheartAdversaryEntry{
 		ID:              "adversary.saruman",
 		Name:            "Saruman",
 		Tier:            2,

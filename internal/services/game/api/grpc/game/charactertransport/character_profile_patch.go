@@ -50,11 +50,20 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		return "", projectionstore.DaggerheartCharacterProfile{}, err
 	}
 
+	var mutationSource *daggerheart.MutationSource
+	if src := in.GetMutationSource(); src != nil {
+		mutationSource = &daggerheart.MutationSource{
+			Type:        src.GetType().String(),
+			Description: src.GetDescription(),
+			SourceID:    src.GetSourceId(),
+		}
+	}
+
 	if err := c.executeDaggerheartProfileReplace(ctx, characterworkflow.CampaignContext{
 		ID:     campaignRecord.ID,
 		System: handler.SystemIDFromCampaignRecord(campaignRecord),
 		Status: campaignRecord.Status,
-	}, characterID, daggerheart.CharacterProfileFromStorage(dhProfile)); err != nil {
+	}, characterID, daggerheart.CharacterProfileFromStorage(dhProfile), mutationSource); err != nil {
 		return "", projectionstore.DaggerheartCharacterProfile{}, err
 	}
 

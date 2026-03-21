@@ -111,7 +111,7 @@ func (d *characterWorkflowDeps) SystemContent() contentstore.DaggerheartContentR
 }
 
 func (d *characterWorkflowDeps) ExecuteProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {
-	return d.app.executeDaggerheartProfileReplace(ctx, campaignContext, characterID, profile)
+	return d.app.executeDaggerheartProfileReplace(ctx, campaignContext, characterID, profile, nil)
 }
 
 func (d *characterWorkflowDeps) ExecuteProfileDelete(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string) error {
@@ -126,7 +126,7 @@ func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, p
 	return DaggerheartProfileToProto(campaignID, characterID, profile, d.app.stores.DaggerheartContent)
 }
 
-func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {
+func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile, mutationSource *daggerheart.MutationSource) error {
 	policyActor, err := authz.RequireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
@@ -137,8 +137,9 @@ func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Conte
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
 	commandPayload := daggerheart.CharacterProfileReplacePayload{
-		CharacterID: ids.CharacterID(characterID),
-		Profile:     profile,
+		CharacterID:    ids.CharacterID(characterID),
+		Profile:        profile,
+		MutationSource: mutationSource,
 	}
 	commandPayloadJSON, err := json.Marshal(commandPayload)
 	if err != nil {
