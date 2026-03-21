@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/web/testast"
 )
 
 func TestModuleConstructorsUseCanonicalConfigContract(t *testing.T) {
@@ -30,7 +32,7 @@ func TestModuleConstructorsUseCanonicalConfigContract(t *testing.T) {
 func assertModuleConstructorContract(t *testing.T, path string) {
 	t.Helper()
 
-	parsed := parseFile(t, path)
+	parsed := testast.ParseFile(t, path)
 	hasConfigType := false
 	hasConfigConstructor := false
 	hasCanonicalConstructor := false

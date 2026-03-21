@@ -41,7 +41,7 @@ func (r Resolver) resolveViewerUncached(request *http.Request) module.Viewer {
 	if userID == "" {
 		return module.Viewer{}
 	}
-	viewer := defaultViewer(r.viewer.assetBaseURL, contextFromRequest(request), userID, r.resolveHasUnreadNotifications)
+	viewer := defaultViewer(contextFromRequest(request), r.viewer.assetBaseURL, userID, r.resolveHasUnreadNotifications)
 	viewer.NotificationsAvailable = r.viewer.notification != nil
 	if profile := r.loadAccountProfile(request.Context(), userID); profile != nil {
 		username := strings.TrimSpace(profile.GetUsername())
@@ -96,8 +96,8 @@ func (r Resolver) loadUserProfile(ctx context.Context, userID string) *socialv1.
 // defaultViewer defines the authenticated chrome fallback before optional
 // social-profile enrichment.
 func defaultViewer(
-	assetBaseURL string,
 	ctx context.Context,
+	assetBaseURL string,
 	userID string,
 	resolveUnread func(context.Context, string) bool,
 ) module.Viewer {

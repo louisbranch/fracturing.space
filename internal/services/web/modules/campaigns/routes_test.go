@@ -8,6 +8,7 @@ import (
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler/modulehandlertest"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -32,7 +33,7 @@ func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 
 	registerStableRoutes(
 		nil,
-		newRouteHandlers(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}, modulehandler.NewTestBase()),
+		newRouteHandlers(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}, modulehandlertest.NewBase()),
 	)
 }
 

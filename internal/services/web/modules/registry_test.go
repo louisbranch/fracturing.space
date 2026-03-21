@@ -410,11 +410,13 @@ func TestRegistryLoggerPrefersProtectedLogger(t *testing.T) {
 	publicLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	protectedLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	if got := registryLogger(publicLogger, protectedLogger); got != protectedLogger {
-		t.Fatalf("registryLogger(public, protected) = %p, want %p", got, protectedLogger)
+	// Protected logger is passed first (matching the Build call site) and wins
+	// when both are non-nil because registryLogger returns the first non-nil.
+	if got := registryLogger(protectedLogger, publicLogger); got != protectedLogger {
+		t.Fatalf("registryLogger(protected, public) = %p, want %p", got, protectedLogger)
 	}
-	if got := registryLogger(publicLogger, nil); got != publicLogger {
-		t.Fatalf("registryLogger(public, nil) = %p, want %p", got, publicLogger)
+	if got := registryLogger(nil, publicLogger); got != publicLogger {
+		t.Fatalf("registryLogger(nil, public) = %p, want %p", got, publicLogger)
 	}
 }
 

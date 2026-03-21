@@ -10,6 +10,7 @@ import (
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler/modulehandlertest"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -77,7 +78,7 @@ func TestHandleCharacterCreationStepRouteUsesHXRedirect(t *testing.T) {
 			},
 		},
 	}
-	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
+	m := New(configWithGateway(gateway, modulehandlertest.NewBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -112,7 +113,7 @@ func TestHandleCharacterCreationStepRouteRedirectsWithFlashOnInvalidForm(t *test
 			Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 			NextStep: 1,
 		},
-	}, modulehandler.NewTestBase(), defaultTestWorkflows()))
+	}, modulehandlertest.NewBase(), defaultTestWorkflows()))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -152,7 +153,7 @@ func TestHandleCharacterCreationStepRouteRedirectsWithFlashWhenWorkflowReady(t *
 			},
 		},
 	}
-	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
+	m := New(configWithGateway(gateway, modulehandlertest.NewBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -182,7 +183,7 @@ func TestHandleCharacterCreationResetRouteRedirectsAndCallsGateway(t *testing.T)
 			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		},
 	}
-	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
+	m := New(configWithGateway(gateway, modulehandlertest.NewBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -217,7 +218,7 @@ func TestHandleCharacterCreationResetRouteUsesHXRedirect(t *testing.T) {
 			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		},
 	}
-	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
+	m := New(configWithGateway(gateway, modulehandlertest.NewBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

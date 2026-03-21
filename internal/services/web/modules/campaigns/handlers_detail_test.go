@@ -11,13 +11,14 @@ import (
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler/modulehandlertest"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func TestMountServesCampaignDetailRoutes(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), nil))
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -52,7 +53,7 @@ func TestMountStableCampaignMutationDetailRoutes(t *testing.T) {
 	m := New(configWithGateway(fakeGateway{
 		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		sessions: []campaignapp.CampaignSession{{ID: "s1", Name: "Session 1", Status: "Active"}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -85,7 +86,7 @@ func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 			Name:   "First Light",
 			Status: "Active",
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -136,7 +137,7 @@ func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.
 				StartedAt: "2026-02-02 20:00 UTC",
 			},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -204,7 +205,7 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 				EndedAt:   "2026-02-02 22:00 UTC",
 			},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -266,7 +267,7 @@ func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 				},
 			},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -303,7 +304,7 @@ func TestMountCampaignSessionDetailRouteRendersSelectedSession(t *testing.T) {
 			Name:   "First Light",
 			Status: "Active",
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -348,7 +349,7 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 			HasRecipient:      true,
 			Status:            "Pending",
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -416,7 +417,7 @@ func TestMountCampaignInvitesRouteHidesManageControlsWithoutInvitePermission(t *
 			Allowed:    false,
 			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -469,7 +470,7 @@ func TestMountCampaignInvitesRouteHidesPublicURLForNonPendingStatuses(t *testing
 			{ID: "inv-declined", ParticipantID: "p3", ParticipantName: "Rejected Seat", Status: "Declined"},
 			{ID: "inv-revoked", ParticipantID: "p4", ParticipantName: "Revoked Seat", Status: "Revoked"},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -527,7 +528,7 @@ func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *te
 			Allowed:    true,
 			ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -585,7 +586,7 @@ func TestMountCampaignInvitesRouteDisablesCreateWhenNoEligibleSeats(t *testing.T
 			Allowed:    true,
 			ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -627,7 +628,7 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 			Controller: "Ariadne",
 			AvatarURL:  "/static/avatars/aria.png",
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -854,7 +855,7 @@ func TestMountCampaignCharacterDetailBreadcrumbUsesCharacterName(t *testing.T) {
 			Kind:       "PC",
 			Controller: "Ariadne",
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -905,7 +906,7 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 			Classes:    []campaignapp.CatalogClass{{ID: "warrior", Name: "Warrior"}},
 			Subclasses: []campaignapp.CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
 		},
-	}, modulehandler.NewTestBase(), defaultTestWorkflows()))
+	}, modulehandlertest.NewBase(), defaultTestWorkflows()))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -947,7 +948,7 @@ func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *
 			Controller: "Ariadne",
 		}},
 		characterCreationProgressErr: errors.New("workflow should not be loaded for non-daggerheart systems"),
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -971,7 +972,7 @@ func TestMountCampaignCharacterCreatePageRendersDedicatedForm(t *testing.T) {
 
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1020,7 +1021,7 @@ func TestMountCampaignCharacterEditPageRendersDedicatedForm(t *testing.T) {
 			Pronouns:   "she/her",
 			CanEdit:    true,
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1063,7 +1064,7 @@ func TestMountCampaignCharactersDisableMutationsDuringActiveSession(t *testing.T
 			Controller: "Ariadne",
 		}},
 		sessions: []campaignapp.CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1109,7 +1110,7 @@ func TestMountCampaignCharacterDetailDisablesActionsDuringActiveSession(t *testi
 			Classes:    []campaignapp.CatalogClass{{ID: "warrior", Name: "Warrior"}},
 			Subclasses: []campaignapp.CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
 		},
-	}, modulehandler.NewTestBase(), defaultTestWorkflows()))
+	}, modulehandlertest.NewBase(), defaultTestWorkflows()))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1141,7 +1142,7 @@ func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 		Name:          "The Guildhouse",
 		Theme:         "Stormbound intrigue",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
-	}}}, modulehandler.NewTestBase(), nil))
+	}}}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1191,7 +1192,7 @@ func TestMountCampaignOverviewRendersPendingAIBindingStatusAndManageLinkForOwner
 			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
 			ActorCampaignAccess: "Owner",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1223,7 +1224,7 @@ func TestMountCampaignOverviewAllowsHead(t *testing.T) {
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
-	}}}, modulehandler.NewTestBase(), nil))
+	}}}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1248,7 +1249,7 @@ func TestMountCampaignEditRequiresManagerOrOwnerAccess(t *testing.T) {
 			Allowed:    false,
 			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1291,7 +1292,7 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 				AvatarURL:      "/static/avatars/aria.png",
 			},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1365,7 +1366,7 @@ func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testin
 			{CheckID: "p-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 			{CheckID: "p-b", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1575,7 +1576,7 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 			{CheckID: "manager", Evaluated: true, Allowed: true},
 			{CheckID: "owner", Evaluated: true, Allowed: true},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1667,7 +1668,7 @@ func TestMountCampaignParticipantEditOmitsGMRoleForHumanSeatsInAIGMCampaigns(t *
 			Evaluated: true,
 			Allowed:   true,
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1710,7 +1711,7 @@ func TestMountCampaignParticipantEditOmitsAIBindingControlsForAIGMSeats(t *testi
 			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
 			ActorCampaignAccess: "Owner",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1759,7 +1760,7 @@ func TestMountCampaignAIBindingPageRendersForOwner(t *testing.T) {
 			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
 			ActorCampaignAccess: "Owner",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1796,7 +1797,7 @@ func TestMountCampaignAIBindingPageRequiresOwnerAccess(t *testing.T) {
 			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
 			ActorCampaignAccess: "Member",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1822,7 +1823,7 @@ func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 			CoverImageURL:  "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		participantsErr: apperrors.E(apperrors.KindUnavailable, "participants unavailable"),
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1841,7 +1842,7 @@ func TestMountCampaignParticipantsFailsClosedWhenParticipantClientMissing(t *tes
 	t.Parallel()
 
 	deps := campaigngateway.GRPCGatewayDeps{Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}}
-	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
+	m := New(configWithGRPCDeps(deps, modulehandlertest.NewBase(), nil))
 	_, err := m.Mount()
 	if err == nil {
 		t.Fatalf("expected Mount() validation error")
@@ -1877,7 +1878,7 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 				AvatarURL:  "/static/avatars/aria.png",
 			},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -1936,7 +1937,7 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 func TestMountCampaignCharactersEmptyStateStillShowsCreateEntry(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), nil))
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1979,7 +1980,7 @@ func TestMountCampaignCharactersRendersDaggerheartSummaryRows(t *testing.T) {
 				CommunityName: "Wanderborne",
 			},
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2023,7 +2024,7 @@ func TestMountCampaignCharactersHidesIncompleteDaggerheartSummaryRows(t *testing
 				CommunityName: "",
 			},
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2064,7 +2065,7 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForEditableCharacters(t *tes
 			Controller: "Ariadne",
 		}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{{CheckID: "ch-a", Evaluated: true, Allowed: true}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2098,7 +2099,7 @@ func TestMountCampaignCharactersHighlightsViewerOwnedCharacterCard(t *testing.T)
 			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne", OwnedByViewer: true},
 			{ID: "ch-b", Name: "Bramble", Kind: "PC", Controller: "Scout", OwnedByViewer: false},
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2132,7 +2133,7 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForReadOnlyCharacters(t *tes
 			Controller: "Ariadne",
 			CanEdit:    false,
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2169,7 +2170,7 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForNonDaggerheartCampaigns(t
 			Controller: "Ariadne",
 			CanEdit:    true,
 		}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2198,7 +2199,7 @@ func TestMountCampaignCharactersFailsWhenGatewayReturnsError(t *testing.T) {
 			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		charactersErr: apperrors.E(apperrors.KindUnavailable, "characters unavailable"),
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2217,7 +2218,7 @@ func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing
 	t.Parallel()
 
 	deps := campaigngateway.GRPCGatewayDeps{Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}}
-	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
+	m := New(configWithGRPCDeps(deps, modulehandlertest.NewBase(), nil))
 	_, err := m.Mount()
 	if err == nil {
 		t.Fatalf("expected Mount() validation error")
@@ -2230,7 +2231,7 @@ func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing
 func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First", CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png"}}}, modulehandler.NewTestBase(), nil))
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First", CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png"}}}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -2294,7 +2295,7 @@ func TestMountCampaignOverviewHidesInvitesMenuWithoutPermission(t *testing.T) {
 			Allowed:    false,
 			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
 		},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -2323,7 +2324,7 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 		ID:            "c1",
 		Name:          "First",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
-	}}}, modulehandler.NewTestBase(), nil))
+	}}}, modulehandlertest.NewBase(), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -2381,7 +2382,7 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), nil))
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -2403,7 +2404,7 @@ func TestMountCampaignSessionDetailRendersBreadcrumbs(t *testing.T) {
 	m := New(configWithGateway(fakeGateway{
 		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		sessions: []campaignapp.CampaignSession{{ID: "s1", Name: "First Light", Status: "Active"}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -2437,7 +2438,7 @@ func TestMountCampaignSessionDetailTruncatesLongBreadcrumbLabels(t *testing.T) {
 	m := New(configWithGateway(fakeGateway{
 		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: longCampaignName}},
 		sessions: []campaignapp.CampaignSession{{ID: longSessionID, Name: longSessionName, Status: "Active"}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -2468,7 +2469,7 @@ func TestMountCampaignSessionDetailReturnsNotFoundForUnknownSession(t *testing.T
 	m := New(configWithGateway(fakeGateway{
 		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		sessions: []campaignapp.CampaignSession{{ID: "s1", Name: "First Light", Status: "Active"}},
-	}, modulehandler.NewTestBase(), nil))
+	}, modulehandlertest.NewBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

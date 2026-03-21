@@ -49,7 +49,7 @@ func (e StartupDependencyValidationError) Error() string {
 		sort.Strings(missing)
 		parts = append(parts, fmt.Sprintf(
 			"%q missing: %s",
-			strings.TrimSpace(issue.Name),
+			issue.Name,
 			strings.Join(missing, ", "),
 		))
 	}
@@ -268,14 +268,14 @@ func validateRequiredDependencyBundle(bundle *DependencyBundle) error {
 	}
 }
 
-// normalizeStartupDependencyIssue sanitizes a required dependency issue payload for
-// stable comparison and transport.
+// normalizeStartupDependencyIssue returns a defensively copied dependency
+// issue for stable comparison.
 func normalizeStartupDependencyIssue(issue StartupDependencyIssue) StartupDependencyIssue {
 	return StartupDependencyIssue{
-		Name:       strings.TrimSpace(issue.Name),
+		Name:       issue.Name,
 		Missing:    append([]string(nil), issue.Missing...),
 		Surfaces:   append([]string(nil), issue.Surfaces...),
-		Capability: strings.TrimSpace(issue.Capability),
+		Capability: issue.Capability,
 		Policy:     issue.Policy,
 	}
 }
@@ -287,10 +287,10 @@ func dependencyValidationIssue(name, capability string, surfaces []string, missi
 		return nil
 	}
 	return &StartupDependencyIssue{
-		Name:       strings.TrimSpace(name),
+		Name:       name,
 		Missing:    append([]string(nil), missing...),
 		Surfaces:   append([]string(nil), surfaces...),
-		Capability: strings.TrimSpace(capability),
+		Capability: capability,
 		Policy:     StartupDependencyRequired,
 	}
 }
@@ -310,9 +310,8 @@ func requireDependencyFields(fields ...fieldCheck) []string {
 		if field.configured {
 			continue
 		}
-		name := strings.TrimSpace(field.name)
-		if name != "" {
-			missing = append(missing, name)
+		if field.name != "" {
+			missing = append(missing, field.name)
 		}
 	}
 	return missing

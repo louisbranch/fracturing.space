@@ -6,21 +6,21 @@ import (
 	"testing"
 
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler/modulehandlertest"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(dashboardapp.NewService(nil, nil, nil), modulehandler.NewTestBase()))
+	registerRoutes(nil, newHandlers(dashboardapp.NewService(nil, nil, nil), modulehandlertest.NewBase()))
 }
 
 func TestRegisterRoutesDashboardPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(dashboardapp.NewService(nil, nil, nil), modulehandler.NewTestBase()))
+	registerRoutes(mux, newHandlers(dashboardapp.NewService(nil, nil, nil), modulehandlertest.NewBase()))
 
 	tests := []struct {
 		name       string

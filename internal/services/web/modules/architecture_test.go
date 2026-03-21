@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	"github.com/louisbranch/fracturing.space/internal/services/web/testast"
 )
 
 func TestFeatureModulesDoNotImportSiblingModules(t *testing.T) {
@@ -406,7 +407,7 @@ func TestSelectedModuleHandlersDoNotReadRawPathValues(t *testing.T) {
 	modulesUsingSharedRouteParamHelper := []string{"campaigns", "notifications", "settings", "profile"}
 	for _, mod := range modulesUsingSharedRouteParamHelper {
 		for _, file := range moduleHandlerFiles(t, mod) {
-			parsed := parseFile(t, file)
+			parsed := testast.ParseFile(t, file)
 			ast.Inspect(parsed, func(n ast.Node) bool {
 				sel, ok := n.(*ast.SelectorExpr)
 				if !ok || sel.Sel == nil || sel.Sel.Name != "PathValue" {

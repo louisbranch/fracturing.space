@@ -24,44 +24,34 @@ func (r runtimeDependencies) close() {
 	closeManagedConns(r.depsConns, slog.Default())
 }
 
+// bootstrapOptions holds injectable overrides for runtime dependency assembly.
+// Production callers leave all fields nil to use defaults; tests override
+// NewConn and/or Resolvers for deterministic wiring.
+type bootstrapOptions struct {
+	NewConn   managedConnFactory
+	Resolvers map[string]dependencyAddressResolver
+}
+
 // bootstrapRuntimeDependencies assembles the runtime dependency graph used by
-// the web server in one place so startup code does not mutate dependency
-// bundles after bootstrap.
+// the web server. Pass nil opts to use production defaults; tests supply
+// overrides via bootstrapOptions.
 func bootstrapRuntimeDependencies(
 	ctx context.Context,
 	cfg Config,
 	reporter *platformstatus.Reporter,
+	opts *bootstrapOptions,
 ) (runtimeDependencies, error) {
-	return bootstrapRuntimeDependenciesWithConnFactory(ctx, cfg, reporter, platformgrpc.NewManagedConn)
-}
+	newConn := platformgrpc.NewManagedConn
+	resolvers := dependencyAddressResolverDefaults()
+	if opts != nil {
+		if opts.NewConn != nil {
+			newConn = opts.NewConn
+		}
+		if opts.Resolvers != nil {
+			resolvers = opts.Resolvers
+		}
+	}
 
-// bootstrapRuntimeDependenciesWithConnFactory assembles the runtime
-// dependency graph while keeping the managed-connection factory injectable for
-// tests.
-func bootstrapRuntimeDependenciesWithConnFactory(
-	ctx context.Context,
-	cfg Config,
-	reporter *platformstatus.Reporter,
-	newConn managedConnFactory,
-) (runtimeDependencies, error) {
-	return bootstrapRuntimeDependenciesWithConnFactoryWithResolvers(
-		ctx,
-		cfg,
-		reporter,
-		newConn,
-		dependencyAddressResolverDefaults(),
-	)
-}
-
-// bootstrapRuntimeDependenciesWithConnFactoryWithResolvers allows resolver overrides
-// in tests while retaining runtime dependency assembly behavior.
-func bootstrapRuntimeDependenciesWithConnFactoryWithResolvers(
-	ctx context.Context,
-	cfg Config,
-	reporter *platformstatus.Reporter,
-	newConn managedConnFactory,
-	resolvers map[string]dependencyAddressResolver,
-) (runtimeDependencies, error) {
 	requirements, err := dependencyRequirementsWithResolvers(cfg, reporter, resolvers)
 	if err != nil {
 		return runtimeDependencies{}, fmt.Errorf("resolve web dependency requirements: %w", err)

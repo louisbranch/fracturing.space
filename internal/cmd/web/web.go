@@ -59,7 +59,7 @@ func Run(ctx context.Context, cfg Config) error {
 		stopReporter := reporter.Start(ctx)
 		defer stopReporter()
 
-		runtimeDeps, err := bootstrapRuntimeDependencies(ctx, cfg, reporter)
+		runtimeDeps, err := bootstrapRuntimeDependencies(ctx, cfg, reporter, nil)
 		if err != nil {
 			return err
 		}
