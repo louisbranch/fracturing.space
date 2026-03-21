@@ -6,7 +6,7 @@ import { backstageFixtureCatalog } from "./fixtures";
 
 describe("BackstagePanel", () => {
   it("assembles the Backstage context, transcript, and compose regions", () => {
-    render(
+    const { container } = render(
       <BackstagePanel
         state={backstageFixtureCatalog.openDiscussion}
         draft=""
@@ -16,11 +16,15 @@ describe("BackstagePanel", () => {
       />,
     );
 
+    const scrollRegion = container.querySelector(".hud-panel-scroll-region");
+    expect(scrollRegion).not.toBeNull();
     expect(screen.getByLabelText("Backstage")).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage context")).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage status: OOC Open")).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage OOC messages")).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage message input")).toBeInTheDocument();
+    expect(scrollRegion).toContainElement(screen.getByLabelText("Backstage context"));
+    expect(scrollRegion).toContainElement(screen.getByLabelText("Backstage OOC messages"));
   });
 
   it("keeps the context card visible and disables actions when Backstage is dormant", () => {

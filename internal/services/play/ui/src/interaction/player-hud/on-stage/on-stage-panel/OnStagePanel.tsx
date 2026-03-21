@@ -22,22 +22,24 @@ export function OnStagePanel({
 
   return (
     <section aria-label="On Stage" className="flex min-h-0 flex-1 flex-col">
-      <OnStageSceneCard
-        sceneName={state.sceneName}
-        sceneDescription={state.sceneDescription}
-        gmOutputText={state.gmOutputText}
-        frameText={state.frameText}
-        actingCharacterNames={state.actingCharacterNames}
-        statusLabel={status.badgeLabel}
-        statusClassName={status.badgeClassName}
-        statusTooltip={status.message}
-      />
-      <OnStageSlotList
-        participants={state.participants}
-        slots={state.slots}
-        actingParticipantIds={state.actingParticipantIds}
-        viewerParticipantId={state.viewerParticipantId}
-      />
+      <div className="hud-panel-scroll-region">
+        <OnStageSceneCard
+          sceneName={state.sceneName}
+          sceneDescription={state.sceneDescription}
+          gmOutputText={state.gmOutputText}
+          frameText={state.frameText}
+          actingCharacterNames={state.actingCharacterNames}
+          statusLabel={status.badgeLabel}
+          statusClassName={status.badgeClassName}
+          statusTooltip={status.message}
+        />
+        <OnStageSlotList
+          participants={state.participants}
+          slots={state.slots}
+          actingParticipantIds={state.actingParticipantIds}
+          viewerParticipantId={state.viewerParticipantId}
+        />
+      </div>
       <OnStageCompose
         draft={draft}
         controls={state.viewerControls}

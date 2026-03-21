@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { backstageFixtureCatalog, onStageFixtureCatalog, sideChatState } from "../shared/fixtures";
+import { backstageFixtureCatalog, playerHUDFixtureCatalog, sideChatState } from "../shared/fixtures";
 import { PlayerHUDShell } from "./PlayerHUDShell";
 
 const baseProps = {
-  onStage: onStageFixtureCatalog.viewerPosted,
+  onStage: playerHUDFixtureCatalog.onStage.onStage,
   onStageDraft: "Aria commits to the vault seam.",
   onOnStageDraftChange: () => {},
   onOnStageSubmit: () => {},
@@ -31,6 +31,11 @@ describe("PlayerHUDShell", () => {
     expect(screen.getByLabelText("Player HUD navigation")).toBeInTheDocument();
     expect(screen.getByLabelText("On Stage")).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
+    expect(screen.getByText(/banked lightning/i)).toBeInTheDocument();
+    expect(screen.getByText(/if this goes wrong, i need to know which compromise/i)).toBeInTheDocument();
+    expect(screen.getByText(/one moment where the ward's recoil is weakest/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("On-stage slot by Ives")).toBeInTheDocument();
+    expect(screen.getByText(/he watches the gallery rail for movement/i)).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage action input")).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage participants")).toBeInTheDocument();
     expect(screen.getByLabelText("Guide GM authority")).toBeInTheDocument();

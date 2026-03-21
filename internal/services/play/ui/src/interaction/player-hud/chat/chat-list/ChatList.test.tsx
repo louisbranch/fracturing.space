@@ -4,7 +4,7 @@ import { ChatList } from "./ChatList";
 import { sideChatMessages, sideChatParticipants } from "./fixtures";
 
 describe("ChatList", () => {
-  it("renders a scrollable container with all messages", () => {
+  it("renders all messages for the panel-owned scroll region", () => {
     render(
       <ChatList
         messages={sideChatMessages}
@@ -15,7 +15,6 @@ describe("ChatList", () => {
 
     const container = screen.getByLabelText("Side chat messages");
     expect(container).toBeInTheDocument();
-    expect(container.className).toContain("overflow-y-auto");
 
     // All message bodies are rendered.
     expect(screen.getByText("Ready when you are.")).toBeInTheDocument();

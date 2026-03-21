@@ -9,7 +9,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Scrollable On Stage slot list that keeps one card per acting participant, even before that participant has committed a post.",
+          "On Stage slot stack rendered inside the panel-owned scroll region, keeping one card per acting participant even before that participant has committed a post.",
       },
     },
   },

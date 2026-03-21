@@ -9,9 +9,9 @@ function formatTime(iso: string): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-// ChatList renders a scrollable list of grouped chat messages. Consecutive
-// messages from the same participant are visually grouped: the name appears on
-// the first message and the avatar on the last in each run.
+// ChatList renders grouped chat messages for the panel-owned scroll region.
+// Consecutive messages from the same participant are visually grouped: the
+// name appears on the first message and the avatar on the last in each run.
 export function ChatList({
   messages,
   participants,
@@ -32,7 +32,7 @@ export function ChatList({
     return (
       <div
         aria-label={ariaLabel}
-        className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto"
+        className="flex min-h-full flex-1 flex-col items-center justify-center px-3 py-3"
       >
         <span className="text-sm text-base-content/50">{emptyLabel}</span>
       </div>
@@ -42,7 +42,7 @@ export function ChatList({
   return (
     <div
       aria-label={ariaLabel}
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 py-1.5"
+      className="flex flex-col px-1.5 py-1.5"
     >
       {messages.map((msg, i) => {
         const prev = messages[i - 1];

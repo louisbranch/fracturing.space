@@ -23,7 +23,7 @@ export function OnStageSceneCard({
           </div>
           <span
             aria-label={`On-stage status: ${statusLabel}`}
-            className="tooltip tooltip-bottom shrink-0"
+            className="tooltip tooltip-left shrink-0"
             data-tip={statusTooltip}
           >
             <span className={`badge ${statusClassName}`} tabIndex={0}>
