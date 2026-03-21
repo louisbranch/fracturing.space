@@ -9,7 +9,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Shared right-side portrait rail for Player HUD surfaces, with tooltip-backed idle, typing, and ready overlays plus an optional GM-authority marker.",
+          "Shared right-side portrait rail for Player HUD surfaces, with tooltip-backed idle, typing, ready, and On Stage progress overlays plus an optional GM-authority marker.",
       },
     },
   },
@@ -55,5 +55,21 @@ export const Ready: Story = {
           "Backstage-style readiness state where player portraits can show ready badges and the GM authority owner is called out separately.",
       },
     },
+  },
+};
+
+export const Active: Story = {
+  args: {
+    participants: participantPortraitRailFixtures.active,
+    viewerParticipantId: "p-rhea",
+    ariaLabel: "On-stage participants",
+  },
+};
+
+export const ChangesRequested: Story = {
+  args: {
+    participants: participantPortraitRailFixtures.changesRequested,
+    viewerParticipantId: "p-rhea",
+    ariaLabel: "On-stage participants",
   },
 };

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, Crown } from "lucide-react";
+import { Check, Crown, RefreshCcw } from "lucide-react";
 import type {
   ParticipantPortraitRailParticipant,
   ParticipantPortraitRailProps,
@@ -26,6 +26,27 @@ function statusDisplay(status: ParticipantPortraitStatus): {
         label: "ready",
         tooltip: "Ready to resume",
         icon: <Check size={12} aria-hidden="true" />,
+      };
+    case "active":
+      return {
+        badgeClassName: "badge-primary",
+        label: "active",
+        tooltip: "Acting now",
+        icon: <span className="block h-2.5 w-2.5 rounded-full bg-base-100" aria-hidden="true" />,
+      };
+    case "yielded":
+      return {
+        badgeClassName: "badge-secondary",
+        label: "yielded",
+        tooltip: "Yielded",
+        icon: <Check size={12} aria-hidden="true" />,
+      };
+    case "changes-requested":
+      return {
+        badgeClassName: "badge-warning",
+        label: "changes requested",
+        tooltip: "Changes requested",
+        icon: <RefreshCcw size={12} aria-hidden="true" />,
       };
     default:
       return {
@@ -85,7 +106,6 @@ export function ParticipantPortraitRail({
               {participant.ownsGMAuthority ? (
                 <span
                   aria-label={`${participant.name} GM authority`}
-                  title="Owns GM authority"
                   className="tooltip tooltip-left absolute top-1 right-1 z-10"
                   data-tip="Owns GM authority"
                 >
@@ -96,7 +116,6 @@ export function ParticipantPortraitRail({
               ) : null}
               <span
                 aria-label={`${participant.name} status: ${status.tooltip}`}
-                title={status.tooltip}
                 className="tooltip tooltip-left absolute right-1 bottom-1 z-10"
                 data-tip={status.tooltip}
               >

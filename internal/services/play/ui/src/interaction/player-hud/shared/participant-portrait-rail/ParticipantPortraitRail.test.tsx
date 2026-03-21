@@ -33,4 +33,18 @@ describe("ParticipantPortraitRail", () => {
     expect(screen.getByLabelText("Bryn: typing")).toBeInTheDocument();
     expect(screen.getByLabelText("Bryn status: Typing")).toBeInTheDocument();
   });
+
+  it("renders on-stage acting and revision states", () => {
+    render(
+      <ParticipantPortraitRail
+        participants={participantPortraitRailFixtures.changesRequested}
+        viewerParticipantId="p-rhea"
+        ariaLabel="On-stage participants"
+      />,
+    );
+
+    expect(screen.getByLabelText("On-stage participants")).toBeInTheDocument();
+    expect(screen.getByLabelText("Rhea: changes requested")).toBeInTheDocument();
+    expect(screen.getByLabelText("Rhea status: Changes requested")).toBeInTheDocument();
+  });
 });

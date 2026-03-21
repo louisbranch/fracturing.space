@@ -1,4 +1,10 @@
-export type ParticipantPortraitStatus = "idle" | "typing" | "ready";
+export type ParticipantPortraitStatus =
+  | "idle"
+  | "typing"
+  | "ready"
+  | "active"
+  | "yielded"
+  | "changes-requested";
 
 export type ParticipantPortraitRailParticipant = {
   id: string;

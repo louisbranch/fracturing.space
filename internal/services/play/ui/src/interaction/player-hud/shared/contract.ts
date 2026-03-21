@@ -1,4 +1,5 @@
 import type { BackstageState } from "../backstage/shared/contract";
+import type { OnStageState } from "../on-stage/shared/contract";
 
 // HUDNavbarTab identifies the three top-level navigation surfaces in the player
 // HUD.
@@ -31,6 +32,7 @@ export type SideChatState = {
 // PlayerHUDState is the minimal top-level state for the player HUD shell.
 export type PlayerHUDState = {
   activeTab: HUDNavbarTab;
+  onStage: OnStageState;
   backstage: BackstageState;
   sideChat: SideChatState;
 };

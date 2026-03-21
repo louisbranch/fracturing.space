@@ -1,10 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { backstageFixtureCatalog, sideChatState } from "../shared/fixtures";
+import { backstageFixtureCatalog, onStageFixtureCatalog, sideChatState } from "../shared/fixtures";
 import { PlayerHUDShell } from "./PlayerHUDShell";
 
 const baseProps = {
+  onStage: onStageFixtureCatalog.viewerPosted,
+  onStageDraft: "Aria commits to the vault seam.",
+  onOnStageDraftChange: () => {},
+  onOnStageSubmit: () => {},
+  onOnStageSubmitAndYield: () => {},
+  onOnStageYield: () => {},
+  onOnStageUnyield: () => {},
   backstage: backstageFixtureCatalog.openDiscussion,
   backstageDraft: "",
   onBackstageDraftChange: () => {},
@@ -17,12 +24,14 @@ const baseProps = {
 };
 
 describe("PlayerHUDShell", () => {
-  it("assembles the navbar and content placeholder into a viewport", () => {
+  it("assembles the navbar and on-stage panel into a viewport", () => {
     render(<PlayerHUDShell activeTab="on-stage" onTabChange={() => {}} {...baseProps} />);
 
     expect(screen.getByLabelText("Player HUD shell")).toBeInTheDocument();
     expect(screen.getByLabelText("Player HUD navigation")).toBeInTheDocument();
-    expect(screen.getByText("on-stage — content coming soon")).toBeInTheDocument();
+    expect(screen.getByLabelText("On Stage")).toBeInTheDocument();
+    expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
+    expect(screen.getByLabelText("On-stage action input")).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage participants")).toBeInTheDocument();
     expect(screen.getByLabelText("Guide GM authority")).toBeInTheDocument();
   });
@@ -43,8 +52,6 @@ describe("PlayerHUDShell", () => {
     expect(screen.getByLabelText("Side chat messages")).toBeInTheDocument();
     expect(screen.getByLabelText("Chat message input")).toBeInTheDocument();
     expect(screen.getByLabelText("Side chat participants")).toBeInTheDocument();
-    // Placeholder should not be shown.
-    expect(screen.queryByText(/content coming soon/)).not.toBeInTheDocument();
   });
 
   it("renders the Backstage panel when activeTab is backstage", () => {
@@ -53,7 +60,5 @@ describe("PlayerHUDShell", () => {
     expect(screen.getByLabelText("Backstage")).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage OOC messages")).toBeInTheDocument();
     expect(screen.getByLabelText("Backstage participants")).toBeInTheDocument();
-    // Placeholder should not be shown.
-    expect(screen.queryByText(/content coming soon/)).not.toBeInTheDocument();
   });
 });
