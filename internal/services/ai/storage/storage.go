@@ -262,3 +262,16 @@ type CampaignArtifactStore interface {
 	GetCampaignArtifact(ctx context.Context, campaignID string, path string) (CampaignArtifactRecord, error)
 	ListCampaignArtifacts(ctx context.Context, campaignID string) ([]CampaignArtifactRecord, error)
 }
+
+// Store embeds all AI storage interfaces so composition roots and integration
+// tests can accept a single concrete store instead of enumerating every
+// sub-interface. Handler-level code should continue accepting narrow interfaces.
+type Store interface {
+	AgentStore
+	CredentialStore
+	ProviderGrantStore
+	ProviderConnectSessionStore
+	AccessRequestStore
+	AuditEventStore
+	CampaignArtifactStore
+}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -46,9 +47,9 @@ func newAuthTokenResolver(
 	}
 }
 
-// authTokenResolverForRuntime rebuilds the resolver from the current invocation
-// handler state so tests and runtime overrides that swap clocks or adapters
-// remain visible to shared auth-token logic.
+// authTokenResolverForRuntime rebuilds the resolver from the current handler
+// state so post-construction mutations (e.g. test clock/adapter swaps) are
+// visible to the shared auth-token logic.
 func (h *InvocationHandlers) authTokenResolverForRuntime() authTokenResolver {
 	return newAuthTokenResolver(
 		h.credentialStore,
@@ -62,7 +63,7 @@ func (h *InvocationHandlers) authTokenResolverForRuntime() authTokenResolver {
 // resolveAgentInvokeToken derives the provider access token for one persisted
 // agent record without leaking auth-reference shape into caller code.
 func (r authTokenResolver) resolveAgentInvokeToken(ctx context.Context, ownerUserID string, agentRecord storage.AgentRecord) (string, error) {
-	authReference, err := agentAuthReferenceFromRecord(agentRecord)
+	authReference, err := agent.AuthReferenceFromRecord(agentRecord)
 	if err != nil {
 		return "", status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
 	}
@@ -84,7 +85,7 @@ func (r authTokenResolver) resolveAuthReferenceToken(ctx context.Context, ownerU
 			}
 			return "", status.Errorf(codes.Internal, "get credential: %v", err)
 		}
-		if !credentialFromRecord(credentialRecord).IsUsableBy(ownerUserID, requestedProvider) {
+		if !credential.FromRecord(credentialRecord).IsUsableBy(ownerUserID, requestedProvider) {
 			return "", status.Error(codes.FailedPrecondition, "credential must be active and owned by caller")
 		}
 		credentialSecret, err := r.sealer.Open(credentialRecord.SecretCiphertext)
@@ -101,7 +102,7 @@ func (r authTokenResolver) resolveAuthReferenceToken(ctx context.Context, ownerU
 		if err != nil {
 			return "", status.Errorf(codes.Internal, "open provider token: %v", err)
 		}
-		accessToken, err := accessTokenFromTokenPayload(tokenPlaintext)
+		accessToken, err := providergrant.AccessTokenFromPayload(tokenPlaintext)
 		if err != nil {
 			return "", status.Errorf(codes.FailedPrecondition, "provider token payload is invalid: %v", err)
 		}
@@ -151,7 +152,7 @@ func (r authTokenResolver) refreshProviderGrant(ctx context.Context, ownerUserID
 	if err != nil {
 		return storage.ProviderGrantRecord{}, fmt.Errorf("open provider token: %w", err)
 	}
-	refreshToken, err := refreshTokenFromTokenPayload(tokenPlaintext)
+	refreshToken, err := providergrant.RefreshTokenFromPayload(tokenPlaintext)
 	if err != nil {
 		return storage.ProviderGrantRecord{}, fmt.Errorf("extract refresh token: %w", err)
 	}
@@ -177,12 +178,12 @@ func (r authTokenResolver) refreshProviderGrant(ctx context.Context, ownerUserID
 		return storage.ProviderGrantRecord{}, fmt.Errorf("seal provider token: %w", err)
 	}
 
-	updatedGrant, err := providergrant.RecordRefreshSuccess(providerGrantFromRecord(record), tokenCiphertext, exchanged.ExpiresAt, refreshedAt)
+	updatedGrant, err := providergrant.RecordRefreshSuccess(providergrant.FromRecord(record), tokenCiphertext, exchanged.ExpiresAt, refreshedAt)
 	if err != nil {
 		return storage.ProviderGrantRecord{}, fmt.Errorf("record provider grant refresh success: %w", err)
 	}
 	updated := record
-	applyProviderGrantLifecycle(&updated, updatedGrant)
+	providergrant.ApplyLifecycle(&updated, updatedGrant)
 	if err := r.providerGrantStore.PutProviderGrant(ctx, updated); err != nil {
 		return storage.ProviderGrantRecord{}, fmt.Errorf("put provider grant: %w", err)
 	}
@@ -196,12 +197,12 @@ func (r authTokenResolver) markProviderGrantRefreshFailed(ctx context.Context, r
 	if refreshErr != nil && strings.TrimSpace(refreshErr.Error()) != "" {
 		message = strings.TrimSpace(refreshErr.Error())
 	}
-	updatedGrant, err := providergrant.RecordRefreshFailure(providerGrantFromRecord(record), message, refreshedAt)
+	updatedGrant, err := providergrant.RecordRefreshFailure(providergrant.FromRecord(record), message, refreshedAt)
 	if err != nil {
 		return fmt.Errorf("record provider grant refresh failed: %w", err)
 	}
 	updated := record
-	applyProviderGrantLifecycle(&updated, updatedGrant)
+	providergrant.ApplyLifecycle(&updated, updatedGrant)
 	if err := r.providerGrantStore.PutProviderGrant(ctx, updated); err != nil {
 		return fmt.Errorf("mark provider grant refresh failed: %w", err)
 	}
@@ -230,7 +231,7 @@ func (r authTokenResolver) resolveProviderGrantForInvocation(ctx context.Context
 	}
 
 	now := r.clock().UTC()
-	grant := providerGrantFromRecord(record)
+	grant := providergrant.FromRecord(record)
 	switch grant.Status {
 	case providergrant.StatusActive:
 		if grant.IsExpired(now) && !record.RefreshSupported {

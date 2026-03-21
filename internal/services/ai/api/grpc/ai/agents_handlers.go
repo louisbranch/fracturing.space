@@ -8,7 +8,9 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -71,7 +73,7 @@ func (h *AgentHandlers) CreateAgent(ctx context.Context, in *aiv1.CreateAgentReq
 		CreatedAt:    created.CreatedAt,
 		UpdatedAt:    created.UpdatedAt,
 	}
-	applyAgentAuthReference(&record, created.AuthReference)
+	agent.ApplyAuthReference(&record, created.AuthReference)
 	if err := h.agentStore.PutAgent(ctx, record); err != nil {
 		if errors.Is(err, storage.ErrConflict) {
 			return nil, status.Error(codes.AlreadyExists, "agent label already exists")
@@ -246,11 +248,11 @@ func (h *AgentHandlers) GetAccessibleAgent(ctx context.Context, in *aiv1.GetAcce
 
 	// Authorization is intentionally shared with invoke checks so lookup and
 	// runtime execution enforce one access policy source.
-	authorized, _, _, err := newAccessibleAgentResolver(h.agentStore, h.accessRequestStore).isAuthorizedToInvokeAgent(ctx, userID, agentRecord)
+	authResult, err := newAccessibleAgentResolver(h.agentStore, h.accessRequestStore).isAuthorizedToInvokeAgent(ctx, userID, agentRecord)
 	if err != nil {
 		return nil, err
 	}
-	if !authorized {
+	if !authResult.Authorized {
 		// Mask inaccessible resources as not found to avoid tenant probing.
 		return nil, status.Error(codes.NotFound, "agent not found")
 	}
@@ -288,7 +290,7 @@ func (h *AgentHandlers) ValidateCampaignAgentBinding(ctx context.Context, in *ai
 	if agentStatusToProto(agentRecord.Status) != aiv1.AgentStatus_AGENT_STATUS_ACTIVE {
 		return nil, status.Error(codes.FailedPrecondition, "agent is not active")
 	}
-	authReference, err := agentAuthReferenceFromRecord(agentRecord)
+	authReference, err := agent.AuthReferenceFromRecord(agentRecord)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
 	}
@@ -334,7 +336,7 @@ func (h *AgentHandlers) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentReq
 	label := firstNonEmpty(strings.TrimSpace(in.GetLabel()), existing.Label)
 	instructions := firstNonEmpty(strings.TrimSpace(in.GetInstructions()), existing.Instructions)
 	model := firstNonEmpty(strings.TrimSpace(in.GetModel()), existing.Model)
-	authReference, err := agentAuthReferenceFromRecord(existing)
+	authReference, err := agent.AuthReferenceFromRecord(existing)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
 	}
@@ -360,7 +362,7 @@ func (h *AgentHandlers) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentReq
 	if err := h.validateAgentAuthReferenceForProvider(ctx, userID, providerFromString(existing.Provider), normalized.AuthReference); err != nil {
 		return nil, err
 	}
-	existingAuthReference, err := agentAuthReferenceFromRecord(existing)
+	existingAuthReference, err := agent.AuthReferenceFromRecord(existing)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
 	}
@@ -376,7 +378,7 @@ func (h *AgentHandlers) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentReq
 	record.Instructions = normalized.Instructions
 	record.Model = normalized.Model
 	record.UpdatedAt = h.clock().UTC()
-	applyAgentAuthReference(&record, normalized.AuthReference)
+	agent.ApplyAuthReference(&record, normalized.AuthReference)
 	if err := h.agentStore.PutAgent(ctx, record); err != nil {
 		if errors.Is(err, storage.ErrConflict) {
 			return nil, status.Error(codes.AlreadyExists, "agent label already exists")
@@ -458,7 +460,7 @@ func (h *AgentHandlers) validateAgentAuthReferenceForProvider(ctx context.Contex
 			}
 			return status.Errorf(codes.Internal, "get credential: %v", err)
 		}
-		if !credentialFromRecord(credentialRecord).IsUsableBy(ownerUserID, requestedProvider) {
+		if !credential.FromRecord(credentialRecord).IsUsableBy(ownerUserID, requestedProvider) {
 			return status.Error(codes.FailedPrecondition, "credential must be active and owned by caller")
 		}
 		return nil
@@ -473,7 +475,7 @@ func (h *AgentHandlers) validateAgentAuthReferenceForProvider(ctx context.Contex
 			}
 			return status.Errorf(codes.Internal, "get provider grant: %v", err)
 		}
-		if !providerGrantFromRecord(grantRecord).IsUsableBy(ownerUserID, requestedProvider) {
+		if !providergrant.FromRecord(grantRecord).IsUsableBy(ownerUserID, requestedProvider) {
 			return status.Error(codes.FailedPrecondition, "provider grant must be active and owned by caller")
 		}
 		return nil

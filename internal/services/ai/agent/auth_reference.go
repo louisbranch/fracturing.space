@@ -1,6 +1,10 @@
 package agent
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+)
 
 // AuthReferenceKind identifies which auth source one agent uses.
 type AuthReferenceKind string
@@ -105,4 +109,17 @@ func (r AuthReference) Type() string {
 // IsZero reports whether the auth reference is unset.
 func (r AuthReference) IsZero() bool {
 	return strings.TrimSpace(r.ID) == "" && strings.TrimSpace(string(r.Kind)) == ""
+}
+
+// AuthReferenceFromRecord reconstructs the domain-owned auth selection from
+// the persisted split-ID storage shape.
+func AuthReferenceFromRecord(record storage.AgentRecord) (AuthReference, error) {
+	return AuthReferenceFromIDs(record.CredentialID, record.ProviderGrantID, true)
+}
+
+// ApplyAuthReference projects the typed domain auth reference back onto the
+// storage shape until persistence is made typed as well.
+func ApplyAuthReference(record *storage.AgentRecord, reference AuthReference) {
+	record.CredentialID = reference.CredentialID()
+	record.ProviderGrantID = reference.ProviderGrantID()
 }

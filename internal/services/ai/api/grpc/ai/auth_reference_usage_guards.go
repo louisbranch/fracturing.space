@@ -99,15 +99,20 @@ func (g authReferenceUsageGuard) ensureAgentNotBoundToActiveCampaigns(ctx contex
 }
 
 func (g authReferenceUsageGuard) activeCampaignCount(ctx context.Context, agentID string) (int32, error) {
+	return queryActiveCampaignCount(ctx, g.gameCampaignAIClient, agentID)
+}
+
+// queryActiveCampaignCount returns the number of DRAFT/ACTIVE campaigns bound
+// to one AI agent. Returns zero when the game client is unavailable.
+func queryActiveCampaignCount(ctx context.Context, client gamev1.CampaignAIServiceClient, agentID string) (int32, error) {
 	agentID = strings.TrimSpace(agentID)
 	if agentID == "" {
 		return 0, status.Error(codes.InvalidArgument, "agent_id is required")
 	}
-	if g.gameCampaignAIClient == nil {
+	if client == nil {
 		return 0, nil
 	}
-
-	usage, err := g.gameCampaignAIClient.GetCampaignAIBindingUsage(ctx, &gamev1.GetCampaignAIBindingUsageRequest{
+	usage, err := client.GetCampaignAIBindingUsage(ctx, &gamev1.GetCampaignAIBindingUsageRequest{
 		AiAgentId: agentID,
 	})
 	if err != nil {

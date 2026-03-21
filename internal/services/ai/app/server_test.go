@@ -27,7 +27,7 @@ func TestNewRequiresEncryptionKey(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", "")
 	setAISessionGrantEnv(t)
 
-	if _, err := New(0); err == nil {
+	if _, err := New(context.Background(), ":0"); err == nil {
 		t.Fatal("expected error for missing encryption key")
 	}
 }
@@ -37,7 +37,7 @@ func TestNewRejectsInvalidEncryptionKey(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", "not-base64")
 	setAISessionGrantEnv(t)
 
-	if _, err := New(0); err == nil {
+	if _, err := New(context.Background(), ":0"); err == nil {
 		t.Fatal("expected error for invalid encryption key")
 	}
 }
@@ -47,7 +47,7 @@ func TestNewSuccess(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
 	setAISessionGrantEnv(t)
 
-	srv, err := New(0)
+	srv, err := New(context.Background(), ":0")
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}
@@ -59,23 +59,23 @@ func TestNewSuccess(t *testing.T) {
 	}
 }
 
-func TestNewWithAddrContextRequiresContext(t *testing.T) {
+func TestNewRequiresContext(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
 	setAISessionGrantEnv(t)
 
-	if _, err := NewWithAddrContext(nil, "127.0.0.1:0"); err == nil || err.Error() != "context is required" {
-		t.Fatalf("NewWithAddrContext error = %v, want context is required", err)
+	if _, err := New(nil, "127.0.0.1:0"); err == nil || err.Error() != "context is required" {
+		t.Fatalf("New error = %v, want context is required", err)
 	}
 }
 
-func TestRunWithAddrRequiresContext(t *testing.T) {
+func TestRunRequiresContext(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
 	setAISessionGrantEnv(t)
 
-	if err := RunWithAddr(nil, "127.0.0.1:0"); err == nil || err.Error() != "context is required" {
-		t.Fatalf("RunWithAddr error = %v, want context is required", err)
+	if err := Run(nil, "127.0.0.1:0"); err == nil || err.Error() != "context is required" {
+		t.Fatalf("Run error = %v, want context is required", err)
 	}
 }
 
@@ -84,7 +84,7 @@ func TestServeRequiresContext(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
 	setAISessionGrantEnv(t)
 
-	srv, err := New(0)
+	srv, err := New(context.Background(), ":0")
 	if err != nil {
 		t.Fatalf("new server for nil-context test: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestServerCloseReleasesListener(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
 	setAISessionGrantEnv(t)
 
-	srv, err := New(0)
+	srv, err := New(context.Background(), ":0")
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}
@@ -119,44 +119,37 @@ func TestServerCloseReleasesListener(t *testing.T) {
 	_ = l.Close()
 }
 
-func TestOpenAIOAuthConfigFromEnvReturnsNilWhenUnset(t *testing.T) {
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL", "")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL", "")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID", "")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET", "")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI", "")
-
-	cfg, err := openAIOAuthConfigFromEnv()
+func TestOpenAIOAuthConfigReturnsNilWhenUnset(t *testing.T) {
+	cfg, err := openAIOAuthConfig(serverEnv{})
 	if err != nil {
-		t.Fatalf("openai oauth config from env: %v", err)
+		t.Fatalf("openai oauth config: %v", err)
 	}
 	if cfg != nil {
 		t.Fatalf("expected nil config, got %+v", cfg)
 	}
 }
 
-func TestOpenAIOAuthConfigFromEnvRejectsPartialConfig(t *testing.T) {
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL", "https://provider.example.com/oauth/authorize")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL", "")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID", "")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET", "")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI", "")
-
-	if _, err := openAIOAuthConfigFromEnv(); err == nil {
+func TestOpenAIOAuthConfigRejectsPartialConfig(t *testing.T) {
+	env := serverEnv{
+		OpenAIOAuthAuthURL: "https://provider.example.com/oauth/authorize",
+	}
+	if _, err := openAIOAuthConfig(env); err == nil {
 		t.Fatal("expected error for partial config")
 	}
 }
 
-func TestOpenAIOAuthConfigFromEnvBuildsConfigWhenComplete(t *testing.T) {
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL", " https://provider.example.com/oauth/authorize ")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL", " https://provider.example.com/oauth/token ")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID", " client-1 ")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET", " secret-1 ")
-	t.Setenv("FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI", " https://app.example.com/oauth/callback ")
+func TestOpenAIOAuthConfigBuildsConfigWhenComplete(t *testing.T) {
+	env := serverEnv{
+		OpenAIOAuthAuthURL:      " https://provider.example.com/oauth/authorize ",
+		OpenAIOAuthTokenURL:     " https://provider.example.com/oauth/token ",
+		OpenAIOAuthClientID:     " client-1 ",
+		OpenAIOAuthClientSecret: " secret-1 ",
+		OpenAIOAuthRedirectURI:  " https://app.example.com/oauth/callback ",
+	}
 
-	cfg, err := openAIOAuthConfigFromEnv()
+	cfg, err := openAIOAuthConfig(env)
 	if err != nil {
-		t.Fatalf("openai oauth config from env: %v", err)
+		t.Fatalf("openai oauth config: %v", err)
 	}
 	if cfg == nil {
 		t.Fatal("expected non-nil config")

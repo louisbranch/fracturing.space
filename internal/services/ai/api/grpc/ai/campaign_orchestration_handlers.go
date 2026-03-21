@@ -118,6 +118,10 @@ func (h *CampaignOrchestrationHandlers) RunCampaignTurn(ctx context.Context, in 
 	}, nil
 }
 
+// campaignTurnGRPCError converts orchestration errors to gRPC status errors.
+// The orchestration layer wraps most context errors with app error codes, but
+// raw context errors may still escape (e.g. from transport-level timeouts), so
+// we fall back to context detection after the app-error branch.
 func campaignTurnGRPCError(err error) error {
 	if err == nil {
 		return nil

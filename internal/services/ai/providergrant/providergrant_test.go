@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 func TestNormalizeCreateInput(t *testing.T) {
@@ -176,5 +177,132 @@ func TestRecordRefreshFailure(t *testing.T) {
 	}
 	if got.RefreshedAt == nil || !got.RefreshedAt.Equal(refreshedAt) {
 		t.Fatalf("refreshed_at = %v, want %v", got.RefreshedAt, refreshedAt)
+	}
+}
+
+func TestFromRecordAndApplyLifecycle(t *testing.T) {
+	createdAt := time.Date(2026, 2, 15, 23, 20, 0, 0, time.UTC)
+	record := storage.ProviderGrantRecord{
+		ID:               "grant-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		GrantedScopes:    []string{"responses.read"},
+		TokenCiphertext:  "enc:token",
+		RefreshSupported: true,
+		Status:           "active",
+		CreatedAt:        createdAt,
+		UpdatedAt:        createdAt,
+	}
+
+	grant := FromRecord(record)
+	if grant.ID != "grant-1" {
+		t.Fatalf("ID = %q, want %q", grant.ID, "grant-1")
+	}
+	if grant.Provider != provider.OpenAI {
+		t.Fatalf("Provider = %q, want %q", grant.Provider, provider.OpenAI)
+	}
+	if grant.Status != StatusActive {
+		t.Fatalf("Status = %q, want %q", grant.Status, StatusActive)
+	}
+	if !grant.RefreshSupported {
+		t.Fatal("expected RefreshSupported")
+	}
+
+	revokedAt := createdAt.Add(5 * time.Minute)
+	grant.Status = StatusRevoked
+	grant.UpdatedAt = revokedAt
+	grant.RevokedAt = &revokedAt
+
+	ApplyLifecycle(&record, grant)
+	if record.Status != "revoked" {
+		t.Fatalf("record.Status = %q, want %q", record.Status, "revoked")
+	}
+	if record.RevokedAt == nil || !record.RevokedAt.Equal(revokedAt) {
+		t.Fatalf("record.RevokedAt = %v, want %v", record.RevokedAt, revokedAt)
+	}
+}
+
+func TestDecodeTokenPayload(t *testing.T) {
+	payload, err := DecodeTokenPayload(`{"access_token":"at","refresh_token":"rt"}`)
+	if err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if payload.AccessToken != "at" || payload.RefreshToken != "rt" {
+		t.Fatalf("payload = %+v, want access=at refresh=rt", payload)
+	}
+
+	_, err = DecodeTokenPayload("")
+	if err == nil {
+		t.Fatal("expected error for empty payload")
+	}
+
+	_, err = DecodeTokenPayload("not-json")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestRefreshTokenFromPayload(t *testing.T) {
+	token, err := RefreshTokenFromPayload(`{"access_token":"at","refresh_token":"rt"}`)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if token != "rt" {
+		t.Fatalf("token = %q, want %q", token, "rt")
+	}
+
+	_, err = RefreshTokenFromPayload(`{"access_token":"at"}`)
+	if err == nil {
+		t.Fatal("expected error when refresh token missing")
+	}
+}
+
+func TestAccessTokenFromPayload(t *testing.T) {
+	token, err := AccessTokenFromPayload(`{"access_token":"at","refresh_token":"rt"}`)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if token != "at" {
+		t.Fatalf("token = %q, want %q", token, "at")
+	}
+
+	_, err = AccessTokenFromPayload(`{"refresh_token":"rt"}`)
+	if err == nil {
+		t.Fatal("expected error when access token missing")
+	}
+}
+
+func TestRevokeTokenFromPayload(t *testing.T) {
+	// Prefers refresh token
+	token, err := RevokeTokenFromPayload(`{"access_token":"at","refresh_token":"rt"}`)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if token != "rt" {
+		t.Fatalf("token = %q, want %q (should prefer refresh)", token, "rt")
+	}
+
+	// Falls back to access token
+	token, err = RevokeTokenFromPayload(`{"access_token":"at"}`)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if token != "at" {
+		t.Fatalf("token = %q, want %q", token, "at")
+	}
+
+	// Falls back to raw plaintext for non-JSON
+	token, err = RevokeTokenFromPayload("raw-token")
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if token != "raw-token" {
+		t.Fatalf("token = %q, want %q", token, "raw-token")
+	}
+
+	// Error for empty
+	_, err = RevokeTokenFromPayload("")
+	if err == nil {
+		t.Fatal("expected error for empty payload")
 	}
 }

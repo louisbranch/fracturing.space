@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 func TestNormalizeCreateInput(t *testing.T) {
@@ -153,6 +154,58 @@ func TestStatusAndAuthReferenceHelpers(t *testing.T) {
 	}
 	if got := (Agent{}).AuthRefType(); got != "" {
 		t.Fatalf("AuthRefType() = %q, want empty for zero auth ref", got)
+	}
+}
+
+func TestAuthReferenceIsZero(t *testing.T) {
+	if !(AuthReference{}).IsZero() {
+		t.Fatal("expected IsZero for empty auth reference")
+	}
+	if CredentialAuthReference("cred-1").IsZero() {
+		t.Fatal("expected not IsZero for populated auth reference")
+	}
+}
+
+func TestAuthReferenceFromRecord(t *testing.T) {
+	ref, err := AuthReferenceFromRecord(storage.AgentRecord{CredentialID: "cred-1"})
+	if err != nil {
+		t.Fatalf("AuthReferenceFromRecord credential: %v", err)
+	}
+	if ref != CredentialAuthReference("cred-1") {
+		t.Fatalf("ref = %+v, want credential cred-1", ref)
+	}
+
+	ref, err = AuthReferenceFromRecord(storage.AgentRecord{ProviderGrantID: "grant-1"})
+	if err != nil {
+		t.Fatalf("AuthReferenceFromRecord provider grant: %v", err)
+	}
+	if ref != ProviderGrantAuthReference("grant-1") {
+		t.Fatalf("ref = %+v, want provider_grant grant-1", ref)
+	}
+
+	_, err = AuthReferenceFromRecord(storage.AgentRecord{CredentialID: "c", ProviderGrantID: "g"})
+	if !errors.Is(err, ErrMultipleAuthReferences) {
+		t.Fatalf("expected ErrMultipleAuthReferences, got %v", err)
+	}
+}
+
+func TestApplyAuthReference(t *testing.T) {
+	var record storage.AgentRecord
+
+	ApplyAuthReference(&record, CredentialAuthReference("cred-1"))
+	if record.CredentialID != "cred-1" {
+		t.Fatalf("CredentialID = %q, want %q", record.CredentialID, "cred-1")
+	}
+	if record.ProviderGrantID != "" {
+		t.Fatalf("ProviderGrantID = %q, want empty", record.ProviderGrantID)
+	}
+
+	ApplyAuthReference(&record, ProviderGrantAuthReference("grant-1"))
+	if record.ProviderGrantID != "grant-1" {
+		t.Fatalf("ProviderGrantID = %q, want %q", record.ProviderGrantID, "grant-1")
+	}
+	if record.CredentialID != "" {
+		t.Fatalf("CredentialID = %q, want empty", record.CredentialID)
 	}
 }
 

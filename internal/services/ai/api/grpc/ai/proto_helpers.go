@@ -102,14 +102,14 @@ func providerGrantStatusToProto(value string) aiv1.ProviderGrantStatus {
 }
 
 func accessRequestStatusToProto(value string) aiv1.AccessRequestStatus {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "pending":
+	switch accessrequest.ParseStatus(value) {
+	case accessrequest.StatusPending:
 		return aiv1.AccessRequestStatus_ACCESS_REQUEST_STATUS_PENDING
-	case "approved":
+	case accessrequest.StatusApproved:
 		return aiv1.AccessRequestStatus_ACCESS_REQUEST_STATUS_APPROVED
-	case "denied":
+	case accessrequest.StatusDenied:
 		return aiv1.AccessRequestStatus_ACCESS_REQUEST_STATUS_DENIED
-	case "revoked":
+	case accessrequest.StatusRevoked:
 		return aiv1.AccessRequestStatus_ACCESS_REQUEST_STATUS_REVOKED
 	default:
 		return aiv1.AccessRequestStatus_ACCESS_REQUEST_STATUS_UNSPECIFIED

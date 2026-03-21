@@ -7,7 +7,7 @@ import (
 )
 
 func TestProductionToolRegistryMatchesSessionCatalog(t *testing.T) {
-	sess := NewDirectSession(Clients{}, sessionContext{})
+	sess := NewDirectSession(Clients{}, SessionContext{})
 
 	tools, err := sess.ListTools(context.Background())
 	if err != nil {
@@ -25,7 +25,7 @@ func TestProductionToolRegistryMatchesSessionCatalog(t *testing.T) {
 		}
 		seen[tool.Name] = struct{}{}
 		names = append(names, tool.Name)
-		if _, ok := registry.lookup(tool.Name); !ok {
+		if _, ok := defaultRegistry.lookup(tool.Name); !ok {
 			t.Fatalf("tool %q is listed but not dispatchable", tool.Name)
 		}
 	}

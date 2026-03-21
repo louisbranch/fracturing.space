@@ -101,7 +101,7 @@ FROM ai_provider_connect_sessions
 WHERE id = ?
 `, connectSessionID)
 
-	rec, err := scanProviderConnectSessionRow(row)
+	rec, err := scanProviderConnectSession(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.ProviderConnectSessionRecord{}, storage.ErrNotFound

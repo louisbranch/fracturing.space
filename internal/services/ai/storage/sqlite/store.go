@@ -107,9 +107,13 @@ func isUniqueConstraintError(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "unique constraint failed")
 }
 
-// PutAgent persists an agent record.
+// scanner abstracts *sql.Row and *sql.Rows so scan functions need only one
+// implementation per record type.
+type scanner interface {
+	Scan(dest ...any) error
+}
 
-func scanProviderGrantRow(row *sql.Row) (storage.ProviderGrantRecord, error) {
+func scanProviderGrant(s scanner) (storage.ProviderGrantRecord, error) {
 	var (
 		rec              storage.ProviderGrantRecord
 		grantedScopesRaw string
@@ -119,7 +123,7 @@ func scanProviderGrantRow(row *sql.Row) (storage.ProviderGrantRecord, error) {
 		expiresAt        sql.NullInt64
 		lastRefreshedAt  sql.NullInt64
 	)
-	if err := row.Scan(
+	if err := s.Scan(
 		&rec.ID,
 		&rec.OwnerUserID,
 		&rec.Provider,
@@ -158,7 +162,7 @@ func scanProviderGrantRow(row *sql.Row) (storage.ProviderGrantRecord, error) {
 	return rec, nil
 }
 
-func scanProviderConnectSessionRow(row *sql.Row) (storage.ProviderConnectSessionRecord, error) {
+func scanProviderConnectSession(s scanner) (storage.ProviderConnectSessionRecord, error) {
 	var (
 		rec                storage.ProviderConnectSessionRecord
 		requestedScopesRaw string
@@ -167,7 +171,7 @@ func scanProviderConnectSessionRow(row *sql.Row) (storage.ProviderConnectSession
 		expiresAt          int64
 		completedAt        sql.NullInt64
 	)
-	if err := row.Scan(
+	if err := s.Scan(
 		&rec.ID,
 		&rec.OwnerUserID,
 		&rec.Provider,
@@ -197,95 +201,14 @@ func scanProviderConnectSessionRow(row *sql.Row) (storage.ProviderConnectSession
 	return rec, nil
 }
 
-func scanProviderGrantRows(rows *sql.Rows) (storage.ProviderGrantRecord, error) {
-	var (
-		rec              storage.ProviderGrantRecord
-		grantedScopesRaw string
-		createdAt        int64
-		updatedAt        int64
-		revokedAt        sql.NullInt64
-		expiresAt        sql.NullInt64
-		lastRefreshedAt  sql.NullInt64
-	)
-	if err := rows.Scan(
-		&rec.ID,
-		&rec.OwnerUserID,
-		&rec.Provider,
-		&grantedScopesRaw,
-		&rec.TokenCiphertext,
-		&rec.RefreshSupported,
-		&rec.Status,
-		&rec.LastRefreshError,
-		&createdAt,
-		&updatedAt,
-		&revokedAt,
-		&expiresAt,
-		&lastRefreshedAt,
-	); err != nil {
-		return storage.ProviderGrantRecord{}, err
-	}
-	scopes, err := decodeScopes(grantedScopesRaw)
-	if err != nil {
-		return storage.ProviderGrantRecord{}, err
-	}
-	rec.GrantedScopes = scopes
-	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
-	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
-	if revokedAt.Valid {
-		value := sqliteutil.FromMillis(revokedAt.Int64)
-		rec.RevokedAt = &value
-	}
-	if expiresAt.Valid {
-		value := sqliteutil.FromMillis(expiresAt.Int64)
-		rec.ExpiresAt = &value
-	}
-	if lastRefreshedAt.Valid {
-		value := sqliteutil.FromMillis(lastRefreshedAt.Int64)
-		rec.LastRefreshedAt = &value
-	}
-	return rec, nil
-}
-
-func scanAccessRequestRow(row *sql.Row) (storage.AccessRequestRecord, error) {
+func scanAccessRequest(s scanner) (storage.AccessRequestRecord, error) {
 	var (
 		rec        storage.AccessRequestRecord
 		createdAt  int64
 		updatedAt  int64
 		reviewedAt sql.NullInt64
 	)
-	if err := row.Scan(
-		&rec.ID,
-		&rec.RequesterUserID,
-		&rec.OwnerUserID,
-		&rec.AgentID,
-		&rec.Scope,
-		&rec.RequestNote,
-		&rec.Status,
-		&rec.ReviewerUserID,
-		&rec.ReviewNote,
-		&createdAt,
-		&updatedAt,
-		&reviewedAt,
-	); err != nil {
-		return storage.AccessRequestRecord{}, err
-	}
-	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
-	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
-	if reviewedAt.Valid {
-		value := sqliteutil.FromMillis(reviewedAt.Int64)
-		rec.ReviewedAt = &value
-	}
-	return rec, nil
-}
-
-func scanAccessRequestRows(rows *sql.Rows) (storage.AccessRequestRecord, error) {
-	var (
-		rec        storage.AccessRequestRecord
-		createdAt  int64
-		updatedAt  int64
-		reviewedAt sql.NullInt64
-	)
-	if err := rows.Scan(
+	if err := s.Scan(
 		&rec.ID,
 		&rec.RequesterUserID,
 		&rec.OwnerUserID,

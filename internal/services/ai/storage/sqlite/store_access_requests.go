@@ -99,7 +99,7 @@ FROM ai_access_requests
 WHERE id = ?
 `, accessRequestID)
 
-	rec, err := scanAccessRequestRow(row)
+	rec, err := scanAccessRequest(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.AccessRequestRecord{}, storage.ErrNotFound
@@ -154,7 +154,7 @@ LIMIT ?
 
 	page := storage.AccessRequestPage{AccessRequests: make([]storage.AccessRequestRecord, 0, pageSize)}
 	for rows.Next() {
-		rec, err := scanAccessRequestRows(rows)
+		rec, err := scanAccessRequest(rows)
 		if err != nil {
 			return storage.AccessRequestPage{}, fmt.Errorf("scan access request row: %w", err)
 		}
@@ -215,7 +215,7 @@ LIMIT ?
 
 	page := storage.AccessRequestPage{AccessRequests: make([]storage.AccessRequestRecord, 0, pageSize)}
 	for rows.Next() {
-		rec, err := scanAccessRequestRows(rows)
+		rec, err := scanAccessRequest(rows)
 		if err != nil {
 			return storage.AccessRequestPage{}, fmt.Errorf("scan access request row: %w", err)
 		}
@@ -261,7 +261,7 @@ ORDER BY id
 LIMIT 1
 `, requesterUserID, ownerUserID, agentID)
 
-	rec, err := scanAccessRequestRow(row)
+	rec, err := scanAccessRequest(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.AccessRequestRecord{}, storage.ErrNotFound
@@ -317,7 +317,7 @@ LIMIT ?
 
 	page := storage.AccessRequestPage{AccessRequests: make([]storage.AccessRequestRecord, 0, pageSize)}
 	for rows.Next() {
-		rec, err := scanAccessRequestRows(rows)
+		rec, err := scanAccessRequest(rows)
 		if err != nil {
 			return storage.AccessRequestPage{}, fmt.Errorf("scan access request row: %w", err)
 		}

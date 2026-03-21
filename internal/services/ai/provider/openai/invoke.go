@@ -17,12 +17,14 @@ type InvokeConfig struct {
 	HTTPClient   *http.Client
 }
 
-type invokeAdapter struct {
+// InvokeAdapter implements provider.InvocationAdapter, orchestration.Provider,
+// and provider.ModelAdapter for the OpenAI Responses API.
+type InvokeAdapter struct {
 	cfg InvokeConfig
 }
 
 // NewInvokeAdapter builds an OpenAI invocation adapter.
-func NewInvokeAdapter(cfg InvokeConfig) provider.InvocationAdapter {
+func NewInvokeAdapter(cfg InvokeConfig) *InvokeAdapter {
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = http.DefaultClient
 	}
@@ -32,10 +34,10 @@ func NewInvokeAdapter(cfg InvokeConfig) provider.InvocationAdapter {
 	if strings.TrimSpace(cfg.BaseURL) == "" {
 		cfg.BaseURL = openAIBaseURLFromResponsesURL(cfg.ResponsesURL)
 	}
-	return &invokeAdapter{cfg: cfg}
+	return &InvokeAdapter{cfg: cfg}
 }
 
-func (a *invokeAdapter) Invoke(ctx context.Context, input provider.InvokeInput) (provider.InvokeResult, error) {
+func (a *InvokeAdapter) Invoke(ctx context.Context, input provider.InvokeInput) (provider.InvokeResult, error) {
 	credentialSecret := strings.TrimSpace(input.CredentialSecret)
 	model := strings.TrimSpace(input.Model)
 	prompt := strings.TrimSpace(input.Input)
@@ -52,7 +54,7 @@ func (a *invokeAdapter) Invoke(ctx context.Context, input provider.InvokeInput) 
 }
 
 // Run executes one OpenAI Responses API step with native tool calling.
-func (a *invokeAdapter) Run(ctx context.Context, input orchestration.ProviderInput) (orchestration.ProviderOutput, error) {
+func (a *InvokeAdapter) Run(ctx context.Context, input orchestration.ProviderInput) (orchestration.ProviderOutput, error) {
 	credentialSecret := strings.TrimSpace(input.CredentialSecret)
 	model := strings.TrimSpace(input.Model)
 	if credentialSecret == "" {

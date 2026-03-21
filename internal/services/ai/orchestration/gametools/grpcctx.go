@@ -12,9 +12,9 @@ import (
 
 const callTimeout = 30 * time.Second
 
-// sessionContext carries the fixed campaign/session/participant authority for
+// SessionContext carries the fixed campaign/session/participant authority for
 // one orchestration run.
-type sessionContext struct {
+type SessionContext struct {
 	CampaignID    string
 	SessionID     string
 	ParticipantID string
@@ -22,7 +22,7 @@ type sessionContext struct {
 
 // outgoingContext attaches gRPC metadata for campaign authority and a fresh
 // request ID to ctx. It also applies a call timeout when none is already set.
-func outgoingContext(ctx context.Context, sc sessionContext) (context.Context, context.CancelFunc) {
+func outgoingContext(ctx context.Context, sc SessionContext) (context.Context, context.CancelFunc) {
 	requestID, _ := id.NewID()
 
 	ctx = metadata.AppendToOutgoingContext(ctx, grpcmeta.RequestIDHeader, requestID)

@@ -125,7 +125,7 @@ func (h *ProviderGrantHandlers) StartProviderConnect(ctx context.Context, in *ai
 		OwnerUserID:            userID,
 		Provider:               string(providerID),
 		Status:                 "pending",
-		RequestedScopes:        normalizeScopes(in.GetRequestedScopes()),
+		RequestedScopes:        providergrant.NormalizeScopes(in.GetRequestedScopes()),
 		StateHash:              hashState(state),
 		CodeVerifierCiphertext: codeVerifierCiphertext,
 		CreatedAt:              now,
@@ -354,7 +354,7 @@ func (h *ProviderGrantHandlers) RevokeProviderGrant(ctx context.Context, in *aiv
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "open provider token: %v", err)
 		}
-		tokenForRevoke, err := revokeTokenFromTokenPayload(tokenPlaintext)
+		tokenForRevoke, err := providergrant.RevokeTokenFromPayload(tokenPlaintext)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "derive provider revoke token: %v", err)
 		}
@@ -363,11 +363,11 @@ func (h *ProviderGrantHandlers) RevokeProviderGrant(ctx context.Context, in *aiv
 		}
 	}
 
-	revoked, err := providergrant.Revoke(providerGrantFromRecord(record), h.clock)
+	revoked, err := providergrant.Revoke(providergrant.FromRecord(record), h.clock)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
-	applyProviderGrantLifecycle(&record, revoked)
+	providergrant.ApplyLifecycle(&record, revoked)
 	if err := h.providerGrantStore.PutProviderGrant(ctx, record); err != nil {
 		return nil, status.Errorf(codes.Internal, "put provider grant: %v", err)
 	}

@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // PromptBuilderConfig holds the dependencies for building campaign turn prompts.
@@ -68,11 +71,20 @@ func (pb *defaultPromptBuilder) Build(ctx context.Context, sess Session, input P
 func readOptionalResource(ctx context.Context, sess Session, uri string) (string, error) {
 	value, err := sess.ReadResource(ctx, uri)
 	if err != nil {
-		errText := strings.ToLower(err.Error())
-		if strings.Contains(errText, "not found") || strings.Contains(errText, "missing resource") {
+		if isResourceNotFound(err) {
 			return "", nil
 		}
 		return "", err
 	}
 	return value, nil
+}
+
+// isResourceNotFound checks gRPC status codes first and falls back to string
+// matching for errors that have already been unwrapped by intermediaries.
+func isResourceNotFound(err error) bool {
+	if st, ok := status.FromError(err); ok && st.Code() == codes.NotFound {
+		return true
+	}
+	errText := strings.ToLower(err.Error())
+	return strings.Contains(errText, "not found") || strings.Contains(errText, "missing resource")
 }

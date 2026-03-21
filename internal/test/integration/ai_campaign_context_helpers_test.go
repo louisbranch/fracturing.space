@@ -92,7 +92,7 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 	t.Setenv("FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT", daggerheartReferenceRoot)
 
 	aiCtx, cancelAI := context.WithCancel(context.Background())
-	aiServer, err := aiapp.NewWithAddrContext(aiCtx, aiAddr)
+	aiServer, err := aiapp.New(aiCtx, aiAddr)
 	if err != nil {
 		cancelAI()
 		t.Fatalf("new ai server: %v", err)
@@ -259,7 +259,7 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 		Model:            strings.TrimSpace(opts.Model),
 		ReasoningEffort:  strings.TrimSpace(opts.ReasoningEffort),
 		CredentialSecret: strings.TrimSpace(opts.CredentialSecret),
-		Provider:         provider.(orchestration.Provider),
+		Provider:         provider,
 	})
 	if err != nil {
 		t.Fatalf("run campaign turn: %v", err)

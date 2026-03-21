@@ -2,6 +2,7 @@ package campaigncontext
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	pathpkg "path"
 	"regexp"
@@ -154,7 +155,7 @@ func (m *Manager) UpsertArtifact(ctx context.Context, campaignID string, path st
 	case err == nil:
 		record.Content = content
 		record.UpdatedAt = now
-	case err == storage.ErrNotFound:
+	case errors.Is(err, storage.ErrNotFound):
 		record = storage.CampaignArtifactRecord{
 			CampaignID: campaignID,
 			Path:       normalizedPath,

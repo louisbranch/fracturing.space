@@ -108,7 +108,7 @@ FROM ai_provider_grants
 WHERE id = ?
 `, providerGrantID)
 
-	rec, err := scanProviderGrantRow(row)
+	rec, err := scanProviderGrant(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.ProviderGrantRecord{}, storage.ErrNotFound
@@ -171,7 +171,7 @@ LIMIT ?
 
 	page := storage.ProviderGrantPage{ProviderGrants: make([]storage.ProviderGrantRecord, 0, pageSize)}
 	for rows.Next() {
-		rec, err := scanProviderGrantRows(rows)
+		rec, err := scanProviderGrant(rows)
 		if err != nil {
 			return storage.ProviderGrantPage{}, fmt.Errorf("scan provider grant row: %w", err)
 		}

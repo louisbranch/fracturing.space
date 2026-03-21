@@ -12,6 +12,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // Status represents provider grant lifecycle state.
@@ -92,11 +93,12 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, ErrEmptyTokenCiphertext
 	}
 
-	input.GrantedScopes = normalizeScopes(input.GrantedScopes)
+	input.GrantedScopes = NormalizeScopes(input.GrantedScopes)
 	return input, nil
 }
 
-func normalizeScopes(in []string) []string {
+// NormalizeScopes deduplicates and trims a scope list, preserving insertion order.
+func NormalizeScopes(in []string) []string {
 	if len(in) == 0 {
 		return nil
 	}
@@ -235,6 +237,39 @@ func ParseStatus(raw string) Status {
 	default:
 		return ""
 	}
+}
+
+// FromRecord reconstructs a domain provider grant from a storage record for
+// lifecycle and usability checks.
+func FromRecord(record storage.ProviderGrantRecord) ProviderGrant {
+	normalizedProvider, _ := provider.Normalize(record.Provider)
+	return ProviderGrant{
+		ID:               record.ID,
+		OwnerUserID:      record.OwnerUserID,
+		Provider:         normalizedProvider,
+		GrantedScopes:    record.GrantedScopes,
+		TokenCiphertext:  record.TokenCiphertext,
+		RefreshSupported: record.RefreshSupported,
+		Status:           ParseStatus(record.Status),
+		LastRefreshError: record.LastRefreshError,
+		CreatedAt:        record.CreatedAt,
+		UpdatedAt:        record.UpdatedAt,
+		RevokedAt:        record.RevokedAt,
+		ExpiresAt:        record.ExpiresAt,
+		RefreshedAt:      record.LastRefreshedAt,
+	}
+}
+
+// ApplyLifecycle writes domain-owned lifecycle changes back into the persisted
+// provider-grant record.
+func ApplyLifecycle(record *storage.ProviderGrantRecord, value ProviderGrant) {
+	record.TokenCiphertext = value.TokenCiphertext
+	record.Status = string(value.Status)
+	record.LastRefreshError = value.LastRefreshError
+	record.UpdatedAt = value.UpdatedAt
+	record.RevokedAt = value.RevokedAt
+	record.ExpiresAt = value.ExpiresAt
+	record.LastRefreshedAt = value.RefreshedAt
 }
 
 // IsActive reports whether the grant is ready for use.

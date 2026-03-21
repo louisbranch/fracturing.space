@@ -52,22 +52,9 @@ type Server struct {
 	closeOnce  sync.Once
 }
 
-// New creates a configured AI server listening on the provided port.
-func New(port int) (*Server, error) {
-	return NewWithAddr(fmt.Sprintf(":%d", port))
-}
-
-// NewWithAddr creates a configured AI server listening on the provided address.
-//
-// This constructor keeps backward compatibility for call sites that do not pass
-// startup context while NewWithAddrContext enables context-bound dependency dial.
-func NewWithAddr(addr string) (*Server, error) {
-	return NewWithAddrContext(context.Background(), addr)
-}
-
-// NewWithAddrContext creates a configured AI server using one startup context
-// for dependency dialing and one parsed runtime config snapshot.
-func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
+// New creates a configured AI server using one startup context for dependency
+// dialing and one parsed runtime config snapshot.
+func New(ctx context.Context, addr string) (*Server, error) {
 	if ctx == nil {
 		return nil, errors.New("context is required")
 	}
@@ -133,13 +120,11 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	providerInvocationAdapters := map[provider.Provider]provider.InvocationAdapter{
 		provider.OpenAI: openAIAdapter,
 	}
-	providerToolAdapters := make(map[provider.Provider]orchestration.Provider, 1)
-	if toolAdapter, ok := openAIAdapter.(orchestration.Provider); ok {
-		providerToolAdapters[provider.OpenAI] = toolAdapter
+	providerToolAdapters := map[provider.Provider]orchestration.Provider{
+		provider.OpenAI: openAIAdapter,
 	}
-	providerModelAdapters := make(map[provider.Provider]provider.ModelAdapter, 1)
-	if modelAdapter, ok := openAIAdapter.(provider.ModelAdapter); ok {
-		providerModelAdapters[provider.OpenAI] = modelAdapter
+	providerModelAdapters := map[provider.Provider]provider.ModelAdapter{
+		provider.OpenAI: openAIAdapter,
 	}
 	instructionLoader := instructionset.New(cfg.InstructionsRoot)
 	campaignArtifactManager := campaigncontext.NewManager(campaigncontext.ManagerConfig{
@@ -152,66 +137,134 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		systemReferenceHandlers = aiservice.NewSystemReferenceHandlers(referencecorpus.New(cfg.DaggerheartReferenceRoot))
 	}
 
-	var gameMc *platformgrpc.ManagedConn
-	var gameCampaignAIClient gamev1.CampaignAIServiceClient
-	var gameAuthorizationClient gamev1.AuthorizationServiceClient
-	if gameAddr := strings.TrimSpace(cfg.GameAddr); gameAddr != "" {
-		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
-			Name: "game",
-			Addr: gameAddr,
-			Mode: platformgrpc.ModeOptional,
-			Logf: log.Printf,
-			DialOpts: append(
-				platformgrpc.LenientDialOptions(),
-				grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
-				grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceAI)),
-			),
-		})
-		if err != nil {
-			log.Printf("ai: game managed conn unavailable; agent usage guard disabled: %v", err)
-		} else {
-			gameMc = mc
-			gameCampaignAIClient = gamev1.NewCampaignAIServiceClient(mc.Conn())
-			gameAuthorizationClient = gamev1.NewAuthorizationServiceClient(mc.Conn())
-		}
+	gameMc, gameClients := dialGameService(ctx, cfg.GameAddr)
+	handlers := buildHandlers(handlerDeps{
+		store:                      store,
+		sealer:                     sealer,
+		cfg:                        cfg,
+		providerOAuthAdapters:      providerOAuthAdapters,
+		providerInvocationAdapters: providerInvocationAdapters,
+		providerToolAdapters:       providerToolAdapters,
+		providerModelAdapters:      providerModelAdapters,
+		campaignArtifactManager:    campaignArtifactManager,
+		systemReferenceHandlers:    systemReferenceHandlers,
+		instructionLoader:          instructionLoader,
+		gameClients:                gameClients,
+		gameMc:                     gameMc,
+	})
+
+	healthServer := health.NewServer()
+	registerServices(grpcServer, healthServer, handlers)
+
+	return &Server{
+		listener:   listener,
+		grpcServer: grpcServer,
+		health:     healthServer,
+		store:      store,
+		gameMc:     gameMc,
+	}, nil
+}
+
+// gameServiceClients groups optional game service gRPC clients that are nil
+// when the game service is unavailable.
+type gameServiceClients struct {
+	campaignAI    gamev1.CampaignAIServiceClient
+	authorization gamev1.AuthorizationServiceClient
+}
+
+func dialGameService(ctx context.Context, gameAddr string) (*platformgrpc.ManagedConn, gameServiceClients) {
+	gameAddr = strings.TrimSpace(gameAddr)
+	if gameAddr == "" {
+		return nil, gameServiceClients{}
 	}
+	mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "game",
+		Addr: gameAddr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: log.Printf,
+		DialOpts: append(
+			platformgrpc.LenientDialOptions(),
+			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
+			grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceAI)),
+		),
+	})
+	if err != nil {
+		log.Printf("ai: game managed conn unavailable; agent usage guard disabled: %v", err)
+		return nil, gameServiceClients{}
+	}
+	return mc, gameServiceClients{
+		campaignAI:    gamev1.NewCampaignAIServiceClient(mc.Conn()),
+		authorization: gamev1.NewAuthorizationServiceClient(mc.Conn()),
+	}
+}
+
+// handlerDeps groups runtime dependencies for handler construction.
+type handlerDeps struct {
+	store                      *aisqlite.Store
+	sealer                     secret.Sealer
+	cfg                        runtimeConfig
+	providerOAuthAdapters      map[provider.Provider]provider.OAuthAdapter
+	providerInvocationAdapters map[provider.Provider]provider.InvocationAdapter
+	providerToolAdapters       map[provider.Provider]orchestration.Provider
+	providerModelAdapters      map[provider.Provider]provider.ModelAdapter
+	campaignArtifactManager    *campaigncontext.Manager
+	systemReferenceHandlers    *aiservice.SystemReferenceHandlers
+	instructionLoader          *instructionset.Loader
+	gameClients                gameServiceClients
+	gameMc                     *platformgrpc.ManagedConn
+}
+
+// serviceHandlers collects all constructed gRPC service implementations.
+type serviceHandlers struct {
+	credentials           *aiservice.CredentialHandlers
+	agents                *aiservice.AgentHandlers
+	invocations           *aiservice.InvocationHandlers
+	campaignOrchestration *aiservice.CampaignOrchestrationHandlers
+	campaignArtifacts     *aiservice.CampaignArtifactHandlers
+	systemReferences      *aiservice.SystemReferenceHandlers
+	providerGrants        *aiservice.ProviderGrantHandlers
+	accessRequests        *aiservice.AccessRequestHandlers
+}
+
+func buildHandlers(d handlerDeps) serviceHandlers {
 	credentialHandlers := aiservice.NewCredentialHandlers(aiservice.CredentialHandlersConfig{
-		CredentialStore:      store,
-		AgentStore:           store,
-		GameCampaignAIClient: gameCampaignAIClient,
-		Sealer:               sealer,
+		CredentialStore:      d.store,
+		AgentStore:           d.store,
+		GameCampaignAIClient: d.gameClients.campaignAI,
+		Sealer:               d.sealer,
 	})
 	campaignArtifactHandlers := aiservice.NewCampaignArtifactHandlers(aiservice.CampaignArtifactHandlersConfig{
-		Manager:                  campaignArtifactManager,
-		AuthorizationClient:      gameAuthorizationClient,
-		InternalServiceAllowlist: cfg.InternalServiceAllowlist,
+		Manager:                  d.campaignArtifactManager,
+		AuthorizationClient:      d.gameClients.authorization,
+		InternalServiceAllowlist: d.cfg.InternalServiceAllowlist,
 	})
 	providerGrantHandlers := aiservice.NewProviderGrantHandlers(aiservice.ProviderGrantHandlersConfig{
-		ProviderGrantStore:    store,
-		ConnectSessionStore:   store,
-		AgentStore:            store,
-		GameCampaignAIClient:  gameCampaignAIClient,
-		Sealer:                sealer,
-		ProviderOAuthAdapters: providerOAuthAdapters,
+		ProviderGrantStore:    d.store,
+		ConnectSessionStore:   d.store,
+		AgentStore:            d.store,
+		GameCampaignAIClient:  d.gameClients.campaignAI,
+		Sealer:                d.sealer,
+		ProviderOAuthAdapters: d.providerOAuthAdapters,
 	})
 	accessRequestHandlers := aiservice.NewAccessRequestHandlers(aiservice.AccessRequestHandlersConfig{
-		AgentStore:         store,
-		AccessRequestStore: store,
-		AuditEventStore:    store,
+		AgentStore:         d.store,
+		AccessRequestStore: d.store,
+		AuditEventStore:    d.store,
 	})
 	agentHandlers := aiservice.NewAgentHandlers(aiservice.AgentHandlersConfig{
-		CredentialStore:       store,
-		AgentStore:            store,
-		ProviderGrantStore:    store,
-		AccessRequestStore:    store,
-		ProviderOAuthAdapters: providerOAuthAdapters,
-		ProviderModelAdapters: providerModelAdapters,
-		GameCampaignAIClient:  gameCampaignAIClient,
-		Sealer:                sealer,
+		CredentialStore:       d.store,
+		AgentStore:            d.store,
+		ProviderGrantStore:    d.store,
+		AccessRequestStore:    d.store,
+		ProviderOAuthAdapters: d.providerOAuthAdapters,
+		ProviderModelAdapters: d.providerModelAdapters,
+		GameCampaignAIClient:  d.gameClients.campaignAI,
+		Sealer:                d.sealer,
 	})
+
 	var campaignTurnRunner orchestration.CampaignTurnRunner
-	if gameMc != nil {
-		gameConn := gameMc.Conn()
+	if d.gameMc != nil {
+		gameConn := d.gameMc.Conn()
 		dialer := gametools.NewDirectDialer(gametools.Clients{
 			Interaction: gamev1.NewInteractionServiceClient(gameConn),
 			Scene:       gamev1.NewSceneServiceClient(gameConn),
@@ -222,47 +275,61 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 			Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
 			Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
 			Artifact:    artifactClientAdapter{server: campaignArtifactHandlers},
-			Reference:   referenceClientAdapter{server: systemReferenceHandlers},
+			Reference:   referenceClientAdapter{server: d.systemReferenceHandlers},
 		})
-		promptBuilder := buildPromptBuilder(instructionLoader)
-		runnerCfg := cfg.campaignTurnRunnerConfig(dialer)
+		promptBuilder := buildPromptBuilder(d.instructionLoader)
+		runnerCfg := d.cfg.campaignTurnRunnerConfig(dialer)
 		runnerCfg.PromptBuilder = promptBuilder
 		runnerCfg.ToolPolicy = orchestration.NewStaticToolPolicy(gametools.ProductionToolNames())
 		campaignTurnRunner = orchestration.NewRunner(runnerCfg)
 	}
+
 	campaignOrchestrationHandlers := aiservice.NewCampaignOrchestrationHandlers(aiservice.CampaignOrchestrationHandlersConfig{
-		AgentStore:              store,
-		CredentialStore:         store,
-		ProviderGrantStore:      store,
-		CampaignArtifactManager: campaignArtifactManager,
-		GameCampaignAIClient:    gameCampaignAIClient,
-		ProviderOAuthAdapters:   providerOAuthAdapters,
-		ProviderToolAdapters:    providerToolAdapters,
+		AgentStore:              d.store,
+		CredentialStore:         d.store,
+		ProviderGrantStore:      d.store,
+		CampaignArtifactManager: d.campaignArtifactManager,
+		GameCampaignAIClient:    d.gameClients.campaignAI,
+		ProviderOAuthAdapters:   d.providerOAuthAdapters,
+		ProviderToolAdapters:    d.providerToolAdapters,
 		CampaignTurnRunner:      campaignTurnRunner,
-		SessionGrantConfig:      cfg.SessionGrantConfig,
-		Sealer:                  sealer,
+		SessionGrantConfig:      d.cfg.SessionGrantConfig,
+		Sealer:                  d.sealer,
 	})
 	invocationHandlers := aiservice.NewInvocationHandlers(aiservice.InvocationHandlersConfig{
-		CredentialStore:            store,
-		AgentStore:                 store,
-		ProviderGrantStore:         store,
-		AccessRequestStore:         store,
-		AuditEventStore:            store,
-		ProviderOAuthAdapters:      providerOAuthAdapters,
-		ProviderInvocationAdapters: providerInvocationAdapters,
-		Sealer:                     sealer,
+		CredentialStore:            d.store,
+		AgentStore:                 d.store,
+		ProviderGrantStore:         d.store,
+		AccessRequestStore:         d.store,
+		AuditEventStore:            d.store,
+		ProviderOAuthAdapters:      d.providerOAuthAdapters,
+		ProviderInvocationAdapters: d.providerInvocationAdapters,
+		Sealer:                     d.sealer,
 	})
 
-	healthServer := health.NewServer()
-	aiv1.RegisterCredentialServiceServer(grpcServer, credentialHandlers)
-	aiv1.RegisterAgentServiceServer(grpcServer, agentHandlers)
-	aiv1.RegisterInvocationServiceServer(grpcServer, invocationHandlers)
-	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, campaignOrchestrationHandlers)
-	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, campaignArtifactHandlers)
-	aiv1.RegisterSystemReferenceServiceServer(grpcServer, systemReferenceHandlers)
-	aiv1.RegisterProviderGrantServiceServer(grpcServer, providerGrantHandlers)
-	aiv1.RegisterAccessRequestServiceServer(grpcServer, accessRequestHandlers)
+	return serviceHandlers{
+		credentials:           credentialHandlers,
+		agents:                agentHandlers,
+		invocations:           invocationHandlers,
+		campaignOrchestration: campaignOrchestrationHandlers,
+		campaignArtifacts:     campaignArtifactHandlers,
+		systemReferences:      d.systemReferenceHandlers,
+		providerGrants:        providerGrantHandlers,
+		accessRequests:        accessRequestHandlers,
+	}
+}
+
+func registerServices(grpcServer *grpc.Server, healthServer *health.Server, h serviceHandlers) {
+	aiv1.RegisterCredentialServiceServer(grpcServer, h.credentials)
+	aiv1.RegisterAgentServiceServer(grpcServer, h.agents)
+	aiv1.RegisterInvocationServiceServer(grpcServer, h.invocations)
+	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, h.campaignOrchestration)
+	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, h.campaignArtifacts)
+	aiv1.RegisterSystemReferenceServiceServer(grpcServer, h.systemReferences)
+	aiv1.RegisterProviderGrantServiceServer(grpcServer, h.providerGrants)
+	aiv1.RegisterAccessRequestServiceServer(grpcServer, h.accessRequests)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.CredentialService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.AgentService", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -272,14 +339,6 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	healthServer.SetServingStatus("ai.v1.SystemReferenceService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.ProviderGrantService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.AccessRequestService", grpc_health_v1.HealthCheckResponse_SERVING)
-
-	return &Server{
-		listener:   listener,
-		grpcServer: grpcServer,
-		health:     healthServer,
-		store:      store,
-		gameMc:     gameMc,
-	}, nil
 }
 
 // Addr returns the listener address for the AI server.
@@ -291,13 +350,8 @@ func (s *Server) Addr() string {
 }
 
 // Run creates and serves an AI server until the context ends.
-func Run(ctx context.Context, port int) error {
-	return RunWithAddr(ctx, fmt.Sprintf(":%d", port))
-}
-
-// RunWithAddr creates and serves an AI server until the context ends.
-func RunWithAddr(ctx context.Context, addr string) error {
-	server, err := NewWithAddrContext(ctx, addr)
+func Run(ctx context.Context, addr string) error {
+	server, err := New(ctx, addr)
 	if err != nil {
 		return err
 	}
