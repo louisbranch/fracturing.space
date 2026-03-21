@@ -1,15 +1,11 @@
-import { cropCloudinaryAvatarURL } from "../character-card/fixtures";
+import { characterAvatarPreviewAssets } from "../../../storybook/preview-assets/fixtures";
 import type { DaggerheartCharacterSheetData } from "./contract";
 
 // CharacterSheetFixtures keeps the known mock-data set explicit for preview and
 // test reuse across the isolated workflow.
 type CharacterSheetFixtures = Record<"full" | "damaged", DaggerheartCharacterSheetData>;
 
-const miraAvatarSheetURL =
-  "https://res.cloudinary.com/fracturing-space/image/upload/v1772673703/high_fantasy/avatar_set/v1/apothecary_journeyman.png";
-const portraitWidth = 512;
-const portraitHeight = 768;
-const portraitDeliveryWidth = 384;
+const [miraAvatar] = characterAvatarPreviewAssets;
 
 // characterSheetFixtures are the canonical reusable preview/test mocks so the
 // sheet is exercised with rich Daggerheart-flavored inputs everywhere.
@@ -19,15 +15,9 @@ export const characterSheetFixtures: CharacterSheetFixtures = {
     name: "Mira",
     portrait: {
       alt: "Portrait of Mira, a Daggerheart rogue with a guarded expression.",
-      src: cropCloudinaryAvatarURL(miraAvatarSheetURL, {
-        x: 512,
-        y: 0,
-        width: portraitWidth,
-        height: portraitHeight,
-        deliveryWidth: portraitDeliveryWidth,
-      }),
-      width: portraitWidth,
-      height: portraitHeight,
+      src: miraAvatar?.imageUrl,
+      width: miraAvatar?.crop.widthPx,
+      height: miraAvatar?.crop.heightPx,
     },
     pronouns: "she/her",
     level: 2,
@@ -109,15 +99,9 @@ export const characterSheetFixtures: CharacterSheetFixtures = {
     name: "Mira",
     portrait: {
       alt: "Portrait of Mira, a Daggerheart rogue with a guarded expression.",
-      src: cropCloudinaryAvatarURL(miraAvatarSheetURL, {
-        x: 512,
-        y: 0,
-        width: portraitWidth,
-        height: portraitHeight,
-        deliveryWidth: portraitDeliveryWidth,
-      }),
-      width: portraitWidth,
-      height: portraitHeight,
+      src: miraAvatar?.imageUrl,
+      width: miraAvatar?.crop.widthPx,
+      height: miraAvatar?.crop.heightPx,
     },
     pronouns: "she/her",
     level: 2,
