@@ -73,6 +73,7 @@ type openAILiveRecorder struct {
 	targetURL string
 	client    *http.Client
 	model     string
+	scenario  aiGMCampaignScenarioSpec
 
 	mu           sync.Mutex
 	firstErr     error
@@ -80,11 +81,27 @@ type openAILiveRecorder struct {
 	steps        []openAIReplayStep
 	rawCapture   openAILiveCapture
 	requestDebug []string
-	lastSceneID  string
 }
 
-// TestAIGMCampaignContextLiveCaptureBootstrap proves a real model can complete the GM bootstrap tool loop.
 func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMBootstrapScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureReviewAdvance(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMReviewAdvanceScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureOOCReplace(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMOOCReplaceScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureSceneSwitch(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMSceneSwitchScenario)
+}
+
+// runAIGMCampaignContextLiveCaptureScenario proves a real model can complete one GM control-mode tool loop.
+func runAIGMCampaignContextLiveCaptureScenario(t *testing.T, spec aiGMCampaignScenarioSpec) {
+	t.Helper()
 	apiKey := strings.TrimSpace(os.Getenv(integrationOpenAIAPIKeyEnv))
 	if apiKey == "" {
 		t.Skipf("%s is required", integrationOpenAIAPIKeyEnv)
@@ -95,12 +112,13 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 		targetURL: liveOpenAIResponsesTargetURL(),
 		client:    newHTTPClient(t),
 		model:     model,
+		scenario:  spec,
 		rawCapture: openAILiveCapture{
 			Metadata: openAIReplayMetadata{
 				Provider:        "openai",
 				Model:           model,
 				ReasoningEffort: reasoningEffort,
-				Scenario:        aiGMBootstrapScenarioName,
+				Scenario:        spec.Name,
 				Source:          "live_capture",
 			},
 		},
@@ -113,7 +131,7 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 		}
 	})
 
-	result := runAIGMCampaignContextBootstrapScenario(t, aiGMBootstrapScenarioOptions{
+	result := runAIGMCampaignContextScenario(t, spec, aiGMCampaignScenarioOptions{
 		ResponsesURL:     server.URL,
 		Model:            model,
 		ReasoningEffort:  reasoningEffort,
@@ -121,39 +139,19 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 		AgentLabel:       "live-capture-gm",
 	})
 
-	rawPath := writeOpenAILiveCapture(t, recorder.rawCapture)
+	rawPath := writeOpenAILiveCapture(t, spec.Name, recorder.rawCapture)
 	t.Logf("live capture written to %s", rawPath)
-	reportPath := writeOpenAILiveCaptureReport(t, recorder, result)
+	reportPath := writeOpenAILiveCaptureReport(t, spec.Name, recorder, result)
 	t.Logf("quality report written to %s", reportPath)
 
 	if err := recorder.Err(); err != nil {
 		t.Fatalf("live recorder: %v\nrequests:\n%s", err, recorder.DebugString())
 	}
-	if strings.TrimSpace(result.OutputText) == "" {
-		t.Fatal("expected non-empty model output")
-	}
-	if strings.TrimSpace(result.MemoryContent) == "" || result.MemoryContent == aiGMBootstrapMemorySeed {
-		t.Fatalf("memory.md = %q, expected updated memory content", result.MemoryContent)
-	}
-	if !result.SkillsReadOnly {
-		t.Fatal("expected skills.md to remain read-only")
-	}
-	if result.SceneCount == 0 || strings.TrimSpace(result.ActiveSceneID) == "" || !result.SceneIsActive {
-		t.Fatalf("scene bootstrap failed: count=%d active_scene_id=%q active=%v", result.SceneCount, result.ActiveSceneID, result.SceneIsActive)
-	}
-	if !result.PlayerPhaseOpen {
-		t.Fatal("expected bootstrap to start the first player phase")
-	}
+	spec.Assert(t, result)
 
-	fixture := recorder.ReplayFixture(result.CampaignID, result.SessionID, result.CharacterID, result.ActiveSceneID)
+	fixture := recorder.ReplayFixture(result.ReplayTokens)
 	fixtureToolNames := openAIReplayFixtureToolNames(fixture)
-	if err := requiredToolSetPresent(fixtureToolNames,
-		"system_reference_search",
-		"scene_create",
-		"interaction_active_scene_set",
-		"interaction_scene_gm_interaction_commit",
-		"interaction_scene_player_phase_start",
-	); err != nil {
+	if err := requiredToolSetPresent(fixtureToolNames, spec.RequiredToolSet...); err != nil {
 		t.Fatalf("fixture tool coverage: %v", err)
 	}
 	// Accept either full-document upsert or section-level update as the memory write tool.
@@ -163,7 +161,7 @@ func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 		}
 	}
 	if envEnabled(integrationAIWriteFixtureEnv) {
-		fixturePath := writeOpenAIReplayFixture(t, aiGMBootstrapFixtureFile, fixture)
+		fixturePath := writeOpenAIReplayFixture(t, spec.FixtureFile, fixture)
 		t.Logf("updated replay fixture at %s", fixturePath)
 	}
 }
@@ -278,9 +276,6 @@ func (r *openAILiveRecorder) recordExchange(method, requestURL string, requestBo
 		r.initialTools = append([]string(nil), toolNames...)
 	}
 	r.captureCallOutputs(requestPayload)
-	if sceneID := extractSceneID(requestPayload); sceneID != "" {
-		r.lastSceneID = sceneID
-	}
 	r.steps = append(r.steps, replayStepFromLiveResponse(responsePayload))
 }
 
@@ -335,7 +330,7 @@ func (r *openAILiveRecorder) DebugString() string {
 }
 
 // ReplayFixture converts the captured live exchange into the stable tokenized fixture committed in the repo.
-func (r *openAILiveRecorder) ReplayFixture(campaignID, sessionID, characterID, sceneID string) openAIReplayFixture {
+func (r *openAILiveRecorder) ReplayFixture(tokens map[string]string) openAIReplayFixture {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	fixture := openAIReplayFixture{
@@ -344,19 +339,14 @@ func (r *openAILiveRecorder) ReplayFixture(campaignID, sessionID, characterID, s
 			Model:           r.model,
 			ReasoningEffort: r.rawCapture.Metadata.ReasoningEffort,
 			CapturedAtUTC:   r.rawCapture.Metadata.CapturedAtUTC,
-			Scenario:        aiGMBootstrapScenarioName,
+			Scenario:        r.scenario.Name,
 			Source:          "live_capture",
 		},
-		InitialPromptContains: bootstrapPromptContains(),
+		InitialPromptContains: append([]string(nil), r.scenario.PromptContains...),
 		InitialToolNames:      append([]string(nil), r.initialTools...),
 		Steps:                 append([]openAIReplayStep(nil), r.steps...),
 	}
-	return tokenizeReplayFixture(fixture, map[string]string{
-		"campaign_id":  campaignID,
-		"session_id":   sessionID,
-		"character_id": characterID,
-		"scene_id":     sceneID,
-	})
+	return tokenizeReplayFixture(fixture, tokens)
 }
 
 // replayStepFromLiveResponse trims the full provider response down to the deterministic replay contract.
@@ -394,13 +384,13 @@ func replayStepFromLiveResponse(payload openAIResponsesPayload) openAIReplayStep
 }
 
 // writeOpenAILiveCapture persists the raw live capture outside the repo fixtures for local debugging and review.
-func writeOpenAILiveCapture(t *testing.T, capture openAILiveCapture) string {
+func writeOpenAILiveCapture(t *testing.T, scenarioName string, capture openAILiveCapture) string {
 	t.Helper()
 	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("create capture dir: %v", err)
 	}
-	filename := fmt.Sprintf("%s-%s.json", aiGMBootstrapScenarioName, time.Now().UTC().Format("20060102T150405Z"))
+	filename := fmt.Sprintf("%s-%s.json", scenarioName, time.Now().UTC().Format("20060102T150405Z"))
 	path := filepath.Join(dir, filename)
 	data, err := json.MarshalIndent(capture, "", "  ")
 	if err != nil {
@@ -416,7 +406,7 @@ func writeOpenAILiveCapture(t *testing.T, capture openAILiveCapture) string {
 // writeOpenAILiveCaptureReport writes a human-readable markdown report alongside
 // the raw capture with token usage, tool sequence, narrative excerpts, and error
 // summary for cross-model quality comparison.
-func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, result aiGMBootstrapResult) string {
+func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult) string {
 	t.Helper()
 	recorder.mu.Lock()
 	defer recorder.mu.Unlock()
@@ -425,7 +415,7 @@ func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, re
 	model := recorder.model
 
 	// Extract narrative fields from recorded steps.
-	var sceneName, sceneDesc, gmNarration, playerFrame, memoryContent string
+	var sceneName, sceneDesc, gmNarration, playerPromptBeat, memoryContent string
 	var toolSequence []string
 	var toolErrors []string
 	for _, step := range recorder.steps {
@@ -435,10 +425,13 @@ func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, re
 			case "scene_create":
 				sceneName = asString(call.Arguments["name"])
 				sceneDesc = asString(call.Arguments["description"])
-			case "interaction_scene_gm_interaction_commit":
+			case "interaction_record_scene_gm_interaction":
 				gmNarration = interactionBeatText(call.Arguments["interaction"], "fiction")
-			case "interaction_scene_player_phase_start":
-				playerFrame = interactionBeatText(call.Arguments["interaction"], "prompt")
+			case "interaction_open_scene_player_phase":
+				if strings.TrimSpace(gmNarration) == "" {
+					gmNarration = interactionBeatText(call.Arguments["interaction"], "fiction")
+				}
+				playerPromptBeat = interactionBeatText(call.Arguments["interaction"], "prompt")
 			case "campaign_memory_section_update":
 				memoryContent = asString(call.Arguments["content"])
 			case "campaign_artifact_upsert":
@@ -458,7 +451,8 @@ func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, re
 	fmt.Fprintf(&b, "# Live Capture Report\n\n")
 	fmt.Fprintf(&b, "- **Model:** %s\n", model)
 	fmt.Fprintf(&b, "- **Captured:** %s\n", recorder.rawCapture.Metadata.CapturedAtUTC)
-	fmt.Fprintf(&b, "- **Scenario:** %s\n\n", aiGMBootstrapScenarioName)
+	fmt.Fprintf(&b, "- **Scenario:** %s\n", scenarioName)
+	fmt.Fprintf(&b, "- **Active Scene ID:** %s\n\n", activeSceneID(result.InteractionState))
 
 	fmt.Fprintf(&b, "## Token Usage\n\n")
 	fmt.Fprintf(&b, "| Metric | Tokens |\n")
@@ -482,12 +476,13 @@ func writeOpenAILiveCaptureReport(t *testing.T, recorder *openAILiveRecorder, re
 	fmt.Fprintf(&b, "\n## Narrative Quality\n\n")
 	fmt.Fprintf(&b, "### Scene: %q\n\n%s\n\n", sceneName, sceneDesc)
 	fmt.Fprintf(&b, "### GM Narration\n\n%s\n\n", gmNarration)
-	fmt.Fprintf(&b, "### Player Phase Frame\n\n%s\n\n", playerFrame)
-	fmt.Fprintf(&b, "### Memory Update\n\n%s\n", memoryContent)
+	fmt.Fprintf(&b, "### Player-Facing Prompt Beat\n\n%s\n\n", playerPromptBeat)
+	fmt.Fprintf(&b, "### Memory Update\n\n%s\n\n", memoryContent)
+	fmt.Fprintf(&b, "### Final Output\n\n%s\n", strings.TrimSpace(result.OutputText))
 
 	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
 	filename := fmt.Sprintf("%s-%s-%s.md",
-		aiGMBootstrapScenarioName,
+		scenarioName,
 		model,
 		time.Now().UTC().Format("20060102T150405Z"),
 	)

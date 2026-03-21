@@ -43,13 +43,13 @@ func TestIntegrationOutboxEventsForEventBuildsAIGMTurnRequests(t *testing.T) {
 			evt: event.Event{
 				CampaignID: ids.CampaignID("camp-1"),
 				SessionID:  ids.SessionID("sess-1"),
-				Type:       session.EventTypeOOCResumed,
+				Type:       session.EventTypeOOCClosed,
 				Timestamp:  now,
-				PayloadJSON: mustJSON(t, session.OOCResumedPayload{
+				PayloadJSON: mustJSON(t, session.OOCClosedPayload{
 					SessionID: ids.SessionID("sess-1"),
 				}),
 			},
-			wantSourceType: string(session.EventTypeOOCResumed),
+			wantSourceType: string(session.EventTypeOOCClosed),
 		},
 		{
 			name: "player phase review started",
@@ -106,9 +106,9 @@ func TestIntegrationOutboxEventsForEventSkipsAIRequestWithoutCampaignOrSession(t
 	t.Parallel()
 
 	outboxEvents, err := integrationOutboxEventsForEvent(event.Event{
-		Type:      session.EventTypeOOCResumed,
+		Type:      session.EventTypeOOCClosed,
 		Timestamp: time.Date(2026, 3, 12, 20, 0, 0, 0, time.UTC),
-		PayloadJSON: mustJSON(t, session.OOCResumedPayload{
+		PayloadJSON: mustJSON(t, session.OOCClosedPayload{
 			SessionID: ids.SessionID(""),
 		}),
 	})

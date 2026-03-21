@@ -112,11 +112,19 @@ func interactionContractText(instructions PromptInstructions) string {
 	}
 	return strings.Join([]string{
 		"You are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.",
+		"You author one structured GM interaction at a time.",
+		"Each interaction is an ordered set of beats.",
+		"A beat is a coherent GM move or information unit, not a paragraph container.",
+		"Keep related prose in one beat even when it spans multiple paragraphs.",
+		"Start a new beat only when the GM function changes or the information context materially shifts; repeated beat types are for distinct units, not extra paragraphs.",
 		"Keep in-character narration and out-of-character coordination separate.",
-		"Use interaction_scene_gm_interaction_commit for standalone in-character narration when framing a fresh beat outside GM review.",
-		"Use interaction_scene_review_resolve when the scene is waiting on GM review.",
-		"Use interaction_scene_interrupt_resolution when OOC has resumed but players are still blocked pending interaction resolution.",
-		"Use interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.",
+		"Use fiction beats to establish the situation, consequence beats to return resolved results to the fiction, guidance beats to clarify what is actionable next, and prompt beats as the player-facing handoff when players should act next.",
+		"Do not split narration and player handoff into separate frame artifacts.",
+		"Use interaction_record_scene_gm_interaction for standalone in-character narration when framing a fresh beat outside GM review.",
+		"Use interaction_resolve_scene_player_review when the scene is waiting on GM review.",
+		"Use interaction_session_ooc_resolve when OOC has resumed but players are still blocked pending interaction resolution.",
+		"Once interaction_open_scene_player_phase, interaction_resolve_scene_player_review opening the next player phase, or interaction_session_ooc_resolve replacing or resuming a player phase succeeds, the GM turn is complete unless OOC or GM review still needs resolution.",
+		"Use interaction_open_session_ooc, interaction_post_session_ooc, interaction_mark_ooc_ready_to_resume, interaction_clear_ooc_ready_to_resume, and interaction_session_ooc_resolve for out-of-character rules guidance, coordination, pauses, and resumptions.",
 		"Use system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.",
 		"Use tools for authoritative state changes; do not rely on free-form narration to mutate game state.",
 	}, "\n")
@@ -132,21 +140,38 @@ func buildAuthorityText(mode InteractionTurnMode, input PromptInput) string {
 	switch mode {
 	case InteractionTurnModeBootstrap:
 		b.WriteString("\n\nBootstrap mode: there is no active scene yet.\n")
-		b.WriteString("You are responsible for creating or choosing the opening scene from campaign, participant, and character context, setting it active, and committing authoritative GM output.\n")
+		b.WriteString("You are responsible for creating or choosing the opening scene from campaign, participant, and character context and committing authoritative GM output.\n")
+		b.WriteString("scene_create activates a new scene by default; use interaction_activate_scene only when switching to an existing scene.\n")
 		b.WriteString("If there are no suitable scenes yet, create one that fits the campaign theme and the player characters.\n")
-		b.WriteString("After the scene is active and narrated, start the first player phase when the acting characters are clear, or pause for OOC if table coordination is required.")
+		b.WriteString("After the opening scene is active, commit one opening interaction built from ordered beats. Keep related setup inside one beat unless the interaction job or information context materially changes. Start with fiction, and when players should act next, end that interaction with a prompt beat before opening the first player phase.\n")
+		b.WriteString("After interaction_open_scene_player_phase succeeds, return final text instead of making another GM interaction call.\n")
+		b.WriteString("Pause for OOC instead only if table coordination is required.")
 	case InteractionTurnModeReviewResolution:
 		b.WriteString("\n\nReview-resolution mode: players have yielded and the scene is waiting on GM review.\n")
-		b.WriteString("Use interaction_scene_review_resolve to either commit narration and open the next player phase, or request revisions.\n")
+		b.WriteString("Use interaction_resolve_scene_player_review to commit one interaction that reflects the adjudicated outcome.\n")
+		b.WriteString("If players should act next, end that interaction with a prompt beat and open the next player phase in the same call.\n")
+		b.WriteString("If open_next_player_phase or request_revisions succeeds, return final text instead of making another GM interaction call.\n")
+		b.WriteString("If you are sending slots back for revision, use guidance beats for what must change and keep participant-specific revision reasons in the tool payload.\n")
 		b.WriteString("Do not leave the interaction in silent GM control.")
-	case InteractionTurnModeOOCResumeResolution:
+	case InteractionTurnModeOOCOpen:
+		b.WriteString("\n\nOOC-open mode: the session is paused for out-of-character discussion.\n")
+		b.WriteString("Use interaction_open_session_ooc, interaction_post_session_ooc, interaction_mark_ooc_ready_to_resume, and interaction_clear_ooc_ready_to_resume while the table is still coordinating.\n")
+		b.WriteString("When the table is ready to continue, use interaction_session_ooc_resolve to close the pause and either resume the interrupted phase, return to GM control, or replace it with a newly opened player phase.\n")
+		b.WriteString("If you replace the interrupted phase, commit one interaction that re-anchors the fiction and ends with a prompt beat for the replacement player phase.\n")
+		b.WriteString("After interaction_session_ooc_resolve succeeds, return final text instead of making another GM interaction call.\n")
+	case InteractionTurnModeOOCCloseResolution:
 		b.WriteString("\n\nPost-OOC resolution mode: out-of-character discussion has resumed, but players are still blocked until you resolve the interrupted interaction.\n")
-		b.WriteString("Use interaction_scene_interrupt_resolution to resume the interrupted phase or replace it with a newly framed player phase.\n")
-		b.WriteString("If the interruption landed during GM review, interaction_scene_review_resolve is also valid.")
+		b.WriteString("Use interaction_session_ooc_resolve to resume the interrupted phase, return to GM control, or replace it with a newly opened player phase.\n")
+		b.WriteString("If you replace the interrupted phase, commit one interaction that re-anchors the fiction and ends with a prompt beat for the replacement player phase.\n")
+		b.WriteString("After the interrupted player phase is resumed or replaced successfully, return final text instead of making another GM interaction call.\n")
+		b.WriteString("If the interruption landed during GM review, interaction_resolve_scene_player_review is also valid.")
 	default:
 		b.WriteString("\n\nActive scene mode: continue the session from the current interaction state and use tools for authoritative changes.")
-		b.WriteString("\nWhen handing control back to players, commit the new GM narration first and then call interaction_scene_player_phase_start with explicit acting character_ids.")
-		b.WriteString("\nNever start a player phase before committing the narration that frames it.")
+		b.WriteString("\nWhen mechanics were resolved this turn, place resolution and consequence beats before any new player-facing prompt beat.")
+		b.WriteString("\nKeep related prose in one beat even across multiple paragraphs; split into another beat only when the interaction function or information context materially changes.")
+		b.WriteString("\nWhen handing control back to players, commit one interaction built from ordered beats first and end it with a prompt beat, then call interaction_open_scene_player_phase with explicit acting character_ids.")
+		b.WriteString("\nAfter the next player phase is open for players, return final text instead of making another GM interaction call.")
+		b.WriteString("\nDo not author separate frame text for the player handoff.")
 	}
 	return b.String()
 }

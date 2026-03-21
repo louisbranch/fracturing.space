@@ -10,9 +10,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
-// decideActiveSceneSet routes the in-character interaction surface to one scene.
-func decideActiveSceneSet(state State, cmd command.Command, now func() time.Time) command.Decision {
-	var payload ActiveSceneSetPayload
+// decideSceneActivated routes the in-character interaction surface to one scene.
+func decideSceneActivated(state State, cmd command.Command, now func() time.Time) command.Decision {
+	var payload SceneActivatedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 	}
@@ -30,12 +30,12 @@ func decideActiveSceneSet(state State, cmd command.Command, now func() time.Time
 		})
 	}
 
-	normalized := ActiveSceneSetPayload{
+	normalized := SceneActivatedPayload{
 		SessionID:     ids.SessionID(cmd.SessionID),
 		ActiveSceneID: ids.SceneID(activeSceneID),
 	}
 	payloadJSON, _ := json.Marshal(normalized)
-	evt := command.NewEvent(cmd, EventTypeActiveSceneSet, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
+	evt := command.NewEvent(cmd, EventTypeSceneActivated, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 	evt.SessionID = cmd.SessionID
 	return command.Accept(evt)
 }

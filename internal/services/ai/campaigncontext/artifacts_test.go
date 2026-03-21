@@ -36,7 +36,7 @@ func TestManagerEnsureDefaultArtifactsSeedsDefaults(t *testing.T) {
 	if !strings.Contains(skills.Content, "GM Skills") {
 		t.Fatalf("skills content missing GM contract: %q", skills.Content)
 	}
-	if !strings.Contains(skills.Content, "interaction_scene_review_resolve") {
+	if !strings.Contains(skills.Content, "interaction_resolve_scene_player_review") {
 		t.Fatalf("skills content missing review resolver guidance: %q", skills.Content)
 	}
 
@@ -181,7 +181,7 @@ func TestManagerEnsureDefaultArtifactsRefreshesExistingSkillsArtifact(t *testing
 	store.CampaignArtifacts["campaign-1\x00"+SkillsArtifactPath] = storage.CampaignArtifactRecord{
 		CampaignID: "campaign-1",
 		Path:       SkillsArtifactPath,
-		Content:    "# Old Skills\nCommit via interaction_scene_gm_interaction_commit only.",
+		Content:    "# Old Skills\nCommit via interaction_record_scene_gm_interaction only.",
 		ReadOnly:   true,
 		CreatedAt:  now.Add(-time.Hour),
 		UpdatedAt:  now.Add(-time.Hour),
@@ -200,7 +200,7 @@ func TestManagerEnsureDefaultArtifactsRefreshesExistingSkillsArtifact(t *testing
 	if err != nil {
 		t.Fatalf("get skills artifact: %v", err)
 	}
-	if !strings.Contains(skills.Content, "interaction_scene_review_resolve") {
+	if !strings.Contains(skills.Content, "interaction_resolve_scene_player_review") {
 		t.Fatalf("skills content = %q, want refreshed review resolver guidance", skills.Content)
 	}
 	if !skills.UpdatedAt.Equal(now) {

@@ -20,31 +20,33 @@ GM-authored interaction.
 ## Core principle
 The GM authors one discrete `gm_interaction` for each GM-owned moment of play.
 
-One interaction may include fictional updates, prompts, resolution,
-consequences, and next-action guidance. The GM is not authoring separate
-narration and prompt artifacts.
+One interaction may include fictional updates, prompts, resolution, consequences,
+and next-action guidance. The GM is not authoring separate narration and prompt
+artifacts.
 
 ## Boundaries
-`gm_interaction` is authored content. Scene/session/phase state remains
-explicit control state and answers:
-
-- who may act now
-- whether a player phase is open
-- whether review is pending
-- whether OOC is blocking progress
-
-`gm_interaction` answers:
-
-- what changed in the fiction
-- what matters right now
-- what the GM is asking for
-- what happens next
+`gm_interaction` is authored content. Scene/session/phase state still answers
+who may act now, whether a player phase is open, whether review is pending, and
+whether OOC is blocking progress. `gm_interaction` answers what changed in the
+fiction, what matters right now, what the GM is asking for, and what happens
+next.
 
 ## Interaction structure
 A `gm_interaction` is discrete, ordered, player-readable, machine-readable, and
 immutable once committed.
 
 Each interaction contains one or more ordered beats.
+
+A beat is a coherent GM move or information unit, not a paragraph container.
+One beat may span multiple paragraphs when the narration is still doing the
+same job. Split into another beat only when the interaction function changes or
+the information context materially shifts. Consecutive beats of the same type
+are therefore legal but should be reserved for genuinely distinct units, not
+for paragraph-by-paragraph prose.
+
+Example: two harbor-setting paragraphs belong in one `fiction` beat if they
+establish the same moment; a second `prompt` beat is warranted only when the GM
+shifts from scene-framing to player handoff.
 
 ### Beat types
 - `fiction`: establish or update shared fictional context
@@ -54,48 +56,17 @@ Each interaction contains one or more ordered beats.
 - `guidance`: clarify what is actionable next without re-authoring scene state
 
 ## Stored model
-`gm_interaction` is stored as structured data, not only rendered text.
+`gm_interaction` is stored as structured data, not only rendered text. Canonical
+fields are `interaction_id`, `scene_id`, `phase_id`, `created_at`,
+`participant_id`, `title`, `character_ids`, optional `illustration`, and
+ordered `beats`.
 
-Canonical fields:
+AI-authored interaction tools currently omit `illustration` from their input
+surface. The stored model keeps the field so future asset-aware callers can
+attach one, but AI agents should author text-only interactions until an asset
+selection surface exists.
 
-- `interaction_id`
-- `scene_id`
-- `phase_id`
-- `created_at`
-- `participant_id`
-- `title`
-- `character_ids`
-- optional `illustration`
-- ordered `beats`
-
-Minimum beat fields:
-
-- `beat_id`
-- `type`
-- `text`
-
-Suggested shape:
-
-```json
-{
-  "interaction_id": "gmint_123",
-  "scene_id": "scene_1",
-  "phase_id": "phase_7",
-  "created_at": "2026-03-20T15:04:05Z",
-  "participant_id": "gm_ai",
-  "title": "Investigating the Docks",
-  "character_ids": ["mara", "henric"],
-  "illustration": {
-    "image_url": "https://res.cloudinary.com/.../lantern_in_the_dark.png",
-    "alt": "A storm lantern burning in darkness.",
-    "caption": "Optional image caption."
-  },
-  "beats": [
-    {"beat_id": "beat_1", "type": "fiction", "text": "The ship lurches hard and the lantern tears loose from its hook."},
-    {"beat_id": "beat_2", "type": "prompt", "text": "Mara and Henric are both close enough to react. Who goes for it first?"}
-  ]
-}
-```
+Minimum beat fields are `beat_id`, `type`, and `text`.
 
 ## Phase semantics
 Phase state remains authoritative for control.
@@ -114,13 +85,14 @@ Review outcomes always produce a new immutable `gm_interaction`:
 Revision loops reuse the same `phase_id`. Opening a truly new beat creates a
 new phase.
 
+For AI GM orchestration, the turn is complete when players are unblocked again:
+either a player phase is open for acting participants or the session is paused
+for OOC. The AI should return final text then instead of authoring an extra GM
+interaction.
+
 ## Scene and session lifecycle
 Administrative lifecycle control is separate from authored GM content:
-
-- `scene.end`
-- scene switch
-- `session.end`
-- OOC pause/resume
+`scene.end`, scene switch, `session.end`, and OOC pause/resume.
 
 Normal narrative closure is:
 
@@ -133,13 +105,7 @@ may force-close with an open phase and without synthesizing a final
 `gm_interaction`.
 
 ## UI implications
-The browser should consume:
-
-- active scene overview
-- explicit phase control state
-- `current_interaction`
-- `interaction_history`
-- participant-owned slots
-
-UI slices like “current prompt” or “latest outcome” are derived from the latest
-interaction beat structure. They are not separately authored fields.
+The browser should consume active scene overview, explicit phase control state,
+`current_interaction`, `interaction_history`, and participant-owned slots. UI
+slices like “current prompt” or “latest outcome” are derived from the latest
+interaction beat structure, not separately authored fields.

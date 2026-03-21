@@ -24,9 +24,9 @@ func TestDecideSessionAuthorityCommandsEmitExpectedEvents(t *testing.T) {
 		{
 			name:      "active scene set",
 			state:     State{Started: true},
-			cmdType:   CommandTypeActiveSceneSet,
-			payload:   ActiveSceneSetPayload{ActiveSceneID: "scene-1"},
-			wantEvent: EventTypeActiveSceneSet,
+			cmdType:   CommandTypeSceneActivate,
+			payload:   SceneActivatedPayload{ActiveSceneID: "scene-1"},
+			wantEvent: EventTypeSceneActivated,
 		},
 		{
 			name:      "gm authority set",
@@ -83,8 +83,8 @@ func TestDecideSessionAuthorityCommandsRejectInvalidState(t *testing.T) {
 		{
 			name:    "active scene unchanged",
 			state:   State{ActiveSceneID: "scene-1"},
-			cmdType: CommandTypeActiveSceneSet,
-			payload: ActiveSceneSetPayload{ActiveSceneID: "scene-1"},
+			cmdType: CommandTypeSceneActivate,
+			payload: SceneActivatedPayload{ActiveSceneID: "scene-1"},
 			want:    rejectionCodeSessionActiveSceneUnchanged,
 		},
 		{
@@ -139,8 +139,8 @@ func TestDecideSessionAuthorityCommandsRejectInvalidPayloadFields(t *testing.T) 
 		{
 			name:    "active scene requires id",
 			state:   State{Started: true},
-			cmdType: CommandTypeActiveSceneSet,
-			payload: ActiveSceneSetPayload{},
+			cmdType: CommandTypeSceneActivate,
+			payload: SceneActivatedPayload{},
 			want:    rejectionCodeSessionActiveSceneRequired,
 		},
 		{
@@ -189,7 +189,7 @@ func TestDecideSessionAuthorityCommandsRejectMalformedPayloadJSON(t *testing.T) 
 		cmdType command.Type
 		state   State
 	}{
-		{cmdType: CommandTypeActiveSceneSet, state: State{Started: true}},
+		{cmdType: CommandTypeSceneActivate, state: State{Started: true}},
 		{cmdType: CommandTypeGMAuthoritySet, state: State{Started: true}},
 	}
 

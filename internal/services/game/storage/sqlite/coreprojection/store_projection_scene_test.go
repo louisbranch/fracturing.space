@@ -24,7 +24,7 @@ func TestSceneLifecycle(t *testing.T) {
 		SessionID:   "sess-1",
 		Name:        "Battle",
 		Description: "A fierce battle",
-		Active:      true,
+		Open:        true,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -43,7 +43,7 @@ func TestSceneLifecycle(t *testing.T) {
 	if got.Description != "A fierce battle" {
 		t.Errorf("description = %q, want %q", got.Description, "A fierce battle")
 	}
-	if !got.Active {
+	if !got.Open {
 		t.Error("expected active")
 	}
 	if got.SessionID != "sess-1" {
@@ -67,7 +67,7 @@ func TestSceneLifecycle(t *testing.T) {
 		t.Fatalf("end scene: %v", err)
 	}
 	got, _ = store.GetScene(ctx, "camp-scene", "sc-1")
-	if got.Active {
+	if got.Open {
 		t.Error("expected inactive after end")
 	}
 	if got.EndedAt == nil {
@@ -108,7 +108,7 @@ func TestListScenes(t *testing.T) {
 			SceneID:    name,
 			SessionID:  "sess-1",
 			Name:       "Scene " + name,
-			Active:     true,
+			Open:       true,
 			CreatedAt:  now.Add(time.Duration(i) * time.Minute),
 			UpdatedAt:  now.Add(time.Duration(i) * time.Minute),
 		}); err != nil {
@@ -122,7 +122,7 @@ func TestListScenes(t *testing.T) {
 		SceneID:    "sc-other",
 		SessionID:  "sess-2",
 		Name:       "Other",
-		Active:     true,
+		Open:       true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
@@ -167,7 +167,7 @@ func TestListScenes(t *testing.T) {
 	}
 }
 
-func TestListActiveScenes(t *testing.T) {
+func TestListOpenScenes(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
@@ -177,7 +177,7 @@ func TestListActiveScenes(t *testing.T) {
 	for _, name := range []string{"sc-a", "sc-b"} {
 		if err := store.PutScene(ctx, storage.SceneRecord{
 			CampaignID: "camp-active", SceneID: name, SessionID: "sess-1",
-			Name: name, Active: true, CreatedAt: now, UpdatedAt: now,
+			Name: name, Open: true, CreatedAt: now, UpdatedAt: now,
 		}); err != nil {
 			t.Fatalf("put scene: %v", err)
 		}
@@ -186,7 +186,7 @@ func TestListActiveScenes(t *testing.T) {
 		t.Fatalf("end scene: %v", err)
 	}
 
-	active, err := store.ListActiveScenes(ctx, "camp-active")
+	active, err := store.ListOpenScenes(ctx, "camp-active")
 	if err != nil {
 		t.Fatalf("list active: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestListActiveScenes(t *testing.T) {
 	}
 }
 
-func TestListVisibleActiveScenesForCharacters(t *testing.T) {
+func TestListVisibleOpenScenesForCharacters(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
@@ -208,7 +208,7 @@ func TestListVisibleActiveScenesForCharacters(t *testing.T) {
 			SceneID:    "sc-1",
 			SessionID:  "sess-1",
 			Name:       "Visible One",
-			Active:     true,
+			Open:       true,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		},
@@ -217,7 +217,7 @@ func TestListVisibleActiveScenesForCharacters(t *testing.T) {
 			SceneID:    "sc-2",
 			SessionID:  "sess-1",
 			Name:       "Visible Two",
-			Active:     true,
+			Open:       true,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		},
@@ -226,7 +226,7 @@ func TestListVisibleActiveScenesForCharacters(t *testing.T) {
 			SceneID:    "sc-3",
 			SessionID:  "sess-2",
 			Name:       "Other Session",
-			Active:     true,
+			Open:       true,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		},
@@ -235,7 +235,7 @@ func TestListVisibleActiveScenesForCharacters(t *testing.T) {
 			SceneID:    "sc-4",
 			SessionID:  "sess-1",
 			Name:       "Ended",
-			Active:     false,
+			Open:       false,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 			EndedAt:    &endedAt,
@@ -258,7 +258,7 @@ func TestListVisibleActiveScenesForCharacters(t *testing.T) {
 		}
 	}
 
-	scenes, err := store.ListVisibleActiveScenesForCharacters(ctx, "camp-visible", "sess-1", []string{"char-2", "char-1", "char-1", ""})
+	scenes, err := store.ListVisibleOpenScenesForCharacters(ctx, "camp-visible", "sess-1", []string{"char-2", "char-1", "char-1", ""})
 	if err != nil {
 		t.Fatalf("list visible active scenes: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestListVisibleActiveScenesForCharacters(t *testing.T) {
 		t.Fatalf("visible scenes = %#v, want [sc-1 sc-2]", scenes)
 	}
 
-	empty, err := store.ListVisibleActiveScenesForCharacters(ctx, "camp-visible", "sess-1", []string{"", " "})
+	empty, err := store.ListVisibleOpenScenesForCharacters(ctx, "camp-visible", "sess-1", []string{"", " "})
 	if err != nil {
 		t.Fatalf("list visible active scenes with empty characters: %v", err)
 	}
@@ -289,7 +289,7 @@ func TestSceneCharacterLifecycle(t *testing.T) {
 		SceneID:    "sc-1",
 		SessionID:  "sess-1",
 		Name:       "Scene",
-		Active:     true,
+		Open:       true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
@@ -350,7 +350,7 @@ func TestSceneGateLifecycle(t *testing.T) {
 		SceneID:    "sc-1",
 		SessionID:  "sess-1",
 		Name:       "Scene",
-		Active:     true,
+		Open:       true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
@@ -614,15 +614,15 @@ func TestListScenes_ValidationErrors(t *testing.T) {
 	}
 }
 
-func TestListActiveScenes_ValidationErrors(t *testing.T) {
+func TestListOpenScenes_ValidationErrors(t *testing.T) {
 	store := openTestStore(t)
-	_, err := store.ListActiveScenes(context.Background(), "")
+	_, err := store.ListOpenScenes(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error for empty campaign_id")
 	}
 }
 
-func TestListVisibleActiveScenesForCharacters_ValidationErrors(t *testing.T) {
+func TestListVisibleOpenScenesForCharacters_ValidationErrors(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
 
@@ -637,7 +637,7 @@ func TestListVisibleActiveScenesForCharacters_ValidationErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := store.ListVisibleActiveScenesForCharacters(ctx, tt.campaignID, tt.sessionID, tt.characterIDs); err == nil {
+			if _, err := store.ListVisibleOpenScenesForCharacters(ctx, tt.campaignID, tt.sessionID, tt.characterIDs); err == nil {
 				t.Fatal("expected error")
 			}
 		})
@@ -762,7 +762,7 @@ func TestSceneSpotlightLifecycle(t *testing.T) {
 		SceneID:    "sc-1",
 		SessionID:  "sess-1",
 		Name:       "Scene",
-		Active:     true,
+		Open:       true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {

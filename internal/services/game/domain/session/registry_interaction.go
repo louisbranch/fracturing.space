@@ -10,9 +10,9 @@ import (
 var sessionInteractionCommandContracts = []commandContract{
 	{
 		definition: command.Definition{
-			Type:            CommandTypeActiveSceneSet,
+			Type:            CommandTypeSceneActivate,
 			Owner:           command.OwnerCore,
-			ValidatePayload: validateActiveSceneSetPayload,
+			ValidatePayload: validateSceneActivatedPayload,
 			Gate: command.GatePolicy{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
@@ -34,9 +34,9 @@ var sessionInteractionCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
-			Type:            CommandTypeOOCPause,
+			Type:            CommandTypeOOCOpen,
 			Owner:           command.OwnerCore,
-			ValidatePayload: validateOOCPausedPayload,
+			ValidatePayload: validateOOCOpenedPayload,
 			Gate: command.GatePolicy{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
@@ -82,9 +82,9 @@ var sessionInteractionCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
-			Type:            CommandTypeOOCResume,
+			Type:            CommandTypeOOCClose,
 			Owner:           command.OwnerCore,
-			ValidatePayload: validateOOCResumedPayload,
+			ValidatePayload: validateOOCClosedPayload,
 			Gate: command.GatePolicy{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
@@ -94,9 +94,9 @@ var sessionInteractionCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
-			Type:            CommandTypeOOCInterruptionResolve,
+			Type:            CommandTypeOOCResolve,
 			Owner:           command.OwnerCore,
-			ValidatePayload: validateOOCInterruptionResolvedPayload,
+			ValidatePayload: validateOOCResolvedPayload,
 			Gate: command.GatePolicy{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
@@ -157,10 +157,10 @@ var sessionInteractionCommandContracts = []commandContract{
 var sessionInteractionEventContracts = []eventProjectionContract{
 	{
 		definition: event.Definition{
-			Type:            EventTypeActiveSceneSet,
+			Type:            EventTypeSceneActivated,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
-			ValidatePayload: validateActiveSceneSetPayload,
+			ValidatePayload: validateSceneActivatedPayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		emittable:  true,
@@ -179,10 +179,10 @@ var sessionInteractionEventContracts = []eventProjectionContract{
 	},
 	{
 		definition: event.Definition{
-			Type:            EventTypeOOCPaused,
+			Type:            EventTypeOOCOpened,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
-			ValidatePayload: validateOOCPausedPayload,
+			ValidatePayload: validateOOCOpenedPayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		emittable:  true,
@@ -223,10 +223,10 @@ var sessionInteractionEventContracts = []eventProjectionContract{
 	},
 	{
 		definition: event.Definition{
-			Type:            EventTypeOOCResumed,
+			Type:            EventTypeOOCClosed,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
-			ValidatePayload: validateOOCResumedPayload,
+			ValidatePayload: validateOOCClosedPayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		emittable:  true,
@@ -234,10 +234,10 @@ var sessionInteractionEventContracts = []eventProjectionContract{
 	},
 	{
 		definition: event.Definition{
-			Type:            EventTypeOOCInterruptionResolved,
+			Type:            EventTypeOOCResolved,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
-			ValidatePayload: validateOOCInterruptionResolvedPayload,
+			ValidatePayload: validateOOCResolvedPayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		emittable:  true,
@@ -289,8 +289,8 @@ var sessionInteractionEventContracts = []eventProjectionContract{
 	},
 }
 
-func validateActiveSceneSetPayload(raw json.RawMessage) error {
-	var payload ActiveSceneSetPayload
+func validateSceneActivatedPayload(raw json.RawMessage) error {
+	var payload SceneActivatedPayload
 	return json.Unmarshal(raw, &payload)
 }
 
@@ -299,8 +299,8 @@ func validateGMAuthoritySetPayload(raw json.RawMessage) error {
 	return json.Unmarshal(raw, &payload)
 }
 
-func validateOOCPausedPayload(raw json.RawMessage) error {
-	var payload OOCPausedPayload
+func validateOOCOpenedPayload(raw json.RawMessage) error {
+	var payload OOCOpenedPayload
 	return json.Unmarshal(raw, &payload)
 }
 
@@ -319,13 +319,13 @@ func validateOOCReadyClearedPayload(raw json.RawMessage) error {
 	return json.Unmarshal(raw, &payload)
 }
 
-func validateOOCResumedPayload(raw json.RawMessage) error {
-	var payload OOCResumedPayload
+func validateOOCClosedPayload(raw json.RawMessage) error {
+	var payload OOCClosedPayload
 	return json.Unmarshal(raw, &payload)
 }
 
-func validateOOCInterruptionResolvedPayload(raw json.RawMessage) error {
-	var payload OOCInterruptionResolvedPayload
+func validateOOCResolvedPayload(raw json.RawMessage) error {
+	var payload OOCResolvedPayload
 	return json.Unmarshal(raw, &payload)
 }
 

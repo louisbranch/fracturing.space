@@ -43,7 +43,7 @@ func (r *Runner) runInteractionSetGMAuthorityStep(ctx context.Context, state *sc
 	}
 	target := requiredString(step.Args, "participant")
 	if target == "" {
-		return r.failf("interaction_set_gm_authority participant is required")
+		return r.failf("interaction_set_session_gm_authority participant is required")
 	}
 	participantIDValue, err := participantID(state, target)
 	if err != nil {
@@ -54,12 +54,12 @@ func (r *Runner) runInteractionSetGMAuthorityStep(ctx context.Context, state *sc
 		ParticipantId: participantIDValue,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_set_gm_authority: %w", err)
+		return fmt.Errorf("interaction_set_session_gm_authority: %w", err)
 	}
 	return nil
 }
 
-func (r *Runner) runInteractionSetActiveSceneStep(ctx context.Context, state *scenarioState, step Step) error {
+func (r *Runner) runInteractionActivateSceneStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
 	}
@@ -71,14 +71,41 @@ func (r *Runner) runInteractionSetActiveSceneStep(ctx context.Context, state *sc
 	if err != nil {
 		return err
 	}
-	_, err = client.SetActiveScene(ctx, &gamev1.SetActiveSceneRequest{
+	_, err = client.ActivateScene(ctx, &gamev1.ActivateSceneRequest{
 		CampaignId: state.campaignID,
 		SceneId:    sceneID,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_set_active_scene: %w", err)
+		return fmt.Errorf("interaction_activate_scene: %w", err)
 	}
 	state.activeSceneID = sceneID
+	return nil
+}
+
+func (r *Runner) runInteractionRecordGMInteractionStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	client, err := r.requireInteractionClient()
+	if err != nil {
+		return err
+	}
+	sceneID, err := resolveInteractionSceneID(state, step.Args, false)
+	if err != nil {
+		return err
+	}
+	interaction, err := scenarioInteractionInputFromArgs(state, step.Args, nil)
+	if err != nil {
+		return err
+	}
+	_, err = client.RecordSceneGMInteraction(ctx, &gamev1.RecordSceneGMInteractionRequest{
+		CampaignId:  state.campaignID,
+		SceneId:     sceneID,
+		Interaction: interaction,
+	})
+	if err != nil {
+		return fmt.Errorf("interaction_record_scene_gm_interaction: %w", err)
+	}
 	return nil
 }
 
@@ -99,20 +126,20 @@ func (r *Runner) runInteractionStartPlayerPhaseStep(ctx context.Context, state *
 		return err
 	}
 	if len(characterIDs) == 0 {
-		return r.failf("interaction_start_player_phase characters are required")
+		return r.failf("interaction_open_scene_player_phase characters are required")
 	}
 	interaction, err := scenarioInteractionInputFromArgs(state, step.Args, characterIDs)
 	if err != nil {
 		return err
 	}
-	_, err = client.StartScenePlayerPhase(ctx, &gamev1.StartScenePlayerPhaseRequest{
+	_, err = client.OpenScenePlayerPhase(ctx, &gamev1.OpenScenePlayerPhaseRequest{
 		CampaignId:   state.campaignID,
 		SceneId:      sceneID,
 		CharacterIds: characterIDs,
 		Interaction:  interaction,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_start_player_phase: %w", err)
+		return fmt.Errorf("interaction_open_scene_player_phase: %w", err)
 	}
 	return nil
 }
@@ -131,22 +158,30 @@ func (r *Runner) runInteractionPostStep(ctx context.Context, state *scenarioStat
 	}
 	summaryText := strings.TrimSpace(optionalString(step.Args, "summary", optionalString(step.Args, "summary_text", optionalString(step.Args, "text", ""))))
 	if summaryText == "" {
-		return r.failf("interaction_post summary is required")
+		return r.failf("interaction_submit_scene_player_action summary is required")
 	}
 	characterIDs, err := resolveCharacterList(state, step.Args, "characters")
 	if err != nil {
 		return err
 	}
-	yieldAfterPost := optionalBool(step.Args, "yield", optionalBool(step.Args, "yield_after_post", false))
-	_, err = client.SubmitScenePlayerPost(ctx, &gamev1.SubmitScenePlayerPostRequest{
-		CampaignId:     state.campaignID,
-		SceneId:        sceneID,
-		SummaryText:    summaryText,
-		CharacterIds:   characterIDs,
-		YieldAfterPost: yieldAfterPost,
+	yieldAfterPost := optionalBool(step.Args, "yield", optionalBool(step.Args, "yield", false))
+	_, err = client.SubmitScenePlayerAction(ctx, &gamev1.SubmitScenePlayerActionRequest{
+		CampaignId:   state.campaignID,
+		SceneId:      sceneID,
+		SummaryText:  summaryText,
+		CharacterIds: characterIDs,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_post: %w", err)
+		return fmt.Errorf("interaction_submit_scene_player_action: %w", err)
+	}
+	if yieldAfterPost {
+		_, err = client.YieldScenePlayerPhase(ctx, &gamev1.YieldScenePlayerPhaseRequest{
+			CampaignId: state.campaignID,
+			SceneId:    sceneID,
+		})
+		if err != nil {
+			return fmt.Errorf("interaction_submit_scene_player_action yield: %w", err)
+		}
 	}
 	return nil
 }
@@ -168,7 +203,7 @@ func (r *Runner) runInteractionYieldStep(ctx context.Context, state *scenarioSta
 		SceneId:    sceneID,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_yield: %w", err)
+		return fmt.Errorf("interaction_yield_scene_player_phase: %w", err)
 	}
 	return nil
 }
@@ -185,12 +220,12 @@ func (r *Runner) runInteractionUnyieldStep(ctx context.Context, state *scenarioS
 	if err != nil {
 		return err
 	}
-	_, err = client.UnyieldScenePlayerPhase(ctx, &gamev1.UnyieldScenePlayerPhaseRequest{
+	_, err = client.WithdrawScenePlayerYield(ctx, &gamev1.WithdrawScenePlayerYieldRequest{
 		CampaignId: state.campaignID,
 		SceneId:    sceneID,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_unyield: %w", err)
+		return fmt.Errorf("interaction_withdraw_scene_player_yield: %w", err)
 	}
 	return nil
 }
@@ -208,13 +243,13 @@ func (r *Runner) runInteractionEndPlayerPhaseStep(ctx context.Context, state *sc
 		return err
 	}
 	reason := strings.TrimSpace(optionalString(step.Args, "reason", "gm_interrupted"))
-	_, err = client.EndScenePlayerPhase(ctx, &gamev1.EndScenePlayerPhaseRequest{
+	_, err = client.InterruptScenePlayerPhase(ctx, &gamev1.InterruptScenePlayerPhaseRequest{
 		CampaignId: state.campaignID,
 		SceneId:    sceneID,
 		Reason:     reason,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_end_player_phase: %w", err)
+		return fmt.Errorf("interaction_interrupt_scene_player_phase: %w", err)
 	}
 	return nil
 }
@@ -231,7 +266,7 @@ func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *sce
 	if err != nil {
 		return err
 	}
-	req := &gamev1.ResolveScenePlayerPhaseReviewRequest{
+	req := &gamev1.ResolveScenePlayerReviewRequest{
 		CampaignId: state.campaignID,
 		SceneId:    sceneID,
 	}
@@ -245,10 +280,10 @@ func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *sce
 			return err
 		}
 		if len(revisions) == 0 {
-			return r.failf("interaction_resolve_review revisions are required")
+			return r.failf("interaction_resolve_scene_player_review revisions are required")
 		}
-		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions{
-			RequestRevisions: &gamev1.ResolveScenePlayerPhaseReviewRequestRevisions{
+		req.Resolution = &gamev1.ResolveScenePlayerReviewRequest_RequestRevisions{
+			RequestRevisions: &gamev1.ResolveScenePlayerReviewRequestRevisions{
 				Interaction: interaction,
 				Revisions:   revisions,
 			},
@@ -258,8 +293,8 @@ func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *sce
 		if err != nil {
 			return err
 		}
-		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_ReturnToGm{
-			ReturnToGm: &gamev1.ResolveScenePlayerPhaseReviewReturnToGM{
+		req.Resolution = &gamev1.ResolveScenePlayerReviewRequest_ReturnToGm{
+			ReturnToGm: &gamev1.ResolveScenePlayerReviewReturnToGM{
 				Interaction: interaction,
 			},
 		}
@@ -269,22 +304,22 @@ func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *sce
 			return err
 		}
 		if len(characterIDs) == 0 {
-			return r.failf("interaction_resolve_review characters are required when advancing to players")
+			return r.failf("interaction_resolve_scene_player_review characters are required when advancing to players")
 		}
 		interaction, err := scenarioInteractionInputFromArgs(state, step.Args, characterIDs)
 		if err != nil {
 			return err
 		}
-		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_AdvanceToPlayers{
-			AdvanceToPlayers: &gamev1.ResolveScenePlayerPhaseReviewAdvanceToPlayers{
+		req.Resolution = &gamev1.ResolveScenePlayerReviewRequest_OpenNextPlayerPhase{
+			OpenNextPlayerPhase: &gamev1.ResolveScenePlayerReviewOpenNextPlayerPhase{
 				NextCharacterIds: characterIDs,
 				Interaction:      interaction,
 			},
 		}
 	}
-	_, err = client.ResolveScenePlayerPhaseReview(ctx, req)
+	_, err = client.ResolveScenePlayerReview(ctx, req)
 	if err != nil {
-		return fmt.Errorf("interaction_resolve_review: %w", err)
+		return fmt.Errorf("interaction_resolve_scene_player_review: %w", err)
 	}
 	return nil
 }
@@ -297,12 +332,12 @@ func (r *Runner) runInteractionPauseOOCStep(ctx context.Context, state *scenario
 	if err != nil {
 		return err
 	}
-	_, err = client.PauseSessionForOOC(ctx, &gamev1.PauseSessionForOOCRequest{
+	_, err = client.OpenSessionOOC(ctx, &gamev1.OpenSessionOOCRequest{
 		CampaignId: state.campaignID,
 		Reason:     strings.TrimSpace(optionalString(step.Args, "reason", "")),
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_pause_ooc: %w", err)
+		return fmt.Errorf("interaction_open_session_ooc: %w", err)
 	}
 	return nil
 }
@@ -317,14 +352,14 @@ func (r *Runner) runInteractionPostOOCStep(ctx context.Context, state *scenarioS
 	}
 	body := strings.TrimSpace(optionalString(step.Args, "body", ""))
 	if body == "" {
-		return r.failf("interaction_post_ooc body is required")
+		return r.failf("interaction_post_session_ooc body is required")
 	}
 	_, err = client.PostSessionOOC(ctx, &gamev1.PostSessionOOCRequest{
 		CampaignId: state.campaignID,
 		Body:       body,
 	})
 	if err != nil {
-		return fmt.Errorf("interaction_post_ooc: %w", err)
+		return fmt.Errorf("interaction_post_session_ooc: %w", err)
 	}
 	return nil
 }
@@ -339,7 +374,7 @@ func (r *Runner) runInteractionReadyOOCStep(ctx context.Context, state *scenario
 	}
 	_, err = client.MarkOOCReadyToResume(ctx, &gamev1.MarkOOCReadyToResumeRequest{CampaignId: state.campaignID})
 	if err != nil {
-		return fmt.Errorf("interaction_ready_ooc: %w", err)
+		return fmt.Errorf("interaction_mark_ooc_ready_to_resume: %w", err)
 	}
 	return nil
 }
@@ -354,12 +389,12 @@ func (r *Runner) runInteractionClearReadyOOCStep(ctx context.Context, state *sce
 	}
 	_, err = client.ClearOOCReadyToResume(ctx, &gamev1.ClearOOCReadyToResumeRequest{CampaignId: state.campaignID})
 	if err != nil {
-		return fmt.Errorf("interaction_clear_ready_ooc: %w", err)
+		return fmt.Errorf("interaction_clear_ooc_ready_to_resume: %w", err)
 	}
 	return nil
 }
 
-func (r *Runner) runInteractionResumeOOCStep(ctx context.Context, state *scenarioState) error {
+func (r *Runner) runInteractionResolveSessionOOCStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
 	}
@@ -367,25 +402,18 @@ func (r *Runner) runInteractionResumeOOCStep(ctx context.Context, state *scenari
 	if err != nil {
 		return err
 	}
-	_, err = client.ResumeFromOOC(ctx, &gamev1.ResumeFromOOCRequest{CampaignId: state.campaignID})
-	if err != nil {
-		return fmt.Errorf("interaction_resume_ooc: %w", err)
-	}
-	return nil
-}
-
-func (r *Runner) runInteractionResolveInterruptedPhaseStep(ctx context.Context, state *scenarioState, step Step) error {
-	if err := r.ensureSession(ctx, state); err != nil {
-		return err
-	}
-	client, err := r.requireInteractionClient()
-	if err != nil {
-		return err
-	}
-	req := &gamev1.ResolveInterruptedScenePhaseRequest{CampaignId: state.campaignID}
-	if optionalBool(step.Args, "resume_original_phase", false) {
-		req.Resolution = &gamev1.ResolveInterruptedScenePhaseRequest_ResumeOriginalPhase{
-			ResumeOriginalPhase: &gamev1.ResolveInterruptedScenePhaseResumeOriginal{},
+	req := &gamev1.ResolveSessionOOCRequest{CampaignId: state.campaignID}
+	if optionalBool(step.Args, "resume_interrupted_phase", false) {
+		req.Resolution = &gamev1.ResolveSessionOOCRequest_ResumeInterruptedPhase{
+			ResumeInterruptedPhase: &gamev1.ResolveSessionOOCResumeInterruptedPhase{},
+		}
+	} else if optionalBool(step.Args, "return_to_gm", false) {
+		sceneID, err := resolveInteractionSceneID(state, step.Args, true)
+		if err != nil && !strings.Contains(err.Error(), "required") {
+			return err
+		}
+		req.Resolution = &gamev1.ResolveSessionOOCRequest_ReturnToGm{
+			ReturnToGm: &gamev1.ResolveSessionOOCReturnToGM{SceneId: sceneID},
 		}
 	} else {
 		characterIDs, err := resolveCharacterList(state, step.Args, "characters")
@@ -393,7 +421,7 @@ func (r *Runner) runInteractionResolveInterruptedPhaseStep(ctx context.Context, 
 			return err
 		}
 		if len(characterIDs) == 0 {
-			return r.failf("interaction_resolve_interrupted_phase characters are required unless resume_original_phase is true")
+			return r.failf("interaction_resolve_session_ooc characters are required unless resume_interrupted_phase or return_to_gm is true")
 		}
 		sceneID, err := resolveInteractionSceneID(state, step.Args, false)
 		if err != nil {
@@ -403,17 +431,17 @@ func (r *Runner) runInteractionResolveInterruptedPhaseStep(ctx context.Context, 
 		if err != nil {
 			return err
 		}
-		req.Resolution = &gamev1.ResolveInterruptedScenePhaseRequest_ReplaceWithPlayerPhase{
-			ReplaceWithPlayerPhase: &gamev1.ResolveInterruptedScenePhaseReplaceWithPlayerPhase{
+		req.Resolution = &gamev1.ResolveSessionOOCRequest_OpenPlayerPhase{
+			OpenPlayerPhase: &gamev1.ResolveSessionOOCOpenPlayerPhase{
 				SceneId:          sceneID,
 				NextCharacterIds: characterIDs,
 				Interaction:      interaction,
 			},
 		}
 	}
-	_, err = client.ResolveInterruptedScenePhase(ctx, req)
+	_, err = client.ResolveSessionOOC(ctx, req)
 	if err != nil {
-		return fmt.Errorf("interaction_resolve_interrupted_phase: %w", err)
+		return fmt.Errorf("interaction_resolve_session_ooc: %w", err)
 	}
 	return nil
 }
@@ -482,6 +510,29 @@ func (r *Runner) runInteractionExpectStep(ctx context.Context, state *scenarioSt
 		actualPrompt := currentInteractionPromptText(stateProto.GetActiveScene().GetCurrentInteraction())
 		if strings.TrimSpace(fmt.Sprint(expectedPrompt)) != actualPrompt {
 			return r.assertf("interaction prompt = %q, want %q", actualPrompt, fmt.Sprint(expectedPrompt))
+		}
+	}
+	if expectedControlMode, ok := step.Args["control_mode"]; ok {
+		actualMode := normalizeInteractionControlMode(stateProto.GetControl().GetMode())
+		wantMode := normalizeInteractionControlModeString(fmt.Sprint(expectedControlMode))
+		if actualMode != wantMode {
+			return r.assertf("interaction control_mode = %q, want %q", actualMode, wantMode)
+		}
+	}
+	if _, ok := step.Args["allowed_transitions"]; ok {
+		expectedTransitions := normalizeInteractionTransitionStrings(readStringSlice(step.Args, "allowed_transitions"))
+		actualTransitions := actualInteractionTransitions(stateProto.GetControl().GetAllowedTransitions())
+		slices.Sort(expectedTransitions)
+		slices.Sort(actualTransitions)
+		if !slices.Equal(actualTransitions, expectedTransitions) {
+			return r.assertf("interaction allowed_transitions = %v, want %v", actualTransitions, expectedTransitions)
+		}
+	}
+	if expectedTransition, ok := step.Args["recommended_transition"]; ok {
+		actualTransition := normalizeInteractionTransition(stateProto.GetControl().GetRecommendedTransition())
+		wantTransition := normalizeInteractionTransitionString(fmt.Sprint(expectedTransition))
+		if actualTransition != wantTransition {
+			return r.assertf("interaction recommended_transition = %q, want %q", actualTransition, wantTransition)
 		}
 	}
 	if _, ok := step.Args["acting_characters"]; ok {
@@ -660,6 +711,54 @@ func normalizeScenePhaseStatusString(value string) string {
 	default:
 		return strings.ToUpper(strings.TrimSpace(value))
 	}
+}
+
+func normalizeInteractionControlMode(mode gamev1.InteractionControlMode) string {
+	name := strings.TrimSpace(mode.String())
+	if strings.HasPrefix(name, "INTERACTION_CONTROL_MODE_") {
+		name = strings.TrimPrefix(name, "INTERACTION_CONTROL_MODE_")
+	}
+	if name == "" {
+		return fmt.Sprintf("UNKNOWN_%d", int32(mode))
+	}
+	return name
+}
+
+func normalizeInteractionControlModeString(value string) string {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	return strings.TrimPrefix(value, "INTERACTION_CONTROL_MODE_")
+}
+
+func normalizeInteractionTransition(transition gamev1.InteractionTransition) string {
+	name := strings.TrimSpace(transition.String())
+	if strings.HasPrefix(name, "INTERACTION_TRANSITION_") {
+		name = strings.TrimPrefix(name, "INTERACTION_TRANSITION_")
+	}
+	if name == "" {
+		return fmt.Sprintf("UNKNOWN_%d", int32(transition))
+	}
+	return name
+}
+
+func normalizeInteractionTransitionString(value string) string {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	return strings.TrimPrefix(value, "INTERACTION_TRANSITION_")
+}
+
+func normalizeInteractionTransitionStrings(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		out = append(out, normalizeInteractionTransitionString(value))
+	}
+	return out
+}
+
+func actualInteractionTransitions(transitions []gamev1.InteractionTransition) []string {
+	out := make([]string, 0, len(transitions))
+	for _, transition := range transitions {
+		out = append(out, normalizeInteractionTransition(transition))
+	}
+	return out
 }
 
 func scenarioInteractionInputFromArgs(state *scenarioState, args map[string]any, fallbackCharacterIDs []string) (*gamev1.GMInteractionInput, error) {

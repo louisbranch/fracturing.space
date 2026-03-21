@@ -58,19 +58,19 @@ Reads:
 
 Writes:
 
-- `SetActiveScene`
-- `CommitSceneGMInteraction`
-- `StartScenePlayerPhase`
-- `SubmitScenePlayerPost`
+- `ActivateScene`
+- `RecordSceneGMInteraction`
+- `OpenScenePlayerPhase`
+- `SubmitScenePlayerAction`
 - `YieldScenePlayerPhase`
-- `UnyieldScenePlayerPhase`
-- `EndScenePlayerPhase`
-- `ResolveScenePlayerPhaseReview`
-- `PauseSessionForOOC`
+- `WithdrawScenePlayerYield`
+- `InterruptScenePlayerPhase`
+- `ResolveScenePlayerReview`
+- `OpenSessionOOC`
 - `PostSessionOOC`
 - `MarkOOCReadyToResume`
 - `ClearOOCReadyToResume`
-- `ResumeFromOOC`
+- `ResolveSessionOOC`
 
 The browser surface consumes interaction state directly. Chat-style stream and
 persona state is no longer the authoritative game-surface contract.

@@ -129,7 +129,7 @@ func integrationOutboxEventsForEvent(evt event.Event) ([]storage.IntegrationOutb
 		return buildInviteDeclinedOutboxEvent(evt)
 	case session.EventTypeGMAuthoritySet:
 		return buildAIGMTurnRequestedOutboxEvent(evt)
-	case session.EventTypeOOCResumed:
+	case session.EventTypeOOCClosed:
 		return buildAIGMTurnRequestedOutboxEvent(evt)
 	case scene.EventTypePlayerPhaseReviewStarted:
 		return buildAIGMTurnRequestedOutboxEvent(evt)

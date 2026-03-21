@@ -17,7 +17,7 @@ func TestFold_Created_SetsActiveAndMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !state.Active {
+	if !state.Open {
 		t.Fatal("expected active = true")
 	}
 	if state.SceneID != "s1" {
@@ -35,7 +35,7 @@ func TestFold_Created_SetsActiveAndMetadata(t *testing.T) {
 }
 
 func TestFold_Updated_UpdatesNameAndDescription(t *testing.T) {
-	state := State{SceneID: "s1", Name: "Old", Description: "Old desc", Active: true}
+	state := State{SceneID: "s1", Name: "Old", Description: "Old desc", Open: true}
 	evt := event.Event{
 		Type:        EventTypeUpdated,
 		PayloadJSON: []byte(`{"scene_id":"s1","name":"New","description":"New desc"}`),
@@ -53,7 +53,7 @@ func TestFold_Updated_UpdatesNameAndDescription(t *testing.T) {
 }
 
 func TestFold_Updated_PartialUpdate_KeepsExistingFields(t *testing.T) {
-	state := State{SceneID: "s1", Name: "Keep", Description: "Keep desc", Active: true}
+	state := State{SceneID: "s1", Name: "Keep", Description: "Keep desc", Open: true}
 	evt := event.Event{
 		Type:        EventTypeUpdated,
 		PayloadJSON: []byte(`{"scene_id":"s1","name":"Changed"}`),
@@ -73,7 +73,7 @@ func TestFold_Updated_PartialUpdate_KeepsExistingFields(t *testing.T) {
 func TestFold_Ended_ClearsActiveAndTransientState(t *testing.T) {
 	state := State{
 		SceneID:              "s1",
-		Active:               true,
+		Open:                 true,
 		GateOpen:             true,
 		GateID:               "g1",
 		SpotlightType:        "gm",
@@ -87,7 +87,7 @@ func TestFold_Ended_ClearsActiveAndTransientState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.Active {
+	if state.Open {
 		t.Fatal("expected active = false")
 	}
 	if state.GateOpen {
@@ -138,7 +138,7 @@ func TestFold_CharacterRemoved_RemovesFromMap(t *testing.T) {
 }
 
 func TestFold_GateOpened_SetsGateState(t *testing.T) {
-	state := State{Active: true}
+	state := State{Open: true}
 	evt := event.Event{
 		Type:        EventTypeGateOpened,
 		PayloadJSON: []byte(`{"scene_id":"s1","gate_id":"g1","gate_type":"decision"}`),
@@ -189,7 +189,7 @@ func TestFold_GateAbandoned_ClearsGateState(t *testing.T) {
 }
 
 func TestFold_SpotlightSet_SetsSpotlightState(t *testing.T) {
-	state := State{Active: true}
+	state := State{Open: true}
 	evt := event.Event{
 		Type:        EventTypeSpotlightSet,
 		PayloadJSON: []byte(`{"scene_id":"s1","spotlight_type":"character","character_id":"c1"}`),
@@ -227,7 +227,7 @@ func TestFold_SpotlightCleared_ClearsSpotlightState(t *testing.T) {
 func TestFold_UnknownEventType_ReturnsError(t *testing.T) {
 	original := State{
 		SceneID: "s1",
-		Active:  true,
+		Open:    true,
 		Name:    "Test",
 	}
 	_, err := Fold(original, event.Event{

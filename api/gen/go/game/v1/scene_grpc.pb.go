@@ -46,7 +46,7 @@ type SceneServiceClient interface {
 	CreateScene(ctx context.Context, in *CreateSceneRequest, opts ...grpc.CallOption) (*CreateSceneResponse, error)
 	// Update scene metadata (name, description).
 	UpdateScene(ctx context.Context, in *UpdateSceneRequest, opts ...grpc.CallOption) (*UpdateSceneResponse, error)
-	// End an active scene.
+	// End an open scene.
 	EndScene(ctx context.Context, in *EndSceneRequest, opts ...grpc.CallOption) (*EndSceneResponse, error)
 	// Add a character to a scene.
 	AddCharacterToScene(ctx context.Context, in *AddCharacterToSceneRequest, opts ...grpc.CallOption) (*AddCharacterToSceneResponse, error)
@@ -230,7 +230,7 @@ type SceneServiceServer interface {
 	CreateScene(context.Context, *CreateSceneRequest) (*CreateSceneResponse, error)
 	// Update scene metadata (name, description).
 	UpdateScene(context.Context, *UpdateSceneRequest) (*UpdateSceneResponse, error)
-	// End an active scene.
+	// End an open scene.
 	EndScene(context.Context, *EndSceneRequest) (*EndSceneResponse, error)
 	// Add a character to a scene.
 	AddCharacterToScene(context.Context, *AddCharacterToSceneRequest) (*AddCharacterToSceneResponse, error)

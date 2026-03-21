@@ -23,7 +23,7 @@ const (
 // Each scene is an independent sub-session boundary with its own character
 // roster, gate, and spotlight. The command engine uses this to enforce
 // scene-scoped gate blocking and spotlight routing without affecting
-// other active scenes.
+// other open scenes.
 type State struct {
 	// SceneID is the canonical identifier for this scene.
 	SceneID ids.SceneID
@@ -31,8 +31,8 @@ type State struct {
 	Name string
 	// Description is optional narrative setup text.
 	Description string
-	// Active indicates whether the scene is still running.
-	Active bool
+	// Open indicates whether the scene is still running.
+	Open bool
 	// Characters tracks character IDs present in this scene (PCs and NPCs).
 	// The same character may appear in multiple scenes simultaneously.
 	Characters map[ids.CharacterID]bool

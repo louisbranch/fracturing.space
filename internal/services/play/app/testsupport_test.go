@@ -112,19 +112,19 @@ func (f *recordingInteractionClient) GetInteractionState(context.Context, *gamev
 	return &gamev1.GetInteractionStateResponse{State: f.state}, nil
 }
 
-func (f *recordingInteractionClient) SetActiveScene(_ context.Context, req *gamev1.SetActiveSceneRequest, _ ...gogrpc.CallOption) (*gamev1.SetActiveSceneResponse, error) {
-	f.record("SetActiveScene", req.GetCampaignId())
-	return &gamev1.SetActiveSceneResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) ActivateScene(_ context.Context, req *gamev1.ActivateSceneRequest, _ ...gogrpc.CallOption) (*gamev1.ActivateSceneResponse, error) {
+	f.record("ActivateScene", req.GetCampaignId())
+	return &gamev1.ActivateSceneResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) StartScenePlayerPhase(_ context.Context, req *gamev1.StartScenePlayerPhaseRequest, _ ...gogrpc.CallOption) (*gamev1.StartScenePlayerPhaseResponse, error) {
-	f.record("StartScenePlayerPhase", req.GetCampaignId())
-	return &gamev1.StartScenePlayerPhaseResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) OpenScenePlayerPhase(_ context.Context, req *gamev1.OpenScenePlayerPhaseRequest, _ ...gogrpc.CallOption) (*gamev1.OpenScenePlayerPhaseResponse, error) {
+	f.record("OpenScenePlayerPhase", req.GetCampaignId())
+	return &gamev1.OpenScenePlayerPhaseResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) SubmitScenePlayerPost(_ context.Context, req *gamev1.SubmitScenePlayerPostRequest, _ ...gogrpc.CallOption) (*gamev1.SubmitScenePlayerPostResponse, error) {
-	f.record("SubmitScenePlayerPost", req.GetCampaignId())
-	return &gamev1.SubmitScenePlayerPostResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) SubmitScenePlayerAction(_ context.Context, req *gamev1.SubmitScenePlayerActionRequest, _ ...gogrpc.CallOption) (*gamev1.SubmitScenePlayerActionResponse, error) {
+	f.record("SubmitScenePlayerAction", req.GetCampaignId())
+	return &gamev1.SubmitScenePlayerActionResponse{State: f.state}, f.mutationErr
 }
 
 func (f *recordingInteractionClient) YieldScenePlayerPhase(_ context.Context, req *gamev1.YieldScenePlayerPhaseRequest, _ ...gogrpc.CallOption) (*gamev1.YieldScenePlayerPhaseResponse, error) {
@@ -132,29 +132,29 @@ func (f *recordingInteractionClient) YieldScenePlayerPhase(_ context.Context, re
 	return &gamev1.YieldScenePlayerPhaseResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) UnyieldScenePlayerPhase(_ context.Context, req *gamev1.UnyieldScenePlayerPhaseRequest, _ ...gogrpc.CallOption) (*gamev1.UnyieldScenePlayerPhaseResponse, error) {
-	f.record("UnyieldScenePlayerPhase", req.GetCampaignId())
-	return &gamev1.UnyieldScenePlayerPhaseResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) WithdrawScenePlayerYield(_ context.Context, req *gamev1.WithdrawScenePlayerYieldRequest, _ ...gogrpc.CallOption) (*gamev1.WithdrawScenePlayerYieldResponse, error) {
+	f.record("WithdrawScenePlayerYield", req.GetCampaignId())
+	return &gamev1.WithdrawScenePlayerYieldResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) EndScenePlayerPhase(_ context.Context, req *gamev1.EndScenePlayerPhaseRequest, _ ...gogrpc.CallOption) (*gamev1.EndScenePlayerPhaseResponse, error) {
-	f.record("EndScenePlayerPhase", req.GetCampaignId())
-	return &gamev1.EndScenePlayerPhaseResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) InterruptScenePlayerPhase(_ context.Context, req *gamev1.InterruptScenePlayerPhaseRequest, _ ...gogrpc.CallOption) (*gamev1.InterruptScenePlayerPhaseResponse, error) {
+	f.record("InterruptScenePlayerPhase", req.GetCampaignId())
+	return &gamev1.InterruptScenePlayerPhaseResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) CommitSceneGMInteraction(_ context.Context, req *gamev1.CommitSceneGMInteractionRequest, _ ...gogrpc.CallOption) (*gamev1.CommitSceneGMInteractionResponse, error) {
-	f.record("CommitSceneGMInteraction", req.GetCampaignId())
-	return &gamev1.CommitSceneGMInteractionResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) RecordSceneGMInteraction(_ context.Context, req *gamev1.RecordSceneGMInteractionRequest, _ ...gogrpc.CallOption) (*gamev1.RecordSceneGMInteractionResponse, error) {
+	f.record("RecordSceneGMInteraction", req.GetCampaignId())
+	return &gamev1.RecordSceneGMInteractionResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) ResolveScenePlayerPhaseReview(_ context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...gogrpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
-	f.record("ResolveScenePlayerPhaseReview", req.GetCampaignId())
-	return &gamev1.ResolveScenePlayerPhaseReviewResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) ResolveScenePlayerReview(_ context.Context, req *gamev1.ResolveScenePlayerReviewRequest, _ ...gogrpc.CallOption) (*gamev1.ResolveScenePlayerReviewResponse, error) {
+	f.record("ResolveScenePlayerReview", req.GetCampaignId())
+	return &gamev1.ResolveScenePlayerReviewResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) PauseSessionForOOC(_ context.Context, req *gamev1.PauseSessionForOOCRequest, _ ...gogrpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error) {
-	f.record("PauseSessionForOOC", req.GetCampaignId())
-	return &gamev1.PauseSessionForOOCResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) OpenSessionOOC(_ context.Context, req *gamev1.OpenSessionOOCRequest, _ ...gogrpc.CallOption) (*gamev1.OpenSessionOOCResponse, error) {
+	f.record("OpenSessionOOC", req.GetCampaignId())
+	return &gamev1.OpenSessionOOCResponse{State: f.state}, f.mutationErr
 }
 
 func (f *recordingInteractionClient) PostSessionOOC(_ context.Context, req *gamev1.PostSessionOOCRequest, _ ...gogrpc.CallOption) (*gamev1.PostSessionOOCResponse, error) {
@@ -172,14 +172,9 @@ func (f *recordingInteractionClient) ClearOOCReadyToResume(_ context.Context, re
 	return &gamev1.ClearOOCReadyToResumeResponse{State: f.state}, f.mutationErr
 }
 
-func (f *recordingInteractionClient) ResumeFromOOC(_ context.Context, req *gamev1.ResumeFromOOCRequest, _ ...gogrpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
-	f.record("ResumeFromOOC", req.GetCampaignId())
-	return &gamev1.ResumeFromOOCResponse{State: f.state}, f.mutationErr
-}
-
-func (f *recordingInteractionClient) ResolveInterruptedScenePhase(_ context.Context, req *gamev1.ResolveInterruptedScenePhaseRequest, _ ...gogrpc.CallOption) (*gamev1.ResolveInterruptedScenePhaseResponse, error) {
-	f.record("ResolveInterruptedScenePhase", req.GetCampaignId())
-	return &gamev1.ResolveInterruptedScenePhaseResponse{State: f.state}, f.mutationErr
+func (f *recordingInteractionClient) ResolveSessionOOC(_ context.Context, req *gamev1.ResolveSessionOOCRequest, _ ...gogrpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error) {
+	f.record("ResolveSessionOOC", req.GetCampaignId())
+	return &gamev1.ResolveSessionOOCResponse{State: f.state}, f.mutationErr
 }
 
 func (f *recordingInteractionClient) SetSessionGMAuthority(_ context.Context, req *gamev1.SetSessionGMAuthorityRequest, _ ...gogrpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error) {

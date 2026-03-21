@@ -47,7 +47,7 @@ func (a Applier) applySceneCreated(ctx context.Context, evt event.Event, payload
 		SessionID:   sessionID,
 		Name:        strings.TrimSpace(payload.Name),
 		Description: strings.TrimSpace(payload.Description),
-		Active:      true,
+		Open:        true,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
 	}); err != nil {

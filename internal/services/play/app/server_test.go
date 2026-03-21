@@ -380,31 +380,31 @@ func (f fakePlayInteractionClient) GetInteractionState(context.Context, *gamev1.
 	return f.response, f.err
 }
 
-func (f fakePlayInteractionClient) SetActiveScene(context.Context, *gamev1.SetActiveSceneRequest, ...grpc.CallOption) (*gamev1.SetActiveSceneResponse, error) {
+func (f fakePlayInteractionClient) ActivateScene(context.Context, *gamev1.ActivateSceneRequest, ...grpc.CallOption) (*gamev1.ActivateSceneResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) StartScenePlayerPhase(context.Context, *gamev1.StartScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.StartScenePlayerPhaseResponse, error) {
+func (f fakePlayInteractionClient) OpenScenePlayerPhase(context.Context, *gamev1.OpenScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.OpenScenePlayerPhaseResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) SubmitScenePlayerPost(context.Context, *gamev1.SubmitScenePlayerPostRequest, ...grpc.CallOption) (*gamev1.SubmitScenePlayerPostResponse, error) {
+func (f fakePlayInteractionClient) SubmitScenePlayerAction(context.Context, *gamev1.SubmitScenePlayerActionRequest, ...grpc.CallOption) (*gamev1.SubmitScenePlayerActionResponse, error) {
 	return nil, nil
 }
 func (f fakePlayInteractionClient) YieldScenePlayerPhase(context.Context, *gamev1.YieldScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.YieldScenePlayerPhaseResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) UnyieldScenePlayerPhase(context.Context, *gamev1.UnyieldScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.UnyieldScenePlayerPhaseResponse, error) {
+func (f fakePlayInteractionClient) WithdrawScenePlayerYield(context.Context, *gamev1.WithdrawScenePlayerYieldRequest, ...grpc.CallOption) (*gamev1.WithdrawScenePlayerYieldResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) EndScenePlayerPhase(context.Context, *gamev1.EndScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.EndScenePlayerPhaseResponse, error) {
+func (f fakePlayInteractionClient) InterruptScenePlayerPhase(context.Context, *gamev1.InterruptScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.InterruptScenePlayerPhaseResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) CommitSceneGMInteraction(context.Context, *gamev1.CommitSceneGMInteractionRequest, ...grpc.CallOption) (*gamev1.CommitSceneGMInteractionResponse, error) {
+func (f fakePlayInteractionClient) RecordSceneGMInteraction(context.Context, *gamev1.RecordSceneGMInteractionRequest, ...grpc.CallOption) (*gamev1.RecordSceneGMInteractionResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) ResolveScenePlayerPhaseReview(context.Context, *gamev1.ResolveScenePlayerPhaseReviewRequest, ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
+func (f fakePlayInteractionClient) ResolveScenePlayerReview(context.Context, *gamev1.ResolveScenePlayerReviewRequest, ...grpc.CallOption) (*gamev1.ResolveScenePlayerReviewResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) PauseSessionForOOC(context.Context, *gamev1.PauseSessionForOOCRequest, ...grpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error) {
+func (f fakePlayInteractionClient) OpenSessionOOC(context.Context, *gamev1.OpenSessionOOCRequest, ...grpc.CallOption) (*gamev1.OpenSessionOOCResponse, error) {
 	return nil, nil
 }
 func (f fakePlayInteractionClient) PostSessionOOC(context.Context, *gamev1.PostSessionOOCRequest, ...grpc.CallOption) (*gamev1.PostSessionOOCResponse, error) {
@@ -416,10 +416,7 @@ func (f fakePlayInteractionClient) MarkOOCReadyToResume(context.Context, *gamev1
 func (f fakePlayInteractionClient) ClearOOCReadyToResume(context.Context, *gamev1.ClearOOCReadyToResumeRequest, ...grpc.CallOption) (*gamev1.ClearOOCReadyToResumeResponse, error) {
 	return nil, nil
 }
-func (f fakePlayInteractionClient) ResumeFromOOC(context.Context, *gamev1.ResumeFromOOCRequest, ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
-	return nil, nil
-}
-func (f fakePlayInteractionClient) ResolveInterruptedScenePhase(context.Context, *gamev1.ResolveInterruptedScenePhaseRequest, ...grpc.CallOption) (*gamev1.ResolveInterruptedScenePhaseResponse, error) {
+func (f fakePlayInteractionClient) ResolveSessionOOC(context.Context, *gamev1.ResolveSessionOOCRequest, ...grpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error) {
 	return nil, nil
 }
 func (f fakePlayInteractionClient) SetSessionGMAuthority(context.Context, *gamev1.SetSessionGMAuthorityRequest, ...grpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error) {

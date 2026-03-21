@@ -42,7 +42,7 @@ Interaction flow steps also live on the root handle. Use `as = "<participant ali
 inside a step table to run that write as a specific GM or player participant:
 
 ```lua
-scn:interaction_start_player_phase({
+scn:interaction_open_scene_player_phase({
   scene = "The Bridge",
   interaction = {
     title = "Bridge Prompt",
@@ -51,7 +51,7 @@ scn:interaction_start_player_phase({
   characters = {"Aria", "Corin"},
   as = "Guide",
 })
-scn:interaction_post({
+scn:interaction_submit_scene_player_action({
   as = "Rhea",
   summary = "Aria lunges for the rope.",
   characters = {"Aria"},
@@ -61,26 +61,26 @@ scn:interaction_post({
 
 Supported interaction root methods:
 
-- `interaction_set_gm_authority`
-- `interaction_set_active_scene`
-- `interaction_start_player_phase`
-- `interaction_post`
-- `interaction_yield`
-- `interaction_unyield`
-- `interaction_resolve_review`
-- `interaction_end_player_phase`
-- `interaction_pause_ooc`
-- `interaction_post_ooc`
-- `interaction_ready_ooc`
-- `interaction_clear_ready_ooc`
-- `interaction_resume_ooc`
+- `interaction_set_session_gm_authority`
+- `interaction_activate_scene`
+- `interaction_open_scene_player_phase`
+- `interaction_submit_scene_player_action`
+- `interaction_yield_scene_player_phase`
+- `interaction_withdraw_scene_player_yield`
+- `interaction_resolve_scene_player_review`
+- `interaction_interrupt_scene_player_phase`
+- `interaction_open_session_ooc`
+- `interaction_post_session_ooc`
+- `interaction_mark_ooc_ready_to_resume`
+- `interaction_clear_ooc_ready_to_resume`
+- `interaction_resolve_session_ooc`
 - `interaction_expect`
 
 Any scenario step may declare an expected failure and continue execution when
 the runner sees a matching gRPC status:
 
 ```lua
-scn:interaction_resume_ooc({
+scn:interaction_resolve_session_ooc({
   as = "Guide",
   expect_error = {code = "FAILED_PRECONDITION", contains = "not paused"},
 })

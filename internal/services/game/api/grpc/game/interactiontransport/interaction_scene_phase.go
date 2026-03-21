@@ -15,12 +15,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (a interactionApplication) StartScenePlayerPhase(ctx context.Context, campaignID string, in *campaignv1.StartScenePlayerPhaseRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) OpenScenePlayerPhase(ctx context.Context, campaignID string, in *campaignv1.OpenScenePlayerPhaseRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
 		return nil, err
 	}
-	campaignRecord, err := a.requireManageSessions(ctx, campaignID)
+	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -32,6 +32,9 @@ func (a interactionApplication) StartScenePlayerPhase(ctx context.Context, campa
 		return nil, err
 	}
 	if err := requireSceneWritesUnblocked(sessionInteraction); err != nil {
+		return nil, err
+	}
+	if err := requireAuthoritativeGMActor(actor, sessionInteraction); err != nil {
 		return nil, err
 	}
 	if strings.TrimSpace(sessionInteraction.ActiveSceneID) != sceneID {
@@ -52,7 +55,7 @@ func (a interactionApplication) StartScenePlayerPhase(ctx context.Context, campa
 	if err := a.clearAITurnIfPresent(ctx, campaignID, activeSession.ID, sessionInteraction, "gm_frame_started"); err != nil {
 		return nil, err
 	}
-	interactionPayload, err := a.buildGMInteractionPayload(in.GetInteraction(), ids.SceneID(sceneID), phaseID, ids.ParticipantID(sessionInteraction.GMAuthorityParticipantID))
+	interactionPayload, err := a.buildGMInteractionPayload(in.GetInteraction(), ids.SceneID(sceneID), phaseID, ids.ParticipantID(actor.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +74,7 @@ func (a interactionApplication) StartScenePlayerPhase(ctx context.Context, campa
 	return a.GetInteractionState(ctx, campaignID)
 }
 
-func (a interactionApplication) SubmitScenePlayerPost(ctx context.Context, campaignID string, in *campaignv1.SubmitScenePlayerPostRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) SubmitScenePlayerAction(ctx context.Context, campaignID string, in *campaignv1.SubmitScenePlayerActionRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
 		return nil, err
@@ -108,11 +111,6 @@ func (a interactionApplication) SubmitScenePlayerPost(ctx context.Context, campa
 	if err := a.executeSceneCommand(ctx, commandTypeScenePlayerPhasePost, campaignID, activeSession.ID, sceneID, payload, "scene.player_phase.post"); err != nil {
 		return nil, err
 	}
-	if in.GetYieldAfterPost() {
-		if err := a.yieldScenePhase(ctx, campaignID, activeSession.ID, sceneID, sceneInteraction.PhaseID, actor.ID); err != nil {
-			return nil, err
-		}
-	}
 	return a.GetInteractionState(ctx, campaignID)
 }
 
@@ -142,7 +140,7 @@ func (a interactionApplication) YieldScenePlayerPhase(ctx context.Context, campa
 	return a.GetInteractionState(ctx, campaignID)
 }
 
-func (a interactionApplication) UnyieldScenePlayerPhase(ctx context.Context, campaignID string, in *campaignv1.UnyieldScenePlayerPhaseRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) WithdrawScenePlayerYield(ctx context.Context, campaignID string, in *campaignv1.WithdrawScenePlayerYieldRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
 		return nil, err
@@ -176,12 +174,12 @@ func (a interactionApplication) UnyieldScenePlayerPhase(ctx context.Context, cam
 	return a.GetInteractionState(ctx, campaignID)
 }
 
-func (a interactionApplication) EndScenePlayerPhase(ctx context.Context, campaignID string, in *campaignv1.EndScenePlayerPhaseRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) InterruptScenePlayerPhase(ctx context.Context, campaignID string, in *campaignv1.InterruptScenePlayerPhaseRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
 		return nil, err
 	}
-	campaignRecord, err := a.requireManageSessions(ctx, campaignID)
+	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -193,6 +191,9 @@ func (a interactionApplication) EndScenePlayerPhase(ctx context.Context, campaig
 		return nil, err
 	}
 	if err := requireSceneWritesUnblocked(currentSessionInteraction); err != nil {
+		return nil, err
+	}
+	if err := requireAuthoritativeGMActor(actor, currentSessionInteraction); err != nil {
 		return nil, err
 	}
 	_, currentSceneInteraction, err := a.requireActiveScenePhase(ctx, campaignID, activeSession.ID, sceneID, currentSessionInteraction)
@@ -209,7 +210,7 @@ func (a interactionApplication) EndScenePlayerPhase(ctx context.Context, campaig
 	return a.GetInteractionState(ctx, campaignID)
 }
 
-func (a interactionApplication) CommitSceneGMInteraction(ctx context.Context, campaignID string, in *campaignv1.CommitSceneGMInteractionRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) RecordSceneGMInteraction(ctx context.Context, campaignID string, in *campaignv1.RecordSceneGMInteractionRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
 		return nil, err
@@ -248,7 +249,7 @@ func (a interactionApplication) CommitSceneGMInteraction(ctx context.Context, ca
 	return a.GetInteractionState(ctx, campaignID)
 }
 
-func (a interactionApplication) ResolveScenePlayerPhaseReview(ctx context.Context, campaignID string, in *campaignv1.ResolveScenePlayerPhaseReviewRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) ResolveScenePlayerReview(ctx context.Context, campaignID string, in *campaignv1.ResolveScenePlayerReviewRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
 		return nil, err
@@ -279,10 +280,10 @@ func (a interactionApplication) ResolveScenePlayerPhaseReview(ctx context.Contex
 	}
 
 	switch resolution := in.GetResolution().(type) {
-	case *campaignv1.ResolveScenePlayerPhaseReviewRequest_AdvanceToPlayers:
-		advance := resolution.AdvanceToPlayers
+	case *campaignv1.ResolveScenePlayerReviewRequest_OpenNextPlayerPhase:
+		advance := resolution.OpenNextPlayerPhase
 		if advance == nil {
-			return nil, status.Error(codes.InvalidArgument, "advance_to_players is required")
+			return nil, status.Error(codes.InvalidArgument, "open_next_player_phase is required")
 		}
 		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, advance.GetNextCharacterIds())
 		if err != nil {
@@ -318,7 +319,7 @@ func (a interactionApplication) ResolveScenePlayerPhaseReview(ctx context.Contex
 		if err := a.clearOOCResolutionIfPending(ctx, campaignID, activeSession.ID, currentSessionInteraction, "review_advanced_to_players"); err != nil {
 			return nil, err
 		}
-	case *campaignv1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions:
+	case *campaignv1.ResolveScenePlayerReviewRequest_RequestRevisions:
 		request := resolution.RequestRevisions
 		if request == nil {
 			return nil, status.Error(codes.InvalidArgument, "request_revisions is required")
@@ -345,7 +346,7 @@ func (a interactionApplication) ResolveScenePlayerPhaseReview(ctx context.Contex
 		if err := a.clearOOCResolutionIfPending(ctx, campaignID, activeSession.ID, currentSessionInteraction, "review_requested_revisions"); err != nil {
 			return nil, err
 		}
-	case *campaignv1.ResolveScenePlayerPhaseReviewRequest_ReturnToGm:
+	case *campaignv1.ResolveScenePlayerReviewRequest_ReturnToGm:
 		returnToGM := resolution.ReturnToGm
 		if returnToGM == nil {
 			return nil, status.Error(codes.InvalidArgument, "return_to_gm is required")

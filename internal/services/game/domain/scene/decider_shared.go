@@ -15,7 +15,7 @@ func requireActiveScene(scenes map[ids.SceneID]State, sceneID string) *command.R
 	if !ok {
 		return &command.Rejection{Code: rejectionCodeSceneNotFound, Message: "scene not found"}
 	}
-	if !scene.Active {
+	if !scene.Open {
 		return &command.Rejection{Code: rejectionCodeSceneNotActive, Message: "scene is not active"}
 	}
 	return nil

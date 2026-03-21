@@ -179,7 +179,7 @@ type SceneRecord struct {
 	SessionID   string
 	Name        string
 	Description string
-	Active      bool
+	Open        bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	EndedAt     *time.Time
@@ -235,11 +235,11 @@ type SceneReader interface {
 	GetScene(ctx context.Context, campaignID, sceneID string) (SceneRecord, error)
 	// ListScenes returns a page of scene records for a session.
 	ListScenes(ctx context.Context, campaignID, sessionID string, pageSize int, pageToken string) (ScenePage, error)
-	// ListActiveScenes returns all active scenes for a campaign.
-	ListActiveScenes(ctx context.Context, campaignID string) ([]SceneRecord, error)
-	// ListVisibleActiveScenesForCharacters returns the active session scenes that
+	// ListOpenScenes returns all open scenes for a campaign.
+	ListOpenScenes(ctx context.Context, campaignID string) ([]SceneRecord, error)
+	// ListVisibleOpenScenesForCharacters returns the open session scenes that
 	// contain at least one of the provided character ids.
-	ListVisibleActiveScenesForCharacters(ctx context.Context, campaignID, sessionID string, characterIDs []string) ([]SceneRecord, error)
+	ListVisibleOpenScenesForCharacters(ctx context.Context, campaignID, sessionID string, characterIDs []string) ([]SceneRecord, error)
 }
 
 // SceneStore owns scene lifecycle read state. Projection handlers use

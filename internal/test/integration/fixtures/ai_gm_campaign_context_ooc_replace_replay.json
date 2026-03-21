@@ -1,0 +1,137 @@
+{
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "captured_at_utc": "2026-03-21T17:40:55Z",
+    "scenario": "ai_gm_campaign_context_ooc_replace",
+    "source": "live_capture"
+  },
+  "initial_prompt_contains": [
+    "story.md:",
+    "Starter seed: The vault ward can be bypassed from the roof vent after the group regroups.",
+    "memory.md:",
+    "Remember: the seam is no longer the plan; the group is pivoting to the roof vent.",
+    "OOC-open mode",
+    "use interaction_session_ooc_resolve to close the pause"
+  ],
+  "initial_tool_names": [
+    "campaign_artifact_list",
+    "campaign_artifact_get",
+    "campaign_artifact_upsert",
+    "campaign_memory_section_read",
+    "campaign_memory_section_update",
+    "scene_create",
+    "scene_update",
+    "scene_end",
+    "scene_transition",
+    "scene_add_character",
+    "scene_remove_character",
+    "interaction_activate_scene",
+    "interaction_open_scene_player_phase",
+    "interaction_resolve_scene_player_review",
+    "interaction_record_scene_gm_interaction",
+    "interaction_open_session_ooc",
+    "interaction_session_ooc_resolve",
+    "interaction_post_session_ooc",
+    "interaction_mark_ooc_ready_to_resume",
+    "interaction_clear_ooc_ready_to_resume",
+    "duality_action_roll",
+    "roll_dice",
+    "duality_outcome",
+    "duality_explain",
+    "duality_probability",
+    "duality_rules_version",
+    "system_reference_search",
+    "system_reference_read"
+  ],
+  "steps": [
+    {
+      "id": "resp_08ebd86a26ce65eb0069bed7eae49481a38acf100754d25b5f",
+      "tool_calls": [
+        {
+          "call_id": "call_wlZ2i7A6DnNlCdSu2VrhPxb6",
+          "name": "campaign_artifact_upsert",
+          "arguments": {
+            "content": "Remember: the seam is no longer the plan; the group is pivoting to the roof vent.\n\nTactics and notes:\n- Vault ward appears to be proximity-triggered around the seam and still reacts to Aria's presence.\n- Current approach: bypass the ward from above by entering through the roof vent after the team regroups on the roof.\n- Aria can inspect the vent grate for residual warding, probe the interior from outside, lower tools or sensors through the slats, or enter the vent to access the vault ceiling.\n- Team will position on nearby cornices to assist entry, cover exits, and manage distractions as needed.\n\nReminder: do not attempt the seam approach; focus on the roof vent bypass.",
+            "path": "memory.md"
+          }
+        },
+        {
+          "call_id": "call_kGJQliRFyI79CU7egguTvP4Q",
+          "name": "interaction_session_ooc_resolve",
+          "arguments": {
+            "open_player_phase": {
+              "character_ids": [
+                "{{character_id}}"
+              ],
+              "interaction": {
+                "beats": [
+                  {
+                    "beat_id": "f1",
+                    "text": "You return to the rooftop. The iron vent above the vault sits slightly ajar; a thin, cold draft slips through and the ward's hum threads through the slats. From here the vault seam is out of reach, but the vent's rim bears faint stamped sigils—old warding marks that might be linked to the field below. Your teammates are making ready on nearby cornices, able to hand up tools or cover you if needed. You have a quiet moment to test the vent or attempt entry.",
+                    "type": "fiction"
+                  },
+                  {
+                    "beat_id": "p1",
+                    "text": "Aria, what do you do at the vent? You can probe the grate from outside, run a tool or sensor through the slats, open the vent and peer inside, climb in and approach the vault from above, or signal your team to act. Describe the first test or action you take.",
+                    "type": "prompt"
+                  }
+                ],
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "title": "Roof Vent Approach"
+              },
+              "scene_id": "{{scene_id}}"
+            },
+            "resume_interrupted_phase": false,
+            "return_to_gm": {
+              "scene_id": "{{scene_id}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_08ebd86a26ce65eb0069bed811c0bc81a391bcecf3e6605fda",
+      "output_text": "Fiction\nYou return to the rooftop. The iron vent above the vault sits slightly ajar; a thin, cold draft slips through and the ward's hum threads through the slats. From here the vault seam is out of reach, but the vent's rim bears faint stamped sigils—old warding marks that might be linked to the field below. Your teammates are making ready on nearby cornices, able to hand up tools or cover you if needed. You have a quiet moment to test the vent or attempt entry.\n\nPrompt\nAria, what do you do at the vent? You can probe the grate from outside, run a tool or sensor through the slats, open the vent and peer inside, climb in and approach the vault from above, or signal your team to act. Describe the first test or action you take.\n\nOOC\nMemory updated: the seam approach is abandoned; the group is pivoting to bypass the ward via the roof vent. Memory now notes the vent-bypass plan and possible tests (inspect grate, probe from outside, lower tools/sensors, enter vent)."
+    },
+    {
+      "id": "resp_08ebd86a26ce65eb0069bed8163cd481a38ebb895365fa5f99",
+      "tool_calls": [
+        {
+          "call_id": "call_GyNooLEg5EDywrauNoueBk3s",
+          "name": "interaction_open_scene_player_phase",
+          "arguments": {
+            "character_ids": [
+              "{{character_id}}"
+            ],
+            "interaction": {
+              "beats": [
+                {
+                  "beat_id": "f1",
+                  "text": "You return to the rooftop. The iron vent above the vault sits slightly ajar; a thin, cold draft slips through and the ward's hum threads through the slats. From here the vault seam is out of reach, but the vent's rim bears faint stamped sigils—old warding marks that might be linked to the field below. Your teammates are making ready on nearby cornices, able to hand up tools or cover you if needed. You have a quiet moment to test the vent or attempt entry.",
+                  "type": "fiction"
+                },
+                {
+                  "beat_id": "p1",
+                  "text": "Aria, what do you do at the vent? You can probe the grate from outside, run a tool or sensor through the slats, open the vent and peer inside, climb in and approach the vault from above, or signal your team to act. Describe the first test or action you take.",
+                  "type": "prompt"
+                }
+              ],
+              "character_ids": [
+                "{{character_id}}"
+              ],
+              "title": "Roof Vent Approach"
+            },
+            "scene_id": "{{scene_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_08ebd86a26ce65eb0069bed823781881a39a5ceff1811f6178",
+      "output_text": "Fiction\nYou return to the rooftop. The iron vent above the vault sits slightly ajar; a thin, cold draft slips through and the ward's hum threads through the slats. From here the vault seam is out of reach, but the vent's rim bears faint stamped sigils—old warding marks that might be linked to the field below. Your teammates are making ready on nearby cornices, able to hand up tools or cover you if needed. You have a quiet moment to test the vent or attempt entry.\n\nPrompt\nAria, what do you do at the vent? You can probe the grate from outside, run a tool or sensor through the slats, open the vent and peer inside, climb in and approach the vault from above, or signal your team to act. Describe the first test or action you take.\n\nOOC\nMemory updated: the seam approach is abandoned; the group is pivoting to bypass the ward via the roof vent. Memory now notes the vent-bypass plan and possible tests (inspect grate, probe from outside, lower tools/sensors, enter vent)."
+    }
+  ]
+}

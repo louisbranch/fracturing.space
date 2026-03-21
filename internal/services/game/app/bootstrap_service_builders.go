@@ -311,12 +311,19 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Applier:            deps.applier,
 	})
 	sceneService := scenetransport.NewService(scenetransport.Deps{
-		Auth:           policy,
-		Campaign:       deps.campaignStore,
-		Scene:          deps.sceneStore,
-		SceneCharacter: deps.sceneCharacter,
-		Write:          deps.writePath,
-		Applier:        deps.applier,
+		Auth:               policy,
+		Campaign:           deps.campaignStore,
+		Participant:        deps.participantStore,
+		Character:          deps.characterStore,
+		Event:              deps.eventStore,
+		Session:            deps.sessionStore,
+		SessionInteraction: deps.sessionInteraction,
+		Scene:              deps.sceneStore,
+		SceneCharacter:     deps.sceneCharacter,
+		SceneInteraction:   deps.sceneInteraction,
+		SceneGMInteraction: deps.sceneGMInteraction,
+		Write:              deps.writePath,
+		Applier:            deps.applier,
 	})
 	forkService := forktransport.NewService(forktransport.Deps{
 		Auth:          policy,

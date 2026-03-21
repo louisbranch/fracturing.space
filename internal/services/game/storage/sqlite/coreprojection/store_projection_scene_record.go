@@ -30,7 +30,7 @@ func (s *Store) PutScene(ctx context.Context, rec storage.SceneRecord) error {
 		return fmt.Errorf("session id is required")
 	}
 
-	active := boolToInt(rec.Active)
+	active := boolToInt(rec.Open)
 	endedAt := sqliteutil.ToNullMillis(rec.EndedAt)
 
 	_, err := s.projectionQueryable().ExecContext(ctx,
@@ -169,8 +169,8 @@ func (s *Store) ListScenes(ctx context.Context, campaignID, sessionID string, pa
 	return page, nil
 }
 
-// ListActiveScenes returns all active scenes for a campaign.
-func (s *Store) ListActiveScenes(ctx context.Context, campaignID string) ([]storage.SceneRecord, error) {
+// ListOpenScenes returns all open scenes for a campaign.
+func (s *Store) ListOpenScenes(ctx context.Context, campaignID string) ([]storage.SceneRecord, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (s *Store) ListActiveScenes(ctx context.Context, campaignID string) ([]stor
 		campaignID,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("list active scenes: %w", err)
+		return nil, fmt.Errorf("list open scenes: %w", err)
 	}
 	defer rows.Close()
 
@@ -201,13 +201,13 @@ func (s *Store) ListActiveScenes(ctx context.Context, campaignID string) ([]stor
 		result = append(result, rec)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("list active scenes rows: %w", err)
+		return nil, fmt.Errorf("list open scenes rows: %w", err)
 	}
 	return result, nil
 }
 
-// ListVisibleActiveScenesForCharacters returns active session scenes visible to one of the characters.
-func (s *Store) ListVisibleActiveScenesForCharacters(ctx context.Context, campaignID, sessionID string, characterIDs []string) ([]storage.SceneRecord, error) {
+// ListVisibleOpenScenesForCharacters returns open session scenes visible to one of the characters.
+func (s *Store) ListVisibleOpenScenesForCharacters(ctx context.Context, campaignID, sessionID string, characterIDs []string) ([]storage.SceneRecord, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func (s *Store) ListVisibleActiveScenesForCharacters(ctx context.Context, campai
 		args...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("list visible active scenes: %w", err)
+		return nil, fmt.Errorf("list visible open scenes: %w", err)
 	}
 	defer rows.Close()
 
@@ -269,7 +269,7 @@ func (s *Store) ListVisibleActiveScenesForCharacters(ctx context.Context, campai
 		result = append(result, rec)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("list visible active scenes rows: %w", err)
+		return nil, fmt.Errorf("list visible open scenes rows: %w", err)
 	}
 	return result, nil
 }
@@ -287,7 +287,7 @@ func scanSceneRow(row *sql.Row) (storage.SceneRecord, error) {
 		}
 		return storage.SceneRecord{}, fmt.Errorf("scan scene: %w", err)
 	}
-	rec.Active = intToBool(active)
+	rec.Open = intToBool(active)
 	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
 	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	rec.EndedAt = sqliteutil.FromNullMillis(endedAt)
@@ -304,7 +304,7 @@ func scanSceneRows(rows *sql.Rows) (storage.SceneRecord, error) {
 	if err != nil {
 		return storage.SceneRecord{}, fmt.Errorf("scan scene: %w", err)
 	}
-	rec.Active = intToBool(active)
+	rec.Open = intToBool(active)
 	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
 	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	rec.EndedAt = sqliteutil.FromNullMillis(endedAt)

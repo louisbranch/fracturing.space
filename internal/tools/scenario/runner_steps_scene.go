@@ -24,6 +24,9 @@ func (r *Runner) runCreateSceneStep(ctx context.Context, state *scenarioState, s
 		Name:        name,
 		Description: optionalString(step.Args, "description", ""),
 	}
+	if activate, ok := readBool(step.Args, "activate"); ok {
+		request.Activate = &activate
+	}
 
 	charNames := readStringSlice(step.Args, "characters")
 	for _, charName := range charNames {
@@ -46,8 +49,12 @@ func (r *Runner) runCreateSceneStep(ctx context.Context, state *scenarioState, s
 
 	sceneID := resp.GetSceneId()
 	state.scenes[name] = sceneID
-	state.activeSceneID = sceneID
-	r.logf("scene created: name=%s id=%s (active)", name, sceneID)
+	if activeSceneID := resp.GetInteractionState().GetActiveScene().GetSceneId(); activeSceneID != "" {
+		state.activeSceneID = activeSceneID
+		r.logf("scene created: name=%s id=%s (active)", name, sceneID)
+	} else {
+		r.logf("scene created: name=%s id=%s", name, sceneID)
+	}
 
 	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneCreated)
 }

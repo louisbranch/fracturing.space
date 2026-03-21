@@ -122,7 +122,7 @@ func (a interactionApplication) aiTurnEligibility(
 	if sessionInteraction.OOCPaused {
 		return aiTurnEligibilityResult{reason: "session is paused for out-of-character discussion"}, nil
 	}
-	if sessionInteraction.OOCResolutionPending && sourceEventType != string(session.EventTypeOOCResumed) {
+	if sessionInteraction.OOCResolutionPending && sourceEventType != string(session.EventTypeOOCClosed) {
 		return aiTurnEligibilityResult{reason: "session is waiting for post-ooc resolution"}, nil
 	}
 	if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" && !bootstrap {

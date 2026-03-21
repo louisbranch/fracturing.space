@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (a interactionApplication) PauseSessionForOOC(ctx context.Context, campaignID string, in *campaignv1.PauseSessionForOOCRequest) (*campaignv1.InteractionState, error) {
+func (a interactionApplication) OpenSessionOOC(ctx context.Context, campaignID string, in *campaignv1.OpenSessionOOCRequest) (*campaignv1.InteractionState, error) {
 	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
@@ -26,12 +26,12 @@ func (a interactionApplication) PauseSessionForOOC(ctx context.Context, campaign
 	if err != nil {
 		return nil, err
 	}
-	payload := session.OOCPausedPayload{
+	payload := session.OOCOpenedPayload{
 		SessionID:                ids.SessionID(activeSession.ID),
 		RequestedByParticipantID: ids.ParticipantID(actor.ID),
 		Reason:                   strings.TrimSpace(in.GetReason()),
 	}
-	if err := a.clearAITurnIfPresent(ctx, campaignID, activeSession.ID, sessionInteraction, "ooc_paused"); err != nil {
+	if err := a.clearAITurnIfPresent(ctx, campaignID, activeSession.ID, sessionInteraction, "ooc_opened"); err != nil {
 		return nil, err
 	}
 	if sessionInteraction.ActiveSceneID != "" && a.stores.SceneInteraction != nil {
@@ -42,7 +42,7 @@ func (a interactionApplication) PauseSessionForOOC(ctx context.Context, campaign
 			payload.InterruptedPhaseStatus = string(sceneInteraction.PhaseStatus)
 		}
 	}
-	if err := a.executeSessionCommand(ctx, commandTypeSessionOOCPause, campaignID, activeSession.ID, payload, "session.ooc.pause"); err != nil {
+	if err := a.executeSessionCommand(ctx, commandTypeSessionOOCOpen, campaignID, activeSession.ID, payload, "session.ooc.open"); err != nil {
 		return nil, err
 	}
 	return a.GetInteractionState(ctx, campaignID)
@@ -84,8 +84,8 @@ func (a interactionApplication) ClearOOCReadyToResume(ctx context.Context, campa
 	return a.toggleOOCReady(ctx, campaignID, false)
 }
 
-func (a interactionApplication) ResumeFromOOC(ctx context.Context, campaignID string, _ *campaignv1.ResumeFromOOCRequest) (*campaignv1.InteractionState, error) {
-	campaignRecord, err := a.requireManageSessions(ctx, campaignID)
+func (a interactionApplication) ResolveSessionOOC(ctx context.Context, campaignID string, in *campaignv1.ResolveSessionOOCRequest) (*campaignv1.InteractionState, error) {
+	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -99,31 +99,12 @@ func (a interactionApplication) ResumeFromOOC(ctx context.Context, campaignID st
 	if !sessionInteraction.OOCPaused {
 		return nil, status.Error(codes.FailedPrecondition, "session is not paused for out-of-character discussion")
 	}
-	payload := session.OOCResumedPayload{SessionID: ids.SessionID(activeSession.ID)}
-	if err := a.executeSessionCommand(ctx, commandTypeSessionOOCResume, campaignID, activeSession.ID, payload, "session.ooc.resume"); err != nil {
+	payload := session.OOCClosedPayload{SessionID: ids.SessionID(activeSession.ID)}
+	if err := a.executeSessionCommand(ctx, commandTypeSessionOOCClose, campaignID, activeSession.ID, payload, "session.ooc.close"); err != nil {
 		return nil, err
 	}
-	return a.GetInteractionState(ctx, campaignID)
-}
-
-func (a interactionApplication) ResolveInterruptedScenePhase(ctx context.Context, campaignID string, in *campaignv1.ResolveInterruptedScenePhaseRequest) (*campaignv1.InteractionState, error) {
-	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, err
-	}
-	activeSession, sessionInteraction, err := a.requireActiveSessionInteraction(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if sessionInteraction.OOCPaused {
-		return nil, status.Error(codes.FailedPrecondition, errSessionOOCPaused)
-	}
-	if !sessionInteraction.OOCResolutionPending {
-		return nil, status.Error(codes.FailedPrecondition, "session is not waiting for post-ooc resolution")
-	}
+	sessionInteraction.OOCPaused = false
+	sessionInteraction.OOCResolutionPending = true
 	if err := requireAuthoritativeGMActor(actor, sessionInteraction); err != nil {
 		return nil, err
 	}
@@ -133,17 +114,55 @@ func (a interactionApplication) ResolveInterruptedScenePhase(ctx context.Context
 	}
 
 	switch resolution := in.GetResolution().(type) {
-	case *campaignv1.ResolveInterruptedScenePhaseRequest_ResumeOriginalPhase:
+	case *campaignv1.ResolveSessionOOCRequest_ResumeInterruptedPhase:
 		if _, _, err := a.requireActiveScenePhase(ctx, campaignID, activeSession.ID, interruptedSceneID, sessionInteraction); err != nil {
 			return nil, err
 		}
-		if err := a.clearOOCResolutionIfPending(ctx, campaignID, activeSession.ID, sessionInteraction, "resume_original_phase"); err != nil {
+		if err := a.clearOOCResolutionIfPending(ctx, campaignID, activeSession.ID, sessionInteraction, "resume_interrupted_phase"); err != nil {
 			return nil, err
 		}
-	case *campaignv1.ResolveInterruptedScenePhaseRequest_ReplaceWithPlayerPhase:
-		replace := resolution.ReplaceWithPlayerPhase
+	case *campaignv1.ResolveSessionOOCRequest_ReturnToGm:
+		returnToGM := resolution.ReturnToGm
+		if returnToGM == nil {
+			return nil, status.Error(codes.InvalidArgument, "return_to_gm is required")
+		}
+		targetSceneID := strings.TrimSpace(returnToGM.GetSceneId())
+		if targetSceneID == "" {
+			targetSceneID = interruptedSceneID
+		}
+		if strings.TrimSpace(sessionInteraction.ActiveSceneID) != targetSceneID {
+			targetScene, err := a.stores.Scene.GetScene(ctx, campaignID, targetSceneID)
+			if err != nil {
+				return nil, err
+			}
+			if targetScene.SessionID != activeSession.ID {
+				return nil, status.Error(codes.FailedPrecondition, "scene is not in the active session")
+			}
+			if strings.TrimSpace(sessionInteraction.ActiveSceneID) != "" {
+				if err := a.endScenePhaseIfOpen(ctx, campaignID, sessionInteraction.ActiveSceneID, "ooc_returned_to_gm"); err != nil {
+					return nil, err
+				}
+			}
+			payload := session.SceneActivatedPayload{
+				SessionID:     ids.SessionID(activeSession.ID),
+				ActiveSceneID: ids.SceneID(targetSceneID),
+			}
+			if err := a.executeSessionCommand(ctx, commandTypeSessionSceneActivate, campaignID, activeSession.ID, payload, "session.scene.activate"); err != nil {
+				return nil, err
+			}
+			sessionInteraction.ActiveSceneID = targetSceneID
+		} else if strings.TrimSpace(sessionInteraction.OOCInterruptedPhaseID) != "" {
+			if err := a.endScenePhase(ctx, campaignID, activeSession.ID, targetSceneID, sessionInteraction.OOCInterruptedPhaseID, "ooc_returned_to_gm"); err != nil {
+				return nil, err
+			}
+		}
+		if err := a.clearOOCResolutionIfPending(ctx, campaignID, activeSession.ID, sessionInteraction, "return_to_gm"); err != nil {
+			return nil, err
+		}
+	case *campaignv1.ResolveSessionOOCRequest_OpenPlayerPhase:
+		replace := resolution.OpenPlayerPhase
 		if replace == nil {
-			return nil, status.Error(codes.InvalidArgument, "replace_with_player_phase is required")
+			return nil, status.Error(codes.InvalidArgument, "open_player_phase is required")
 		}
 		targetSceneID := strings.TrimSpace(replace.GetSceneId())
 		if targetSceneID == "" {
@@ -162,11 +181,11 @@ func (a interactionApplication) ResolveInterruptedScenePhase(ctx context.Context
 					return nil, err
 				}
 			}
-			payload := session.ActiveSceneSetPayload{
+			payload := session.SceneActivatedPayload{
 				SessionID:     ids.SessionID(activeSession.ID),
 				ActiveSceneID: ids.SceneID(targetSceneID),
 			}
-			if err := a.executeSessionCommand(ctx, commandTypeSessionActiveSceneSet, campaignID, activeSession.ID, payload, "session.active_scene.set"); err != nil {
+			if err := a.executeSessionCommand(ctx, commandTypeSessionSceneActivate, campaignID, activeSession.ID, payload, "session.scene.activate"); err != nil {
 				return nil, err
 			}
 			sessionInteraction.ActiveSceneID = targetSceneID
@@ -208,7 +227,7 @@ func (a interactionApplication) ResolveInterruptedScenePhase(ctx context.Context
 			return nil, err
 		}
 	default:
-		return nil, status.Error(codes.InvalidArgument, "interrupted scene resolution is required")
+		return nil, status.Error(codes.InvalidArgument, "session ooc resolution is required")
 	}
 
 	return a.GetInteractionState(ctx, campaignID)

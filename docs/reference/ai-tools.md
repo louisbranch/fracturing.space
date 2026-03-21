@@ -30,15 +30,15 @@ Broader bootstrap or dev-only registrations are intentionally omitted here.
 
 ## Interaction
 
-- `interaction_active_scene_set`
-- `interaction_scene_player_phase_start`
-- `interaction_scene_review_resolve`
-- `interaction_scene_gm_interaction_commit`
-- `interaction_scene_interrupt_resolution`
-- `interaction_ooc_pause`
-- `interaction_ooc_post`
-- `interaction_ooc_ready_mark`
-- `interaction_ooc_ready_clear`
+- `interaction_activate_scene`
+- `interaction_open_scene_player_phase`
+- `interaction_resolve_scene_player_review`
+- `interaction_record_scene_gm_interaction`
+- `interaction_session_ooc_resolve`
+- `interaction_open_session_ooc`
+- `interaction_post_session_ooc`
+- `interaction_mark_ooc_ready_to_resume`
+- `interaction_clear_ooc_ready_to_resume`
 - `interaction_ooc_resume`
 
 ## Rules and system reference

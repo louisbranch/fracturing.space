@@ -29,8 +29,9 @@ campaign-scoped orchestration loop is stable.
   - session scene list
   - interaction state
 - The model receives a curated GM tool surface, including `scene_create`,
-  `interaction_active_scene_set`, `interaction_scene_player_phase_start`, and
-  `interaction_scene_gm_interaction_commit`.
+  `interaction_activate_scene` for existing-scene switches,
+  `interaction_open_scene_player_phase`, and
+  `interaction_record_scene_gm_interaction`.
 - Prompt assembly is split into brief collection and rendering. AI startup
   selects the concrete render policy explicitly, and missing instruction files
   degrade only the affected instruction field instead of disabling the full
@@ -38,7 +39,8 @@ campaign-scoped orchestration loop is stable.
 - On a bootstrap turn with no active scene, the AI GM is expected to:
   - understand who is participating and which GM seat it controls
   - choose or create an opening scene
-  - activate that scene
+  - rely on `scene_create` to activate a new scene by default, or use
+    `interaction_activate_scene` only when reusing an existing scene
 - commit the opening GM interaction
 - The MVP remains stateless across turns beyond authoritative game state.
   There is no persisted memory store, recap chain, or imported campaign file

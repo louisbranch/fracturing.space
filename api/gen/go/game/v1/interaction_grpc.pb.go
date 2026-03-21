@@ -20,23 +20,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InteractionService_GetInteractionState_FullMethodName           = "/game.v1.InteractionService/GetInteractionState"
-	InteractionService_SetActiveScene_FullMethodName                = "/game.v1.InteractionService/SetActiveScene"
-	InteractionService_StartScenePlayerPhase_FullMethodName         = "/game.v1.InteractionService/StartScenePlayerPhase"
-	InteractionService_SubmitScenePlayerPost_FullMethodName         = "/game.v1.InteractionService/SubmitScenePlayerPost"
-	InteractionService_YieldScenePlayerPhase_FullMethodName         = "/game.v1.InteractionService/YieldScenePlayerPhase"
-	InteractionService_UnyieldScenePlayerPhase_FullMethodName       = "/game.v1.InteractionService/UnyieldScenePlayerPhase"
-	InteractionService_EndScenePlayerPhase_FullMethodName           = "/game.v1.InteractionService/EndScenePlayerPhase"
-	InteractionService_CommitSceneGMInteraction_FullMethodName      = "/game.v1.InteractionService/CommitSceneGMInteraction"
-	InteractionService_ResolveScenePlayerPhaseReview_FullMethodName = "/game.v1.InteractionService/ResolveScenePlayerPhaseReview"
-	InteractionService_PauseSessionForOOC_FullMethodName            = "/game.v1.InteractionService/PauseSessionForOOC"
-	InteractionService_PostSessionOOC_FullMethodName                = "/game.v1.InteractionService/PostSessionOOC"
-	InteractionService_MarkOOCReadyToResume_FullMethodName          = "/game.v1.InteractionService/MarkOOCReadyToResume"
-	InteractionService_ClearOOCReadyToResume_FullMethodName         = "/game.v1.InteractionService/ClearOOCReadyToResume"
-	InteractionService_ResumeFromOOC_FullMethodName                 = "/game.v1.InteractionService/ResumeFromOOC"
-	InteractionService_ResolveInterruptedScenePhase_FullMethodName  = "/game.v1.InteractionService/ResolveInterruptedScenePhase"
-	InteractionService_SetSessionGMAuthority_FullMethodName         = "/game.v1.InteractionService/SetSessionGMAuthority"
-	InteractionService_RetryAIGMTurn_FullMethodName                 = "/game.v1.InteractionService/RetryAIGMTurn"
+	InteractionService_GetInteractionState_FullMethodName       = "/game.v1.InteractionService/GetInteractionState"
+	InteractionService_ActivateScene_FullMethodName             = "/game.v1.InteractionService/ActivateScene"
+	InteractionService_OpenScenePlayerPhase_FullMethodName      = "/game.v1.InteractionService/OpenScenePlayerPhase"
+	InteractionService_SubmitScenePlayerAction_FullMethodName   = "/game.v1.InteractionService/SubmitScenePlayerAction"
+	InteractionService_YieldScenePlayerPhase_FullMethodName     = "/game.v1.InteractionService/YieldScenePlayerPhase"
+	InteractionService_WithdrawScenePlayerYield_FullMethodName  = "/game.v1.InteractionService/WithdrawScenePlayerYield"
+	InteractionService_InterruptScenePlayerPhase_FullMethodName = "/game.v1.InteractionService/InterruptScenePlayerPhase"
+	InteractionService_RecordSceneGMInteraction_FullMethodName  = "/game.v1.InteractionService/RecordSceneGMInteraction"
+	InteractionService_ResolveScenePlayerReview_FullMethodName  = "/game.v1.InteractionService/ResolveScenePlayerReview"
+	InteractionService_OpenSessionOOC_FullMethodName            = "/game.v1.InteractionService/OpenSessionOOC"
+	InteractionService_PostSessionOOC_FullMethodName            = "/game.v1.InteractionService/PostSessionOOC"
+	InteractionService_MarkOOCReadyToResume_FullMethodName      = "/game.v1.InteractionService/MarkOOCReadyToResume"
+	InteractionService_ClearOOCReadyToResume_FullMethodName     = "/game.v1.InteractionService/ClearOOCReadyToResume"
+	InteractionService_ResolveSessionOOC_FullMethodName         = "/game.v1.InteractionService/ResolveSessionOOC"
+	InteractionService_SetSessionGMAuthority_FullMethodName     = "/game.v1.InteractionService/SetSessionGMAuthority"
+	InteractionService_RetryAIGMTurn_FullMethodName             = "/game.v1.InteractionService/RetryAIGMTurn"
 )
 
 // InteractionServiceClient is the client API for InteractionService service.
@@ -49,37 +48,33 @@ type InteractionServiceClient interface {
 	// Returns the caller's current active-play interaction state for one
 	// campaign.
 	GetInteractionState(ctx context.Context, in *GetInteractionStateRequest, opts ...grpc.CallOption) (*GetInteractionStateResponse, error)
-	// Sets the session's active scene.
-	SetActiveScene(ctx context.Context, in *SetActiveSceneRequest, opts ...grpc.CallOption) (*SetActiveSceneResponse, error)
-	// Starts a new player phase on the active scene from a GM interaction.
-	StartScenePlayerPhase(ctx context.Context, in *StartScenePlayerPhaseRequest, opts ...grpc.CallOption) (*StartScenePlayerPhaseResponse, error)
-	// Updates one participant's current post in the open player phase. When
-	// yield_after_post is true, the participant yields in the same accepted write.
-	SubmitScenePlayerPost(ctx context.Context, in *SubmitScenePlayerPostRequest, opts ...grpc.CallOption) (*SubmitScenePlayerPostResponse, error)
+	// Activates an existing scene for in-character play.
+	ActivateScene(ctx context.Context, in *ActivateSceneRequest, opts ...grpc.CallOption) (*ActivateSceneResponse, error)
+	// Opens a new player phase on the active scene from a GM interaction.
+	OpenScenePlayerPhase(ctx context.Context, in *OpenScenePlayerPhaseRequest, opts ...grpc.CallOption) (*OpenScenePlayerPhaseResponse, error)
+	// Updates one participant's current action summary in the open player phase.
+	SubmitScenePlayerAction(ctx context.Context, in *SubmitScenePlayerActionRequest, opts ...grpc.CallOption) (*SubmitScenePlayerActionResponse, error)
 	// Marks the participant as yielded in the active scene's open player phase.
 	YieldScenePlayerPhase(ctx context.Context, in *YieldScenePlayerPhaseRequest, opts ...grpc.CallOption) (*YieldScenePlayerPhaseResponse, error)
-	// Clears the participant's yielded state in the active scene's open player
-	// phase.
-	UnyieldScenePlayerPhase(ctx context.Context, in *UnyieldScenePlayerPhaseRequest, opts ...grpc.CallOption) (*UnyieldScenePlayerPhaseResponse, error)
-	// Ends the active scene's current player phase early under GM control.
-	EndScenePlayerPhase(ctx context.Context, in *EndScenePlayerPhaseRequest, opts ...grpc.CallOption) (*EndScenePlayerPhaseResponse, error)
-	// Commits one authoritative GM interaction to the active scene.
-	CommitSceneGMInteraction(ctx context.Context, in *CommitSceneGMInteractionRequest, opts ...grpc.CallOption) (*CommitSceneGMInteractionResponse, error)
-	// Resolves a GM-review player phase by either reframing the next player beat
-	// or returning one or more slots for revision.
-	ResolveScenePlayerPhaseReview(ctx context.Context, in *ResolveScenePlayerPhaseReviewRequest, opts ...grpc.CallOption) (*ResolveScenePlayerPhaseReviewResponse, error)
+	// Withdraws the participant's yielded state in the active scene's open player phase.
+	WithdrawScenePlayerYield(ctx context.Context, in *WithdrawScenePlayerYieldRequest, opts ...grpc.CallOption) (*WithdrawScenePlayerYieldResponse, error)
+	// Interrupts the active scene's current player phase early under GM control.
+	InterruptScenePlayerPhase(ctx context.Context, in *InterruptScenePlayerPhaseRequest, opts ...grpc.CallOption) (*InterruptScenePlayerPhaseResponse, error)
+	// Commits one authoritative GM interaction to the active scene without opening player control.
+	RecordSceneGMInteraction(ctx context.Context, in *RecordSceneGMInteractionRequest, opts ...grpc.CallOption) (*RecordSceneGMInteractionResponse, error)
+	// Resolves a GM-review player phase by reframing the same phase, returning
+	// control to the GM, or opening the next player phase.
+	ResolveScenePlayerReview(ctx context.Context, in *ResolveScenePlayerReviewRequest, opts ...grpc.CallOption) (*ResolveScenePlayerReviewResponse, error)
 	// Opens a session-level OOC pause over the active scene.
-	PauseSessionForOOC(ctx context.Context, in *PauseSessionForOOCRequest, opts ...grpc.CallOption) (*PauseSessionForOOCResponse, error)
+	OpenSessionOOC(ctx context.Context, in *OpenSessionOOCRequest, opts ...grpc.CallOption) (*OpenSessionOOCResponse, error)
 	// Posts one append-only OOC message while the session is paused.
 	PostSessionOOC(ctx context.Context, in *PostSessionOOCRequest, opts ...grpc.CallOption) (*PostSessionOOCResponse, error)
 	// Marks the caller as ready to resume from the current OOC pause.
 	MarkOOCReadyToResume(ctx context.Context, in *MarkOOCReadyToResumeRequest, opts ...grpc.CallOption) (*MarkOOCReadyToResumeResponse, error)
 	// Clears the caller's ready-to-resume state for the current OOC pause.
 	ClearOOCReadyToResume(ctx context.Context, in *ClearOOCReadyToResumeRequest, opts ...grpc.CallOption) (*ClearOOCReadyToResumeResponse, error)
-	// Resumes scene play from the current OOC pause.
-	ResumeFromOOC(ctx context.Context, in *ResumeFromOOCRequest, opts ...grpc.CallOption) (*ResumeFromOOCResponse, error)
-	// Resolves the scene interaction that was interrupted by a completed OOC pause.
-	ResolveInterruptedScenePhase(ctx context.Context, in *ResolveInterruptedScenePhaseRequest, opts ...grpc.CallOption) (*ResolveInterruptedScenePhaseResponse, error)
+	// Resolves the current OOC pause back into in-character control.
+	ResolveSessionOOC(ctx context.Context, in *ResolveSessionOOCRequest, opts ...grpc.CallOption) (*ResolveSessionOOCResponse, error)
 	// Sets which GM participant currently owns the next GM decision for the active session.
 	SetSessionGMAuthority(ctx context.Context, in *SetSessionGMAuthorityRequest, opts ...grpc.CallOption) (*SetSessionGMAuthorityResponse, error)
 	// Re-queues the current failed AI GM turn when the session is still eligible.
@@ -104,30 +99,30 @@ func (c *interactionServiceClient) GetInteractionState(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *interactionServiceClient) SetActiveScene(ctx context.Context, in *SetActiveSceneRequest, opts ...grpc.CallOption) (*SetActiveSceneResponse, error) {
+func (c *interactionServiceClient) ActivateScene(ctx context.Context, in *ActivateSceneRequest, opts ...grpc.CallOption) (*ActivateSceneResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetActiveSceneResponse)
-	err := c.cc.Invoke(ctx, InteractionService_SetActiveScene_FullMethodName, in, out, cOpts...)
+	out := new(ActivateSceneResponse)
+	err := c.cc.Invoke(ctx, InteractionService_ActivateScene_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *interactionServiceClient) StartScenePlayerPhase(ctx context.Context, in *StartScenePlayerPhaseRequest, opts ...grpc.CallOption) (*StartScenePlayerPhaseResponse, error) {
+func (c *interactionServiceClient) OpenScenePlayerPhase(ctx context.Context, in *OpenScenePlayerPhaseRequest, opts ...grpc.CallOption) (*OpenScenePlayerPhaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(StartScenePlayerPhaseResponse)
-	err := c.cc.Invoke(ctx, InteractionService_StartScenePlayerPhase_FullMethodName, in, out, cOpts...)
+	out := new(OpenScenePlayerPhaseResponse)
+	err := c.cc.Invoke(ctx, InteractionService_OpenScenePlayerPhase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *interactionServiceClient) SubmitScenePlayerPost(ctx context.Context, in *SubmitScenePlayerPostRequest, opts ...grpc.CallOption) (*SubmitScenePlayerPostResponse, error) {
+func (c *interactionServiceClient) SubmitScenePlayerAction(ctx context.Context, in *SubmitScenePlayerActionRequest, opts ...grpc.CallOption) (*SubmitScenePlayerActionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubmitScenePlayerPostResponse)
-	err := c.cc.Invoke(ctx, InteractionService_SubmitScenePlayerPost_FullMethodName, in, out, cOpts...)
+	out := new(SubmitScenePlayerActionResponse)
+	err := c.cc.Invoke(ctx, InteractionService_SubmitScenePlayerAction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,50 +139,50 @@ func (c *interactionServiceClient) YieldScenePlayerPhase(ctx context.Context, in
 	return out, nil
 }
 
-func (c *interactionServiceClient) UnyieldScenePlayerPhase(ctx context.Context, in *UnyieldScenePlayerPhaseRequest, opts ...grpc.CallOption) (*UnyieldScenePlayerPhaseResponse, error) {
+func (c *interactionServiceClient) WithdrawScenePlayerYield(ctx context.Context, in *WithdrawScenePlayerYieldRequest, opts ...grpc.CallOption) (*WithdrawScenePlayerYieldResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UnyieldScenePlayerPhaseResponse)
-	err := c.cc.Invoke(ctx, InteractionService_UnyieldScenePlayerPhase_FullMethodName, in, out, cOpts...)
+	out := new(WithdrawScenePlayerYieldResponse)
+	err := c.cc.Invoke(ctx, InteractionService_WithdrawScenePlayerYield_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *interactionServiceClient) EndScenePlayerPhase(ctx context.Context, in *EndScenePlayerPhaseRequest, opts ...grpc.CallOption) (*EndScenePlayerPhaseResponse, error) {
+func (c *interactionServiceClient) InterruptScenePlayerPhase(ctx context.Context, in *InterruptScenePlayerPhaseRequest, opts ...grpc.CallOption) (*InterruptScenePlayerPhaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EndScenePlayerPhaseResponse)
-	err := c.cc.Invoke(ctx, InteractionService_EndScenePlayerPhase_FullMethodName, in, out, cOpts...)
+	out := new(InterruptScenePlayerPhaseResponse)
+	err := c.cc.Invoke(ctx, InteractionService_InterruptScenePlayerPhase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *interactionServiceClient) CommitSceneGMInteraction(ctx context.Context, in *CommitSceneGMInteractionRequest, opts ...grpc.CallOption) (*CommitSceneGMInteractionResponse, error) {
+func (c *interactionServiceClient) RecordSceneGMInteraction(ctx context.Context, in *RecordSceneGMInteractionRequest, opts ...grpc.CallOption) (*RecordSceneGMInteractionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CommitSceneGMInteractionResponse)
-	err := c.cc.Invoke(ctx, InteractionService_CommitSceneGMInteraction_FullMethodName, in, out, cOpts...)
+	out := new(RecordSceneGMInteractionResponse)
+	err := c.cc.Invoke(ctx, InteractionService_RecordSceneGMInteraction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *interactionServiceClient) ResolveScenePlayerPhaseReview(ctx context.Context, in *ResolveScenePlayerPhaseReviewRequest, opts ...grpc.CallOption) (*ResolveScenePlayerPhaseReviewResponse, error) {
+func (c *interactionServiceClient) ResolveScenePlayerReview(ctx context.Context, in *ResolveScenePlayerReviewRequest, opts ...grpc.CallOption) (*ResolveScenePlayerReviewResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ResolveScenePlayerPhaseReviewResponse)
-	err := c.cc.Invoke(ctx, InteractionService_ResolveScenePlayerPhaseReview_FullMethodName, in, out, cOpts...)
+	out := new(ResolveScenePlayerReviewResponse)
+	err := c.cc.Invoke(ctx, InteractionService_ResolveScenePlayerReview_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *interactionServiceClient) PauseSessionForOOC(ctx context.Context, in *PauseSessionForOOCRequest, opts ...grpc.CallOption) (*PauseSessionForOOCResponse, error) {
+func (c *interactionServiceClient) OpenSessionOOC(ctx context.Context, in *OpenSessionOOCRequest, opts ...grpc.CallOption) (*OpenSessionOOCResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PauseSessionForOOCResponse)
-	err := c.cc.Invoke(ctx, InteractionService_PauseSessionForOOC_FullMethodName, in, out, cOpts...)
+	out := new(OpenSessionOOCResponse)
+	err := c.cc.Invoke(ctx, InteractionService_OpenSessionOOC_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -224,20 +219,10 @@ func (c *interactionServiceClient) ClearOOCReadyToResume(ctx context.Context, in
 	return out, nil
 }
 
-func (c *interactionServiceClient) ResumeFromOOC(ctx context.Context, in *ResumeFromOOCRequest, opts ...grpc.CallOption) (*ResumeFromOOCResponse, error) {
+func (c *interactionServiceClient) ResolveSessionOOC(ctx context.Context, in *ResolveSessionOOCRequest, opts ...grpc.CallOption) (*ResolveSessionOOCResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ResumeFromOOCResponse)
-	err := c.cc.Invoke(ctx, InteractionService_ResumeFromOOC_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *interactionServiceClient) ResolveInterruptedScenePhase(ctx context.Context, in *ResolveInterruptedScenePhaseRequest, opts ...grpc.CallOption) (*ResolveInterruptedScenePhaseResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ResolveInterruptedScenePhaseResponse)
-	err := c.cc.Invoke(ctx, InteractionService_ResolveInterruptedScenePhase_FullMethodName, in, out, cOpts...)
+	out := new(ResolveSessionOOCResponse)
+	err := c.cc.Invoke(ctx, InteractionService_ResolveSessionOOC_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -274,37 +259,33 @@ type InteractionServiceServer interface {
 	// Returns the caller's current active-play interaction state for one
 	// campaign.
 	GetInteractionState(context.Context, *GetInteractionStateRequest) (*GetInteractionStateResponse, error)
-	// Sets the session's active scene.
-	SetActiveScene(context.Context, *SetActiveSceneRequest) (*SetActiveSceneResponse, error)
-	// Starts a new player phase on the active scene from a GM interaction.
-	StartScenePlayerPhase(context.Context, *StartScenePlayerPhaseRequest) (*StartScenePlayerPhaseResponse, error)
-	// Updates one participant's current post in the open player phase. When
-	// yield_after_post is true, the participant yields in the same accepted write.
-	SubmitScenePlayerPost(context.Context, *SubmitScenePlayerPostRequest) (*SubmitScenePlayerPostResponse, error)
+	// Activates an existing scene for in-character play.
+	ActivateScene(context.Context, *ActivateSceneRequest) (*ActivateSceneResponse, error)
+	// Opens a new player phase on the active scene from a GM interaction.
+	OpenScenePlayerPhase(context.Context, *OpenScenePlayerPhaseRequest) (*OpenScenePlayerPhaseResponse, error)
+	// Updates one participant's current action summary in the open player phase.
+	SubmitScenePlayerAction(context.Context, *SubmitScenePlayerActionRequest) (*SubmitScenePlayerActionResponse, error)
 	// Marks the participant as yielded in the active scene's open player phase.
 	YieldScenePlayerPhase(context.Context, *YieldScenePlayerPhaseRequest) (*YieldScenePlayerPhaseResponse, error)
-	// Clears the participant's yielded state in the active scene's open player
-	// phase.
-	UnyieldScenePlayerPhase(context.Context, *UnyieldScenePlayerPhaseRequest) (*UnyieldScenePlayerPhaseResponse, error)
-	// Ends the active scene's current player phase early under GM control.
-	EndScenePlayerPhase(context.Context, *EndScenePlayerPhaseRequest) (*EndScenePlayerPhaseResponse, error)
-	// Commits one authoritative GM interaction to the active scene.
-	CommitSceneGMInteraction(context.Context, *CommitSceneGMInteractionRequest) (*CommitSceneGMInteractionResponse, error)
-	// Resolves a GM-review player phase by either reframing the next player beat
-	// or returning one or more slots for revision.
-	ResolveScenePlayerPhaseReview(context.Context, *ResolveScenePlayerPhaseReviewRequest) (*ResolveScenePlayerPhaseReviewResponse, error)
+	// Withdraws the participant's yielded state in the active scene's open player phase.
+	WithdrawScenePlayerYield(context.Context, *WithdrawScenePlayerYieldRequest) (*WithdrawScenePlayerYieldResponse, error)
+	// Interrupts the active scene's current player phase early under GM control.
+	InterruptScenePlayerPhase(context.Context, *InterruptScenePlayerPhaseRequest) (*InterruptScenePlayerPhaseResponse, error)
+	// Commits one authoritative GM interaction to the active scene without opening player control.
+	RecordSceneGMInteraction(context.Context, *RecordSceneGMInteractionRequest) (*RecordSceneGMInteractionResponse, error)
+	// Resolves a GM-review player phase by reframing the same phase, returning
+	// control to the GM, or opening the next player phase.
+	ResolveScenePlayerReview(context.Context, *ResolveScenePlayerReviewRequest) (*ResolveScenePlayerReviewResponse, error)
 	// Opens a session-level OOC pause over the active scene.
-	PauseSessionForOOC(context.Context, *PauseSessionForOOCRequest) (*PauseSessionForOOCResponse, error)
+	OpenSessionOOC(context.Context, *OpenSessionOOCRequest) (*OpenSessionOOCResponse, error)
 	// Posts one append-only OOC message while the session is paused.
 	PostSessionOOC(context.Context, *PostSessionOOCRequest) (*PostSessionOOCResponse, error)
 	// Marks the caller as ready to resume from the current OOC pause.
 	MarkOOCReadyToResume(context.Context, *MarkOOCReadyToResumeRequest) (*MarkOOCReadyToResumeResponse, error)
 	// Clears the caller's ready-to-resume state for the current OOC pause.
 	ClearOOCReadyToResume(context.Context, *ClearOOCReadyToResumeRequest) (*ClearOOCReadyToResumeResponse, error)
-	// Resumes scene play from the current OOC pause.
-	ResumeFromOOC(context.Context, *ResumeFromOOCRequest) (*ResumeFromOOCResponse, error)
-	// Resolves the scene interaction that was interrupted by a completed OOC pause.
-	ResolveInterruptedScenePhase(context.Context, *ResolveInterruptedScenePhaseRequest) (*ResolveInterruptedScenePhaseResponse, error)
+	// Resolves the current OOC pause back into in-character control.
+	ResolveSessionOOC(context.Context, *ResolveSessionOOCRequest) (*ResolveSessionOOCResponse, error)
 	// Sets which GM participant currently owns the next GM decision for the active session.
 	SetSessionGMAuthority(context.Context, *SetSessionGMAuthorityRequest) (*SetSessionGMAuthorityResponse, error)
 	// Re-queues the current failed AI GM turn when the session is still eligible.
@@ -322,32 +303,32 @@ type UnimplementedInteractionServiceServer struct{}
 func (UnimplementedInteractionServiceServer) GetInteractionState(context.Context, *GetInteractionStateRequest) (*GetInteractionStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInteractionState not implemented")
 }
-func (UnimplementedInteractionServiceServer) SetActiveScene(context.Context, *SetActiveSceneRequest) (*SetActiveSceneResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetActiveScene not implemented")
+func (UnimplementedInteractionServiceServer) ActivateScene(context.Context, *ActivateSceneRequest) (*ActivateSceneResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ActivateScene not implemented")
 }
-func (UnimplementedInteractionServiceServer) StartScenePlayerPhase(context.Context, *StartScenePlayerPhaseRequest) (*StartScenePlayerPhaseResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartScenePlayerPhase not implemented")
+func (UnimplementedInteractionServiceServer) OpenScenePlayerPhase(context.Context, *OpenScenePlayerPhaseRequest) (*OpenScenePlayerPhaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OpenScenePlayerPhase not implemented")
 }
-func (UnimplementedInteractionServiceServer) SubmitScenePlayerPost(context.Context, *SubmitScenePlayerPostRequest) (*SubmitScenePlayerPostResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitScenePlayerPost not implemented")
+func (UnimplementedInteractionServiceServer) SubmitScenePlayerAction(context.Context, *SubmitScenePlayerActionRequest) (*SubmitScenePlayerActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitScenePlayerAction not implemented")
 }
 func (UnimplementedInteractionServiceServer) YieldScenePlayerPhase(context.Context, *YieldScenePlayerPhaseRequest) (*YieldScenePlayerPhaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method YieldScenePlayerPhase not implemented")
 }
-func (UnimplementedInteractionServiceServer) UnyieldScenePlayerPhase(context.Context, *UnyieldScenePlayerPhaseRequest) (*UnyieldScenePlayerPhaseResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UnyieldScenePlayerPhase not implemented")
+func (UnimplementedInteractionServiceServer) WithdrawScenePlayerYield(context.Context, *WithdrawScenePlayerYieldRequest) (*WithdrawScenePlayerYieldResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WithdrawScenePlayerYield not implemented")
 }
-func (UnimplementedInteractionServiceServer) EndScenePlayerPhase(context.Context, *EndScenePlayerPhaseRequest) (*EndScenePlayerPhaseResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EndScenePlayerPhase not implemented")
+func (UnimplementedInteractionServiceServer) InterruptScenePlayerPhase(context.Context, *InterruptScenePlayerPhaseRequest) (*InterruptScenePlayerPhaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InterruptScenePlayerPhase not implemented")
 }
-func (UnimplementedInteractionServiceServer) CommitSceneGMInteraction(context.Context, *CommitSceneGMInteractionRequest) (*CommitSceneGMInteractionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CommitSceneGMInteraction not implemented")
+func (UnimplementedInteractionServiceServer) RecordSceneGMInteraction(context.Context, *RecordSceneGMInteractionRequest) (*RecordSceneGMInteractionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordSceneGMInteraction not implemented")
 }
-func (UnimplementedInteractionServiceServer) ResolveScenePlayerPhaseReview(context.Context, *ResolveScenePlayerPhaseReviewRequest) (*ResolveScenePlayerPhaseReviewResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResolveScenePlayerPhaseReview not implemented")
+func (UnimplementedInteractionServiceServer) ResolveScenePlayerReview(context.Context, *ResolveScenePlayerReviewRequest) (*ResolveScenePlayerReviewResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveScenePlayerReview not implemented")
 }
-func (UnimplementedInteractionServiceServer) PauseSessionForOOC(context.Context, *PauseSessionForOOCRequest) (*PauseSessionForOOCResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PauseSessionForOOC not implemented")
+func (UnimplementedInteractionServiceServer) OpenSessionOOC(context.Context, *OpenSessionOOCRequest) (*OpenSessionOOCResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OpenSessionOOC not implemented")
 }
 func (UnimplementedInteractionServiceServer) PostSessionOOC(context.Context, *PostSessionOOCRequest) (*PostSessionOOCResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostSessionOOC not implemented")
@@ -358,11 +339,8 @@ func (UnimplementedInteractionServiceServer) MarkOOCReadyToResume(context.Contex
 func (UnimplementedInteractionServiceServer) ClearOOCReadyToResume(context.Context, *ClearOOCReadyToResumeRequest) (*ClearOOCReadyToResumeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearOOCReadyToResume not implemented")
 }
-func (UnimplementedInteractionServiceServer) ResumeFromOOC(context.Context, *ResumeFromOOCRequest) (*ResumeFromOOCResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResumeFromOOC not implemented")
-}
-func (UnimplementedInteractionServiceServer) ResolveInterruptedScenePhase(context.Context, *ResolveInterruptedScenePhaseRequest) (*ResolveInterruptedScenePhaseResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResolveInterruptedScenePhase not implemented")
+func (UnimplementedInteractionServiceServer) ResolveSessionOOC(context.Context, *ResolveSessionOOCRequest) (*ResolveSessionOOCResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveSessionOOC not implemented")
 }
 func (UnimplementedInteractionServiceServer) SetSessionGMAuthority(context.Context, *SetSessionGMAuthorityRequest) (*SetSessionGMAuthorityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetSessionGMAuthority not implemented")
@@ -409,56 +387,56 @@ func _InteractionService_GetInteractionState_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_SetActiveScene_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetActiveSceneRequest)
+func _InteractionService_ActivateScene_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActivateSceneRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).SetActiveScene(ctx, in)
+		return srv.(InteractionServiceServer).ActivateScene(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_SetActiveScene_FullMethodName,
+		FullMethod: InteractionService_ActivateScene_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).SetActiveScene(ctx, req.(*SetActiveSceneRequest))
+		return srv.(InteractionServiceServer).ActivateScene(ctx, req.(*ActivateSceneRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_StartScenePlayerPhase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StartScenePlayerPhaseRequest)
+func _InteractionService_OpenScenePlayerPhase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenScenePlayerPhaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).StartScenePlayerPhase(ctx, in)
+		return srv.(InteractionServiceServer).OpenScenePlayerPhase(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_StartScenePlayerPhase_FullMethodName,
+		FullMethod: InteractionService_OpenScenePlayerPhase_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).StartScenePlayerPhase(ctx, req.(*StartScenePlayerPhaseRequest))
+		return srv.(InteractionServiceServer).OpenScenePlayerPhase(ctx, req.(*OpenScenePlayerPhaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_SubmitScenePlayerPost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SubmitScenePlayerPostRequest)
+func _InteractionService_SubmitScenePlayerAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitScenePlayerActionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).SubmitScenePlayerPost(ctx, in)
+		return srv.(InteractionServiceServer).SubmitScenePlayerAction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_SubmitScenePlayerPost_FullMethodName,
+		FullMethod: InteractionService_SubmitScenePlayerAction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).SubmitScenePlayerPost(ctx, req.(*SubmitScenePlayerPostRequest))
+		return srv.(InteractionServiceServer).SubmitScenePlayerAction(ctx, req.(*SubmitScenePlayerActionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -481,92 +459,92 @@ func _InteractionService_YieldScenePlayerPhase_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_UnyieldScenePlayerPhase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnyieldScenePlayerPhaseRequest)
+func _InteractionService_WithdrawScenePlayerYield_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WithdrawScenePlayerYieldRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).UnyieldScenePlayerPhase(ctx, in)
+		return srv.(InteractionServiceServer).WithdrawScenePlayerYield(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_UnyieldScenePlayerPhase_FullMethodName,
+		FullMethod: InteractionService_WithdrawScenePlayerYield_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).UnyieldScenePlayerPhase(ctx, req.(*UnyieldScenePlayerPhaseRequest))
+		return srv.(InteractionServiceServer).WithdrawScenePlayerYield(ctx, req.(*WithdrawScenePlayerYieldRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_EndScenePlayerPhase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EndScenePlayerPhaseRequest)
+func _InteractionService_InterruptScenePlayerPhase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InterruptScenePlayerPhaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).EndScenePlayerPhase(ctx, in)
+		return srv.(InteractionServiceServer).InterruptScenePlayerPhase(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_EndScenePlayerPhase_FullMethodName,
+		FullMethod: InteractionService_InterruptScenePlayerPhase_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).EndScenePlayerPhase(ctx, req.(*EndScenePlayerPhaseRequest))
+		return srv.(InteractionServiceServer).InterruptScenePlayerPhase(ctx, req.(*InterruptScenePlayerPhaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_CommitSceneGMInteraction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CommitSceneGMInteractionRequest)
+func _InteractionService_RecordSceneGMInteraction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordSceneGMInteractionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).CommitSceneGMInteraction(ctx, in)
+		return srv.(InteractionServiceServer).RecordSceneGMInteraction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_CommitSceneGMInteraction_FullMethodName,
+		FullMethod: InteractionService_RecordSceneGMInteraction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).CommitSceneGMInteraction(ctx, req.(*CommitSceneGMInteractionRequest))
+		return srv.(InteractionServiceServer).RecordSceneGMInteraction(ctx, req.(*RecordSceneGMInteractionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_ResolveScenePlayerPhaseReview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResolveScenePlayerPhaseReviewRequest)
+func _InteractionService_ResolveScenePlayerReview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveScenePlayerReviewRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).ResolveScenePlayerPhaseReview(ctx, in)
+		return srv.(InteractionServiceServer).ResolveScenePlayerReview(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_ResolveScenePlayerPhaseReview_FullMethodName,
+		FullMethod: InteractionService_ResolveScenePlayerReview_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).ResolveScenePlayerPhaseReview(ctx, req.(*ResolveScenePlayerPhaseReviewRequest))
+		return srv.(InteractionServiceServer).ResolveScenePlayerReview(ctx, req.(*ResolveScenePlayerReviewRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_PauseSessionForOOC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PauseSessionForOOCRequest)
+func _InteractionService_OpenSessionOOC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenSessionOOCRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).PauseSessionForOOC(ctx, in)
+		return srv.(InteractionServiceServer).OpenSessionOOC(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_PauseSessionForOOC_FullMethodName,
+		FullMethod: InteractionService_OpenSessionOOC_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).PauseSessionForOOC(ctx, req.(*PauseSessionForOOCRequest))
+		return srv.(InteractionServiceServer).OpenSessionOOC(ctx, req.(*OpenSessionOOCRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -625,38 +603,20 @@ func _InteractionService_ClearOOCReadyToResume_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_ResumeFromOOC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResumeFromOOCRequest)
+func _InteractionService_ResolveSessionOOC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveSessionOOCRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).ResumeFromOOC(ctx, in)
+		return srv.(InteractionServiceServer).ResolveSessionOOC(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_ResumeFromOOC_FullMethodName,
+		FullMethod: InteractionService_ResolveSessionOOC_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).ResumeFromOOC(ctx, req.(*ResumeFromOOCRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _InteractionService_ResolveInterruptedScenePhase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResolveInterruptedScenePhaseRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(InteractionServiceServer).ResolveInterruptedScenePhase(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: InteractionService_ResolveInterruptedScenePhase_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).ResolveInterruptedScenePhase(ctx, req.(*ResolveInterruptedScenePhaseRequest))
+		return srv.(InteractionServiceServer).ResolveSessionOOC(ctx, req.(*ResolveSessionOOCRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -709,40 +669,40 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InteractionService_GetInteractionState_Handler,
 		},
 		{
-			MethodName: "SetActiveScene",
-			Handler:    _InteractionService_SetActiveScene_Handler,
+			MethodName: "ActivateScene",
+			Handler:    _InteractionService_ActivateScene_Handler,
 		},
 		{
-			MethodName: "StartScenePlayerPhase",
-			Handler:    _InteractionService_StartScenePlayerPhase_Handler,
+			MethodName: "OpenScenePlayerPhase",
+			Handler:    _InteractionService_OpenScenePlayerPhase_Handler,
 		},
 		{
-			MethodName: "SubmitScenePlayerPost",
-			Handler:    _InteractionService_SubmitScenePlayerPost_Handler,
+			MethodName: "SubmitScenePlayerAction",
+			Handler:    _InteractionService_SubmitScenePlayerAction_Handler,
 		},
 		{
 			MethodName: "YieldScenePlayerPhase",
 			Handler:    _InteractionService_YieldScenePlayerPhase_Handler,
 		},
 		{
-			MethodName: "UnyieldScenePlayerPhase",
-			Handler:    _InteractionService_UnyieldScenePlayerPhase_Handler,
+			MethodName: "WithdrawScenePlayerYield",
+			Handler:    _InteractionService_WithdrawScenePlayerYield_Handler,
 		},
 		{
-			MethodName: "EndScenePlayerPhase",
-			Handler:    _InteractionService_EndScenePlayerPhase_Handler,
+			MethodName: "InterruptScenePlayerPhase",
+			Handler:    _InteractionService_InterruptScenePlayerPhase_Handler,
 		},
 		{
-			MethodName: "CommitSceneGMInteraction",
-			Handler:    _InteractionService_CommitSceneGMInteraction_Handler,
+			MethodName: "RecordSceneGMInteraction",
+			Handler:    _InteractionService_RecordSceneGMInteraction_Handler,
 		},
 		{
-			MethodName: "ResolveScenePlayerPhaseReview",
-			Handler:    _InteractionService_ResolveScenePlayerPhaseReview_Handler,
+			MethodName: "ResolveScenePlayerReview",
+			Handler:    _InteractionService_ResolveScenePlayerReview_Handler,
 		},
 		{
-			MethodName: "PauseSessionForOOC",
-			Handler:    _InteractionService_PauseSessionForOOC_Handler,
+			MethodName: "OpenSessionOOC",
+			Handler:    _InteractionService_OpenSessionOOC_Handler,
 		},
 		{
 			MethodName: "PostSessionOOC",
@@ -757,12 +717,8 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InteractionService_ClearOOCReadyToResume_Handler,
 		},
 		{
-			MethodName: "ResumeFromOOC",
-			Handler:    _InteractionService_ResumeFromOOC_Handler,
-		},
-		{
-			MethodName: "ResolveInterruptedScenePhase",
-			Handler:    _InteractionService_ResolveInterruptedScenePhase_Handler,
+			MethodName: "ResolveSessionOOC",
+			Handler:    _InteractionService_ResolveSessionOOC_Handler,
 		},
 		{
 			MethodName: "SetSessionGMAuthority",

@@ -24,8 +24,8 @@ type SpotlightClearedPayload struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-// ActiveSceneSetPayload captures the payload for session.active_scene_set events.
-type ActiveSceneSetPayload struct {
+// SceneActivatedPayload captures the payload for session.scene_activated events.
+type SceneActivatedPayload struct {
 	SessionID     ids.SessionID `json:"session_id"`
 	ActiveSceneID ids.SceneID   `json:"active_scene_id"`
 }
@@ -36,8 +36,8 @@ type GMAuthoritySetPayload struct {
 	ParticipantID ids.ParticipantID `json:"participant_id"`
 }
 
-// OOCPausedPayload captures the payload for session.ooc_paused events.
-type OOCPausedPayload struct {
+// OOCOpenedPayload captures the payload for session.ooc_opened events.
+type OOCOpenedPayload struct {
 	SessionID                ids.SessionID     `json:"session_id"`
 	RequestedByParticipantID ids.ParticipantID `json:"requested_by_participant_id,omitempty"`
 	Reason                   string            `json:"reason,omitempty"`
@@ -66,15 +66,15 @@ type OOCReadyClearedPayload struct {
 	ParticipantID ids.ParticipantID `json:"participant_id"`
 }
 
-// OOCResumedPayload captures the payload for session.ooc_resumed events.
-type OOCResumedPayload struct {
+// OOCClosedPayload captures the payload for session.ooc_closed events.
+type OOCClosedPayload struct {
 	SessionID ids.SessionID `json:"session_id"`
 	Reason    string        `json:"reason,omitempty"`
 }
 
-// OOCInterruptionResolvedPayload clears the post-OOC resolution gate once the
+// OOCResolvedPayload clears the post-OOC resolution gate once the
 // GM has explicitly chosen how the interrupted scene should continue.
-type OOCInterruptionResolvedPayload struct {
+type OOCResolvedPayload struct {
 	SessionID  ids.SessionID `json:"session_id"`
 	Resolution string        `json:"resolution,omitempty"`
 }

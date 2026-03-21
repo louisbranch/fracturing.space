@@ -220,7 +220,7 @@ func TestAIGMTurnRequestedHandlerHandleClassifiesPreStartErrors(t *testing.T) {
 
 			handler := NewAIGMTurnRequestedHandler(&fakeCampaignAIOrchestrationClient{queueErr: tc.err}, &fakeCampaignAIServiceClient{}, &fakeCampaignTurnClient{})
 			err := handler.Handle(context.Background(), outboxEventStub{
-				payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.active_scene_set"}`,
+				payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.scene_activated"}`,
 			})
 			if err == nil {
 				t.Fatal("expected error")
@@ -240,7 +240,7 @@ func TestAIGMTurnRequestedHandlerHandleFailsTurnOnGrantError(t *testing.T) {
 	handler := NewAIGMTurnRequestedHandler(orchestration, game, &fakeCampaignTurnClient{})
 
 	err := handler.Handle(context.Background(), outboxEventStub{
-		payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.active_scene_set"}`,
+		payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.scene_activated"}`,
 	})
 	if err != nil {
 		t.Fatalf("handle error = %v", err)
@@ -261,7 +261,7 @@ func TestAIGMTurnRequestedHandlerHandleFailsTurnOnAIError(t *testing.T) {
 	handler := NewAIGMTurnRequestedHandler(orchestration, &fakeCampaignAIServiceClient{}, ai)
 
 	err := handler.Handle(context.Background(), outboxEventStub{
-		payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.active_scene_set"}`,
+		payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.scene_activated"}`,
 	})
 	if err != nil {
 		t.Fatalf("handle error = %v", err)
@@ -279,7 +279,7 @@ func TestAIGMTurnRequestedHandlerHandleReturnsErrorWhenFailWriteFails(t *testing
 	handler := NewAIGMTurnRequestedHandler(orchestration, game, &fakeCampaignTurnClient{})
 
 	err := handler.Handle(context.Background(), outboxEventStub{
-		payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.active_scene_set"}`,
+		payloadJSON: `{"campaign_id":"camp-1","session_id":"sess-1","source_event_type":"session.scene_activated"}`,
 	})
 	if err == nil {
 		t.Fatal("expected error")

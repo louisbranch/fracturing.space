@@ -25,14 +25,14 @@ func newFoldRouter() *fold.CoreFoldRouter[State] {
 	r.Handle(EventTypeGateAbandoned, foldGateClosed)
 	r.Handle(EventTypeSpotlightSet, foldSpotlightSet)
 	r.Handle(EventTypeSpotlightCleared, foldSpotlightCleared)
-	r.Handle(EventTypeActiveSceneSet, foldActiveSceneSet)
+	r.Handle(EventTypeSceneActivated, foldSceneActivated)
 	r.Handle(EventTypeGMAuthoritySet, foldGMAuthoritySet)
-	r.Handle(EventTypeOOCPaused, foldOOCPaused)
+	r.Handle(EventTypeOOCOpened, foldOOCOpened)
 	r.Handle(EventTypeOOCPosted, foldOOCPosted)
 	r.Handle(EventTypeOOCReadyMarked, foldOOCReadyMarked)
 	r.Handle(EventTypeOOCReadyCleared, foldOOCReadyCleared)
-	r.Handle(EventTypeOOCResumed, foldOOCResumed)
-	r.Handle(EventTypeOOCInterruptionResolved, foldOOCInterruptionResolved)
+	r.Handle(EventTypeOOCClosed, foldOOCClosed)
+	r.Handle(EventTypeOOCResolved, foldOOCResolved)
 	r.Handle(EventTypeAITurnQueued, foldAITurnQueued)
 	r.Handle(EventTypeAITurnRunning, foldAITurnRunning)
 	r.Handle(EventTypeAITurnFailed, foldAITurnFailed)
@@ -144,8 +144,8 @@ func foldSpotlightCleared(state State, _ event.Event) (State, error) {
 	return state, nil
 }
 
-func foldActiveSceneSet(state State, evt event.Event) (State, error) {
-	var payload ActiveSceneSetPayload
+func foldSceneActivated(state State, evt event.Event) (State, error) {
+	var payload SceneActivatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 	}
@@ -162,8 +162,8 @@ func foldGMAuthoritySet(state State, evt event.Event) (State, error) {
 	return state, nil
 }
 
-func foldOOCPaused(state State, evt event.Event) (State, error) {
-	var payload OOCPausedPayload
+func foldOOCOpened(state State, evt event.Event) (State, error) {
+	var payload OOCOpenedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 	}
@@ -204,14 +204,14 @@ func foldOOCReadyCleared(state State, evt event.Event) (State, error) {
 	return state, nil
 }
 
-func foldOOCResumed(state State, _ event.Event) (State, error) {
+func foldOOCClosed(state State, _ event.Event) (State, error) {
 	state.OOCPaused = false
 	state.OOCReadyParticipants = nil
 	state.OOCResolutionPending = state.OOCInterruptedSceneID != "" && state.OOCInterruptedPhaseID != ""
 	return state, nil
 }
 
-func foldOOCInterruptionResolved(state State, _ event.Event) (State, error) {
+func foldOOCResolved(state State, _ event.Event) (State, error) {
 	state.OOCRequestedByParticipantID = ""
 	state.OOCReason = ""
 	state.OOCInterruptedSceneID = ""

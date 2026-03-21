@@ -336,7 +336,7 @@ type sceneListEntry struct {
 	SessionID    string   `json:"session_id"`
 	Name         string   `json:"name"`
 	Description  string   `json:"description,omitempty"`
-	Active       bool     `json:"active"`
+	Open         bool     `json:"open"`
 	CharacterIDs []string `json:"character_ids,omitempty"`
 	CreatedAt    string   `json:"created_at"`
 	UpdatedAt    string   `json:"updated_at"`
@@ -373,7 +373,7 @@ func (s *DirectSession) readSceneList(ctx context.Context, uri string) (string, 
 			SessionID:    sc.GetSessionId(),
 			Name:         sc.GetName(),
 			Description:  sc.GetDescription(),
-			Active:       sc.GetActive(),
+			Open:         sc.GetOpen(),
 			CharacterIDs: append([]string(nil), sc.GetCharacterIds()...),
 			CreatedAt:    formatTimestamp(sc.GetCreatedAt()),
 			UpdatedAt:    formatTimestamp(sc.GetUpdatedAt()),

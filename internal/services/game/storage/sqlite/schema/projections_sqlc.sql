@@ -589,7 +589,7 @@ CREATE TABLE session_interactions (
     session_id TEXT NOT NULL,
     active_scene_id TEXT NOT NULL DEFAULT '',
     gm_authority_participant_id TEXT NOT NULL DEFAULT '',
-    ooc_paused INTEGER NOT NULL DEFAULT 0,
+    ooc_opened INTEGER NOT NULL DEFAULT 0,
     ooc_requested_by_participant_id TEXT NOT NULL DEFAULT '',
     ooc_reason TEXT NOT NULL DEFAULT '',
     ooc_interrupted_scene_id TEXT NOT NULL DEFAULT '',

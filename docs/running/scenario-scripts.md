@@ -88,7 +88,7 @@ owner. This is how interaction loops model alternating GM/player authority:
 
 ```lua
 -- GM opens the beat.
-scn:interaction_start_player_phase({
+scn:interaction_open_scene_player_phase({
   scene = "The Bridge",
   interaction = {
     title = "Bridge Lurch",
@@ -101,7 +101,7 @@ scn:interaction_start_player_phase({
 })
 
 -- One player commits a summary and then takes a real system action.
-scn:interaction_post({
+scn:interaction_submit_scene_player_action({
   as = "Rhea",
   summary = "Aria grabs the near rope before the bridge twists away.",
   characters = {"Aria"},
@@ -118,19 +118,19 @@ dh:action_roll({
 Interaction scenarios now execute directly through `game.v1.InteractionService`.
 Available root interaction steps are:
 
-- `interaction_set_gm_authority`
-- `interaction_set_active_scene`
-- `interaction_start_player_phase`
-- `interaction_post`
-- `interaction_yield`
-- `interaction_unyield`
-- `interaction_resolve_review`
-- `interaction_end_player_phase`
-- `interaction_pause_ooc`
-- `interaction_post_ooc`
-- `interaction_ready_ooc`
-- `interaction_clear_ready_ooc`
-- `interaction_resume_ooc`
+- `interaction_set_session_gm_authority`
+- `interaction_activate_scene`
+- `interaction_open_scene_player_phase`
+- `interaction_submit_scene_player_action`
+- `interaction_yield_scene_player_phase`
+- `interaction_withdraw_scene_player_yield`
+- `interaction_resolve_scene_player_review`
+- `interaction_interrupt_scene_player_phase`
+- `interaction_open_session_ooc`
+- `interaction_post_session_ooc`
+- `interaction_mark_ooc_ready_to_resume`
+- `interaction_clear_ooc_ready_to_resume`
+- `interaction_resolve_session_ooc`
 - `interaction_expect`
 
 `interaction_expect` reads authoritative interaction state and can assert the
@@ -168,7 +168,7 @@ scn:interaction_expect({
   },
 })
 
-scn:interaction_resolve_review({
+scn:interaction_resolve_scene_player_review({
   as = "Guide",
   scene = "Flooded Archive",
   interaction = {

@@ -110,7 +110,7 @@ func TestMemoryCheckpoint_SaveAndGetState_ScenesIsolation(t *testing.T) {
 		Scenes: map[ids.SceneID]scene.State{
 			"scene-1": {
 				SceneID: "scene-1",
-				Active:  true,
+				Open:    true,
 				Characters: map[ids.CharacterID]bool{
 					"c1": true,
 				},

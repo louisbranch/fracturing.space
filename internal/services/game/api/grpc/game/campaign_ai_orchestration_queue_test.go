@@ -46,7 +46,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 		gametest.FixedIDGenerator("unused"),
 	)
 
-	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.active_scene_set", "", "")
+	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.scene_activated", "", "")
 	if err != nil {
 		t.Fatalf("QueueAIGMTurn mismatch error = %v", err)
 	}
@@ -62,7 +62,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 			AITurn:                   storage.SessionAITurn{Status: session.AITurnStatusIdle},
 		},
 	}
-	state, err = app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.active_scene_set", "", "")
+	state, err = app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.scene_activated", "", "")
 	if err != nil {
 		t.Fatalf("QueueAIGMTurn ineligible error = %v", err)
 	}
@@ -114,7 +114,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSceneInteractionStor
 		gametest.FixedIDGenerator("unused"),
 	)
 
-	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.active_scene_set", "scene-1", "")
+	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.scene_activated", "scene-1", "")
 	if err != nil {
 		t.Fatalf("QueueAIGMTurn error = %v", err)
 	}

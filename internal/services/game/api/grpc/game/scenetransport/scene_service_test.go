@@ -23,7 +23,7 @@ func TestTransitionScene_UsesSourceSceneSessionID(t *testing.T) {
 				SceneID:    "sc-1",
 				SessionID:  "sess-1",
 				Name:       "Room A",
-				Active:     true,
+				Open:       true,
 				CreatedAt:  time.Unix(1000, 0),
 				UpdatedAt:  time.Unix(1000, 0),
 			},

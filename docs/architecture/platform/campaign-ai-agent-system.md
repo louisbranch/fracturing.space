@@ -4,45 +4,52 @@ parent: "Platform surfaces"
 nav_order: 15
 status: draft
 owner: engineering
-last_reviewed: "2026-03-18"
+last_reviewed: "2026-03-21"
 ---
 
 # Campaign AI Agent System
 
 ## Purpose
+Define how the AI agent behaves as a Game Master and Narrator during campaign turns:
+role separation, instruction composition, context assembly, and extension points for
+new game systems.
 
-Define how the AI agent behaves as a Game Master and Narrator during campaign
-turns: role separation, instruction composition, context assembly, and
-extension points for new game systems.
-
-This document extends [Campaign AI Orchestration](campaign-ai-orchestration.md)
-(which defines the grant, tool, and turn-loop contract) with the **behavioral**
-layer: what the agent is taught, how context is budgeted, and how contributors
-add game-system-specific intelligence.
+This document extends [Campaign AI Orchestration](campaign-ai-orchestration.md) with
+the **behavioral** layer: what the agent is taught, how context is budgeted, and how
+contributors add game-system-specific intelligence.
 
 ## Output Channel Model
-
 The agent speaks through three output channels. Each maps to a distinct role:
 
 | Channel | Role | Purpose |
 |---------|------|---------|
 | Tool calls (dice, scene, interaction tools) | **Game Master** | Adjudicate rules, resolve mechanics, manage authoritative game state |
-| `interaction_scene_gm_interaction_commit` structured content | **Narrator** | In-character prose, atmosphere, prompts, and consequence beats |
+| `interaction_record_scene_gm_interaction` structured content | **Narrator** | In-character prose, atmosphere, prompts, and consequence beats |
 | Final model response (`OutputText`) | **Meta / OOC** | Conversational reply to the caller, summaries, coordination notes |
 
-**Channel discipline**: The agent must never mix rules text into committed
-narration, nor embed state-mutating decisions in free-form prose. Tool calls
-are the sole authority for state changes; committed text is the sole authority
-for in-character narration.
+**Channel discipline**: The agent must never mix rules text into committed narration,
+nor embed state-mutating decisions in free-form prose. Tool calls are the sole
+authority for state changes; committed text is the sole authority for in-character
+narration.
+
+## Beat-Oriented Interaction Authoring
+The committed interaction channel is beat-oriented: the agent authors one structured
+`gm_interaction` at a time using ordered beats such as `fiction`, `resolution`,
+`consequence`, `guidance`, and `prompt`. It must not reason in terms of separate
+narration plus frame text. When players should act next, the interaction should end with
+a `prompt` beat; when mechanics were resolved this turn, `resolution` and `consequence`
+beats should appear before that handoff prompt; when the GM keeps control, the
+interaction may omit a `prompt` beat entirely. A beat is a coherent interaction unit,
+not a paragraph container: one beat may span multiple paragraphs, and a second beat of
+the same type is warranted only when the GM is making a distinct move or shifting the
+information context.
 
 ## Instruction Composition
-
 Agent instructions are **markdown files on disk**, not Go string literals.
 This enables iteration without recompilation and A/B testing via directory
 swap.
 
 ### Directory Layout
-
 ```
 data/instructions/
   v1/
@@ -57,7 +64,6 @@ data/instructions/
 ```
 
 ### Composition Order
-
 `campaigncontext/instructionset.Loader` composes skills guidance in this order:
 
 1. `core/skills.md` — universal GM/Narrator contract
@@ -71,17 +77,15 @@ instead of disabling the full prompt path.
 
 ### Runtime Override
 
-`FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT` env var points to an alternative
-instruction directory. Default: embedded `data/instructions/v1` via
-`embed.FS`.
+`FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT` points to an alternative instruction
+directory. Default: embedded `data/instructions/v1` via `embed.FS`.
 
 ## Context Assembly Pipeline
 
-Each turn, the prompt path first collects a typed **session brief** and then
-renders the final prompt from that brief plus explicit render policy. The
-collector is a `SessionBriefCollector` backed by a `ContextSourceRegistry`;
-the renderer is a `PromptRenderer` chosen by AI startup in
-`internal/services/ai/app`.
+Each turn, the prompt path first collects a typed **session brief** and then renders
+the final prompt from that brief plus explicit render policy. The collector is a
+`SessionBriefCollector` backed by a `ContextSourceRegistry`; the renderer is a
+`PromptRenderer` chosen by AI startup in `internal/services/ai/app`.
 
 The default renderer still uses `BriefAssembler` to sort prompt sections by
 priority and drop low-priority content when the token budget is tight.
@@ -97,9 +101,9 @@ priority and drop low-priority content when the token budget is tight.
 
 ### Token Budgeting
 
-Token estimation uses a byte heuristic (~4 chars per token). Required sections
-are never dropped. Non-required sections are dropped lowest-priority-first
-when the assembled brief exceeds the budget.
+Token estimation uses a byte heuristic (~4 chars per token). Required sections are never
+dropped. Non-required sections are dropped lowest-priority-first when the assembled
+brief exceeds the budget.
 
 ### ContextSource Interface
 
@@ -141,9 +145,6 @@ take effect on the next turn without recompilation when using
 embedded default instruction set.
 
 ## Relationship to Other Docs
-
-- [Campaign AI Orchestration](campaign-ai-orchestration.md) — grant, tool
-  policy, turn-loop mechanics
-- [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md) — session
-  start readiness and bootstrap behavior
+- [Campaign AI Orchestration](campaign-ai-orchestration.md) — grant, tool policy, turn-loop mechanics
+- [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md) — session start readiness and bootstrap behavior
 - [AI service contributor map](../../reference/ai-service-contributor-map.md) — package routing for contributors

@@ -85,11 +85,12 @@ func newProductionToolRegistry() productionToolRegistry {
 		{
 			Tool: orchestration.Tool{
 				Name:        "scene_create",
-				Description: "Creates a new scene within the current session; creation alone does not make it the authoritative active scene",
+				Description: "Creates a new scene within the current session and activates it by default unless activate is set to false",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"name":          {Type: "string", Description: "scene title"},
 					"description":   {Type: "string", Description: "scene framing description"},
 					"character_ids": {Type: "array", Description: "optional starting character identifiers", Items: &schemaProperty{Type: "string"}},
+					"activate":      {Type: "boolean", Description: "optional explicit activation flag; defaults to true"},
 				}),
 			},
 			Execute: (*DirectSession).sceneCreate,
@@ -155,37 +156,37 @@ func newProductionToolRegistry() productionToolRegistry {
 		// Interaction tools
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_active_scene_set",
+				Name:        "interaction_activate_scene",
 				Description: "Sets the authoritative active scene for the current session",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"scene_id": {Type: "string", Description: "scene identifier"},
 				}),
 			},
-			Execute: (*DirectSession).interactionSetActiveScene,
+			Execute: (*DirectSession).interactionActivateScene,
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_scene_player_phase_start",
-				Description: "Starts a new player phase on the active scene from a GM interaction prompt",
+				Name:        "interaction_open_scene_player_phase",
+				Description: "Commits one structured GM interaction and opens a new player phase on the active scene; use this when players should act next",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"scene_id":      {Type: "string", Description: "scene identifier (defaults to active scene)"},
-					"interaction":   interactionSchemaProperty("structured GM interaction that opens the player phase"),
+					"interaction":   interactionSchemaProperty("structured GM interaction that opens the player phase; usually fiction first and a final prompt beat for the acting characters"),
 					"character_ids": {Type: "array", Description: "acting character identifiers", Items: &schemaProperty{Type: "string"}},
 				}),
 			},
-			Execute: (*DirectSession).interactionStartScenePlayerPhase,
+			Execute: (*DirectSession).interactionOpenScenePlayerPhase,
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_scene_review_resolve",
+				Name:        "interaction_resolve_scene_player_review",
 				Description: "Resolves the active scene GM review by either opening the next player phase or requesting revisions",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
-					"advance_to_players": {
+					"open_next_player_phase": {
 						Type:        "object",
 						Description: "commit a GM interaction and open the next player phase",
 						Properties: map[string]schemaProperty{
-							"interaction":        interactionSchemaProperty("structured GM interaction committed before the next player phase"),
+							"interaction":        interactionSchemaProperty("structured GM interaction committed before the next player phase; usually consequence before a final prompt beat"),
 							"next_character_ids": {Type: "array", Description: "acting character identifiers for the next player phase", Items: &schemaProperty{Type: "string"}},
 						},
 					},
@@ -193,7 +194,7 @@ func newProductionToolRegistry() productionToolRegistry {
 						Type:        "object",
 						Description: "commit a GM interaction and request participant-scoped revisions",
 						Properties: map[string]schemaProperty{
-							"interaction": interactionSchemaProperty("structured GM interaction shown with the revision request"),
+							"interaction": interactionSchemaProperty("structured GM interaction shown with the revision request; use guidance beats to explain what must change"),
 							"revisions": {
 								Type:        "array",
 								Description: "participant-scoped revision requests",
@@ -212,27 +213,27 @@ func newProductionToolRegistry() productionToolRegistry {
 						Type:        "object",
 						Description: "commit a GM interaction and return the scene to GM control with no open player phase",
 						Properties: map[string]schemaProperty{
-							"interaction": interactionSchemaProperty("structured GM interaction committed before returning control to the GM"),
+							"interaction": interactionSchemaProperty("structured GM interaction committed before returning control to the GM; omit a prompt beat if no player handoff follows"),
 						},
 					},
 				}),
 			},
-			Execute: (*DirectSession).interactionResolveScenePlayerPhaseReview,
+			Execute: (*DirectSession).interactionResolveScenePlayerReview,
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_scene_gm_interaction_commit",
-				Description: "Commits authoritative GM interaction content for the active scene",
+				Name:        "interaction_record_scene_gm_interaction",
+				Description: "Commits one authoritative beat-based GM interaction for the active scene without opening a player phase",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"scene_id":    {Type: "string", Description: "scene identifier (defaults to active scene)"},
 					"interaction": interactionSchemaProperty("structured GM interaction to commit on the active scene"),
 				}),
 			},
-			Execute: (*DirectSession).interactionCommitSceneGMInteraction,
+			Execute: (*DirectSession).interactionRecordSceneGMInteraction,
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_ooc_pause",
+				Name:        "interaction_open_session_ooc",
 				Description: "Opens the session-level out-of-character pause overlay",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"reason": {Type: "string", Description: "optional OOC pause reason"},
@@ -242,26 +243,33 @@ func newProductionToolRegistry() productionToolRegistry {
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_scene_interrupt_resolution",
-				Description: "Resolves a scene phase that was interrupted by OOC by resuming it or replacing it with a newly framed player phase",
+				Name:        "interaction_session_ooc_resolve",
+				Description: "Resolves the current OOC pause by resuming the interrupted phase, returning control to the GM, or replacing it with a newly opened player phase",
 				InputSchema: schemaObject(map[string]schemaProperty{
-					"resume_original_phase": {Type: "boolean", Description: "set true to restore the interrupted phase for players"},
-					"replace_with_player_phase": {
+					"resume_interrupted_phase": {Type: "boolean", Description: "set true to restore the interrupted phase for players"},
+					"return_to_gm": {
+						Type:        "object",
+						Description: "return to GM control, optionally on a different scene in the active session",
+						Properties: map[string]schemaProperty{
+							"scene_id": {Type: "string", Description: "target scene identifier; defaults to the interrupted scene"},
+						},
+					},
+					"open_player_phase": {
 						Type:        "object",
 						Description: "replace the interrupted phase with a new GM interaction and acting set",
 						Properties: map[string]schemaProperty{
 							"scene_id":      {Type: "string", Description: "target scene identifier; defaults to the interrupted scene"},
-							"interaction":   interactionSchemaProperty("structured GM interaction committed for the replacement player phase"),
+							"interaction":   interactionSchemaProperty("structured GM interaction committed for the replacement player phase; re-anchor the fiction and end with a prompt beat"),
 							"character_ids": {Type: "array", Description: "acting character identifiers for the replacement phase", Items: &schemaProperty{Type: "string"}},
 						},
 					},
 				}),
 			},
-			Execute: (*DirectSession).interactionResolveInterruptedScenePhase,
+			Execute: (*DirectSession).interactionResolveSessionOOC,
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_ooc_post",
+				Name:        "interaction_post_session_ooc",
 				Description: "Posts one append-only out-of-character transcript message",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"body": {Type: "string", Description: "out-of-character message body"},
@@ -271,7 +279,7 @@ func newProductionToolRegistry() productionToolRegistry {
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_ooc_ready_mark",
+				Name:        "interaction_mark_ooc_ready_to_resume",
 				Description: "Marks the caller as ready to resume from the current OOC pause",
 				InputSchema: schemaObject(nil),
 			},
@@ -279,19 +287,11 @@ func newProductionToolRegistry() productionToolRegistry {
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_ooc_ready_clear",
+				Name:        "interaction_clear_ooc_ready_to_resume",
 				Description: "Clears the caller's ready-to-resume state for the current OOC pause",
 				InputSchema: schemaObject(nil),
 			},
 			Execute: (*DirectSession).interactionClearOOCReady,
-		},
-		{
-			Tool: orchestration.Tool{
-				Name:        "interaction_ooc_resume",
-				Description: "Resumes in-character scene play from the current OOC pause",
-				InputSchema: schemaObject(nil),
-			},
-			Execute: (*DirectSession).interactionResumeOOC,
 		},
 
 		// Daggerheart tools
@@ -431,24 +431,15 @@ func interactionSchemaProperty(description string) schemaProperty {
 		Properties: map[string]schemaProperty{
 			"title":         {Type: "string", Description: "short interaction title"},
 			"character_ids": {Type: "array", Description: "characters addressed by the interaction", Items: &schemaProperty{Type: "string"}},
-			"illustration": {
-				Type:        "object",
-				Description: "optional interaction illustration metadata",
-				Properties: map[string]schemaProperty{
-					"image_url": {Type: "string", Description: "illustration image URL"},
-					"alt":       {Type: "string", Description: "required alt text when illustration is present"},
-					"caption":   {Type: "string", Description: "optional image caption"},
-				},
-			},
 			"beats": {
 				Type:        "array",
-				Description: "ordered beats that make up the GM interaction",
+				Description: "ordered beats that make up the GM interaction; keep related prose in one beat even across paragraphs, and start a new beat only when the function or information context materially changes; end with a prompt beat when players should act next",
 				Items: &schemaProperty{
 					Type: "object",
 					Properties: map[string]schemaProperty{
 						"beat_id": {Type: "string", Description: "optional stable beat identifier"},
 						"type":    {Type: "string", Description: "beat type: fiction, prompt, resolution, consequence, or guidance"},
-						"text":    {Type: "string", Description: "beat body text"},
+						"text":    {Type: "string", Description: "beat body text; may span multiple paragraphs when it serves one coherent beat"},
 					},
 				},
 			},

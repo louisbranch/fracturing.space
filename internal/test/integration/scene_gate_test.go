@@ -163,7 +163,7 @@ func TestSceneGateBlocksSceneActions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get scene after gates: %v", err)
 	}
-	if !getResp.GetScene().GetActive() {
-		t.Error("expected scene to still be active")
+	if !getResp.GetScene().GetOpen() {
+		t.Error("expected scene to still be open")
 	}
 }

@@ -14,37 +14,33 @@ service InteractionService {
   // Returns the caller's current active-play interaction state for one
   // campaign.
   rpc GetInteractionState(GetInteractionStateRequest) returns (GetInteractionStateResponse);
-  // Sets the session's active scene.
-  rpc SetActiveScene(SetActiveSceneRequest) returns (SetActiveSceneResponse);
-  // Starts a new player phase on the active scene from a GM interaction.
-  rpc StartScenePlayerPhase(StartScenePlayerPhaseRequest) returns (StartScenePlayerPhaseResponse);
-  // Updates one participant's current post in the open player phase. When
-  // yield_after_post is true, the participant yields in the same accepted write.
-  rpc SubmitScenePlayerPost(SubmitScenePlayerPostRequest) returns (SubmitScenePlayerPostResponse);
+  // Activates an existing scene for in-character play.
+  rpc ActivateScene(ActivateSceneRequest) returns (ActivateSceneResponse);
+  // Opens a new player phase on the active scene from a GM interaction.
+  rpc OpenScenePlayerPhase(OpenScenePlayerPhaseRequest) returns (OpenScenePlayerPhaseResponse);
+  // Updates one participant's current action summary in the open player phase.
+  rpc SubmitScenePlayerAction(SubmitScenePlayerActionRequest) returns (SubmitScenePlayerActionResponse);
   // Marks the participant as yielded in the active scene's open player phase.
   rpc YieldScenePlayerPhase(YieldScenePlayerPhaseRequest) returns (YieldScenePlayerPhaseResponse);
-  // Clears the participant's yielded state in the active scene's open player
-  // phase.
-  rpc UnyieldScenePlayerPhase(UnyieldScenePlayerPhaseRequest) returns (UnyieldScenePlayerPhaseResponse);
-  // Ends the active scene's current player phase early under GM control.
-  rpc EndScenePlayerPhase(EndScenePlayerPhaseRequest) returns (EndScenePlayerPhaseResponse);
-  // Commits one authoritative GM interaction to the active scene.
-  rpc CommitSceneGMInteraction(CommitSceneGMInteractionRequest) returns (CommitSceneGMInteractionResponse);
-  // Resolves a GM-review player phase by either reframing the next player beat
-  // or returning one or more slots for revision.
-  rpc ResolveScenePlayerPhaseReview(ResolveScenePlayerPhaseReviewRequest) returns (ResolveScenePlayerPhaseReviewResponse);
+  // Withdraws the participant's yielded state in the active scene's open player phase.
+  rpc WithdrawScenePlayerYield(WithdrawScenePlayerYieldRequest) returns (WithdrawScenePlayerYieldResponse);
+  // Interrupts the active scene's current player phase early under GM control.
+  rpc InterruptScenePlayerPhase(InterruptScenePlayerPhaseRequest) returns (InterruptScenePlayerPhaseResponse);
+  // Commits one authoritative GM interaction to the active scene without opening player control.
+  rpc RecordSceneGMInteraction(RecordSceneGMInteractionRequest) returns (RecordSceneGMInteractionResponse);
+  // Resolves a GM-review player phase by reframing the same phase, returning
+  // control to the GM, or opening the next player phase.
+  rpc ResolveScenePlayerReview(ResolveScenePlayerReviewRequest) returns (ResolveScenePlayerReviewResponse);
   // Opens a session-level OOC pause over the active scene.
-  rpc PauseSessionForOOC(PauseSessionForOOCRequest) returns (PauseSessionForOOCResponse);
+  rpc OpenSessionOOC(OpenSessionOOCRequest) returns (OpenSessionOOCResponse);
   // Posts one append-only OOC message while the session is paused.
   rpc PostSessionOOC(PostSessionOOCRequest) returns (PostSessionOOCResponse);
   // Marks the caller as ready to resume from the current OOC pause.
   rpc MarkOOCReadyToResume(MarkOOCReadyToResumeRequest) returns (MarkOOCReadyToResumeResponse);
   // Clears the caller's ready-to-resume state for the current OOC pause.
   rpc ClearOOCReadyToResume(ClearOOCReadyToResumeRequest) returns (ClearOOCReadyToResumeResponse);
-  // Resumes scene play from the current OOC pause.
-  rpc ResumeFromOOC(ResumeFromOOCRequest) returns (ResumeFromOOCResponse);
-  // Resolves the scene interaction that was interrupted by a completed OOC pause.
-  rpc ResolveInterruptedScenePhase(ResolveInterruptedScenePhaseRequest) returns (ResolveInterruptedScenePhaseResponse);
+  // Resolves the current OOC pause back into in-character control.
+  rpc ResolveSessionOOC(ResolveSessionOOCRequest) returns (ResolveSessionOOCResponse);
   // Sets which GM participant currently owns the next GM decision for the active session.
   rpc SetSessionGMAuthority(SetSessionGMAuthorityRequest) returns (SetSessionGMAuthorityResponse);
   // Re-queues the current failed AI GM turn when the session is still eligible.
@@ -211,6 +207,42 @@ message AITurnState {
   string last_error = 7;
 }
 
+enum InteractionControlMode {
+  INTERACTION_CONTROL_MODE_UNSPECIFIED = 0;
+  INTERACTION_CONTROL_MODE_GM = 1;
+  INTERACTION_CONTROL_MODE_PLAYERS = 2;
+  INTERACTION_CONTROL_MODE_GM_REVIEW = 3;
+  INTERACTION_CONTROL_MODE_OOC = 4;
+  INTERACTION_CONTROL_MODE_OOC_RESOLUTION = 5;
+}
+
+enum InteractionTransition {
+  INTERACTION_TRANSITION_UNSPECIFIED = 0;
+  INTERACTION_TRANSITION_ACTIVATE_SCENE = 1;
+  INTERACTION_TRANSITION_OPEN_SCENE_PLAYER_PHASE = 2;
+  INTERACTION_TRANSITION_RECORD_SCENE_GM_INTERACTION = 3;
+  INTERACTION_TRANSITION_SUBMIT_SCENE_PLAYER_ACTION = 4;
+  INTERACTION_TRANSITION_YIELD_SCENE_PLAYER_PHASE = 5;
+  INTERACTION_TRANSITION_WITHDRAW_SCENE_PLAYER_YIELD = 6;
+  INTERACTION_TRANSITION_INTERRUPT_SCENE_PLAYER_PHASE = 7;
+  INTERACTION_TRANSITION_RESOLVE_SCENE_PLAYER_REVIEW = 8;
+  INTERACTION_TRANSITION_OPEN_SESSION_OOC = 9;
+  INTERACTION_TRANSITION_POST_SESSION_OOC = 10;
+  INTERACTION_TRANSITION_MARK_OOC_READY_TO_RESUME = 11;
+  INTERACTION_TRANSITION_CLEAR_OOC_READY_TO_RESUME = 12;
+  INTERACTION_TRANSITION_RESOLVE_SESSION_OOC = 13;
+  INTERACTION_TRANSITION_SET_SESSION_GM_AUTHORITY = 14;
+  INTERACTION_TRANSITION_RETRY_AI_GM_TURN = 15;
+}
+
+message InteractionControlState {
+  InteractionControlMode mode = 1;
+  repeated InteractionTransition allowed_transitions = 2;
+  InteractionTransition recommended_transition = 3;
+  string recommended_scene_id = 4;
+  string recommended_phase_id = 5;
+}
+
 message InteractionState {
   string campaign_id = 1;
   string campaign_name = 2;
@@ -222,6 +254,7 @@ message InteractionState {
   OOCState ooc = 8;
   string gm_authority_participant_id = 9;
   AITurnState ai_turn = 10;
+  InteractionControlState control = 11;
 }
 
 message GetInteractionStateRequest {
@@ -232,35 +265,34 @@ message GetInteractionStateResponse {
   InteractionState state = 1;
 }
 
-message SetActiveSceneRequest {
+message ActivateSceneRequest {
   string campaign_id = 1;
   string scene_id = 2;
 }
 
-message SetActiveSceneResponse {
+message ActivateSceneResponse {
   InteractionState state = 1;
 }
 
-message StartScenePlayerPhaseRequest {
+message OpenScenePlayerPhaseRequest {
   string campaign_id = 1;
   string scene_id = 2;
   GMInteractionInput interaction = 3;
   repeated string character_ids = 4;
 }
 
-message StartScenePlayerPhaseResponse {
+message OpenScenePlayerPhaseResponse {
   InteractionState state = 1;
 }
 
-message SubmitScenePlayerPostRequest {
+message SubmitScenePlayerActionRequest {
   string campaign_id = 1;
   string scene_id = 2;
   string summary_text = 3;
   repeated string character_ids = 4;
-  bool yield_after_post = 5;
 }
 
-message SubmitScenePlayerPostResponse {
+message SubmitScenePlayerActionResponse {
   InteractionState state = 1;
 }
 
@@ -273,32 +305,32 @@ message YieldScenePlayerPhaseResponse {
   InteractionState state = 1;
 }
 
-message UnyieldScenePlayerPhaseRequest {
+message WithdrawScenePlayerYieldRequest {
   string campaign_id = 1;
   string scene_id = 2;
 }
 
-message UnyieldScenePlayerPhaseResponse {
+message WithdrawScenePlayerYieldResponse {
   InteractionState state = 1;
 }
 
-message EndScenePlayerPhaseRequest {
+message InterruptScenePlayerPhaseRequest {
   string campaign_id = 1;
   string scene_id = 2;
   string reason = 3;
 }
 
-message EndScenePlayerPhaseResponse {
+message InterruptScenePlayerPhaseResponse {
   InteractionState state = 1;
 }
 
-message CommitSceneGMInteractionRequest {
+message RecordSceneGMInteractionRequest {
   string campaign_id = 1;
   string scene_id = 2;
   GMInteractionInput interaction = 3;
 }
 
-message CommitSceneGMInteractionResponse {
+message RecordSceneGMInteractionResponse {
   InteractionState state = 1;
 }
 
@@ -308,40 +340,40 @@ message ScenePlayerRevisionRequest {
   repeated string character_ids = 3;
 }
 
-message ResolveScenePlayerPhaseReviewAdvanceToPlayers {
+message ResolveScenePlayerReviewOpenNextPlayerPhase {
   GMInteractionInput interaction = 1;
   repeated string next_character_ids = 2;
 }
 
-message ResolveScenePlayerPhaseReviewRequestRevisions {
+message ResolveScenePlayerReviewRequestRevisions {
   GMInteractionInput interaction = 1;
   repeated ScenePlayerRevisionRequest revisions = 2;
 }
 
-message ResolveScenePlayerPhaseReviewReturnToGM {
+message ResolveScenePlayerReviewReturnToGM {
   GMInteractionInput interaction = 1;
 }
 
-message ResolveScenePlayerPhaseReviewRequest {
+message ResolveScenePlayerReviewRequest {
   string campaign_id = 1;
   string scene_id = 2;
   oneof resolution {
-    ResolveScenePlayerPhaseReviewAdvanceToPlayers advance_to_players = 3;
-    ResolveScenePlayerPhaseReviewRequestRevisions request_revisions = 4;
-    ResolveScenePlayerPhaseReviewReturnToGM return_to_gm = 5;
+    ResolveScenePlayerReviewOpenNextPlayerPhase open_next_player_phase = 3;
+    ResolveScenePlayerReviewRequestRevisions request_revisions = 4;
+    ResolveScenePlayerReviewReturnToGM return_to_gm = 5;
   }
 }
 
-message ResolveScenePlayerPhaseReviewResponse {
+message ResolveScenePlayerReviewResponse {
   InteractionState state = 1;
 }
 
-message PauseSessionForOOCRequest {
+message OpenSessionOOCRequest {
   string campaign_id = 1;
   string reason = 2;
 }
 
-message PauseSessionForOOCResponse {
+message OpenSessionOOCResponse {
   InteractionState state = 1;
 }
 
@@ -370,31 +402,28 @@ message ClearOOCReadyToResumeResponse {
   InteractionState state = 1;
 }
 
-message ResumeFromOOCRequest {
-  string campaign_id = 1;
+message ResolveSessionOOCResumeInterruptedPhase {}
+
+message ResolveSessionOOCReturnToGM {
+  string scene_id = 1;
 }
 
-message ResumeFromOOCResponse {
-  InteractionState state = 1;
-}
-
-message ResolveInterruptedScenePhaseResumeOriginal {}
-
-message ResolveInterruptedScenePhaseReplaceWithPlayerPhase {
+message ResolveSessionOOCOpenPlayerPhase {
   string scene_id = 1;
   GMInteractionInput interaction = 2;
   repeated string next_character_ids = 3;
 }
 
-message ResolveInterruptedScenePhaseRequest {
+message ResolveSessionOOCRequest {
   string campaign_id = 1;
   oneof resolution {
-    ResolveInterruptedScenePhaseResumeOriginal resume_original_phase = 2;
-    ResolveInterruptedScenePhaseReplaceWithPlayerPhase replace_with_player_phase = 3;
+    ResolveSessionOOCResumeInterruptedPhase resume_interrupted_phase = 2;
+    ResolveSessionOOCReturnToGM return_to_gm = 3;
+    ResolveSessionOOCOpenPlayerPhase open_player_phase = 4;
   }
 }
 
-message ResolveInterruptedScenePhaseResponse {
+message ResolveSessionOOCResponse {
   InteractionState state = 1;
 }
 

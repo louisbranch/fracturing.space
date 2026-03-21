@@ -22,11 +22,12 @@ scn:create_scene{
 scn:create_scene{
   name = "Collapsed Antechamber",
   description = "Broken columns and a drift of dust offer a defensible fallback from the warded door.",
-  characters = {"Aria", "Corin"}
+  characters = {"Aria", "Corin"},
+  activate = false
 }
-scn:interaction_set_gm_authority({participant = "Guide"})
-scn:interaction_set_active_scene({scene = "Sealed Vault"})
-scn:interaction_start_player_phase{
+scn:interaction_set_session_gm_authority({participant = "Guide"})
+scn:interaction_open_scene_player_phase{
+  as = "Guide",
   scene = "Sealed Vault",
   interaction = {
     title = "Warded Vault",
@@ -38,12 +39,12 @@ scn:interaction_start_player_phase{
 }
 
 -- A player interrupts with OOC, and the table decides the scene should change.
-scn:interaction_pause_ooc({as = "Rhea", reason = "Check whether the vault is even a viable target right now."})
-scn:interaction_post_ooc({as = "Rhea", body = "If the ward surges on any approach, Aria wants to fall back instead of forcing the issue."})
-scn:interaction_post_ooc({as = "Guide", body = "That makes sense. The ward is escalating too fast to tackle head-on in this beat."})
-scn:interaction_post_ooc({as = "Bryn", body = "Then Corin should pull everyone back into the antechamber and regroup."})
-scn:interaction_ready_ooc({as = "Rhea"})
-scn:interaction_ready_ooc({as = "Bryn"})
+scn:interaction_open_session_ooc({as = "Rhea", reason = "Check whether the vault is even a viable target right now."})
+scn:interaction_post_session_ooc({as = "Rhea", body = "If the ward surges on any approach, Aria wants to fall back instead of forcing the issue."})
+scn:interaction_post_session_ooc({as = "Guide", body = "That makes sense. The ward is escalating too fast to tackle head-on in this beat."})
+scn:interaction_post_session_ooc({as = "Bryn", body = "Then Corin should pull everyone back into the antechamber and regroup."})
+scn:interaction_mark_ooc_ready_to_resume({as = "Rhea"})
+scn:interaction_mark_ooc_ready_to_resume({as = "Bryn"})
 scn:interaction_expect{
   active_scene = "Sealed Vault",
   phase_status = "PLAYERS",
@@ -54,17 +55,8 @@ scn:interaction_expect{
   ooc_ready = {"Rhea", "Bryn"}
 }
 
-scn:interaction_resume_ooc()
-scn:interaction_expect{
-  active_scene = "Sealed Vault",
-  phase_status = "PLAYERS",
-  ooc_open = false,
-  ooc_resolution_pending = true,
-  gm_authority = "Guide"
-}
-
 -- Simulate the AI GM reevaluating the scene and moving the action elsewhere.
-scn:interaction_resolve_interrupted_phase{
+scn:interaction_resolve_session_ooc{
   as = "Guide",
   scene = "Collapsed Antechamber",
   interaction = {
