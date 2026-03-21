@@ -6,9 +6,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/adversarytransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 func (s *DaggerheartService) adversaryHandler() *adversarytransport.Handler {

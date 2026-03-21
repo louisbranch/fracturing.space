@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 func TestMillisHelpers(t *testing.T) {

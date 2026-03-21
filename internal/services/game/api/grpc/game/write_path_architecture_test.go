@@ -319,7 +319,7 @@ func TestCampaignApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 
 func TestCampaignReadinessApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_readiness_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "readinesstransport", "application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -352,7 +352,7 @@ func TestCampaignServiceUsesApplicationAndReadinessBoundaries(t *testing.T) {
 	}
 	requiredFields := []string{
 		"app       campaignApplication",
-		"readiness campaignReadinessApplication",
+		"readiness readinesstransport.Application",
 	}
 	for _, field := range requiredFields {
 		if strings.Contains(source, field) {
@@ -398,21 +398,21 @@ func TestCampaignServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestCampaignAIServiceUsesApplicationBoundary(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "aitransport", "service.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	source := string(content)
-	if strings.Contains(source, "type CampaignAIService struct {\n\tcampaignv1.UnimplementedCampaignAIServiceServer\n\tstores ") {
+	if strings.Contains(source, "type Service struct {\n\tcampaignv1.UnimplementedCampaignAIServiceServer\n\tstores ") {
 		relPath, err := filepath.Rel(repoRoot, path)
 		if err != nil {
 			t.Fatalf("relative path %s: %v", path, err)
 		}
-		t.Fatalf("%s still carries full Stores; use campaignAIApplication instead", filepath.ToSlash(relPath))
+		t.Fatalf("%s still carries full Stores; use application instead", filepath.ToSlash(relPath))
 	}
-	if !strings.Contains(source, "app campaignAIApplication") {
+	if !strings.Contains(source, "app application") {
 		relPath, err := filepath.Rel(repoRoot, path)
 		if err != nil {
 			t.Fatalf("relative path %s: %v", path, err)
@@ -424,9 +424,9 @@ func TestCampaignAIServiceUsesApplicationBoundary(t *testing.T) {
 func TestCampaignAIServiceHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	serviceFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service_issue_grant.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service_auth_state.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service_binding_usage.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "aitransport", "service_issue_grant.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "aitransport", "service_auth_state.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "aitransport", "service_binding_usage.go"),
 	}
 
 	var violations []string

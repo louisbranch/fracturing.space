@@ -10,9 +10,9 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 

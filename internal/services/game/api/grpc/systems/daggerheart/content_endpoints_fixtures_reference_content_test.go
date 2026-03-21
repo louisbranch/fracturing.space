@@ -3,7 +3,7 @@ package daggerheart
 import (
 	"context"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 

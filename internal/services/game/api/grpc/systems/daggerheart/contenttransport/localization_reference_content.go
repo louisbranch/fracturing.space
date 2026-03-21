@@ -4,7 +4,7 @@ import (
 	"context"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 )
 
 func localizeClasses(ctx context.Context, store contentstore.DaggerheartContentReadStore, locale commonv1.Locale, classes []contentstore.DaggerheartClass) error {

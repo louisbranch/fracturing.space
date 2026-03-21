@@ -3,11 +3,11 @@ package eventtransport
 import (
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 

@@ -95,9 +95,10 @@ func TestDomainImportsRespectArchitectureContracts(t *testing.T) {
 	}
 
 	allowStorageImports := map[string]struct{}{
-		modulePath + "/internal/services/game/domain/bridge/daggerheart":                     {},
-		modulePath + "/internal/services/game/domain/bridge/daggerheart/internal/projection": {},
-		modulePath + "/internal/services/game/domain/bridge/manifest":                        {},
+		modulePath + "/internal/services/game/domain/systems/daggerheart":                     {},
+		modulePath + "/internal/services/game/domain/systems/daggerheart/internal/adapter":    {},
+		modulePath + "/internal/services/game/domain/systems/daggerheart/internal/projection": {},
+		modulePath + "/internal/services/game/domain/systems/manifest":                        {},
 	}
 	allowProtoImports := map[string]struct{}{}
 

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 

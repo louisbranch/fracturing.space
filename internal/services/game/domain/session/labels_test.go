@@ -80,6 +80,29 @@ func TestNormalizeSpotlightType(t *testing.T) {
 	}
 }
 
+func TestNormalizeAITurnStatus(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]AITurnStatus{
+		" idle ":  AITurnStatusIdle,
+		"QUEUED":  AITurnStatusQueued,
+		"running": AITurnStatusRunning,
+		"FAILED":  AITurnStatusFailed,
+	}
+	for input, want := range tests {
+		got, err := NormalizeAITurnStatus(input)
+		if err != nil {
+			t.Fatalf("NormalizeAITurnStatus(%q) error = %v", input, err)
+		}
+		if got != want {
+			t.Fatalf("NormalizeAITurnStatus(%q) = %q, want %q", input, got, want)
+		}
+	}
+	if _, err := NormalizeAITurnStatus("bogus"); err == nil {
+		t.Fatal("expected unsupported ai turn status error")
+	}
+}
+
 func TestValidateSpotlightTarget(t *testing.T) {
 	if err := ValidateSpotlightTarget(SpotlightTypeCharacter, " "); err == nil {
 		t.Fatal("expected missing character id error for character spotlight")

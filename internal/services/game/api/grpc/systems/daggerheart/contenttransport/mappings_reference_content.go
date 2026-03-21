@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 )
 
 func toProtoDaggerheartClass(class contentstore.DaggerheartClass) *pb.DaggerheartClass {

@@ -10,7 +10,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -18,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )

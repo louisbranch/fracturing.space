@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 )
 
 func toStorageClassFeatures(features []featureRecord) []contentstore.DaggerheartFeature {

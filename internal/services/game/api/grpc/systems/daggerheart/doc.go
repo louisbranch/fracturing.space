@@ -30,7 +30,7 @@
 //  2. the relevant `workflow_*handler.go`, `content_service.go`, or
 //     `asset_service.go` wrapper,
 //  3. the sibling package that owns the actual behavior,
-//  4. `internal/services/game/domain/bridge/daggerheart/...` when the change
+//  4. `internal/services/game/domain/systems/daggerheart/...` when the change
 //     affects system commands, events, or replay rules.
 //
 // Non-goals:

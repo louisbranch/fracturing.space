@@ -7,10 +7,10 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

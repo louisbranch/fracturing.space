@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )

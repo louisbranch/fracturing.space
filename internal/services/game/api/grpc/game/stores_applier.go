@@ -3,7 +3,7 @@ package game
 import (
 	"fmt"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 )

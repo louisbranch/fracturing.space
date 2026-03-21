@@ -57,7 +57,7 @@ Authenticated surface: canonical `/app/*` routes (`/app/dashboard`, `/app/campai
 Game service combines core domain packages and system extension packages.
 
 - Core domains: `campaign`, `participant`, `character`, `invite`, `session`, `action`, etc.
-- System extensions: `internal/services/game/domain/bridge/<system>/`.
+- System extensions: `internal/services/game/domain/systems/<system>/`.
 - Registration alignment: module + metadata + adapter descriptors are wired from
   manifest registration.
 

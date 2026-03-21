@@ -7,13 +7,13 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )

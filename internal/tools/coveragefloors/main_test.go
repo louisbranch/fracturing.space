@@ -79,6 +79,93 @@ func TestTryLoadFloorsInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestRunCheckSkipsRemovedPackagesWhenSeedProvided(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	profilePath := filepath.Join(tmpDir, "coverage.out")
+	floorsPath := filepath.Join(tmpDir, "floors.json")
+	seedPath := filepath.Join(tmpDir, "seed.json")
+
+	// Profile only covers pkg/a — pkg/old was renamed/removed.
+	profile := "mode: set\n" +
+		"github.com/example/project/pkg/a/file.go:1.1,1.2 1 1\n"
+
+	// Ratcheted floors (from badges) still reference the old package.
+	floors := `{
+  "version": 1,
+  "allow_drop": 0.1,
+  "packages": [
+    {"package": "github.com/example/project/pkg/a", "floor": 90.0},
+    {"package": "github.com/example/project/pkg/old", "floor": 95.0}
+  ]
+}`
+
+	// Seed (local) only lists pkg/a — pkg/old was intentionally removed.
+	seed := `{
+  "version": 1,
+  "allow_drop": 0.1,
+  "packages": [
+    {"package": "github.com/example/project/pkg/a", "floor": 90.0}
+  ]
+}`
+
+	if err := os.WriteFile(profilePath, []byte(profile), 0o644); err != nil {
+		t.Fatalf("write profile: %v", err)
+	}
+	if err := os.WriteFile(floorsPath, []byte(floors), 0o644); err != nil {
+		t.Fatalf("write floors: %v", err)
+	}
+	if err := os.WriteFile(seedPath, []byte(seed), 0o644); err != nil {
+		t.Fatalf("write seed: %v", err)
+	}
+
+	// Should pass — pkg/old is absent from seed, so it's skipped as "removed".
+	if err := runCheck([]string{
+		"-profile=" + profilePath,
+		"-floors=" + floorsPath,
+		"-seed=" + seedPath,
+	}); err != nil {
+		t.Fatalf("runCheck should pass when removed packages are absent from seed: %v", err)
+	}
+}
+
+func TestRunCheckFailsMissingPackageWithoutSeed(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	profilePath := filepath.Join(tmpDir, "coverage.out")
+	floorsPath := filepath.Join(tmpDir, "floors.json")
+
+	// Profile only covers pkg/a — pkg/old is missing.
+	profile := "mode: set\n" +
+		"github.com/example/project/pkg/a/file.go:1.1,1.2 1 1\n"
+
+	floors := `{
+  "version": 1,
+  "allow_drop": 0.1,
+  "packages": [
+    {"package": "github.com/example/project/pkg/a", "floor": 90.0},
+    {"package": "github.com/example/project/pkg/old", "floor": 95.0}
+  ]
+}`
+
+	if err := os.WriteFile(profilePath, []byte(profile), 0o644); err != nil {
+		t.Fatalf("write profile: %v", err)
+	}
+	if err := os.WriteFile(floorsPath, []byte(floors), 0o644); err != nil {
+		t.Fatalf("write floors: %v", err)
+	}
+
+	// Without seed, missing packages should fail.
+	if err := runCheck([]string{
+		"-profile=" + profilePath,
+		"-floors=" + floorsPath,
+	}); err == nil {
+		t.Fatal("runCheck should fail when packages are missing without seed")
+	}
+}
+
 func TestRunRatchetAllowsEmptyExistingFile(t *testing.T) {
 	t.Parallel()
 

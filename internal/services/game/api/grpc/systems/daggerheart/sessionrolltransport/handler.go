@@ -16,10 +16,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

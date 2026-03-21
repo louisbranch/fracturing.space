@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )

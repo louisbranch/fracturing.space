@@ -37,8 +37,8 @@ check sequence.
 | Change Daggerheart character-creation workflow provider | `internal/services/game/api/grpc/systems/daggerheart/creationworkflow/` |
 | Change command dispatch, replay, or cross-aggregate engine policy | `internal/services/game/domain/command/`, `internal/services/game/domain/engine/`, `internal/services/game/domain/readiness/` |
 | Change aggregate rules for campaigns, sessions, characters, participants, invites, scenes, forks, or readiness | `internal/services/game/domain/<aggregate>/` plus the owning workflow-local `decider_*.go` or workflow package listed below |
-| Change system-owned domain behavior for Daggerheart | `internal/services/game/domain/bridge/daggerheart/` |
-| Change manifest/module/adapter/metadata registration for a game system | `internal/services/game/domain/bridge/manifest/`, `internal/services/game/domain/module/`, `internal/services/game/domain/bridge/` |
+| Change system-owned domain behavior for Daggerheart | `internal/services/game/domain/systems/daggerheart/` |
+| Change manifest/module/adapter/metadata registration for a game system | `internal/services/game/domain/systems/manifest/`, `internal/services/game/domain/module/`, `internal/services/game/domain/systems/` |
 | Change projection apply logic or read-model contracts | `internal/services/game/projection/`, `internal/services/game/storage/` |
 | Change SQLite persistence backends | `internal/services/game/storage/sqlite/` and the owning backend subpackage such as `coreprojection/`, `eventjournal/`, `integrationoutbox/`, `daggerheartcontent/`, or `daggerheartprojection/` |
 | Change integration harnesses or cross-service behavior checks | `internal/test/integration/`, `internal/services/game/integration/` |

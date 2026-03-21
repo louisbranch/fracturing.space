@@ -4,12 +4,12 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
 // StepProgress carries one creation step's completion state.

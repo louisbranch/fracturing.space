@@ -3,12 +3,12 @@ package outcometransport
 import (
 	"context"
 
-	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/gamefakes"
 )

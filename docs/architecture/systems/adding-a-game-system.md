@@ -11,7 +11,7 @@ last_reviewed: "2026-03-11"
 
 Step-by-step guide for registering a new game system in the game service. Use
 Daggerheart as the reference implementation for manifest/module/adapter shape
-(`internal/services/game/domain/bridge/daggerheart/`), but do not copy its
+(`internal/services/game/domain/systems/daggerheart/`), but do not copy its
 surface area blindly. New systems should follow the manifest-driven path
 described here rather than wiring startup through ad hoc app or engine edits.
 
@@ -47,8 +47,8 @@ emit has a corresponding projection handler in the adapter.
 
 Built-in system registration should read as one sequence:
 
-1. Implement the system package under `internal/services/game/domain/bridge/<system>/`.
-2. Add one `manifest.SystemDescriptor` entry in `internal/services/game/domain/bridge/manifest/manifest.go`.
+1. Implement the system package under `internal/services/game/domain/systems/<system>/`.
+2. Add one `manifest.SystemDescriptor` entry in `internal/services/game/domain/systems/manifest/manifest.go`.
 3. If needed, add the system-owned projection store contract and backend wiring.
 4. Run module conformance, startup parity, generated event docs, and scenario checks.
 
@@ -87,7 +87,7 @@ core `map[string]any` envelopes.
 
 ## Step 5: Add the Manifest Entry
 
-In `internal/services/game/domain/bridge/manifest/manifest.go`, add a
+In `internal/services/game/domain/systems/manifest/manifest.go`, add a
 `SystemDescriptor` to `builtInSystems`:
 
 ```go
@@ -142,7 +142,7 @@ Common parity failures:
 
 Key files:
 
-- `internal/services/game/domain/bridge/manifest/manifest.go`
+- `internal/services/game/domain/systems/manifest/manifest.go`
 - `internal/services/game/domain/module/testkit/`
 - `internal/services/game/app/system_registration.go`
 - `internal/services/game/app/bootstrap_systems.go`

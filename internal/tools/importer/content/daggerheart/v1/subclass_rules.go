@@ -3,7 +3,7 @@ package catalogimporter
 import (
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 )
 
 func toStorageSubclassFeatures(features []featureRecord) []contentstore.DaggerheartFeature {

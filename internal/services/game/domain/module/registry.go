@@ -116,7 +116,7 @@ type CommandTyper interface {
 // implementation.
 //
 // NOTE: This is the write-path StateFactory (returns untyped `any`).
-// See also bridge.StateHandlerFactory (domain/bridge/registry_bridge.go)
+// See also bridge.StateHandlerFactory (domain/systems/registry_bridge.go)
 // which returns typed handlers (CharacterStateHandler, SnapshotStateHandler)
 // for the API bridge layer. Daggerheart only implements this module variant;
 // the bridge variant is used by the API layer to provide resource/damage

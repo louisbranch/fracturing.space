@@ -11,7 +11,7 @@ Canonical how-to for system-extension changes.
 ## 1. Add or change command/event definitions
 
 1. Update the owning registration surface:
-   - system modules: `RegisterCommands` and `RegisterEvents` in `internal/services/game/domain/bridge/<system>/module.go`
+   - system modules: `RegisterCommands` and `RegisterEvents` in `internal/services/game/domain/systems/<system>/module.go`
    - core modules: registration in the owning `internal/services/game/domain/<area>/registry.go`
 2. Update payload structs and validation in the same owning package.
 3. Add/update focused registration tests in that package.
@@ -25,8 +25,8 @@ Canonical how-to for system-extension changes.
 
 ## 3. If adding a new game system
 
-1. Implement the system package in `internal/services/game/domain/bridge/<system>/`.
-2. Add one `SystemDescriptor` in `internal/services/game/domain/bridge/manifest/manifest.go`.
+1. Implement the system package in `internal/services/game/domain/systems/<system>/`.
+2. Add one `SystemDescriptor` in `internal/services/game/domain/systems/manifest/manifest.go`.
    That descriptor is the built-in source of truth for:
    - `BuildModule` → write-path registration
    - `BuildMetadataSystem` → API-facing system metadata

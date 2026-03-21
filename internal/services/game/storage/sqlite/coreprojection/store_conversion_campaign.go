@@ -4,8 +4,8 @@ import (
 	"database/sql"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )

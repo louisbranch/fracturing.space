@@ -3,8 +3,8 @@ package sessionrolltransport
 import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
 )
 
 // outcomeToProto maps a domain Outcome to the corresponding proto enum value.

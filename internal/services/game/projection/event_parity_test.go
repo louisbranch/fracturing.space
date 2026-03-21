@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 func TestApplyProjectionRequiredCoreEventsAreHandled(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 // ValidateProjectionRegistries bundles the three projection coverage validators

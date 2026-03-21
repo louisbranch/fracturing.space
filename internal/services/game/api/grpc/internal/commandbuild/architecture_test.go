@@ -35,7 +35,7 @@ func TestCommandbuildDoesNotImportSystemSpecificPackages(t *testing.T) {
 		}
 		for _, spec := range node.Imports {
 			importPath := strings.Trim(spec.Path.Value, "\"")
-			if strings.Contains(importPath, "/internal/services/game/domain/bridge/") {
+			if strings.Contains(importPath, "/internal/services/game/domain/systems/") {
 				violations = append(violations, name+": "+importPath)
 			}
 		}

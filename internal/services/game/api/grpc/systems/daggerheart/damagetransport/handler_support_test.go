@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

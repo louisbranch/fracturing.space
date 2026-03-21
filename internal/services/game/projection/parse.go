@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 // parseGameSystem maps external and enum-style system names into canonical

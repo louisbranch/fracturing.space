@@ -5,7 +5,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 func TestAdapterRegistryForSystemStoresEmpty(t *testing.T) {

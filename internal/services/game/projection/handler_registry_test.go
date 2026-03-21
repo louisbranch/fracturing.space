@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 // TestRegisteredHandlerTypes_MatchesProjectionHandledTypes verifies that the

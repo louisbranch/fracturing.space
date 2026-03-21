@@ -5,6 +5,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport/readinesstransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 )
 
@@ -17,7 +18,7 @@ const (
 type CampaignService struct {
 	campaignv1.UnimplementedCampaignServiceServer
 	app       campaignApplication
-	readiness campaignReadinessApplication
+	readiness readinesstransport.Application
 }
 
 // NewCampaignService creates a CampaignService. The AuthClient and AIClient
@@ -33,7 +34,14 @@ func newCampaignServiceWithDependencies(
 	idGenerator func() (string, error),
 ) *CampaignService {
 	return &CampaignService{
-		app:       newCampaignApplicationWithDependencies(deps, clock, idGenerator),
-		readiness: newCampaignReadinessApplication(deps),
+		app: newCampaignApplicationWithDependencies(deps, clock, idGenerator),
+		readiness: readinesstransport.NewApplication(readinesstransport.Deps{
+			Auth:        deps.Auth,
+			Campaign:    deps.Campaign,
+			Participant: deps.Participant,
+			Character:   deps.Character,
+			Session:     deps.Session,
+			Daggerheart: deps.Daggerheart,
+		}),
 	}
 }

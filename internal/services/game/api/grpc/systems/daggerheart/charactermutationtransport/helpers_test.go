@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
-	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

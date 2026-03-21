@@ -9,8 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -18,6 +16,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 

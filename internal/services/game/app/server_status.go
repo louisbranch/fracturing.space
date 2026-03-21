@@ -7,7 +7,7 @@ import (
 	"time"
 
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 )
 
 const (

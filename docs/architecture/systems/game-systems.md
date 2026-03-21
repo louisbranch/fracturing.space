@@ -55,7 +55,7 @@ Startup validation enforces coverage:
 ## Extension surfaces and registry wiring
 
 Adding a game system requires four registries, all wired from one
-`SystemDescriptor` in `domain/bridge/manifest/manifest.go`. If a system is
+`SystemDescriptor` in `domain/systems/manifest/manifest.go`. If a system is
 present in one registry and missing in another, startup validation fails.
 
 ```mermaid
@@ -81,9 +81,9 @@ flowchart TD
 | Registry | Scope | File | What it provides |
 |----------|-------|------|------------------|
 | **Module** | Write path | `domain/module/registry.go` | Routes commands to deciders, events to folders during replay |
-| **Adapter** | Projection | `domain/bridge/adapter_registry.go` | Applies system events to projection stores |
-| **Metadata** | API surface | `domain/bridge/registry_bridge.go` | Transport-facing contracts, state handler factories, outcome appliers |
-| **Manifest** | Glue | `domain/bridge/manifest/manifest.go` | Single descriptor that wires the other three together |
+| **Adapter** | Projection | `domain/systems/adapter_registry.go` | Applies system events to projection stores |
+| **Metadata** | API surface | `domain/systems/registry_bridge.go` | Transport-facing contracts, state handler factories, outcome appliers |
+| **Manifest** | Glue | `domain/systems/manifest/manifest.go` | Single descriptor that wires the other three together |
 
 Metadata registry contracts are domain-owned (`SystemID`, metadata status enums).
 gRPC/API adapters map those values to protobuf enums at transport boundaries so
@@ -115,7 +115,7 @@ domain packages remain independent from generated API code.
 
 Reference layout for a system implementation:
 
-- `internal/services/game/domain/bridge/<system>/module.go` (registration)
+- `internal/services/game/domain/systems/<system>/module.go` (registration)
 - `.../decider.go` (command decisions)
 - `.../folder.go` (replay fold)
 - `.../adapter.go` (projection apply)

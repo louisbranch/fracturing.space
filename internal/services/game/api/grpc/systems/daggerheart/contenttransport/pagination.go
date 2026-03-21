@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
-	contentfilter "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/content/filter"
+	contentfilter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/content/filter"
 )
 
 type contentKeySpec struct {

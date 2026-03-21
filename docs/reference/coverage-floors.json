@@ -18,37 +18,67 @@
       "description": "Campaign authorization capability and policy decisions."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems",
       "floor": 97.7,
       "description": "Bridge registry and system metadata routing boundaries."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart",
-      "floor": 91.9,
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart",
+      "floor": 91.5,
       "description": "Daggerheart system module, fold, and projection adapter path."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/rules",
+      "floor": 79.0,
+      "description": "Pure Daggerheart game-rule types and functions extracted from root."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain",
       "floor": 94.8,
       "description": "Pure Daggerheart mechanics helpers."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile",
       "floor": 97.7,
       "description": "Daggerheart profile defaults and validation policy seams."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/mechanics",
       "floor": 95.5,
       "description": "Pure Daggerheart mechanics seam used by folder and adapter paths."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/reducer",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/reducer",
       "floor": 93.8,
       "description": "Pure Daggerheart reducer seam for deterministic state mutations."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest",
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/snapstate",
+      "floor": 90.0,
+      "description": "Leaf character-state value types for campaign snapshot runtime state."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/validator",
+      "floor": 90.0,
+      "description": "Daggerheart payload validation functions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter",
+      "floor": 93.0,
+      "description": "Daggerheart event projection adapter for persistent storage."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider",
+      "floor": 86.0,
+      "description": "Daggerheart command decision handlers and rejection logic."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/folder",
+      "floor": 97.0,
+      "description": "Daggerheart in-memory snapshot fold handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest",
       "floor": 94.8,
       "description": "Built-in system descriptor and adapter wiring contracts."
     },
@@ -119,8 +149,13 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session",
-      "floor": 93.1,
-      "description": "Session start/end and gate behavior."
+      "floor": 96.8,
+      "description": "Session start/end, gate aggregate behavior, and lifecycle state."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session/gate",
+      "floor": 89.5,
+      "description": "Gate workflow engine, progress computation, and projection helpers."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/app",

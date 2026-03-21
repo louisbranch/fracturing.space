@@ -9,7 +9,7 @@
 // This boundary is what lets new game systems be added without changing the
 // core campaign/session/participant command flow.
 //
-// Compare with the sibling package domain/bridge, which provides the
+// Compare with the sibling package domain/systems, which provides the
 // projection-side adapter registry and the API metadata bridge (proto enum
 // mapping). The two packages collaborate but own different concerns:
 //

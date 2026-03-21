@@ -1,0 +1,152 @@
+package gate
+
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
+)
+
+func DecodeGateWorkflow(gateType string, data []byte) (GateWorkflow, error) {
+	metadata, err := WorkflowMetadataFromJSON(data)
+	if err != nil {
+		return nil, err
+	}
+	return NewGateWorkflow(gateType, metadata)
+}
+
+func ParseGateWorkflowBase(metadata map[string]any, defaultResponseAuthority string) (GateWorkflowBase, error) {
+	eligibleIDs, err := WorkflowStringSlice(MetadataValue(metadata, WorkflowEligibleParticipantIDsKey), WorkflowEligibleParticipantIDsKey)
+	if err != nil {
+		return GateWorkflowBase{}, err
+	}
+	responseAuthority, err := WorkflowResponseAuthority(MetadataValue(metadata, WorkflowResponseAuthorityKey), defaultResponseAuthority)
+	if err != nil {
+		return GateWorkflowBase{}, err
+	}
+	return GateWorkflowBase{
+		ExtraMetadata:          WorkflowExtraMetadata(metadata),
+		EligibleParticipantIDs: eligibleIDs,
+		ResponseAuthority:      responseAuthority,
+	}, nil
+}
+
+func WorkflowMetadataFromJSON(data []byte) (map[string]any, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return nil, fmt.Errorf("decode gate metadata: %w", err)
+	}
+	return metadata, nil
+}
+
+func WorkflowExtraMetadata(metadata map[string]any) map[string]any {
+	if len(metadata) == 0 {
+		return nil
+	}
+	extra := make(map[string]any, len(metadata))
+	for key, value := range metadata {
+		switch key {
+		case WorkflowEligibleParticipantIDsKey, WorkflowResponseAuthorityKey:
+			continue
+		default:
+			extra[key] = value
+		}
+	}
+	if len(extra) == 0 {
+		return nil
+	}
+	return extra
+}
+
+func WorkflowCloneMap(values map[string]any) map[string]any {
+	if len(values) == 0 {
+		return map[string]any{}
+	}
+	cloned := make(map[string]any, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+func WorkflowResponseAuthority(value any, defaultValue string) (string, error) {
+	if value == nil {
+		return defaultValue, nil
+	}
+	text, ok := value.(string)
+	if !ok {
+		return "", fmt.Errorf("%s must be a string", WorkflowResponseAuthorityKey)
+	}
+	text = strings.ToLower(strings.TrimSpace(text))
+	switch text {
+	case "":
+		return defaultValue, nil
+	case GateResponseAuthorityParticipant:
+		return text, nil
+	default:
+		return "", fmt.Errorf("%s %q is not supported", WorkflowResponseAuthorityKey, text)
+	}
+}
+
+func WorkflowStringSlice(value any, fieldName string) ([]string, error) {
+	if value == nil {
+		return nil, nil
+	}
+	rawValues, ok := value.([]any)
+	if ok {
+		normalized := make([]string, 0, len(rawValues))
+		for _, entry := range rawValues {
+			text, ok := entry.(string)
+			if !ok {
+				return nil, fmt.Errorf("%s entries must be strings", fieldName)
+			}
+			text = strings.TrimSpace(text)
+			if text == "" {
+				continue
+			}
+			normalized = append(normalized, text)
+		}
+		return WorkflowUniqueStrings(normalized), nil
+	}
+	if rawStrings, ok := value.([]string); ok {
+		return WorkflowUniqueStrings(rawStrings), nil
+	}
+	return nil, fmt.Errorf("%s must be an array of strings", fieldName)
+}
+
+func WorkflowUniqueStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	unique := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		unique = append(unique, value)
+	}
+	sort.Strings(unique)
+	if len(unique) == 0 {
+		return nil
+	}
+	return unique
+}
+
+func WorkflowContains(values []string, target string) bool {
+	target = strings.TrimSpace(target)
+	for _, value := range values {
+		if strings.TrimSpace(value) == target {
+			return true
+		}
+	}
+	return false
+}
