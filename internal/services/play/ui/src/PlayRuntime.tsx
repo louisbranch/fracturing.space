@@ -22,6 +22,8 @@ type RuntimeState = {
   bootstrap: BootstrapResponse | null;
   snapshot: WireRoomSnapshot | null;
   chatMessages: WireChatMessage[];
+  remoteTypingParticipantIDs: string[];
+  viewerTyping: boolean;
   connectionState: HUDConnectionState;
   activeTab: HUDNavbarTab;
   onStageDraft: string;
@@ -37,15 +39,19 @@ type RuntimeAction =
   | { type: "ws-ready"; snapshot: WireRoomSnapshot }
   | { type: "ws-interaction-updated"; snapshot: WireRoomSnapshot }
   | { type: "ws-chat-message"; message: WireChatMessage }
+  | { type: "ws-typing"; participantId: string; active: boolean }
   | { type: "ws-connection"; state: HUDConnectionState }
   | { type: "mutation-snapshot"; snapshot: WireRoomSnapshot }
   | { type: "mutation-error"; message: string }
   | { type: "dismiss-mutation-error" }
   | { type: "set-tab"; tab: HUDNavbarTab }
+  | { type: "set-viewer-typing"; active: boolean }
   | { type: "set-on-stage-draft"; value: string }
   | { type: "set-backstage-draft"; value: string }
   | { type: "set-side-chat-draft"; value: string }
   | { type: "set-sidebar-open"; open: boolean };
+
+type ComposerTypingSource = "on-stage" | "backstage" | "side-chat";
 
 type ScenePlayerPostRequest = {
   scene_id: string;
@@ -64,6 +70,8 @@ function initialState(): RuntimeState {
     bootstrap: null,
     snapshot: null,
     chatMessages: [],
+    remoteTypingParticipantIDs: [],
+    viewerTyping: false,
     connectionState: "disconnected",
     activeTab: "on-stage",
     onStageDraft: "",
@@ -91,6 +99,24 @@ function errorStatus(err: unknown): number | null {
   return typeof maybeStatus === "number" ? maybeStatus : null;
 }
 
+function addTypingParticipant(ids: string[], participantId: string): string[] {
+  return ids.includes(participantId) ? ids : [...ids, participantId];
+}
+
+function removeTypingParticipant(ids: string[], participantId: string): string[] {
+  return ids.filter((id) => id !== participantId);
+}
+
+function viewerParticipantID(
+  bootstrap: BootstrapResponse | null,
+  snapshot: WireRoomSnapshot | null,
+): string {
+  return snapshot?.interaction_state?.viewer?.participant_id
+    ?? bootstrap?.interaction_state?.viewer?.participant_id
+    ?? bootstrap?.viewer?.participant_id
+    ?? "";
+}
+
 function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
   switch (action.type) {
     case "bootstrap-loaded":
@@ -99,6 +125,7 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
         phase: "ready",
         bootstrap: action.bootstrap,
         chatMessages: action.bootstrap.chat.messages,
+        remoteTypingParticipantIDs: [],
       };
     case "runtime-resynced":
       return {
@@ -107,16 +134,29 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
         bootstrap: action.bootstrap,
         snapshot: snapshotFromBootstrap(action.bootstrap),
         chatMessages: action.bootstrap.chat.messages,
+        remoteTypingParticipantIDs: [],
         mutationError: undefined,
       };
     case "bootstrap-error":
       return { ...state, phase: "error", errorMessage: action.message };
     case "ws-ready":
-      return { ...state, snapshot: action.snapshot };
+      return { ...state, snapshot: action.snapshot, remoteTypingParticipantIDs: [] };
     case "ws-interaction-updated":
       return { ...state, snapshot: action.snapshot, mutationError: undefined };
     case "ws-chat-message":
       return { ...state, chatMessages: [...state.chatMessages, action.message] };
+    case "ws-typing": {
+      const participantId = action.participantId.trim();
+      if (!participantId) {
+        return state;
+      }
+      return {
+        ...state,
+        remoteTypingParticipantIDs: action.active
+          ? addTypingParticipant(state.remoteTypingParticipantIDs, participantId)
+          : removeTypingParticipant(state.remoteTypingParticipantIDs, participantId),
+      };
+    }
     case "ws-connection":
       return { ...state, connectionState: action.state };
     case "mutation-snapshot":
@@ -127,6 +167,8 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
       return { ...state, mutationError: undefined };
     case "set-tab":
       return { ...state, activeTab: action.tab };
+    case "set-viewer-typing":
+      return { ...state, viewerTyping: action.active };
     case "set-on-stage-draft":
       return { ...state, onStageDraft: action.value };
     case "set-backstage-draft":
@@ -184,6 +226,14 @@ function buildSceneScopedRequest(
 export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const wsRef = useRef<WSConnection | null>(null);
+  const typingSourceActiveRef = useRef<Record<ComposerTypingSource, boolean>>({
+    "on-stage": false,
+    backstage: false,
+    "side-chat": false,
+  });
+  const typingSourceIdleTimersRef = useRef<Partial<Record<ComposerTypingSource, ReturnType<typeof setTimeout>>>>({});
+  const typingHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const viewerTypingRef = useRef(false);
   const {
     inspector,
     close: closeInspector,
@@ -191,6 +241,77 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     openForParticipant,
     setActiveCharacter,
   } = usePlayerHUDCharacterInspector();
+  const typingTTLMs = Math.max(500, state.bootstrap?.realtime.typing_ttl_ms ?? 3_000);
+
+  const clearTypingSourceIdleTimer = useCallback((source: ComposerTypingSource) => {
+    const timer = typingSourceIdleTimersRef.current[source];
+    if (timer) {
+      clearTimeout(timer);
+      delete typingSourceIdleTimersRef.current[source];
+    }
+  }, []);
+
+  const stopTypingHeartbeat = useCallback(() => {
+    if (typingHeartbeatRef.current) {
+      clearInterval(typingHeartbeatRef.current);
+      typingHeartbeatRef.current = null;
+    }
+  }, []);
+
+  const sendTypingFrame = useCallback((active: boolean) => {
+    wsRef.current?.send({
+      type: FrameType.Typing,
+      payload: { active },
+    });
+  }, []);
+
+  const setViewerTyping = useCallback((active: boolean) => {
+    if (viewerTypingRef.current === active) {
+      return;
+    }
+    viewerTypingRef.current = active;
+    dispatch({ type: "set-viewer-typing", active });
+    if (active) {
+      sendTypingFrame(true);
+      if (!typingHeartbeatRef.current) {
+        typingHeartbeatRef.current = setInterval(() => {
+          if (viewerTypingRef.current) {
+            sendTypingFrame(true);
+          }
+        }, Math.max(250, Math.floor(typingTTLMs / 2)));
+      }
+      return;
+    }
+
+    stopTypingHeartbeat();
+    sendTypingFrame(false);
+  }, [sendTypingFrame, stopTypingHeartbeat, typingTTLMs]);
+
+  const syncViewerTypingFromSources = useCallback(() => {
+    const active = Object.values(typingSourceActiveRef.current).some(Boolean);
+    setViewerTyping(active);
+  }, [setViewerTyping]);
+
+  const setTypingSource = useCallback((source: ComposerTypingSource, active: boolean) => {
+    clearTypingSourceIdleTimer(source);
+    typingSourceActiveRef.current[source] = active;
+    if (active) {
+      typingSourceIdleTimersRef.current[source] = setTimeout(() => {
+        typingSourceActiveRef.current[source] = false;
+        delete typingSourceIdleTimersRef.current[source];
+        syncViewerTypingFromSources();
+      }, typingTTLMs);
+    }
+    syncViewerTypingFromSources();
+  }, [clearTypingSourceIdleTimer, syncViewerTypingFromSources, typingTTLMs]);
+
+  const clearAllTypingSources = useCallback(() => {
+    (Object.keys(typingSourceActiveRef.current) as ComposerTypingSource[]).forEach((source) => {
+      clearTypingSourceIdleTimer(source);
+      typingSourceActiveRef.current[source] = false;
+    });
+    syncViewerTypingFromSources();
+  }, [clearTypingSourceIdleTimer, syncViewerTypingFromSources]);
 
   const refreshRuntimeState = useCallback(async (): Promise<boolean> => {
     try {
@@ -239,6 +360,9 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
           case "chat.message":
             dispatch({ type: "ws-chat-message", message: event.message });
             break;
+          case "typing":
+            dispatch({ type: "ws-typing", participantId: event.participantId, active: event.active });
+            break;
           case "connection":
             dispatch({ type: "ws-connection", state: event.state });
             break;
@@ -254,6 +378,11 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       wsRef.current = null;
     };
   }, [refreshRuntimeState, state.bootstrap, shellConfig.realtimePath]);
+
+  useEffect(() => () => {
+    clearAllTypingSources();
+    stopTypingHeartbeat();
+  }, [clearAllTypingSources, stopTypingHeartbeat]);
 
   // --- Handlers ---
 
@@ -292,14 +421,25 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       return;
     }
     dispatch({ type: "set-on-stage-draft", value: "" });
+    setTypingSource("on-stage", false);
     mutations
       .submitScenePlayerPost(campaignId, request)
       .then(handleMutationSnapshot)
       .catch((err) => {
         dispatch({ type: "set-on-stage-draft", value: draft });
+        setTypingSource("on-stage", draft.length > 0);
         handleMutationFailure(err);
       });
-  }, [campaignId, handleMutationError, handleMutationFailure, handleMutationSnapshot, state.bootstrap, state.onStageDraft, state.snapshot]);
+  }, [
+    campaignId,
+    handleMutationError,
+    handleMutationFailure,
+    handleMutationSnapshot,
+    setTypingSource,
+    state.bootstrap,
+    state.onStageDraft,
+    state.snapshot,
+  ]);
 
   const handleOnStageSubmitAndYield = useCallback(() => {
     const draft = state.onStageDraft.trim();
@@ -310,14 +450,25 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       return;
     }
     dispatch({ type: "set-on-stage-draft", value: "" });
+    setTypingSource("on-stage", false);
     mutations
       .submitScenePlayerPost(campaignId, request)
       .then(handleMutationSnapshot)
       .catch((err) => {
         dispatch({ type: "set-on-stage-draft", value: draft });
+        setTypingSource("on-stage", draft.length > 0);
         handleMutationFailure(err);
       });
-  }, [campaignId, handleMutationError, handleMutationFailure, handleMutationSnapshot, state.bootstrap, state.onStageDraft, state.snapshot]);
+  }, [
+    campaignId,
+    handleMutationError,
+    handleMutationFailure,
+    handleMutationSnapshot,
+    setTypingSource,
+    state.bootstrap,
+    state.onStageDraft,
+    state.snapshot,
+  ]);
 
   const handleOnStageYield = useCallback(() => {
     const request = buildSceneScopedRequest(state.bootstrap, state.snapshot);
@@ -341,14 +492,16 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     const draft = state.backstageDraft.trim();
     if (!draft) return;
     dispatch({ type: "set-backstage-draft", value: "" });
+    setTypingSource("backstage", false);
     mutations
       .postSessionOOC(campaignId, { body: draft })
       .then(handleMutationSnapshot)
       .catch((err) => {
         dispatch({ type: "set-backstage-draft", value: draft });
+        setTypingSource("backstage", draft.length > 0);
         handleMutationFailure(err);
       });
-  }, [campaignId, state.backstageDraft, handleMutationFailure, handleMutationSnapshot]);
+  }, [campaignId, handleMutationFailure, handleMutationSnapshot, setTypingSource, state.backstageDraft]);
 
   const handleBackstageReadyToggle = useCallback(() => {
     if (!state.bootstrap) return;
@@ -369,7 +522,8 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       },
     });
     dispatch({ type: "set-side-chat-draft", value: "" });
-  }, [state.sideChatDraft]);
+    setTypingSource("side-chat", false);
+  }, [setTypingSource, state.sideChatDraft]);
 
   // --- Render ---
 
@@ -397,12 +551,21 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     );
   }
 
+  const currentViewerParticipantID = viewerParticipantID(state.bootstrap, state.snapshot);
+  const typingParticipantIDs = state.viewerTyping && currentViewerParticipantID
+    ? addTypingParticipant(
+        removeTypingParticipant(state.remoteTypingParticipantIDs, currentViewerParticipantID),
+        currentViewerParticipantID,
+      )
+    : state.remoteTypingParticipantIDs;
+
   const hudState = mapToPlayerHUDState(
     state.bootstrap,
     state.snapshot,
     state.connectionState,
     state.activeTab,
     state.chatMessages,
+    typingParticipantIDs,
     shellConfig.backURL,
   );
 
@@ -474,7 +637,10 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
         onTabChange={(tab) => dispatch({ type: "set-tab", tab })}
         onStage={hudState.onStage}
         onStageDraft={state.onStageDraft}
-        onOnStageDraftChange={(value) => dispatch({ type: "set-on-stage-draft", value })}
+        onOnStageDraftChange={(value) => {
+          dispatch({ type: "set-on-stage-draft", value });
+          setTypingSource("on-stage", value.trim().length > 0);
+        }}
         onOnStageSubmit={handleOnStageSubmit}
         onOnStageSubmitAndYield={handleOnStageSubmitAndYield}
         onOnStageYield={handleOnStageYield}
@@ -483,12 +649,18 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
         onParticipantInspect={handleParticipantInspect}
         backstage={hudState.backstage}
         backstageDraft={state.backstageDraft}
-        onBackstageDraftChange={(value) => dispatch({ type: "set-backstage-draft", value })}
+        onBackstageDraftChange={(value) => {
+          dispatch({ type: "set-backstage-draft", value });
+          setTypingSource("backstage", value.trim().length > 0);
+        }}
         onBackstageSend={handleBackstageSend}
         onBackstageReadyToggle={handleBackstageReadyToggle}
         sideChat={hudState.sideChat}
         sideChatDraft={state.sideChatDraft}
-        onSideChatDraftChange={(value) => dispatch({ type: "set-side-chat-draft", value })}
+        onSideChatDraftChange={(value) => {
+          dispatch({ type: "set-side-chat-draft", value });
+          setTypingSource("side-chat", value.trim().length > 0);
+        }}
         onSideChatSend={handleSideChatSend}
       />
       <PlayerHUDCharacterInspectorDialog

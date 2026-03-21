@@ -5,8 +5,7 @@ export type WSEvent =
   | { type: "ready"; snapshot: WireRoomSnapshot }
   | { type: "interaction.updated"; snapshot: WireRoomSnapshot }
   | { type: "chat.message"; message: WireChatMessage }
-  | { type: "chat.typing"; participantId: string; name: string; active: boolean }
-  | { type: "draft.typing"; participantId: string; name: string; active: boolean }
+  | { type: "typing"; participantId: string; name: string; active: boolean }
   | { type: "connection"; state: HUDConnectionState }
   | { type: "resync" }
   | { type: "error"; code: string; message: string };
@@ -38,8 +37,7 @@ export const FrameType = {
   Pong: "play.pong",
   ChatMessage: "play.chat.message",
   ChatSend: "play.chat.send",
-  ChatTyping: "play.chat.typing",
-  DraftTyping: "play.draft.typing",
+  Typing: "play.typing",
   InteractionUpdated: "play.interaction.updated",
   Error: "play.error",
   Resync: "play.resync",
@@ -156,23 +154,11 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
         }
         break;
       }
-      case FrameType.ChatTyping: {
+      case FrameType.Typing: {
         const te = payload as { participant_id?: string; name?: string; active?: boolean } | undefined;
         if (te) {
           opts.onEvent({
-            type: "chat.typing",
-            participantId: te.participant_id ?? "",
-            name: te.name ?? "",
-            active: te.active ?? false,
-          });
-        }
-        break;
-      }
-      case FrameType.DraftTyping: {
-        const te = payload as { participant_id?: string; name?: string; active?: boolean } | undefined;
-        if (te) {
-          opts.onEvent({
-            type: "draft.typing",
+            type: "typing",
             participantId: te.participant_id ?? "",
             name: te.name ?? "",
             active: te.active ?? false,

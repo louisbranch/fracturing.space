@@ -17,4 +17,18 @@ describe("OnStageParticipantRail", () => {
     expect(screen.getByLabelText("Bryn: active")).toBeInTheDocument();
     expect(screen.getByLabelText("Guide GM authority")).toBeInTheDocument();
   });
+
+  it("renders typing state when unified typing presence is active", () => {
+    render(
+      <OnStageParticipantRail
+        participants={onStageFixtureCatalog.yieldedWaiting.participants.map((participant) =>
+          participant.id === "p-bryn" ? { ...participant, railStatus: "typing" } : participant
+        )}
+        viewerParticipantId={onStageFixtureCatalog.yieldedWaiting.viewerParticipantId}
+      />,
+    );
+
+    expect(screen.getByLabelText("Bryn: typing")).toBeInTheDocument();
+    expect(screen.getByLabelText("Bryn status: Typing")).toBeInTheDocument();
+  });
 });

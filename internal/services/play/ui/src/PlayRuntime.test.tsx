@@ -1,7 +1,8 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BootstrapResponse, WireRoomSnapshot } from "./api/types";
+import { FrameType } from "./api/websocket";
 import { PlayRuntime } from "./PlayRuntime";
 import {
   playerHUDCharacterCatalog,
@@ -174,6 +175,10 @@ describe("PlayRuntime", () => {
     unyieldScenePlayerPhaseMock.mockResolvedValue(runtimeSnapshot());
     websocketConnection.send.mockReset();
     websocketConnection.close.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("opens the character inspector from the drawer and participant portrait after realtime ready", async () => {
@@ -391,6 +396,86 @@ describe("PlayRuntime", () => {
 
     expect(await screen.findByText("The Observatory")).toBeInTheDocument();
     expect(screen.queryByText("The Vault")).not.toBeInTheDocument();
+  });
+
+  it("sends unified play.typing frames from on-stage and side-chat composers", async () => {
+    const user = userEvent.setup();
+    fetchBootstrapMock.mockResolvedValue(runtimeBootstrap());
+
+    render(
+      <PlayRuntime
+        shellConfig={{
+          campaignId: "c1",
+          bootstrapPath: "/api/campaigns/c1/bootstrap",
+          realtimePath: "/realtime",
+          backURL: "http://example.com/app/campaigns/c1",
+        }}
+      />,
+    );
+
+    await screen.findByLabelText("Player HUD shell");
+    await waitFor(() => expect(connectWebSocketMock).toHaveBeenCalledTimes(1));
+    websocketConnection.send.mockClear();
+
+    await user.type(screen.getByLabelText("On-stage action input"), "Aria");
+    expect(websocketConnection.send).toHaveBeenCalledWith({
+      type: FrameType.Typing,
+      payload: { active: true },
+    });
+
+    await user.clear(screen.getByLabelText("On-stage action input"));
+    expect(websocketConnection.send).toHaveBeenLastCalledWith({
+      type: FrameType.Typing,
+      payload: { active: false },
+    });
+
+    websocketConnection.send.mockClear();
+    await user.click(screen.getByRole("button", { name: "Side Chat" }));
+    await user.type(screen.getByLabelText("Chat message input"), "Ready");
+    expect(websocketConnection.send).toHaveBeenCalledWith({
+      type: FrameType.Typing,
+      payload: { active: true },
+    });
+
+    await user.clear(screen.getByLabelText("Chat message input"));
+    expect(websocketConnection.send).toHaveBeenLastCalledWith({
+      type: FrameType.Typing,
+      payload: { active: false },
+    });
+  });
+
+  it("renders unified typing presence across on-stage, backstage, and side chat rails", async () => {
+    const user = userEvent.setup();
+    fetchBootstrapMock.mockResolvedValue(runtimeBootstrap());
+
+    render(
+      <PlayRuntime
+        shellConfig={{
+          campaignId: "c1",
+          bootstrapPath: "/api/campaigns/c1/bootstrap",
+          realtimePath: "/realtime",
+          backURL: "http://example.com/app/campaigns/c1",
+        }}
+      />,
+    );
+
+    await screen.findByLabelText("Player HUD shell");
+    await waitFor(() => expect(connectWebSocketMock).toHaveBeenCalledTimes(1));
+
+    const websocketOptions = connectWebSocketMock.mock.calls[0][0] as {
+      onEvent: (event: { type: "typing"; participantId: string; name: string; active: boolean }) => void;
+    };
+    act(() => {
+      websocketOptions.onEvent({ type: "typing", participantId: "p2", name: "Guide", active: true });
+    });
+
+    expect(screen.getByLabelText("Guide: typing")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Backstage" }));
+    expect(screen.getByLabelText("Guide: typing")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Side Chat" }));
+    expect(screen.getByLabelText("Guide: typing")).toBeInTheDocument();
   });
 
   it("refreshes bootstrap when the server requests a resync", async () => {

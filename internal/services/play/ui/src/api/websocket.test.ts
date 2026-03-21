@@ -187,43 +187,23 @@ describe("connectWebSocket", () => {
   // 3. Typing events
   // -----------------------------------------------------------------------
 
-  it("emits chat.typing events from play.chat.typing frames", () => {
+  it("emits typing events from play.typing frames", () => {
     const events: WSEvent[] = [];
     connectWebSocket(defaultOpts((e) => events.push(e)));
 
     const ws = latestWS();
     ws.simulateOpen();
     ws.simulateMessage({
-      type: FrameType.ChatTyping,
+      type: FrameType.Typing,
       payload: { participant_id: "p2", name: "GM Bran", active: true },
     });
 
     expect(events).toHaveLength(1);
     expect(events[0]).toEqual({
-      type: "chat.typing",
+      type: "typing",
       participantId: "p2",
       name: "GM Bran",
       active: true,
-    });
-  });
-
-  it("emits draft.typing events from play.draft.typing frames", () => {
-    const events: WSEvent[] = [];
-    connectWebSocket(defaultOpts((e) => events.push(e)));
-
-    const ws = latestWS();
-    ws.simulateOpen();
-    ws.simulateMessage({
-      type: FrameType.DraftTyping,
-      payload: { participant_id: "p1", name: "Avery", active: false },
-    });
-
-    expect(events).toHaveLength(1);
-    expect(events[0]).toEqual({
-      type: "draft.typing",
-      participantId: "p1",
-      name: "Avery",
-      active: false,
     });
   });
 

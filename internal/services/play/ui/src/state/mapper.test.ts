@@ -100,7 +100,7 @@ describe("deriveOnStageMode", () => {
 describe("mapToPlayerHUDState", () => {
   it("maps bootstrap data to a complete HUD state", () => {
     const bootstrap = minimalBootstrap();
-    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", [], "http://example.com/app/campaigns/c1");
+    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", [], [], "http://example.com/app/campaigns/c1");
 
     expect(state.activeTab).toBe("on-stage");
     expect(state.connectionState).toBe("connected");
@@ -124,7 +124,15 @@ describe("mapToPlayerHUDState", () => {
         body: "Hello!",
       },
     ];
-    const state = mapToPlayerHUDState(bootstrap, null, "connected", "side-chat", messages, "http://example.com/app/campaigns/c1");
+    const state = mapToPlayerHUDState(
+      bootstrap,
+      null,
+      "connected",
+      "side-chat",
+      messages,
+      [],
+      "http://example.com/app/campaigns/c1",
+    );
 
     expect(state.sideChat.messages).toHaveLength(1);
     expect(state.sideChat.messages[0].body).toBe("Hello!");
@@ -171,7 +179,7 @@ describe("mapToPlayerHUDState", () => {
         },
       },
     });
-    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", [], "http://example.com/app/campaigns/c1");
+    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", [], [], "http://example.com/app/campaigns/c1");
 
     expect(state.campaignNavigation.characterControllers).toHaveLength(2);
     const avery = state.campaignNavigation.characterControllers.find((c) => c.participantId === "p1");
@@ -182,5 +190,22 @@ describe("mapToPlayerHUDState", () => {
     expect(state.onStage.participants.find((participant) => participant.id === "p1")?.avatarUrl).toBe(
       "https://cdn.example.com/participants/p1.png",
     );
+  });
+
+  it("maps unified typing presence across on-stage, backstage, and side chat participants", () => {
+    const bootstrap = minimalBootstrap();
+    const state = mapToPlayerHUDState(
+      bootstrap,
+      null,
+      "connected",
+      "on-stage",
+      [],
+      ["p1", "p2"],
+      "http://example.com/app/campaigns/c1",
+    );
+
+    expect(state.onStage.participants.find((participant) => participant.id === "p1")?.railStatus).toBe("typing");
+    expect(state.backstage.participants.find((participant) => participant.id === "p1")?.typing).toBe(true);
+    expect(state.sideChat.participants.find((participant) => participant.id === "p2")?.typing).toBe(true);
   });
 });

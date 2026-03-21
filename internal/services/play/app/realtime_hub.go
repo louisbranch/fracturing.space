@@ -152,10 +152,8 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 			h.handleConnect(conn.Request().Context(), session, frame)
 		case "play.chat.send":
 			h.handleChatSend(conn.Request().Context(), session, frame)
-		case "play.chat.typing":
-			h.handleTyping(session, frame, "play.chat.typing")
-		case "play.draft.typing":
-			h.handleTyping(session, frame, "play.draft.typing")
+		case "play.typing":
+			h.handleTyping(session, frame)
 		case "play.ping":
 			_ = session.peer.writeFrame(wsFrame{
 				Type:      "play.pong",
@@ -276,7 +274,7 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 	})
 }
 
-func (h *realtimeHub) handleTyping(session *realtimeSession, frame wsFrame, frameType string) {
+func (h *realtimeHub) handleTyping(session *realtimeSession, frame wsFrame) {
 	var payload typingPayload
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "invalid typing payload", nil)
@@ -292,13 +290,13 @@ func (h *realtimeHub) handleTyping(session *realtimeSession, frame wsFrame, fram
 		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "participant identity unavailable", nil)
 		return
 	}
-	room.broadcastFrame(wsFrame{Type: frameType, Payload: mustJSON(playprotocol.TypingEvent{
+	room.broadcastFrame(wsFrame{Type: "play.typing", Payload: mustJSON(playprotocol.TypingEvent{
 		SessionID:     identity.SessionID,
 		ParticipantID: identity.ParticipantID,
 		Name:          identity.ParticipantName,
 		Active:        payload.Active,
 	})})
-	session.resetTypingTimer(frameType, payload.Active)
+	session.resetTypingTimer(payload.Active)
 }
 
 func (h *realtimeHub) room(campaignID string) *campaignRoom {
@@ -334,15 +332,25 @@ func (h *realtimeHub) unregisterSession(session *realtimeSession) {
 	}
 	session.mu.Lock()
 	room := session.room
-	if session.chatTypingTimer != nil {
-		session.chatTypingTimer.Stop()
-	}
-	if session.draftTypingTimer != nil {
-		session.draftTypingTimer.Stop()
+	typingActive := session.typingTimer != nil
+	participantID := session.participantID
+	participantName := session.participantName
+	sessionID := session.activeSessionID
+	if session.typingTimer != nil {
+		session.typingTimer.Stop()
+		session.typingTimer = nil
 	}
 	session.room = nil
 	session.mu.Unlock()
 	if room != nil {
+		if typingActive {
+			room.broadcastFrame(wsFrame{Type: "play.typing", Payload: mustJSON(playprotocol.TypingEvent{
+				SessionID:     sessionID,
+				ParticipantID: participantID,
+				Name:          participantName,
+				Active:        false,
+			})})
+		}
 		room.remove(session)
 	}
 }

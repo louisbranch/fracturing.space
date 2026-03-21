@@ -81,6 +81,7 @@ export function mapToPlayerHUDState(
   connectionState: HUDConnectionState,
   activeTab: HUDNavbarTab,
   chatMessages: WireChatMessage[],
+  typingParticipantIDs: string[],
   backURL: string,
 ): PlayerHUDState {
   const state = snapshot?.interaction_state ?? bootstrap.interaction_state;
@@ -89,6 +90,11 @@ export function mapToPlayerHUDState(
   const viewerPID = state.viewer?.participant_id ?? bootstrap.viewer?.participant_id ?? "";
   const viewerRole = safeRole(state.viewer?.role ?? bootstrap.viewer?.role);
   const returnURL = backURL.trim() || "/";
+  const typingByParticipant = new Set(
+    typingParticipantIDs
+      .map((participantID) => participantID.trim())
+      .filter((participantID) => participantID.length > 0),
+  );
 
   const inspectionCatalog = mapCharacterInspectionCatalog(catalog);
 
@@ -98,9 +104,9 @@ export function mapToPlayerHUDState(
     // Campaign navigation should preserve the durable participant-to-character
     // ownership from bootstrap even when realtime snapshots omit character IDs.
     campaignNavigation: mapCampaignNavigation(returnURL, bootstrap.participants ?? [], viewerPID, inspectionCatalog),
-    onStage: mapOnStageState(state, participants, viewerPID, viewerRole, inspectionCatalog),
-    backstage: mapBackstageState(state, participants, viewerPID, chatMessages, inspectionCatalog),
-    sideChat: mapSideChatState(viewerPID, participants, chatMessages, inspectionCatalog),
+    onStage: mapOnStageState(state, participants, typingByParticipant, viewerPID, viewerRole, inspectionCatalog),
+    backstage: mapBackstageState(state, participants, typingByParticipant, viewerPID, chatMessages, inspectionCatalog),
+    sideChat: mapSideChatState(viewerPID, participants, typingByParticipant, chatMessages, inspectionCatalog),
   };
 }
 
@@ -162,6 +168,7 @@ function mapBaseParticipant(p: WireParticipant, catalog: PlayerHUDCharacterInspe
 function mapOnStageState(
   state: WireInteractionState,
   participants: WireParticipant[],
+  typingByParticipant: ReadonlySet<string>,
   viewerPID: string,
   viewerRole: string,
   catalog: PlayerHUDCharacterInspectionCatalog,
@@ -176,7 +183,7 @@ function mapOnStageState(
   const currentInteraction = scene?.current_interaction;
 
   const onStageParticipants: OnStageParticipant[] = participants.map((p) =>
-    mapOnStageParticipant(p, phase, state.gm_authority_participant_id, catalog),
+    mapOnStageParticipant(p, phase, typingByParticipant, state.gm_authority_participant_id, catalog),
   );
 
   const slots: OnStageSlot[] = (phase?.slots ?? []).map((s) => mapOnStageSlot(s, catalog));
@@ -281,15 +288,20 @@ export function deriveOnStageMode(
 function mapOnStageParticipant(
   p: WireParticipant,
   phase: WirePlayerPhase | undefined,
+  typingByParticipant: ReadonlySet<string>,
   gmAuthorityPID: string | undefined,
   catalog: PlayerHUDCharacterInspectionCatalog,
 ): OnStageParticipant {
-  const slot = phase?.slots?.find((s) => s.participant_id === p.id);
   let railStatus: OnStageParticipantRailStatus = "waiting";
-  if (slot) {
-    if (slot.review_status === "changes_requested") railStatus = "changes-requested";
-    else if (slot.yielded) railStatus = "yielded";
-    else if (phase?.acting_participant_ids?.includes(p.id)) railStatus = "active";
+  if (typingByParticipant.has(p.id)) {
+    railStatus = "typing";
+  } else {
+    const slot = phase?.slots?.find((s) => s.participant_id === p.id);
+    if (slot) {
+      if (slot.review_status === "changes_requested") railStatus = "changes-requested";
+      else if (slot.yielded) railStatus = "yielded";
+      else if (phase?.acting_participant_ids?.includes(p.id)) railStatus = "active";
+    }
   }
 
   return {
@@ -333,6 +345,7 @@ function deriveViewerControls(mode: OnStageMode, viewerSlot: WirePlayerSlot | un
 function mapBackstageState(
   state: WireInteractionState,
   participants: WireParticipant[],
+  typingByParticipant: ReadonlySet<string>,
   viewerPID: string,
   chatMessages: WireChatMessage[],
   catalog: PlayerHUDCharacterInspectionCatalog,
@@ -344,6 +357,7 @@ function mapBackstageState(
   const backstageParticipants: BackstageParticipant[] = participants.map((p) => ({
     ...mapBaseParticipant(p, catalog),
     readyToResume: ooc?.ready_to_resume_participant_ids?.includes(p.id) ?? false,
+    typing: typingByParticipant.has(p.id),
   }));
 
   const messages: BackstageMessage[] = (ooc?.posts ?? []).map((post) => ({
@@ -382,12 +396,14 @@ function deriveBackstageResumeState(
 function mapSideChatState(
   viewerPID: string,
   participants: WireParticipant[],
+  typingByParticipant: ReadonlySet<string>,
   chatMessages: WireChatMessage[],
   catalog: PlayerHUDCharacterInspectionCatalog,
 ): SideChatState {
-  const sideChatParticipants: SideChatParticipant[] = participants.map((p) =>
-    mapBaseParticipant(p, catalog),
-  );
+  const sideChatParticipants: SideChatParticipant[] = participants.map((p) => ({
+    ...mapBaseParticipant(p, catalog),
+    typing: typingByParticipant.has(p.id),
+  }));
 
   const messages: SideChatMessage[] = chatMessages.map((m) => ({
     id: m.message_id,
