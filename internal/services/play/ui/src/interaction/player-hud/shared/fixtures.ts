@@ -6,7 +6,14 @@ import {
   onStageFixtureCatalog,
   onStageParticipants,
 } from "../on-stage/shared/fixtures";
-import type { PlayerHUDState, SideChatMessage, SideChatParticipant, SideChatState } from "./contract";
+import type {
+  PlayerHUDCampaignNavigation,
+  PlayerHUDCharacterController,
+  PlayerHUDState,
+  SideChatMessage,
+  SideChatParticipant,
+  SideChatState,
+} from "./contract";
 
 export const sideChatParticipants: SideChatParticipant[] = [
   backstageParticipants[0],
@@ -98,24 +105,100 @@ const onStageShellPreview = {
   characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
 };
 
+function characterControllers(
+  input: {
+    participantId: string;
+    participantName: string;
+    isViewer: boolean;
+    characters: PlayerHUDCharacterController["characters"];
+  }[],
+): PlayerHUDCharacterController[] {
+  return input
+    .map((entry) => ({
+      ...entry,
+      characters: [...entry.characters],
+    }))
+    .filter((entry) => entry.characters.length > 0);
+}
+
+function campaignNavigation(input: {
+  returnHref: string;
+  characterControllers: PlayerHUDCharacterController[];
+}): PlayerHUDCampaignNavigation {
+  return {
+    returnHref: input.returnHref,
+    characterControllers: input.characterControllers,
+    characterInspectionCatalog: playerHUDCharacterInspectionCatalog,
+  };
+}
+
+const backstageCampaignNavigation = campaignNavigation({
+  returnHref: "/app/campaigns/camp-sealed-vault",
+  characterControllers: characterControllers([
+    {
+      participantId: backstageParticipants[0].id,
+      participantName: backstageParticipants[0].name,
+      isViewer: true,
+      characters: backstageParticipants[0].characters,
+    },
+    {
+      participantId: backstageParticipants[1].id,
+      participantName: backstageParticipants[1].name,
+      isViewer: false,
+      characters: backstageParticipants[1].characters,
+    },
+  ]),
+});
+
+const onStageCampaignNavigation = campaignNavigation({
+  returnHref: "/app/campaigns/camp-sealed-vault",
+  characterControllers: characterControllers([
+    {
+      participantId: "p-rhea",
+      participantName: "Rhea",
+      isViewer: true,
+      characters: [
+        onStageCharacterCatalog.aria,
+        onStageCharacterCatalog.mira,
+        onStageCharacterCatalog.rowan,
+      ],
+    },
+    {
+      participantId: "p-bryn",
+      participantName: "Bryn",
+      isViewer: false,
+      characters: [onStageCharacterCatalog.corin],
+    },
+    {
+      participantId: "p-ives",
+      participantName: "Ives",
+      isViewer: false,
+      characters: [onStageCharacterCatalog.sable],
+    },
+  ]),
+});
+
 export const playerHUDFixtureCatalog: Record<
   "onStage" | "backstage" | "sideChat",
   PlayerHUDState
 > = {
   onStage: {
     activeTab: "on-stage",
+    campaignNavigation: onStageCampaignNavigation,
     onStage: onStageShellPreview,
     backstage: backstageFixtureCatalog.dormant,
     sideChat: sideChatState,
   },
   backstage: {
     activeTab: "backstage",
+    campaignNavigation: backstageCampaignNavigation,
     onStage: onStageFixtureCatalog.waitingOnGM,
     backstage: backstageFixtureCatalog.openDiscussion,
     sideChat: sideChatState,
   },
   sideChat: {
     activeTab: "side-chat",
+    campaignNavigation: backstageCampaignNavigation,
     onStage: onStageFixtureCatalog.aiThinking,
     backstage: backstageFixtureCatalog.waitingOnGM,
     sideChat: sideChatState,

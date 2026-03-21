@@ -9,6 +9,19 @@ import type {
 // HUD.
 export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat";
 
+export type PlayerHUDCharacterController = {
+  participantId: string;
+  participantName: string;
+  isViewer: boolean;
+  characters: PlayerHUDCharacterReference[];
+};
+
+export type PlayerHUDCampaignNavigation = {
+  returnHref: string;
+  characterControllers: PlayerHUDCharacterController[];
+  characterInspectionCatalog: PlayerHUDCharacterInspectionCatalog;
+};
+
 // SideChatParticipant represents a user in the side chat conversation.
 export type SideChatParticipant = {
   id: string;
@@ -38,6 +51,7 @@ export type SideChatState = {
 // PlayerHUDState is the minimal top-level state for the player HUD shell.
 export type PlayerHUDState = {
   activeTab: HUDNavbarTab;
+  campaignNavigation: PlayerHUDCampaignNavigation;
   onStage: OnStageState;
   backstage: BackstageState;
   sideChat: SideChatState;

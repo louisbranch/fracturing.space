@@ -1,4 +1,4 @@
-import { playerHUDFixtureCatalog } from "../shared/fixtures";
+import { playerHUDFixtureCatalog } from "../fixtures";
 
 export const hudNavbarFixtures = {
   onStage: playerHUDFixtureCatalog.onStage,

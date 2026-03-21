@@ -5,6 +5,21 @@ import { playerHUDShellFixtures } from "./fixtures";
 import { PlayerHUDShellPreview } from "./PlayerHUDShellPreview";
 
 describe("PlayerHUDShellPreview", () => {
+  it("opens the drawer from the navbar and lists the campaign characters", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PlayerHUDShellPreview initialState={playerHUDShellFixtures.onStage} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open campaign sidebar" }));
+    const sidebar = screen.getByLabelText("Player HUD sidebar");
+    expect(sidebar).toBeInTheDocument();
+
+    await user.click(within(sidebar).getByRole("button", { name: "Characters" }));
+    expect(within(sidebar).getByRole("button", { name: "Inspect Sable" })).toBeInTheDocument();
+  });
+
   it("opens character inspection from the participant rail and shows the empty state for the GM portrait", async () => {
     const user = userEvent.setup();
 
@@ -28,5 +43,23 @@ describe("PlayerHUDShellPreview", () => {
         "No character sheet is available for this participant yet.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("opens the same character inspector from the drawer with the selected character active", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PlayerHUDShellPreview initialState={playerHUDShellFixtures.onStage} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open campaign sidebar" }));
+    const sidebar = screen.getByLabelText("Player HUD sidebar");
+    await user.click(within(sidebar).getByRole("button", { name: "Characters" }));
+    await user.click(within(sidebar).getByRole("button", { name: "Inspect Sable" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Ives" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: "Sable" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Player HUD sidebar toggle")).not.toBeChecked();
   });
 });

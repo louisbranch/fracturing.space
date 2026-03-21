@@ -1,10 +1,11 @@
 import { BackstagePanel } from "../backstage/backstage-panel/BackstagePanel";
 import { BackstageParticipantRail } from "../backstage/backstage-participant-rail/BackstageParticipantRail";
-import { HUDNavbar } from "../hud-navbar/HUDNavbar";
 import { SideChatPanel } from "../chat/side-chat-panel/SideChatPanel";
 import { SideChatParticipantRail } from "../chat/side-chat-participant-rail/SideChatParticipantRail";
 import { OnStagePanel } from "../on-stage/on-stage-panel/OnStagePanel";
 import { OnStageParticipantRail } from "../on-stage/on-stage-participant-rail/OnStageParticipantRail";
+import { HUDNavbar } from "../shared/hud-navbar/HUDNavbar";
+import { PlayerHUDDrawerSidebar } from "../shared/player-hud-drawer-sidebar/PlayerHUDDrawerSidebar";
 import type { PlayerHUDShellProps } from "./contract";
 
 // PlayerHUDShell is the player HUD composition viewport with a top navbar and
@@ -12,6 +13,9 @@ import type { PlayerHUDShellProps } from "./contract";
 // so all three top-level tabs keep the same overall layout.
 export function PlayerHUDShell({
   activeTab,
+  campaignNavigation,
+  isSidebarOpen,
+  onSidebarOpenChange,
   onTabChange,
   onStage,
   onStageDraft,
@@ -55,43 +59,71 @@ export function PlayerHUDShell({
   );
 
   return (
-    <main aria-label="Player HUD shell" className="play-density-hud flex h-dvh w-full flex-col">
-      <HUDNavbar activeTab={activeTab} onTabChange={onTabChange} />
+    <div className={`drawer h-dvh ${isSidebarOpen ? "drawer-open" : ""}`}>
+      <input
+        type="checkbox"
+        className="drawer-toggle"
+        checked={isSidebarOpen}
+        aria-label="Player HUD sidebar toggle"
+        onChange={(event) => onSidebarOpenChange(event.currentTarget.checked)}
+      />
+      <div className="drawer-content">
+        <main aria-label="Player HUD shell" className="play-density-hud flex h-dvh w-full flex-col">
+          <HUDNavbar
+            activeTab={activeTab}
+            isSidebarOpen={isSidebarOpen}
+            onSidebarOpenChange={onSidebarOpenChange}
+            onTabChange={onTabChange}
+          />
 
-      <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 flex-1">
-          {activeTab === "on-stage" ? (
-            <OnStagePanel
-              state={onStage}
-              draft={onStageDraft}
-              onDraftChange={onOnStageDraftChange}
-              onSubmit={onOnStageSubmit}
-              onSubmitAndYield={onOnStageSubmitAndYield}
-              onYield={onOnStageYield}
-              onUnyield={onOnStageUnyield}
-              onCharacterInspect={onCharacterInspect}
-            />
-          ) : activeTab === "backstage" ? (
-            <BackstagePanel
-              state={backstage}
-              draft={backstageDraft}
-              onDraftChange={onBackstageDraftChange}
-              onSend={onBackstageSend}
-              onReadyToggle={onBackstageReadyToggle}
-            />
-          ) : activeTab === "side-chat" ? (
-            <SideChatPanel
-              state={sideChat}
-              draft={sideChatDraft}
-              onDraftChange={onSideChatDraftChange}
-              onSend={onSideChatSend}
-            />
-          ) : (
-            <div />
-          )}
-        </div>
-        {participantRail}
+          <div className="flex min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1">
+              {activeTab === "on-stage" ? (
+                <OnStagePanel
+                  state={onStage}
+                  draft={onStageDraft}
+                  onDraftChange={onOnStageDraftChange}
+                  onSubmit={onOnStageSubmit}
+                  onSubmitAndYield={onOnStageSubmitAndYield}
+                  onYield={onOnStageYield}
+                  onUnyield={onOnStageUnyield}
+                  onCharacterInspect={onCharacterInspect}
+                />
+              ) : activeTab === "backstage" ? (
+                <BackstagePanel
+                  state={backstage}
+                  draft={backstageDraft}
+                  onDraftChange={onBackstageDraftChange}
+                  onSend={onBackstageSend}
+                  onReadyToggle={onBackstageReadyToggle}
+                />
+              ) : activeTab === "side-chat" ? (
+                <SideChatPanel
+                  state={sideChat}
+                  draft={sideChatDraft}
+                  onDraftChange={onSideChatDraftChange}
+                  onSend={onSideChatSend}
+                />
+              ) : (
+                <div />
+              )}
+            </div>
+            {participantRail}
+          </div>
+        </main>
       </div>
-    </main>
+      <div className="drawer-side z-20">
+        <label
+          aria-label="Close campaign sidebar"
+          className="drawer-overlay"
+          onClick={() => onSidebarOpenChange(false)}
+        />
+        <PlayerHUDDrawerSidebar
+          navigation={campaignNavigation}
+          onCharacterInspect={onCharacterInspect}
+          onClose={() => onSidebarOpenChange(false)}
+        />
+      </div>
+    </div>
   );
 }

@@ -14,6 +14,7 @@ type PlayerHUDShellPreviewProps = {
 
 export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewProps) {
   const [activeTab, setActiveTab] = useState<HUDNavbarTab>(initialState.activeTab);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const initialOnStageDraft =
     initialState.onStage.slots.find(
       (slot) => slot.participantId === initialState.onStage.viewerParticipantId,
@@ -30,6 +31,12 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
     openForParticipant,
     setActiveCharacter,
   } = usePlayerHUDCharacterInspector();
+
+  function controllerForCharacter(characterId: string) {
+    return initialState.campaignNavigation.characterControllers.find((controller) =>
+      controller.characters.some((character) => character.id === characterId),
+    );
+  }
 
   function nextResumeState(
     mode: PlayerHUDState["backstage"]["mode"],
@@ -159,6 +166,9 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
     <>
       <PlayerHUDShell
         activeTab={activeTab}
+        campaignNavigation={initialState.campaignNavigation}
+        isSidebarOpen={isSidebarOpen}
+        onSidebarOpenChange={setIsSidebarOpen}
         onTabChange={setActiveTab}
         onStage={onStage}
         onStageDraft={onStageDraft}
@@ -191,17 +201,19 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
           }))
         }
         onCharacterInspect={(participantId, characterId) => {
-          const participant = onStage.participants.find(
-            (entry) => entry.id === participantId,
-          );
-          if (!participant) {
+          const controller =
+            initialState.campaignNavigation.characterControllers.find(
+              (entry) => entry.participantId === participantId,
+            ) ??
+            controllerForCharacter(characterId);
+          if (!controller) {
             return;
           }
           openForCharacter(
             {
-              name: participant.name,
-              characters: participant.characters,
-              isViewer: participant.id === onStage.viewerParticipantId,
+              name: controller.participantName,
+              characters: controller.characters,
+              isViewer: controller.isViewer,
             },
             characterId,
           );
@@ -238,7 +250,7 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
         characters={inspector?.characters ?? []}
         activeCharacterId={inspector?.activeCharacterId}
         isViewer={inspector?.isViewer ?? false}
-        characterInspectionCatalog={onStage.characterInspectionCatalog}
+        characterInspectionCatalog={initialState.campaignNavigation.characterInspectionCatalog}
         onCharacterChange={setActiveCharacter}
         onClose={close}
       />
