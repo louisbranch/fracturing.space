@@ -82,7 +82,7 @@ func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string,
 	if campaignID == "" {
 		return nil, fmt.Errorf("campaign id is required")
 	}
-	if err := ensureArtifactIfMissing(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
+	if err := ensureArtifactUpToDate(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
 		CampaignID: campaignID,
 		Path:       SkillsArtifactPath,
 		Content:    m.resolveSkillsContent(),
@@ -90,7 +90,7 @@ func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string,
 	}); err != nil {
 		return nil, err
 	}
-	if err := ensureArtifactIfMissing(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
+	if err := ensureArtifactUpToDate(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
 		CampaignID: campaignID,
 		Path:       MemoryArtifactPath,
 		Content:    "",
@@ -208,6 +208,27 @@ func normalizeWritableArtifactPath(path string) (string, error) {
 	return normalizedPath, nil
 }
 
+func ensureArtifactUpToDate(ctx context.Context, store ArtifactStore, clock func() time.Time, campaignID string, record storage.CampaignArtifactRecord) error {
+	existing, err := store.GetCampaignArtifact(ctx, campaignID, record.Path)
+	switch {
+	case err == nil:
+		if existing.ReadOnly == record.ReadOnly && existing.Content == record.Content {
+			return nil
+		}
+		existing.Content = record.Content
+		existing.ReadOnly = record.ReadOnly
+		existing.UpdatedAt = clock().UTC()
+		return store.PutCampaignArtifact(ctx, existing)
+	case err != storage.ErrNotFound:
+		return err
+	}
+
+	now := clock().UTC()
+	record.CreatedAt = now
+	record.UpdatedAt = now
+	return store.PutCampaignArtifact(ctx, record)
+}
+
 func ensureArtifactIfMissing(ctx context.Context, store ArtifactStore, clock func() time.Time, campaignID string, record storage.CampaignArtifactRecord) error {
 	_, err := store.GetCampaignArtifact(ctx, campaignID, record.Path)
 	if err == nil {
@@ -243,9 +264,11 @@ You are the AI GM for this campaign. You are responsible for both narration and 
 ## Operating rules
 
 - Keep in-character narration separate from out-of-character table talk.
-- Use interaction_scene_gm_output_commit for authoritative in-character narration.
-- When handing control back to players, commit authoritative GM narration first, then call interaction_scene_player_phase_start with explicit acting character IDs.
-- Never start a player phase before committing the GM output that frames it.
+- Use interaction_scene_gm_output_commit only for standalone in-character narration when framing a fresh beat outside GM review.
+- In GM review, use interaction_scene_review_resolve to commit narration and either open the next player phase or request revisions.
+- After OOC resume when players are still blocked, use interaction_scene_interrupt_resolution to resume or replace the interrupted interaction.
+- When handing control back to players outside GM review, commit authoritative GM narration first, then call interaction_scene_player_phase_start with explicit acting character IDs.
+- Never leave the interaction in silent GM control after players yield; the turn must end in a player phase or OOC.
 - Use interaction_ooc_* tools for rules clarifications, pacing, consent checks, and other out-of-character coordination.
 - Use tools for authoritative changes to scenes, interaction flow, rolls, and other game state.
 - Do not claim a state change happened until the corresponding tool succeeds.

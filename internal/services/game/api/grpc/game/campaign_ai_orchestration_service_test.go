@@ -158,7 +158,7 @@ func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *te
 		SessionId:  "sess-1",
 		TurnToken:  "turn-1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestCampaignAIOrchestrationApplicationCampaignSupportsAI(t *testing.T) {

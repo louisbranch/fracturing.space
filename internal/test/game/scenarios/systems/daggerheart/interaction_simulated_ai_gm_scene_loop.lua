@@ -77,17 +77,15 @@ scn:interaction_expect{
   },
   gm_authority = "Guide"
 }
-scn:interaction_accept_player_phase({as = "Guide"})
-
--- Simulate the AI GM by having the GM participant immediately frame the next beat.
-scn:interaction_start_player_phase{
-  scene = "The Bridge",
-  frame_text = "The far anchor snaps loose and the lantern swings over the gorge. Who catches it before it drops?",
+scn:interaction_resolve_review{
+  as = "Guide",
+  gm_output_text = "The far anchor snaps loose and the lantern swings over the gorge.",
+  frame_text = "Who catches it before it drops?",
   characters = {"Aria", "Corin"}
 }
 scn:interaction_expect{
   phase_status = "PLAYERS",
-  frame_text = "The far anchor snaps loose and the lantern swings over the gorge. Who catches it before it drops?",
+  frame_text = "Who catches it before it drops?",
   acting_characters = {"Aria", "Corin"},
   acting_participants = {"Rhea", "Bryn"},
   slots = {

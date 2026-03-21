@@ -2052,6 +2052,9 @@ damageChecks:
 		}
 	}
 	if len(damageApplications) > 0 && damageApplications[0].GetState() != nil {
+		if err := r.waitForDaggerheartCharacterProjection(ctx, state, expectationTargetID, nil, damageApplications[0].GetState()); err != nil {
+			return err
+		}
 		return r.assertExpectedDeltasAfterState(expectedSpec, expectedBefore, damageApplications[0].GetState())
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
@@ -2986,6 +2989,9 @@ func (r *Runner) runApplyStatModifierStep(ctx context.Context, state *scenarioSt
 	}
 
 	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeStatModifierChanged); err != nil {
+		return err
+	}
+	if err := r.waitForDaggerheartStatModifierProjection(ctx, state, characterID, resp.GetActiveModifiers()); err != nil {
 		return err
 	}
 

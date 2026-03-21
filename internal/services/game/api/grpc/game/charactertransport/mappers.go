@@ -7,6 +7,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	daggerheartstatetransport "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/statetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
@@ -115,6 +116,69 @@ func DaggerheartProfileToProto(campaignID, characterID string, profile projectio
 	}
 }
 
+// DaggerheartSheetProfileToProto augments the shared profile read model with
+// display-ready equipment summaries for the character sheet surface.
+func DaggerheartSheetProfileToProto(ctx context.Context, campaignID, characterID string, profile projectionstore.DaggerheartCharacterProfile, content contentstore.DaggerheartContentReadStore) *campaignv1.CharacterProfile {
+	pb := DaggerheartProfileToProto(campaignID, characterID, profile, content)
+	dh := pb.GetDaggerheart()
+	if dh == nil || content == nil {
+		return pb
+	}
+
+	dh.Heritage = daggerheartSheetHeritageToProto(ctx, content, profile.Heritage)
+	primary, secondary := daggerheartSheetWeaponsToProto(ctx, content, profile.StartingWeaponIDs)
+	dh.PrimaryWeapon = primary
+	dh.SecondaryWeapon = secondary
+	dh.ActiveArmor = daggerheartSheetArmorToProto(ctx, content, profile)
+	return pb
+}
+
+func daggerheartSheetHeritageToProto(ctx context.Context, content contentstore.DaggerheartContentReadStore, heritage projectionstore.DaggerheartHeritageSelection) *daggerheartv1.DaggerheartHeritageSelection {
+	pb := daggerheartHeritageToProto(heritage)
+	if pb == nil || content == nil {
+		return pb
+	}
+	pb.AncestryName = daggerheartHeritageAncestryDisplayName(ctx, content, heritage)
+	pb.CommunityName = daggerheartHeritageName(ctx, content, heritage.CommunityID)
+	return pb
+}
+
+func daggerheartHeritageAncestryDisplayName(ctx context.Context, content contentstore.DaggerheartContentReadStore, heritage projectionstore.DaggerheartHeritageSelection) string {
+	if label := strings.TrimSpace(heritage.AncestryLabel); label != "" {
+		return label
+	}
+
+	names := make([]string, 0, 2)
+	appendName := func(id string) {
+		name := daggerheartHeritageName(ctx, content, id)
+		if name == "" {
+			return
+		}
+		for _, existing := range names {
+			if existing == name {
+				return
+			}
+		}
+		names = append(names, name)
+	}
+
+	appendName(heritage.FirstFeatureAncestryID)
+	appendName(heritage.SecondFeatureAncestryID)
+	return strings.Join(names, " / ")
+}
+
+func daggerheartHeritageName(ctx context.Context, content contentstore.DaggerheartContentReadStore, id string) string {
+	heritageID := strings.TrimSpace(id)
+	if heritageID == "" || content == nil {
+		return ""
+	}
+	entry, err := content.GetDaggerheartHeritage(ctx, heritageID)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(entry.Name)
+}
+
 func daggerheartActiveClassFeaturesToProto(content contentstore.DaggerheartContentReadStore, profile projectionstore.DaggerheartCharacterProfile) []*daggerheartv1.DaggerheartActiveClassFeature {
 	if content == nil {
 		return nil
@@ -149,6 +213,105 @@ func daggerheartActiveClassFeaturesToProto(content contentstore.DaggerheartConte
 		return nil
 	}
 	return items
+}
+
+func daggerheartSheetWeaponsToProto(ctx context.Context, content contentstore.DaggerheartContentReadStore, ids []string) (*daggerheartv1.DaggerheartSheetWeaponSummary, *daggerheartv1.DaggerheartSheetWeaponSummary) {
+	if content == nil || len(ids) == 0 {
+		return nil, nil
+	}
+
+	var primary *daggerheartv1.DaggerheartSheetWeaponSummary
+	var secondary *daggerheartv1.DaggerheartSheetWeaponSummary
+	for _, id := range ids {
+		weaponID := strings.TrimSpace(id)
+		if weaponID == "" {
+			continue
+		}
+		weapon, err := content.GetDaggerheartWeapon(ctx, weaponID)
+		if err != nil {
+			continue
+		}
+		summary := daggerheartSheetWeaponToProto(weapon)
+		if summary == nil {
+			continue
+		}
+
+		switch strings.ToLower(strings.TrimSpace(weapon.Category)) {
+		case "primary":
+			if primary == nil {
+				primary = summary
+			}
+		case "secondary":
+			if secondary == nil {
+				secondary = summary
+			}
+		default:
+			if primary == nil {
+				primary = summary
+			} else if secondary == nil {
+				secondary = summary
+			}
+		}
+	}
+	return primary, secondary
+}
+
+func daggerheartSheetWeaponToProto(weapon contentstore.DaggerheartWeapon) *daggerheartv1.DaggerheartSheetWeaponSummary {
+	if strings.TrimSpace(weapon.Name) == "" {
+		return nil
+	}
+	return &daggerheartv1.DaggerheartSheetWeaponSummary{
+		Id:         strings.TrimSpace(weapon.ID),
+		Name:       strings.TrimSpace(weapon.Name),
+		Trait:      strings.TrimSpace(weapon.Trait),
+		Range:      strings.TrimSpace(weapon.Range),
+		DamageDice: daggerheartWeaponDamageDiceLabel(weapon.DamageDice),
+		DamageType: strings.TrimSpace(weapon.DamageType),
+		Feature:    strings.TrimSpace(weapon.Feature),
+	}
+}
+
+func daggerheartWeaponDamageDiceLabel(dice []contentstore.DaggerheartDamageDie) string {
+	if len(dice) == 0 {
+		return ""
+	}
+
+	parts := make([]string, 0, len(dice))
+	for _, die := range dice {
+		if die.Count <= 0 || die.Sides <= 0 {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%dd%d", die.Count, die.Sides))
+	}
+	return strings.Join(parts, " + ")
+}
+
+func daggerheartSheetArmorToProto(ctx context.Context, content contentstore.DaggerheartContentReadStore, profile projectionstore.DaggerheartCharacterProfile) *daggerheartv1.DaggerheartSheetArmorSummary {
+	if content == nil {
+		return nil
+	}
+
+	armorID := strings.TrimSpace(profile.EquippedArmorID)
+	if armorID == "" {
+		armorID = strings.TrimSpace(profile.StartingArmorID)
+	}
+	if armorID == "" {
+		return nil
+	}
+
+	armor, err := content.GetDaggerheartArmor(ctx, armorID)
+	if err != nil {
+		return nil
+	}
+	if strings.TrimSpace(armor.Name) == "" {
+		return nil
+	}
+	return &daggerheartv1.DaggerheartSheetArmorSummary{
+		Id:        strings.TrimSpace(armor.ID),
+		Name:      strings.TrimSpace(armor.Name),
+		BaseScore: int32(armor.ArmorScore),
+		Feature:   strings.TrimSpace(armor.Feature),
+	}
 }
 
 func daggerheartSubclassTracksToProto(tracks []projectionstore.DaggerheartSubclassTrack) []*daggerheartv1.DaggerheartSubclassTrack {
@@ -358,16 +521,7 @@ func DaggerheartStateToProto(campaignID, characterID string, state projectionsto
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 		SystemState: &campaignv1.CharacterState_Daggerheart{
-			Daggerheart: &daggerheartv1.DaggerheartCharacterState{
-				Hp:                            int32(state.Hp),
-				Hope:                          int32(state.Hope),
-				HopeMax:                       int32(state.HopeMax),
-				Stress:                        int32(state.Stress),
-				Armor:                         int32(state.Armor),
-				ConditionStates:               DaggerheartProjectionConditionStatesToProto(state.Conditions),
-				LifeState:                     DaggerheartLifeStateToProto(state.LifeState),
-				ImpenetrableUsedThisShortRest: state.ImpenetrableUsedThisShortRest,
-			},
+			Daggerheart: daggerheartstatetransport.CharacterStateToProto(state),
 		},
 	}
 }

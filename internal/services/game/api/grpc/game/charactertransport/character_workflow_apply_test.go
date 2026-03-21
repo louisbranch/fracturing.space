@@ -46,6 +46,15 @@ func TestApplyCharacterCreationWorkflow_Success(t *testing.T) {
 	if resp.GetProfile().GetDaggerheart().GetClassId() != "class.guardian" {
 		t.Fatalf("class_id = %q, want %q", resp.GetProfile().GetDaggerheart().GetClassId(), "class.guardian")
 	}
+	if got := resp.GetProfile().GetDaggerheart().GetEquippedArmorId(); got != "armor.gambeson-armor" {
+		t.Fatalf("equipped_armor_id = %q, want %q", got, "armor.gambeson-armor")
+	}
+	if got := resp.GetProfile().GetDaggerheart().GetArmorScore().GetValue(); got != 1 {
+		t.Fatalf("armor_score = %d, want 1", got)
+	}
+	if got := resp.GetProfile().GetDaggerheart().GetArmorMax().GetValue(); got != 1 {
+		t.Fatalf("armor_max = %d, want 1", got)
+	}
 	if !resp.GetProgress().GetReady() {
 		t.Fatal("ready = false, want true")
 	}

@@ -38,8 +38,12 @@ type GMAuthoritySetPayload struct {
 
 // OOCPausedPayload captures the payload for session.ooc_paused events.
 type OOCPausedPayload struct {
-	SessionID ids.SessionID `json:"session_id"`
-	Reason    string        `json:"reason,omitempty"`
+	SessionID                ids.SessionID     `json:"session_id"`
+	RequestedByParticipantID ids.ParticipantID `json:"requested_by_participant_id,omitempty"`
+	Reason                   string            `json:"reason,omitempty"`
+	InterruptedSceneID       ids.SceneID       `json:"interrupted_scene_id,omitempty"`
+	InterruptedPhaseID       string            `json:"interrupted_phase_id,omitempty"`
+	InterruptedPhaseStatus   string            `json:"interrupted_phase_status,omitempty"`
 }
 
 // OOCPostedPayload captures the payload for session.ooc_posted events.
@@ -66,6 +70,13 @@ type OOCReadyClearedPayload struct {
 type OOCResumedPayload struct {
 	SessionID ids.SessionID `json:"session_id"`
 	Reason    string        `json:"reason,omitempty"`
+}
+
+// OOCInterruptionResolvedPayload clears the post-OOC resolution gate once the
+// GM has explicitly chosen how the interrupted scene should continue.
+type OOCInterruptionResolvedPayload struct {
+	SessionID  ids.SessionID `json:"session_id"`
+	Resolution string        `json:"resolution,omitempty"`
 }
 
 // AITurnQueuedPayload captures the payload for session.ai_turn_queued events.

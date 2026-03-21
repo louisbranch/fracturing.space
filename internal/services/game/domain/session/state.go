@@ -35,6 +35,18 @@ type State struct {
 	GMAuthorityParticipantID ids.ParticipantID
 	// OOCPaused reports whether the session is currently paused for out-of-character discussion.
 	OOCPaused bool
+	// OOCRequestedByParticipantID records who opened the current or most recent OOC pause.
+	OOCRequestedByParticipantID ids.ParticipantID
+	// OOCReason stores the current or most recent OOC pause reason.
+	OOCReason string
+	// OOCInterruptedSceneID records which scene was interrupted by the OOC pause.
+	OOCInterruptedSceneID ids.SceneID
+	// OOCInterruptedPhaseID records which scene phase was interrupted by the OOC pause.
+	OOCInterruptedPhaseID string
+	// OOCInterruptedPhaseStatus records which scene phase state was interrupted.
+	OOCInterruptedPhaseStatus string
+	// OOCResolutionPending reports whether OOC has resumed but the GM still must resolve the interrupted interaction.
+	OOCResolutionPending bool
 	// OOCReadyParticipants tracks which participants have marked ready to resume.
 	OOCReadyParticipants map[ids.ParticipantID]bool
 	// AITurnStatus tracks whether the current GM-owned moment has an AI turn queued,

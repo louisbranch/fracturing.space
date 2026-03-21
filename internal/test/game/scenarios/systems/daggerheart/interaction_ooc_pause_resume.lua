@@ -27,7 +27,7 @@ scn:interaction_start_player_phase{
   frame_text = "The ward crackles when either of you nears the seam. What do you do?",
   characters = {"Aria", "Corin"}
 }
-scn:interaction_pause_ooc({reason = "Clarify how the ward reacts to tools."})
+scn:interaction_pause_ooc({as = "Rhea", reason = "Clarify how the ward reacts to tools."})
 scn:interaction_post_ooc({as = "Rhea", body = "Does the ward react to metal touching the seam or only skin?"})
 scn:interaction_post_ooc({as = "Guide", body = "The ward reacts to any contact with the seam itself."})
 scn:interaction_post_ooc({as = "Bryn", body = "Then Corin should guide from a step back."})
@@ -35,8 +35,11 @@ scn:interaction_ready_ooc({as = "Rhea"})
 scn:interaction_ready_ooc({as = "Bryn"})
 scn:interaction_expect{
   active_scene = "Sealed Vault",
-  phase_status = "GM",
+  phase_status = "PLAYERS",
   ooc_open = true,
+  ooc_requested_by = "Rhea",
+  ooc_interrupted_scene = "Sealed Vault",
+  ooc_interrupted_phase_status = "PLAYERS",
   ooc_ready = {"Rhea", "Bryn"},
   ooc_posts = {
     {participant = "Rhea", body = "Does the ward react to metal touching the seam or only skin?"},
@@ -49,13 +52,15 @@ scn:interaction_expect{
 scn:interaction_resume_ooc()
 scn:interaction_expect{
   active_scene = "Sealed Vault",
-  phase_status = "GM",
+  phase_status = "PLAYERS",
   ooc_open = false,
+  ooc_resolution_pending = true,
   ooc_ready = {},
   gm_authority = "Guide"
 }
-scn:interaction_start_player_phase{
-  scene = "Sealed Vault",
+scn:interaction_resolve_interrupted_phase{
+  as = "Guide",
+  gm_output_text = "The ward's crackle changes once you understand the seam is the trigger.",
   frame_text = "Aria, now that you know the seam is the trigger, how do you pry the vault open?",
   characters = {"Aria", "Corin"}
 }
@@ -78,7 +83,8 @@ scn:interaction_expect{
     {participant = "Bryn", summary = "Corin keeps clear of the ward and talks Aria through the leverage point.", characters = {"Corin"}, yielded = true, review_status = "UNDER_REVIEW"},
     {participant = "Rhea", summary = "Aria wedges a hooked tool into the seam without touching it.", characters = {"Aria"}, yielded = true, review_status = "UNDER_REVIEW"}
   },
-  gm_authority = "Guide"
+  gm_authority = "Guide",
+  ooc_resolution_pending = false
 }
 
 scn:end_session()

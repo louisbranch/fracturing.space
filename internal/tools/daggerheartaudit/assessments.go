@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/tools/cli"
 )
 
 // curatedAssessment captures milestone-level audit conclusions that should be
@@ -453,19 +457,23 @@ func baselineAssessmentForRow(row auditMatrixRow, advClasses map[string]adversar
 			EvidenceCode: []string{
 				"api/proto/systems/daggerheart/v1/content.proto",
 				"internal/tools/importer/content/daggerheart/v1/armor_rules.go",
-				"internal/services/game/domain/systems/daggerheart/armor_profile.go",
+				"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/provider_step_application_equipment.go",
+				"internal/services/game/domain/systems/daggerheart/rules/armor_profile.go",
+				"internal/services/game/domain/systems/daggerheart/state/character_profile.go",
 				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler.go",
 				"internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport/handler.go",
 				"internal/services/game/api/grpc/systems/daggerheart/sessionrolltransport/handler.go",
 			},
 			EvidenceTests: []string{
 				"internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_support_test.go",
+				"internal/services/game/api/grpc/game/charactertransport/character_workflow_apply_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/damagetransport/armor_helpers_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport/handler_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport/armor_helpers_test.go",
 				"internal/services/game/api/grpc/systems/daggerheart/sessionrolltransport/handler_test.go",
-				"internal/services/game/domain/systems/daggerheart/armor_profile_test.go",
+				"internal/services/game/domain/systems/daggerheart/rules/armor_profile_test.go",
+				"internal/services/game/domain/systems/daggerheart/state/character_profile_test.go",
 				"internal/test/game/scenarios/systems/daggerheart/armor_hopeful_and_sharp.lua",
 				"internal/test/game/scenarios/systems/daggerheart/armor_incoming_reactions.lua",
 				"internal/test/game/scenarios/systems/daggerheart/armor_last_chance_reactions.lua",
@@ -474,7 +482,8 @@ func baselineAssessmentForRow(row auditMatrixRow, advClasses map[string]adversar
 				"docs/product/daggerheart-PRD.md",
 			},
 			Notes: []string{
-				"Equipped armor is now the runtime authority for derived evasion, trait modifiers, thresholds, mitigation, and reactive armor behavior.",
+				"Character creation now initializes equipped armor identity, armor score, and base slot cap together instead of relying on a later swap to establish armor state.",
+				"Equipped armor is the runtime authority for derived evasion, trait modifiers, thresholds, mitigation, and reactive armor behavior.",
 				"Deterministic and reactive armor features are modeled through typed content rules, transport validation, and scenario coverage.",
 			},
 		}, true
@@ -906,6 +915,9 @@ func validateAuditRow(row auditMatrixRow, entry corpusIndexEntry, requireFinalSt
 	if len(row.EvidenceCode) == 0 && len(row.EvidenceTests) == 0 && len(row.EvidenceDocs) == 0 && len(row.Notes) == 0 {
 		return fmt.Errorf("audit row %q is reviewed but has no evidence or rationale", row.ReferenceID)
 	}
+	if err := validateEvidencePaths(row); err != nil {
+		return err
+	}
 	switch row.FinalStatus {
 	case "covered":
 		if row.GapClass != "" || row.FollowUpEpic != "" {
@@ -921,6 +933,22 @@ func validateAuditRow(row auditMatrixRow, entry corpusIndexEntry, requireFinalSt
 	case "not_applicable":
 		if row.GapClass != "" || row.FollowUpEpic != "" {
 			return fmt.Errorf("audit row %q is not_applicable but still records gap metadata", row.ReferenceID)
+		}
+	}
+	return nil
+}
+
+func validateEvidencePaths(row auditMatrixRow) error {
+	root, err := cli.ResolveRoot("")
+	if err != nil {
+		return fmt.Errorf("resolve repo root for audit evidence: %w", err)
+	}
+	for _, path := range append(append([]string(nil), row.EvidenceCode...), append(row.EvidenceTests, row.EvidenceDocs...)...) {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(path))); err != nil {
+			return fmt.Errorf("audit row %q cites missing evidence path %q", row.ReferenceID, path)
 		}
 	}
 	return nil

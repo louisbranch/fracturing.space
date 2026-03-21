@@ -94,6 +94,18 @@ var sessionInteractionCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
+			Type:            CommandTypeOOCInterruptionResolve,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateOOCInterruptionResolvedPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeSession,
+				AllowWhenOpen: true,
+			},
+			ActiveSession: command.AllowedDuringActiveSession(),
+		},
+	},
+	{
+		definition: command.Definition{
 			Type:            CommandTypeAITurnQueue,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateAITurnQueuedPayload,
@@ -222,6 +234,17 @@ var sessionInteractionEventContracts = []eventProjectionContract{
 	},
 	{
 		definition: event.Definition{
+			Type:            EventTypeOOCInterruptionResolved,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateOOCInterruptionResolvedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
 			Type:            EventTypeAITurnQueued,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
@@ -298,6 +321,11 @@ func validateOOCReadyClearedPayload(raw json.RawMessage) error {
 
 func validateOOCResumedPayload(raw json.RawMessage) error {
 	var payload OOCResumedPayload
+	return json.Unmarshal(raw, &payload)
+}
+
+func validateOOCInterruptionResolvedPayload(raw json.RawMessage) error {
+	var payload OOCInterruptionResolvedPayload
 	return json.Unmarshal(raw, &payload)
 }
 

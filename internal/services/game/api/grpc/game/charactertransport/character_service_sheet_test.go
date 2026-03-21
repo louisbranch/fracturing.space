@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -83,10 +84,57 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, CreatedAt: now},
 	}
 	ts.Daggerheart.Profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
-		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10, Agility: 2, Strength: 1},
+		"ch1": {
+			CampaignID:        "c1",
+			CharacterID:       "ch1",
+			HpMax:             12,
+			StressMax:         6,
+			Evasion:           10,
+			MajorThreshold:    5,
+			SevereThreshold:   10,
+			Agility:           2,
+			Strength:          1,
+			StartingWeaponIDs: []string{"weapon.longsword", "weapon.dagger"},
+			StartingArmorID:   "armor.leather",
+			Heritage: projectionstore.DaggerheartHeritageSelection{
+				FirstFeatureAncestryID:  "heritage.ancestry.human",
+				SecondFeatureAncestryID: "heritage.ancestry.human",
+				CommunityID:             "heritage.community.slyborne",
+			},
+		},
 	}
 	ts.Daggerheart.States["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
+	}
+	ts.Content = workflowContentStore{
+		heritages: map[string]contentstore.DaggerheartHeritage{
+			"heritage.ancestry.human":     {ID: "heritage.ancestry.human", Kind: "ancestry", Name: "Human"},
+			"heritage.community.slyborne": {ID: "heritage.community.slyborne", Kind: "community", Name: "Slyborne"},
+		},
+		weapons: map[string]contentstore.DaggerheartWeapon{
+			"weapon.longsword": {
+				ID:         "weapon.longsword",
+				Name:       "Longsword",
+				Category:   "primary",
+				Trait:      "Strength",
+				Range:      "melee",
+				DamageDice: []contentstore.DaggerheartDamageDie{{Count: 1, Sides: 10}},
+				DamageType: "physical",
+				Feature:    "Reliable",
+			},
+			"weapon.dagger": {
+				ID:         "weapon.dagger",
+				Name:       "Dagger",
+				Category:   "secondary",
+				Trait:      "Finesse",
+				Range:      "very close",
+				DamageDice: []contentstore.DaggerheartDamageDie{{Count: 1, Sides: 6}},
+				DamageType: "physical",
+			},
+		},
+		armors: map[string]contentstore.DaggerheartArmor{
+			"armor.leather": {ID: "armor.leather", Name: "Leather", ArmorScore: 1, Feature: "Quiet"},
+		},
 	}
 	ts.Participant.Participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": gametest.NamedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
@@ -115,6 +163,21 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 	}
 	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 12 {
 		t.Errorf("Profile HpMax = %d, want %d", dh.GetHpMax(), 12)
+	}
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetPrimaryWeapon().GetName() != "Longsword" {
+		t.Fatalf("Profile PrimaryWeapon = %#v, want Longsword", dh.GetPrimaryWeapon())
+	}
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHeritage().GetAncestryName() != "Human" {
+		t.Fatalf("Profile Heritage ancestry_name = %#v, want Human", dh.GetHeritage())
+	}
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHeritage().GetCommunityName() != "Slyborne" {
+		t.Fatalf("Profile Heritage community_name = %#v, want Slyborne", dh.GetHeritage())
+	}
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetSecondaryWeapon().GetName() != "Dagger" {
+		t.Fatalf("Profile SecondaryWeapon = %#v, want Dagger", dh.GetSecondaryWeapon())
+	}
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetActiveArmor().GetName() != "Leather" {
+		t.Fatalf("Profile ActiveArmor = %#v, want Leather", dh.GetActiveArmor())
 	}
 	if dh := resp.State.GetDaggerheart(); dh == nil || dh.GetHope() != 3 {
 		t.Errorf("State Hope = %d, want %d", dh.GetHope(), 3)

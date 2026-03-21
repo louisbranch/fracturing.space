@@ -248,6 +248,7 @@ func (p CharacterProfile) Normalized() CharacterProfile {
 	if normalized.Level == 0 {
 		normalized.Level = daggerheartprofile.PCLevelDefault
 	}
+	normalized = normalizeCreationArmorProfile(normalized)
 	if len(normalized.SubclassTracks) == 0 &&
 		strings.TrimSpace(normalized.ClassID) != "" &&
 		strings.TrimSpace(normalized.SubclassID) != "" {
@@ -271,6 +272,19 @@ func (p CharacterProfile) Normalized() CharacterProfile {
 		normalized.CompanionSheet = &companion
 	}
 	return normalized
+}
+
+func normalizeCreationArmorProfile(profile CharacterProfile) CharacterProfile {
+	if profile.ArmorScore <= 0 {
+		return profile
+	}
+	if strings.TrimSpace(profile.EquippedArmorID) == "" && strings.TrimSpace(profile.StartingArmorID) != "" {
+		profile.EquippedArmorID = strings.TrimSpace(profile.StartingArmorID)
+	}
+	if profile.ArmorMax == 0 && strings.TrimSpace(profile.EquippedArmorID) != "" {
+		profile.ArmorMax = profile.ArmorScore
+	}
+	return profile
 }
 
 // Validate checks that the profile is structurally valid for projection and replay.

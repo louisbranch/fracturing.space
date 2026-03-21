@@ -128,6 +128,34 @@ func TestValidateAuditRowRejectsReviewedGapWithoutEpic(t *testing.T) {
 	}
 }
 
+func TestValidateAuditRowRejectsMissingEvidencePath(t *testing.T) {
+	row := auditMatrixRow{
+		ReferenceID:          "armor-chainmail",
+		Title:                "Chainmail Armor",
+		Kind:                 "armor",
+		Path:                 "armor/chainmail.md",
+		AuditArea:            "equipment_items",
+		Normativity:          "content_instance",
+		ReviewState:          "reviewed",
+		RepoMappings:         []repoMapping{{Surface: "docs", Paths: []string{"docs/product/daggerheart-PRD.md"}}},
+		SurfaceApplicability: []surfaceApplicability{{Surface: "docs", State: "expected"}},
+		NameStrategy:         "canonical",
+		SemanticMatch:        "matched",
+		FinalStatus:          "covered",
+		EvidenceCode:         []string{"internal/services/game/domain/systems/daggerheart/does_not_exist.go"},
+	}
+
+	err := validateAuditRow(row, corpusIndexEntry{
+		ID:    "armor-chainmail",
+		Title: "Chainmail Armor",
+		Kind:  "armor",
+		Path:  "armor/chainmail.md",
+	}, false)
+	if err == nil {
+		t.Fatal("expected reviewed row with missing evidence path to fail validation")
+	}
+}
+
 func TestBuildEpicCatalogAggregatesGapRows(t *testing.T) {
 	rows := []auditMatrixRow{
 		{

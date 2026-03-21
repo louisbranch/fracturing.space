@@ -30,15 +30,18 @@ scn:interaction_start_player_phase{
 }
 
 -- Pause for an out-of-character clarification and make the overlay authoritative.
-scn:interaction_pause_ooc({reason = "Clarify how the ward reacts to touch."})
+scn:interaction_pause_ooc({as = "Rhea", reason = "Clarify how the ward reacts to touch."})
 scn:interaction_post_ooc({as = "Rhea", body = "Does the ward flare if Aria uses a tool instead of bare hands?"})
 scn:interaction_post_ooc({as = "Guide", body = "The ward reacts to contact with the seam, not to sight or sound."})
 scn:interaction_post_ooc({as = "Bryn", body = "Then Corin can coach from a safe distance."})
 scn:interaction_ready_ooc({as = "Rhea"})
 scn:interaction_ready_ooc({as = "Bryn"})
 scn:interaction_expect{
-  phase_status = "GM",
+  phase_status = "PLAYERS",
   ooc_open = true,
+  ooc_requested_by = "Rhea",
+  ooc_interrupted_scene = "Sealed Vault",
+  ooc_interrupted_phase_status = "PLAYERS",
   ooc_ready = {"Rhea", "Bryn"},
   ooc_posts = {
     {participant = "Rhea", body = "Does the ward flare if Aria uses a tool instead of bare hands?"},
@@ -50,12 +53,14 @@ scn:interaction_expect{
 -- Resume the scene, let the GM reframe the beat, and take a real roll after the pause.
 scn:interaction_resume_ooc()
 scn:interaction_expect{
-  phase_status = "GM",
+  phase_status = "PLAYERS",
   ooc_open = false,
+  ooc_resolution_pending = true,
   gm_authority = "Guide"
 }
-scn:interaction_start_player_phase{
-  scene = "Sealed Vault",
+scn:interaction_resolve_interrupted_phase{
+  as = "Guide",
+  gm_output_text = "The ward's pulse sharpens once you understand the seam is the real trigger.",
   frame_text = "Aria, now that you know the seam is the trigger, how do you pry it open?",
   characters = {"Aria"}
 }
@@ -78,7 +83,8 @@ scn:interaction_expect{
     {participant = "Rhea", summary = "Aria wedges a hooked tool into the seam and eases the ward apart without touching it.", characters = {"Aria"}, yielded = true, review_status = "UNDER_REVIEW"}
   },
   gm_authority = "Guide",
-  ooc_open = false
+  ooc_open = false,
+  ooc_resolution_pending = false
 }
 
 scn:end_session()

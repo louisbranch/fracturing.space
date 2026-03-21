@@ -36,6 +36,9 @@ func TestManagerEnsureDefaultArtifactsSeedsDefaults(t *testing.T) {
 	if !strings.Contains(skills.Content, "GM Skills") {
 		t.Fatalf("skills content missing GM contract: %q", skills.Content)
 	}
+	if !strings.Contains(skills.Content, "interaction_scene_review_resolve") {
+		t.Fatalf("skills content missing review resolver guidance: %q", skills.Content)
+	}
 
 	memory, err := store.GetCampaignArtifact(context.Background(), "campaign-1", MemoryArtifactPath)
 	if err != nil {
@@ -166,9 +169,42 @@ func TestManagerEnsureDefaultArtifactsUsesConfiguredSkillsLoader(t *testing.T) {
 
 func TestEnsureArtifactIfMissingPropagatesStoreErrors(t *testing.T) {
 	store := &artifactStoreStub{getErr: context.DeadlineExceeded}
-	err := ensureArtifactIfMissing(context.Background(), store, time.Now, "campaign-1", storage.CampaignArtifactRecord{Path: StoryArtifactPath})
+	err := ensureArtifactUpToDate(context.Background(), store, time.Now, "campaign-1", storage.CampaignArtifactRecord{Path: StoryArtifactPath})
 	if err != context.DeadlineExceeded {
-		t.Fatalf("ensureArtifactIfMissing() error = %v, want %v", err, context.DeadlineExceeded)
+		t.Fatalf("ensureArtifactUpToDate() error = %v, want %v", err, context.DeadlineExceeded)
+	}
+}
+
+func TestManagerEnsureDefaultArtifactsRefreshesExistingSkillsArtifact(t *testing.T) {
+	store := aifakes.NewCampaignArtifactStore()
+	now := time.Date(2026, 3, 20, 17, 0, 0, 0, time.UTC)
+	store.CampaignArtifacts["campaign-1\x00"+SkillsArtifactPath] = storage.CampaignArtifactRecord{
+		CampaignID: "campaign-1",
+		Path:       SkillsArtifactPath,
+		Content:    "# Old Skills\nCommit via interaction_scene_gm_output_commit only.",
+		ReadOnly:   true,
+		CreatedAt:  now.Add(-time.Hour),
+		UpdatedAt:  now.Add(-time.Hour),
+	}
+
+	manager := NewManager(ManagerConfig{
+		Store: store,
+		Clock: func() time.Time { return now },
+	})
+
+	if _, err := manager.EnsureDefaultArtifacts(context.Background(), "campaign-1", ""); err != nil {
+		t.Fatalf("EnsureDefaultArtifacts() error = %v", err)
+	}
+
+	skills, err := store.GetCampaignArtifact(context.Background(), "campaign-1", SkillsArtifactPath)
+	if err != nil {
+		t.Fatalf("get skills artifact: %v", err)
+	}
+	if !strings.Contains(skills.Content, "interaction_scene_review_resolve") {
+		t.Fatalf("skills content = %q, want refreshed review resolver guidance", skills.Content)
+	}
+	if !skills.UpdatedAt.Equal(now) {
+		t.Fatalf("updated_at = %s, want %s", skills.UpdatedAt, now)
 	}
 }
 

@@ -6,17 +6,18 @@ import (
 )
 
 const (
-	commandTypeSessionActiveSceneSet command.Type = commandids.SessionActiveSceneSet
-	commandTypeSessionGMAuthoritySet command.Type = commandids.SessionGMAuthoritySet
-	commandTypeSessionOOCPause       command.Type = commandids.SessionOOCPause
-	commandTypeSessionOOCPost        command.Type = commandids.SessionOOCPost
-	commandTypeSessionOOCReadyMark   command.Type = commandids.SessionOOCReadyMark
-	commandTypeSessionOOCReadyClear  command.Type = commandids.SessionOOCReadyClear
-	commandTypeSessionOOCResume      command.Type = commandids.SessionOOCResume
-	commandTypeSessionAITurnQueue    command.Type = commandids.SessionAITurnQueue
-	commandTypeSessionAITurnStart    command.Type = commandids.SessionAITurnStart
-	commandTypeSessionAITurnFail     command.Type = commandids.SessionAITurnFail
-	commandTypeSessionAITurnClear    command.Type = commandids.SessionAITurnClear
+	commandTypeSessionActiveSceneSet         command.Type = commandids.SessionActiveSceneSet
+	commandTypeSessionGMAuthoritySet         command.Type = commandids.SessionGMAuthoritySet
+	commandTypeSessionOOCPause               command.Type = commandids.SessionOOCPause
+	commandTypeSessionOOCPost                command.Type = commandids.SessionOOCPost
+	commandTypeSessionOOCReadyMark           command.Type = commandids.SessionOOCReadyMark
+	commandTypeSessionOOCReadyClear          command.Type = commandids.SessionOOCReadyClear
+	commandTypeSessionOOCResume              command.Type = commandids.SessionOOCResume
+	commandTypeSessionOOCInterruptionResolve command.Type = commandids.SessionOOCInterruptionResolve
+	commandTypeSessionAITurnQueue            command.Type = commandids.SessionAITurnQueue
+	commandTypeSessionAITurnStart            command.Type = commandids.SessionAITurnStart
+	commandTypeSessionAITurnFail             command.Type = commandids.SessionAITurnFail
+	commandTypeSessionAITurnClear            command.Type = commandids.SessionAITurnClear
 
 	commandTypeScenePlayerPhaseStart            command.Type = commandids.ScenePlayerPhaseStart
 	commandTypeScenePlayerPhasePost             command.Type = commandids.ScenePlayerPhasePost

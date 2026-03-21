@@ -46,6 +46,10 @@ func scenarioInteractionRequestRevisions(state *lua.State) int {
 	return interactionStep(state, "interaction_request_revisions")
 }
 
+func scenarioInteractionResolveReview(state *lua.State) int {
+	return interactionStep(state, "interaction_resolve_review")
+}
+
 func scenarioInteractionPauseOOC(state *lua.State) int {
 	return interactionStep(state, "interaction_pause_ooc")
 }
@@ -64,6 +68,10 @@ func scenarioInteractionClearReadyOOC(state *lua.State) int {
 
 func scenarioInteractionResumeOOC(state *lua.State) int {
 	return interactionStep(state, "interaction_resume_ooc")
+}
+
+func scenarioInteractionResolveInterruptedPhase(state *lua.State) int {
+	return interactionStep(state, "interaction_resolve_interrupted_phase")
 }
 
 func scenarioInteractionExpect(state *lua.State) int {

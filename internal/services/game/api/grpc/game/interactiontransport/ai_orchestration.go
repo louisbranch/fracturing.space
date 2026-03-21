@@ -2,14 +2,18 @@ package interactiontransport
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // AIOrchestrationApplication coordinates AI GM turn lifecycle writes for the
@@ -116,6 +120,28 @@ func (a AIOrchestrationApplication) FailAIGMTurn(ctx context.Context, campaignID
 
 // CompleteAIGMTurn clears the running AI turn on success.
 func (a AIOrchestrationApplication) CompleteAIGMTurn(ctx context.Context, campaignID, sessionID, turnToken string) (*campaignv1.AITurnState, error) {
+	sessionInteraction, err := a.interaction.stores.SessionInteraction.GetSessionInteraction(ctx, campaignID, sessionID)
+	if err != nil {
+		return nil, grpcerror.Internal("load ai turn completion interaction state", err)
+	}
+	if !sessionInteraction.OOCPaused {
+		if sessionInteraction.OOCResolutionPending {
+			return nil, status.Error(codes.FailedPrecondition, "ai gm turn must resolve the post-ooc interaction before completion")
+		}
+		if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" {
+			return nil, status.Error(codes.FailedPrecondition, "ai gm turn must leave an active scene ready for players or ooc")
+		}
+		sceneInteraction, err := a.interaction.stores.SceneInteraction.GetSceneInteraction(ctx, campaignID, sessionInteraction.ActiveSceneID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil, status.Error(codes.FailedPrecondition, "ai gm turn must open a player phase or pause for ooc before completion")
+			}
+			return nil, grpcerror.Internal("load ai turn completion scene interaction", err)
+		}
+		if !sceneInteraction.PhaseOpen || strings.TrimSpace(sceneInteraction.PhaseID) == "" || sceneInteraction.PhaseStatus != scene.PlayerPhaseStatusPlayers || len(sceneInteraction.ActingParticipantIDs) == 0 {
+			return nil, status.Error(codes.FailedPrecondition, "ai gm turn must open the next player phase or pause for ooc before completion")
+		}
+	}
 	payload := session.AITurnClearedPayload{
 		SessionID: ids.SessionID(sessionID),
 		TurnToken: strings.TrimSpace(turnToken),

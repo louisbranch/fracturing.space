@@ -20,23 +20,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InteractionService_GetInteractionState_FullMethodName         = "/game.v1.InteractionService/GetInteractionState"
-	InteractionService_SetActiveScene_FullMethodName              = "/game.v1.InteractionService/SetActiveScene"
-	InteractionService_StartScenePlayerPhase_FullMethodName       = "/game.v1.InteractionService/StartScenePlayerPhase"
-	InteractionService_SubmitScenePlayerPost_FullMethodName       = "/game.v1.InteractionService/SubmitScenePlayerPost"
-	InteractionService_YieldScenePlayerPhase_FullMethodName       = "/game.v1.InteractionService/YieldScenePlayerPhase"
-	InteractionService_UnyieldScenePlayerPhase_FullMethodName     = "/game.v1.InteractionService/UnyieldScenePlayerPhase"
-	InteractionService_EndScenePlayerPhase_FullMethodName         = "/game.v1.InteractionService/EndScenePlayerPhase"
-	InteractionService_CommitSceneGMOutput_FullMethodName         = "/game.v1.InteractionService/CommitSceneGMOutput"
-	InteractionService_AcceptScenePlayerPhase_FullMethodName      = "/game.v1.InteractionService/AcceptScenePlayerPhase"
-	InteractionService_RequestScenePlayerRevisions_FullMethodName = "/game.v1.InteractionService/RequestScenePlayerRevisions"
-	InteractionService_PauseSessionForOOC_FullMethodName          = "/game.v1.InteractionService/PauseSessionForOOC"
-	InteractionService_PostSessionOOC_FullMethodName              = "/game.v1.InteractionService/PostSessionOOC"
-	InteractionService_MarkOOCReadyToResume_FullMethodName        = "/game.v1.InteractionService/MarkOOCReadyToResume"
-	InteractionService_ClearOOCReadyToResume_FullMethodName       = "/game.v1.InteractionService/ClearOOCReadyToResume"
-	InteractionService_ResumeFromOOC_FullMethodName               = "/game.v1.InteractionService/ResumeFromOOC"
-	InteractionService_SetSessionGMAuthority_FullMethodName       = "/game.v1.InteractionService/SetSessionGMAuthority"
-	InteractionService_RetryAIGMTurn_FullMethodName               = "/game.v1.InteractionService/RetryAIGMTurn"
+	InteractionService_GetInteractionState_FullMethodName           = "/game.v1.InteractionService/GetInteractionState"
+	InteractionService_SetActiveScene_FullMethodName                = "/game.v1.InteractionService/SetActiveScene"
+	InteractionService_StartScenePlayerPhase_FullMethodName         = "/game.v1.InteractionService/StartScenePlayerPhase"
+	InteractionService_SubmitScenePlayerPost_FullMethodName         = "/game.v1.InteractionService/SubmitScenePlayerPost"
+	InteractionService_YieldScenePlayerPhase_FullMethodName         = "/game.v1.InteractionService/YieldScenePlayerPhase"
+	InteractionService_UnyieldScenePlayerPhase_FullMethodName       = "/game.v1.InteractionService/UnyieldScenePlayerPhase"
+	InteractionService_EndScenePlayerPhase_FullMethodName           = "/game.v1.InteractionService/EndScenePlayerPhase"
+	InteractionService_CommitSceneGMOutput_FullMethodName           = "/game.v1.InteractionService/CommitSceneGMOutput"
+	InteractionService_AcceptScenePlayerPhase_FullMethodName        = "/game.v1.InteractionService/AcceptScenePlayerPhase"
+	InteractionService_RequestScenePlayerRevisions_FullMethodName   = "/game.v1.InteractionService/RequestScenePlayerRevisions"
+	InteractionService_ResolveScenePlayerPhaseReview_FullMethodName = "/game.v1.InteractionService/ResolveScenePlayerPhaseReview"
+	InteractionService_PauseSessionForOOC_FullMethodName            = "/game.v1.InteractionService/PauseSessionForOOC"
+	InteractionService_PostSessionOOC_FullMethodName                = "/game.v1.InteractionService/PostSessionOOC"
+	InteractionService_MarkOOCReadyToResume_FullMethodName          = "/game.v1.InteractionService/MarkOOCReadyToResume"
+	InteractionService_ClearOOCReadyToResume_FullMethodName         = "/game.v1.InteractionService/ClearOOCReadyToResume"
+	InteractionService_ResumeFromOOC_FullMethodName                 = "/game.v1.InteractionService/ResumeFromOOC"
+	InteractionService_ResolveInterruptedScenePhase_FullMethodName  = "/game.v1.InteractionService/ResolveInterruptedScenePhase"
+	InteractionService_SetSessionGMAuthority_FullMethodName         = "/game.v1.InteractionService/SetSessionGMAuthority"
+	InteractionService_RetryAIGMTurn_FullMethodName                 = "/game.v1.InteractionService/RetryAIGMTurn"
 )
 
 // InteractionServiceClient is the client API for InteractionService service.
@@ -69,6 +71,9 @@ type InteractionServiceClient interface {
 	AcceptScenePlayerPhase(ctx context.Context, in *AcceptScenePlayerPhaseRequest, opts ...grpc.CallOption) (*AcceptScenePlayerPhaseResponse, error)
 	// Returns one or more participant slots for correction while preserving the current phase state.
 	RequestScenePlayerRevisions(ctx context.Context, in *RequestScenePlayerRevisionsRequest, opts ...grpc.CallOption) (*RequestScenePlayerRevisionsResponse, error)
+	// Resolves a GM-review player phase by either reframing the next player beat
+	// or returning one or more slots for revision.
+	ResolveScenePlayerPhaseReview(ctx context.Context, in *ResolveScenePlayerPhaseReviewRequest, opts ...grpc.CallOption) (*ResolveScenePlayerPhaseReviewResponse, error)
 	// Opens a session-level OOC pause over the active scene.
 	PauseSessionForOOC(ctx context.Context, in *PauseSessionForOOCRequest, opts ...grpc.CallOption) (*PauseSessionForOOCResponse, error)
 	// Posts one append-only OOC message while the session is paused.
@@ -79,6 +84,8 @@ type InteractionServiceClient interface {
 	ClearOOCReadyToResume(ctx context.Context, in *ClearOOCReadyToResumeRequest, opts ...grpc.CallOption) (*ClearOOCReadyToResumeResponse, error)
 	// Resumes scene play from the current OOC pause.
 	ResumeFromOOC(ctx context.Context, in *ResumeFromOOCRequest, opts ...grpc.CallOption) (*ResumeFromOOCResponse, error)
+	// Resolves the scene interaction that was interrupted by a completed OOC pause.
+	ResolveInterruptedScenePhase(ctx context.Context, in *ResolveInterruptedScenePhaseRequest, opts ...grpc.CallOption) (*ResolveInterruptedScenePhaseResponse, error)
 	// Sets which GM participant currently owns the next GM decision for the active session.
 	SetSessionGMAuthority(ctx context.Context, in *SetSessionGMAuthorityRequest, opts ...grpc.CallOption) (*SetSessionGMAuthorityResponse, error)
 	// Re-queues the current failed AI GM turn when the session is still eligible.
@@ -193,6 +200,16 @@ func (c *interactionServiceClient) RequestScenePlayerRevisions(ctx context.Conte
 	return out, nil
 }
 
+func (c *interactionServiceClient) ResolveScenePlayerPhaseReview(ctx context.Context, in *ResolveScenePlayerPhaseReviewRequest, opts ...grpc.CallOption) (*ResolveScenePlayerPhaseReviewResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveScenePlayerPhaseReviewResponse)
+	err := c.cc.Invoke(ctx, InteractionService_ResolveScenePlayerPhaseReview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *interactionServiceClient) PauseSessionForOOC(ctx context.Context, in *PauseSessionForOOCRequest, opts ...grpc.CallOption) (*PauseSessionForOOCResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PauseSessionForOOCResponse)
@@ -237,6 +254,16 @@ func (c *interactionServiceClient) ResumeFromOOC(ctx context.Context, in *Resume
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResumeFromOOCResponse)
 	err := c.cc.Invoke(ctx, InteractionService_ResumeFromOOC_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *interactionServiceClient) ResolveInterruptedScenePhase(ctx context.Context, in *ResolveInterruptedScenePhaseRequest, opts ...grpc.CallOption) (*ResolveInterruptedScenePhaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveInterruptedScenePhaseResponse)
+	err := c.cc.Invoke(ctx, InteractionService_ResolveInterruptedScenePhase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -293,6 +320,9 @@ type InteractionServiceServer interface {
 	AcceptScenePlayerPhase(context.Context, *AcceptScenePlayerPhaseRequest) (*AcceptScenePlayerPhaseResponse, error)
 	// Returns one or more participant slots for correction while preserving the current phase state.
 	RequestScenePlayerRevisions(context.Context, *RequestScenePlayerRevisionsRequest) (*RequestScenePlayerRevisionsResponse, error)
+	// Resolves a GM-review player phase by either reframing the next player beat
+	// or returning one or more slots for revision.
+	ResolveScenePlayerPhaseReview(context.Context, *ResolveScenePlayerPhaseReviewRequest) (*ResolveScenePlayerPhaseReviewResponse, error)
 	// Opens a session-level OOC pause over the active scene.
 	PauseSessionForOOC(context.Context, *PauseSessionForOOCRequest) (*PauseSessionForOOCResponse, error)
 	// Posts one append-only OOC message while the session is paused.
@@ -303,6 +333,8 @@ type InteractionServiceServer interface {
 	ClearOOCReadyToResume(context.Context, *ClearOOCReadyToResumeRequest) (*ClearOOCReadyToResumeResponse, error)
 	// Resumes scene play from the current OOC pause.
 	ResumeFromOOC(context.Context, *ResumeFromOOCRequest) (*ResumeFromOOCResponse, error)
+	// Resolves the scene interaction that was interrupted by a completed OOC pause.
+	ResolveInterruptedScenePhase(context.Context, *ResolveInterruptedScenePhaseRequest) (*ResolveInterruptedScenePhaseResponse, error)
 	// Sets which GM participant currently owns the next GM decision for the active session.
 	SetSessionGMAuthority(context.Context, *SetSessionGMAuthorityRequest) (*SetSessionGMAuthorityResponse, error)
 	// Re-queues the current failed AI GM turn when the session is still eligible.
@@ -347,6 +379,9 @@ func (UnimplementedInteractionServiceServer) AcceptScenePlayerPhase(context.Cont
 func (UnimplementedInteractionServiceServer) RequestScenePlayerRevisions(context.Context, *RequestScenePlayerRevisionsRequest) (*RequestScenePlayerRevisionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestScenePlayerRevisions not implemented")
 }
+func (UnimplementedInteractionServiceServer) ResolveScenePlayerPhaseReview(context.Context, *ResolveScenePlayerPhaseReviewRequest) (*ResolveScenePlayerPhaseReviewResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveScenePlayerPhaseReview not implemented")
+}
 func (UnimplementedInteractionServiceServer) PauseSessionForOOC(context.Context, *PauseSessionForOOCRequest) (*PauseSessionForOOCResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PauseSessionForOOC not implemented")
 }
@@ -361,6 +396,9 @@ func (UnimplementedInteractionServiceServer) ClearOOCReadyToResume(context.Conte
 }
 func (UnimplementedInteractionServiceServer) ResumeFromOOC(context.Context, *ResumeFromOOCRequest) (*ResumeFromOOCResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResumeFromOOC not implemented")
+}
+func (UnimplementedInteractionServiceServer) ResolveInterruptedScenePhase(context.Context, *ResolveInterruptedScenePhaseRequest) (*ResolveInterruptedScenePhaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveInterruptedScenePhase not implemented")
 }
 func (UnimplementedInteractionServiceServer) SetSessionGMAuthority(context.Context, *SetSessionGMAuthorityRequest) (*SetSessionGMAuthorityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetSessionGMAuthority not implemented")
@@ -569,6 +607,24 @@ func _InteractionService_RequestScenePlayerRevisions_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InteractionService_ResolveScenePlayerPhaseReview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveScenePlayerPhaseReviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InteractionServiceServer).ResolveScenePlayerPhaseReview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InteractionService_ResolveScenePlayerPhaseReview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InteractionServiceServer).ResolveScenePlayerPhaseReview(ctx, req.(*ResolveScenePlayerPhaseReviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _InteractionService_PauseSessionForOOC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PauseSessionForOOCRequest)
 	if err := dec(in); err != nil {
@@ -659,6 +715,24 @@ func _InteractionService_ResumeFromOOC_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InteractionService_ResolveInterruptedScenePhase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveInterruptedScenePhaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InteractionServiceServer).ResolveInterruptedScenePhase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InteractionService_ResolveInterruptedScenePhase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InteractionServiceServer).ResolveInterruptedScenePhase(ctx, req.(*ResolveInterruptedScenePhaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _InteractionService_SetSessionGMAuthority_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetSessionGMAuthorityRequest)
 	if err := dec(in); err != nil {
@@ -743,6 +817,10 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InteractionService_RequestScenePlayerRevisions_Handler,
 		},
 		{
+			MethodName: "ResolveScenePlayerPhaseReview",
+			Handler:    _InteractionService_ResolveScenePlayerPhaseReview_Handler,
+		},
+		{
 			MethodName: "PauseSessionForOOC",
 			Handler:    _InteractionService_PauseSessionForOOC_Handler,
 		},
@@ -761,6 +839,10 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResumeFromOOC",
 			Handler:    _InteractionService_ResumeFromOOC_Handler,
+		},
+		{
+			MethodName: "ResolveInterruptedScenePhase",
+			Handler:    _InteractionService_ResolveInterruptedScenePhase_Handler,
 		},
 		{
 			MethodName: "SetSessionGMAuthority",

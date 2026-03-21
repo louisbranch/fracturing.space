@@ -3854,6 +3854,83 @@ func TestRunLevelUpStepBuildsMulticlassWithoutFoundationCard(t *testing.T) {
 	}
 }
 
+func TestRunApplyStatModifierStepWaitsForProjectedModifiers(t *testing.T) {
+	fixture := testEnv()
+	modifier := &daggerheartv1.DaggerheartStatModifier{
+		Id:            "mod-evasion-wall",
+		Target:        "evasion",
+		Delta:         100,
+		Label:         "Wall of Iron",
+		Source:        "domain_card",
+		ClearTriggers: []daggerheartv1.DaggerheartConditionClearTrigger{daggerheartv1.DaggerheartConditionClearTrigger_DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST},
+	}
+	fixture.daggerheartClient.applyStatModifiers = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyStatModifiersRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyStatModifiersResponse, error) {
+		return &daggerheartv1.DaggerheartApplyStatModifiersResponse{
+			ActiveModifiers: []*daggerheartv1.DaggerheartStatModifier{modifier},
+			Added:           []*daggerheartv1.DaggerheartStatModifier{modifier},
+		}, nil
+	}
+
+	listCalls := 0
+	fixture.eventClient.listEvents = func(_ context.Context, _ *gamev1.ListEventsRequest, _ ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
+		listCalls++
+		if listCalls == 1 {
+			return &gamev1.ListEventsResponse{
+				Events: []*gamev1.Event{{Seq: 1, Type: "baseline"}},
+			}, nil
+		}
+		return &gamev1.ListEventsResponse{
+			Events: []*gamev1.Event{{Seq: 2, Type: "sys.daggerheart.stat_modifier_changed"}},
+		}, nil
+	}
+
+	getSheetCalls := 0
+	fixture.env.characterClient.(*fakeCharacterClient).getSheet = func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+		getSheetCalls++
+		state := &daggerheartv1.DaggerheartCharacterState{}
+		if getSheetCalls >= 2 {
+			state.StatModifiers = []*daggerheartv1.DaggerheartStatModifier{modifier}
+		}
+		return &gamev1.GetCharacterSheetResponse{
+			State: &gamev1.CharacterState{
+				SystemState: &gamev1.CharacterState_Daggerheart{
+					Daggerheart: state,
+				},
+			},
+		}, nil
+	}
+
+	runner := quietRunner(fixture.env)
+	state := testState()
+	state.actors["Rogue"] = "char-rogue"
+
+	err := runner.runApplyStatModifierStep(context.Background(), state, Step{
+		Kind: "apply_stat_modifier",
+		Args: map[string]any{
+			"target": "Rogue",
+			"source": "domain_card.wall_of_iron",
+			"add": []any{
+				map[string]any{
+					"id":             "mod-evasion-wall",
+					"target":         "evasion",
+					"delta":          100,
+					"label":          "Wall of Iron",
+					"source":         "domain_card",
+					"clear_triggers": []any{"SHORT_REST"},
+				},
+			},
+			"expect_active_count": 1,
+			"expect_added_count":  1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runApplyStatModifierStep returned error: %v", err)
+	}
+	if getSheetCalls < 2 {
+		t.Fatalf("getSheet calls = %d, want projection retry", getSheetCalls)
+	}
+}
+
 func TestSubclassTrackHelpers(t *testing.T) {
 	tracks := []*daggerheartv1.DaggerheartSubclassTrack{
 		{

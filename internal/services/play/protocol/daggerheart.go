@@ -96,6 +96,9 @@ type DaggerheartCharacterSheetData struct {
 	Hope            *TrackValue             `json:"hope,omitempty"`
 	HopeFeature     string                  `json:"hopeFeature,omitempty"`
 	ClassFeature    string                  `json:"classFeature,omitempty"`
+	PrimaryWeapon   *DaggerheartWeapon      `json:"primaryWeapon,omitempty"`
+	SecondaryWeapon *DaggerheartWeapon      `json:"secondaryWeapon,omitempty"`
+	ActiveArmor     *DaggerheartArmor       `json:"activeArmor,omitempty"`
 	Experiences     []DaggerheartExperience `json:"experiences,omitempty"`
 	DomainCards     []DaggerheartDomainCard `json:"domainCards,omitempty"`
 	Description     string                  `json:"description,omitempty"`
@@ -127,6 +130,23 @@ type DaggerheartDomainCard struct {
 	Domain string `json:"domain,omitempty"`
 }
 
+// DaggerheartWeapon is one active weapon entry on the full character sheet.
+type DaggerheartWeapon struct {
+	Name       string `json:"name"`
+	Trait      string `json:"trait,omitempty"`
+	Range      string `json:"range,omitempty"`
+	DamageDice string `json:"damageDice,omitempty"`
+	DamageType string `json:"damageType,omitempty"`
+	Feature    string `json:"feature,omitempty"`
+}
+
+// DaggerheartArmor is the active armor entry on the full character sheet.
+type DaggerheartArmor struct {
+	Name      string `json:"name"`
+	BaseScore *int32 `json:"baseScore,omitempty"`
+	Feature   string `json:"feature,omitempty"`
+}
+
 // DaggerheartCardFromSheet builds the card data from a GetCharacterSheetResponse.
 func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) DaggerheartCharacterCardData {
 	card := DaggerheartCharacterCardData{
@@ -138,16 +158,18 @@ func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profi
 
 	if profile != nil {
 		className, subclassName := resolveClassNames(profile)
+		ancestryName, communityName := heritageDisplayNames(profile)
 		summary := &DaggerheartCharacterSummary{
-			Level:        profile.GetLevel(),
-			ClassName:    className,
-			SubclassName: subclassName,
-			AncestryName: ancestryName(profile),
-			HP:           profileHPTrack(profile, state),
-			Stress:       profileStressTrack(profile, state),
-			Evasion:      wrapperInt32Ptr(profile.GetEvasion()),
-			Armor:        profileArmorTrack(profile, state),
-			Hope:         hopeTrack(state),
+			Level:         profile.GetLevel(),
+			ClassName:     className,
+			SubclassName:  subclassName,
+			AncestryName:  ancestryName,
+			CommunityName: communityName,
+			HP:            profileHPTrack(profile, state),
+			Stress:        profileStressTrack(profile, state),
+			Evasion:       wrapperInt32Ptr(profile.GetEvasion()),
+			Armor:         profileArmorTrack(profile, state),
+			Hope:          hopeTrack(state),
 		}
 		// Find the first hope feature from active class features.
 		for _, f := range profile.GetActiveClassFeatures() {
@@ -179,10 +201,12 @@ func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, p
 
 	if profile != nil {
 		className, subclassName := resolveClassNames(profile)
+		ancestryName, communityName := heritageDisplayNames(profile)
 		sheet.Level = profile.GetLevel()
 		sheet.ClassName = className
 		sheet.SubclassName = subclassName
-		sheet.AncestryName = ancestryName(profile)
+		sheet.AncestryName = ancestryName
+		sheet.CommunityName = communityName
 		sheet.Proficiency = wrapperInt32Ptr(profile.GetProficiency())
 		sheet.HP = profileHPTrack(profile, state)
 		sheet.Stress = profileStressTrack(profile, state)
@@ -194,18 +218,21 @@ func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, p
 		sheet.Description = strings.TrimSpace(profile.GetDescription())
 		sheet.Background = strings.TrimSpace(profile.GetBackground())
 		sheet.Connections = strings.TrimSpace(profile.GetConnections())
+		sheet.PrimaryWeapon = daggerheartSheetWeapon(profile.GetPrimaryWeapon())
+		sheet.SecondaryWeapon = daggerheartSheetWeapon(profile.GetSecondaryWeapon())
+		sheet.ActiveArmor = daggerheartSheetArmor(profile.GetActiveArmor())
 
 		// Hope feature from active class features.
 		for _, f := range profile.GetActiveClassFeatures() {
 			if f.GetHopeFeature() {
-				sheet.HopeFeature = strings.TrimSpace(f.GetName())
+				sheet.HopeFeature = daggerheartFeatureText(f.GetName(), f.GetDescription())
 				break
 			}
 		}
 		// First non-hope class feature as the classFeature display.
 		for _, f := range profile.GetActiveClassFeatures() {
 			if !f.GetHopeFeature() {
-				sheet.ClassFeature = strings.TrimSpace(f.GetName())
+				sheet.ClassFeature = daggerheartFeatureText(f.GetName(), f.GetDescription())
 				break
 			}
 		}
@@ -302,11 +329,19 @@ func resolveClassNames(profile *daggerheartv1.DaggerheartProfile) (string, strin
 	return className, subclassName
 }
 
-func ancestryName(profile *daggerheartv1.DaggerheartProfile) string {
-	if h := profile.GetHeritage(); h != nil {
-		return strings.TrimSpace(h.GetAncestryLabel())
+func heritageDisplayNames(profile *daggerheartv1.DaggerheartProfile) (string, string) {
+	if profile == nil {
+		return "", ""
 	}
-	return ""
+	heritage := profile.GetHeritage()
+	if heritage == nil {
+		return "", ""
+	}
+	ancestryName := strings.TrimSpace(heritage.GetAncestryName())
+	if ancestryName == "" {
+		ancestryName = strings.TrimSpace(heritage.GetAncestryLabel())
+	}
+	return ancestryName, strings.TrimSpace(heritage.GetCommunityName())
 }
 
 func profileHPTrack(profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) *TrackValue {
@@ -335,16 +370,38 @@ func profileStressTrack(profile *daggerheartv1.DaggerheartProfile, state *dagger
 }
 
 func profileArmorTrack(profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) *TrackValue {
-	maxW := profile.GetArmorMax()
-	if maxW == nil {
+	scoreW := profile.GetArmorScore()
+	if scoreW == nil {
 		return nil
 	}
-	max := maxW.GetValue()
+	max := scoreW.GetValue()
 	current := max
 	if state != nil {
-		current = state.GetArmor()
+		current = baseArmorSlotsLeft(state)
+	}
+	if current < 0 {
+		current = 0
+	}
+	if current > max {
+		current = max
 	}
 	return &TrackValue{Current: current, Max: max}
+}
+
+func baseArmorSlotsLeft(state *daggerheartv1.DaggerheartCharacterState) int32 {
+	if state == nil {
+		return 0
+	}
+	current := state.GetArmor()
+	for _, bucket := range state.GetTemporaryArmorBuckets() {
+		if amount := bucket.GetAmount(); amount > 0 {
+			current -= amount
+		}
+	}
+	if current < 0 {
+		return 0
+	}
+	return current
 }
 
 func hopeTrack(state *daggerheartv1.DaggerheartCharacterState) *TrackValue {
@@ -490,6 +547,44 @@ func daggerheartDomainCards(profile *daggerheartv1.DaggerheartProfile) []Daggerh
 	return cards
 }
 
+func daggerheartFeatureText(name, description string) string {
+	name = strings.TrimSpace(name)
+	description = strings.TrimSpace(description)
+	switch {
+	case name != "" && description != "":
+		return name + ": " + description
+	case name != "":
+		return name
+	default:
+		return description
+	}
+}
+
+func daggerheartSheetWeapon(summary *daggerheartv1.DaggerheartSheetWeaponSummary) *DaggerheartWeapon {
+	if summary == nil || strings.TrimSpace(summary.GetName()) == "" {
+		return nil
+	}
+	return &DaggerheartWeapon{
+		Name:       strings.TrimSpace(summary.GetName()),
+		Trait:      strings.TrimSpace(summary.GetTrait()),
+		Range:      strings.TrimSpace(summary.GetRange()),
+		DamageDice: strings.TrimSpace(summary.GetDamageDice()),
+		DamageType: strings.TrimSpace(summary.GetDamageType()),
+		Feature:    strings.TrimSpace(summary.GetFeature()),
+	}
+}
+
+func daggerheartSheetArmor(summary *daggerheartv1.DaggerheartSheetArmorSummary) *DaggerheartArmor {
+	if summary == nil || strings.TrimSpace(summary.GetName()) == "" {
+		return nil
+	}
+	return &DaggerheartArmor{
+		Name:      strings.TrimSpace(summary.GetName()),
+		BaseScore: int32PtrIfNonZero(summary.GetBaseScore()),
+		Feature:   strings.TrimSpace(summary.GetFeature()),
+	}
+}
+
 func contentLabelFromID(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -499,6 +594,13 @@ func contentLabelFromID(value string) string {
 		value = value[idx+1:]
 	}
 	return humanizeContentSlug(value)
+}
+
+func int32PtrIfNonZero(v int32) *int32 {
+	if v == 0 {
+		return nil
+	}
+	return &v
 }
 
 func domainCardLabelFromID(value string) (string, string) {

@@ -24,6 +24,7 @@ func registerSessionProjectionHandlers(r *CoreRouter) {
 	HandleProjection(r, session.EventTypeOOCReadyMarked, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCReadyMarked)
 	HandleProjection(r, session.EventTypeOOCReadyCleared, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCReadyCleared)
 	HandleProjection(r, session.EventTypeOOCResumed, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCResumed)
+	HandleProjection(r, session.EventTypeOOCInterruptionResolved, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCInterruptionResolved)
 	HandleProjection(r, session.EventTypeAITurnQueued, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnQueued)
 	HandleProjection(r, session.EventTypeAITurnRunning, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnRunning)
 	HandleProjection(r, session.EventTypeAITurnFailed, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnFailed)

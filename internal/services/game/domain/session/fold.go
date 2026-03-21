@@ -32,6 +32,7 @@ func newFoldRouter() *fold.CoreFoldRouter[State] {
 	r.Handle(EventTypeOOCReadyMarked, foldOOCReadyMarked)
 	r.Handle(EventTypeOOCReadyCleared, foldOOCReadyCleared)
 	r.Handle(EventTypeOOCResumed, foldOOCResumed)
+	r.Handle(EventTypeOOCInterruptionResolved, foldOOCInterruptionResolved)
 	r.Handle(EventTypeAITurnQueued, foldAITurnQueued)
 	r.Handle(EventTypeAITurnRunning, foldAITurnRunning)
 	r.Handle(EventTypeAITurnFailed, foldAITurnFailed)
@@ -72,6 +73,12 @@ func foldEnded(state State, evt event.Event) (State, error) {
 	state.ActiveSceneID = ""
 	state.GMAuthorityParticipantID = ""
 	state.OOCPaused = false
+	state.OOCRequestedByParticipantID = ""
+	state.OOCReason = ""
+	state.OOCInterruptedSceneID = ""
+	state.OOCInterruptedPhaseID = ""
+	state.OOCInterruptedPhaseStatus = ""
+	state.OOCResolutionPending = false
 	state.OOCReadyParticipants = nil
 	state.AITurnStatus = ""
 	state.AITurnToken = ""
@@ -155,8 +162,18 @@ func foldGMAuthoritySet(state State, evt event.Event) (State, error) {
 	return state, nil
 }
 
-func foldOOCPaused(state State, _ event.Event) (State, error) {
+func foldOOCPaused(state State, evt event.Event) (State, error) {
+	var payload OOCPausedPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+	}
 	state.OOCPaused = true
+	state.OOCRequestedByParticipantID = ids.ParticipantID(payload.RequestedByParticipantID)
+	state.OOCReason = strings.TrimSpace(payload.Reason)
+	state.OOCInterruptedSceneID = ids.SceneID(payload.InterruptedSceneID)
+	state.OOCInterruptedPhaseID = strings.TrimSpace(payload.InterruptedPhaseID)
+	state.OOCInterruptedPhaseStatus = strings.TrimSpace(payload.InterruptedPhaseStatus)
+	state.OOCResolutionPending = false
 	state.OOCReadyParticipants = make(map[ids.ParticipantID]bool)
 	return state, nil
 }
@@ -190,6 +207,17 @@ func foldOOCReadyCleared(state State, evt event.Event) (State, error) {
 func foldOOCResumed(state State, _ event.Event) (State, error) {
 	state.OOCPaused = false
 	state.OOCReadyParticipants = nil
+	state.OOCResolutionPending = state.OOCInterruptedSceneID != "" && state.OOCInterruptedPhaseID != ""
+	return state, nil
+}
+
+func foldOOCInterruptionResolved(state State, _ event.Event) (State, error) {
+	state.OOCRequestedByParticipantID = ""
+	state.OOCReason = ""
+	state.OOCInterruptedSceneID = ""
+	state.OOCInterruptedPhaseID = ""
+	state.OOCInterruptedPhaseStatus = ""
+	state.OOCResolutionPending = false
 	return state, nil
 }
 

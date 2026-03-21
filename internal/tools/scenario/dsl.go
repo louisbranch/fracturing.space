@@ -151,11 +151,13 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "interaction_end_player_phase", Function: scenarioInteractionEndPlayerPhase},
 	{Name: "interaction_accept_player_phase", Function: scenarioInteractionAcceptPlayerPhase},
 	{Name: "interaction_request_revisions", Function: scenarioInteractionRequestRevisions},
+	{Name: "interaction_resolve_review", Function: scenarioInteractionResolveReview},
 	{Name: "interaction_pause_ooc", Function: scenarioInteractionPauseOOC},
 	{Name: "interaction_post_ooc", Function: scenarioInteractionPostOOC},
 	{Name: "interaction_ready_ooc", Function: scenarioInteractionReadyOOC},
 	{Name: "interaction_clear_ready_ooc", Function: scenarioInteractionClearReadyOOC},
 	{Name: "interaction_resume_ooc", Function: scenarioInteractionResumeOOC},
+	{Name: "interaction_resolve_interrupted_phase", Function: scenarioInteractionResolveInterruptedPhase},
 	{Name: "interaction_expect", Function: scenarioInteractionExpect},
 }
 

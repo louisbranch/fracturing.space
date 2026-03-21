@@ -23,7 +23,11 @@ func decideOOCPause(state State, cmd command.Command, now func() time.Time) comm
 		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 	}
 	payload.SessionID = ids.SessionID(cmd.SessionID)
+	payload.RequestedByParticipantID = ids.ParticipantID(strings.TrimSpace(payload.RequestedByParticipantID.String()))
 	payload.Reason = strings.TrimSpace(payload.Reason)
+	payload.InterruptedSceneID = ids.SceneID(strings.TrimSpace(payload.InterruptedSceneID.String()))
+	payload.InterruptedPhaseID = strings.TrimSpace(payload.InterruptedPhaseID)
+	payload.InterruptedPhaseStatus = strings.TrimSpace(payload.InterruptedPhaseStatus)
 	payloadJSON, _ := json.Marshal(payload)
 	evt := command.NewEvent(cmd, EventTypeOOCPaused, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 	evt.SessionID = cmd.SessionID
@@ -139,6 +143,26 @@ func decideOOCResume(state State, cmd command.Command, now func() time.Time) com
 	payload.Reason = strings.TrimSpace(payload.Reason)
 	payloadJSON, _ := json.Marshal(payload)
 	evt := command.NewEvent(cmd, EventTypeOOCResumed, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
+	evt.SessionID = cmd.SessionID
+	return command.Accept(evt)
+}
+
+// decideOOCInterruptionResolve clears the pending GM resolution gate after OOC.
+func decideOOCInterruptionResolve(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if state.OOCPaused || !state.OOCResolutionPending {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeSessionOOCResolutionNotPending,
+			Message: "session is not waiting for post-ooc resolution",
+		})
+	}
+	var payload OOCInterruptionResolvedPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+	}
+	payload.SessionID = ids.SessionID(cmd.SessionID)
+	payload.Resolution = strings.TrimSpace(payload.Resolution)
+	payloadJSON, _ := json.Marshal(payload)
+	evt := command.NewEvent(cmd, EventTypeOOCInterruptionResolved, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 	evt.SessionID = cmd.SessionID
 	return command.Accept(evt)
 }

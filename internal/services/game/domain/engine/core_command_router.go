@@ -198,6 +198,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		session.CommandTypeOOCReadyMark:              sessionRoute,
 		session.CommandTypeOOCReadyClear:             sessionRoute,
 		session.CommandTypeOOCResume:                 sessionRoute,
+		session.CommandTypeOOCInterruptionResolve:    sessionRoute,
 		session.CommandTypeAITurnQueue:               sessionRoute,
 		session.CommandTypeAITurnStart:               sessionRoute,
 		session.CommandTypeAITurnFail:                sessionRoute,

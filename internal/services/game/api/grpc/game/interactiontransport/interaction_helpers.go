@@ -26,6 +26,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	errSessionOOCPaused            = "session is paused for out-of-character discussion"
+	errSessionOOCResolutionPending = "session is waiting for gm resolution after out-of-character discussion"
+)
+
 func (a interactionApplication) loadViewerCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, storage.ParticipantRecord, error) {
 	campaignRecord, err := a.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
@@ -98,6 +103,27 @@ func requireAuthoritativeGMActor(actor storage.ParticipantRecord, sessionInterac
 	return nil
 }
 
+func requireSceneWritesUnblocked(sessionInteraction storage.SessionInteraction) error {
+	if sessionInteraction.OOCPaused {
+		return status.Error(codes.FailedPrecondition, errSessionOOCPaused)
+	}
+	if sessionInteraction.OOCResolutionPending {
+		return status.Error(codes.FailedPrecondition, errSessionOOCResolutionPending)
+	}
+	return nil
+}
+
+func (a interactionApplication) clearOOCResolutionIfPending(ctx context.Context, campaignID, sessionID string, sessionInteraction storage.SessionInteraction, resolution string) error {
+	if !sessionInteraction.OOCResolutionPending {
+		return nil
+	}
+	payload := session.OOCInterruptionResolvedPayload{
+		SessionID:  ids.SessionID(sessionID),
+		Resolution: strings.TrimSpace(resolution),
+	}
+	return a.executeSessionCommand(ctx, commandTypeSessionOOCInterruptionResolve, campaignID, sessionID, payload, "session.ooc.interruption_resolve")
+}
+
 func (a interactionApplication) loadSceneState(ctx context.Context, campaignID string, sceneRecord storage.SceneRecord) (*campaignv1.InteractionScene, storage.SceneInteraction, error) {
 	sceneCharacters, err := a.stores.SceneCharacter.ListSceneCharacters(ctx, campaignID, sceneRecord.SceneID)
 	if err != nil {
@@ -158,7 +184,7 @@ func (a interactionApplication) requireActiveSceneForGM(
 	sessionInteraction storage.SessionInteraction,
 ) (storage.SceneRecord, storage.SceneInteraction, error) {
 	if sessionInteraction.OOCPaused {
-		return storage.SceneRecord{}, storage.SceneInteraction{}, status.Error(codes.FailedPrecondition, "session is paused for out-of-character discussion")
+		return storage.SceneRecord{}, storage.SceneInteraction{}, status.Error(codes.FailedPrecondition, errSessionOOCPaused)
 	}
 	if strings.TrimSpace(sessionInteraction.ActiveSceneID) != sceneID {
 		return storage.SceneRecord{}, storage.SceneInteraction{}, status.Error(codes.FailedPrecondition, "scene is not the active scene")

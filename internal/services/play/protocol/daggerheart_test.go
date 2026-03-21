@@ -27,12 +27,14 @@ func TestDaggerheartCardFromSheetBasicMapping(t *testing.T) {
 		SubclassId: "subclass.stalwart",
 		StressMax:  wrapperspb.Int32(6),
 		Evasion:    wrapperspb.Int32(10),
+		ArmorScore: wrapperspb.Int32(3),
 		ArmorMax:   wrapperspb.Int32(3),
 		Agility:    wrapperspb.Int32(2),
 		Strength:   wrapperspb.Int32(-1),
 		Finesse:    wrapperspb.Int32(0),
 		Heritage: &daggerheartv1.DaggerheartHeritageSelection{
-			AncestryLabel: "Elf",
+			AncestryName:  "Elf",
+			CommunityName: "Loreborne",
 		},
 		ActiveClassFeatures: []*daggerheartv1.DaggerheartActiveClassFeature{
 			{Name: "Unstoppable", Level: 1, HopeFeature: false},
@@ -77,6 +79,9 @@ func TestDaggerheartCardFromSheetBasicMapping(t *testing.T) {
 	if summary.AncestryName != "Elf" {
 		t.Fatalf("ancestryName = %q, want %q", summary.AncestryName, "Elf")
 	}
+	if summary.CommunityName != "Loreborne" {
+		t.Fatalf("communityName = %q, want %q", summary.CommunityName, "Loreborne")
+	}
 	if summary.HP == nil || summary.HP.Current != 8 || summary.HP.Max != 12 {
 		t.Fatalf("hp = %#v", summary.HP)
 	}
@@ -85,6 +90,9 @@ func TestDaggerheartCardFromSheetBasicMapping(t *testing.T) {
 	}
 	if summary.Hope == nil || summary.Hope.Current != 3 || summary.Hope.Max != 5 {
 		t.Fatalf("hope = %#v", summary.Hope)
+	}
+	if summary.Armor == nil || summary.Armor.Current != 1 || summary.Armor.Max != 3 {
+		t.Fatalf("armor = %#v", summary.Armor)
 	}
 	if summary.Feature != "Stand Firm" {
 		t.Fatalf("feature = %q, want %q", summary.Feature, "Stand Firm")
@@ -201,6 +209,96 @@ func TestDaggerheartSheetExperiences(t *testing.T) {
 	}
 }
 
+func TestDaggerheartSheetFromResponseIncludesFullFeatureTextAndEquipment(t *testing.T) {
+	t.Parallel()
+
+	char := &gamev1.Character{Id: "c", Name: "Mira"}
+	profile := &daggerheartv1.DaggerheartProfile{
+		ActiveClassFeatures: []*daggerheartv1.DaggerheartActiveClassFeature{
+			{
+				Name:        "Rogue's Dodge",
+				Description: "Spend 3 Hope to gain +2 Evasion until an attack succeeds against you.",
+				HopeFeature: true,
+			},
+			{
+				Name:        "Sneak Attack",
+				Description: "When you have advantage on a melee attack, deal an extra 1d8 damage.",
+			},
+		},
+		PrimaryWeapon: &daggerheartv1.DaggerheartSheetWeaponSummary{
+			Name:       "Sword",
+			Trait:      "Finesse",
+			Range:      "melee",
+			DamageDice: "1d8",
+			DamageType: "physical",
+			Feature:    "Versatile",
+		},
+		SecondaryWeapon: &daggerheartv1.DaggerheartSheetWeaponSummary{
+			Name:       "Dagger",
+			Trait:      "Finesse",
+			Range:      "very close",
+			DamageDice: "1d6",
+			DamageType: "physical",
+		},
+		ActiveArmor: &daggerheartv1.DaggerheartSheetArmorSummary{
+			Name:      "Leather",
+			BaseScore: 2,
+			Feature:   "Quiet",
+		},
+	}
+
+	sheet := DaggerheartSheetFromResponse("", char, profile, nil)
+
+	if sheet.HopeFeature != "Rogue's Dodge: Spend 3 Hope to gain +2 Evasion until an attack succeeds against you." {
+		t.Fatalf("hope feature = %q", sheet.HopeFeature)
+	}
+	if sheet.ClassFeature != "Sneak Attack: When you have advantage on a melee attack, deal an extra 1d8 damage." {
+		t.Fatalf("class feature = %q", sheet.ClassFeature)
+	}
+	if sheet.PrimaryWeapon == nil || sheet.PrimaryWeapon.Name != "Sword" || sheet.PrimaryWeapon.DamageDice != "1d8" {
+		t.Fatalf("primary weapon = %#v", sheet.PrimaryWeapon)
+	}
+	if sheet.SecondaryWeapon == nil || sheet.SecondaryWeapon.Name != "Dagger" {
+		t.Fatalf("secondary weapon = %#v", sheet.SecondaryWeapon)
+	}
+	if sheet.ActiveArmor == nil || sheet.ActiveArmor.Name != "Leather" {
+		t.Fatalf("active armor = %#v", sheet.ActiveArmor)
+	}
+	if sheet.ActiveArmor.BaseScore == nil || *sheet.ActiveArmor.BaseScore != 2 {
+		t.Fatalf("active armor base score = %#v", sheet.ActiveArmor.BaseScore)
+	}
+}
+
+func TestDaggerheartHeritageDisplayFallsBackToAncestryLabel(t *testing.T) {
+	t.Parallel()
+
+	char := &gamev1.Character{Id: "c", Name: "Mira"}
+	profile := &daggerheartv1.DaggerheartProfile{
+		Heritage: &daggerheartv1.DaggerheartHeritageSelection{
+			AncestryLabel: "Half-Clank",
+		},
+	}
+
+	card := DaggerheartCardFromSheet("", char, profile, nil)
+	if card.Daggerheart == nil || card.Daggerheart.Summary == nil {
+		t.Fatalf("card summary = %#v", card.Daggerheart)
+	}
+	if got := card.Daggerheart.Summary.AncestryName; got != "Half-Clank" {
+		t.Fatalf("card ancestryName = %q, want %q", got, "Half-Clank")
+	}
+	if got := card.Daggerheart.Summary.CommunityName; got != "" {
+		t.Fatalf("card communityName = %q, want empty", got)
+	}
+
+	sheet := DaggerheartSheetFromResponse("", char, profile, nil)
+	if got := sheet.AncestryName; got != "Half-Clank" {
+		t.Fatalf("sheet ancestryName = %q, want %q", got, "Half-Clank")
+	}
+	if got := sheet.CommunityName; got != "" {
+		t.Fatalf("sheet communityName = %q, want empty", got)
+	}
+}
+
 func TestDaggerheartSheetTraitsIncludeSkillLabels(t *testing.T) {
 	t.Parallel()
 
@@ -219,5 +317,34 @@ func TestDaggerheartSheetTraitsIncludeSkillLabels(t *testing.T) {
 	}
 	if sheet.Traits[0].Skills[0] != "Sprint" {
 		t.Fatalf("trait skills[0] = %q, want %q", sheet.Traits[0].Skills[0], "Sprint")
+	}
+}
+
+func TestDaggerheartArmorTrack_UsesBaseArmorSlotsAndArmorScore(t *testing.T) {
+	t.Parallel()
+
+	char := &gamev1.Character{Id: "char-3", Name: "Vale"}
+	profile := &daggerheartv1.DaggerheartProfile{
+		ArmorScore: wrapperspb.Int32(4),
+		ArmorMax:   wrapperspb.Int32(4),
+	}
+	state := &daggerheartv1.DaggerheartCharacterState{
+		Armor: 5,
+		TemporaryArmorBuckets: []*daggerheartv1.DaggerheartTemporaryArmorBucket{
+			{Amount: 2},
+		},
+	}
+
+	card := DaggerheartCardFromSheet("", char, profile, state)
+	if card.Daggerheart == nil || card.Daggerheart.Summary == nil || card.Daggerheart.Summary.Armor == nil {
+		t.Fatalf("card armor summary = %#v", card.Daggerheart)
+	}
+	if card.Daggerheart.Summary.Armor.Current != 3 || card.Daggerheart.Summary.Armor.Max != 4 {
+		t.Fatalf("card armor = %#v, want 3/4", card.Daggerheart.Summary.Armor)
+	}
+
+	sheet := DaggerheartSheetFromResponse("", char, profile, state)
+	if sheet.Armor == nil || sheet.Armor.Current != 3 || sheet.Armor.Max != 4 {
+		t.Fatalf("sheet armor = %#v, want 3/4", sheet.Armor)
 	}
 }

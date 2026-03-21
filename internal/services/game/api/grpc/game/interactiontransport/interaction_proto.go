@@ -30,6 +30,12 @@ func sessionInteractionToProto(interaction storage.SessionInteraction) *campaign
 		Open:                        interaction.OOCPaused,
 		Posts:                       posts,
 		ReadyToResumeParticipantIds: ready,
+		RequestedByParticipantId:    interaction.OOCRequestedByParticipantID,
+		Reason:                      interaction.OOCReason,
+		InterruptedSceneId:          interaction.OOCInterruptedSceneID,
+		InterruptedPhaseId:          interaction.OOCInterruptedPhaseID,
+		InterruptedPhaseStatus:      scenePhaseStatusToProto(scene.PlayerPhaseStatus(interaction.OOCInterruptedPhaseStatus)),
+		ResolutionPending:           interaction.OOCResolutionPending,
 	}
 }
 
@@ -120,8 +126,10 @@ func scenePhaseStatusToProto(status scene.PlayerPhaseStatus) campaignv1.ScenePha
 		return campaignv1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW
 	case scene.PlayerPhaseStatusPlayers:
 		return campaignv1.ScenePhaseStatus_SCENE_PHASE_STATUS_PLAYERS
+	case "":
+		return campaignv1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM
 	default:
-		return campaignv1.ScenePhaseStatus_SCENE_PHASE_STATUS_PLAYERS
+		return campaignv1.ScenePhaseStatus_SCENE_PHASE_STATUS_UNSPECIFIED
 	}
 }
 

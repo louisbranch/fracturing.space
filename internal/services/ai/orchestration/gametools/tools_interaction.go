@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -24,33 +25,42 @@ type interactionStartScenePlayerPhaseInput struct {
 	CharacterIDs []string `json:"character_ids"`
 }
 
-type interactionAcceptScenePlayerPhaseInput struct {
-	CampaignID string `json:"campaign_id,omitempty"`
-	SceneID    string `json:"scene_id,omitempty"`
-}
-
 type interactionScenePlayerRevisionInput struct {
 	ParticipantID string   `json:"participant_id"`
 	Reason        string   `json:"reason"`
 	CharacterIDs  []string `json:"character_ids,omitempty"`
 }
 
-type interactionRequestScenePlayerRevisionsInput struct {
-	CampaignID string                                `json:"campaign_id,omitempty"`
-	SceneID    string                                `json:"scene_id,omitempty"`
-	Revisions  []interactionScenePlayerRevisionInput `json:"revisions"`
+type interactionReviewAdvanceToPlayersInput struct {
+	GMOutputText     string   `json:"gm_output_text"`
+	NextFrameText    string   `json:"next_frame_text"`
+	NextCharacterIDs []string `json:"next_character_ids"`
 }
 
-type interactionEndScenePlayerPhaseInput struct {
-	CampaignID string `json:"campaign_id,omitempty"`
-	SceneID    string `json:"scene_id,omitempty"`
-	Reason     string `json:"reason,omitempty"`
+type interactionResolveScenePlayerPhaseReviewInput struct {
+	CampaignID       string                                  `json:"campaign_id,omitempty"`
+	SceneID          string                                  `json:"scene_id,omitempty"`
+	AdvanceToPlayers *interactionReviewAdvanceToPlayersInput `json:"advance_to_players,omitempty"`
+	RequestRevisions []interactionScenePlayerRevisionInput   `json:"request_revisions,omitempty"`
 }
 
 type interactionCommitSceneGMOutputInput struct {
 	CampaignID string `json:"campaign_id,omitempty"`
 	SceneID    string `json:"scene_id,omitempty"`
 	Text       string `json:"text"`
+}
+
+type interactionReplaceInterruptedScenePhaseInput struct {
+	SceneID      string   `json:"scene_id,omitempty"`
+	GMOutputText string   `json:"gm_output_text,omitempty"`
+	FrameText    string   `json:"frame_text"`
+	CharacterIDs []string `json:"character_ids"`
+}
+
+type interactionResolveInterruptedScenePhaseInput struct {
+	CampaignID             string                                        `json:"campaign_id,omitempty"`
+	ResumeOriginalPhase    bool                                          `json:"resume_original_phase,omitempty"`
+	ReplaceWithPlayerPhase *interactionReplaceInterruptedScenePhaseInput `json:"replace_with_player_phase,omitempty"`
 }
 
 type interactionPauseOOCInput struct {
@@ -139,6 +149,12 @@ type interactionOOCStateResult struct {
 	Open                        bool                       `json:"open"`
 	Posts                       []interactionOOCPostResult `json:"posts,omitempty"`
 	ReadyToResumeParticipantIDs []string                   `json:"ready_to_resume_participant_ids,omitempty"`
+	RequestedByParticipantID    string                     `json:"requested_by_participant_id,omitempty"`
+	Reason                      string                     `json:"reason,omitempty"`
+	InterruptedSceneID          string                     `json:"interrupted_scene_id,omitempty"`
+	InterruptedPhaseID          string                     `json:"interrupted_phase_id,omitempty"`
+	InterruptedPhaseStatus      string                     `json:"interrupted_phase_status,omitempty"`
+	ResolutionPending           bool                       `json:"resolution_pending"`
 }
 
 // --- Handlers ---
@@ -197,8 +213,8 @@ func (s *DirectSession) interactionStartScenePlayerPhase(ctx context.Context, ar
 	return toolResultJSON(interactionStateFromProto(resp.GetState()))
 }
 
-func (s *DirectSession) interactionAcceptScenePlayerPhase(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
-	var input interactionAcceptScenePlayerPhaseInput
+func (s *DirectSession) interactionResolveScenePlayerPhaseReview(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
+	var input interactionResolveScenePlayerPhaseReviewInput
 	if err := json.Unmarshal(argsJSON, &input); err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
 	}
@@ -212,81 +228,39 @@ func (s *DirectSession) interactionAcceptScenePlayerPhase(ctx context.Context, a
 	if err != nil {
 		return orchestration.ToolResult{}, err
 	}
-	resp, err := s.clients.Interaction.AcceptScenePlayerPhase(callCtx, &statev1.AcceptScenePlayerPhaseRequest{
+	req := &statev1.ResolveScenePlayerPhaseReviewRequest{
 		CampaignId: campaignID,
 		SceneId:    sceneID,
-	})
+	}
+	if input.AdvanceToPlayers != nil {
+		req.Resolution = &statev1.ResolveScenePlayerPhaseReviewRequest_AdvanceToPlayers{
+			AdvanceToPlayers: &statev1.ResolveScenePlayerPhaseReviewAdvanceToPlayers{
+				GmOutputText:     strings.TrimSpace(input.AdvanceToPlayers.GMOutputText),
+				NextFrameText:    strings.TrimSpace(input.AdvanceToPlayers.NextFrameText),
+				NextCharacterIds: append([]string(nil), input.AdvanceToPlayers.NextCharacterIDs...),
+			},
+		}
+	} else if len(input.RequestRevisions) != 0 {
+		revisions := make([]*statev1.ScenePlayerRevisionRequest, 0, len(input.RequestRevisions))
+		for _, rev := range input.RequestRevisions {
+			revisions = append(revisions, &statev1.ScenePlayerRevisionRequest{
+				ParticipantId: strings.TrimSpace(rev.ParticipantID),
+				Reason:        strings.TrimSpace(rev.Reason),
+				CharacterIds:  append([]string(nil), rev.CharacterIDs...),
+			})
+		}
+		req.Resolution = &statev1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions{
+			RequestRevisions: &statev1.ResolveScenePlayerPhaseReviewRequestRevisions{Revisions: revisions},
+		}
+	} else {
+		return orchestration.ToolResult{}, fmt.Errorf("advance_to_players or request_revisions is required")
+	}
+	resp, err := s.clients.Interaction.ResolveScenePlayerPhaseReview(callCtx, req)
 	if err != nil {
-		return orchestration.ToolResult{}, fmt.Errorf("accept scene player phase failed: %w", err)
+		return orchestration.ToolResult{}, fmt.Errorf("resolve scene player phase review failed: %w", err)
 	}
 	if resp == nil {
-		return orchestration.ToolResult{}, fmt.Errorf("accept scene player phase response is missing")
-	}
-	return toolResultJSON(interactionStateFromProto(resp.GetState()))
-}
-
-func (s *DirectSession) interactionRequestScenePlayerRevisions(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
-	var input interactionRequestScenePlayerRevisionsInput
-	if err := json.Unmarshal(argsJSON, &input); err != nil {
-		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
-	}
-	campaignID := s.resolveCampaignID(input.CampaignID)
-	if campaignID == "" {
-		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
-	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
-	sceneID, err := s.resolveSceneID(callCtx, campaignID, input.SceneID)
-	if err != nil {
-		return orchestration.ToolResult{}, err
-	}
-	revisions := make([]*statev1.ScenePlayerRevisionRequest, 0, len(input.Revisions))
-	for _, rev := range input.Revisions {
-		revisions = append(revisions, &statev1.ScenePlayerRevisionRequest{
-			ParticipantId: rev.ParticipantID,
-			Reason:        rev.Reason,
-			CharacterIds:  append([]string(nil), rev.CharacterIDs...),
-		})
-	}
-	resp, err := s.clients.Interaction.RequestScenePlayerRevisions(callCtx, &statev1.RequestScenePlayerRevisionsRequest{
-		CampaignId: campaignID,
-		SceneId:    sceneID,
-		Revisions:  revisions,
-	})
-	if err != nil {
-		return orchestration.ToolResult{}, fmt.Errorf("request scene player revisions failed: %w", err)
-	}
-	if resp == nil {
-		return orchestration.ToolResult{}, fmt.Errorf("request scene player revisions response is missing")
-	}
-	return toolResultJSON(interactionStateFromProto(resp.GetState()))
-}
-
-func (s *DirectSession) interactionEndScenePlayerPhase(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
-	var input interactionEndScenePlayerPhaseInput
-	if err := json.Unmarshal(argsJSON, &input); err != nil {
-		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
-	}
-	campaignID := s.resolveCampaignID(input.CampaignID)
-	if campaignID == "" {
-		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
-	}
-	callCtx, cancel := outgoingContext(ctx, s.sc)
-	defer cancel()
-	sceneID, err := s.resolveSceneID(callCtx, campaignID, input.SceneID)
-	if err != nil {
-		return orchestration.ToolResult{}, err
-	}
-	resp, err := s.clients.Interaction.EndScenePlayerPhase(callCtx, &statev1.EndScenePlayerPhaseRequest{
-		CampaignId: campaignID,
-		SceneId:    sceneID,
-		Reason:     input.Reason,
-	})
-	if err != nil {
-		return orchestration.ToolResult{}, fmt.Errorf("end scene player phase failed: %w", err)
-	}
-	if resp == nil {
-		return orchestration.ToolResult{}, fmt.Errorf("end scene player phase response is missing")
+		return orchestration.ToolResult{}, fmt.Errorf("resolve scene player phase review response is missing")
 	}
 	return toolResultJSON(interactionStateFromProto(resp.GetState()))
 }
@@ -302,7 +276,14 @@ func (s *DirectSession) interactionCommitSceneGMOutput(ctx context.Context, args
 	}
 	callCtx, cancel := outgoingContext(ctx, s.sc)
 	defer cancel()
-	sceneID, err := s.resolveSceneID(callCtx, campaignID, input.SceneID)
+	state, err := s.getInteractionState(callCtx, campaignID)
+	if err != nil {
+		return orchestration.ToolResult{}, err
+	}
+	if state.GetPlayerPhase().GetStatus() == statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW {
+		return orchestration.ToolResult{}, fmt.Errorf("scene is waiting on gm review; use interaction_scene_review_resolve instead of interaction_scene_gm_output_commit")
+	}
+	sceneID, err := s.resolveSceneIDFromState(state, input.SceneID)
 	if err != nil {
 		return orchestration.ToolResult{}, err
 	}
@@ -340,6 +321,45 @@ func (s *DirectSession) interactionPauseOOC(ctx context.Context, argsJSON []byte
 	}
 	if resp == nil {
 		return orchestration.ToolResult{}, fmt.Errorf("pause session for ooc response is missing")
+	}
+	return toolResultJSON(interactionStateFromProto(resp.GetState()))
+}
+
+func (s *DirectSession) interactionResolveInterruptedScenePhase(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
+	var input interactionResolveInterruptedScenePhaseInput
+	if err := json.Unmarshal(argsJSON, &input); err != nil {
+		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
+	}
+	campaignID := s.resolveCampaignID(input.CampaignID)
+	if campaignID == "" {
+		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
+	}
+	callCtx, cancel := outgoingContext(ctx, s.sc)
+	defer cancel()
+	req := &statev1.ResolveInterruptedScenePhaseRequest{CampaignId: campaignID}
+	switch {
+	case input.ResumeOriginalPhase:
+		req.Resolution = &statev1.ResolveInterruptedScenePhaseRequest_ResumeOriginalPhase{
+			ResumeOriginalPhase: &statev1.ResolveInterruptedScenePhaseResumeOriginal{},
+		}
+	case input.ReplaceWithPlayerPhase != nil:
+		req.Resolution = &statev1.ResolveInterruptedScenePhaseRequest_ReplaceWithPlayerPhase{
+			ReplaceWithPlayerPhase: &statev1.ResolveInterruptedScenePhaseReplaceWithPlayerPhase{
+				SceneId:      strings.TrimSpace(input.ReplaceWithPlayerPhase.SceneID),
+				GmOutputText: strings.TrimSpace(input.ReplaceWithPlayerPhase.GMOutputText),
+				FrameText:    strings.TrimSpace(input.ReplaceWithPlayerPhase.FrameText),
+				CharacterIds: append([]string(nil), input.ReplaceWithPlayerPhase.CharacterIDs...),
+			},
+		}
+	default:
+		return orchestration.ToolResult{}, fmt.Errorf("resume_original_phase or replace_with_player_phase is required")
+	}
+	resp, err := s.clients.Interaction.ResolveInterruptedScenePhase(callCtx, req)
+	if err != nil {
+		return orchestration.ToolResult{}, fmt.Errorf("resolve interrupted scene phase failed: %w", err)
+	}
+	if resp == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("resolve interrupted scene phase response is missing")
 	}
 	return toolResultJSON(interactionStateFromProto(resp.GetState()))
 }
@@ -440,31 +460,47 @@ func (s *DirectSession) interactionResumeOOC(ctx context.Context, argsJSON []byt
 // --- Helpers ---
 
 func (s *DirectSession) resolveCampaignID(explicit string) string {
-	if explicit != "" {
-		return explicit
+	if id := strings.TrimSpace(explicit); id != "" {
+		return id
 	}
-	return s.sc.CampaignID
+	return strings.TrimSpace(s.sc.CampaignID)
 }
 
 func (s *DirectSession) resolveSessionID(explicit string) string {
-	if explicit != "" {
-		return explicit
+	if id := strings.TrimSpace(explicit); id != "" {
+		return id
 	}
-	return s.sc.SessionID
+	return strings.TrimSpace(s.sc.SessionID)
 }
 
 func (s *DirectSession) resolveSceneID(ctx context.Context, campaignID, explicit string) (string, error) {
-	if explicit != "" {
-		return explicit, nil
+	state, err := s.getInteractionState(ctx, campaignID)
+	if err != nil {
+		return "", err
 	}
+	return s.resolveSceneIDFromState(state, explicit)
+}
+
+func (s *DirectSession) getInteractionState(ctx context.Context, campaignID string) (*statev1.InteractionState, error) {
 	resp, err := s.clients.Interaction.GetInteractionState(ctx, &statev1.GetInteractionStateRequest{CampaignId: campaignID})
 	if err != nil {
-		return "", fmt.Errorf("get interaction state failed: %w", err)
+		return nil, fmt.Errorf("get interaction state failed: %w", err)
 	}
 	if resp == nil || resp.State == nil {
-		return "", fmt.Errorf("get interaction state response is missing")
+		return nil, fmt.Errorf("get interaction state response is missing")
 	}
-	sceneID := resp.GetState().GetActiveScene().GetSceneId()
+	return resp.GetState(), nil
+}
+
+func (s *DirectSession) resolveSceneIDFromState(state *statev1.InteractionState, explicit string) (string, error) {
+	sceneID := strings.TrimSpace(explicit)
+	if sceneID != "" {
+		return sceneID, nil
+	}
+	if state == nil {
+		return "", fmt.Errorf("interaction state is required")
+	}
+	sceneID = strings.TrimSpace(state.GetActiveScene().GetSceneId())
 	if sceneID == "" {
 		return "", fmt.Errorf("scene_id is required when no active scene is set")
 	}
@@ -508,6 +544,12 @@ func interactionStateFromProto(state *statev1.InteractionState) interactionState
 			Open:                        state.GetOoc().GetOpen(),
 			Posts:                       make([]interactionOOCPostResult, 0, len(state.GetOoc().GetPosts())),
 			ReadyToResumeParticipantIDs: append([]string(nil), state.GetOoc().GetReadyToResumeParticipantIds()...),
+			RequestedByParticipantID:    state.GetOoc().GetRequestedByParticipantId(),
+			Reason:                      state.GetOoc().GetReason(),
+			InterruptedSceneID:          state.GetOoc().GetInterruptedSceneId(),
+			InterruptedPhaseID:          state.GetOoc().GetInterruptedPhaseId(),
+			InterruptedPhaseStatus:      scenePhaseStatusToString(state.GetOoc().GetInterruptedPhaseStatus()),
+			ResolutionPending:           state.GetOoc().GetResolutionPending(),
 		},
 	}
 	for _, ch := range state.GetActiveScene().GetCharacters() {

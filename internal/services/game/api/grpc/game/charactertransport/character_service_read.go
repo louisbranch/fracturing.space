@@ -96,7 +96,7 @@ func (s *Service) GetCharacterSheet(ctx context.Context, in *campaignv1.GetChara
 
 	return &campaignv1.GetCharacterSheetResponse{
 		Character: CharacterToProto(sheet.character),
-		Profile:   DaggerheartProfileToProto(campaignID, characterID, sheet.profile, s.app.stores.DaggerheartContent),
+		Profile:   DaggerheartSheetProfileToProto(ctx, campaignID, characterID, sheet.profile, s.app.stores.DaggerheartContent),
 		State:     DaggerheartStateToProto(campaignID, characterID, sheet.state),
 	}, nil
 }

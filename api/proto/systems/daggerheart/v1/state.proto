@@ -22,6 +22,10 @@ message DaggerheartHeritageSelection {
   string second_feature_ancestry_id = 4;
   string second_feature_id = 5;
   string community_id = 6;
+  // Display-ready ancestry summary resolved for sheet/card read surfaces.
+  string ancestry_name = 7;
+  // Display-ready community name resolved for sheet/card read surfaces.
+  string community_name = 8;
 }
 
 // DaggerheartCompanionSheet stores the static companion sheet selected during
@@ -187,6 +191,27 @@ message DaggerheartActiveClassFeature {
   bool hope_feature = 5;
 }
 
+// DaggerheartSheetWeaponSummary captures the display-ready weapon details used
+// by the character sheet read surface.
+message DaggerheartSheetWeaponSummary {
+  string id = 1;
+  string name = 2;
+  string trait = 3;
+  string range = 4;
+  string damage_dice = 5;
+  string damage_type = 6;
+  string feature = 7;
+}
+
+// DaggerheartSheetArmorSummary captures the display-ready armor details used by
+// the character sheet read surface.
+message DaggerheartSheetArmorSummary {
+  string id = 1;
+  string name = 2;
+  int32 base_score = 3;
+  string feature = 4;
+}
+
 message DaggerheartActiveSubclassTrackFeatures {
   DaggerheartSubclassTrack track = 1;
   repeated DaggerheartActiveSubclassFeature foundation_features = 2;
@@ -291,6 +316,15 @@ message DaggerheartProfile {
 
   // Derived active class features from the selected primary class.
   repeated DaggerheartActiveClassFeature active_class_features = 35;
+
+  // Sheet-ready primary weapon summary resolved from selected equipment.
+  DaggerheartSheetWeaponSummary primary_weapon = 36;
+
+  // Sheet-ready secondary weapon summary resolved from selected equipment.
+  DaggerheartSheetWeaponSummary secondary_weapon = 37;
+
+  // Sheet-ready active armor summary resolved from selected equipment.
+  DaggerheartSheetArmorSummary active_armor = 38;
 }
 
 // DaggerheartCreationStepClassSubclassInput applies creation step 1

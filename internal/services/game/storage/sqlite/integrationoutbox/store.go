@@ -127,10 +127,6 @@ func integrationOutboxEventsForEvent(evt event.Event) ([]storage.IntegrationOutb
 		return buildInviteClaimedOutboxEvent(evt)
 	case invite.EventTypeDeclined:
 		return buildInviteDeclinedOutboxEvent(evt)
-	case session.EventTypeStarted:
-		return buildAIGMTurnRequestedOutboxEvent(evt)
-	case session.EventTypeActiveSceneSet:
-		return buildAIGMTurnRequestedOutboxEvent(evt)
 	case session.EventTypeGMAuthoritySet:
 		return buildAIGMTurnRequestedOutboxEvent(evt)
 	case session.EventTypeOOCResumed:
@@ -241,12 +237,6 @@ func buildAIGMTurnRequestedOutboxEvent(evt event.Event) ([]storage.IntegrationOu
 		SourceEventType: strings.TrimSpace(string(evt.Type)),
 	}
 	switch evt.Type {
-	case session.EventTypeActiveSceneSet:
-		var source session.ActiveSceneSetPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &source); err != nil {
-			return nil, fmt.Errorf("decode session.active_scene_set integration payload: %w", err)
-		}
-		payload.SourceSceneID = strings.TrimSpace(source.ActiveSceneID.String())
 	case scene.EventTypePlayerPhaseReviewStarted:
 		var source scene.PlayerPhaseReviewStartedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &source); err != nil {

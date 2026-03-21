@@ -108,7 +108,8 @@ func (a interactionApplication) aiTurnEligibility(
 	sessionInteraction storage.SessionInteraction,
 	sourceEventType string,
 ) (aiTurnEligibilityResult, error) {
-	bootstrap := strings.TrimSpace(sourceEventType) == string(session.EventTypeStarted)
+	sourceEventType = strings.TrimSpace(sourceEventType)
+	bootstrap := sourceEventType == string(session.EventTypeStarted) || sourceEventType == string(session.EventTypeGMAuthoritySet)
 	if campaignRecord.GmMode != campaign.GmModeAI && campaignRecord.GmMode != campaign.GmModeHybrid {
 		return aiTurnEligibilityResult{reason: "campaign gm mode does not support ai orchestration"}, nil
 	}
@@ -120,6 +121,9 @@ func (a interactionApplication) aiTurnEligibility(
 	}
 	if sessionInteraction.OOCPaused {
 		return aiTurnEligibilityResult{reason: "session is paused for out-of-character discussion"}, nil
+	}
+	if sessionInteraction.OOCResolutionPending && sourceEventType != string(session.EventTypeOOCResumed) {
+		return aiTurnEligibilityResult{reason: "session is waiting for post-ooc resolution"}, nil
 	}
 	if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" && !bootstrap {
 		return aiTurnEligibilityResult{reason: "session has no active scene"}, nil
@@ -149,6 +153,9 @@ func (a interactionApplication) aiTurnEligibility(
 	sceneInteraction, err := a.stores.SceneInteraction.GetSceneInteraction(ctx, campaignRecord.ID, sessionInteraction.ActiveSceneID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return aiTurnEligibilityResult{}, grpcerror.Internal("load active scene interaction", err)
+	}
+	if sessionInteraction.OOCResolutionPending {
+		return aiTurnEligibilityResult{ok: true, ownerParticipant: owner}, nil
 	}
 	if err == nil && sceneInteraction.PhaseOpen && strings.TrimSpace(sceneInteraction.PhaseID) != "" && sceneInteraction.PhaseStatus != scene.PlayerPhaseStatusGMReview {
 		return aiTurnEligibilityResult{reason: "scene player phase is open"}, nil

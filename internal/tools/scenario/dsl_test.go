@@ -355,10 +355,12 @@ scn:interaction_unyield({as = "Rhea"})
 scn:interaction_end_player_phase({reason = "gm_interrupted"})
 scn:interaction_accept_player_phase({as = "Guide"})
 scn:interaction_request_revisions({as = "Guide", revisions = {{participant = "Rhea", reason = "Clarify", characters = {"Aria"}}}})
+scn:interaction_resolve_review({as = "Guide", gm_output_text = "The bridge buckles.", frame_text = "Who catches the lantern?", characters = {"Aria"}})
 scn:interaction_pause_ooc({reason = "clarify the ruling"})
 scn:interaction_post_ooc({as = "Rhea", body = "Question?"})
 scn:interaction_ready_ooc({as = "Rhea"})
 scn:interaction_clear_ready_ooc({as = "Rhea"})
+scn:interaction_resolve_interrupted_phase({as = "Guide", resume_original_phase = true})
 scn:interaction_expect({phase_status = "GM_REVIEW", slots = {}, ooc_posts = {}})
 
 return scn
@@ -377,10 +379,12 @@ return scn
 		"interaction_end_player_phase",
 		"interaction_accept_player_phase",
 		"interaction_request_revisions",
+		"interaction_resolve_review",
 		"interaction_pause_ooc",
 		"interaction_post_ooc",
 		"interaction_ready_ooc",
 		"interaction_clear_ready_ooc",
+		"interaction_resolve_interrupted_phase",
 		"interaction_expect",
 	}
 	if len(scenario.Steps) != len(wantKinds) {
