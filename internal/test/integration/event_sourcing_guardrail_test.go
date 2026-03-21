@@ -33,7 +33,7 @@ func TestProjectionStoreWritesAreEventDriven(t *testing.T) {
 		t.Fatal("storage package not found")
 	}
 	storagePkg := storagePkgs[0]
-	projectionStorePkgs, err := packages.Load(config, "./internal/services/game/domain/bridge/daggerheart/projectionstore")
+	projectionStorePkgs, err := packages.Load(config, "./internal/services/game/domain/systems/daggerheart/projectionstore")
 	if err != nil {
 		t.Fatalf("load daggerheart projectionstore package: %v", err)
 	}

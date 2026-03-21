@@ -2,8 +2,8 @@ package daggerheart
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 const (

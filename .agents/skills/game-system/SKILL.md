@@ -12,7 +12,7 @@ Daggerheart reference implementation.
 ## Quick-start workflow
 
 1. **Start at manifest.go** — open
-   `internal/services/game/domain/bridge/manifest/manifest.go` first. It shows
+   `internal/services/game/domain/systems/manifest/manifest.go` first. It shows
    all three registry surfaces (`BuildModule`, `BuildMetadataSystem`,
    `BuildAdapter`) wired from one `SystemDescriptor`. Read an existing entry
    (Daggerheart) to understand the shape, then add yours.
@@ -60,11 +60,11 @@ Daggerheart reference implementation.
 
 | Concern | Location |
 |---|---|
-| Manifest registry | `domain/bridge/manifest/manifest.go` |
+| Manifest registry | `domain/systems/manifest/manifest.go` |
 | Module interface | `domain/module/registry.go` |
-| Adapter interface | `domain/bridge/adapter_registry.go` |
-| ProfileAdapter | `domain/bridge/adapter_registry.go` |
+| Adapter interface | `domain/systems/adapter_registry.go` |
+| ProfileAdapter | `domain/systems/adapter_registry.go` |
 | DecideFunc helpers | `domain/module/decide_func.go` |
 | FoldRouter | `domain/module/fold_router.go` |
 | Conformance tests | `domain/module/testkit/` |
-| Daggerheart example | `domain/bridge/daggerheart/` |
+| Daggerheart example | `domain/systems/daggerheart/` |

@@ -1,7 +1,7 @@
 package coreprojection
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	sqlitedaggerheartprojection "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartprojection"
 )
 

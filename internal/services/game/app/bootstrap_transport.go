@@ -13,7 +13,7 @@ import (
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/interceptors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"

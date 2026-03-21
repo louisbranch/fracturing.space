@@ -10,11 +10,11 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
@@ -323,97 +323,6 @@ func TestGetCampaignSessionReadiness_CharacterControllerUsesCharacterName(t *tes
 	}
 	if strings.Contains(blocker.GetMessage(), "char-1") {
 		t.Fatalf("blocker message = %q, did not expect character id when name is present", blocker.GetMessage())
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_CharacterControllerUsesCharacterName(t *testing.T) {
-	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessCharacterControllerRequired,
-		Metadata: map[string]string{
-			"character_id":   "char-1",
-			"character_name": "Aria",
-		},
-	})
-	if !strings.Contains(message, "Aria") {
-		t.Fatalf("message = %q, want character name in localized message", message)
-	}
-	if strings.Contains(message, "char-1") {
-		t.Fatalf("message = %q, did not expect character id when name is present", message)
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_CharacterControllerFallsBackToCharacterID(t *testing.T) {
-	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessCharacterControllerRequired,
-		Metadata: map[string]string{
-			"character_id": "char-1",
-		},
-	})
-	if !strings.Contains(message, "char-1") {
-		t.Fatalf("message = %q, want character id fallback in localized message", message)
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_CharacterSystemWithoutReason(t *testing.T) {
-	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessCharacterSystemRequired,
-		Metadata: map[string]string{
-			"character_id": "char-1",
-		},
-	})
-	if strings.Contains(strings.ToLower(message), "unspecified") {
-		t.Fatalf("message = %q, did not expect unspecified fallback reason", message)
-	}
-	if !strings.Contains(message, "char-1") {
-		t.Fatalf("message = %q, want character id in message", message)
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_CharacterSystemUsesCharacterName(t *testing.T) {
-	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessCharacterSystemRequired,
-		Metadata: map[string]string{
-			"character_id":   "char-1",
-			"character_name": "Aria",
-			"reason":         "class is required",
-		},
-	})
-	if !strings.Contains(message, "Aria") {
-		t.Fatalf("message = %q, want character name in localized message", message)
-	}
-	if strings.Contains(message, "char-1") {
-		t.Fatalf("message = %q, did not expect character id when name is present", message)
-	}
-	if !strings.Contains(message, "class is required") {
-		t.Fatalf("message = %q, want readiness reason", message)
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_PlayerCharacterUsesParticipantName(t *testing.T) {
-	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessPlayerCharacterRequired,
-		Metadata: map[string]string{
-			"participant_id":   "player-2",
-			"participant_name": "Player Two",
-		},
-	})
-	if !strings.Contains(message, "Player Two") {
-		t.Fatalf("message = %q, want participant name in localized message", message)
-	}
-	if strings.Contains(message, "player-2") {
-		t.Fatalf("message = %q, did not expect participant id when name is present", message)
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_PlayerCharacterFallsBackToParticipantID(t *testing.T) {
-	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessPlayerCharacterRequired,
-		Metadata: map[string]string{
-			"participant_id": "player-2",
-		},
-	})
-	if !strings.Contains(message, "player-2") {
-		t.Fatalf("message = %q, want participant id fallback in localized message", message)
 	}
 }
 

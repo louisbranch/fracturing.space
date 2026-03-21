@@ -13,10 +13,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )

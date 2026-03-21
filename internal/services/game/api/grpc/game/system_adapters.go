@@ -1,8 +1,8 @@
 package game
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 )
 
 // TryAdapterRegistryForSystemStores builds the adapter registry from the

@@ -1,6 +1,6 @@
 package daggerheart
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 
 func newContentTestService() *DaggerheartContentService {
 	cs := newFakeContentStore()

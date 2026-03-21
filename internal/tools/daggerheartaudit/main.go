@@ -477,7 +477,7 @@ func buildRepoMappings(entry corpusIndexEntry) []repoMapping {
 				Surface: "content",
 				Paths: []string{
 					"api/proto/systems/daggerheart/v1/content.proto",
-					"internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go",
+					"internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
 					"internal/services/game/api/grpc/systems/daggerheart/contenttransport/",
 					"internal/services/game/storage/sqlite/daggerheartcontent/",
 					"internal/tools/importer/content/daggerheart/v1/",
@@ -515,14 +515,14 @@ func buildRepoMappings(entry corpusIndexEntry) []repoMapping {
 				Surface: "content",
 				Paths: []string{
 					"api/proto/systems/daggerheart/v1/content.proto",
-					"internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go",
+					"internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
 				},
 				Notes: "Ability semantics may resolve through domain cards, class features, subclass features, or genericized system behavior.",
 			},
 			repoMapping{
 				Surface: "domain_module",
 				Paths: []string{
-					"internal/services/game/domain/bridge/daggerheart/",
+					"internal/services/game/domain/systems/daggerheart/",
 					"internal/services/game/api/grpc/systems/daggerheart/",
 				},
 			},
@@ -535,7 +535,7 @@ func buildRepoMappings(entry corpusIndexEntry) []repoMapping {
 			repoMapping{
 				Surface: "domain_module",
 				Paths: []string{
-					"internal/services/game/domain/bridge/daggerheart/creation_workflow.go",
+					"internal/services/game/domain/systems/daggerheart/creation_workflow.go",
 					"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/",
 				},
 			},
@@ -561,7 +561,7 @@ func buildRepoMappings(entry corpusIndexEntry) []repoMapping {
 			repoMapping{
 				Surface: "domain_module",
 				Paths: []string{
-					"internal/services/game/domain/bridge/daggerheart/",
+					"internal/services/game/domain/systems/daggerheart/",
 				},
 			},
 			repoMapping{
@@ -582,7 +582,7 @@ func buildRepoMappings(entry corpusIndexEntry) []repoMapping {
 			repoMapping{
 				Surface: "domain_module",
 				Paths: []string{
-					"internal/services/game/domain/bridge/daggerheart/",
+					"internal/services/game/domain/systems/daggerheart/",
 				},
 			},
 			repoMapping{

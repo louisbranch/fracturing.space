@@ -7,7 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -25,8 +25,8 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Introduce an authoritative mapping layer from extracted ability rows to domain cards, class features, subclass features, or explicit runtime mechanics so ability coverage is proven instead of inferred.",
 		Boundary: "Content-to-runtime semantic mapping for ability-shaped reference entries.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go",
-			"internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go",
+			"internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
+			"internal/services/game/domain/systems/daggerheart/mechanics_manifest.go",
 			"api/proto/systems/daggerheart/v1/content.proto",
 			"internal/tools/importer/content/daggerheart/v1/",
 		},
@@ -46,7 +46,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Close the gap between adversary catalog entries and runtime adversary behavior, especially fear features, move semantics, and entry-specific rules.",
 		Boundary: "Adversary runtime semantics beyond base stats, conditions, and damage application.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/state.go",
+			"internal/services/game/domain/systems/daggerheart/state.go",
 			"internal/services/game/api/grpc/systems/daggerheart/damagetransport/",
 			"internal/services/game/api/grpc/systems/daggerheart/gmmovetransport/",
 			"api/proto/systems/daggerheart/v1/content.proto",
@@ -66,7 +66,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Model beastform transformation, attack semantics, and state transitions as first-class runtime behavior instead of content-only catalog rows.",
 		Boundary: "Character transformation and beastform-specific combat/profile behavior.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/",
 			"internal/services/game/api/grpc/systems/daggerheart/",
 			"api/proto/systems/daggerheart/v1/state.proto",
 			"api/proto/systems/daggerheart/v1/content.proto",
@@ -86,8 +86,8 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Promote class hope features and starting class features from descriptive content into explicit runtime contracts and execution paths.",
 		Boundary: "Class-owned mechanics and character state hooks.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/character_profile_contract.go",
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/character_profile_contract.go",
+			"internal/services/game/domain/systems/daggerheart/",
 			"api/proto/systems/daggerheart/v1/state.proto",
 			"api/proto/systems/daggerheart/v1/content.proto",
 		},
@@ -106,7 +106,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Extend condition handling beyond the standard named set so temporary tags, special conditions, and clearing rules are first-class and auditable.",
 		Boundary: "Condition lifecycle, storage shape, and clearing semantics.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/compat_conditions.go",
+			"internal/services/game/domain/systems/daggerheart/compat_conditions.go",
 			"internal/services/game/api/grpc/systems/daggerheart/workfloweffects/",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
@@ -125,7 +125,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Reconcile remaining umbrella-level mechanics drift so resource, recovery, fear, and condition rules match the extracted reference at the system boundary.",
 		Boundary: "Cross-cutting Daggerheart mechanics that do not fit a narrower epic cleanly.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/",
 			"internal/services/game/api/grpc/systems/daggerheart/",
 			"docs/reference/daggerheart-event-timeline-contract.md",
 		},
@@ -143,7 +143,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Align the creation workflow ordering and readiness contract across domain, gRPC, web, MCP, and docs with the extracted reference.",
 		Boundary: "Character creation sequencing and step-owned fields.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/creation_workflow.go",
+			"internal/services/game/domain/systems/daggerheart/creation_workflow.go",
 			"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/",
 			"internal/services/web/modules/campaigns/workflow/daggerheart/",
 			"internal/services/mcp/domain/character_handlers.go",
@@ -165,7 +165,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Enforce the terminal outcome when scars remove the final hope slot so death-move semantics fully match the reference.",
 		Boundary: "Death-move resolution and post-scar character lifecycle.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/internal/mechanics/death.go",
+			"internal/services/game/domain/systems/daggerheart/internal/mechanics/death.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/handler.go",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
@@ -183,8 +183,8 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Bring the downtime move menu, short-rest versus long-rest behavior, and project advancement semantics into parity with the reference across domain and transport surfaces.",
 		Boundary: "Rest and downtime move coverage.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/internal/mechanics/rest.go",
-			"internal/services/game/domain/bridge/daggerheart/internal/mechanics/downtime.go",
+			"internal/services/game/domain/systems/daggerheart/internal/mechanics/rest.go",
+			"internal/services/game/domain/systems/daggerheart/internal/mechanics/downtime.go",
 			"internal/services/game/api/grpc/systems/daggerheart/recoverytransport/",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
@@ -203,7 +203,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Promote environment entries from content-only rows into first-class runtime entities with fear features and consequence hooks.",
 		Boundary: "Environment runtime state and execution semantics.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/",
 			"internal/services/game/api/grpc/systems/daggerheart/",
 			"api/proto/systems/daggerheart/v1/content.proto",
 			"api/proto/systems/daggerheart/v1/state.proto",
@@ -223,8 +223,8 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Model armor and other equipment feature text that materially changes stats or rolls instead of limiting implementation to base scores and thresholds.",
 		Boundary: "Equipment-derived modifiers and special rules.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/character_profile_contract.go",
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/character_profile_contract.go",
+			"internal/services/game/domain/systems/daggerheart/",
 			"api/proto/systems/daggerheart/v1/content.proto",
 		},
 		TestsRequired: []string{
@@ -242,10 +242,10 @@ var epicDefinitions = map[string]epicDefinition{
 		Boundary: "First-session bootstrap semantics and pre-activation fear defaults.",
 		ContractsToTouch: []string{
 			"internal/services/game/domain/readiness/session_start_workflow.go",
-			"internal/services/game/domain/bridge/daggerheart/module.go",
-			"internal/services/game/domain/bridge/daggerheart/state.go",
-			"internal/services/game/domain/bridge/daggerheart/state_factory.go",
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/module.go",
+			"internal/services/game/domain/systems/daggerheart/state.go",
+			"internal/services/game/domain/systems/daggerheart/state_factory.go",
+			"internal/services/game/domain/systems/daggerheart/",
 		},
 		TestsRequired: []string{
 			"Bootstrap tests for initial fear values derived from created-PC count on first session activation.",
@@ -263,7 +263,7 @@ var epicDefinitions = map[string]epicDefinition{
 		ContractsToTouch: []string{
 			"internal/services/game/api/grpc/systems/daggerheart/gmmovetransport/",
 			"internal/services/game/api/grpc/systems/daggerheart/outcometransport/",
-			"internal/services/game/domain/bridge/daggerheart/gm_fear_rules.go",
+			"internal/services/game/domain/systems/daggerheart/gm_fear_rules.go",
 			"api/proto/systems/daggerheart/v1/service.proto",
 		},
 		TestsRequired: []string{
@@ -281,7 +281,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Add first-class mixed-heritage and companion modeling so ancestry/community features and companion-backed selections become durable runtime data instead of loosely coupled content.",
 		Boundary: "Character profile shape for heritage composition and companion ownership.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/character_profile_contract.go",
+			"internal/services/game/domain/systems/daggerheart/character_profile_contract.go",
 			"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/",
 			"internal/services/web/modules/campaigns/workflow/daggerheart/",
 			"api/proto/systems/daggerheart/v1/state.proto",
@@ -302,7 +302,7 @@ var epicDefinitions = map[string]epicDefinition{
 		Summary:  "Promote mechanically meaningful item and consumable entries into explicit runtime item-use behavior rather than leaving them as descriptive catalog text.",
 		Boundary: "Inventory- and item-use semantics for Daggerheart content rows.",
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/",
 			"internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/",
 			"api/proto/systems/daggerheart/v1/content.proto",
 			"api/proto/systems/daggerheart/v1/state.proto",
@@ -325,7 +325,7 @@ var epicDefinitions = map[string]epicDefinition{
 			"heritage-and-companion-modeling",
 		},
 		ContractsToTouch: []string{
-			"internal/services/game/domain/bridge/daggerheart/",
+			"internal/services/game/domain/systems/daggerheart/",
 			"internal/services/game/api/grpc/systems/daggerheart/",
 			"api/proto/systems/daggerheart/v1/state.proto",
 			"api/proto/systems/daggerheart/v1/content.proto",

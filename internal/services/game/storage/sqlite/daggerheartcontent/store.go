@@ -8,7 +8,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/migrations"
 )

@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	sqlitedaggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartcontent"
 )
 

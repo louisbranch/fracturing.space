@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authorizationtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport/aitransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/eventtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/forktransport"
@@ -23,7 +24,7 @@ import (
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/gameplaystores"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -108,7 +109,6 @@ func buildServiceDescriptors(
 		Applier:            stores.Applier(),
 		AuthClient:         authClient,
 		AIClient:           aiAgentClient,
-		SessionGrantConfig: sessionGrantConfig,
 	}
 	campaignService := campaigntransport.NewCampaignService(campaignDeps)
 	participantService := participanttransport.NewService(participanttransport.Deps{
@@ -203,7 +203,13 @@ func buildServiceDescriptors(
 		Character:   stores.Character,
 		Audit:       stores.Audit,
 	})
-	campaignAIService := campaigntransport.NewCampaignAIService(campaignDeps)
+	campaignAIService := aitransport.NewService(aitransport.Deps{
+		Campaign:           stores.Campaign,
+		Session:            stores.Session,
+		Participant:        stores.Participant,
+		SessionInteraction: stores.SessionInteraction,
+		SessionGrantConfig: sessionGrantConfig,
+	})
 	campaignAIOrchestrationService := gamegrpc.NewCampaignAIOrchestrationService(stores)
 	interactionService := interactiontransport.NewInteractionService(interactiontransport.Deps{
 		Auth: authz.PolicyDeps{

@@ -19,7 +19,7 @@ acyclic as the number of game systems grows.
 The game service has four tiers, ordered by allowed dependency direction:
 
 ```
-platform  ←  core  ←  domain  ←  domain/bridge
+platform  ←  core  ←  domain  ←  domain/systems
 ```
 
 Each tier may import from tiers to its left but never to its right.
@@ -49,7 +49,7 @@ cryptographic random seeding, and encoding helpers.
 
 - The concept references campaign, session, participant, or event types
   (use `domain/` instead).
-- The concept is specific to one game system (use `domain/bridge/<system>/`).
+- The concept is specific to one game system (use `domain/systems/<system>/`).
 
 **Examples:** `dice.Roll(n, sides, seed)`, `check.Against(dc, modifier)`,
 `random.NewSeed()`.
@@ -72,7 +72,7 @@ lifecycle, the event schema, and replay/fold logic.
 **Do not put code here when:**
 
 - The concept implements rules from a specific game system — use
-  `domain/bridge/<system>/` and register it through the module interface.
+  `domain/systems/<system>/` and register it through the module interface.
 - The concept is a read-model or storage contract — use `storage/` or
   `projection/`.
 
@@ -87,7 +87,7 @@ lifecycle, the event schema, and replay/fold logic.
 | `domain/module/` | Module interface for game system extension |
 | `domain/<entity>/` | Per-entity state, events, folds, decisions |
 
-### `domain/bridge/` and `domain/bridge/<system>/`
+### `domain/systems/` and `domain/systems/<system>/`
 
 System-specific mechanics: adapters, state factories, deciders, folds,
 and projection hooks for a particular game system (e.g. Daggerheart).
@@ -116,7 +116,7 @@ When adding a new type or function, walk through these questions:
 1. **Is it service-agnostic infrastructure?** → `platform/`
 2. **Is it a pure mechanical primitive with no domain model references?** → `core/`
 3. **Does it reference campaign/session/event types but not a specific game system?** → `domain/`
-4. **Does it implement rules or state for a specific game system?** → `domain/bridge/<system>/`
+4. **Does it implement rules or state for a specific game system?** → `domain/systems/<system>/`
 
 If the answer is ambiguous, prefer the **most specific tier** — code is
 easier to generalize later than to disentangle.
@@ -126,7 +126,7 @@ easier to generalize later than to disentangle.
 - `core/` imports only `platform/errors` (no other upward imports).
 - `domain/` imports `core/` and `platform/` but never `bridge/` or
   `storage/`.
-- `domain/bridge/` imports `domain/` and `core/` but never `storage/`
+- `domain/systems/` imports `domain/` and `core/` but never `storage/`
   directly — descriptor-owned adapter builders may extract system stores from
   concrete backend sources, but that extraction logic stays inside the system
   descriptor rather than a shared manifest bundle.

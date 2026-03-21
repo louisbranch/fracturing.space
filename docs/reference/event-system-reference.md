@@ -74,11 +74,11 @@ Runtime registration should remain coherent across these surfaces:
 - command registry (`domain/command`)
 - event registry (`domain/event`)
 - module registry (`domain/module`)
-- adapter registry (`domain/bridge/adapter_registry.go`)
-- metadata registry (`domain/bridge/registry_bridge.go`)
+- adapter registry (`domain/systems/adapter_registry.go`)
+- metadata registry (`domain/systems/registry_bridge.go`)
 
 For system modules, manifest-driven registration in
-`internal/services/game/domain/bridge/manifest/manifest.go` is the source of
+`internal/services/game/domain/systems/manifest/manifest.go` is the source of
 truth for module + metadata + adapter alignment.
 
 ## Validation rules and why they matter

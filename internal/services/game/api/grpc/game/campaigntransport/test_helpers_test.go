@@ -249,11 +249,6 @@ func newTestCampaignService(deps Deps, clock func() time.Time, idGenerator func(
 	return newCampaignServiceWithDependencies(deps, clock, idGenerator)
 }
 
-// newTestCampaignAIService wraps newCampaignAIServiceWithDependencies for tests.
-func newTestCampaignAIService(deps Deps, clock func() time.Time, idGenerator func() (string, error)) *CampaignAIService {
-	return newCampaignAIServiceWithDependencies(deps, clock, idGenerator)
-}
-
 // writeDeps returns a Deps with domain executor and runtime configured.
 func writeDeps(domain handler.Domain, base Deps) Deps {
 	base.Write = domainwriteexec.WritePath{

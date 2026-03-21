@@ -12,7 +12,7 @@
       "summary": "Close the gap between adversary catalog entries and runtime adversary behavior, especially fear features, move semantics, and entry-specific rules.",
       "boundary": "Adversary runtime semantics beyond base stats, conditions, and damage application.",
       "contracts_to_touch": [
-        "internal/services/game/domain/bridge/daggerheart/state.go",
+        "internal/services/game/domain/systems/daggerheart/state.go",
         "internal/services/game/api/grpc/systems/daggerheart/damagetransport/",
         "internal/services/game/api/grpc/systems/daggerheart/gmmovetransport/",
         "api/proto/systems/daggerheart/v1/content.proto"
@@ -57,8 +57,8 @@
       "evidence_code": [
         "api/proto/systems/daggerheart/v1/content.proto",
         "internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler.go",
-        "internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go",
-        "internal/services/game/domain/bridge/daggerheart/state.go"
+        "internal/services/game/domain/systems/daggerheart/mechanics_manifest.go",
+        "internal/services/game/domain/systems/daggerheart/state.go"
       ],
       "evidence_tests": [
         "internal/services/game/api/grpc/systems/daggerheart/adversaries_test.go",
@@ -76,8 +76,8 @@
       "summary": "Introduce an authoritative mapping layer from extracted ability rows to domain cards, class features, subclass features, or explicit runtime mechanics so ability coverage is proven instead of inferred.",
       "boundary": "Content-to-runtime semantic mapping for ability-shaped reference entries.",
       "contracts_to_touch": [
-        "internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go",
-        "internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go",
+        "internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
+        "internal/services/game/domain/systems/daggerheart/mechanics_manifest.go",
         "api/proto/systems/daggerheart/v1/content.proto",
         "internal/tools/importer/content/daggerheart/v1/"
       ],
@@ -121,8 +121,8 @@
       ],
       "evidence_code": [
         "api/proto/systems/daggerheart/v1/content.proto",
-        "internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go",
-        "internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go"
+        "internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
+        "internal/services/game/domain/systems/daggerheart/mechanics_manifest.go"
       ],
       "evidence_tests": [
         "internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go"
@@ -138,7 +138,7 @@
       "summary": "Promote mechanically meaningful item and consumable entries into explicit runtime item-use behavior rather than leaving them as descriptive catalog text.",
       "boundary": "Inventory- and item-use semantics for Daggerheart content rows.",
       "contracts_to_touch": [
-        "internal/services/game/domain/bridge/daggerheart/",
+        "internal/services/game/domain/systems/daggerheart/",
         "internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/",
         "api/proto/systems/daggerheart/v1/content.proto",
         "api/proto/systems/daggerheart/v1/state.proto"
@@ -187,7 +187,7 @@
       "evidence_code": [
         "api/proto/systems/daggerheart/v1/content.proto",
         "internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/",
-        "internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go",
+        "internal/services/game/domain/systems/daggerheart/contentstore/contracts.go",
         "internal/services/game/storage/sqlite/daggerheartcontent/",
         "internal/tools/importer/content/daggerheart/v1/"
       ],

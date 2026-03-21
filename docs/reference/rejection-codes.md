@@ -192,7 +192,7 @@ rejections -- they describe blockers for session start:
 
 ## Daggerheart System
 
-Defined in `domain/bridge/daggerheart/`:
+Defined in `domain/systems/daggerheart/`:
 
 | Code | When |
 |------|------|

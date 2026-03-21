@@ -2,8 +2,8 @@ package gametest
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 )
 
 // SetupRuntime builds a write-path runtime configured for tests, using the

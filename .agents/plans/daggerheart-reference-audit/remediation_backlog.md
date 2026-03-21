@@ -18,7 +18,7 @@ Generated backlog synthesized from `audit_matrix.json` gap rows.
 - Sample references: `adversary-acid-burrower`, `adversary-adult-flickerfly`, `adversary-apprentice-assassin`, `adversary-arch-necromancer`, `adversary-archer-guard`, `adversary-archer-squadron`, `adversary-assassin-poisoner`, `adversary-battle-box`
 
 Contracts to touch:
-- `internal/services/game/domain/bridge/daggerheart/state.go`
+- `internal/services/game/domain/systems/daggerheart/state.go`
 - `internal/services/game/api/grpc/systems/daggerheart/damagetransport/`
 - `internal/services/game/api/grpc/systems/daggerheart/gmmovetransport/`
 - `api/proto/systems/daggerheart/v1/content.proto`
@@ -34,8 +34,8 @@ Removal criteria:
 Representative code evidence:
 - `api/proto/systems/daggerheart/v1/content.proto`
 - `internal/services/game/api/grpc/systems/daggerheart/damagetransport/handler.go`
-- `internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go`
-- `internal/services/game/domain/bridge/daggerheart/state.go`
+- `internal/services/game/domain/systems/daggerheart/mechanics_manifest.go`
+- `internal/services/game/domain/systems/daggerheart/state.go`
 
 Representative test evidence:
 - `internal/services/game/api/grpc/systems/daggerheart/adversaries_test.go`
@@ -58,8 +58,8 @@ Representative docs:
 - Sample references: `ability-a-soldier-s-bond`, `ability-adjust-reality`, `ability-arcana-touched`, `ability-arcane-reflection`, `ability-armorer`, `ability-astral-projection`, `ability-banish`, `ability-bare-bones`
 
 Contracts to touch:
-- `internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go`
-- `internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go`
+- `internal/services/game/domain/systems/daggerheart/contentstore/contracts.go`
+- `internal/services/game/domain/systems/daggerheart/mechanics_manifest.go`
 - `api/proto/systems/daggerheart/v1/content.proto`
 - `internal/tools/importer/content/daggerheart/v1/`
 
@@ -74,8 +74,8 @@ Removal criteria:
 
 Representative code evidence:
 - `api/proto/systems/daggerheart/v1/content.proto`
-- `internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go`
-- `internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go`
+- `internal/services/game/domain/systems/daggerheart/contentstore/contracts.go`
+- `internal/services/game/domain/systems/daggerheart/mechanics_manifest.go`
 
 Representative test evidence:
 - `internal/services/game/api/grpc/systems/daggerheart/contenttransport/service_test.go`
@@ -96,7 +96,7 @@ Representative docs:
 - Sample references: `consumable-acidpaste`, `consumable-armor-stitcher`, `consumable-attune-potion`, `consumable-blinding-orb`, `consumable-blood-of-the-yorgi`, `consumable-bolster-potion`, `consumable-bonding-honey`, `consumable-bridge-seed`
 
 Contracts to touch:
-- `internal/services/game/domain/bridge/daggerheart/`
+- `internal/services/game/domain/systems/daggerheart/`
 - `internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/`
 - `api/proto/systems/daggerheart/v1/content.proto`
 - `api/proto/systems/daggerheart/v1/state.proto`
@@ -112,7 +112,7 @@ Removal criteria:
 Representative code evidence:
 - `api/proto/systems/daggerheart/v1/content.proto`
 - `internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport/`
-- `internal/services/game/domain/bridge/daggerheart/contentstore/contracts.go`
+- `internal/services/game/domain/systems/daggerheart/contentstore/contracts.go`
 - `internal/services/game/storage/sqlite/daggerheartcontent/`
 - `internal/tools/importer/content/daggerheart/v1/`
 

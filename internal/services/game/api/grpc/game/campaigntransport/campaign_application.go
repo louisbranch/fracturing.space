@@ -9,11 +9,10 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
 // Deps holds the explicit dependencies for the campaign transport subpackage.
@@ -30,7 +29,6 @@ type Deps struct {
 	Applier            projection.Applier
 	AuthClient         authv1.AuthServiceClient
 	AIClient           aiv1.AgentServiceClient
-	SessionGrantConfig aisessiongrant.Config
 }
 
 // campaignApplication coordinates campaign transport use-cases across focused

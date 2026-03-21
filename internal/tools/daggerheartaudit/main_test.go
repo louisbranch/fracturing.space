@@ -133,7 +133,7 @@ func TestBuildEpicCatalogAggregatesGapRows(t *testing.T) {
 			FinalStatus:  "gap",
 			GapClass:     "missing_model",
 			FollowUpEpic: "heritage-and-companion-modeling",
-			EvidenceCode: []string{"internal/services/game/domain/bridge/daggerheart/creation_workflow.go"},
+			EvidenceCode: []string{"internal/services/game/domain/systems/daggerheart/creation_workflow.go"},
 		},
 		{
 			ReferenceID:  "ability-brace",

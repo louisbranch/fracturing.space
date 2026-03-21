@@ -8,7 +8,7 @@ They are not the full audit result.
 - The extracted reference uses the sequence:
   `class/subclass -> heritage -> traits -> details -> equipment -> background -> experiences -> domain cards -> connections`.
 - The current implementation in
-  `internal/services/game/domain/bridge/daggerheart/creation_workflow.go` and
+  `internal/services/game/domain/systems/daggerheart/creation_workflow.go` and
   `internal/services/game/api/grpc/systems/daggerheart/creationworkflow/provider.go`
   still orders equipment before details/background.
 - `docs/reference/daggerheart-creation-workflow.md` already documents the
@@ -27,7 +27,7 @@ Suggested follow-up epic: `companion-modeling`
 
 ## 3. Mechanics manifest is useful but not sufficient
 
-- `internal/services/game/domain/bridge/daggerheart/mechanics_manifest.go`
+- `internal/services/game/domain/systems/daggerheart/mechanics_manifest.go`
   provides a starting mechanic inventory and currently derives a COMPLETE
   implementation stage.
 - That manifest does not guarantee that every corpus entry or every normative

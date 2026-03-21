@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 )
 
 var (

@@ -1,7 +1,7 @@
 package contenttransport
 
 import (
-	contentfilter "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/content/filter"
+	contentfilter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/content/filter"
 	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 )
 

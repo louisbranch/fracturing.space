@@ -14,7 +14,7 @@ Use this map to find the best first edit point for common contribution types.
 | Change you want | Primary files/packages |
 | --- | --- |
 | Add a command, event, or game system | `docs/guides/adding-command-event-system.md` |
-| Add/update Daggerheart mechanics or gRPC gameplay/content flows | `internal/services/game/domain/bridge/daggerheart/`, `internal/services/game/api/grpc/systems/daggerheart/` |
+| Add/update Daggerheart mechanics or gRPC gameplay/content flows | `internal/services/game/domain/systems/daggerheart/`, `internal/services/game/api/grpc/systems/daggerheart/` |
 | Add/update MCP gameplay tool/resource handlers or production bridge exposure | `internal/services/mcp/domain/`, `internal/services/mcp/sessionctx/`, `internal/services/mcp/service/server_registration.go`, `internal/services/shared/mcpbridge/` |
 | Add/update MCP AI campaign artifacts or system-reference tools/resources | `internal/services/mcp/campaigncontext/`, `internal/services/mcp/service/server_registration.go`, `internal/services/shared/mcpbridge/` |
 | Add/update MCP HTTP bridge transport, session lifecycle, or host validation | `internal/services/mcp/httptransport/`, `internal/services/mcp/service/server_runtime.go`, `internal/services/mcp/service/http_transport_runtime_adapter.go` |

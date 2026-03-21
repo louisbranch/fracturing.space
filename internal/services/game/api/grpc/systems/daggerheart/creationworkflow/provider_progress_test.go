@@ -3,7 +3,7 @@ package creationworkflow
 import (
 	"testing"
 
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 func TestProgressFromDaggerheart(t *testing.T) {

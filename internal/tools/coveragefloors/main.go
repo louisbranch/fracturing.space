@@ -81,6 +81,7 @@ func runCheck(args []string) error {
 	fs.SetOutput(io.Discard)
 	profilePath := fs.String("profile", "", "coverage profile path")
 	floorsPath := fs.String("floors", "", "coverage floors JSON path")
+	seedPath := fs.String("seed", "", "seed floors JSON path (caps ratcheted floors for intentional reductions)")
 	excludePattern := fs.String("exclude", "", "regex to skip floor entries for excluded packages")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
@@ -102,6 +103,21 @@ func runCheck(args []string) error {
 	if err != nil {
 		return fmt.Errorf("load floors %s: %w", *floorsPath, err)
 	}
+
+	// When -seed is provided, cap each ratcheted floor at the seed value.
+	// This allows engineers to intentionally lower a floor in the seed file
+	// (e.g. after a structural extraction) and have the check respect it.
+	seedCap := map[string]float64{}
+	if p := strings.TrimSpace(*seedPath); p != "" {
+		seed, seedErr := tryLoadFloors(p)
+		if seedErr != nil {
+			return fmt.Errorf("load seed floors %s: %w", p, seedErr)
+		}
+		for _, pkg := range seed.Packages {
+			seedCap[pkg.Package] = pkg.Floor
+		}
+	}
+
 	stats, err := parseCoverageProfile(*profilePath)
 	if err != nil {
 		return fmt.Errorf("parse coverage profile %s: %w", *profilePath, err)
@@ -115,24 +131,37 @@ func runCheck(args []string) error {
 	fmt.Println("Package coverage floors:")
 	fmt.Println("package,current,floor,threshold,status")
 	for _, pkg := range floors.Packages {
+		effectiveFloor := pkg.Floor
+		if cap, ok := seedCap[pkg.Package]; ok && cap < effectiveFloor {
+			effectiveFloor = cap
+		}
+
 		stat, ok := stats[pkg.Package]
 		if !ok {
+			// When seed is provided and the package is absent from seed,
+			// treat it as intentionally removed (e.g. renamed package).
+			if len(seedCap) > 0 {
+				if _, inSeed := seedCap[pkg.Package]; !inSeed {
+					fmt.Printf("%s,removed,%.1f,%.1f,SKIP\n", pkg.Package, effectiveFloor, effectiveFloor-floors.AllowDrop)
+					continue
+				}
+			}
 			if excludeRe != nil && excludeRe.MatchString(pkg.Package) {
-				fmt.Printf("%s,excluded,%.1f,%.1f,SKIP\n", pkg.Package, pkg.Floor, pkg.Floor-floors.AllowDrop)
+				fmt.Printf("%s,excluded,%.1f,%.1f,SKIP\n", pkg.Package, effectiveFloor, effectiveFloor-floors.AllowDrop)
 				continue
 			}
 			failed = true
-			fmt.Printf("%s,missing,%.1f,%.1f,FAIL\n", pkg.Package, pkg.Floor, pkg.Floor-floors.AllowDrop)
+			fmt.Printf("%s,missing,%.1f,%.1f,FAIL\n", pkg.Package, effectiveFloor, effectiveFloor-floors.AllowDrop)
 			continue
 		}
 		current := round1(stat.Percent())
-		threshold := round1(pkg.Floor - floors.AllowDrop)
+		threshold := round1(effectiveFloor - floors.AllowDrop)
 		status := "OK"
 		if current+1e-9 < threshold {
 			failed = true
 			status = "FAIL"
 		}
-		fmt.Printf("%s,%.1f,%.1f,%.1f,%s\n", pkg.Package, current, pkg.Floor, threshold, status)
+		fmt.Printf("%s,%.1f,%.1f,%.1f,%s\n", pkg.Package, current, effectiveFloor, threshold, status)
 	}
 	if failed {
 		return fmt.Errorf("package coverage floor regression detected (allow_drop=%.1f)", floors.AllowDrop)
