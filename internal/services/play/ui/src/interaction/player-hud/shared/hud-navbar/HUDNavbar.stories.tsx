@@ -7,6 +7,7 @@ const meta = {
   component: HUDNavbar,
   tags: ["autodocs"],
   args: {
+    connectionState: "connected",
     isSidebarOpen: false,
     onSidebarOpenChange: () => {},
     onTabChange: () => {},
@@ -39,6 +40,21 @@ export const SideChat: Story = {
 export const WithUpdates: Story = {
   args: {
     activeTab: hudNavbarFixtures.onStage.activeTab,
+    connectionState: "connected",
     tabsWithUpdates: new Map([["side-chat", 2]]),
+  },
+};
+
+export const Reconnecting: Story = {
+  args: {
+    activeTab: hudNavbarFixtures.onStage.activeTab,
+    connectionState: "reconnecting",
+  },
+};
+
+export const Disconnected: Story = {
+  args: {
+    activeTab: hudNavbarFixtures.onStage.activeTab,
+    connectionState: "disconnected",
   },
 };

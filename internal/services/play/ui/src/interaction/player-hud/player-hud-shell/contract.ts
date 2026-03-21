@@ -1,6 +1,7 @@
 import type { BackstageState } from "../backstage/shared/contract";
 import type { OnStageState } from "../on-stage/shared/contract";
 import type {
+  HUDConnectionState,
   HUDNavbarTab,
   PlayerHUDCampaignNavigation,
   SideChatState,
@@ -8,6 +9,7 @@ import type {
 
 export type PlayerHUDShellProps = {
   activeTab: HUDNavbarTab;
+  connectionState: HUDConnectionState;
   campaignNavigation: PlayerHUDCampaignNavigation;
   isSidebarOpen: boolean;
   onSidebarOpenChange: (open: boolean) => void;

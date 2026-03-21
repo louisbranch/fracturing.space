@@ -9,6 +9,10 @@ import type {
 // HUD.
 export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat";
 
+// HUDConnectionState identifies the transport health state shown in the shared
+// Player HUD navbar badge.
+export type HUDConnectionState = "connected" | "reconnecting" | "disconnected";
+
 export type PlayerHUDCharacterController = {
   participantId: string;
   participantName: string;
@@ -51,6 +55,7 @@ export type SideChatState = {
 // PlayerHUDState is the minimal top-level state for the player HUD shell.
 export type PlayerHUDState = {
   activeTab: HUDNavbarTab;
+  connectionState: HUDConnectionState;
   campaignNavigation: PlayerHUDCampaignNavigation;
   onStage: OnStageState;
   backstage: BackstageState;

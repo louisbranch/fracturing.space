@@ -28,6 +28,7 @@ describe("PlayerHUDShell", () => {
     render(
       <PlayerHUDShell
         activeTab="on-stage"
+        connectionState="connected"
         campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
@@ -38,6 +39,7 @@ describe("PlayerHUDShell", () => {
 
     expect(screen.getByLabelText("Player HUD shell")).toBeInTheDocument();
     expect(screen.getByLabelText("Player HUD navigation")).toBeInTheDocument();
+    expect(screen.getByLabelText("Connection status: Connected")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "On Stage" })).toBeInTheDocument();
     expect(screen.getByLabelText("On-stage scene context")).toBeInTheDocument();
     expect(screen.getByText(/banked lightning/i)).toBeInTheDocument();
@@ -56,6 +58,7 @@ describe("PlayerHUDShell", () => {
     render(
       <PlayerHUDShell
         activeTab="on-stage"
+        connectionState="connected"
         campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
@@ -74,6 +77,7 @@ describe("PlayerHUDShell", () => {
     render(
       <PlayerHUDShell
         activeTab="on-stage"
+        connectionState="connected"
         campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
         isSidebarOpen={false}
         onSidebarOpenChange={onSidebarOpenChange}
@@ -92,6 +96,7 @@ describe("PlayerHUDShell", () => {
     render(
       <PlayerHUDShell
         activeTab="on-stage"
+        connectionState="connected"
         campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
         isSidebarOpen={true}
         onSidebarOpenChange={onSidebarOpenChange}
@@ -108,6 +113,7 @@ describe("PlayerHUDShell", () => {
     render(
       <PlayerHUDShell
         activeTab="side-chat"
+        connectionState="connected"
         campaignNavigation={playerHUDFixtureCatalog.sideChat.campaignNavigation}
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
@@ -126,6 +132,7 @@ describe("PlayerHUDShell", () => {
     render(
       <PlayerHUDShell
         activeTab="backstage"
+        connectionState="connected"
         campaignNavigation={playerHUDFixtureCatalog.backstage.campaignNavigation}
         isSidebarOpen={false}
         onSidebarOpenChange={() => {}}
@@ -143,6 +150,7 @@ describe("PlayerHUDShell", () => {
     render(
       <PlayerHUDShell
         activeTab="on-stage"
+        connectionState="disconnected"
         campaignNavigation={playerHUDFixtureCatalog.onStage.campaignNavigation}
         isSidebarOpen={true}
         onSidebarOpenChange={() => {}}
@@ -153,5 +161,6 @@ describe("PlayerHUDShell", () => {
 
     expect(screen.getByLabelText("Player HUD sidebar")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Return to Campaign" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Connection status: Disconnected")).toBeInTheDocument();
   });
 });

@@ -184,6 +184,7 @@ export const playerHUDFixtureCatalog: Record<
 > = {
   onStage: {
     activeTab: "on-stage",
+    connectionState: "connected",
     campaignNavigation: onStageCampaignNavigation,
     onStage: onStageShellPreview,
     backstage: backstageFixtureCatalog.dormant,
@@ -191,6 +192,7 @@ export const playerHUDFixtureCatalog: Record<
   },
   backstage: {
     activeTab: "backstage",
+    connectionState: "connected",
     campaignNavigation: backstageCampaignNavigation,
     onStage: onStageFixtureCatalog.waitingOnGM,
     backstage: backstageFixtureCatalog.openDiscussion,
@@ -198,6 +200,7 @@ export const playerHUDFixtureCatalog: Record<
   },
   sideChat: {
     activeTab: "side-chat",
+    connectionState: "connected",
     campaignNavigation: backstageCampaignNavigation,
     onStage: onStageFixtureCatalog.aiThinking,
     backstage: backstageFixtureCatalog.waitingOnGM,

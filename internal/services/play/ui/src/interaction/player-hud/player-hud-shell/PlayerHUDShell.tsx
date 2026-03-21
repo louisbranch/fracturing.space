@@ -13,6 +13,7 @@ import type { PlayerHUDShellProps } from "./contract";
 // so all three top-level tabs keep the same overall layout.
 export function PlayerHUDShell({
   activeTab,
+  connectionState,
   campaignNavigation,
   isSidebarOpen,
   onSidebarOpenChange,
@@ -71,6 +72,7 @@ export function PlayerHUDShell({
         <main aria-label="Player HUD shell" className="play-density-hud flex h-dvh w-full flex-col">
           <HUDNavbar
             activeTab={activeTab}
+            connectionState={connectionState}
             isSidebarOpen={isSidebarOpen}
             onSidebarOpenChange={onSidebarOpenChange}
             onTabChange={onTabChange}

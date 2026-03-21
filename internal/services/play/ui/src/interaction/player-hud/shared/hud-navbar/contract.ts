@@ -1,7 +1,8 @@
-import type { HUDNavbarTab } from "../contract";
+import type { HUDConnectionState, HUDNavbarTab } from "../contract";
 
 export type HUDNavbarProps = {
   activeTab: HUDNavbarTab;
+  connectionState: HUDConnectionState;
   isSidebarOpen: boolean;
   onSidebarOpenChange: (open: boolean) => void;
   onTabChange: (tab: HUDNavbarTab) => void;
