@@ -56,6 +56,13 @@ func TestDecideSessionOOCCommandsEmitExpectedEvents(t *testing.T) {
 			payload:   OOCResumedPayload{Reason: "resume"},
 			wantEvent: EventTypeOOCResumed,
 		},
+		{
+			name:      "ooc interruption resolve",
+			state:     State{Started: true, OOCInterruptedSceneID: "scene-1", OOCInterruptedPhaseID: "phase-1", OOCResolutionPending: true},
+			cmdType:   CommandTypeOOCInterruptionResolve,
+			payload:   OOCInterruptionResolvedPayload{Resolution: "  resume_original_phase  "},
+			wantEvent: EventTypeOOCInterruptionResolved,
+		},
 	}
 
 	for _, tc := range tests {
@@ -87,6 +94,18 @@ func TestDecideSessionOOCCommandsEmitExpectedEvents(t *testing.T) {
 			if decision.Events[0].SessionID != ids.SessionID("sess-1") {
 				t.Fatalf("session id = %q", decision.Events[0].SessionID)
 			}
+			if tc.cmdType == CommandTypeOOCInterruptionResolve {
+				var payload OOCInterruptionResolvedPayload
+				if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+					t.Fatalf("decode interruption payload: %v", err)
+				}
+				if payload.SessionID != ids.SessionID("sess-1") {
+					t.Fatalf("payload session id = %q, want %q", payload.SessionID, ids.SessionID("sess-1"))
+				}
+				if payload.Resolution != "resume_original_phase" {
+					t.Fatalf("payload resolution = %q, want %q", payload.Resolution, "resume_original_phase")
+				}
+			}
 		})
 	}
 }
@@ -107,6 +126,20 @@ func TestDecideSessionOOCCommandsRejectInvalidState(t *testing.T) {
 			cmdType: CommandTypeOOCPost,
 			payload: OOCPostedPayload{PostID: "ooc-1", ParticipantID: "p1", Body: "Question"},
 			want:    rejectionCodeSessionOOCNotOpen,
+		},
+		{
+			name:    "ooc interruption resolve when not pending",
+			state:   State{Started: true},
+			cmdType: CommandTypeOOCInterruptionResolve,
+			payload: OOCInterruptionResolvedPayload{Resolution: "resume_original_phase"},
+			want:    rejectionCodeSessionOOCResolutionNotPending,
+		},
+		{
+			name:    "ooc interruption resolve while paused",
+			state:   State{Started: true, OOCPaused: true, OOCInterruptedSceneID: "scene-1", OOCInterruptedPhaseID: "phase-1", OOCResolutionPending: true},
+			cmdType: CommandTypeOOCInterruptionResolve,
+			payload: OOCInterruptionResolvedPayload{Resolution: "resume_original_phase"},
+			want:    rejectionCodeSessionOOCResolutionNotPending,
 		},
 	}
 
@@ -243,6 +276,7 @@ func TestDecideSessionOOCCommandsRejectMalformedPayloadJSON(t *testing.T) {
 		{cmdType: CommandTypeOOCReadyMark, state: State{Started: true, OOCPaused: true}},
 		{cmdType: CommandTypeOOCReadyClear, state: State{Started: true, OOCPaused: true}},
 		{cmdType: CommandTypeOOCResume, state: State{Started: true, OOCPaused: true}},
+		{cmdType: CommandTypeOOCInterruptionResolve, state: State{Started: true, OOCInterruptedSceneID: "scene-1", OOCInterruptedPhaseID: "phase-1", OOCResolutionPending: true}},
 	}
 
 	for _, tc := range tests {
