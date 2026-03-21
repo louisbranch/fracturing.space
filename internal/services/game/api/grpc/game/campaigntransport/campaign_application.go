@@ -8,7 +8,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -25,7 +25,7 @@ type Deps struct {
 	SessionInteraction storage.SessionInteractionStore
 	Daggerheart        projectionstore.Store
 	Social             socialv1.SocialServiceClient
-	Write              domainwriteexec.WritePath
+	Write              domainwrite.WritePath
 	Applier            projection.Applier
 	AuthClient         authv1.AuthServiceClient
 	AIClient           aiv1.AgentServiceClient
@@ -36,7 +36,7 @@ type Deps struct {
 type campaignApplication struct {
 	auth        authz.PolicyDeps
 	stores      campaignApplicationStores
-	write       domainwriteexec.WritePath
+	write       domainwrite.WritePath
 	applier     projection.Applier
 	clock       func() time.Time
 	idGenerator func() (string, error)
@@ -53,7 +53,7 @@ type campaignApplicationStores struct {
 
 type campaignCommandExecution struct {
 	Campaign storage.CampaignStore
-	Write    domainwriteexec.WritePath
+	Write    domainwrite.WritePath
 	Applier  projection.Applier
 }
 
@@ -92,7 +92,7 @@ func newCampaignApplicationWithDependencies(
 // campaign-internal types.
 func NewClearCampaignAIBindingFunc(
 	campaignStore storage.CampaignStore,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 ) func(ctx context.Context, campaignID, actorID string, actorType command.ActorType, requestID, invocationID string) (storage.CampaignRecord, error) {
 	return func(ctx context.Context, campaignID, actorID string, actorType command.ActorType, requestID, invocationID string) (storage.CampaignRecord, error) {

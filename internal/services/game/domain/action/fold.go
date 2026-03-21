@@ -5,50 +5,63 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fold"
 )
 
-// FoldHandledTypes returns the event types handled by the action fold function.
-func FoldHandledTypes() []event.Type {
-	return []event.Type{
-		EventTypeRollResolved,
-		EventTypeOutcomeApplied,
-	}
+// foldRouter is the registration-based fold dispatcher. Handled types are
+// derived from registered handlers, eliminating sync-drift between the switch
+// and the type list.
+var foldRouter = newFoldRouter()
+
+func newFoldRouter() *fold.CoreFoldRouter[State] {
+	r := fold.NewCoreFoldRouter[State]()
+	r.Handle(EventTypeRollResolved, foldRollResolved)
+	r.Handle(EventTypeOutcomeApplied, foldOutcomeApplied)
+	return r
 }
 
-// Fold applies an event to action state. It returns an error if a recognized
-// event carries a payload that cannot be unmarshalled.
+// FoldHandledTypes returns the event types handled by the action fold function.
+// Derived from registered handlers via the fold router.
+func FoldHandledTypes() []event.Type {
+	return foldRouter.FoldHandledTypes()
+}
+
+// Fold applies an event to action state. Returns an error for unhandled
+// event types and for recognized events with unparseable payloads.
 func Fold(state State, evt event.Event) (State, error) {
-	switch evt.Type {
-	case EventTypeRollResolved:
-		var payload RollResolvePayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("action fold %s: %w", evt.Type, err)
-		}
-		if payload.RollSeq == 0 {
-			return state, nil
-		}
-		if state.Rolls == nil {
-			state.Rolls = make(map[uint64]RollState)
-		}
-		state.Rolls[payload.RollSeq] = RollState{
-			RequestID: payload.RequestID,
-			SessionID: evt.SessionID,
-			Outcome:   payload.Outcome,
-		}
-	case EventTypeOutcomeApplied:
-		var payload OutcomeApplyPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("action fold %s: %w", evt.Type, err)
-		}
-		if payload.RollSeq == 0 {
-			return state, nil
-		}
-		if state.AppliedOutcomes == nil {
-			state.AppliedOutcomes = make(map[uint64]struct{})
-		}
-		state.AppliedOutcomes[payload.RollSeq] = struct{}{}
+	return foldRouter.Fold(state, evt)
+}
+
+func foldRollResolved(state State, evt event.Event) (State, error) {
+	var payload RollResolvePayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return state, fmt.Errorf("action fold %s: %w", evt.Type, err)
 	}
-	// Unknown event types are silently ignored so that replay remains
-	// forward-compatible when new events are added before the fold is updated.
+	if payload.RollSeq == 0 {
+		return state, nil
+	}
+	if state.Rolls == nil {
+		state.Rolls = make(map[uint64]RollState)
+	}
+	state.Rolls[payload.RollSeq] = RollState{
+		RequestID: payload.RequestID,
+		SessionID: evt.SessionID,
+		Outcome:   payload.Outcome,
+	}
+	return state, nil
+}
+
+func foldOutcomeApplied(state State, evt event.Event) (State, error) {
+	var payload OutcomeApplyPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return state, fmt.Errorf("action fold %s: %w", evt.Type, err)
+	}
+	if payload.RollSeq == 0 {
+		return state, nil
+	}
+	if state.AppliedOutcomes == nil {
+		state.AppliedOutcomes = make(map[uint64]struct{})
+	}
+	state.AppliedOutcomes[payload.RollSeq] = struct{}{}
 	return state, nil
 }

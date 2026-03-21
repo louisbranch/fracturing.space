@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -17,18 +16,18 @@ import (
 // failures.
 func ExecuteAndApply(
 	ctx context.Context,
-	deps domainwriteexec.Deps,
+	deps domainwrite.Deps,
 	applier domainwrite.EventApplier,
 	cmd command.Command,
 	options domainwrite.Options,
 ) (engine.Result, error) {
-	result, err := domainwriteexec.ExecuteAndApply(
+	result, err := domainwrite.TransportExecuteAndApply(
 		ctx,
 		deps,
 		applier,
 		cmd,
 		options,
-		grpcerror.NormalizeDomainWriteOptionsConfig{
+		domainwrite.NormalizeDomainWriteOptionsConfig{
 			PreserveDomainCodeOnApply: true,
 		},
 	)
@@ -41,7 +40,7 @@ func ExecuteAndApply(
 // NewRuntime builds the shared workflow runtime backed by the provided write
 // path and Daggerheart stores.
 func NewRuntime(
-	deps domainwriteexec.Deps,
+	deps domainwrite.Deps,
 	eventStore workflowruntime.EventStore,
 	daggerheartStore projectionstore.Store,
 ) *workflowruntime.Runtime {

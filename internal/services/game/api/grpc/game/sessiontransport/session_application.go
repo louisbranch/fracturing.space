@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -21,7 +21,7 @@ type Deps struct {
 	SessionSpotlight   storage.SessionSpotlightStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore
-	Write              domainwriteexec.WritePath
+	Write              domainwrite.WritePath
 	Applier            projection.Applier
 }
 

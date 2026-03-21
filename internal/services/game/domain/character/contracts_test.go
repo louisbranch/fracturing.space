@@ -1,7 +1,6 @@
 package character
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -115,7 +114,7 @@ func TestRegisterEvents_RejectsNilRegistry(t *testing.T) {
 	}
 }
 
-func TestFold_IgnoresUnknownEventType(t *testing.T) {
+func TestFold_ReturnsErrorForUnknownEventType(t *testing.T) {
 	original := State{
 		Created:            true,
 		CharacterID:        "char-1",
@@ -126,14 +125,11 @@ func TestFold_IgnoresUnknownEventType(t *testing.T) {
 		Aliases:            []string{"alias-1"},
 	}
 
-	updated, err := Fold(original, event.Event{
+	_, err := Fold(original, event.Event{
 		Type:        event.Type("character.unknown"),
 		PayloadJSON: []byte(`{"ignored":true}`),
 	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !reflect.DeepEqual(updated, original) {
-		t.Fatalf("fold updated state for unknown event: got %+v, want %+v", updated, original)
+	if err == nil {
+		t.Fatal("expected error for unknown event type, got nil")
 	}
 }

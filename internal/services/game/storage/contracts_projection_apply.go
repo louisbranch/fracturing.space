@@ -68,25 +68,14 @@ type ProjectionApplyOutboxStore interface {
 }
 
 // ProjectionApplyTxStore is the transaction-scoped projection contract needed
-// by exactly-once projection apply callbacks. Core projection stores only —
-// system-specific stores are recovered separately from the concrete store
-// source during adapter rebinding.
+// by exactly-once projection apply callbacks. It composes the three
+// purpose-scoped read store interfaces plus watermark tracking. Core projection
+// stores only — system-specific stores are recovered separately from the
+// concrete store source during adapter rebinding.
 type ProjectionApplyTxStore interface {
-	CampaignStore
-	CharacterStore
-	CampaignForkStore
-	ClaimIndexStore
-	InviteStore
-	ParticipantStore
-	SessionStore
-	SessionGateStore
-	SessionSpotlightStore
-	SessionInteractionStore
-	SceneStore
-	SceneCharacterStore
-	SceneGateStore
-	SceneSpotlightStore
-	SceneInteractionStore
+	CampaignReadStores
+	SessionReadStores
+	SceneReadStores
 	ProjectionWatermarkStore
 }
 

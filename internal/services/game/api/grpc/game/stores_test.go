@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -73,7 +72,7 @@ func TestStoresValidate(t *testing.T) {
 }
 
 func TestRootStoreConcernBuilders(t *testing.T) {
-	projectionStore := &projectionStoreBundleStub{
+	projectionStore := &projectionStoreStub{
 		CampaignStore:            gametest.NewFakeCampaignStore(),
 		ParticipantStore:         gametest.NewFakeParticipantStore(),
 		ClaimIndexStore:          stubClaimIndex{},
@@ -130,7 +129,7 @@ func TestRootStoreConcernBuilders(t *testing.T) {
 }
 
 func TestNewRuntimeStores_AuditWiring(t *testing.T) {
-	projectionStore := &projectionStoreBundleStub{
+	projectionStore := &projectionStoreStub{
 		CampaignStore:            gametest.NewFakeCampaignStore(),
 		ParticipantStore:         gametest.NewFakeParticipantStore(),
 		ClaimIndexStore:          stubClaimIndex{},
@@ -222,7 +221,7 @@ func validRootStoreGroups() rootStoreGroupsFixture {
 			DaggerheartContent: stubDaggerheartContent{},
 		},
 		runtime: RuntimeStores{
-			Write: domainwriteexec.WritePath{Executor: fakeDomainExecutor{}, Runtime: domainwrite.NewRuntime()},
+			Write: domainwrite.WritePath{Executor: fakeDomainExecutor{}, Runtime: domainwrite.NewRuntime()},
 		},
 	}
 }
@@ -246,25 +245,26 @@ type stubSceneGateStore struct{ storage.SceneGateStore }
 type stubSceneSpotlightStore struct{ storage.SceneSpotlightStore }
 type stubSceneInteractionStore struct{ storage.SceneInteractionStore }
 
-type projectionStoreBundleStub struct {
+// projectionStoreStub satisfies storage.ProjectionStore for test construction.
+type projectionStoreStub struct {
 	storage.CampaignStore
 	storage.ParticipantStore
 	storage.ClaimIndexStore
 	storage.InviteStore
 	storage.CharacterStore
-	storage.SessionStore
-	storage.SessionInteractionStore
-	storage.SnapshotStore
 	storage.CampaignForkStore
-	storage.StatisticsStore
-	storage.ProjectionWatermarkStore
+	storage.SessionStore
 	storage.SessionGateStore
 	storage.SessionSpotlightStore
+	storage.SessionInteractionStore
 	storage.SceneStore
 	storage.SceneCharacterStore
 	storage.SceneGateStore
 	storage.SceneSpotlightStore
 	storage.SceneInteractionStore
+	storage.SnapshotStore
+	storage.StatisticsStore
+	storage.ProjectionWatermarkStore
 }
 
 type eventAuditStoreStub struct {

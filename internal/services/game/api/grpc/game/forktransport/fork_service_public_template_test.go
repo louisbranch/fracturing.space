@@ -11,7 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/testclients"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -206,7 +206,7 @@ func TestForkCampaign_AllowsPublicStarterTemplateForkAndReassignsOwnerSeat(t *te
 		Event:        eventStore,
 		CampaignFork: forkStore,
 		Social:       socialClient,
-		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
 
@@ -506,7 +506,7 @@ func TestForkCampaign_PublicSeatClaimResyncsControlledCharacterAvatar(t *testing
 		Event:        eventStore,
 		CampaignFork: forkStore,
 		Social:       socialClient,
-		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 	deps.Applier = testApplier(t, deps, dhStore)
 

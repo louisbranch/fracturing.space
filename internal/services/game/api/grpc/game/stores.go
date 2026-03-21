@@ -4,7 +4,6 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -18,7 +17,7 @@ type SystemStores = systemmanifest.ProjectionStores
 
 // WritePath exposes the root transport write-path contract without forcing
 // startup callers to import the grpc/internal package directly.
-type WritePath = domainwriteexec.WritePath
+type WritePath = domainwrite.WritePath
 
 // ProjectionStores groups the core projection-backed read models used by the
 // root game transport and projection applier.
@@ -59,28 +58,15 @@ type ContentStores struct {
 
 // RuntimeStores groups runtime-owned collaborators used by the write path.
 type RuntimeStores struct {
-	Write domainwriteexec.WritePath
-}
-
-// ProjectionStoreBundle is the projection dependency contract for game gRPC
-// handlers and appliers. Startup wires one projection implementation into this
-// bundle so callers avoid assigning each projection interface manually.
-type ProjectionStoreBundle interface {
-	storage.ProjectionStore
-	storage.SessionGateStore
-	storage.SessionSpotlightStore
-	storage.SessionInteractionStore
-	storage.SceneStore
-	storage.SceneCharacterStore
-	storage.SceneGateStore
-	storage.SceneSpotlightStore
-	storage.SceneInteractionStore
+	Write domainwrite.WritePath
 }
 
 // StoresProjectionConfig groups the projection-backed contracts used to build
-// the root game transport projection concern.
+// the root game transport projection concern. The ProjectionStore satisfies
+// all purpose-scoped read store interfaces (CampaignReadStores,
+// SessionReadStores, SceneReadStores) plus infrastructure concerns.
 type StoresProjectionConfig struct {
-	ProjectionStore ProjectionStoreBundle
+	ProjectionStore storage.ProjectionStore
 	SystemStores    SystemStores
 }
 

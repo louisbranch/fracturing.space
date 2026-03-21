@@ -29,6 +29,24 @@ const (
 	rejectionCodeCharacterOwnerParticipantID = "CHARACTER_OWNER_PARTICIPANT_ID_REQUIRED"
 )
 
+// RejectionCodes returns all rejection code strings used by the character
+// decider. Used by startup validators to detect cross-domain collisions.
+func RejectionCodes() []string {
+	return []string{
+		rejectionCodeCharacterAlreadyExists,
+		rejectionCodeCharacterIDRequired,
+		rejectionCodeCharacterNameEmpty,
+		rejectionCodeCharacterKindInvalid,
+		rejectionCodeCharacterAvatarSetInvalid,
+		rejectionCodeCharacterAvatarAssetInvalid,
+		rejectionCodeCharacterNotCreated,
+		rejectionCodeCharacterUpdateEmpty,
+		rejectionCodeCharacterUpdateFieldInvalid,
+		rejectionCodeCharacterAliasesInvalid,
+		rejectionCodeCharacterOwnerParticipantID,
+	}
+}
+
 // Decide returns the decision for a character command against current state.
 //
 // Character changes are intentionally event-driven so ownership and profile edits

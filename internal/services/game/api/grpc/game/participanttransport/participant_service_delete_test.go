@@ -8,7 +8,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -102,7 +102,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
 	ctx := gametest.ContextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -178,7 +178,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 		},
 	}}
 
-	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
 	ctx := gametest.ContextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -236,7 +236,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t
 		},
 	}}
 
-	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
 	ctx := gametest.ContextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -302,7 +302,7 @@ func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) 
 		},
 	}}
 
-	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
 	ctx := gametest.ContextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -377,7 +377,7 @@ func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testin
 		},
 	}}
 
-	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
 	ctx := gametest.ContextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -448,7 +448,7 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Character:   characterStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore},
 		},
 		gametest.FixedClock(now),

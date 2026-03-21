@@ -34,6 +34,20 @@ const (
 	rejectionCodeInviteJWTRequired       = "INVITE_JTI_REQUIRED"
 )
 
+// RejectionCodes returns all rejection code strings used by the invite
+// decider. Used by startup validators to detect cross-domain collisions.
+func RejectionCodes() []string {
+	return []string{
+		rejectionCodeInviteAlreadyExists,
+		rejectionCodeInviteIDRequired,
+		rejectionCodeInviteParticipantNeeded,
+		rejectionCodeInviteNotCreated,
+		rejectionCodeInviteStatusInvalid,
+		rejectionCodeInviteUserIDRequired,
+		rejectionCodeInviteJWTRequired,
+	}
+}
+
 // Decide returns the decision for an invite command against current state.
 //
 // Invite flow is intentionally strict because it gates who can participate in a

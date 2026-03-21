@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -38,7 +38,7 @@ func TestExecuteSessionGateCommandAndLoad_Success(t *testing.T) {
 			},
 		},
 	}
-	executor := newSessionGateCommandExecutor(domainwriteexec.WritePath{Executor: domain, Runtime: runtime}, projection.Applier{})
+	executor := newSessionGateCommandExecutor(domainwrite.WritePath{Executor: domain, Runtime: runtime}, projection.Applier{})
 
 	loaded := false
 	value, err := executeSessionGateCommandAndLoad(
@@ -68,7 +68,7 @@ func TestExecuteSessionGateCommandAndLoad_Success(t *testing.T) {
 
 func TestExecuteSessionGateCommandAndLoad_PropagatesExecuteError(t *testing.T) {
 	executor := newSessionGateCommandExecutor(
-		domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
 		projection.Applier{},
 	)
 

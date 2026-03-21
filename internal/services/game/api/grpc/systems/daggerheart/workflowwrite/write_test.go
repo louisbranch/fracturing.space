@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -77,7 +76,7 @@ func TestExecuteAndApplyRequiresEvents(t *testing.T) {
 	runtime := testWriteRuntime(t)
 	runtime.SetInlineApplyEnabled(true)
 
-	deps := domainwriteexec.WritePath{
+	deps := domainwrite.WritePath{
 		Executor: fakeDomainExecutor{result: engine.Result{Decision: command.Decision{}}},
 		Runtime:  runtime,
 	}
@@ -102,7 +101,7 @@ func TestExecuteAndApplySkipsApplyWhenInlineDisabled(t *testing.T) {
 	runtime.SetInlineApplyEnabled(false)
 
 	applier := &fakeEventApplier{err: errors.New("should not apply")}
-	deps := domainwriteexec.WritePath{
+	deps := domainwrite.WritePath{
 		Executor: fakeDomainExecutor{
 			result: engine.Result{
 				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
@@ -131,7 +130,7 @@ func TestExecuteAndApplyAppliesWhenInlineEnabled(t *testing.T) {
 	runtime.SetInlineApplyEnabled(true)
 
 	applier := &fakeEventApplier{}
-	deps := domainwriteexec.WritePath{
+	deps := domainwrite.WritePath{
 		Executor: fakeDomainExecutor{
 			result: engine.Result{
 				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
@@ -160,7 +159,7 @@ func TestExecuteAndApplyReturnsApplyErrorWhenInlineEnabled(t *testing.T) {
 	runtime.SetInlineApplyEnabled(true)
 
 	applier := &fakeEventApplier{err: errors.New("boom")}
-	deps := domainwriteexec.WritePath{
+	deps := domainwrite.WritePath{
 		Executor: fakeDomainExecutor{
 			result: engine.Result{
 				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
@@ -192,7 +191,7 @@ func TestExecuteAndApplySkipsJournalOnlyInlineApply(t *testing.T) {
 	runtime.SetInlineApplyEnabled(true)
 
 	applier := &fakeEventApplier{err: errors.New("should not apply")}
-	deps := domainwriteexec.WritePath{
+	deps := domainwrite.WritePath{
 		Executor: fakeDomainExecutor{
 			result: engine.Result{
 				Decision: command.Decision{Events: []event.Event{
@@ -230,7 +229,7 @@ func TestExecuteAndApplyMapsNonRetryableExecutionError(t *testing.T) {
 	runtime := testWriteRuntime(t)
 	runtime.SetInlineApplyEnabled(true)
 
-	deps := domainwriteexec.WritePath{
+	deps := domainwrite.WritePath{
 		Executor: fakeDomainExecutor{err: nonRetryableTestError{err: errors.New("checkpoint save failed")}},
 		Runtime:  runtime,
 	}
@@ -254,7 +253,7 @@ func TestNewRuntimeUsesExecuteAndApplyPolicy(t *testing.T) {
 	runtime := testWriteRuntime(t)
 	eventStore := gamefakes.NewEventStore()
 	daggerheartStore := gamefakes.NewDaggerheartStore()
-	deps := domainwriteexec.WritePath{
+	deps := domainwrite.WritePath{
 		Executor: fakeDomainExecutor{
 			result: engine.Result{
 				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},

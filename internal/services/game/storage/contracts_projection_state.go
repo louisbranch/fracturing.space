@@ -84,20 +84,49 @@ type ProjectionWatermarkStore interface {
 	ListProjectionWatermarks(ctx context.Context) ([]ProjectionWatermark, error)
 }
 
-// ProjectionStore groups read-model-oriented stores consumed by APIs and queries.
-// System-specific stores (for example Daggerheart gameplay state) are accessed
-// through explicit consumer-owned seams rather than embedded in this core
-// composite.
-type ProjectionStore interface {
+// CampaignReadStores groups campaign-oriented projection stores consumed by
+// campaign, participant, invite, character, and fork workflows.
+type CampaignReadStores interface {
 	CampaignStore
 	ParticipantStore
 	ClaimIndexStore
 	InviteStore
 	CharacterStore
-	SessionStore
-	SessionInteractionStore
-	SnapshotStore
 	CampaignForkStore
+}
+
+// SessionReadStores groups session-oriented projection stores consumed by
+// session lifecycle, gate, spotlight, and interaction workflows.
+type SessionReadStores interface {
+	SessionStore
+	SessionGateStore
+	SessionSpotlightStore
+	SessionInteractionStore
+}
+
+// SceneReadStores groups scene-oriented projection stores consumed by
+// scene lifecycle, character presence, gate, spotlight, and interaction
+// workflows.
+type SceneReadStores interface {
+	SceneStore
+	SceneCharacterStore
+	SceneGateStore
+	SceneSpotlightStore
+	SceneInteractionStore
+}
+
+// ProjectionStore groups all core read-model stores consumed by APIs, queries,
+// and maintenance tooling. It composes the purpose-scoped interfaces plus
+// infrastructure concerns (snapshots, statistics, watermarks).
+//
+// System-specific stores (for example Daggerheart gameplay state) are accessed
+// through explicit consumer-owned seams rather than embedded in this core
+// composite.
+type ProjectionStore interface {
+	CampaignReadStores
+	SessionReadStores
+	SceneReadStores
+	SnapshotStore
 	StatisticsStore
 	ProjectionWatermarkStore
 }

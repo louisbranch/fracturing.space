@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -26,7 +25,7 @@ func TestStoresValidate_MissingEvents(t *testing.T) {
 		Daggerheart:      gamefakes.NewDaggerheartStore(),
 		Content:          &fakeContentStore{},
 		Event:            gamefakes.NewEventStore(),
-		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
+		Write:            domainwrite.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 	}
 
 	err := s.Validate()
@@ -48,7 +47,7 @@ func TestStoresApplier(t *testing.T) {
 		Daggerheart:      gamefakes.NewDaggerheartStore(),
 		Content:          &fakeContentStore{},
 		Event:            gamefakes.NewEventStore(),
-		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
+		Write:            domainwrite.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 		Events:           event.NewRegistry(),
 	}
 	if err := s.Validate(); err != nil {
@@ -128,7 +127,7 @@ func TestStoresAdapterRegistryMatchesManifest(t *testing.T) {
 		Daggerheart:      daggerheartStore,
 		Content:          &fakeContentStore{},
 		Event:            gamefakes.NewEventStore(),
-		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
+		Write:            domainwrite.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 		Events:           event.NewRegistry(),
 	}
 	if err := s.Validate(); err != nil {

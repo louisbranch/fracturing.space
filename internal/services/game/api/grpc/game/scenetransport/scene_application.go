@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -15,7 +15,7 @@ type Deps struct {
 	Campaign       storage.CampaignStore
 	Scene          storage.SceneStore
 	SceneCharacter storage.SceneCharacterStore
-	Write          domainwriteexec.WritePath
+	Write          domainwrite.WritePath
 	Applier        projection.Applier
 }
 
@@ -25,7 +25,7 @@ type Deps struct {
 type sceneApplication struct {
 	auth        authz.PolicyDeps
 	stores      sceneApplicationStores
-	write       domainwriteexec.WritePath
+	write       domainwrite.WritePath
 	applier     projection.Applier
 	clock       func() time.Time
 	idGenerator func() (string, error)

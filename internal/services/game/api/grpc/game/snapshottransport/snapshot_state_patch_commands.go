@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -18,7 +17,7 @@ import (
 
 func applyDaggerheartCharacterStatePatchCommand(
 	ctx context.Context,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 	campaignID string,
 	characterID string,
@@ -64,7 +63,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 
 func executeDaggerheartConditionChangeCommand(
 	ctx context.Context,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 	campaignID string,
 	characterID string,

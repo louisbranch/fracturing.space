@@ -17,22 +17,45 @@ import (
 	"google.golang.org/grpc/health"
 )
 
+// Server is the top-level game gRPC server. Fields are grouped into embedded
+// sub-structs by concern to keep each area's surface small.
 type Server struct {
-	listener                                 net.Listener
-	grpcServer                               *grpc.Server
-	health                                   *health.Server
-	stores                                   *storageBundle
-	authMc                                   *platformgrpc.ManagedConn
-	socialMc                                 *platformgrpc.ManagedConn
-	aiMc                                     *platformgrpc.ManagedConn
-	statusMc                                 *platformgrpc.ManagedConn
-	statusBindDone                           <-chan struct{}
-	statusBindCancel                         context.CancelFunc
-	projectionApplyOutboxWorkerEnabled       bool
-	projectionApplyOutboxApply               func(context.Context, event.Event) error
-	projectionApplyOutboxShadowWorkerEnabled bool
-	statusReporter                           *platformstatus.Reporter
-	catalogReadyAtStartup                    bool
+	listener  net.Listener
+	stores    *storageBundle
+	transport transportState
+	conns     connectionState
+	workers   projectionWorkerState
+	status    statusState
+}
+
+// transportState holds gRPC server and health infrastructure.
+type transportState struct {
+	grpcServer *grpc.Server
+	health     *health.Server
+}
+
+// connectionState holds outbound managed connections and their lifecycle hooks.
+type connectionState struct {
+	authMc           *platformgrpc.ManagedConn
+	socialMc         *platformgrpc.ManagedConn
+	aiMc             *platformgrpc.ManagedConn
+	statusMc         *platformgrpc.ManagedConn
+	statusBindDone   <-chan struct{}
+	statusBindCancel context.CancelFunc
+}
+
+// projectionWorkerState holds configuration for optional background projection
+// apply and shadow workers.
+type projectionWorkerState struct {
+	applyWorkerEnabled  bool
+	applyFunc           func(context.Context, event.Event) error
+	shadowWorkerEnabled bool
+}
+
+// statusState holds status reporting and catalog readiness state.
+type statusState struct {
+	reporter              *platformstatus.Reporter
+	catalogReadyAtStartup bool
 }
 
 // projectionApplyOutboxShadowProcessor and projectionApplyOutboxProcessor use
@@ -52,14 +75,6 @@ type eventBackend interface {
 
 type projectionBackend interface {
 	storage.ProjectionStore
-	storage.SessionGateStore
-	storage.SessionSpotlightStore
-	storage.SessionInteractionStore
-	storage.SceneStore
-	storage.SceneCharacterStore
-	storage.SceneGateStore
-	storage.SceneSpotlightStore
-	storage.SceneInteractionStore
 	projection.ExactlyOnceStore
 	Close() error
 }

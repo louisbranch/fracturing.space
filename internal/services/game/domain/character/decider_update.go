@@ -123,8 +123,5 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 		}
 	}
 	normalizedPayload := UpdatePayload{CharacterID: ids.CharacterID(characterID), Fields: normalizedFields}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "character", characterID, payloadJSON, now().UTC())
-
-	return command.Accept(evt)
+	return acceptCharacterEvent(cmd, now, EventTypeUpdated, characterID, normalizedPayload)
 }

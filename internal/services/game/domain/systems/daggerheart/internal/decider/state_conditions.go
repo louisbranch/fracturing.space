@@ -1,12 +1,11 @@
 package decider
 
 import (
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -38,7 +37,7 @@ func decideGMMoveApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot
 						Message: "gm move shape is unsupported",
 					}
 				}
-				description := strings.TrimSpace(p.Target.Description)
+				description := normalize.String(p.Target.Description)
 				if shape == rules.GMMoveShapeCustom && description == "" {
 					return &command.Rejection{
 						Code:    rejectionCodeGMMoveDescriptionRequired,
@@ -48,20 +47,20 @@ func decideGMMoveApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot
 				p.Target.Kind = kind
 				p.Target.Shape = shape
 				p.Target.Description = description
-				p.Target.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.Target.AdversaryID.String()))
+				p.Target.AdversaryID = normalize.ID(p.Target.AdversaryID)
 			case rules.GMMoveTargetTypeAdversaryFeature:
-				p.Target.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.Target.AdversaryID.String()))
-				p.Target.FeatureID = strings.TrimSpace(p.Target.FeatureID)
-				p.Target.Description = strings.TrimSpace(p.Target.Description)
+				p.Target.AdversaryID = normalize.ID(p.Target.AdversaryID)
+				p.Target.FeatureID = normalize.String(p.Target.FeatureID)
+				p.Target.Description = normalize.String(p.Target.Description)
 			case rules.GMMoveTargetTypeEnvironmentFeature:
-				p.Target.EnvironmentEntityID = ids.EnvironmentEntityID(strings.TrimSpace(p.Target.EnvironmentEntityID.String()))
-				p.Target.EnvironmentID = strings.TrimSpace(p.Target.EnvironmentID)
-				p.Target.FeatureID = strings.TrimSpace(p.Target.FeatureID)
-				p.Target.Description = strings.TrimSpace(p.Target.Description)
+				p.Target.EnvironmentEntityID = normalize.ID(p.Target.EnvironmentEntityID)
+				p.Target.EnvironmentID = normalize.String(p.Target.EnvironmentID)
+				p.Target.FeatureID = normalize.String(p.Target.FeatureID)
+				p.Target.Description = normalize.String(p.Target.Description)
 			case rules.GMMoveTargetTypeAdversaryExperience:
-				p.Target.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.Target.AdversaryID.String()))
-				p.Target.ExperienceName = strings.TrimSpace(p.Target.ExperienceName)
-				p.Target.Description = strings.TrimSpace(p.Target.Description)
+				p.Target.AdversaryID = normalize.ID(p.Target.AdversaryID)
+				p.Target.ExperienceName = normalize.String(p.Target.ExperienceName)
+				p.Target.Description = normalize.String(p.Target.Description)
 			default:
 				return &command.Rejection{
 					Code:    rejectionCodeGMMoveKindUnsupported,
@@ -95,7 +94,7 @@ func decideGMMoveApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot
 			specs := []module.EventSpec{{
 				Type:       payload.EventTypeGMMoveApplied,
 				EntityType: "session",
-				EntityID:   strings.TrimSpace(cmd.SessionID.String()),
+				EntityID:   normalize.ID(cmd.SessionID).String(),
 				Payload: payload.GMMoveAppliedPayload{
 					Target:    p.Target,
 					FearSpent: p.FearSpent,
@@ -105,7 +104,7 @@ func decideGMMoveApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot
 			specs = append(specs, module.EventSpec{
 				Type:       payload.EventTypeGMFearChanged,
 				EntityType: "campaign",
-				EntityID:   strings.TrimSpace(string(cmd.CampaignID)),
+				EntityID:   normalize.ID(cmd.CampaignID).String(),
 				Payload: payload.GMFearChangedPayload{
 					Value:  after,
 					Reason: "gm_move",
@@ -150,7 +149,7 @@ func decideGMFearSet(snapshotState daggerheartstate.SnapshotState, hasSnapshot b
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.GMFearSetPayload) payload.GMFearChangedPayload {
 			return payload.GMFearChangedPayload{
 				Value:  *p.After,
-				Reason: strings.TrimSpace(p.Reason),
+				Reason: normalize.String(p.Reason),
 			}
 		},
 		now)
@@ -159,7 +158,7 @@ func decideGMFearSet(snapshotState daggerheartstate.SnapshotState, hasSnapshot b
 func decideCharacterStatePatch(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeCharacterStatePatched, "character",
-		func(p *payload.CharacterStatePatchPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.CharacterStatePatchPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.CharacterStatePatchPayload, _ func() time.Time) *command.Rejection {
 			if hasState && isCharacterStatePatchNoMutation(s, *p) {
 				return &command.Rejection{
@@ -167,13 +166,13 @@ func decideCharacterStatePatch(snapshotState daggerheartstate.SnapshotState, has
 					Message: "character state patch is unchanged",
 				}
 			}
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+			p.CharacterID = normalize.ID(p.CharacterID)
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CharacterStatePatchPayload) payload.CharacterStatePatchedPayload {
 			return payload.CharacterStatePatchedPayload{
 				CharacterID:   p.CharacterID,
-				Source:        strings.TrimSpace(p.Source),
+				Source:        normalize.String(p.Source),
 				HP:            p.HPAfter,
 				Hope:          p.HopeAfter,
 				HopeMax:       p.HopeMaxAfter,
@@ -190,7 +189,7 @@ func decideCharacterStatePatch(snapshotState daggerheartstate.SnapshotState, has
 func decideConditionChange(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeConditionChanged, "character",
-		func(p *payload.ConditionChangePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.ConditionChangePayload) string { return normalize.ID(p.CharacterID).String() },
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.ConditionChangePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if hasMissingCharacterConditionRemovals(s, *p) {
@@ -206,8 +205,8 @@ func decideConditionChange(snapshotState daggerheartstate.SnapshotState, hasSnap
 					}
 				}
 			}
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.Source = strings.TrimSpace(p.Source)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.Source = normalize.String(p.Source)
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.ConditionChangePayload) payload.ConditionChangedPayload {
@@ -226,9 +225,9 @@ func decideConditionChange(snapshotState daggerheartstate.SnapshotState, hasSnap
 func decideHopeSpend(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeCharacterStatePatched, "character",
-		func(p *payload.HopeSpendPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.HopeSpendPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.HopeSpendPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+			p.CharacterID = normalize.ID(p.CharacterID)
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.HopeSpendPayload) payload.CharacterStatePatchedPayload {
@@ -244,9 +243,9 @@ func decideHopeSpend(snapshotState daggerheartstate.SnapshotState, hasSnapshot b
 func decideStressSpend(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeCharacterStatePatched, "character",
-		func(p *payload.StressSpendPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.StressSpendPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.StressSpendPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+			p.CharacterID = normalize.ID(p.CharacterID)
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.StressSpendPayload) payload.CharacterStatePatchedPayload {
@@ -262,12 +261,12 @@ func decideStressSpend(snapshotState daggerheartstate.SnapshotState, hasSnapshot
 func decideLoadoutSwap(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeLoadoutSwapped, "character",
-		func(p *payload.LoadoutSwapPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.LoadoutSwapPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.LoadoutSwapPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.CardID = strings.TrimSpace(p.CardID)
-			p.From = strings.TrimSpace(p.From)
-			p.To = strings.TrimSpace(p.To)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.CardID = normalize.String(p.CardID)
+			p.From = normalize.String(p.From)
+			p.To = normalize.String(p.To)
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.LoadoutSwapPayload) payload.LoadoutSwappedPayload {

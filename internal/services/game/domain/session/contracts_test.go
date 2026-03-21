@@ -2,7 +2,6 @@ package session
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -148,26 +147,13 @@ func TestRegisterEvents_RejectsNilRegistry(t *testing.T) {
 	}
 }
 
-func TestFold_IgnoresUnknownEventType(t *testing.T) {
-	original := State{
-		Started:              true,
-		SessionID:            "sess-1",
-		Name:                 "Session",
-		GateOpen:             true,
-		GateID:               "gate-1",
-		SpotlightType:        "gm",
-		SpotlightCharacterID: "char-1",
-	}
-
-	updated, err := Fold(original, event.Event{
+func TestFold_ReturnsErrorForUnknownEventType(t *testing.T) {
+	_, err := Fold(State{}, event.Event{
 		Type:        event.Type("session.unknown"),
 		PayloadJSON: []byte(`{"ignored":true}`),
 	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !reflect.DeepEqual(updated, original) {
-		t.Fatalf("fold updated state for unknown event: got %+v, want %+v", updated, original)
+	if err == nil {
+		t.Fatal("expected error for unknown event type, got nil")
 	}
 }
 

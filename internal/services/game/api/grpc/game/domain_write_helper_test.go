@@ -8,7 +8,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -104,7 +103,7 @@ func testWriteRuntime(t *testing.T) *domainwrite.Runtime {
 	return runtime
 }
 
-func testRuntimeStoresWithWrite(write domainwriteexec.WritePath) RuntimeStores {
+func testRuntimeStoresWithWrite(write domainwrite.WritePath) RuntimeStores {
 	return RuntimeStores{Write: write}
 }
 
@@ -116,7 +115,7 @@ func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
-	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
+	stores := testRuntimeStoresWithWrite(domainwrite.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
@@ -137,7 +136,7 @@ func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T)
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
-	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
+	stores := testRuntimeStoresWithWrite(domainwrite.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
@@ -168,7 +167,7 @@ func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) 
 			}},
 		},
 	}
-	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
+	stores := testRuntimeStoresWithWrite(domainwrite.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
@@ -186,7 +185,7 @@ func TestExecuteAndApplyDomainCommand_MapsNonRetryableExecutionError(t *testing.
 	domain := fakeDomainExecutor{
 		err: nonRetryableTestError{err: errors.New("post-persist checkpoint failed")},
 	}
-	stores := testRuntimeStoresWithWrite(domainwriteexec.WritePath{Executor: domain, Runtime: runtime})
+	stores := testRuntimeStoresWithWrite(domainwrite.WritePath{Executor: domain, Runtime: runtime})
 	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,

@@ -7,7 +7,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -32,7 +32,7 @@ type Deps struct {
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
 	Social      socialv1.SocialServiceClient
-	Write       domainwriteexec.WritePath
+	Write       domainwrite.WritePath
 	Applier     projection.Applier
 
 	// ClearCampaignAIBinding is called when participant mutations require
@@ -46,7 +46,7 @@ type Deps struct {
 type participantApplication struct {
 	auth                   authz.PolicyDeps
 	stores                 participantApplicationStores
-	write                  domainwriteexec.WritePath
+	write                  domainwrite.WritePath
 	applier                projection.Applier
 	clock                  func() time.Time
 	idGenerator            func() (string, error)

@@ -76,6 +76,66 @@ func (s CharacterClassState) Normalized() CharacterClassState {
 	return normalized
 }
 
+// Equal reports whether two class states are equivalent after normalization.
+func (s CharacterClassState) Equal(other CharacterClassState) bool {
+	a := s.Normalized()
+	b := other.Normalized()
+	return a.AttackBonusUntilRest == b.AttackBonusUntilRest &&
+		a.EvasionBonusUntilHitOrRest == b.EvasionBonusUntilHitOrRest &&
+		a.DifficultyPenaltyUntilRest == b.DifficultyPenaltyUntilRest &&
+		a.FocusTargetID == b.FocusTargetID &&
+		equalActiveBeastform(a.ActiveBeastform, b.ActiveBeastform) &&
+		a.StrangePatternsNumber == b.StrangePatternsNumber &&
+		equalIntSlice(a.RallyDice, b.RallyDice) &&
+		equalIntSlice(a.PrayerDice, b.PrayerDice) &&
+		a.Unstoppable == b.Unstoppable &&
+		a.ChannelRawPowerUsedThisLongRest == b.ChannelRawPowerUsedThisLongRest
+}
+
+func equalIntSlice(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func equalActiveBeastform(a, b *CharacterActiveBeastformState) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.BeastformID == b.BeastformID &&
+		a.BaseTrait == b.BaseTrait &&
+		a.AttackTrait == b.AttackTrait &&
+		a.TraitBonus == b.TraitBonus &&
+		a.EvasionBonus == b.EvasionBonus &&
+		a.AttackRange == b.AttackRange &&
+		equalDamageDice(a.DamageDice, b.DamageDice) &&
+		a.DamageBonus == b.DamageBonus &&
+		a.DamageType == b.DamageType &&
+		a.EvolutionTraitOverride == b.EvolutionTraitOverride &&
+		a.DropOnAnyHPMark == b.DropOnAnyHPMark
+}
+
+func equalDamageDice(a, b []CharacterDamageDie) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // IsZero reports whether the class state carries any mutable runtime data.
 func (s CharacterClassState) IsZero() bool {
 	normalized := s.Normalized()

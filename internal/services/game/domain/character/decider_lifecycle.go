@@ -34,8 +34,5 @@ func decideDelete(state State, cmd command.Command, now func() time.Time) comman
 	reason := strings.TrimSpace(payload.Reason)
 
 	normalizedPayload := DeletePayload{CharacterID: ids.CharacterID(characterID), Reason: reason}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeDeleted, "character", characterID, payloadJSON, now().UTC())
-
-	return command.Accept(evt)
+	return acceptCharacterEvent(cmd, now, EventTypeDeleted, characterID, normalizedPayload)
 }

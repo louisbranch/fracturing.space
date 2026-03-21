@@ -92,10 +92,9 @@ type EventJournal interface {
 // Named "Folder" (not "Applier") to distinguish pure state folds from
 // projection.Applier, which performs side-effecting I/O writes to stores.
 //
-// Intentionally defined at the consumption point (Go interface-at-consumer
-// pattern). Parallel definitions exist at:
-//   - domain/replay.Folder (replay path)
-//   - domain/module.Folder (adds FoldHandledTypes for system fold coverage)
+// This is a narrow local interface requiring only Fold(). The canonical
+// fold.Folder interface in domain/fold/ adds FoldHandledTypes() for startup
+// coverage validation.
 type Folder interface {
 	Fold(state any, evt event.Event) (any, error)
 }

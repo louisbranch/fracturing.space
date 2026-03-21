@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -28,11 +27,11 @@ type sessionCommandExecutionInput struct {
 // sessionCommandExecutor centralizes the canonical session write path for
 // lifecycle and spotlight commands.
 type sessionCommandExecutor struct {
-	write   domainwriteexec.WritePath
+	write   domainwrite.WritePath
 	applier projection.Applier
 }
 
-func newSessionCommandExecutor(write domainwriteexec.WritePath, applier projection.Applier) sessionCommandExecutor {
+func newSessionCommandExecutor(write domainwrite.WritePath, applier projection.Applier) sessionCommandExecutor {
 	return sessionCommandExecutor{
 		write:   write,
 		applier: applier,

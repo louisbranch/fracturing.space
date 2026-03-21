@@ -8,7 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -44,7 +44,7 @@ func TestRevokeInvite_Success(t *testing.T) {
 	}}
 
 	svc := newServiceWithDependencies(
-		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("x"),
 		nil,
@@ -125,7 +125,7 @@ func TestRevokeInvite_UsesDomainEngine(t *testing.T) {
 			Participant: participantStore,
 			Campaign:    campaignStore,
 			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("x"),

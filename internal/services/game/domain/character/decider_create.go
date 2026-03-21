@@ -77,7 +77,5 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 		Pronouns:           pronouns,
 		Aliases:            aliases,
 	}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeCreated, "character", characterID, payloadJSON, now().UTC())
-	return command.Accept(evt)
+	return acceptCharacterEvent(cmd, now, EventTypeCreated, characterID, normalizedPayload)
 }

@@ -6,7 +6,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
@@ -22,7 +22,7 @@ type Deps struct {
 	ClaimIndex  storage.ClaimIndexStore
 	Event       storage.EventStore
 	Social      socialv1.SocialServiceClient
-	Write       domainwriteexec.WritePath
+	Write       domainwrite.WritePath
 	Applier     projection.Applier
 }
 
@@ -31,7 +31,7 @@ type Deps struct {
 type inviteApplication struct {
 	auth              authz.PolicyDeps
 	stores            inviteApplicationStores
-	write             domainwriteexec.WritePath
+	write             domainwrite.WritePath
 	applier           projection.Applier
 	clock             func() time.Time
 	idGenerator       func() (string, error)

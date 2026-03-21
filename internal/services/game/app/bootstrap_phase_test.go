@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -240,4 +241,40 @@ func TestAttachDependencyClientsSetsSocialOnContentStores(t *testing.T) {
 	if contentStores.Social == nil {
 		t.Fatal("expected social client to be attached")
 	}
+}
+
+func TestAssertWatermarkStoreConfigured(t *testing.T) {
+	t.Run("passes when outbox disabled", func(t *testing.T) {
+		err := assertWatermarkStoreConfigured(
+			serverEnv{ProjectionApplyOutboxEnabled: false},
+			gamegrpc.InfrastructureStores{Watermarks: nil},
+		)
+		if err != nil {
+			t.Fatalf("expected nil error when outbox disabled, got %v", err)
+		}
+	})
+
+	t.Run("passes when outbox enabled and watermarks configured", func(t *testing.T) {
+		err := assertWatermarkStoreConfigured(
+			serverEnv{ProjectionApplyOutboxEnabled: true},
+			gamegrpc.InfrastructureStores{Watermarks: stubWatermarkStore{}},
+		)
+		if err != nil {
+			t.Fatalf("expected nil error with watermarks configured, got %v", err)
+		}
+	})
+
+	t.Run("fails when outbox enabled and watermarks nil", func(t *testing.T) {
+		err := assertWatermarkStoreConfigured(
+			serverEnv{ProjectionApplyOutboxEnabled: true},
+			gamegrpc.InfrastructureStores{Watermarks: nil},
+		)
+		if err == nil {
+			t.Fatal("expected error when outbox enabled but watermarks nil")
+		}
+	})
+}
+
+type stubWatermarkStore struct {
+	storage.ProjectionWatermarkStore
 }

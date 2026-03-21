@@ -1,7 +1,6 @@
 package participant
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -94,8 +93,5 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 		AvatarAssetID:  avatarAssetID,
 		Pronouns:       pronouns,
 	}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-
-	evt := command.NewEvent(cmd, EventTypeJoined, "participant", participantID, payloadJSON, now().UTC())
-	return command.Accept(evt)
+	return acceptParticipantEvent(cmd, now, EventTypeJoined, participantID, normalizedPayload)
 }

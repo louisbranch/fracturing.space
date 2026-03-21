@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -118,7 +118,7 @@ func newActionTestService() *DaggerheartService {
 			SessionGate:      &fakeSessionGateStore{},
 			SessionSpotlight: &fakeSessionSpotlightStore{},
 			Session:          sessStore,
-			Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
+			Write:            domainwrite.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
 	}

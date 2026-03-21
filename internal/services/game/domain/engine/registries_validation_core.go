@@ -177,6 +177,31 @@ func ValidateAliasFoldCoverage(events *event.Registry) error {
 	return nil
 }
 
+// ValidateCoreRejectionCodeUniqueness verifies that no two core domains
+// declare the same rejection code string. A collision would make rejection
+// handling ambiguous for callers that branch on the code value.
+func ValidateCoreRejectionCodeUniqueness() error {
+	seen := make(map[string]string) // code -> owning domain name
+	var collisions []string
+	for _, domain := range CoreDomains() {
+		if domain.RejectionCodes == nil {
+			continue
+		}
+		for _, code := range domain.RejectionCodes() {
+			if owner, exists := seen[code]; exists {
+				collisions = append(collisions, fmt.Sprintf("%s (in %s and %s)", code, owner, domain.Name()))
+			} else {
+				seen[code] = domain.Name()
+			}
+		}
+	}
+	if len(collisions) > 0 {
+		return fmt.Errorf("core domain rejection code collisions: %s",
+			strings.Join(collisions, ", "))
+	}
+	return nil
+}
+
 // ValidateCoreDeciderCommandCoverage verifies that every core-owned command
 // type in the command registry is claimed by some CoreDomain's
 // DeciderHandledCommands, and conversely that every declared handler has a

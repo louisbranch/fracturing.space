@@ -9,7 +9,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -106,7 +106,7 @@ func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
 		Session:      sessionStore,
 		Event:        eventStore,
 		CampaignFork: forkStore,
-		Write:        domainwriteexec.WritePath{Executor: &fakeDomainEngine{store: eventStore}},
+		Write:        domainwrite.WritePath{Executor: &fakeDomainEngine{store: eventStore}},
 	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{

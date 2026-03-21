@@ -8,7 +8,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -48,7 +48,7 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 			}),
 		},
 	}}
-	write := domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}
+	write := domainwrite.WritePath{Executor: domain, Runtime: testRuntime}
 
 	err = applyStressVulnerableCondition(
 		ctx,
@@ -113,7 +113,7 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 			}),
 		},
 	}}
-	write := domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}
+	write := domainwrite.WritePath{Executor: domain, Runtime: testRuntime}
 
 	err = applyStressVulnerableCondition(
 		ctx,
@@ -150,7 +150,7 @@ func TestApplyStressVulnerableCondition_NoOpWhenUnchanged(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
 	dhStore := gametest.NewFakeDaggerheartStore()
 	noopDomain := &fakeDomainEngine{}
-	write := domainwriteexec.WritePath{Executor: noopDomain}
+	write := domainwrite.WritePath{Executor: noopDomain}
 
 	err := applyStressVulnerableCondition(
 		ctx,
@@ -180,7 +180,7 @@ func TestApplyStressVulnerableCondition_NoOpWhenAlreadyVulnerable(t *testing.T) 
 	eventStore := gametest.NewFakeEventStore()
 	dhStore := gametest.NewFakeDaggerheartStore()
 	noopDomain := &fakeDomainEngine{}
-	write := domainwriteexec.WritePath{Executor: noopDomain}
+	write := domainwrite.WritePath{Executor: noopDomain}
 
 	err := applyStressVulnerableCondition(
 		ctx,

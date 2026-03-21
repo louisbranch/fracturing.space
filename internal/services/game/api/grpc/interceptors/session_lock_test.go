@@ -3,6 +3,7 @@ package interceptors
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -507,8 +508,8 @@ func TestValidateSessionLockPolicyCoverage_DetectsUncoveredNamespace(t *testing.
 	if err == nil {
 		t.Fatal("expected error for uncovered namespace")
 	}
-	if err.Error() != "domain policy blocks namespace \"custom\" but no RPC method maps to it in session lock interceptor" {
-		t.Fatalf("unexpected error: %v", err)
+	if !strings.Contains(err.Error(), "custom") || !strings.Contains(err.Error(), "no RPC method maps") {
+		t.Fatalf("expected namespace coverage error mentioning 'custom', got: %v", err)
 	}
 }
 

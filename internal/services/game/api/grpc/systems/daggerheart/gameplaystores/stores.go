@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -43,9 +42,9 @@ type Stores struct {
 	Events           *event.Registry
 
 	// Write groups the domain executor, runtime controls, and audit store
-	// used by the write path. It satisfies domainwriteexec.WritePath so
+	// used by the write path. It satisfies domainwrite.WritePath so
 	// handlers can pass it directly to shared write helpers.
-	Write domainwriteexec.WritePath
+	Write domainwrite.WritePath
 
 	// adapters is built eagerly during Validate and cached for Applier.
 	adapters *bridge.AdapterRegistry
@@ -88,7 +87,7 @@ func NewFromProjection(config FromProjectionConfig) Stores {
 		Event:            config.EventStore,
 		Watermarks:       config.ProjectionStore,
 		Events:           config.Events,
-		Write: domainwriteexec.WritePath{
+		Write: domainwrite.WritePath{
 			Executor: config.Domain,
 			Runtime:  config.WriteRuntime,
 		},

@@ -10,7 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -314,7 +314,7 @@ func TestNewClearCampaignAIBindingFuncClearsStoredBinding(t *testing.T) {
 
 	clearBinding := NewClearCampaignAIBindingFunc(
 		ts.Campaign,
-		domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{Campaign: ts.Campaign},
 	)
 	updated, err := clearBinding(

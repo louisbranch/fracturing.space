@@ -11,7 +11,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -159,7 +159,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
-		Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		Applier:     testApplier(dhStore),
 	})
 
@@ -225,7 +225,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
-		Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		Applier:     testApplier(dhStore),
 	})
 
@@ -281,7 +281,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
-		Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		Applier:     testApplier(dhStore),
 	})
 
@@ -331,7 +331,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
-		Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		Applier:     testApplier(dhStore),
 	})
 

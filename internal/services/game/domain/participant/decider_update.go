@@ -1,7 +1,6 @@
 package participant
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -147,7 +146,5 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 	}
 
 	normalizedPayload := UpdatePayload{ParticipantID: ids.ParticipantID(participantID), Fields: normalizedFields}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "participant", participantID, payloadJSON, now().UTC())
-	return command.Accept(evt)
+	return acceptParticipantEvent(cmd, now, EventTypeUpdated, participantID, normalizedPayload)
 }

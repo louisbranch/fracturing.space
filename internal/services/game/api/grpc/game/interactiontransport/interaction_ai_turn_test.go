@@ -8,7 +8,7 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -255,7 +255,7 @@ func TestAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligibl
 		Session:            sessionStore,
 		Participant:        participantStore,
 		SessionInteraction: sessionInteractionStore,
-		Write:              domainwriteexec.WritePath{Executor: domain, Runtime: runtime},
+		Write:              domainwrite.WritePath{Executor: domain, Runtime: runtime},
 	}, gametest.FixedIDGenerator("unused"))
 
 	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.active_scene_set", "", "")

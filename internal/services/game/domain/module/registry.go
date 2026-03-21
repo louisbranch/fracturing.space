@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fold"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
@@ -35,22 +36,10 @@ type Decider interface {
 	Decide(state any, cmd command.Command, now func() time.Time) command.Decision
 }
 
-// Folder folds system-owned events into system state.
-//
-// FoldHandledTypes declares which event types the Fold method handles, enabling
-// ValidateSystemFoldCoverage to verify at startup that every emittable event
-// type with replay intent has a corresponding fold handler.
-// Named "Folder" (not "Applier") because it performs a pure state fold,
-// not a side-effecting projection write (projection.Applier.Apply).
-//
-// Intentionally defined at the consumption point (Go interface-at-consumer
-// pattern). Parallel definitions with a subset of methods exist at:
-//   - domain/replay.Folder (Fold only, replay path)
-//   - domain/engine.Folder (Fold only, engine execution path)
-type Folder interface {
-	Fold(state any, evt event.Event) (any, error)
-	FoldHandledTypes() []event.Type
-}
+// Folder is the canonical fold interface for system modules.
+// It is an alias for fold.Folder — the single canonical interface shared by
+// all fold consumers (engine, replay, module).
+type Folder = fold.Folder
 
 // CharacterReadinessChecker is an optional module extension point used by
 // session-start readiness evaluation.

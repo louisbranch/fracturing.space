@@ -244,10 +244,6 @@ func TestConfigureStoresAndApplier_DoesNotInlineStoresOrApplierAssembly(t *testi
 		"projection.NewApplier(",
 		"type configuredStores struct",
 		"stores := storeState.stores",
-		"newCampaignRegistrationDeps(campaignRegistrationSources{",
-		"newSessionRegistrationDeps(sessionRegistrationSources{",
-		"newInfrastructureRegistrationDeps(infrastructureRegistrationSources{",
-		"newDaggerheartRegistrationDeps(daggerheartRegistrationSources{",
 		"buildRegistrationAssemblies(bundle, domainState, deps, systemState.systemRegistry)",
 	} {
 		if strings.Contains(source, marker) {
@@ -890,13 +886,13 @@ func TestRunProjectionApplyOutboxShadowWorkerNoopWithoutProcessor(t *testing.T) 
 	}
 }
 
-func TestStartProjectionApplyOutboxWorkerNoopWhenDisabled(t *testing.T) {
+func TestStartProjectionWorkerNoopWhenDisabled(t *testing.T) {
 	srv := &Server{}
-	stop := srv.startProjectionApplyOutboxWorker(context.Background())
+	stop := srv.startProjectionWorker(context.Background(), projectionApplyWorkerKind)
 	stop()
 }
 
-func TestStartProjectionApplyOutboxWorkerProcessesRowsWhenEnabled(t *testing.T) {
+func TestStartProjectionWorkerProcessesRowsWhenEnabled(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
@@ -933,15 +929,17 @@ func TestStartProjectionApplyOutboxWorkerProcessesRowsWhenEnabled(t *testing.T) 
 		stores: &storageBundle{
 			events: store,
 		},
-		projectionApplyOutboxWorkerEnabled: true,
-		projectionApplyOutboxApply: func(context.Context, event.Event) error {
-			applyCalls.Add(1)
-			return nil
+		workers: projectionWorkerState{
+			applyWorkerEnabled: true,
+			applyFunc: func(context.Context, event.Event) error {
+				applyCalls.Add(1)
+				return nil
+			},
 		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stop := srv.startProjectionApplyOutboxWorker(ctx)
+	stop := srv.startProjectionWorker(ctx, projectionApplyWorkerKind)
 	t.Cleanup(func() {
 		cancel()
 		stop()
@@ -968,13 +966,13 @@ func TestStartProjectionApplyOutboxWorkerProcessesRowsWhenEnabled(t *testing.T) 
 	t.Fatal("expected apply worker to process and remove outbox row")
 }
 
-func TestStartProjectionApplyOutboxShadowWorkerNoopWhenDisabled(t *testing.T) {
+func TestStartProjectionShadowWorkerNoopWhenDisabled(t *testing.T) {
 	srv := &Server{}
-	stop := srv.startProjectionApplyOutboxShadowWorker(context.Background())
+	stop := srv.startProjectionWorker(context.Background(), projectionShadowWorkerKind)
 	stop()
 }
 
-func TestStartProjectionApplyOutboxShadowWorkerProcessesRowsWhenEnabled(t *testing.T) {
+func TestStartProjectionShadowWorkerProcessesRowsWhenEnabled(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
@@ -1010,11 +1008,13 @@ func TestStartProjectionApplyOutboxShadowWorkerProcessesRowsWhenEnabled(t *testi
 		stores: &storageBundle{
 			events: store,
 		},
-		projectionApplyOutboxShadowWorkerEnabled: true,
+		workers: projectionWorkerState{
+			shadowWorkerEnabled: true,
+		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stop := srv.startProjectionApplyOutboxShadowWorker(ctx)
+	stop := srv.startProjectionWorker(ctx, projectionShadowWorkerKind)
 	t.Cleanup(func() {
 		cancel()
 		stop()

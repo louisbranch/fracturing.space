@@ -9,7 +9,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -125,6 +124,6 @@ func (f *fakeDomainEngine) Execute(ctx context.Context, cmd command.Command) (en
 	return result, nil
 }
 
-func testWritePath(executor domainwrite.Executor) domainwriteexec.WritePath {
-	return domainwriteexec.WritePath{Executor: executor, Runtime: testRuntime}
+func testWritePath(executor domainwrite.Executor) domainwrite.WritePath {
+	return domainwrite.WritePath{Executor: executor, Runtime: testRuntime}
 }

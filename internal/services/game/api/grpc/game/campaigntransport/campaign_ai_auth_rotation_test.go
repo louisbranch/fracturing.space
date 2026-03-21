@@ -8,7 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -21,7 +21,7 @@ func TestRotateCampaignAIAuthEpochValidation(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 
 	deps := campaignCommandExecution{
-		Write: domainwriteexec.WritePath{Executor: &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}}},
+		Write: domainwrite.WritePath{Executor: &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}}},
 	}
 
 	err = rotateCampaignAIAuthEpoch(context.Background(), deps, "", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
@@ -35,7 +35,7 @@ func TestRotateCampaignAIAuthEpochSuccess(t *testing.T) {
 	domain := &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}}
 	deps := campaignCommandExecution{
 		Campaign: gametest.NewFakeCampaignStore(),
-		Write:    domainwriteexec.WritePath{Executor: domain},
+		Write:    domainwrite.WritePath{Executor: domain},
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.RequestIDHeader, "req-1",
