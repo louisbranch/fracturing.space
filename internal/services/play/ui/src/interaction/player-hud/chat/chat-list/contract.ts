@@ -4,4 +4,6 @@ export type ChatListProps = {
   messages: SideChatMessage[];
   participants: SideChatParticipant[];
   viewerParticipantId: string;
+  ariaLabel?: string;
+  emptyLabel?: string;
 };

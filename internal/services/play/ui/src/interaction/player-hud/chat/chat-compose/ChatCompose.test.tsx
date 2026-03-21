@@ -54,4 +54,22 @@ describe("ChatCompose", () => {
     await user.type(textarea, "hi");
     expect(onDraftChange).toHaveBeenCalled();
   });
+
+  it("supports custom labels and disabled state", () => {
+    render(
+      <ChatCompose
+        draft=""
+        disabled
+        ariaLabel="Backstage message input"
+        placeholder="Waiting for OOC to open..."
+        sendLabel="Post"
+        onDraftChange={() => {}}
+        onSend={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText("Backstage message input")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Post" })).toBeDisabled();
+    expect(screen.getByPlaceholderText("Waiting for OOC to open...")).toBeInTheDocument();
+  });
 });

@@ -9,7 +9,7 @@ describe("ChatList", () => {
       <ChatList
         messages={sideChatMessages}
         participants={sideChatParticipants}
-        viewerParticipantId="p-viewer"
+        viewerParticipantId="p-rhea"
       />,
     );
 
@@ -27,13 +27,13 @@ describe("ChatList", () => {
       <ChatList
         messages={sideChatMessages}
         participants={sideChatParticipants}
-        viewerParticipantId="p-viewer"
+        viewerParticipantId="p-rhea"
       />,
     );
 
-    // Corin has two consecutive messages (m1, m2). Name should appear once.
-    const corinHeaders = screen.getAllByText("Corin");
-    expect(corinHeaders).toHaveLength(1);
+    // Bryn has two consecutive messages (m1, m2). Name should appear once.
+    const brynHeaders = screen.getAllByText("Bryn");
+    expect(brynHeaders).toHaveLength(1);
   });
 
   it("aligns viewer messages to chat-end and others to chat-start", () => {
@@ -41,7 +41,7 @@ describe("ChatList", () => {
       <ChatList
         messages={sideChatMessages}
         participants={sideChatParticipants}
-        viewerParticipantId="p-viewer"
+        viewerParticipantId="p-rhea"
       />,
     );
 
@@ -58,10 +58,11 @@ describe("ChatList", () => {
       <ChatList
         messages={[]}
         participants={sideChatParticipants}
-        viewerParticipantId="p-viewer"
+        viewerParticipantId="p-rhea"
+        emptyLabel="Nothing here yet"
       />,
     );
 
-    expect(screen.getByText("No messages yet")).toBeInTheDocument();
+    expect(screen.getByText("Nothing here yet")).toBeInTheDocument();
   });
 });

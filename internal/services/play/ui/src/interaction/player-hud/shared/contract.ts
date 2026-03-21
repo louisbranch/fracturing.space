@@ -1,3 +1,5 @@
+import type { BackstageState } from "../backstage/shared/contract";
+
 // HUDNavbarTab identifies the three top-level navigation surfaces in the player
 // HUD.
 export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat";
@@ -6,7 +8,9 @@ export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat";
 export type SideChatParticipant = {
   id: string;
   name: string;
+  role: "player" | "gm";
   avatarUrl?: string;
+  typing?: boolean;
 };
 
 // SideChatMessage is a single message in the side chat.
@@ -27,5 +31,6 @@ export type SideChatState = {
 // PlayerHUDState is the minimal top-level state for the player HUD shell.
 export type PlayerHUDState = {
   activeTab: HUDNavbarTab;
+  backstage: BackstageState;
   sideChat: SideChatState;
 };

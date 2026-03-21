@@ -40,4 +40,12 @@ describe("HUDNavbar", () => {
     await user.click(screen.getByText("Side Chat"));
     expect(onChange).toHaveBeenCalledWith("side-chat");
   });
+
+  it("keeps Backstage and Side Chat copy distinct", () => {
+    const { container } = render(<HUDNavbar activeTab="on-stage" onTabChange={() => {}} />);
+
+    expect(container.textContent).toContain("Backstage");
+    expect(container.textContent).toContain("Side Chat");
+    expect(container.textContent).not.toContain("Out-of-character chat");
+  });
 });
