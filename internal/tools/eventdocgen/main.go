@@ -1188,9 +1188,77 @@ func buildPackageConstLookup(dir, root string, global map[string]string) (map[st
 	return seed, nil
 }
 
+// scanLocalEmitterWrappers scans all Go files in a package directory for
+// unexported functions that internally call command.NewEvent and pass one of
+// their parameters as the event type argument. It returns a map from function
+// name to the parameter index carrying the event type.
+//
+// This allows the emitter scanner to follow one level of indirection where
+// domain packages introduce helpers like acceptParticipantEvent that wrap
+// command.NewEvent with a consistent envelope.
+func scanLocalEmitterWrappers(dir string) (map[string]int, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dir, func(info os.FileInfo) bool {
+		return !strings.HasSuffix(info.Name(), "_test.go")
+	}, parser.AllErrors)
+	if err != nil {
+		return nil, fmt.Errorf("parse wrappers in %s: %w", dir, err)
+	}
+
+	wrappers := make(map[string]int)
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || fn.Body == nil || fn.Recv != nil {
+					continue
+				}
+				name := fn.Name.Name
+				if name == "" || isExported(name) {
+					continue
+				}
+				// Build a map from parameter name to flattened index.
+				paramIndex := make(map[string]int)
+				idx := 0
+				if fn.Type.Params != nil {
+					for _, field := range fn.Type.Params.List {
+						for _, paramName := range field.Names {
+							paramIndex[paramName.Name] = idx
+							idx++
+						}
+					}
+				}
+				// Walk the function body looking for command.NewEvent calls
+				// and check whether the event-type argument (index 1) is a
+				// direct reference to one of the function's parameters.
+				ast.Inspect(fn.Body, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok || !isCommandNewEventCall(call) {
+						return true
+					}
+					if len(call.Args) < 2 {
+						return true
+					}
+					eventArg := call.Args[1]
+					ident, ok := eventArg.(*ast.Ident)
+					if !ok {
+						return true
+					}
+					if pi, found := paramIndex[ident.Name]; found {
+						wrappers[name] = pi
+					}
+					return true
+				})
+			}
+		}
+	}
+	return wrappers, nil
+}
+
 func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map[string][]string, error) {
 	emitters := make(map[string][]string)
 	packageLookups := make(map[string]map[string]string)
+	packageWrappers := make(map[string]map[string]int)
 	if err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -1214,6 +1282,14 @@ func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map
 				return err
 			}
 			packageLookups[dirPath] = packageLookup
+		}
+		wrappers, ok := packageWrappers[dirPath]
+		if !ok {
+			wrappers, err = scanLocalEmitterWrappers(dirPath)
+			if err != nil {
+				return err
+			}
+			packageWrappers[dirPath] = wrappers
 		}
 		fileLookup := buildLocalConstLookup(file, packageLookup)
 		importAliases := parseImportAliases(file)
@@ -1249,13 +1325,16 @@ func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map
 				}
 				return true
 			}
-			// Match command.NewEvent(cmd, <eventType>, ...) and
-			// module.Decide* helper calls.
+			// Match command.NewEvent(cmd, <eventType>, ...),
+			// module.Decide* helper calls, and local wrapper functions
+			// that forward to command.NewEvent.
 			if call, ok := node.(*ast.CallExpr); ok {
 				eventTypeArg := -1
 				if isCommandNewEventCall(call) {
 					eventTypeArg = 1
 				} else if idx, ok := moduleDecideEventTypeArgIndex(call); ok {
+					eventTypeArg = idx
+				} else if idx, ok := localWrapperEventTypeArgIndex(call, wrappers); ok {
 					eventTypeArg = idx
 				}
 				if eventTypeArg >= 0 && len(call.Args) > eventTypeArg {
@@ -1398,6 +1477,24 @@ func isCommandNewEventCall(call *ast.CallExpr) bool {
 		return false
 	}
 	return ident.Name == "command" && sel.Sel.Name == "NewEvent"
+}
+
+// localWrapperEventTypeArgIndex returns the argument index that carries the
+// event type for a call to a package-local wrapper function that forwards to
+// command.NewEvent. The wrappers map is built by scanLocalEmitterWrappers.
+func localWrapperEventTypeArgIndex(call *ast.CallExpr, wrappers map[string]int) (int, bool) {
+	if len(wrappers) == 0 {
+		return 0, false
+	}
+	ident, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return 0, false
+	}
+	idx, found := wrappers[ident.Name]
+	if !found {
+		return 0, false
+	}
+	return idx, true
 }
 
 // moduleDecideEventTypeArgIndex returns the argument index that carries the

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -19,7 +19,7 @@ type Deps struct {
 	Participant        storage.ParticipantStore
 	Daggerheart        projectionstore.Store
 	DaggerheartContent contentstore.DaggerheartContentReadStore
-	Write              domainwriteexec.WritePath
+	Write              domainwrite.WritePath
 	Applier            projection.Applier
 }
 
@@ -28,7 +28,7 @@ type Deps struct {
 type characterApplication struct {
 	auth        authz.PolicyDeps
 	stores      characterApplicationStores
-	write       domainwriteexec.WritePath
+	write       domainwrite.WritePath
 	applier     projection.Applier
 	clock       func() time.Time
 	idGenerator func() (string, error)

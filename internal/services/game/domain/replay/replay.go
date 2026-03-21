@@ -44,10 +44,9 @@ type CheckpointStore interface {
 
 // Folder folds a domain event into aggregate state during replay.
 //
-// Intentionally defined at the consumption point (Go interface-at-consumer
-// pattern). Parallel definitions exist at:
-//   - domain/module.Folder (adds FoldHandledTypes for system fold coverage)
-//   - domain/engine.Folder (engine execution path)
+// This is a narrow local interface requiring only Fold(). The canonical
+// fold.Folder interface in domain/fold/ adds FoldHandledTypes() for startup
+// coverage validation.
 type Folder interface {
 	Fold(state any, evt event.Event) (any, error)
 }

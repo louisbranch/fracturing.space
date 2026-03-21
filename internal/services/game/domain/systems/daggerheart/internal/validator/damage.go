@@ -12,34 +12,27 @@ import (
 )
 
 func ValidateDamageApplyPayload(raw json.RawMessage) error {
-	var p payload.DamageApplyPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return err
-	}
-	if strings.TrimSpace(p.CharacterID.String()) == "" {
-		return errors.New("character_id is required")
-	}
-	if !HasDamagePatchMutation(p.HpBefore, p.HpAfter, p.StressAfter, p.ArmorBefore, p.ArmorAfter) {
-		return errors.New("damage apply must change hp, stress, or armor")
-	}
-	if err := ValidateDamageAdapterInvariants(p); err != nil {
-		return err
-	}
-	return nil
+	return ValidatePayload(raw, func(p payload.DamageApplyPayload) error {
+		if err := RequireCharacterID(p.CharacterID); err != nil {
+			return err
+		}
+		if !HasDamagePatchMutation(p.HpBefore, p.HpAfter, p.StressAfter, p.ArmorBefore, p.ArmorAfter) {
+			return errors.New("damage apply must change hp, stress, or armor")
+		}
+		return ValidateDamageAdapterInvariants(p)
+	})
 }
 
 func ValidateDamageAppliedPayload(raw json.RawMessage) error {
-	var p payload.DamageAppliedPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return err
-	}
-	if strings.TrimSpace(p.CharacterID.String()) == "" {
-		return errors.New("character_id is required")
-	}
-	if p.Hp == nil && p.Stress == nil && p.Armor == nil {
-		return errors.New("damage applied must include hp, stress, or armor")
-	}
-	return ValidateDamageAppliedInvariants(p)
+	return ValidatePayload(raw, func(p payload.DamageAppliedPayload) error {
+		if err := RequireCharacterID(p.CharacterID); err != nil {
+			return err
+		}
+		if p.Hp == nil && p.Stress == nil && p.Armor == nil {
+			return errors.New("damage applied must include hp, stress, or armor")
+		}
+		return ValidateDamageAppliedInvariants(p)
+	})
 }
 
 func ValidateDamageAppliedInvariants(p payload.DamageAppliedPayload) error {
@@ -69,53 +62,47 @@ func ValidateDamageAppliedInvariants(p payload.DamageAppliedPayload) error {
 }
 
 func ValidateMultiTargetDamageApplyPayload(raw json.RawMessage) error {
-	var p payload.MultiTargetDamageApplyPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return err
-	}
-	if len(p.Targets) == 0 {
-		return errors.New("targets is required and must not be empty")
-	}
-	for i, t := range p.Targets {
-		if strings.TrimSpace(t.CharacterID.String()) == "" {
-			return fmt.Errorf("targets[%d]: character_id is required", i)
+	return ValidatePayload(raw, func(p payload.MultiTargetDamageApplyPayload) error {
+		if len(p.Targets) == 0 {
+			return errors.New("targets is required and must not be empty")
 		}
-		if !HasDamagePatchMutation(t.HpBefore, t.HpAfter, t.StressAfter, t.ArmorBefore, t.ArmorAfter) {
-			return fmt.Errorf("targets[%d]: damage apply must change hp, stress, or armor", i)
+		for i, t := range p.Targets {
+			if strings.TrimSpace(t.CharacterID.String()) == "" {
+				return fmt.Errorf("targets[%d]: character_id is required", i)
+			}
+			if !HasDamagePatchMutation(t.HpBefore, t.HpAfter, t.StressAfter, t.ArmorBefore, t.ArmorAfter) {
+				return fmt.Errorf("targets[%d]: damage apply must change hp, stress, or armor", i)
+			}
+			if err := ValidateDamageAdapterInvariants(t); err != nil {
+				return fmt.Errorf("targets[%d]: %w", i, err)
+			}
 		}
-		if err := ValidateDamageAdapterInvariants(t); err != nil {
-			return fmt.Errorf("targets[%d]: %w", i, err)
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func ValidateAdversaryDamageApplyPayload(raw json.RawMessage) error {
-	var p payload.AdversaryDamageApplyPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return err
-	}
-	if strings.TrimSpace(p.AdversaryID.String()) == "" {
-		return errors.New("adversary_id is required")
-	}
-	if !HasDamagePatchMutation(p.HpBefore, p.HpAfter, nil, p.ArmorBefore, p.ArmorAfter) {
-		return errors.New("damage apply must change hp or armor")
-	}
-	return nil
+	return ValidatePayload(raw, func(p payload.AdversaryDamageApplyPayload) error {
+		if err := RequireAdversaryID(p.AdversaryID); err != nil {
+			return err
+		}
+		if !HasDamagePatchMutation(p.HpBefore, p.HpAfter, nil, p.ArmorBefore, p.ArmorAfter) {
+			return errors.New("damage apply must change hp or armor")
+		}
+		return nil
+	})
 }
 
 func ValidateAdversaryDamageAppliedPayload(raw json.RawMessage) error {
-	var p payload.AdversaryDamageAppliedPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return err
-	}
-	if strings.TrimSpace(p.AdversaryID.String()) == "" {
-		return errors.New("adversary_id is required")
-	}
-	if p.Hp == nil && p.Armor == nil {
-		return errors.New("damage applied must include hp or armor")
-	}
-	return nil
+	return ValidatePayload(raw, func(p payload.AdversaryDamageAppliedPayload) error {
+		if err := RequireAdversaryID(p.AdversaryID); err != nil {
+			return err
+		}
+		if p.Hp == nil && p.Armor == nil {
+			return errors.New("damage applied must include hp or armor")
+		}
+		return nil
+	})
 }
 
 func ValidateDamageAdapterInvariants(p payload.DamageApplyPayload) error {
@@ -145,11 +132,9 @@ func ValidateDamageAdapterInvariants(p payload.DamageApplyPayload) error {
 }
 
 func ValidateDowntimeMoveAppliedPayload(raw json.RawMessage) error {
-	var p payload.DowntimeMoveAppliedPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return err
-	}
-	return ValidateDowntimeMoveAppliedPayloadFields(p)
+	return ValidatePayload(raw, func(p payload.DowntimeMoveAppliedPayload) error {
+		return ValidateDowntimeMoveAppliedPayloadFields(p)
+	})
 }
 
 func ValidateDowntimeMoveAppliedPayloadFields(p payload.DowntimeMoveAppliedPayload) error {
@@ -179,23 +164,21 @@ func ValidateDowntimeMoveAppliedPayloadFields(p payload.DowntimeMoveAppliedPaylo
 }
 
 func ValidateCharacterTemporaryArmorApplyPayload(raw json.RawMessage) error {
-	var p payload.CharacterTemporaryArmorApplyPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return err
-	}
-	if err := RequireTrimmedValue(p.CharacterID.String(), "character_id"); err != nil {
-		return err
-	}
-	if err := RequireTrimmedValue(p.Source, "source"); err != nil {
-		return err
-	}
-	if !IsTemporaryArmorDuration(strings.TrimSpace(p.Duration)) {
-		return errors.New("duration must be short_rest, long_rest, session, or scene")
-	}
-	if p.Amount <= 0 {
-		return errors.New("amount must be greater than zero")
-	}
-	return nil
+	return ValidatePayload(raw, func(p payload.CharacterTemporaryArmorApplyPayload) error {
+		if err := RequireCharacterID(p.CharacterID); err != nil {
+			return err
+		}
+		if err := RequireTrimmedValue(p.Source, "source"); err != nil {
+			return err
+		}
+		if !IsTemporaryArmorDuration(strings.TrimSpace(p.Duration)) {
+			return errors.New("duration must be short_rest, long_rest, session, or scene")
+		}
+		if p.Amount <= 0 {
+			return errors.New("amount must be greater than zero")
+		}
+		return nil
+	})
 }
 
 func ValidateCharacterTemporaryArmorAppliedPayload(raw json.RawMessage) error {

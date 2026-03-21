@@ -3,8 +3,10 @@ package participant
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 func ensureParticipantActive(state State) (command.Rejection, bool) {
@@ -109,4 +111,13 @@ func normalizeCampaignAccessLabel(value string) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// acceptParticipantEvent creates the standard participant event envelope for
+// accepted commands. Centralizing this constructor keeps participant event
+// metadata consistent across all participant command handlers.
+func acceptParticipantEvent(cmd command.Command, now func() time.Time, eventType event.Type, participantID string, payload any) command.Decision {
+	payloadJSON, _ := json.Marshal(payload)
+	evt := command.NewEvent(cmd, eventType, "participant", participantID, payloadJSON, now().UTC())
+	return command.Accept(evt)
 }

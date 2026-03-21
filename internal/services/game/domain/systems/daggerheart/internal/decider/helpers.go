@@ -2,9 +2,10 @@ package decider
 
 import (
 	"reflect"
-	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -13,12 +14,12 @@ import (
 // ── Snapshot lookup helpers ────────────────────────────────────────────
 
 func snapshotCharacterState(snapshot daggerheartstate.SnapshotState, characterID ids.CharacterID) (daggerheartstate.CharacterState, bool) {
-	trimmed := ids.CharacterID(strings.TrimSpace(characterID.String()))
-	if trimmed == "" {
+	trimmed, ok := normalize.RequireID(characterID)
+	if !ok {
 		return daggerheartstate.CharacterState{}, false
 	}
-	character, ok := snapshot.CharacterStates[trimmed]
-	if !ok {
+	character, found := snapshot.CharacterStates[trimmed]
+	if !found {
 		return daggerheartstate.CharacterState{}, false
 	}
 	character.CharacterID = trimmed.String()
@@ -30,17 +31,70 @@ func snapshotCharacterState(snapshot daggerheartstate.SnapshotState, characterID
 }
 
 func snapshotAdversaryState(snapshot daggerheartstate.SnapshotState, adversaryID ids.AdversaryID) (daggerheartstate.AdversaryState, bool) {
-	trimmed := ids.AdversaryID(strings.TrimSpace(adversaryID.String()))
-	if trimmed == "" {
+	trimmed, ok := normalize.RequireID(adversaryID)
+	if !ok {
 		return daggerheartstate.AdversaryState{}, false
 	}
-	adversary, ok := snapshot.AdversaryStates[trimmed]
-	if !ok {
+	adversary, found := snapshot.AdversaryStates[trimmed]
+	if !found {
 		return daggerheartstate.AdversaryState{}, false
 	}
 	adversary.AdversaryID = trimmed
 	adversary.CampaignID = snapshot.CampaignID
 	return adversary, true
+}
+
+// ── Shared damage validation ──────────────────────────────────────────
+
+// rejectArmorSpendLimit rejects commands that try to spend more than one armor
+// slot in a single damage application.
+func rejectArmorSpendLimit(armorSpent int) *command.Rejection {
+	if armorSpent > 1 {
+		return &command.Rejection{
+			Code:    rejectionCodeDamageArmorSpendLimit,
+			Message: "damage apply can spend at most one armor slot",
+		}
+	}
+	return nil
+}
+
+// rejectDamageBeforeMismatch checks HP and Armor "before" fields against current
+// state. This is the shared validation used by character damage, adversary
+// damage, and multi-target damage handlers.
+func rejectDamageBeforeMismatch(hpBefore *int, currentHP int, armorBefore *int, currentArmor int, code, message string) *command.Rejection {
+	if hpBefore != nil && currentHP != *hpBefore {
+		return &command.Rejection{Code: code, Message: message}
+	}
+	if armorBefore != nil && currentArmor != *armorBefore {
+		return &command.Rejection{Code: code, Message: message}
+	}
+	return nil
+}
+
+// characterDamageAppliedPayload builds a DamageAppliedPayload from a
+// DamageApplyPayload, eliminating the duplicated field-by-field construction
+// across decideDamageApply and decideMultiTargetDamageApply.
+func characterDamageAppliedPayload(p payload.DamageApplyPayload) payload.DamageAppliedPayload {
+	return payload.DamageAppliedPayload{
+		CharacterID:        p.CharacterID,
+		Hp:                 p.HpAfter,
+		Stress:             p.StressAfter,
+		Armor:              p.ArmorAfter,
+		ArmorSpent:         p.ArmorSpent,
+		Severity:           p.Severity,
+		Marks:              p.Marks,
+		DamageType:         p.DamageType,
+		RollSeq:            p.RollSeq,
+		ResistPhysical:     p.ResistPhysical,
+		ResistMagic:        p.ResistMagic,
+		ImmunePhysical:     p.ImmunePhysical,
+		ImmuneMagic:        p.ImmuneMagic,
+		Direct:             p.Direct,
+		MassiveDamage:      p.MassiveDamage,
+		Mitigated:          p.Mitigated,
+		Source:             p.Source,
+		SourceCharacterIDs: p.SourceCharacterIDs,
+	}
 }
 
 // ── State mutation detection ───────────────────────────────────────────

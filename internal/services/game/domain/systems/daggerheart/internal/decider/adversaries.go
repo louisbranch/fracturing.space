@@ -1,12 +1,11 @@
 package decider
 
 import (
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -16,7 +15,7 @@ func decideAdversaryConditionChange(snapshotState daggerheartstate.SnapshotState
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeAdversaryConditionChanged, "adversary",
 		func(p *payload.AdversaryConditionChangePayload) string {
-			return strings.TrimSpace(p.AdversaryID.String())
+			return normalize.ID(p.AdversaryID).String()
 		},
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.AdversaryConditionChangePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
@@ -33,8 +32,8 @@ func decideAdversaryConditionChange(snapshotState daggerheartstate.SnapshotState
 					}
 				}
 			}
-			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
-			p.Source = strings.TrimSpace(p.Source)
+			p.AdversaryID = normalize.ID(p.AdversaryID)
+			p.Source = normalize.String(p.Source)
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.AdversaryConditionChangePayload) payload.AdversaryConditionChangedPayload {
@@ -52,7 +51,7 @@ func decideAdversaryConditionChange(snapshotState daggerheartstate.SnapshotState
 
 func decideAdversaryCreate(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, payload.EventTypeAdversaryCreated, "adversary",
-		func(p *payload.AdversaryCreatePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
+		func(p *payload.AdversaryCreatePayload) string { return normalize.ID(p.AdversaryID).String() },
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.AdversaryCreatePayload, _ func() time.Time) *command.Rejection {
 			if hasState && isAdversaryCreateNoMutation(s, *p) {
 				return &command.Rejection{
@@ -60,30 +59,30 @@ func decideAdversaryCreate(snapshotState daggerheartstate.SnapshotState, hasSnap
 					Message: "adversary create is unchanged",
 				}
 			}
-			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
-			p.AdversaryEntryID = strings.TrimSpace(p.AdversaryEntryID)
-			p.Name = strings.TrimSpace(p.Name)
-			p.Kind = strings.TrimSpace(p.Kind)
-			p.SessionID = ids.SessionID(strings.TrimSpace(p.SessionID.String()))
-			p.SceneID = ids.SceneID(strings.TrimSpace(p.SceneID.String()))
-			p.Notes = strings.TrimSpace(p.Notes)
-			p.SpotlightGateID = ids.GateID(strings.TrimSpace(p.SpotlightGateID.String()))
+			p.AdversaryID = normalize.ID(p.AdversaryID)
+			p.AdversaryEntryID = normalize.String(p.AdversaryEntryID)
+			p.Name = normalize.String(p.Name)
+			p.Kind = normalize.String(p.Kind)
+			p.SessionID = normalize.ID(p.SessionID)
+			p.SceneID = normalize.ID(p.SceneID)
+			p.Notes = normalize.String(p.Notes)
+			p.SpotlightGateID = normalize.ID(p.SpotlightGateID)
 			return nil
 		}, now)
 }
 
 func decideAdversaryUpdate(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, payload.EventTypeAdversaryUpdated, "adversary",
-		func(p *payload.AdversaryUpdatePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
+		func(p *payload.AdversaryUpdatePayload) string { return normalize.ID(p.AdversaryID).String() },
 		func(p *payload.AdversaryUpdatePayload, _ func() time.Time) *command.Rejection {
-			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
-			p.AdversaryEntryID = strings.TrimSpace(p.AdversaryEntryID)
-			p.Name = strings.TrimSpace(p.Name)
-			p.Kind = strings.TrimSpace(p.Kind)
-			p.SessionID = ids.SessionID(strings.TrimSpace(p.SessionID.String()))
-			p.SceneID = ids.SceneID(strings.TrimSpace(p.SceneID.String()))
-			p.Notes = strings.TrimSpace(p.Notes)
-			p.SpotlightGateID = ids.GateID(strings.TrimSpace(p.SpotlightGateID.String()))
+			p.AdversaryID = normalize.ID(p.AdversaryID)
+			p.AdversaryEntryID = normalize.String(p.AdversaryEntryID)
+			p.Name = normalize.String(p.Name)
+			p.Kind = normalize.String(p.Kind)
+			p.SessionID = normalize.ID(p.SessionID)
+			p.SceneID = normalize.ID(p.SceneID)
+			p.Notes = normalize.String(p.Notes)
+			p.SpotlightGateID = normalize.ID(p.SpotlightGateID)
 			return nil
 		}, now)
 }
@@ -91,7 +90,7 @@ func decideAdversaryUpdate(cmd command.Command, now func() time.Time) command.De
 func decideAdversaryFeatureApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeAdversaryUpdated, "adversary",
-		func(p *payload.AdversaryFeatureApplyPayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
+		func(p *payload.AdversaryFeatureApplyPayload) string { return normalize.ID(p.AdversaryID).String() },
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.AdversaryFeatureApplyPayload, _ func() time.Time) *command.Rejection {
 			if hasState && isAdversaryFeatureApplyNoMutation(s, *p) {
 				return &command.Rejection{
@@ -99,11 +98,11 @@ func decideAdversaryFeatureApply(snapshotState daggerheartstate.SnapshotState, h
 					Message: "adversary feature apply is unchanged",
 				}
 			}
-			p.ActorAdversaryID = ids.AdversaryID(strings.TrimSpace(p.ActorAdversaryID.String()))
-			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
-			p.FeatureID = strings.TrimSpace(p.FeatureID)
-			p.TargetCharacterID = ids.CharacterID(strings.TrimSpace(p.TargetCharacterID.String()))
-			p.TargetAdversaryID = ids.AdversaryID(strings.TrimSpace(p.TargetAdversaryID.String()))
+			p.ActorAdversaryID = normalize.ID(p.ActorAdversaryID)
+			p.AdversaryID = normalize.ID(p.AdversaryID)
+			p.FeatureID = normalize.String(p.FeatureID)
+			p.TargetCharacterID = normalize.ID(p.TargetCharacterID)
+			p.TargetAdversaryID = normalize.ID(p.TargetAdversaryID)
 			return nil
 		},
 		func(s daggerheartstate.SnapshotState, _ bool, p payload.AdversaryFeatureApplyPayload) payload.AdversaryUpdatedPayload {
@@ -147,10 +146,10 @@ func decideAdversaryFeatureApply(snapshotState daggerheartstate.SnapshotState, h
 
 func decideAdversaryDelete(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, payload.EventTypeAdversaryDeleted, "adversary",
-		func(p *payload.AdversaryDeletePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
+		func(p *payload.AdversaryDeletePayload) string { return normalize.ID(p.AdversaryID).String() },
 		func(p *payload.AdversaryDeletePayload, _ func() time.Time) *command.Rejection {
-			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
-			p.Reason = strings.TrimSpace(p.Reason)
+			p.AdversaryID = normalize.ID(p.AdversaryID)
+			p.Reason = normalize.String(p.Reason)
 			return nil
 		}, now)
 }
@@ -190,12 +189,12 @@ func isAdversaryCreateNoMutation(snapshot daggerheartstate.SnapshotState, p payl
 	if !hasAdversary {
 		return false
 	}
-	return adversary.Name == strings.TrimSpace(p.Name) &&
-		adversary.AdversaryEntryID == strings.TrimSpace(p.AdversaryEntryID) &&
-		adversary.Kind == strings.TrimSpace(p.Kind) &&
-		adversary.SessionID == ids.SessionID(strings.TrimSpace(p.SessionID.String())) &&
-		adversary.SceneID == ids.SceneID(strings.TrimSpace(p.SceneID.String())) &&
-		adversary.Notes == strings.TrimSpace(p.Notes) &&
+	return adversary.Name == normalize.String(p.Name) &&
+		adversary.AdversaryEntryID == normalize.String(p.AdversaryEntryID) &&
+		adversary.Kind == normalize.String(p.Kind) &&
+		adversary.SessionID == normalize.ID(p.SessionID) &&
+		adversary.SceneID == normalize.ID(p.SceneID) &&
+		adversary.Notes == normalize.String(p.Notes) &&
 		adversary.HP == p.HP &&
 		adversary.HPMax == p.HPMax &&
 		adversary.Stress == p.Stress &&
@@ -206,7 +205,7 @@ func isAdversaryCreateNoMutation(snapshot daggerheartstate.SnapshotState, p payl
 		adversary.Armor == p.Armor &&
 		equalAdversaryFeatureStates(adversary.FeatureStates, p.FeatureStates) &&
 		equalAdversaryPendingExperience(adversary.PendingExperience, p.PendingExperience) &&
-		adversary.SpotlightGateID == ids.GateID(strings.TrimSpace(p.SpotlightGateID.String())) &&
+		adversary.SpotlightGateID == normalize.ID(p.SpotlightGateID) &&
 		adversary.SpotlightCount == p.SpotlightCount
 }
 

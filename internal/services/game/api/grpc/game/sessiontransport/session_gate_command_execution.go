@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -17,11 +16,11 @@ import (
 // sessionGateCommandExecutor centralizes the canonical session-gate write path
 // so session- and communication-owned handlers share one orchestration seam.
 type sessionGateCommandExecutor struct {
-	write   domainwriteexec.WritePath
+	write   domainwrite.WritePath
 	applier projection.Applier
 }
 
-func newSessionGateCommandExecutor(write domainwriteexec.WritePath, applier projection.Applier) sessionGateCommandExecutor {
+func newSessionGateCommandExecutor(write domainwrite.WritePath, applier projection.Applier) sessionGateCommandExecutor {
 	return sessionGateCommandExecutor{
 		write:   write,
 		applier: applier,

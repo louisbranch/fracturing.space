@@ -96,6 +96,11 @@ func (s CharacterSubclassState) Normalized() CharacterSubclassState {
 	return normalized
 }
 
+// Equal reports whether two subclass states are equivalent after normalization.
+func (s CharacterSubclassState) Equal(other CharacterSubclassState) bool {
+	return s.Normalized() == other.Normalized()
+}
+
 // IsZero reports whether the subclass state carries no mutable runtime data.
 func (s CharacterSubclassState) IsZero() bool {
 	normalized := s.Normalized()

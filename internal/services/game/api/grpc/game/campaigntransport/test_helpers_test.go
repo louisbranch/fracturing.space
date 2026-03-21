@@ -14,7 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -412,7 +411,7 @@ func newTestCampaignService(deps Deps, clock func() time.Time, idGenerator func(
 
 // writeDeps returns a Deps with domain executor and runtime configured.
 func writeDeps(domain handler.Domain, base Deps) Deps {
-	base.Write = domainwriteexec.WritePath{
+	base.Write = domainwrite.WritePath{
 		Executor: domain,
 		Runtime:  testRuntime,
 	}

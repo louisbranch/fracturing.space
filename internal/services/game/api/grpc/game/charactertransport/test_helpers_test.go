@@ -12,7 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -317,7 +316,7 @@ func newWorkflowCharacterService(t *testing.T, profile projectionstore.Daggerhea
 				"domain-card.blade-strike": {ID: "domain-card.blade-strike", DomainID: "domain.blade", Name: "Blade Strike", Level: 1},
 			},
 		},
-		Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	})
 }
 

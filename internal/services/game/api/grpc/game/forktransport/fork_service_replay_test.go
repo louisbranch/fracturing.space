@@ -9,7 +9,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -192,7 +192,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		Character:    characterStore,
 		Event:        eventStore,
 		CampaignFork: forkStore,
-		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 	deps.Applier = testApplier(t, deps, dhStore)
 
@@ -364,7 +364,7 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 		Character:    characterStore,
 		Event:        eventStore,
 		CampaignFork: forkStore,
-		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
 
@@ -588,7 +588,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		Character:    characterStore,
 		Event:        eventStore,
 		CampaignFork: forkStore,
-		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 	deps.Applier = testApplier(t, deps, dhStore)
 
@@ -699,7 +699,7 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 		Character:    characterStore,
 		Event:        eventStore,
 		CampaignFork: forkStore,
-		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
 	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
@@ -875,7 +875,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 		Event:        eventStore,
 		CampaignFork: forkStore,
 		Session:      sessionStore,
-		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
 	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))

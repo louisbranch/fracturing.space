@@ -877,17 +877,16 @@ func TestSessionGateStoreDoesNotUseLegacyProjectionJSONBlobs(t *testing.T) {
 }
 
 // TestHandlerPipelineImportDirectionIsLayered enforces the import DAG between
-// the five handler-pipeline packages (validate, commandbuild, domainwrite,
-// domainwriteexec, grpcerror).
+// the four handler-pipeline packages (validate, commandbuild, domainwrite,
+// grpcerror).
 //
 // Invariant: lower-layer packages must not import higher-layer packages.
 // The allowed directions are:
 //
-//	domainwriteexec → domainwrite, grpcerror
-//	grpcerror       → domainwrite
-//	validate        → (none of the above)
-//	commandbuild    → (none of the above)
-//	domainwrite     → (none of the above)
+//	grpcerror    → (none of the above)
+//	validate     → (none of the above)
+//	commandbuild → (none of the above)
+//	domainwrite  → (none of the above)
 func TestHandlerPipelineImportDirectionIsLayered(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	pipelineBase := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "internal")
@@ -895,11 +894,10 @@ func TestHandlerPipelineImportDirectionIsLayered(t *testing.T) {
 
 	// allowedImports defines which pipeline packages each package may import.
 	allowedImports := map[string]map[string]struct{}{
-		"validate":        {},
-		"commandbuild":    {},
-		"domainwrite":     {},
-		"grpcerror":       {"domainwrite": {}},
-		"domainwriteexec": {"domainwrite": {}, "grpcerror": {}},
+		"validate":     {},
+		"commandbuild": {},
+		"domainwrite":  {},
+		"grpcerror":    {},
 	}
 
 	var violations []string

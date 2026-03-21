@@ -1,7 +1,6 @@
 package participant
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -51,9 +50,7 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 	}
 
 	normalizedPayload := BindPayload{ParticipantID: ids.ParticipantID(participantID), UserID: ids.UserID(userID)}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeBound, "participant", participantID, payloadJSON, now().UTC())
-	return command.Accept(evt)
+	return acceptParticipantEvent(cmd, now, EventTypeBound, participantID, normalizedPayload)
 }
 
 func decideUnbind(state State, cmd command.Command, now func() time.Time) command.Decision {
@@ -92,9 +89,7 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 	reason := strings.TrimSpace(payload.Reason)
 
 	normalizedPayload := UnbindPayload{ParticipantID: ids.ParticipantID(participantID), UserID: ids.UserID(userID), Reason: reason}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUnbound, "participant", participantID, payloadJSON, now().UTC())
-	return command.Accept(evt)
+	return acceptParticipantEvent(cmd, now, EventTypeUnbound, participantID, normalizedPayload)
 }
 
 func decideSeatReassign(state State, cmd command.Command, now func() time.Time) command.Decision {
@@ -145,7 +140,5 @@ func decideSeatReassign(state State, cmd command.Command, now func() time.Time) 
 		UserID:        ids.UserID(userID),
 		Reason:        reason,
 	}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeSeatReassigned, "participant", participantID, payloadJSON, now().UTC())
-	return command.Accept(evt)
+	return acceptParticipantEvent(cmd, now, EventTypeSeatReassigned, participantID, normalizedPayload)
 }

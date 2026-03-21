@@ -9,7 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -171,7 +170,7 @@ func (h *interactionServiceHarness) serviceWithSuccessfulWrite(t *testing.T) *In
 	runtime := testWriteRuntime(t)
 	runtime.SetInlineApplyEnabled(false)
 	deps := h.deps()
-	deps.Write = domainwriteexec.WritePath{
+	deps.Write = domainwrite.WritePath{
 		Executor: fakeDomainExecutor{
 			result: testAcceptedDomainResult(),
 		},
@@ -1090,7 +1089,7 @@ func TestInteractionApplicationSetActiveScenePreservesOwningAIGMTurn(t *testing.
 		Scene:              h.sceneStore,
 		SceneCharacter:     h.sceneCharacters,
 		SceneInteraction:   h.sceneInteraction,
-		Write:              domainwriteexec.WritePath{Executor: domain, Runtime: runtime},
+		Write:              domainwrite.WritePath{Executor: domain, Runtime: runtime},
 	}, gametest.FixedIDGenerator("unused"))
 
 	if _, err := app.SetActiveScene(
@@ -1175,7 +1174,7 @@ func TestInteractionApplicationSetActiveSceneClearsAIGMTurnForDifferentActor(t *
 		Scene:              h.sceneStore,
 		SceneCharacter:     h.sceneCharacters,
 		SceneInteraction:   h.sceneInteraction,
-		Write:              domainwriteexec.WritePath{Executor: domain, Runtime: runtime},
+		Write:              domainwrite.WritePath{Executor: domain, Runtime: runtime},
 	}, gametest.FixedIDGenerator("unused"))
 
 	if _, err := app.SetActiveScene(

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fold"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
@@ -54,29 +55,29 @@ var characterUpdateFieldAppliers = map[string]characterUpdateFieldApplier{
 	},
 }
 
-// FoldHandledTypes returns the event types handled by the character fold function.
-func FoldHandledTypes() []event.Type {
-	return []event.Type{
-		EventTypeCreated,
-		EventTypeUpdated,
-		EventTypeDeleted,
-	}
+// foldRouter is the registration-based fold dispatcher. Handled types are
+// derived from registered handlers, eliminating sync-drift between the switch
+// and the type list.
+var foldRouter = newFoldRouter()
+
+func newFoldRouter() *fold.CoreFoldRouter[State] {
+	r := fold.NewCoreFoldRouter[State]()
+	r.Handle(EventTypeCreated, foldCreated)
+	r.Handle(EventTypeUpdated, foldUpdated)
+	r.Handle(EventTypeDeleted, foldDeleted)
+	return r
 }
 
-// Fold applies an event to character state. It returns an error if a recognized
-// event carries a payload that cannot be unmarshalled.
+// FoldHandledTypes returns the event types handled by the character fold function.
+// Derived from registered handlers via the fold router.
+func FoldHandledTypes() []event.Type {
+	return foldRouter.FoldHandledTypes()
+}
+
+// Fold applies an event to character state. Returns an error for unhandled
+// event types and for recognized events with unparseable payloads.
 func Fold(state State, evt event.Event) (State, error) {
-	switch evt.Type {
-	case EventTypeCreated:
-		return foldCreated(state, evt)
-	case EventTypeUpdated:
-		return foldUpdated(state, evt)
-	case EventTypeDeleted:
-		return foldDeleted(state, evt)
-	}
-	// Unknown event types are silently ignored so that replay remains
-	// forward-compatible when new events are added before the fold is updated.
-	return state, nil
+	return foldRouter.Fold(state, evt)
 }
 
 func foldCreated(state State, evt event.Event) (State, error) {

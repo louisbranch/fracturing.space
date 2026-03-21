@@ -3,6 +3,7 @@ package replay
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -172,8 +173,8 @@ func TestReplay_DetectsSequenceGap(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected sequence gap error")
 	}
-	if got := err.Error(); got != "event sequence gap: expected 2 got 3" {
-		t.Fatalf("sequence gap error = %q, want %q", got, "event sequence gap: expected 2 got 3")
+	if !strings.Contains(err.Error(), "sequence gap") {
+		t.Fatalf("expected sequence gap error, got: %v", err)
 	}
 }
 

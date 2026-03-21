@@ -3,12 +3,12 @@ package decider
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -22,7 +22,7 @@ func decideCharacterProfileReplace(cmd command.Command, now func() time.Time) co
 		})
 	}
 
-	characterID := strings.TrimSpace(p.CharacterID.String())
+	characterID := normalize.ID(p.CharacterID).String()
 	if characterID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodePayloadDecodeFailed,
@@ -54,7 +54,7 @@ func decideCharacterProfileDelete(cmd command.Command, now func() time.Time) com
 		})
 	}
 
-	characterID := strings.TrimSpace(p.CharacterID.String())
+	characterID := normalize.ID(p.CharacterID).String()
 	if characterID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodePayloadDecodeFailed,
@@ -64,7 +64,7 @@ func decideCharacterProfileDelete(cmd command.Command, now func() time.Time) com
 
 	normalized := daggerheartstate.CharacterProfileDeletePayload{
 		CharacterID: ids.CharacterID(characterID),
-		Reason:      strings.TrimSpace(p.Reason),
+		Reason:      normalize.String(p.Reason),
 	}
 	payloadJSON, _ := json.Marshal(normalized)
 	evt := command.NewEvent(cmd, payload.EventTypeCharacterProfileDeleted, "character", characterID, payloadJSON, now().UTC())

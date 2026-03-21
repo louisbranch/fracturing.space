@@ -1,7 +1,6 @@
 package participant
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -33,7 +32,5 @@ func decideLeave(state State, cmd command.Command, now func() time.Time) command
 	reason := strings.TrimSpace(payload.Reason)
 
 	normalizedPayload := LeavePayload{ParticipantID: ids.ParticipantID(participantID), Reason: reason}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeLeft, "participant", participantID, payloadJSON, now().UTC())
-	return command.Accept(evt)
+	return acceptParticipantEvent(cmd, now, EventTypeLeft, participantID, normalizedPayload)
 }

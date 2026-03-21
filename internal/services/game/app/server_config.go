@@ -54,10 +54,19 @@ func loadServerEnv() (serverEnv, error) {
 	if cfg.ContentDBPath == "" {
 		cfg.ContentDBPath = filepath.Join("data", "game-content.db")
 	}
-	if _, _, _, err := resolveProjectionApplyOutboxModes(cfg); err != nil {
+	if err := validateProjectionApplyOutboxConfig(cfg); err != nil {
 		return serverEnv{}, fmt.Errorf("validate projection apply config: %w", err)
 	}
 	return cfg, nil
+}
+
+// validateProjectionApplyOutboxConfig checks that the projection apply outbox
+// env flags form a valid combination. This is the single validation pass;
+// resolveProjectionApplyOutboxModes reuses the same rules to return the
+// resolved mode without re-validating.
+func validateProjectionApplyOutboxConfig(srvEnv serverEnv) error {
+	_, _, _, err := resolveProjectionApplyOutboxModes(srvEnv)
+	return err
 }
 
 func resolveProjectionApplyOutboxModes(srvEnv serverEnv) (bool, bool, string, error) {

@@ -6,6 +6,12 @@
 // configure behavior through Options (require events, error callbacks,
 // rejection observers).
 //
-// domainwrite is transport-agnostic — it knows nothing about gRPC codes.
-// gRPC-specific error shaping is layered on by grpcerror.NormalizeDomainWriteOptions.
+// The package provides both transport-agnostic helpers (ExecuteAndApply)
+// and gRPC-aware entry points (TransportExecuteAndApply) that normalize
+// error callbacks, wire audit rejection telemetry, and apply runtime
+// configuration.
+//
+// WritePath bundles the executor, runtime, and optional audit store into
+// a single dependency struct that satisfies the Deps interface. Transport
+// packages embed or accept WritePath instead of carrying three separate fields.
 package domainwrite

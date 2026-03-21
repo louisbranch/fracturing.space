@@ -2,12 +2,11 @@ package decider
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -15,8 +14,8 @@ import (
 func decideClassFeatureApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncMulti(cmd, snapshotState, hasSnapshot,
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.ClassFeatureApplyPayload, _ func() time.Time) *command.Rejection {
-			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
-			p.Feature = strings.TrimSpace(p.Feature)
+			p.ActorCharacterID = normalize.ID(p.ActorCharacterID)
+			p.Feature = normalize.String(p.Feature)
 			if p.ActorCharacterID == "" {
 				return &command.Rejection{Code: "CLASS_FEATURE_ACTOR_REQUIRED", Message: "actor character id is required"}
 			}
@@ -28,7 +27,7 @@ func decideClassFeatureApply(snapshotState daggerheartstate.SnapshotState, hasSn
 			}
 			if hasState {
 				for _, targetPatch := range p.Targets {
-					targetPatch.CharacterID = ids.CharacterID(strings.TrimSpace(targetPatch.CharacterID.String()))
+					targetPatch.CharacterID = normalize.ID(targetPatch.CharacterID)
 					target, ok := snapshotCharacterState(s, targetPatch.CharacterID)
 					if ok {
 						if targetPatch.HPAfter != nil && target.HP != derefInt(targetPatch.HPBefore, target.HP) {
@@ -59,13 +58,13 @@ func decideClassFeatureApply(snapshotState daggerheartstate.SnapshotState, hasSn
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.ClassFeatureApplyPayload, _ func() time.Time) ([]module.EventSpec, error) {
-			source := fmt.Sprintf("class_feature:%s:%s", p.Feature, strings.TrimSpace(p.ActorCharacterID.String()))
+			source := fmt.Sprintf("class_feature:%s:%s", p.Feature, normalize.ID(p.ActorCharacterID).String())
 			specs := make([]module.EventSpec, 0, len(p.Targets))
 			for _, targetPatch := range p.Targets {
 				specs = append(specs, module.EventSpec{
 					Type:       payload.EventTypeCharacterStatePatched,
 					EntityType: "character",
-					EntityID:   strings.TrimSpace(targetPatch.CharacterID.String()),
+					EntityID:   normalize.ID(targetPatch.CharacterID).String(),
 					Payload: payload.CharacterStatePatchedPayload{
 						CharacterID: targetPatch.CharacterID,
 						Source:      source,

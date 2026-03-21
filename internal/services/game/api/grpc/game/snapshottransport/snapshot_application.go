@@ -2,7 +2,7 @@ package snapshottransport
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -14,7 +14,7 @@ type Deps struct {
 	Campaign    storage.CampaignStore
 	Character   storage.CharacterStore
 	Daggerheart projectionstore.Store
-	Write       domainwriteexec.WritePath
+	Write       domainwrite.WritePath
 	Applier     projection.Applier
 }
 
@@ -24,7 +24,7 @@ type Deps struct {
 type snapshotApplication struct {
 	auth    authz.PolicyDeps
 	stores  snapshotApplicationStores
-	write   domainwriteexec.WritePath
+	write   domainwrite.WritePath
 	applier projection.Applier
 }
 

@@ -9,7 +9,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -35,7 +35,7 @@ func TestTransitionScene_UsesSourceSceneSessionID(t *testing.T) {
 		Auth:     authz.PolicyDeps{Participant: participantStore},
 		Campaign: campaignStore,
 		Scene:    sceneStore,
-		Write: domainwriteexec.WritePath{
+		Write: domainwrite.WritePath{
 			Executor: domain,
 		},
 	})

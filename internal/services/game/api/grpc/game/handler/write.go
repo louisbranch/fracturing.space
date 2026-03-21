@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -15,7 +14,7 @@ import (
 )
 
 // DomainWriteDeps is the dependency bundle for domain write execution.
-type DomainWriteDeps = domainwriteexec.Deps
+type DomainWriteDeps = domainwrite.Deps
 
 // ExecuteAndApplyDomainCommand executes a domain command and applies the
 // resulting events inline when enabled.
@@ -26,13 +25,13 @@ func ExecuteAndApplyDomainCommand(
 	cmd command.Command,
 	options domainwrite.Options,
 ) (engine.Result, error) {
-	result, err := domainwriteexec.ExecuteAndApply(
+	result, err := domainwrite.TransportExecuteAndApply(
 		ctx,
 		deps,
 		applier,
 		cmd,
 		options,
-		grpcerror.NormalizeDomainWriteOptionsConfig{},
+		domainwrite.NormalizeDomainWriteOptionsConfig{},
 	)
 	if err != nil {
 		return result, grpcerror.EnsureStatus(err)
@@ -48,12 +47,12 @@ func ExecuteWithoutInlineApply(
 	cmd command.Command,
 	options domainwrite.Options,
 ) (engine.Result, error) {
-	result, err := domainwriteexec.ExecuteWithoutInlineApply(
+	result, err := domainwrite.TransportExecuteWithoutInlineApply(
 		ctx,
 		deps,
 		cmd,
 		options,
-		grpcerror.NormalizeDomainWriteOptionsConfig{},
+		domainwrite.NormalizeDomainWriteOptionsConfig{},
 	)
 	if err != nil {
 		return result, grpcerror.EnsureStatus(err)
@@ -64,5 +63,5 @@ func ExecuteWithoutInlineApply(
 // ApplyErrorWithCodePreserve returns an error wrapper that maps apply errors
 // while preserving domain status codes.
 func ApplyErrorWithCodePreserve(message string) func(error) error {
-	return grpcerror.ApplyErrorWithDomainCodePreserve(message)
+	return domainwrite.ApplyErrorWithDomainCodePreserve(message)
 }

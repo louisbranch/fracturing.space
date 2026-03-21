@@ -1,7 +1,6 @@
 package participant
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -116,28 +115,12 @@ func TestRegisterRequiresRegistry(t *testing.T) {
 	}
 }
 
-func TestFoldUnknownTypeIsNoOp(t *testing.T) {
-	initial := State{
-		Joined:         true,
-		ParticipantID:  "p-1",
-		UserID:         "u-1",
-		Name:           "Alice",
-		Role:           "player",
-		Controller:     "human",
-		CampaignAccess: "member",
-		AvatarSetID:    "set-1",
-		AvatarAssetID:  "asset-1",
-		Pronouns:       "they/them",
-	}
-
-	updated, err := Fold(initial, event.Event{
+func TestFoldUnknownTypeReturnsError(t *testing.T) {
+	_, err := Fold(State{}, event.Event{
 		Type:        event.Type("participant.unknown"),
 		PayloadJSON: []byte(`{"ignored":true}`),
 	})
-	if err != nil {
-		t.Fatalf("Fold() unexpected error: %v", err)
-	}
-	if !reflect.DeepEqual(updated, initial) {
-		t.Fatalf("Fold() updated state on unknown event: got %+v, want %+v", updated, initial)
+	if err == nil {
+		t.Fatal("expected error for unknown event type, got nil")
 	}
 }

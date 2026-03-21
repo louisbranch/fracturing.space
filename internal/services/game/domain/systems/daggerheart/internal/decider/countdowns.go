@@ -3,13 +3,13 @@ package decider
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -23,13 +23,13 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 		})
 	}
 	now = command.NowFunc(now)
-	p.RestType = strings.TrimSpace(p.RestType)
+	p.RestType = normalize.String(p.RestType)
 	for i := range p.CountdownUpdates {
 		if rejection := countdownUpdateSnapshotRejection(snapshotState, p.CountdownUpdates[i]); rejection != nil {
 			return command.Reject(*rejection)
 		}
-		p.CountdownUpdates[i].CountdownID = ids.CountdownID(strings.TrimSpace(p.CountdownUpdates[i].CountdownID.String()))
-		p.CountdownUpdates[i].Reason = strings.TrimSpace(p.CountdownUpdates[i].Reason)
+		p.CountdownUpdates[i].CountdownID = normalize.ID(p.CountdownUpdates[i].CountdownID)
+		p.CountdownUpdates[i].Reason = normalize.String(p.CountdownUpdates[i].Reason)
 	}
 
 	eventPayload := payload.RestTakenPayload{
@@ -42,7 +42,7 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 	}
 	eventPayload.Participants = append(eventPayload.Participants, p.Participants...)
 	eventPayloadJSON, _ := json.Marshal(eventPayload)
-	entityID := strings.TrimSpace(cmd.EntityID)
+	entityID := normalize.String(cmd.EntityID)
 	if entityID == "" {
 		entityID = string(cmd.CampaignID)
 	}
@@ -50,12 +50,12 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 	events := []event.Event{restEvent}
 
 	for _, move := range p.DowntimeMoves {
-		move.ActorCharacterID = ids.CharacterID(strings.TrimSpace(move.ActorCharacterID.String()))
-		move.TargetCharacterID = ids.CharacterID(strings.TrimSpace(move.TargetCharacterID.String()))
-		move.CountdownID = ids.CountdownID(strings.TrimSpace(move.CountdownID.String()))
-		move.GroupID = strings.TrimSpace(move.GroupID)
-		move.RestType = strings.TrimSpace(move.RestType)
-		move.Move = strings.TrimSpace(move.Move)
+		move.ActorCharacterID = normalize.ID(move.ActorCharacterID)
+		move.TargetCharacterID = normalize.ID(move.TargetCharacterID)
+		move.CountdownID = normalize.ID(move.CountdownID)
+		move.GroupID = normalize.String(move.GroupID)
+		move.RestType = normalize.String(move.RestType)
+		move.Move = normalize.String(move.Move)
 		movePayloadJSON, _ := json.Marshal(move)
 		entityID := move.ActorCharacterID.String()
 		if entityID == "" {
@@ -81,15 +81,15 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 
 func decideCountdownCreate(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, payload.EventTypeCountdownCreated, "countdown",
-		func(p *payload.CountdownCreatePayload) string { return strings.TrimSpace(p.CountdownID.String()) },
+		func(p *payload.CountdownCreatePayload) string { return normalize.ID(p.CountdownID).String() },
 		func(p *payload.CountdownCreatePayload, _ func() time.Time) *command.Rejection {
-			p.CountdownID = ids.CountdownID(strings.TrimSpace(p.CountdownID.String()))
-			p.Name = strings.TrimSpace(p.Name)
-			p.Kind = strings.TrimSpace(p.Kind)
-			p.Direction = strings.TrimSpace(p.Direction)
-			p.Variant = strings.TrimSpace(p.Variant)
-			p.TriggerEventType = strings.TrimSpace(p.TriggerEventType)
-			p.LinkedCountdownID = ids.CountdownID(strings.TrimSpace(p.LinkedCountdownID.String()))
+			p.CountdownID = normalize.ID(p.CountdownID)
+			p.Name = normalize.String(p.Name)
+			p.Kind = normalize.String(p.Kind)
+			p.Direction = normalize.String(p.Direction)
+			p.Variant = normalize.String(p.Variant)
+			p.TriggerEventType = normalize.String(p.TriggerEventType)
+			p.LinkedCountdownID = normalize.ID(p.LinkedCountdownID)
 			if p.Variant == "" {
 				p.Variant = "standard"
 			}
@@ -111,15 +111,15 @@ func decideCountdownCreate(cmd command.Command, now func() time.Time) command.De
 
 func decideCountdownUpdate(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, payload.EventTypeCountdownUpdated, "countdown",
-		func(p *payload.CountdownUpdatePayload) string { return strings.TrimSpace(p.CountdownID.String()) },
+		func(p *payload.CountdownUpdatePayload) string { return normalize.ID(p.CountdownID).String() },
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.CountdownUpdatePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if rejection := countdownUpdateSnapshotRejection(s, *p); rejection != nil {
 					return rejection
 				}
 			}
-			p.CountdownID = ids.CountdownID(strings.TrimSpace(p.CountdownID.String()))
-			p.Reason = strings.TrimSpace(p.Reason)
+			p.CountdownID = normalize.ID(p.CountdownID)
+			p.Reason = normalize.String(p.Reason)
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CountdownUpdatePayload) payload.CountdownUpdatedPayload {
@@ -136,10 +136,10 @@ func decideCountdownUpdate(snapshotState daggerheartstate.SnapshotState, hasSnap
 
 func decideCountdownDelete(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, payload.EventTypeCountdownDeleted, "countdown",
-		func(p *payload.CountdownDeletePayload) string { return strings.TrimSpace(p.CountdownID.String()) },
+		func(p *payload.CountdownDeletePayload) string { return normalize.ID(p.CountdownID).String() },
 		func(p *payload.CountdownDeletePayload, _ func() time.Time) *command.Rejection {
-			p.CountdownID = ids.CountdownID(strings.TrimSpace(p.CountdownID.String()))
-			p.Reason = strings.TrimSpace(p.Reason)
+			p.CountdownID = normalize.ID(p.CountdownID)
+			p.Reason = normalize.String(p.Reason)
 			return nil
 		}, now)
 }
@@ -177,7 +177,7 @@ func countdownUpdateSnapshotRejection(snapshot daggerheartstate.SnapshotState, p
 }
 
 func snapshotCountdownState(snapshot daggerheartstate.SnapshotState, countdownID ids.CountdownID) (daggerheartstate.CountdownState, bool) {
-	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
+	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
 		return daggerheartstate.CountdownState{}, false
 	}

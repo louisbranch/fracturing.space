@@ -2,12 +2,11 @@ package decider
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -15,8 +14,8 @@ import (
 func decideSubclassFeatureApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncMulti(cmd, snapshotState, hasSnapshot,
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.SubclassFeatureApplyPayload, _ func() time.Time) *command.Rejection {
-			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
-			p.Feature = strings.TrimSpace(p.Feature)
+			p.ActorCharacterID = normalize.ID(p.ActorCharacterID)
+			p.Feature = normalize.String(p.Feature)
 			if p.ActorCharacterID == "" {
 				return &command.Rejection{Code: "SUBCLASS_FEATURE_ACTOR_REQUIRED", Message: "actor character id is required"}
 			}
@@ -29,7 +28,7 @@ func decideSubclassFeatureApply(snapshotState daggerheartstate.SnapshotState, ha
 			hasMutation := len(p.CharacterConditionTargets) > 0 || len(p.AdversaryConditionTargets) > 0
 			if hasState {
 				for _, targetPatch := range p.Targets {
-					targetPatch.CharacterID = ids.CharacterID(strings.TrimSpace(targetPatch.CharacterID.String()))
+					targetPatch.CharacterID = normalize.ID(targetPatch.CharacterID)
 					target, ok := snapshotCharacterState(s, targetPatch.CharacterID)
 					if ok {
 						if targetPatch.HPAfter != nil && target.HP != derefInt(targetPatch.HPBefore, target.HP) {
@@ -71,13 +70,13 @@ func decideSubclassFeatureApply(snapshotState daggerheartstate.SnapshotState, ha
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.SubclassFeatureApplyPayload, _ func() time.Time) ([]module.EventSpec, error) {
-			source := fmt.Sprintf("subclass_feature:%s:%s", p.Feature, strings.TrimSpace(p.ActorCharacterID.String()))
+			source := fmt.Sprintf("subclass_feature:%s:%s", p.Feature, normalize.ID(p.ActorCharacterID).String())
 			specs := make([]module.EventSpec, 0, len(p.Targets)+len(p.CharacterConditionTargets)+len(p.AdversaryConditionTargets))
 			for _, targetPatch := range p.Targets {
 				specs = append(specs, module.EventSpec{
 					Type:       payload.EventTypeCharacterStatePatched,
 					EntityType: "character",
-					EntityID:   strings.TrimSpace(targetPatch.CharacterID.String()),
+					EntityID:   normalize.ID(targetPatch.CharacterID).String(),
 					Payload: payload.CharacterStatePatchedPayload{
 						CharacterID:   targetPatch.CharacterID,
 						Source:        source,
@@ -91,14 +90,14 @@ func decideSubclassFeatureApply(snapshotState daggerheartstate.SnapshotState, ha
 				})
 			}
 			for _, targetPatch := range p.CharacterConditionTargets {
-				eventSource := strings.TrimSpace(targetPatch.Source)
+				eventSource := normalize.String(targetPatch.Source)
 				if eventSource == "" {
 					eventSource = source
 				}
 				specs = append(specs, module.EventSpec{
 					Type:       payload.EventTypeConditionChanged,
 					EntityType: "character",
-					EntityID:   strings.TrimSpace(targetPatch.CharacterID.String()),
+					EntityID:   normalize.ID(targetPatch.CharacterID).String(),
 					Payload: payload.ConditionChangedPayload{
 						CharacterID: targetPatch.CharacterID,
 						Conditions:  targetPatch.ConditionsAfter,
@@ -110,14 +109,14 @@ func decideSubclassFeatureApply(snapshotState daggerheartstate.SnapshotState, ha
 				})
 			}
 			for _, targetPatch := range p.AdversaryConditionTargets {
-				eventSource := strings.TrimSpace(targetPatch.Source)
+				eventSource := normalize.String(targetPatch.Source)
 				if eventSource == "" {
 					eventSource = source
 				}
 				specs = append(specs, module.EventSpec{
 					Type:       payload.EventTypeAdversaryConditionChanged,
 					EntityType: "adversary",
-					EntityID:   strings.TrimSpace(targetPatch.AdversaryID.String()),
+					EntityID:   normalize.ID(targetPatch.AdversaryID).String(),
 					Payload: payload.AdversaryConditionChangedPayload{
 						AdversaryID: targetPatch.AdversaryID,
 						Conditions:  targetPatch.ConditionsAfter,

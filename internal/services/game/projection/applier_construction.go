@@ -69,24 +69,13 @@ type StoreGroups struct {
 }
 
 // StoreBundle is the projection-owned store contract for the full core read
-// model surface plus watermark persistence. It keeps projection construction on
-// a consumer-owned seam instead of reusing a broader storage package composite.
+// model surface plus watermark persistence. It composes the purpose-scoped
+// interfaces from the storage package so consumers import only what they need
+// while the SQLite implementation satisfies the full surface.
 type StoreBundle interface {
-	storage.CampaignStore
-	storage.CharacterStore
-	storage.CampaignForkStore
-	storage.ClaimIndexStore
-	storage.InviteStore
-	storage.ParticipantStore
-	storage.SessionStore
-	storage.SessionGateStore
-	storage.SessionSpotlightStore
-	storage.SessionInteractionStore
-	storage.SceneStore
-	storage.SceneCharacterStore
-	storage.SceneGateStore
-	storage.SceneSpotlightStore
-	storage.SceneInteractionStore
+	storage.CampaignReadStores
+	storage.SessionReadStores
+	storage.SceneReadStores
 	storage.ProjectionWatermarkStore
 }
 

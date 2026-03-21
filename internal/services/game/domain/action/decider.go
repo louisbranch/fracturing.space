@@ -28,6 +28,19 @@ const (
 
 var coreOutcomeEffectPolicy = newOutcomeEffectPolicy("session.gate_opened", "session.spotlight_set")
 
+// RejectionCodes returns all rejection code strings used by the action
+// decider. Used by startup validators to detect cross-domain collisions.
+func RejectionCodes() []string {
+	return []string{
+		rejectionCodeRequestIDRequired,
+		rejectionCodeRollSeqRequired,
+		rejectionCodeOutcomeAlreadyApplied,
+		rejectionCodeOutcomeEffectSystemOwnedForbidden,
+		rejectionCodeOutcomeEffectTypeForbidden,
+		rejectionCodeNoteContentRequired,
+	}
+}
+
 // Decide returns the decision for an action command against current state.
 //
 // The action aggregate is intentionally lightweight: each supported action command

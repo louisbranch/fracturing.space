@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -30,7 +30,7 @@ func NewProjectionStores(config StoresProjectionConfig) ProjectionStores {
 // NewInfrastructureStores builds the operational store concern from the exact
 // infrastructure dependencies that root transport and projection apply use.
 func NewInfrastructureStores(
-	projectionStore ProjectionStoreBundle,
+	projectionStore storage.ProjectionStore,
 	config StoresInfrastructureConfig,
 ) InfrastructureStores {
 	return InfrastructureStores{
@@ -58,7 +58,7 @@ func NewRuntimeStores(
 	auditStore storage.AuditEventStore,
 ) RuntimeStores {
 	return RuntimeStores{
-		Write: domainwriteexec.WritePath{
+		Write: domainwrite.WritePath{
 			Executor: config.Domain,
 			Runtime:  config.WriteRuntime,
 			Audit:    auditStore,

@@ -322,6 +322,9 @@ func (b *serverBootstrap) configureStoresAndApplier(
 	if err := applier.ValidateStorePreconditions(); err != nil {
 		return configuredDomainState{}, err
 	}
+	if err := assertWatermarkStoreConfigured(srvEnv, storeGroups.infrastructure); err != nil {
+		return configuredDomainState{}, err
+	}
 	return configuredDomainState{
 		projectionStores:     storeGroups.projection,
 		systemStores:         storeGroups.system,
@@ -344,6 +347,21 @@ type dependencyConns struct {
 	// during shutdown before closing statusMc or reporter.
 	statusBindDone   <-chan struct{}
 	statusBindCancel context.CancelFunc
+}
+
+// assertWatermarkStoreConfigured fails startup when the projection outbox
+// worker is enabled but the watermark store is nil. Without watermarks the
+// outbox worker can silently process events while gap detection is disabled,
+// which means projection divergence will not be detected or repaired.
+func assertWatermarkStoreConfigured(srvEnv serverEnv, infra gamegrpc.InfrastructureStores) error {
+	if !srvEnv.ProjectionApplyOutboxEnabled {
+		return nil
+	}
+	if infra.Watermarks == nil {
+		return fmt.Errorf("projection apply outbox is enabled but watermark store is nil; " +
+			"watermarks are required for projection gap detection when the outbox worker is active")
+	}
+	return nil
 }
 
 func nilCatalogReadinessStore(bundle *storageBundle) contentstore.DaggerheartCatalogReadinessStore {

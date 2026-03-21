@@ -14,6 +14,9 @@ import (
 // CampaignStore is a lightweight in-memory CampaignStore fake for tests.
 type CampaignStore struct {
 	Campaigns map[string]storage.CampaignRecord
+	PutErr    error
+	GetErr    error
+	ListErr   error
 }
 
 // NewCampaignStore constructs a CampaignStore fake with initialized state maps.
@@ -22,11 +25,17 @@ func NewCampaignStore() *CampaignStore {
 }
 
 func (s *CampaignStore) Put(_ context.Context, c storage.CampaignRecord) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.Campaigns[c.ID] = c
 	return nil
 }
 
 func (s *CampaignStore) Get(_ context.Context, id string) (storage.CampaignRecord, error) {
+	if s.GetErr != nil {
+		return storage.CampaignRecord{}, s.GetErr
+	}
 	c, ok := s.Campaigns[id]
 	if !ok {
 		return storage.CampaignRecord{}, storage.ErrNotFound
@@ -35,6 +44,9 @@ func (s *CampaignStore) Get(_ context.Context, id string) (storage.CampaignRecor
 }
 
 func (s *CampaignStore) List(_ context.Context, _ int, _ string) (storage.CampaignPage, error) {
+	if s.ListErr != nil {
+		return storage.CampaignPage{}, s.ListErr
+	}
 	return storage.CampaignPage{}, nil
 }
 
@@ -44,7 +56,10 @@ type DaggerheartStore struct {
 	States              map[string]projectionstore.DaggerheartCharacterState
 	Snapshots           map[string]projectionstore.DaggerheartSnapshot
 	Countdowns          map[string]projectionstore.DaggerheartCountdown
+	Adversaries         map[string]projectionstore.DaggerheartAdversary
 	EnvironmentEntities map[string]projectionstore.DaggerheartEnvironmentEntity
+	PutErr              error
+	GetErr              error
 }
 
 // NewDaggerheartStore constructs a DaggerheartStore fake with initialized state maps.
@@ -54,16 +69,23 @@ func NewDaggerheartStore() *DaggerheartStore {
 		States:              make(map[string]projectionstore.DaggerheartCharacterState),
 		Snapshots:           make(map[string]projectionstore.DaggerheartSnapshot),
 		Countdowns:          make(map[string]projectionstore.DaggerheartCountdown),
+		Adversaries:         make(map[string]projectionstore.DaggerheartAdversary),
 		EnvironmentEntities: make(map[string]projectionstore.DaggerheartEnvironmentEntity),
 	}
 }
 
 func (s *DaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, p projectionstore.DaggerheartCharacterProfile) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.Profiles[p.CampaignID+":"+p.CharacterID] = p
 	return nil
 }
 
 func (s *DaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartCharacterProfile{}, s.GetErr
+	}
 	p, ok := s.Profiles[campaignID+":"+characterID]
 	if !ok {
 		return projectionstore.DaggerheartCharacterProfile{}, storage.ErrNotFound
@@ -72,6 +94,9 @@ func (s *DaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, cam
 }
 
 func (s *DaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (projectionstore.DaggerheartCharacterProfilePage, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartCharacterProfilePage{}, s.GetErr
+	}
 	page := projectionstore.DaggerheartCharacterProfilePage{
 		Profiles: make([]projectionstore.DaggerheartCharacterProfile, 0),
 	}
@@ -84,16 +109,25 @@ func (s *DaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, c
 }
 
 func (s *DaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	delete(s.Profiles, campaignID+":"+characterID)
 	return nil
 }
 
 func (s *DaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st projectionstore.DaggerheartCharacterState) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.States[st.CampaignID+":"+st.CharacterID] = st
 	return nil
 }
 
 func (s *DaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartCharacterState{}, s.GetErr
+	}
 	st, ok := s.States[campaignID+":"+characterID]
 	if !ok {
 		return projectionstore.DaggerheartCharacterState{}, storage.ErrNotFound
@@ -102,11 +136,17 @@ func (s *DaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campa
 }
 
 func (s *DaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap projectionstore.DaggerheartSnapshot) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.Snapshots[snap.CampaignID] = snap
 	return nil
 }
 
 func (s *DaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartSnapshot{}, s.GetErr
+	}
 	snap, ok := s.Snapshots[campaignID]
 	if !ok {
 		return projectionstore.DaggerheartSnapshot{}, storage.ErrNotFound
@@ -115,11 +155,17 @@ func (s *DaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID 
 }
 
 func (s *DaggerheartStore) PutDaggerheartCountdown(_ context.Context, cd projectionstore.DaggerheartCountdown) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.Countdowns[cd.CampaignID+":"+cd.CountdownID] = cd
 	return nil
 }
 
 func (s *DaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartCountdown{}, s.GetErr
+	}
 	cd, ok := s.Countdowns[campaignID+":"+countdownID]
 	if !ok {
 		return projectionstore.DaggerheartCountdown{}, storage.ErrNotFound
@@ -128,9 +174,12 @@ func (s *DaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID
 }
 
 func (s *DaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]projectionstore.DaggerheartCountdown, error) {
+	if s.GetErr != nil {
+		return nil, s.GetErr
+	}
 	result := make([]projectionstore.DaggerheartCountdown, 0)
 	for key, cd := range s.Countdowns {
-		if len(key) > len(campaignID) && strings.HasPrefix(key, campaignID) {
+		if len(key) > len(campaignID) && strings.HasPrefix(key, campaignID+":") {
 			result = append(result, cd)
 		}
 	}
@@ -138,32 +187,70 @@ func (s *DaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaign
 }
 
 func (s *DaggerheartStore) DeleteDaggerheartCountdown(_ context.Context, campaignID, countdownID string) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	delete(s.Countdowns, campaignID+":"+countdownID)
 	return nil
 }
 
-func (s *DaggerheartStore) PutDaggerheartAdversary(_ context.Context, _ projectionstore.DaggerheartAdversary) error {
+func (s *DaggerheartStore) PutDaggerheartAdversary(_ context.Context, adv projectionstore.DaggerheartAdversary) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
+	s.Adversaries[adv.CampaignID+":"+adv.AdversaryID] = adv
 	return nil
 }
 
-func (s *DaggerheartStore) GetDaggerheartAdversary(_ context.Context, _, _ string) (projectionstore.DaggerheartAdversary, error) {
-	return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
+func (s *DaggerheartStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartAdversary{}, s.GetErr
+	}
+	adv, ok := s.Adversaries[campaignID+":"+adversaryID]
+	if !ok {
+		return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
+	}
+	return adv, nil
 }
 
-func (s *DaggerheartStore) ListDaggerheartAdversaries(_ context.Context, _, _ string) ([]projectionstore.DaggerheartAdversary, error) {
-	return nil, nil
+func (s *DaggerheartStore) ListDaggerheartAdversaries(_ context.Context, campaignID, sessionID string) ([]projectionstore.DaggerheartAdversary, error) {
+	if s.GetErr != nil {
+		return nil, s.GetErr
+	}
+	result := make([]projectionstore.DaggerheartAdversary, 0)
+	prefix := campaignID + ":"
+	for key, adv := range s.Adversaries {
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		if strings.TrimSpace(sessionID) != "" && adv.SessionID != sessionID {
+			continue
+		}
+		result = append(result, adv)
+	}
+	return result, nil
 }
 
-func (s *DaggerheartStore) DeleteDaggerheartAdversary(_ context.Context, _, _ string) error {
+func (s *DaggerheartStore) DeleteDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
+	delete(s.Adversaries, campaignID+":"+adversaryID)
 	return nil
 }
 
 func (s *DaggerheartStore) PutDaggerheartEnvironmentEntity(_ context.Context, environmentEntity projectionstore.DaggerheartEnvironmentEntity) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.EnvironmentEntities[environmentEntity.CampaignID+":"+environmentEntity.EnvironmentEntityID] = environmentEntity
 	return nil
 }
 
 func (s *DaggerheartStore) GetDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartEnvironmentEntity{}, s.GetErr
+	}
 	entity, ok := s.EnvironmentEntities[campaignID+":"+environmentEntityID]
 	if !ok {
 		return projectionstore.DaggerheartEnvironmentEntity{}, storage.ErrNotFound
@@ -172,6 +259,9 @@ func (s *DaggerheartStore) GetDaggerheartEnvironmentEntity(_ context.Context, ca
 }
 
 func (s *DaggerheartStore) ListDaggerheartEnvironmentEntities(_ context.Context, campaignID, sessionID, sceneID string) ([]projectionstore.DaggerheartEnvironmentEntity, error) {
+	if s.GetErr != nil {
+		return nil, s.GetErr
+	}
 	result := make([]projectionstore.DaggerheartEnvironmentEntity, 0)
 	prefix := campaignID + ":"
 	for key, entity := range s.EnvironmentEntities {
@@ -190,15 +280,21 @@ func (s *DaggerheartStore) ListDaggerheartEnvironmentEntities(_ context.Context,
 }
 
 func (s *DaggerheartStore) DeleteDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	delete(s.EnvironmentEntities, campaignID+":"+environmentEntityID)
 	return nil
 }
 
 // EventStore is an in-memory EventStore fake with simple list/filter behavior.
 type EventStore struct {
-	Events  map[string][]event.Event
-	ByHash  map[string]event.Event
-	NextSeq map[string]uint64
+	Events    map[string][]event.Event
+	ByHash    map[string]event.Event
+	NextSeq   map[string]uint64
+	AppendErr error
+	GetErr    error
+	ListErr   error
 }
 
 // NewEventStore constructs an EventStore fake with initialized state maps.
@@ -211,6 +307,9 @@ func NewEventStore() *EventStore {
 }
 
 func (s *EventStore) AppendEvent(_ context.Context, evt event.Event) (event.Event, error) {
+	if s.AppendErr != nil {
+		return event.Event{}, s.AppendErr
+	}
 	cid := string(evt.CampaignID)
 	seq := s.NextSeq[cid]
 	if seq == 0 {
@@ -225,6 +324,9 @@ func (s *EventStore) AppendEvent(_ context.Context, evt event.Event) (event.Even
 }
 
 func (s *EventStore) GetEventByHash(_ context.Context, hash string) (event.Event, error) {
+	if s.GetErr != nil {
+		return event.Event{}, s.GetErr
+	}
 	evt, ok := s.ByHash[hash]
 	if !ok {
 		return event.Event{}, storage.ErrNotFound
@@ -233,6 +335,9 @@ func (s *EventStore) GetEventByHash(_ context.Context, hash string) (event.Event
 }
 
 func (s *EventStore) GetEventBySeq(_ context.Context, campaignID string, seq uint64) (event.Event, error) {
+	if s.GetErr != nil {
+		return event.Event{}, s.GetErr
+	}
 	for _, evt := range s.Events[campaignID] {
 		if evt.Seq == seq {
 			return evt, nil
@@ -242,6 +347,9 @@ func (s *EventStore) GetEventBySeq(_ context.Context, campaignID string, seq uin
 }
 
 func (s *EventStore) ListEvents(_ context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
+	if s.ListErr != nil {
+		return nil, s.ListErr
+	}
 	result := make([]event.Event, 0)
 	for _, e := range s.Events[campaignID] {
 		if e.Seq > afterSeq {
@@ -255,6 +363,9 @@ func (s *EventStore) ListEvents(_ context.Context, campaignID string, afterSeq u
 }
 
 func (s *EventStore) ListEventsBySession(_ context.Context, campaignID, sessionID string, afterSeq uint64, limit int) ([]event.Event, error) {
+	if s.ListErr != nil {
+		return nil, s.ListErr
+	}
 	result := make([]event.Event, 0)
 	for _, e := range s.Events[campaignID] {
 		if e.SessionID.String() == sessionID && e.Seq > afterSeq {
@@ -268,6 +379,9 @@ func (s *EventStore) ListEventsBySession(_ context.Context, campaignID, sessionI
 }
 
 func (s *EventStore) GetLatestEventSeq(_ context.Context, campaignID string) (uint64, error) {
+	if s.GetErr != nil {
+		return 0, s.GetErr
+	}
 	seq := s.NextSeq[campaignID]
 	if seq == 0 {
 		return 0, nil
@@ -276,6 +390,9 @@ func (s *EventStore) GetLatestEventSeq(_ context.Context, campaignID string) (ui
 }
 
 func (s *EventStore) ListEventsPage(_ context.Context, req storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
+	if s.ListErr != nil {
+		return storage.ListEventsPageResult{}, s.ListErr
+	}
 	pageSize := req.PageSize
 	if pageSize <= 0 {
 		pageSize = 50
@@ -414,6 +531,10 @@ func eventMatchesPageFilterClause(evt event.Event, clause string, params []any) 
 // CharacterStore is a lightweight in-memory CharacterStore fake for tests.
 type CharacterStore struct {
 	Characters map[string]storage.CharacterRecord
+	PutErr     error
+	GetErr     error
+	DeleteErr  error
+	ListErr    error
 }
 
 // NewCharacterStore constructs a CharacterStore fake with initialized state maps.
@@ -422,11 +543,17 @@ func NewCharacterStore() *CharacterStore {
 }
 
 func (s *CharacterStore) PutCharacter(_ context.Context, c storage.CharacterRecord) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.Characters[c.CampaignID+":"+c.ID] = c
 	return nil
 }
 
 func (s *CharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
+	if s.GetErr != nil {
+		return storage.CharacterRecord{}, s.GetErr
+	}
 	record, ok := s.Characters[campaignID+":"+characterID]
 	if !ok {
 		return storage.CharacterRecord{}, storage.ErrNotFound
@@ -434,11 +561,18 @@ func (s *CharacterStore) GetCharacter(_ context.Context, campaignID, characterID
 	return record, nil
 }
 
-func (s *CharacterStore) DeleteCharacter(_ context.Context, _, _ string) error {
+func (s *CharacterStore) DeleteCharacter(_ context.Context, campaignID, characterID string) error {
+	if s.DeleteErr != nil {
+		return s.DeleteErr
+	}
+	delete(s.Characters, campaignID+":"+characterID)
 	return nil
 }
 
 func (s *CharacterStore) CountCharacters(_ context.Context, campaignID string) (int, error) {
+	if s.ListErr != nil {
+		return 0, s.ListErr
+	}
 	count := 0
 	for key := range s.Characters {
 		if strings.HasPrefix(key, campaignID+":") {
@@ -449,6 +583,9 @@ func (s *CharacterStore) CountCharacters(_ context.Context, campaignID string) (
 }
 
 func (s *CharacterStore) ListCharactersByOwnerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	if s.ListErr != nil {
+		return nil, s.ListErr
+	}
 	result := make([]storage.CharacterRecord, 0)
 	for key, record := range s.Characters {
 		if !strings.HasPrefix(key, campaignID+":") {
@@ -462,6 +599,9 @@ func (s *CharacterStore) ListCharactersByOwnerParticipant(_ context.Context, cam
 }
 
 func (s *CharacterStore) ListCharactersByControllerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	if s.ListErr != nil {
+		return nil, s.ListErr
+	}
 	result := make([]storage.CharacterRecord, 0)
 	for key, record := range s.Characters {
 		if !strings.HasPrefix(key, campaignID+":") {
@@ -475,12 +615,19 @@ func (s *CharacterStore) ListCharactersByControllerParticipant(_ context.Context
 }
 
 func (s *CharacterStore) ListCharacters(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
+	if s.ListErr != nil {
+		return storage.CharacterPage{}, s.ListErr
+	}
 	return storage.CharacterPage{}, nil
 }
 
 // SessionStore is a lightweight in-memory SessionStore fake for tests.
 type SessionStore struct {
 	Sessions map[string]storage.SessionRecord
+	PutErr   error
+	GetErr   error
+	EndErr   error
+	ListErr  error
 }
 
 // NewSessionStore constructs a SessionStore fake with initialized state maps.
@@ -489,15 +636,31 @@ func NewSessionStore() *SessionStore {
 }
 
 func (s *SessionStore) PutSession(_ context.Context, sess storage.SessionRecord) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.Sessions[sess.CampaignID+":"+sess.ID] = sess
 	return nil
 }
 
-func (s *SessionStore) EndSession(_ context.Context, _, _ string, _ time.Time) (storage.SessionRecord, bool, error) {
-	return storage.SessionRecord{}, false, nil
+func (s *SessionStore) EndSession(_ context.Context, campaignID, sessionID string, endedAt time.Time) (storage.SessionRecord, bool, error) {
+	if s.EndErr != nil {
+		return storage.SessionRecord{}, false, s.EndErr
+	}
+	key := campaignID + ":" + sessionID
+	sess, ok := s.Sessions[key]
+	if !ok {
+		return storage.SessionRecord{}, false, storage.ErrNotFound
+	}
+	sess.EndedAt = &endedAt
+	s.Sessions[key] = sess
+	return sess, true, nil
 }
 
 func (s *SessionStore) GetSession(_ context.Context, campaignID, sessionID string) (storage.SessionRecord, error) {
+	if s.GetErr != nil {
+		return storage.SessionRecord{}, s.GetErr
+	}
 	sess, ok := s.Sessions[campaignID+":"+sessionID]
 	if !ok {
 		return storage.SessionRecord{}, storage.ErrNotFound
@@ -505,11 +668,22 @@ func (s *SessionStore) GetSession(_ context.Context, campaignID, sessionID strin
 	return sess, nil
 }
 
-func (s *SessionStore) GetActiveSession(_ context.Context, _ string) (storage.SessionRecord, error) {
+func (s *SessionStore) GetActiveSession(_ context.Context, campaignID string) (storage.SessionRecord, error) {
+	if s.GetErr != nil {
+		return storage.SessionRecord{}, s.GetErr
+	}
+	for key, sess := range s.Sessions {
+		if strings.HasPrefix(key, campaignID+":") && sess.EndedAt == nil {
+			return sess, nil
+		}
+	}
 	return storage.SessionRecord{}, storage.ErrNotFound
 }
 
 func (s *SessionStore) CountSessions(_ context.Context, campaignID string) (int, error) {
+	if s.ListErr != nil {
+		return 0, s.ListErr
+	}
 	count := 0
 	for key := range s.Sessions {
 		if strings.HasPrefix(key, campaignID+":") {
@@ -519,6 +693,15 @@ func (s *SessionStore) CountSessions(_ context.Context, campaignID string) (int,
 	return count, nil
 }
 
-func (s *SessionStore) ListSessions(_ context.Context, _ string, _ int, _ string) (storage.SessionPage, error) {
-	return storage.SessionPage{}, nil
+func (s *SessionStore) ListSessions(_ context.Context, campaignID string, _ int, _ string) (storage.SessionPage, error) {
+	if s.ListErr != nil {
+		return storage.SessionPage{}, s.ListErr
+	}
+	result := make([]storage.SessionRecord, 0)
+	for key, sess := range s.Sessions {
+		if strings.HasPrefix(key, campaignID+":") {
+			result = append(result, sess)
+		}
+	}
+	return storage.SessionPage{Sessions: result}, nil
 }

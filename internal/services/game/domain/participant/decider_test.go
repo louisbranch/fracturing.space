@@ -1272,28 +1272,6 @@ func TestDecideParticipantActiveGuards_LeftParticipantRejected(t *testing.T) {
 	}
 }
 
-func TestParticipantDecisionHandlersCoverSupportedCommands(t *testing.T) {
-	expected := []command.Type{
-		CommandTypeJoin,
-		CommandTypeUpdate,
-		CommandTypeLeave,
-		CommandTypeBind,
-		CommandTypeUnbind,
-		CommandTypeSeatReassign,
-	}
-	if len(participantDecisionHandlers) != len(expected) {
-		t.Fatalf("handler count = %d, expected count = %d", len(participantDecisionHandlers), len(expected))
-	}
-	expectedSet := make(map[command.Type]struct{}, len(expected))
-	for _, cmdType := range expected {
-		expectedSet[cmdType] = struct{}{}
-		if _, ok := participantDecisionHandlers[cmdType]; !ok {
-			t.Fatalf("missing handler for command %s", cmdType)
-		}
-	}
-	for cmdType := range participantDecisionHandlers {
-		if _, ok := expectedSet[cmdType]; !ok {
-			t.Fatalf("unexpected handler for command %s", cmdType)
-		}
-	}
-}
+// Coverage of participant decider commands against the switch statement is
+// validated by ValidateCoreDeciderCommandCoverage via DeciderHandledCommands()
+// in the engine package's startup validators.

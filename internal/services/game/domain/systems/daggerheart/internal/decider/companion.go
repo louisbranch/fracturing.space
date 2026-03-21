@@ -1,12 +1,11 @@
 package decider
 
 import (
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -15,12 +14,12 @@ func decideCompanionExperienceBegin(snapshotState daggerheartstate.SnapshotState
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeCompanionExperienceBegun, "character",
 		func(p *payload.CompanionExperienceBeginPayload) string {
-			return strings.TrimSpace(p.CharacterID.String())
+			return normalize.ID(p.CharacterID).String()
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.CompanionExperienceBeginPayload, _ func() time.Time) *command.Rejection {
-			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.ExperienceID = strings.TrimSpace(p.ExperienceID)
+			p.ActorCharacterID = normalize.ID(p.ActorCharacterID)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.ExperienceID = normalize.String(p.ExperienceID)
 			if p.ActorCharacterID == "" {
 				return &command.Rejection{Code: "COMPANION_ACTOR_REQUIRED", Message: "actor character id is required"}
 			}
@@ -50,11 +49,11 @@ func decideCompanionExperienceBegin(snapshotState daggerheartstate.SnapshotState
 func decideCompanionReturn(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeCompanionReturned, "character",
-		func(p *payload.CompanionReturnPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.CompanionReturnPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.CompanionReturnPayload, _ func() time.Time) *command.Rejection {
-			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.Resolution = strings.TrimSpace(p.Resolution)
+			p.ActorCharacterID = normalize.ID(p.ActorCharacterID)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.Resolution = normalize.String(p.Resolution)
 			if p.ActorCharacterID == "" {
 				return &command.Rejection{Code: "COMPANION_ACTOR_REQUIRED", Message: "actor character id is required"}
 			}

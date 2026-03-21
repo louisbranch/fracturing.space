@@ -420,6 +420,89 @@ func (f *fakeProjectionStore) ListProjectionWatermarks(ctx context.Context) ([]s
 	return nil, nil
 }
 
+// SessionGateStore methods.
+func (f *fakeProjectionStore) PutSessionGate(context.Context, storage.SessionGate) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetSessionGate(context.Context, string, string, string) (storage.SessionGate, error) {
+	return storage.SessionGate{}, fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetOpenSessionGate(context.Context, string, string) (storage.SessionGate, error) {
+	return storage.SessionGate{}, fmt.Errorf("not implemented")
+}
+
+// SessionSpotlightStore methods.
+func (f *fakeProjectionStore) PutSessionSpotlight(context.Context, storage.SessionSpotlight) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetSessionSpotlight(context.Context, string, string) (storage.SessionSpotlight, error) {
+	return storage.SessionSpotlight{}, fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) ClearSessionSpotlight(context.Context, string, string) error {
+	return fmt.Errorf("not implemented")
+}
+
+// SceneStore methods.
+func (f *fakeProjectionStore) PutScene(context.Context, storage.SceneRecord) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) EndScene(context.Context, string, string, time.Time) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetScene(context.Context, string, string) (storage.SceneRecord, error) {
+	return storage.SceneRecord{}, fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) ListScenes(context.Context, string, string, int, string) (storage.ScenePage, error) {
+	return storage.ScenePage{}, fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) ListActiveScenes(context.Context, string) ([]storage.SceneRecord, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) ListVisibleActiveScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// SceneCharacterStore methods.
+func (f *fakeProjectionStore) PutSceneCharacter(context.Context, storage.SceneCharacterRecord) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) DeleteSceneCharacter(context.Context, string, string, string) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) ListSceneCharacters(context.Context, string, string) ([]storage.SceneCharacterRecord, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// SceneGateStore methods.
+func (f *fakeProjectionStore) PutSceneGate(context.Context, storage.SceneGate) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetSceneGate(context.Context, string, string, string) (storage.SceneGate, error) {
+	return storage.SceneGate{}, fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetOpenSceneGate(context.Context, string, string) (storage.SceneGate, error) {
+	return storage.SceneGate{}, fmt.Errorf("not implemented")
+}
+
+// SceneSpotlightStore methods.
+func (f *fakeProjectionStore) PutSceneSpotlight(context.Context, storage.SceneSpotlight) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetSceneSpotlight(context.Context, string, string) (storage.SceneSpotlight, error) {
+	return storage.SceneSpotlight{}, fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) ClearSceneSpotlight(context.Context, string, string) error {
+	return fmt.Errorf("not implemented")
+}
+
+// SceneInteractionStore methods.
+func (f *fakeProjectionStore) PutSceneInteraction(context.Context, storage.SceneInteraction) error {
+	return fmt.Errorf("not implemented")
+}
+func (f *fakeProjectionStore) GetSceneInteraction(context.Context, string, string) (storage.SceneInteraction, error) {
+	return storage.SceneInteraction{}, fmt.Errorf("not implemented")
+}
+
 // fakeClosableProjectionStore wraps fakeProjectionStore with a closable interface.
 type fakeClosableProjectionStore struct {
 	fakeProjectionStore

@@ -159,51 +159,100 @@ const (
 	ReasonErrorOwnerResolution = "AUTHZ_ERROR_OWNER_RESOLUTION"
 )
 
-var rolePolicyTable = []RolePolicyRow{
-	{Role: participant.CampaignAccessOwner, Action: ActionRead, Resource: ResourceCampaign},
-	{Role: participant.CampaignAccessManager, Action: ActionRead, Resource: ResourceCampaign},
-	{Role: participant.CampaignAccessMember, Action: ActionRead, Resource: ResourceCampaign},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionRead, Resource: ResourceParticipant},
-	{Role: participant.CampaignAccessManager, Action: ActionRead, Resource: ResourceParticipant},
-	{Role: participant.CampaignAccessMember, Action: ActionRead, Resource: ResourceParticipant},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionRead, Resource: ResourceCharacter},
-	{Role: participant.CampaignAccessManager, Action: ActionRead, Resource: ResourceCharacter},
-	{Role: participant.CampaignAccessMember, Action: ActionRead, Resource: ResourceCharacter},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionRead, Resource: ResourceSession},
-	{Role: participant.CampaignAccessManager, Action: ActionRead, Resource: ResourceSession},
-	{Role: participant.CampaignAccessMember, Action: ActionRead, Resource: ResourceSession},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionRead, Resource: ResourceInvite},
-	{Role: participant.CampaignAccessManager, Action: ActionRead, Resource: ResourceInvite},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionManage, Resource: ResourceCampaign},
-	{Role: participant.CampaignAccessManager, Action: ActionManage, Resource: ResourceCampaign},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionManage, Resource: ResourceParticipant},
-	{Role: participant.CampaignAccessManager, Action: ActionManage, Resource: ResourceParticipant},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionManage, Resource: ResourceInvite},
-	{Role: participant.CampaignAccessManager, Action: ActionManage, Resource: ResourceInvite},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionManage, Resource: ResourceSession},
-	{Role: participant.CampaignAccessManager, Action: ActionManage, Resource: ResourceSession},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionMutate, Resource: ResourceCharacter},
-	{Role: participant.CampaignAccessManager, Action: ActionMutate, Resource: ResourceCharacter},
-	{Role: participant.CampaignAccessMember, Action: ActionMutate, Resource: ResourceCharacter},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionManage, Resource: ResourceCharacter},
-	{Role: participant.CampaignAccessManager, Action: ActionManage, Resource: ResourceCharacter},
-
-	{Role: participant.CampaignAccessOwner, Action: ActionTransferOwnership, Resource: ResourceCharacter},
+// policyEntry declares which roles are allowed for a specific capability.
+// Roles not listed are implicitly denied.
+type policyEntry struct {
+	Action       Action
+	Resource     Resource
+	AllowedRoles []participant.CampaignAccess
 }
 
-// PolicyTable returns a copy of the canonical role/action/resource matrix.
+// allActions enumerates every recognized Action value (excluding Unspecified).
+var allActions = []Action{
+	ActionRead,
+	ActionManage,
+	ActionMutate,
+	ActionTransferOwnership,
+}
+
+// allResources enumerates every recognized Resource value (excluding Unspecified).
+var allResources = []Resource{
+	ResourceCampaign,
+	ResourceParticipant,
+	ResourceInvite,
+	ResourceSession,
+	ResourceCharacter,
+}
+
+// allRoles enumerates every recognized campaign role (excluding Unspecified).
+var allRoles = []participant.CampaignAccess{
+	participant.CampaignAccessOwner,
+	participant.CampaignAccessManager,
+	participant.CampaignAccessMember,
+}
+
+// policyMatrix is the canonical role/action/resource authorization matrix.
+// Each entry declares which roles are allowed for a specific (action, resource)
+// capability. The exhaustiveness test validates that every recognized capability
+// has exactly one entry and every Capability*() accessor maps to an entry.
+var policyMatrix = []policyEntry{
+	// Read capabilities — broad access.
+	{ActionRead, ResourceCampaign, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager, participant.CampaignAccessMember)},
+	{ActionRead, ResourceParticipant, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager, participant.CampaignAccessMember)},
+	{ActionRead, ResourceCharacter, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager, participant.CampaignAccessMember)},
+	{ActionRead, ResourceSession, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager, participant.CampaignAccessMember)},
+	{ActionRead, ResourceInvite, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager)},
+
+	// Manage capabilities — governance and administrative mutation.
+	{ActionManage, ResourceCampaign, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager)},
+	{ActionManage, ResourceParticipant, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager)},
+	{ActionManage, ResourceInvite, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager)},
+	{ActionManage, ResourceSession, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager)},
+	{ActionManage, ResourceCharacter, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager)},
+
+	// Mutate capabilities — standard mutable operations.
+	{ActionMutate, ResourceCharacter, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager, participant.CampaignAccessMember)},
+
+	// Transfer capabilities — ownership transfers.
+	{ActionTransferOwnership, ResourceCharacter, roles(participant.CampaignAccessOwner)},
+}
+
+// roles is a convenience constructor for AllowedRoles slices.
+func roles(rr ...participant.CampaignAccess) []participant.CampaignAccess { return rr }
+
+// policyIndex is the lookup structure built from policyMatrix.
+// Key is "action:resource", value is the set of allowed roles.
+type policyIndex map[string]map[participant.CampaignAccess]bool
+
+func buildPolicyIndex() policyIndex {
+	idx := make(policyIndex, len(policyMatrix))
+	for _, entry := range policyMatrix {
+		key := string(entry.Action) + ":" + string(entry.Resource)
+		allowed := make(map[participant.CampaignAccess]bool, len(entry.AllowedRoles))
+		for _, role := range entry.AllowedRoles {
+			allowed[role] = true
+		}
+		idx[key] = allowed
+	}
+	return idx
+}
+
+var matrixIndex = buildPolicyIndex()
+
+// PolicyTable returns the canonical role/action/resource matrix expanded to
+// individual rows for inspection and backward-compatible iteration.
 func PolicyTable() []RolePolicyRow {
-	return append([]RolePolicyRow(nil), rolePolicyTable...)
+	var rows []RolePolicyRow
+	for _, entry := range policyMatrix {
+		for _, role := range entry.AllowedRoles {
+			rows = append(rows, RolePolicyRow{
+				Role:     role,
+				Action:   entry.Action,
+				Resource: entry.Resource,
+			})
+		}
+	}
+	return rows
 }
 
 // CapabilityFromActionResource maps action/resource inputs to a known capability.
@@ -212,10 +261,9 @@ func CapabilityFromActionResource(action Action, resource Resource) (Capability,
 	if !candidate.Valid() {
 		return Capability{}, false
 	}
-	for _, row := range rolePolicyTable {
-		if row.Action == candidate.Action && row.Resource == candidate.Resource {
-			return candidate, true
-		}
+	key := string(action) + ":" + string(resource)
+	if _, ok := matrixIndex[key]; ok {
+		return candidate, true
 	}
 	return Capability{}, false
 }
@@ -226,13 +274,9 @@ func CanCampaignAccess(access participant.CampaignAccess, capability Capability)
 	if !capability.Valid() {
 		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyAccessLevelRequired}
 	}
-	for _, row := range rolePolicyTable {
-		if row.Action != capability.Action || row.Resource != capability.Resource {
-			continue
-		}
-		if row.Role == access {
-			return PolicyDecision{Allowed: true, ReasonCode: ReasonAllowAccessLevel}
-		}
+	key := string(capability.Action) + ":" + string(capability.Resource)
+	if allowed, ok := matrixIndex[key]; ok && allowed[access] {
+		return PolicyDecision{Allowed: true, ReasonCode: ReasonAllowAccessLevel}
 	}
 	return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyAccessLevelRequired}
 }

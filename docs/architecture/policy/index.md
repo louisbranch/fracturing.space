@@ -15,3 +15,4 @@ Cross-cutting rules and quality policies.
 - [Event payload change policy](event-payload-change-policy.md)
 - [Event payload design](event-payload-design.md)
 - [Testing policy](testing-policy.md)
+- [Test writing guide](test-writing-guide.md)

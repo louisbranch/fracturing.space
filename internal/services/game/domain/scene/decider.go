@@ -1,3 +1,15 @@
+// Package scene implements the scene domain aggregate for the game service.
+//
+// # Decider Signature Exception
+//
+// The scene Decide function takes map[ids.SceneID]State instead of a single
+// State, unlike every other core domain decider. This is an intentional
+// deviation required by cross-scene commands (CharacterTransfer, Transition)
+// that must read and validate state from multiple scenes atomically within a
+// single decision. The engine router (core_command_router.go) accounts for
+// this by passing the full scenes map from aggregate state. Single-scene
+// commands look up their target by ID from the map; cross-scene commands
+// look up multiple entries.
 package scene
 
 import (
@@ -80,6 +92,41 @@ const (
 	rejectionCodeSceneGMOutputRequired                = "SCENE_GM_OUTPUT_REQUIRED"
 	rejectionCodeSceneGMOutputParticipantRequired     = "SCENE_GM_OUTPUT_PARTICIPANT_REQUIRED"
 )
+
+// RejectionCodes returns all rejection code strings used by the scene
+// decider. Used by startup validators to detect cross-domain collisions.
+func RejectionCodes() []string {
+	return []string{
+		rejectionCodeSceneIDRequired,
+		rejectionCodeSceneNameRequired,
+		rejectionCodeSceneCharactersRequired,
+		rejectionCodeSceneNotFound,
+		rejectionCodeSceneNotActive,
+		rejectionCodeSceneGateIDRequired,
+		rejectionCodeSceneGateTypeRequired,
+		rejectionCodeSceneGateAlreadyOpen,
+		rejectionCodeSceneGateNotOpen,
+		rejectionCodeCharacterIDRequired,
+		rejectionCodeCharacterAlreadyInScene,
+		rejectionCodeCharacterNotInScene,
+		rejectionCodeSpotlightTypeRequired,
+		rejectionCodeSpotlightNotSet,
+		rejectionCodeSourceSceneIDRequired,
+		rejectionCodeTargetSceneIDRequired,
+		rejectionCodeNewSceneIDRequired,
+		rejectionCodeScenePlayerPhaseIDRequired,
+		rejectionCodeScenePlayerPhaseAlreadyOpen,
+		rejectionCodeScenePlayerPhaseNotOpen,
+		rejectionCodeScenePlayerPhaseNotInPlayersState,
+		rejectionCodeScenePlayerPhaseNotInReviewState,
+		rejectionCodeScenePlayerPhaseParticipantRequired,
+		rejectionCodeScenePlayerPhaseParticipantNotActing,
+		rejectionCodeScenePlayerPhaseSummaryRequired,
+		rejectionCodeScenePlayerPhaseRevisionRequired,
+		rejectionCodeSceneGMOutputRequired,
+		rejectionCodeSceneGMOutputParticipantRequired,
+	}
+}
 
 // Decide returns the decision for a scene command against the current scene
 // states. The scenes map contains all scene states keyed by scene ID.

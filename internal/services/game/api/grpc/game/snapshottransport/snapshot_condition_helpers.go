@@ -3,7 +3,7 @@ package snapshottransport
 import (
 	"context"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -18,7 +18,7 @@ import (
 func applyStressVulnerableCondition(
 	ctx context.Context,
 	daggerheartStore projectionstore.Store,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 	campaignID string,
 	sessionID string,

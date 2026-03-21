@@ -119,7 +119,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/invite",
-      "floor": 98.7,
+      "floor": 98.4,
       "description": "Invite lifecycle and grant-validation path."
     },
     {

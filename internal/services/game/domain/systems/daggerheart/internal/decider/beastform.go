@@ -1,12 +1,11 @@
 package decider
 
 import (
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -14,12 +13,12 @@ import (
 func decideBeastformTransform(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeBeastformTransformed, "character",
-		func(p *payload.BeastformTransformPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.BeastformTransformPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.BeastformTransformPayload, _ func() time.Time) *command.Rejection {
-			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.BeastformID = strings.TrimSpace(p.BeastformID)
-			p.EvolutionTrait = strings.TrimSpace(p.EvolutionTrait)
+			p.ActorCharacterID = normalize.ID(p.ActorCharacterID)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.BeastformID = normalize.String(p.BeastformID)
+			p.EvolutionTrait = normalize.String(p.EvolutionTrait)
 			if p.ActorCharacterID == "" {
 				return &command.Rejection{Code: "BEASTFORM_ACTOR_REQUIRED", Message: "actor character id is required"}
 			}
@@ -62,12 +61,12 @@ func decideBeastformTransform(snapshotState daggerheartstate.SnapshotState, hasS
 func decideBeastformDrop(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeBeastformDropped, "character",
-		func(p *payload.BeastformDropPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.BeastformDropPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.BeastformDropPayload, _ func() time.Time) *command.Rejection {
-			p.ActorCharacterID = ids.CharacterID(strings.TrimSpace(p.ActorCharacterID.String()))
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.BeastformID = strings.TrimSpace(p.BeastformID)
-			p.Source = strings.TrimSpace(p.Source)
+			p.ActorCharacterID = normalize.ID(p.ActorCharacterID)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.BeastformID = normalize.String(p.BeastformID)
+			p.Source = normalize.String(p.Source)
 			if p.ActorCharacterID == "" {
 				return &command.Rejection{Code: "BEASTFORM_ACTOR_REQUIRED", Message: "actor character id is required"}
 			}
@@ -87,7 +86,7 @@ func decideBeastformDrop(snapshotState daggerheartstate.SnapshotState, hasSnapsh
 			return nil
 		},
 		func(_ daggerheartstate.SnapshotState, _ bool, p payload.BeastformDropPayload) payload.BeastformDroppedPayload {
-			source := strings.TrimSpace(p.Source)
+			source := normalize.String(p.Source)
 			if source == "" {
 				source = "beastform.drop"
 			}

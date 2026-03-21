@@ -56,34 +56,16 @@ func TestFold_OutcomeAppliedMutatesCausalReplayState(t *testing.T) {
 	}
 }
 
-func TestFold_NonCausalEventsDoNotMutateCausalReplayState(t *testing.T) {
-	base := State{
-		Rolls: map[uint64]RollState{
-			7: {RequestID: "req-7", SessionID: "sess-1", Outcome: "SUCCESS_WITH_HOPE"},
-		},
-		AppliedOutcomes: map[uint64]struct{}{
-			7: {},
-		},
-	}
-	unchanged, err := Fold(base, event.Event{Type: EventTypeOutcomeRejected, PayloadJSON: []byte(`{"roll_seq":7}`)})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(unchanged.Rolls) != 1 {
-		t.Fatalf("rolls size = %d, want 1", len(unchanged.Rolls))
-	}
-	if len(unchanged.AppliedOutcomes) != 1 {
-		t.Fatalf("applied outcomes size = %d, want 1", len(unchanged.AppliedOutcomes))
-	}
-
-	unchanged, err = Fold(base, event.Event{Type: EventTypeNoteAdded, PayloadJSON: []byte(`{"content":"note"}`)})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(unchanged.Rolls) != 1 {
-		t.Fatalf("rolls size = %d, want 1", len(unchanged.Rolls))
-	}
-	if len(unchanged.AppliedOutcomes) != 1 {
-		t.Fatalf("applied outcomes size = %d, want 1", len(unchanged.AppliedOutcomes))
+// TestFold_AuditOnlyEventsAreNotHandled verifies that audit-only event types
+// (outcome_rejected, note_added) are not registered in the fold router.
+// These events are filtered out by the aggregate folder before reaching
+// domain folds — a fold handler for them would be dead code.
+func TestFold_AuditOnlyEventsAreNotHandled(t *testing.T) {
+	auditOnlyTypes := []event.Type{EventTypeOutcomeRejected, EventTypeNoteAdded}
+	for _, evtType := range auditOnlyTypes {
+		_, err := Fold(State{}, event.Event{Type: evtType, PayloadJSON: []byte(`{}`)})
+		if err == nil {
+			t.Fatalf("expected error for audit-only event type %s, got nil", evtType)
+		}
 	}
 }

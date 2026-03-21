@@ -1,12 +1,11 @@
 package decider
 
 import (
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -24,10 +23,10 @@ const (
 func decideGoldUpdate(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeGoldUpdated, "character",
-		func(p *payload.GoldUpdatePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.GoldUpdatePayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.GoldUpdatePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.Reason = strings.TrimSpace(p.Reason)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.Reason = normalize.String(p.Reason)
 
 			if p.HandfulsAfter < 0 || p.HandfulsAfter > goldHandfulsMax {
 				return &command.Rejection{Code: rejectionCodeGoldInvalid, Message: "handfuls must be in range 0..9"}
@@ -63,11 +62,11 @@ const (
 
 func decideDomainCardAcquire(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, payload.EventTypeDomainCardAcquired, "character",
-		func(p *payload.DomainCardAcquirePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.DomainCardAcquirePayload) string { return normalize.ID(p.CharacterID).String() },
 		func(p *payload.DomainCardAcquirePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.CardID = strings.TrimSpace(p.CardID)
-			p.Destination = strings.TrimSpace(p.Destination)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.CardID = normalize.String(p.CardID)
+			p.Destination = normalize.String(p.Destination)
 			if p.Destination != "vault" && p.Destination != "loadout" {
 				return &command.Rejection{Code: rejectionCodeDomainCardAcquireInvalid, Message: "destination must be vault or loadout"}
 			}
@@ -83,13 +82,13 @@ const (
 
 func decideEquipmentSwap(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, payload.EventTypeEquipmentSwapped, "character",
-		func(p *payload.EquipmentSwapPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.EquipmentSwapPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(p *payload.EquipmentSwapPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.ItemID = strings.TrimSpace(p.ItemID)
-			p.ItemType = strings.TrimSpace(p.ItemType)
-			p.From = strings.TrimSpace(p.From)
-			p.To = strings.TrimSpace(p.To)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.ItemID = normalize.String(p.ItemID)
+			p.ItemType = normalize.String(p.ItemType)
+			p.From = normalize.String(p.From)
+			p.To = normalize.String(p.To)
 
 			if p.ItemType != "weapon" && p.ItemType != "armor" {
 				return &command.Rejection{Code: rejectionCodeEquipmentSwapInvalid, Message: "item_type must be weapon or armor"}
@@ -117,10 +116,10 @@ const (
 func decideConsumableUse(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeConsumableUsed, "character",
-		func(p *payload.ConsumableUsePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.ConsumableUsePayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.ConsumableUsePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.ConsumableID = strings.TrimSpace(p.ConsumableID)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.ConsumableID = normalize.String(p.ConsumableID)
 			if p.QuantityBefore <= 0 {
 				return &command.Rejection{Code: rejectionCodeConsumableInvalid, Message: "quantity_before must be positive"}
 			}
@@ -142,10 +141,10 @@ func decideConsumableUse(snapshotState daggerheartstate.SnapshotState, hasSnapsh
 func decideConsumableAcquire(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeConsumableAcquired, "character",
-		func(p *payload.ConsumableAcquirePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.ConsumableAcquirePayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.ConsumableAcquirePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.ConsumableID = strings.TrimSpace(p.ConsumableID)
+			p.CharacterID = normalize.ID(p.CharacterID)
+			p.ConsumableID = normalize.String(p.ConsumableID)
 			if p.QuantityAfter < 1 || p.QuantityAfter > consumableStackMax {
 				return &command.Rejection{Code: rejectionCodeConsumableInvalid, Message: "quantity_after must be in range 1..5"}
 			}

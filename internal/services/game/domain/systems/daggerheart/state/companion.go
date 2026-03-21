@@ -34,6 +34,11 @@ func (s CharacterCompanionState) Normalized() CharacterCompanionState {
 	return normalized
 }
 
+// Equal reports whether two companion states are equivalent after normalization.
+func (s CharacterCompanionState) Equal(other CharacterCompanionState) bool {
+	return s.Normalized() == other.Normalized()
+}
+
 // IsZero reports whether the companion carries no runtime mutation beyond the
 // default "present and idle" state.
 func (s CharacterCompanionState) IsZero() bool {

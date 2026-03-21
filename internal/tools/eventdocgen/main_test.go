@@ -1622,3 +1622,104 @@ func TestScanAppliers_DetectsHandleAdapter(t *testing.T) {
 		t.Fatalf("unexpected applier path: %s", got[0])
 	}
 }
+
+func TestScanLocalEmitterWrappers(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "domain")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir domain: %v", err)
+	}
+
+	src := strings.Join([]string{
+		"package domain",
+		"",
+		"import (",
+		"\t\"example.com/command\"",
+		"\t\"example.com/event\"",
+		")",
+		"",
+		"func acceptDomainEvent(cmd command.Command, now func(), eventType event.Type, entityID string, payload any) command.Decision {",
+		"\tpayloadJSON := []byte(\"{}\")",
+		"\tevt := command.NewEvent(cmd, eventType, \"domain\", entityID, payloadJSON, now())",
+		"\treturn command.Accept(evt)",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(dir, "shared.go"), []byte(src), 0o644); err != nil {
+		t.Fatalf("write shared.go: %v", err)
+	}
+
+	wrappers, err := scanLocalEmitterWrappers(dir)
+	if err != nil {
+		t.Fatalf("scanLocalEmitterWrappers returned error: %v", err)
+	}
+	idx, ok := wrappers["acceptDomainEvent"]
+	if !ok {
+		t.Fatal("expected acceptDomainEvent in wrappers")
+	}
+	if idx != 2 {
+		t.Fatalf("expected event type at param index 2, got %d", idx)
+	}
+}
+
+func TestScanEmitterValues_DetectsLocalWrapperCalls(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "domain")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir domain: %v", err)
+	}
+
+	sharedSrc := strings.Join([]string{
+		"package domain",
+		"",
+		"import (",
+		"\t\"example.com/command\"",
+		"\t\"example.com/event\"",
+		")",
+		"",
+		"const EventTypeJoined = \"participant.joined\"",
+		"const EventTypeLeft = \"participant.left\"",
+		"",
+		"func acceptDomainEvent(cmd command.Command, now func(), eventType event.Type, entityID string, payload any) command.Decision {",
+		"\tpayloadJSON := []byte(\"{}\")",
+		"\tevt := command.NewEvent(cmd, eventType, \"domain\", entityID, payloadJSON, now())",
+		"\treturn command.Accept(evt)",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(dir, "shared.go"), []byte(sharedSrc), 0o644); err != nil {
+		t.Fatalf("write shared.go: %v", err)
+	}
+
+	deciderSrc := strings.Join([]string{
+		"package domain",
+		"",
+		"func decideJoin(cmd any) any {",
+		"\treturn acceptDomainEvent(cmd, nil, EventTypeJoined, \"p1\", nil)",
+		"}",
+		"",
+		"func decideLeave(cmd any) any {",
+		"\treturn acceptDomainEvent(cmd, nil, EventTypeLeft, \"p1\", nil)",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(dir, "decider.go"), []byte(deciderSrc), 0o644); err != nil {
+		t.Fatalf("write decider.go: %v", err)
+	}
+
+	lookup := map[string]string{
+		"EventTypeJoined": "participant.joined",
+		"EventTypeLeft":   "participant.left",
+	}
+	emitters, err := scanEmitterValues(root, root, lookup)
+	if err != nil {
+		t.Fatalf("scanEmitterValues returned error: %v", err)
+	}
+
+	// The wrapper definition in shared.go calls command.NewEvent but with a
+	// parameter reference, not a constant — so it should not count as an
+	// emitter itself. Only the call-sites in decider.go should register.
+	if got := len(emitters["participant.joined"]); got != 1 {
+		t.Fatalf("expected 1 emitter for participant.joined, got %d (%v)", got, emitters["participant.joined"])
+	}
+	if got := len(emitters["participant.left"]); got != 1 {
+		t.Fatalf("expected 1 emitter for participant.left, got %d (%v)", got, emitters["participant.left"])
+	}
+}

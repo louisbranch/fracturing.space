@@ -78,6 +78,41 @@ const (
 	rejectionCodeSessionAITurnTokenMismatch     = "SESSION_AI_TURN_TOKEN_MISMATCH"
 )
 
+// RejectionCodes returns all rejection code strings used by the session
+// decider. Used by startup validators to detect cross-domain collisions.
+func RejectionCodes() []string {
+	return []string{
+		rejectionCodeSessionIDRequired,
+		rejectionCodeSessionNameRequired,
+		rejectionCodeSessionAlreadyStarted,
+		rejectionCodeSessionNotStarted,
+		rejectionCodeSessionGateIDRequired,
+		rejectionCodeSessionGateTypeRequired,
+		rejectionCodeSessionGateParticipantRequired,
+		rejectionCodeSessionGateAlreadyOpen,
+		rejectionCodeSessionGateMetadataInvalid,
+		rejectionCodeSessionGateNotOpen,
+		rejectionCodeSessionGateMismatch,
+		rejectionCodeSessionGateResponseInvalid,
+		rejectionCodeSessionSpotlightTypeInvalid,
+		rejectionCodeSessionSpotlightTargetInvalid,
+		rejectionCodeSessionActiveSceneRequired,
+		rejectionCodeSessionActiveSceneUnchanged,
+		rejectionCodeSessionGMAuthorityRequired,
+		rejectionCodeSessionGMAuthorityUnchanged,
+		rejectionCodeSessionOOCAlreadyOpen,
+		rejectionCodeSessionOOCNotOpen,
+		rejectionCodeSessionOOCPostIDRequired,
+		rejectionCodeSessionOOCParticipantRequired,
+		rejectionCodeSessionOOCBodyRequired,
+		rejectionCodeSessionAITurnTokenRequired,
+		rejectionCodeSessionAITurnOwnerRequired,
+		rejectionCodeSessionAITurnNotQueued,
+		rejectionCodeSessionAITurnNotActive,
+		rejectionCodeSessionAITurnTokenMismatch,
+	}
+}
+
 // Decide returns the decision for a session command against current state.
 //
 // It maps every supported session lifecycle and gate command to deterministic

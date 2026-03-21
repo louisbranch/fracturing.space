@@ -1,7 +1,7 @@
 package daggerheart
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
@@ -39,6 +39,6 @@ func validDaggerheartStoresForConstructorTests() Stores {
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
 		Events:           event.NewRegistry(),
-		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
+		Write:            domainwrite.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
 	}
 }

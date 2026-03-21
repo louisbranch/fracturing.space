@@ -42,15 +42,29 @@ const (
 	rejectionCodeParticipantAIIdentityLocked   = "PARTICIPANT_AI_IDENTITY_LOCKED"
 )
 
-type participantDecisionHandler func(State, command.Command, func() time.Time) command.Decision
-
-var participantDecisionHandlers = map[command.Type]participantDecisionHandler{
-	CommandTypeJoin:         decideJoin,
-	CommandTypeUpdate:       decideUpdate,
-	CommandTypeLeave:        decideLeave,
-	CommandTypeBind:         decideBind,
-	CommandTypeUnbind:       decideUnbind,
-	CommandTypeSeatReassign: decideSeatReassign,
+// RejectionCodes returns all rejection code strings used by the participant
+// decider. Used by startup validators to detect cross-domain collisions.
+func RejectionCodes() []string {
+	return []string{
+		rejectionCodeParticipantAlreadyJoined,
+		rejectionCodeParticipantNotJoined,
+		rejectionCodeParticipantIDRequired,
+		rejectionCodeParticipantNameEmpty,
+		rejectionCodeParticipantRoleInvalid,
+		rejectionCodeParticipantControllerInvalid,
+		rejectionCodeParticipantAccessInvalid,
+		rejectionCodeParticipantAvatarSetInvalid,
+		rejectionCodeParticipantAvatarAssetInvalid,
+		rejectionCodeParticipantUpdateEmpty,
+		rejectionCodeParticipantUpdateFieldInvalid,
+		rejectionCodeParticipantAlreadyClaimed,
+		rejectionCodeParticipantUserIDRequired,
+		rejectionCodeParticipantUserIDMismatch,
+		rejectionCodeParticipantAIRoleRequired,
+		rejectionCodeParticipantAIAccessRequired,
+		rejectionCodeParticipantAIUserIDForbidden,
+		rejectionCodeParticipantAIIdentityLocked,
+	}
 }
 
 // Decide returns the decision for a participant command against current state.
@@ -59,12 +73,23 @@ var participantDecisionHandlers = map[command.Type]participantDecisionHandler{
 // that context explicit by emitting identity/role/capability changes as immutable
 // events rather than mutating shared storage directly.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	handler, ok := participantDecisionHandlers[cmd.Type]
-	if !ok {
+	switch cmd.Type {
+	case CommandTypeJoin:
+		return decideJoin(state, cmd, now)
+	case CommandTypeUpdate:
+		return decideUpdate(state, cmd, now)
+	case CommandTypeLeave:
+		return decideLeave(state, cmd, now)
+	case CommandTypeBind:
+		return decideBind(state, cmd, now)
+	case CommandTypeUnbind:
+		return decideUnbind(state, cmd, now)
+	case CommandTypeSeatReassign:
+		return decideSeatReassign(state, cmd, now)
+	default:
 		return command.Reject(command.Rejection{
 			Code:    command.RejectionCodeCommandTypeUnsupported,
 			Message: fmt.Sprintf("command type %s is not supported by participant decider", cmd.Type),
 		})
 	}
-	return handler(state, cmd, now)
 }

@@ -2,7 +2,7 @@ package daggerheart
 
 import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
@@ -79,7 +79,7 @@ func newAdversaryTestService() *DaggerheartService {
 			Event:       eventStore,
 			SessionGate: &fakeSessionGateStore{},
 			Session:     sessStore,
-			Write:       domainwriteexec.WritePath{Executor: &dynamicDomainEngine{store: eventStore}, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: &dynamicDomainEngine{store: eventStore}, Runtime: testRuntime},
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
 	}

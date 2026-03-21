@@ -10,7 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/testclients"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -35,7 +35,7 @@ func TestApplyParticipantProfileSnapshot_AvatarlessSnapshotSkipsCharacterSync(t 
 
 	applyParticipantProfileSnapshot(
 		context.Background(),
-		domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
 		participantStore,
 		characterStore,
@@ -111,7 +111,7 @@ func TestSyncControlledCharacterAvatars_UpdatesOnlyMismatchedCharacters(t *testi
 
 	syncControlledCharacterAvatars(
 		context.Background(),
-		domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
 		participantStore,
 		characterStore,
@@ -153,7 +153,7 @@ func TestSyncControlledCharacterAvatars_SkipsWhenParticipantLookupFails(t *testi
 
 	syncControlledCharacterAvatars(
 		context.Background(),
-		domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
 		participantStore,
 		gametest.NewFakeCharacterStore(),
@@ -198,7 +198,7 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenParticipantUpdate
 
 	applyParticipantProfileSnapshot(
 		context.Background(),
-		domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
 		participantStore,
 		characterStore,
@@ -241,7 +241,7 @@ func TestSyncControlledCharacterAvatars_SkipsWhenCharacterListFails(t *testing.T
 
 	syncControlledCharacterAvatars(
 		context.Background(),
-		domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
 		participantStore,
 		characterStore,
@@ -263,7 +263,7 @@ func TestSyncControlledCharacterAvatars_SkipsWhenStoresMissing(t *testing.T) {
 
 	syncControlledCharacterAvatars(
 		context.Background(),
-		domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
 		nil,
 		nil,

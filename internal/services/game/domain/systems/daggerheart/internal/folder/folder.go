@@ -2,11 +2,11 @@ package folder
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/reducer"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -97,7 +97,7 @@ func (f *Folder) foldGMFearChanged(state *daggerheartstate.SnapshotState, p payl
 }
 
 func (f *Folder) foldCharacterProfileReplaced(state *daggerheartstate.SnapshotState, p daggerheartstate.CharacterProfileReplacedPayload) error {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return nil
 	}
@@ -105,8 +105,8 @@ func (f *Folder) foldCharacterProfileReplaced(state *daggerheartstate.SnapshotSt
 	state.CharacterProfiles[characterID] = profile
 	if _, exists := state.CharacterStates[characterID]; !exists {
 		state.CharacterStates[characterID] = daggerheartstate.CharacterState{
-			CampaignID:  strings.TrimSpace(string(state.CampaignID)),
-			CharacterID: strings.TrimSpace(string(characterID)),
+			CampaignID:  normalize.ID(state.CampaignID).String(),
+			CharacterID: characterID.String(),
 			HP:          profile.HpMax,
 			Hope:        daggerheartstate.HopeDefault,
 			HopeMax:     daggerheartstate.HopeMaxDefault,
@@ -124,7 +124,7 @@ func (f *Folder) foldCharacterProfileReplaced(state *daggerheartstate.SnapshotSt
 }
 
 func (f *Folder) foldCharacterProfileDeleted(state *daggerheartstate.SnapshotState, p daggerheartstate.CharacterProfileDeletedPayload) error {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return nil
 	}
@@ -139,7 +139,7 @@ func (f *Folder) foldCharacterStatePatched(state *daggerheartstate.SnapshotState
 }
 
 func (f *Folder) foldBeastformTransformed(state *daggerheartstate.SnapshotState, p payload.BeastformTransformedPayload) error {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return nil
 	}
@@ -153,7 +153,7 @@ func (f *Folder) foldBeastformTransformed(state *daggerheartstate.SnapshotState,
 }
 
 func (f *Folder) foldBeastformDropped(state *daggerheartstate.SnapshotState, p payload.BeastformDroppedPayload) error {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return nil
 	}
@@ -247,10 +247,10 @@ func (f *Folder) foldAdversaryDamageApplied(state *daggerheartstate.SnapshotStat
 
 func (f *Folder) foldDowntimeMoveApplied(state *daggerheartstate.SnapshotState, p payload.DowntimeMoveAppliedPayload) error {
 	targetID := p.TargetCharacterID
-	if strings.TrimSpace(targetID.String()) == "" {
+	if normalize.ID(targetID) == "" {
 		targetID = p.ActorCharacterID
 	}
-	if strings.TrimSpace(targetID.String()) == "" {
+	if normalize.ID(targetID) == "" {
 		return nil
 	}
 	applyStatePatch(state, targetID, p.HP, p.Hope, nil, p.Stress, p.Armor, nil, nil, nil, nil)
@@ -273,26 +273,26 @@ func (f *Folder) foldAdversaryUpdated(state *daggerheartstate.SnapshotState, p p
 }
 
 func (f *Folder) foldAdversaryDeleted(state *daggerheartstate.SnapshotState, p payload.AdversaryDeletedPayload) error {
-	delete(state.AdversaryStates, ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String())))
+	delete(state.AdversaryStates, normalize.ID(p.AdversaryID))
 	return nil
 }
 
 func (f *Folder) foldEnvironmentEntityCreated(state *daggerheartstate.SnapshotState, p payload.EnvironmentEntityCreatedPayload) error {
-	environmentEntityID := ids.EnvironmentEntityID(strings.TrimSpace(p.EnvironmentEntityID.String()))
+	environmentEntityID := normalize.ID(p.EnvironmentEntityID)
 	if environmentEntityID == "" {
 		return nil
 	}
 	state.EnvironmentStates[environmentEntityID] = daggerheartstate.EnvironmentEntityState{
 		CampaignID:          state.CampaignID,
 		EnvironmentEntityID: environmentEntityID,
-		EnvironmentID:       strings.TrimSpace(p.EnvironmentID),
-		Name:                strings.TrimSpace(p.Name),
-		Type:                strings.TrimSpace(p.Type),
+		EnvironmentID:       normalize.String(p.EnvironmentID),
+		Name:                normalize.String(p.Name),
+		Type:                normalize.String(p.Type),
 		Tier:                p.Tier,
 		Difficulty:          p.Difficulty,
-		SessionID:           ids.SessionID(strings.TrimSpace(p.SessionID.String())),
-		SceneID:             ids.SceneID(strings.TrimSpace(p.SceneID.String())),
-		Notes:               strings.TrimSpace(p.Notes),
+		SessionID:           normalize.ID(p.SessionID),
+		SceneID:             normalize.ID(p.SceneID),
+		Notes:               normalize.String(p.Notes),
 	}
 	return nil
 }
@@ -302,45 +302,48 @@ func (f *Folder) foldEnvironmentEntityUpdated(state *daggerheartstate.SnapshotSt
 }
 
 func (f *Folder) foldEnvironmentEntityDeleted(state *daggerheartstate.SnapshotState, p payload.EnvironmentEntityDeletedPayload) error {
-	delete(state.EnvironmentStates, ids.EnvironmentEntityID(strings.TrimSpace(p.EnvironmentEntityID.String())))
+	delete(state.EnvironmentStates, normalize.ID(p.EnvironmentEntityID))
 	return nil
 }
 
 func (f *Folder) foldLevelUpApplied(state *daggerheartstate.SnapshotState, p payload.LevelUpAppliedPayload) error {
 	touchCharacter(state, p.CharacterID)
-	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))]; ok {
+	characterID := normalize.ID(p.CharacterID)
+	if profile, ok := state.CharacterProfiles[characterID]; ok {
 		f.applyLevelUp(&profile, p)
-		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))] = profile
+		state.CharacterProfiles[characterID] = profile
 	}
 	return nil
 }
 
 func (f *Folder) foldGoldUpdated(state *daggerheartstate.SnapshotState, p payload.GoldUpdatedPayload) error {
 	touchCharacter(state, p.CharacterID)
-	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))]; ok {
+	characterID := normalize.ID(p.CharacterID)
+	if profile, ok := state.CharacterProfiles[characterID]; ok {
 		profile.GoldHandfuls = p.Handfuls
 		profile.GoldBags = p.Bags
 		profile.GoldChests = p.Chests
-		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))] = profile
+		state.CharacterProfiles[characterID] = profile
 	}
 	return nil
 }
 
 func (f *Folder) foldDomainCardAcquired(state *daggerheartstate.SnapshotState, p payload.DomainCardAcquiredPayload) error {
 	touchCharacter(state, p.CharacterID)
-	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))]; ok {
+	characterID := normalize.ID(p.CharacterID)
+	if profile, ok := state.CharacterProfiles[characterID]; ok {
 		profile.DomainCardIDs = daggerheartstate.AppendUnique(profile.DomainCardIDs, p.CardID)
-		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))] = profile
+		state.CharacterProfiles[characterID] = profile
 	}
 	return nil
 }
 
 func (f *Folder) foldEquipmentSwapped(state *daggerheartstate.SnapshotState, p payload.EquipmentSwappedPayload) error {
 	touchCharacter(state, p.CharacterID)
-	if strings.TrimSpace(p.ItemType) == "armor" {
-		characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	if normalize.String(p.ItemType) == "armor" {
+		characterID := normalize.ID(p.CharacterID)
 		if profile, ok := state.CharacterProfiles[characterID]; ok {
-			profile.EquippedArmorID = strings.TrimSpace(p.EquippedArmorID)
+			profile.EquippedArmorID = normalize.String(p.EquippedArmorID)
 			if p.EvasionAfter != nil {
 				profile.Evasion = *p.EvasionAfter
 			}
@@ -384,7 +387,7 @@ func (f *Folder) foldEquipmentSwapped(state *daggerheartstate.SnapshotState, p p
 		}
 	}
 	if p.StressCost > 0 {
-		characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+		characterID := normalize.ID(p.CharacterID)
 		characterState := state.CharacterStates[characterID]
 		characterState.CampaignID = state.CampaignID.String()
 		characterState.CharacterID = characterID.String()
@@ -405,7 +408,7 @@ func (f *Folder) foldConsumableAcquired(state *daggerheartstate.SnapshotState, p
 }
 
 func (f *Folder) foldStatModifierChanged(state *daggerheartstate.SnapshotState, p payload.StatModifierChangedPayload) error {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return nil
 	}
@@ -416,7 +419,7 @@ func (f *Folder) foldStatModifierChanged(state *daggerheartstate.SnapshotState, 
 // --- helpers ---
 
 func touchCharacter(state *daggerheartstate.SnapshotState, rawID ids.CharacterID) {
-	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
+	characterID := normalize.ID(rawID)
 	if characterID == "" {
 		return
 	}
@@ -431,7 +434,7 @@ func applyCharacterStatePatched(state *daggerheartstate.SnapshotState, p payload
 }
 
 func applyStatePatch(state *daggerheartstate.SnapshotState, characterID ids.CharacterID, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *daggerheartstate.CharacterClassState, subclassStateAfter *daggerheartstate.CharacterSubclassState, companionStateAfter *daggerheartstate.CharacterCompanionState) {
-	characterID = ids.CharacterID(strings.TrimSpace(characterID.String()))
+	characterID = normalize.ID(characterID)
 	if characterID == "" {
 		return
 	}
@@ -469,7 +472,7 @@ func applyStatePatch(state *daggerheartstate.SnapshotState, characterID ids.Char
 }
 
 func applyCharacterConditionsChanged(state *daggerheartstate.SnapshotState, p payload.ConditionChangedPayload) {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return
 	}
@@ -481,7 +484,7 @@ func applyCharacterConditionsChanged(state *daggerheartstate.SnapshotState, p pa
 }
 
 func applyCharacterLoadoutSwapped(state *daggerheartstate.SnapshotState, p payload.LoadoutSwappedPayload) {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return
 	}
@@ -493,7 +496,7 @@ func applyCharacterLoadoutSwapped(state *daggerheartstate.SnapshotState, p paylo
 }
 
 func applyCharacterTemporaryArmorApplied(state *daggerheartstate.SnapshotState, p payload.CharacterTemporaryArmorAppliedPayload) {
-	characterID := ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+	characterID := normalize.ID(p.CharacterID)
 	if characterID == "" {
 		return
 	}
@@ -501,16 +504,16 @@ func applyCharacterTemporaryArmorApplied(state *daggerheartstate.SnapshotState, 
 	characterState.CampaignID = state.CampaignID.String()
 	characterState.CharacterID = characterID.String()
 	reducer.ApplyTemporaryArmor(&characterState, reducer.TemporaryArmorPatch{
-		Source:   strings.TrimSpace(p.Source),
-		Duration: strings.TrimSpace(p.Duration),
-		SourceID: strings.TrimSpace(p.SourceID),
+		Source:   normalize.String(p.Source),
+		Duration: normalize.String(p.Duration),
+		SourceID: normalize.String(p.SourceID),
 		Amount:   p.Amount,
 	})
 	state.CharacterStates[characterID] = characterState
 }
 
 func clearRestTemporaryArmor(state *daggerheartstate.SnapshotState, rawID string, clearShortRest bool, clearLongRest bool) {
-	characterID := ids.CharacterID(strings.TrimSpace(rawID))
+	characterID := ids.CharacterID(normalize.String(rawID))
 	if characterID == "" {
 		return
 	}
@@ -522,7 +525,7 @@ func clearRestTemporaryArmor(state *daggerheartstate.SnapshotState, rawID string
 }
 
 func applyCountdownUpsert(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID, mutate func(*daggerheartstate.CountdownState)) {
-	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
+	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
 		return
 	}
@@ -536,7 +539,7 @@ func applyCountdownUpsert(state *daggerheartstate.SnapshotState, countdownID ids
 }
 
 func deleteCountdownState(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID) {
-	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
+	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
 		return
 	}
@@ -544,7 +547,7 @@ func deleteCountdownState(state *daggerheartstate.SnapshotState, countdownID ids
 }
 
 func applyDamageApplied(state *daggerheartstate.SnapshotState, rawID ids.CharacterID, hpAfter, stressAfter, armorAfter *int) {
-	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
+	characterID := normalize.ID(rawID)
 	if characterID == "" {
 		return
 	}
@@ -559,7 +562,7 @@ func applyDamageApplied(state *daggerheartstate.SnapshotState, rawID ids.Charact
 }
 
 func applyAdversaryDamage(state *daggerheartstate.SnapshotState, rawID ids.AdversaryID, hpAfter, armorAfter *int) {
-	adversaryID := ids.AdversaryID(strings.TrimSpace(rawID.String()))
+	adversaryID := normalize.ID(rawID)
 	if adversaryID == "" {
 		return
 	}
@@ -576,18 +579,18 @@ func applyAdversaryDamage(state *daggerheartstate.SnapshotState, rawID ids.Adver
 }
 
 func applyAdversaryCreated(state *daggerheartstate.SnapshotState, p payload.AdversaryCreatePayload) {
-	adversaryID := ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
+	adversaryID := normalize.ID(p.AdversaryID)
 	if adversaryID == "" {
 		return
 	}
 	adversaryState := state.AdversaryStates[adversaryID]
 	adversaryState.CampaignID = state.CampaignID
 	adversaryState.AdversaryID = adversaryID
-	adversaryState.AdversaryEntryID = strings.TrimSpace(p.AdversaryEntryID)
+	adversaryState.AdversaryEntryID = normalize.String(p.AdversaryEntryID)
 	adversaryState.Name = p.Name
-	adversaryState.Kind = strings.TrimSpace(p.Kind)
-	adversaryState.SessionID = ids.SessionID(strings.TrimSpace(p.SessionID.String()))
-	adversaryState.SceneID = ids.SceneID(strings.TrimSpace(p.SceneID.String()))
+	adversaryState.Kind = normalize.String(p.Kind)
+	adversaryState.SessionID = normalize.ID(p.SessionID)
+	adversaryState.SceneID = normalize.ID(p.SceneID)
 	adversaryState.Notes = p.Notes
 	adversaryState.HP = p.HP
 	adversaryState.HPMax = p.HPMax
@@ -599,20 +602,20 @@ func applyAdversaryCreated(state *daggerheartstate.SnapshotState, p payload.Adve
 	adversaryState.Armor = p.Armor
 	adversaryState.FeatureStates = p.FeatureStates
 	adversaryState.PendingExperience = p.PendingExperience
-	adversaryState.SpotlightGateID = ids.GateID(strings.TrimSpace(p.SpotlightGateID.String()))
+	adversaryState.SpotlightGateID = normalize.ID(p.SpotlightGateID)
 	adversaryState.SpotlightCount = p.SpotlightCount
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
 func applyAdversaryUpdated(state *daggerheartstate.SnapshotState, p payload.AdversaryUpdatePayload) {
-	adversaryID := ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
+	adversaryID := normalize.ID(p.AdversaryID)
 	if adversaryID == "" {
 		return
 	}
 	adversaryState := state.AdversaryStates[adversaryID]
 	adversaryState.CampaignID = state.CampaignID
 	adversaryState.AdversaryID = adversaryID
-	adversaryState.AdversaryEntryID = strings.TrimSpace(p.AdversaryEntryID)
+	adversaryState.AdversaryEntryID = normalize.String(p.AdversaryEntryID)
 	adversaryState.Name = p.Name
 	adversaryState.Kind = p.Kind
 	adversaryState.SessionID = p.SessionID
@@ -634,7 +637,7 @@ func applyAdversaryUpdated(state *daggerheartstate.SnapshotState, p payload.Adve
 }
 
 func clearRestStatModifiers(state *daggerheartstate.SnapshotState, rawID ids.CharacterID, clearShortRest, clearLongRest bool) {
-	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
+	characterID := normalize.ID(rawID)
 	if characterID == "" {
 		return
 	}
@@ -652,7 +655,7 @@ func clearRestStatModifiers(state *daggerheartstate.SnapshotState, rawID ids.Cha
 }
 
 func applyAdversaryConditionsChanged(state *daggerheartstate.SnapshotState, rawID ids.AdversaryID, after []rules.ConditionState) {
-	adversaryID := ids.AdversaryID(strings.TrimSpace(rawID.String()))
+	adversaryID := normalize.ID(rawID)
 	if adversaryID == "" {
 		return
 	}

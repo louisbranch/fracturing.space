@@ -14,7 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -461,7 +460,7 @@ func batchAppendEvents(ctx context.Context, store storage.EventStore, events []e
 // write-path rejection mapping used by ExecuteAndApply.
 func domainDecisionError(code string, message string) error {
 	options := domainwrite.Options{}
-	grpcerror.NormalizeDomainWriteOptions(&options, grpcerror.NormalizeDomainWriteOptionsConfig{})
+	domainwrite.NormalizeDomainWriteOptions(&options, domainwrite.NormalizeDomainWriteOptionsConfig{})
 	return options.RejectErr(code, message)
 }
 
@@ -513,7 +512,7 @@ func findInviteClaimByJTI(ctx context.Context, store storage.EventStore, campaig
 // pronouns, and avatar without duplicating the invite-claim flow.
 func applyParticipantProfileSnapshot(
 	ctx context.Context,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 	participantStore storage.ParticipantStore,
 	characterStore storage.CharacterStore,
@@ -604,7 +603,7 @@ func applyParticipantProfileSnapshot(
 // avatars after a seat claim updates the participant avatar snapshot.
 func syncControlledCharacterAvatars(
 	ctx context.Context,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 	participantStore storage.ParticipantStore,
 	characterStore storage.CharacterStore,

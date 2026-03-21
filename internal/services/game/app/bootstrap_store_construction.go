@@ -12,7 +12,7 @@ import (
 // storesConstructionSources keeps root store construction scoped to the exact
 // startup-owned collaborators needed for phase 4.
 type storesConstructionSources struct {
-	projectionStore gamegrpc.ProjectionStoreBundle
+	projectionStore storage.ProjectionStore
 	systemStores    gamegrpc.SystemStores
 	eventStore      storage.EventStore
 	auditStore      storage.AuditEventStore
@@ -54,7 +54,7 @@ func buildStoreGroupsFromSources(sources storesConstructionSources) constructedS
 // applierConstructionSources keeps root applier construction scoped to the
 // exact projection-owned collaborators needed for phase 4.
 type applierConstructionSources struct {
-	projectionStore gamegrpc.ProjectionStoreBundle
+	projectionStore storage.ProjectionStore
 	systemStores    gamegrpc.SystemStores
 	auditStore      storage.AuditEventStore
 	events          *event.Registry

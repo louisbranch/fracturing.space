@@ -42,8 +42,8 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 	defer s.closeResources()
 	stopAncillaryWorkers := composeRuntimeStops(
-		s.startProjectionApplyOutboxWorker(ctx),
-		s.startProjectionApplyOutboxShadowWorker(ctx),
+		s.startProjectionWorker(ctx, projectionApplyWorkerKind),
+		s.startProjectionWorker(ctx, projectionShadowWorkerKind),
 		s.startStatusReporter(ctx),
 		s.startCatalogAvailabilityMonitor(ctx),
 	)
@@ -53,64 +53,72 @@ func (s *Server) Serve(ctx context.Context) error {
 	return runGRPCServeLoop(
 		ctx,
 		func() error {
-			return s.grpcServer.Serve(s.listener)
+			return s.transport.grpcServer.Serve(s.listener)
 		},
 		func() {
-			if s.health != nil {
-				s.health.Shutdown()
+			if s.transport.health != nil {
+				s.transport.health.Shutdown()
 			}
-			platformgrpc.GracefulStopWithTimeout(s.grpcServer, platformgrpc.DefaultGracefulStopTimeout)
+			platformgrpc.GracefulStopWithTimeout(s.transport.grpcServer, platformgrpc.DefaultGracefulStopTimeout)
 		},
 	)
 }
 
-// startProjectionApplyOutboxShadowWorker launches an optional background shadow worker.
-//
-// This keeps pending queue items progressing when projection updates are not
-// processed inline.
-func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) func() {
-	if s == nil || !s.projectionApplyOutboxShadowWorkerEnabled || s.stores == nil || s.stores.events == nil {
+// projectionWorkerKind selects the apply or shadow worker variant.
+type projectionWorkerKind int
+
+const (
+	projectionApplyWorkerKind projectionWorkerKind = iota
+	projectionShadowWorkerKind
+)
+
+// startProjectionWorker launches an optional background projection worker of
+// the given kind. It returns a stop function that blocks until the worker
+// goroutine exits. The two worker variants (apply and shadow) share identical
+// lifecycle logic and differ only in the processing function they invoke.
+func (s *Server) startProjectionWorker(ctx context.Context, kind projectionWorkerKind) func() {
+	if s == nil || s.stores == nil || s.stores.events == nil {
 		return func() {}
 	}
+
+	var enabled bool
+	switch kind {
+	case projectionApplyWorkerKind:
+		enabled = s.workers.applyWorkerEnabled && s.workers.applyFunc != nil
+	case projectionShadowWorkerKind:
+		enabled = s.workers.shadowWorkerEnabled
+	}
+	if !enabled {
+		return func() {}
+	}
+
 	processor := s.stores.events.ProjectionApplyOutboxStore()
 	if processor == nil {
 		return func() {}
 	}
 
 	return startCancelableLoop(ctx, func(workerCtx context.Context) {
-		runProjectionApplyOutboxShadowWorker(
-			workerCtx,
-			processor,
-			projectionApplyOutboxShadowWorkerInterval,
-			projectionApplyOutboxShadowWorkerBatch,
-			time.Now,
-			slogInfof,
-		)
-	})
-}
-
-// startProjectionApplyOutboxWorker launches an optional background projection worker.
-//
-// The worker applies queued projection rows independently from request handling.
-func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
-	if s == nil || !s.projectionApplyOutboxWorkerEnabled || s.stores == nil || s.stores.events == nil || s.projectionApplyOutboxApply == nil {
-		return func() {}
-	}
-	processor := s.stores.events.ProjectionApplyOutboxStore()
-	if processor == nil {
-		return func() {}
-	}
-
-	return startCancelableLoop(ctx, func(workerCtx context.Context) {
-		runProjectionApplyOutboxWorker(
-			workerCtx,
-			processor,
-			s.projectionApplyOutboxApply,
-			projectionApplyOutboxWorkerInterval,
-			projectionApplyOutboxWorkerBatch,
-			time.Now,
-			slogInfof,
-		)
+		switch kind {
+		case projectionApplyWorkerKind:
+			runProjectionApplyOutboxWorker(
+				workerCtx,
+				processor,
+				s.workers.applyFunc,
+				projectionApplyOutboxWorkerInterval,
+				projectionApplyOutboxWorkerBatch,
+				time.Now,
+				slogInfof,
+			)
+		case projectionShadowWorkerKind:
+			runProjectionApplyOutboxShadowWorker(
+				workerCtx,
+				processor,
+				projectionApplyOutboxShadowWorkerInterval,
+				projectionApplyOutboxShadowWorkerBatch,
+				time.Now,
+				slogInfof,
+			)
+		}
 	})
 }
 
@@ -198,16 +206,16 @@ func (s *Server) closeResources() {
 	s.stores.Close()
 	// Cancel and join the status-bind goroutine before closing the connection
 	// it references.
-	if s.statusBindCancel != nil {
-		s.statusBindCancel()
+	if s.conns.statusBindCancel != nil {
+		s.conns.statusBindCancel()
 	}
-	if s.statusBindDone != nil {
-		<-s.statusBindDone
+	if s.conns.statusBindDone != nil {
+		<-s.conns.statusBindDone
 	}
-	closeManagedConn(s.statusMc, "status")
-	closeManagedConn(s.aiMc, "ai")
-	closeManagedConn(s.socialMc, "social")
-	closeManagedConn(s.authMc, "auth")
+	closeManagedConn(s.conns.statusMc, "status")
+	closeManagedConn(s.conns.aiMc, "ai")
+	closeManagedConn(s.conns.socialMc, "social")
+	closeManagedConn(s.conns.authMc, "auth")
 }
 
 func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {

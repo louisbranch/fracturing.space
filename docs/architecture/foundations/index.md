@@ -20,6 +20,8 @@ Core explanations for system model, vocabulary, and write-path behavior.
 - [gRPC write path](grpc-write-path.md)
 - [Event replay](event-replay.md)
 - [Storage database separation](storage-database-separation.md)
+- [Projection apply outbox](projection-outbox.md)
+- [Validation boundaries](validation-boundaries.md)
 
 Deep reference addenda:
 

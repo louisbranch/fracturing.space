@@ -10,7 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -82,7 +82,7 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 		Campaign:    campaignStore,
 		Session:     sessionStore,
 		Participant: participantStore,
-		Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	})
 	_, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -110,7 +110,7 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 		Campaign:    campaignStore,
 		Session:     sessionStore,
 		Participant: participantStore,
-		Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	})
 	_, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -188,7 +188,7 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 			Session:            sessionStore,
 			Participant:        participantStore,
 			SessionInteraction: &fakeSessionInteractionStore{},
-			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("session-123"),
@@ -275,7 +275,7 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 			Session:            sessionStore,
 			Participant:        participantStore,
 			SessionInteraction: &fakeSessionInteractionStore{},
-			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("session-123"),
@@ -399,7 +399,7 @@ func TestStartSession_BlankNameDefaultsToCampaignLocaleSequence(t *testing.T) {
 					Session:            sessionStore,
 					Participant:        participantStore,
 					SessionInteraction: &fakeSessionInteractionStore{},
-					Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+					Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 				},
 				gametest.FixedClock(now),
 				gametest.FixedIDGenerator("session-123"),
@@ -477,7 +477,7 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 			Session:            sessionStore,
 			Participant:        participantStore,
 			SessionInteraction: &fakeSessionInteractionStore{},
-			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("session-123"),

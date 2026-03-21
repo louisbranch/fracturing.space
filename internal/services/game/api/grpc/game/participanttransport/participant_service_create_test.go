@@ -13,7 +13,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -129,7 +129,7 @@ func TestCreateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 		},
 	}}
 
-	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
 	ctx := gametest.ContextWithParticipantID("owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
@@ -188,7 +188,7 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 		},
 	}}
 	svc := newParticipantServiceForTest(
-		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
+		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("participant-123"),
 		nil,
@@ -265,7 +265,7 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 		},
 	}}
 	svc := newParticipantServiceForTest(
-		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
+		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("participant-456"),
 		nil,
@@ -321,7 +321,7 @@ func TestCreateParticipant_Success_ManagerAccess(t *testing.T) {
 		},
 	}}
 	svc := newParticipantServiceForTest(
-		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
+		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("participant-manager"),
 		nil,
@@ -414,7 +414,7 @@ func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
 		},
 		gametest.FixedClock(now),
@@ -490,7 +490,7 @@ func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *te
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
 			Social:      socialClient,
 		},
@@ -574,7 +574,7 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
 			Social:      socialClient,
 		},
@@ -642,7 +642,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsername(t *testi
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
 		},
 		gametest.FixedClock(now),
@@ -716,7 +716,7 @@ func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testi
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
 			Social:      socialClient,
 		},
@@ -789,7 +789,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsernameForLocale
 			Auth:        authz.PolicyDeps{Participant: participantStore},
 			Campaign:    campaignStore,
 			Participant: participantStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
 		},
 		gametest.FixedClock(now),

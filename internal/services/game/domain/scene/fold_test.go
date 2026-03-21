@@ -2,7 +2,6 @@ package scene
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -225,21 +224,18 @@ func TestFold_SpotlightCleared_ClearsSpotlightState(t *testing.T) {
 	}
 }
 
-func TestFold_UnknownEventType_NoChange(t *testing.T) {
+func TestFold_UnknownEventType_ReturnsError(t *testing.T) {
 	original := State{
 		SceneID: "s1",
 		Active:  true,
 		Name:    "Test",
 	}
-	updated, err := Fold(original, event.Event{
+	_, err := Fold(original, event.Event{
 		Type:        event.Type("scene.unknown"),
 		PayloadJSON: []byte(`{}`),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(updated, original) {
-		t.Fatalf("fold changed state for unknown event: got %+v, want %+v", updated, original)
+	if err == nil {
+		t.Fatal("expected error for unknown event type, got nil")
 	}
 }
 

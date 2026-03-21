@@ -12,7 +12,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -416,7 +416,7 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 		nil,
@@ -606,7 +606,7 @@ func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Social:      socialClient,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		nil,
@@ -718,7 +718,7 @@ func TestClaimInvite_ResyncsControlledCharacterAvatarFromClaimedSeat(t *testing.
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Social:      socialClient,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("x"),

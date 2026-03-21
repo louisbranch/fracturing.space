@@ -24,6 +24,7 @@ type CoreDomain struct {
 	FoldHandledTypes       func() []event.Type
 	DeciderHandledCommands func() []command.Type
 	ProjectionHandledTypes func() []event.Type
+	RejectionCodes         func() []string
 }
 
 // Name returns a human-readable label for error messages and diagnostics.
@@ -42,6 +43,7 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       campaign.FoldHandledTypes,
 			DeciderHandledCommands: campaign.DeciderHandledCommands,
 			ProjectionHandledTypes: campaign.ProjectionHandledTypes,
+			RejectionCodes:         campaign.RejectionCodes,
 		},
 		{
 			name:                   "action",
@@ -51,6 +53,7 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       action.FoldHandledTypes,
 			DeciderHandledCommands: action.DeciderHandledCommands,
 			ProjectionHandledTypes: action.ProjectionHandledTypes,
+			RejectionCodes:         action.RejectionCodes,
 		},
 		{
 			name:                   "session",
@@ -60,6 +63,7 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       session.FoldHandledTypes,
 			DeciderHandledCommands: session.DeciderHandledCommands,
 			ProjectionHandledTypes: session.ProjectionHandledTypes,
+			RejectionCodes:         session.RejectionCodes,
 		},
 		{
 			name:                   "participant",
@@ -69,6 +73,7 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       participant.FoldHandledTypes,
 			DeciderHandledCommands: participant.DeciderHandledCommands,
 			ProjectionHandledTypes: participant.ProjectionHandledTypes,
+			RejectionCodes:         participant.RejectionCodes,
 		},
 		{
 			name:                   "invite",
@@ -78,6 +83,7 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       invite.FoldHandledTypes,
 			DeciderHandledCommands: invite.DeciderHandledCommands,
 			ProjectionHandledTypes: invite.ProjectionHandledTypes,
+			RejectionCodes:         invite.RejectionCodes,
 		},
 		{
 			name:                   "character",
@@ -87,6 +93,7 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       character.FoldHandledTypes,
 			DeciderHandledCommands: character.DeciderHandledCommands,
 			ProjectionHandledTypes: character.ProjectionHandledTypes,
+			RejectionCodes:         character.RejectionCodes,
 		},
 		{
 			name:                   "scene",
@@ -96,6 +103,7 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       scene.FoldHandledTypes,
 			DeciderHandledCommands: scene.DeciderHandledCommands,
 			ProjectionHandledTypes: scene.ProjectionHandledTypes,
+			RejectionCodes:         scene.RejectionCodes,
 		},
 	}
 }

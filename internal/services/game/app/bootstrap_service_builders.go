@@ -34,8 +34,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-// daggerheartRegistrationDeps keeps the Daggerheart registration surface local
-// to system-owned read/write paths instead of the full root game store bag.
+// daggerheartRegistrationDeps groups the Daggerheart service family
+// collaborators needed for both transport registration assembly and service
+// descriptor construction.
 type daggerheartRegistrationDeps struct {
 	projectionStore projectionBackend
 	systemStores    gamegrpc.SystemStores
@@ -45,24 +46,13 @@ type daggerheartRegistrationDeps struct {
 	events          *event.Registry
 }
 
-// daggerheartRegistrationSources keeps the Daggerheart family builder scoped
-// to the exact startup-owned collaborators it needs.
-type daggerheartRegistrationSources struct {
-	projectionStore projectionBackend
-	systemStores    gamegrpc.SystemStores
-	contentStore    contentBackend
-	eventStore      eventBackend
-	writePath       gamegrpc.WritePath
-	events          *event.Registry
-}
-
-// campaignRegistrationDeps groups the campaign-owned transport dependencies so
-// root registration can wire campaign services without passing every store.
+// campaignRegistrationDeps groups the campaign service family collaborators.
+// Policy deps are derived from the struct's own fields via policyDeps().
 type campaignRegistrationDeps struct {
-	policy             authz.PolicyDeps
 	campaignStore      storage.CampaignStore
 	participantStore   storage.ParticipantStore
 	characterStore     storage.CharacterStore
+	auditStore         storage.AuditEventStore
 	sessionStore       storage.SessionStore
 	sessionInteraction storage.SessionInteractionStore
 	systemStores       gamegrpc.SystemStores
@@ -77,34 +67,23 @@ type campaignRegistrationDeps struct {
 	aiAgentClient      aiv1.AgentServiceClient
 }
 
-// campaignRegistrationSources keeps the campaign family builder scoped to the
-// exact startup-owned collaborators it needs, without passing concern groups.
-type campaignRegistrationSources struct {
-	campaign           storage.CampaignStore
-	participant        storage.ParticipantStore
-	character          storage.CharacterStore
-	session            storage.SessionStore
-	sessionInteraction storage.SessionInteractionStore
-	systemStores       gamegrpc.SystemStores
-	invite             storage.InviteStore
-	claimIndex         storage.ClaimIndexStore
-	event              storage.EventStore
-	content            contentstore.DaggerheartContentReadStore
-	social             socialv1.SocialServiceClient
-	writePath          gamegrpc.WritePath
-	audit              storage.AuditEventStore
-	applier            projection.Applier
-	authClient         authv1.AuthServiceClient
-	aiAgentClient      aiv1.AgentServiceClient
+// policyDeps derives shared authorization collaborators from the campaign
+// registration's own fields.
+func (d campaignRegistrationDeps) policyDeps() authz.PolicyDeps {
+	return authz.PolicyDeps{
+		Participant: d.participantStore,
+		Character:   d.characterStore,
+		Audit:       d.auditStore,
+	}
 }
 
-// sessionRegistrationDeps keeps session-owned service registration aligned to
-// the session/scene/interaction workflow seams instead of the root store bag.
+// sessionRegistrationDeps groups the session/scene/interaction service family
+// collaborators. Policy deps are derived via policyDeps().
 type sessionRegistrationDeps struct {
-	policy             authz.PolicyDeps
 	campaignStore      storage.CampaignStore
 	participantStore   storage.ParticipantStore
 	characterStore     storage.CharacterStore
+	auditStore         storage.AuditEventStore
 	sessionStore       storage.SessionStore
 	sessionGateStore   storage.SessionGateStore
 	sessionSpotlight   storage.SessionSpotlightStore
@@ -119,29 +98,18 @@ type sessionRegistrationDeps struct {
 	applier            projection.Applier
 }
 
-// sessionRegistrationSources keeps the session family builder scoped to the
-// exact session/scene workflow collaborators it needs from startup.
-type sessionRegistrationSources struct {
-	campaign           storage.CampaignStore
-	participant        storage.ParticipantStore
-	character          storage.CharacterStore
-	session            storage.SessionStore
-	sessionGate        storage.SessionGateStore
-	sessionSpotlight   storage.SessionSpotlightStore
-	sessionInteraction storage.SessionInteractionStore
-	scene              storage.SceneStore
-	sceneCharacter     storage.SceneCharacterStore
-	sceneInteraction   storage.SceneInteractionStore
-	campaignFork       storage.CampaignForkStore
-	event              storage.EventStore
-	social             socialv1.SocialServiceClient
-	writePath          gamegrpc.WritePath
-	audit              storage.AuditEventStore
-	applier            projection.Applier
+// policyDeps derives shared authorization collaborators from the session
+// registration's own fields.
+func (d sessionRegistrationDeps) policyDeps() authz.PolicyDeps {
+	return authz.PolicyDeps{
+		Participant: d.participantStore,
+		Character:   d.characterStore,
+		Audit:       d.auditStore,
+	}
 }
 
-// infrastructureRegistrationDeps keeps the remaining operational services on a
-// minimal infrastructure surface rather than coupling them to gameplay stores.
+// infrastructureRegistrationDeps groups the operational service collaborators
+// that do not belong to a gameplay capability family.
 type infrastructureRegistrationDeps struct {
 	campaignStore    storage.CampaignStore
 	participantStore storage.ParticipantStore
@@ -150,113 +118,6 @@ type infrastructureRegistrationDeps struct {
 	statisticsStore  storage.StatisticsStore
 	bundle           *storageBundle
 	systemRegistry   *bridge.MetadataRegistry
-}
-
-// infrastructureRegistrationSources keeps the infrastructure family builder
-// scoped to the exact operational collaborators it needs from startup.
-type infrastructureRegistrationSources struct {
-	campaign       storage.CampaignStore
-	participant    storage.ParticipantStore
-	character      storage.CharacterStore
-	audit          storage.AuditEventStore
-	statistics     storage.StatisticsStore
-	bundle         *storageBundle
-	systemRegistry *bridge.MetadataRegistry
-}
-
-// newRegistrationPolicyDeps extracts the shared authorization collaborators
-// once so capability helpers can depend on a narrow policy bundle.
-func newRegistrationPolicyDeps(
-	participant storage.ParticipantStore,
-	character storage.CharacterStore,
-	audit storage.AuditEventStore,
-) authz.PolicyDeps {
-	return authz.PolicyDeps{
-		Participant: participant,
-		Character:   character,
-		Audit:       audit,
-	}
-}
-
-// newDaggerheartRegistrationDeps binds the Daggerheart service family to the
-// system-owned read/write paths needed by the root transport.
-func newDaggerheartRegistrationDeps(
-	sources daggerheartRegistrationSources,
-) daggerheartRegistrationDeps {
-	return daggerheartRegistrationDeps{
-		projectionStore: sources.projectionStore,
-		systemStores:    sources.systemStores,
-		contentStore:    sources.contentStore,
-		eventStore:      sources.eventStore,
-		writePath:       sources.writePath,
-		events:          sources.events,
-	}
-}
-
-// newCampaignRegistrationDeps assembles the campaign-owned service family from
-// the root stores without introducing a transport-wide registration bag.
-func newCampaignRegistrationDeps(
-	sources campaignRegistrationSources,
-) campaignRegistrationDeps {
-	return campaignRegistrationDeps{
-		policy:             newRegistrationPolicyDeps(sources.participant, sources.character, sources.audit),
-		campaignStore:      sources.campaign,
-		participantStore:   sources.participant,
-		characterStore:     sources.character,
-		sessionStore:       sources.session,
-		sessionInteraction: sources.sessionInteraction,
-		systemStores:       sources.systemStores,
-		inviteStore:        sources.invite,
-		claimIndexStore:    sources.claimIndex,
-		eventStore:         sources.event,
-		contentStore:       sources.content,
-		socialClient:       sources.social,
-		writePath:          sources.writePath,
-		applier:            sources.applier,
-		authClient:         sources.authClient,
-		aiAgentClient:      sources.aiAgentClient,
-	}
-}
-
-// newSessionRegistrationDeps assembles the session-owned registration family
-// from the stores that back session, scene, and interaction workflows.
-func newSessionRegistrationDeps(
-	sources sessionRegistrationSources,
-) sessionRegistrationDeps {
-	return sessionRegistrationDeps{
-		policy:             newRegistrationPolicyDeps(sources.participant, sources.character, sources.audit),
-		campaignStore:      sources.campaign,
-		participantStore:   sources.participant,
-		characterStore:     sources.character,
-		sessionStore:       sources.session,
-		sessionGateStore:   sources.sessionGate,
-		sessionSpotlight:   sources.sessionSpotlight,
-		sessionInteraction: sources.sessionInteraction,
-		sceneStore:         sources.scene,
-		sceneCharacter:     sources.sceneCharacter,
-		sceneInteraction:   sources.sceneInteraction,
-		campaignForkStore:  sources.campaignFork,
-		eventStore:         sources.event,
-		socialClient:       sources.social,
-		writePath:          sources.writePath,
-		applier:            sources.applier,
-	}
-}
-
-// newInfrastructureRegistrationDeps assembles the remaining operational
-// services from infrastructure stores and startup-owned collaborators.
-func newInfrastructureRegistrationDeps(
-	sources infrastructureRegistrationSources,
-) infrastructureRegistrationDeps {
-	return infrastructureRegistrationDeps{
-		campaignStore:    sources.campaign,
-		participantStore: sources.participant,
-		characterStore:   sources.character,
-		auditStore:       sources.audit,
-		statisticsStore:  sources.statistics,
-		bundle:           sources.bundle,
-		systemRegistry:   sources.systemRegistry,
-	}
 }
 
 // buildDaggerheartServiceDescriptors wires the Daggerheart transport family
@@ -311,8 +172,9 @@ func buildCampaignServiceDescriptors(
 	deps campaignRegistrationDeps,
 	sessionGrantConfig aisessiongrant.Config,
 ) []grpcServiceDescriptor {
+	policy := deps.policyDeps()
 	campaignService := campaigntransport.NewCampaignService(campaigntransport.Deps{
-		Auth:               deps.policy,
+		Auth:               policy,
 		Campaign:           deps.campaignStore,
 		Participant:        deps.participantStore,
 		Character:          deps.characterStore,
@@ -341,7 +203,7 @@ func buildCampaignServiceDescriptors(
 		Applier:            deps.applier,
 	})
 	participantService := participanttransport.NewService(participanttransport.Deps{
-		Auth:                   deps.policy,
+		Auth:                   policy,
 		Campaign:               deps.campaignStore,
 		Participant:            deps.participantStore,
 		Character:              deps.characterStore,
@@ -351,7 +213,7 @@ func buildCampaignServiceDescriptors(
 		ClearCampaignAIBinding: campaigntransport.NewClearCampaignAIBindingFunc(deps.campaignStore, deps.writePath, deps.applier),
 	}, deps.authClient)
 	inviteService := invitetransport.NewService(invitetransport.Deps{
-		Auth:        deps.policy,
+		Auth:        policy,
 		Campaign:    deps.campaignStore,
 		Participant: deps.participantStore,
 		Character:   deps.characterStore,
@@ -363,7 +225,7 @@ func buildCampaignServiceDescriptors(
 		Applier:     deps.applier,
 	}, deps.authClient)
 	characterService := charactertransport.NewService(charactertransport.Deps{
-		Auth:               deps.policy,
+		Auth:               policy,
 		Campaign:           deps.campaignStore,
 		Character:          deps.characterStore,
 		Participant:        deps.participantStore,
@@ -373,7 +235,7 @@ func buildCampaignServiceDescriptors(
 		Applier:            deps.applier,
 	})
 	snapshotService := snapshottransport.NewService(snapshottransport.Deps{
-		Auth:        deps.policy,
+		Auth:        policy,
 		Campaign:    deps.campaignStore,
 		Character:   deps.characterStore,
 		Daggerheart: deps.systemStores.Daggerheart,
@@ -430,8 +292,9 @@ func buildCampaignServiceDescriptors(
 // buildSessionServiceDescriptors wires the session/scene interaction family
 // from the session-owned projection and write dependencies.
 func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceDescriptor {
+	policy := deps.policyDeps()
 	sessionService := sessiontransport.NewSessionService(sessiontransport.Deps{
-		Auth:               deps.policy,
+		Auth:               policy,
 		Campaign:           deps.campaignStore,
 		Participant:        deps.participantStore,
 		Character:          deps.characterStore,
@@ -444,7 +307,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Applier:            deps.applier,
 	})
 	sceneService := scenetransport.NewService(scenetransport.Deps{
-		Auth:           deps.policy,
+		Auth:           policy,
 		Campaign:       deps.campaignStore,
 		Scene:          deps.sceneStore,
 		SceneCharacter: deps.sceneCharacter,
@@ -452,7 +315,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Applier:        deps.applier,
 	})
 	forkService := forktransport.NewService(forktransport.Deps{
-		Auth:         deps.policy,
+		Auth:         policy,
 		Campaign:     deps.campaignStore,
 		Participant:  deps.participantStore,
 		Character:    deps.characterStore,
@@ -464,7 +327,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Applier:      deps.applier,
 	})
 	eventService := eventtransport.NewService(eventtransport.Deps{
-		Auth:        deps.policy,
+		Auth:        policy,
 		Event:       deps.eventStore,
 		Campaign:    deps.campaignStore,
 		Participant: deps.participantStore,
@@ -473,7 +336,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Write:       deps.writePath,
 	})
 	interactionService := interactiontransport.NewInteractionService(interactiontransport.Deps{
-		Auth:               deps.policy,
+		Auth:               policy,
 		Campaign:           deps.campaignStore,
 		Participant:        deps.participantStore,
 		Character:          deps.characterStore,

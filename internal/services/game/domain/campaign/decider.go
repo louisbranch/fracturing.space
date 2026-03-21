@@ -45,6 +45,28 @@ const (
 	rejectionCodePayloadDecodeFailed          = command.RejectionCodePayloadDecodeFailed
 )
 
+// RejectionCodes returns all rejection code strings used by the campaign
+// decider. Used by startup validators to detect cross-domain collisions.
+func RejectionCodes() []string {
+	return []string{
+		rejectionCodeCampaignAlreadyExists,
+		rejectionCodeCampaignNotCreated,
+		rejectionCodeCampaignNameEmpty,
+		rejectionCodeCampaignGameSystemInvalid,
+		rejectionCodeCampaignGmModeInvalid,
+		rejectionCodeCampaignUpdateEmpty,
+		rejectionCodeCampaignStatusInvalid,
+		rejectionCodeCampaignStatusTransition,
+		rejectionCodeCampaignUpdateFieldInvalid,
+		rejectionCodeCampaignLocaleInvalid,
+		rejectionCodeCampaignCoverAssetInvalid,
+		rejectionCodeCampaignCoverSetInvalid,
+		rejectionCodeCampaignAIAgentIDRequired,
+		rejectionCodeCampaignParticipantsEmpty,
+		rejectionCodeCampaignParticipantDuplicate,
+	}
+}
+
 // Decide returns the decision for a campaign command against current state.
 //
 // This function is the campaign policy hub: it normalizes command payloads,

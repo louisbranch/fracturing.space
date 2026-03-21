@@ -10,7 +10,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -36,13 +35,13 @@ type Deps struct {
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
 	Session     storage.SessionStore
-	Write       domainwriteexec.WritePath
+	Write       domainwrite.WritePath
 }
 
 type eventApplication struct {
 	auth   authz.PolicyDeps
 	stores eventApplicationStores
-	write  domainwriteexec.WritePath
+	write  domainwrite.WritePath
 	clock  func() time.Time
 }
 

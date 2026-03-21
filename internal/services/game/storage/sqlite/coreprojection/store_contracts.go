@@ -3,18 +3,15 @@ package coreprojection
 import "github.com/louisbranch/fracturing.space/internal/services/game/storage"
 
 var (
-	// Aggregate projection contracts used across app/bootstrap tooling.
+	// Aggregate projection contract: includes campaign, session, and scene
+	// read stores plus infrastructure concerns (snapshots, statistics,
+	// watermarks).
 	_ storage.ProjectionStore = (*Store)(nil)
 
-	// Projection seams intentionally outside ProjectionStore aggregate.
-	_ storage.SessionGateStore        = (*Store)(nil)
-	_ storage.SessionSpotlightStore   = (*Store)(nil)
-	_ storage.SessionInteractionStore = (*Store)(nil)
-	_ storage.SceneStore              = (*Store)(nil)
-	_ storage.SceneCharacterStore     = (*Store)(nil)
-	_ storage.SceneGateStore          = (*Store)(nil)
-	_ storage.SceneSpotlightStore     = (*Store)(nil)
-	_ storage.SceneInteractionStore   = (*Store)(nil)
+	// Purpose-scoped projection composites — all satisfied by the same Store.
+	_ storage.CampaignReadStores = (*Store)(nil)
+	_ storage.SessionReadStores  = (*Store)(nil)
+	_ storage.SceneReadStores    = (*Store)(nil)
 
 	// Projection apply/runtime integrity contracts.
 	_ storage.ProjectionApplyExactlyOnceStore = (*Store)(nil)

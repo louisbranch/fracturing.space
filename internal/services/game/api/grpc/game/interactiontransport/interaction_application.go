@@ -9,7 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -33,7 +33,7 @@ type Deps struct {
 	Scene              storage.SceneStore
 	SceneCharacter     storage.SceneCharacterStore
 	SceneInteraction   storage.SceneInteractionStore
-	Write              domainwriteexec.WritePath
+	Write              domainwrite.WritePath
 	Applier            projection.Applier
 }
 
@@ -42,7 +42,7 @@ type Deps struct {
 type interactionApplication struct {
 	auth        authz.PolicyDeps
 	stores      interactionApplicationStores
-	write       domainwriteexec.WritePath
+	write       domainwrite.WritePath
 	applier     projection.Applier
 	idGenerator func() (string, error)
 }

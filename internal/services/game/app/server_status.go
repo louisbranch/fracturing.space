@@ -63,27 +63,27 @@ func applyCatalogCapabilityState(reporter *platformstatus.Reporter, state catalo
 
 // startStatusReporter launches the background push loop if a reporter is configured.
 func (s *Server) startStatusReporter(ctx context.Context) func() {
-	if s == nil || s.statusReporter == nil {
+	if s == nil || s.status.reporter == nil {
 		return func() {}
 	}
-	return s.statusReporter.Start(ctx)
+	return s.status.reporter.Start(ctx)
 }
 
 // startCatalogAvailabilityMonitor keeps catalog-backed capability status
 // current until catalog content becomes ready.
 func (s *Server) startCatalogAvailabilityMonitor(ctx context.Context) func() {
 	if s == nil ||
-		s.statusReporter == nil ||
+		s.status.reporter == nil ||
 		s.stores == nil ||
 		s.stores.content == nil ||
-		s.catalogReadyAtStartup {
+		s.status.catalogReadyAtStartup {
 		return func() {}
 	}
 
 	return startCancelableLoop(ctx, func(workerCtx context.Context) {
 		runCatalogAvailabilityMonitor(
 			workerCtx,
-			s.statusReporter,
+			s.status.reporter,
 			s.stores.content,
 			catalogAvailabilityMonitorInterval,
 			slogInfof,

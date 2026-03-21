@@ -1,12 +1,11 @@
 package decider
 
 import (
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -15,9 +14,9 @@ import (
 func decideLevelUpApply(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		payload.EventTypeLevelUpApplied, "character",
-		func(p *payload.LevelUpApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(p *payload.LevelUpApplyPayload) string { return normalize.ID(p.CharacterID).String() },
 		func(_ daggerheartstate.SnapshotState, _ bool, p *payload.LevelUpApplyPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
+			p.CharacterID = normalize.ID(p.CharacterID)
 
 			// Convert payload advancements to domain model.
 			domainAdvs := make([]mechanics.Advancement, 0, len(p.Advancements))

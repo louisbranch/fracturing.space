@@ -9,7 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -23,7 +22,7 @@ import (
 // current name, pronouns, and avatar without duplicating the invite-claim flow.
 func applyParticipantProfileSnapshot(
 	ctx context.Context,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 	participantStore storage.ParticipantStore,
 	characterStore storage.CharacterStore,
@@ -114,7 +113,7 @@ func applyParticipantProfileSnapshot(
 // avatars after a seat claim updates the participant avatar snapshot.
 func syncControlledCharacterAvatars(
 	ctx context.Context,
-	write domainwriteexec.WritePath,
+	write domainwrite.WritePath,
 	applier projection.Applier,
 	participantStore storage.ParticipantStore,
 	characterStore storage.CharacterStore,
