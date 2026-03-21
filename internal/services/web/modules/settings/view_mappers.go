@@ -9,7 +9,7 @@ import (
 
 // settingsSideMenu centralizes this web behavior in one helper seam.
 func settingsSideMenu(currentPath string, loc webtemplates.Localizer, availability settingsSurfaceAvailability) *webtemplates.AppSideMenu {
-	items := make([]webtemplates.AppSideMenuItem, 0, 5)
+	items := make([]webtemplates.AppSideMenuItem, 0, 3)
 	if availability.profile {
 		items = append(items, webtemplates.AppSideMenuItem{
 			Label:      webtemplates.T(loc, "layout.settings_user_profile"),
@@ -31,26 +31,34 @@ func settingsSideMenu(currentPath string, loc webtemplates.Localizer, availabili
 			Label:      webtemplates.T(loc, "layout.settings_security"),
 			URL:        routepath.AppSettingsSecurity,
 			MatchExact: true,
-			IconID:     commonv1.IconId_ICON_ID_KEY,
+			IconID:     commonv1.IconId_ICON_ID_LOCK,
 		})
 	}
+	aiItems := make([]webtemplates.AppSideMenuItem, 0, 2)
 	if availability.aiKeys {
-		items = append(items, webtemplates.AppSideMenuItem{
+		aiItems = append(aiItems, webtemplates.AppSideMenuItem{
 			Label:      webtemplates.T(loc, "layout.settings_ai_keys"),
 			URL:        routepath.AppSettingsAIKeys,
 			MatchExact: true,
-			IconID:     commonv1.IconId_ICON_ID_AI,
+			IconID:     commonv1.IconId_ICON_ID_KEY,
 		})
 	}
 	if availability.aiAgents {
-		items = append(items, webtemplates.AppSideMenuItem{
+		aiItems = append(aiItems, webtemplates.AppSideMenuItem{
 			Label:      webtemplates.T(loc, "layout.settings_ai_agents"),
 			URL:        routepath.AppSettingsAIAgents,
 			MatchExact: true,
-			IconID:     commonv1.IconId_ICON_ID_AI,
+			IconID:     commonv1.IconId_ICON_ID_BRAIN_COG,
 		})
 	}
-	return &webtemplates.AppSideMenu{CurrentPath: currentPath, Items: items}
+	menu := &webtemplates.AppSideMenu{CurrentPath: currentPath, Items: items}
+	if len(aiItems) > 0 {
+		menu.Groups = []webtemplates.AppSideMenuGroup{{
+			Title: webtemplates.T(loc, "layout.settings_ai"),
+			Items: aiItems,
+		}}
+	}
+	return menu
 }
 
 // mapPasskeyTemplateRows maps settings passkeys into template rows.

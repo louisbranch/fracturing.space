@@ -750,14 +750,14 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			}
 		}
 		if dashboardServiceHealthVisible(view) {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<section id=\"dashboard-service-health\" data-dashboard-block=\"service-health\" class=\"card bg-base-200 border border-base-300 shadow-sm lg:col-span-1 lg:col-start-3\"><div class=\"card-body gap-2\"><h2 class=\"card-title text-sm\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<section id=\"dashboard-service-health\" data-dashboard-block=\"service-health\" class=\"card bg-base-200 border border-base-300 shadow-sm lg:col-span-1 lg:col-start-3\"><div class=\"card-body gap-2\"><h2 class=\"card-title\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.service_health.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 281, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 281, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -768,14 +768,14 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if dashboardAllServicesOperational(view) {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "<p class=\"text-sm text-success\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "<p class=\"text-success\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var38 string
 				templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.service_health.all_operational"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 283, Col: 94}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 283, Col: 86}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 				if templ_7745c5c3_Err != nil {

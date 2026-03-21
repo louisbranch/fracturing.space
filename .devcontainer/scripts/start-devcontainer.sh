@@ -53,7 +53,7 @@ wait_for_services_ready() {
     "game server listening"
     "auth server listening at"
     "social server listening at"
-    "ai server listening at"
+    "server listening"
     "notifications server listening at"
     "userhub server listening at"
     "admin listening on"

@@ -263,7 +263,7 @@ run_catalog_importer_async
 wait_for_service_log_marker "auth" "auth server listening at"
 wait_for_service_log_marker "social" "social server listening at"
 wait_for_service_log_marker "discovery" "discovery server listening at"
-wait_for_service_log_marker "ai" "ai server listening at"
+wait_for_service_log_marker "ai" "server listening"
 wait_for_service_log_marker "notifications" "notifications server listening at"
 start_service userhub
 wait_for_service_log_marker "userhub" "userhub server listening at"

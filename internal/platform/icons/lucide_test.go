@@ -103,13 +103,44 @@ func TestLucideNameLocaleIcon(t *testing.T) {
 	}
 }
 
-func TestLucideSpriteIncludesLocaleSymbol(t *testing.T) {
-	if !strings.Contains(LucideSprite(), `id="lucide-languages"`) {
-		t.Fatalf("LucideSprite() missing locale icon symbol")
+func TestLucideNameSettingsIcons(t *testing.T) {
+	tests := []struct {
+		name string
+		id   commonv1.IconId
+		want string
+	}{
+		{
+			name: "locale",
+			id:   commonv1.IconId_ICON_ID_LOCALE,
+			want: "languages",
+		},
+		{
+			name: "lock",
+			id:   commonv1.IconId_ICON_ID_LOCK,
+			want: "lock",
+		},
+		{
+			name: "brain-cog",
+			id:   commonv1.IconId_ICON_ID_BRAIN_COG,
+			want: "brain-cog",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := LucideName(tc.id)
+			if !ok {
+				t.Fatalf("LucideName(%s) missing mapping", tc.id.String())
+			}
+			if got != tc.want {
+				t.Fatalf("LucideName(%s) = %q, want %q", tc.id.String(), got, tc.want)
+			}
+		})
 	}
 }
 
-func TestLucideSpriteIncludesUpdatedInviteAndMessageSymbols(t *testing.T) {
+func TestLucideSpriteIncludesUpdatedSettingsAndNotificationSymbols(t *testing.T) {
 	sprite := LucideSprite()
 	for _, symbolID := range []string{
 		`id="lucide-drama"`,
@@ -117,6 +148,9 @@ func TestLucideSpriteIncludesUpdatedInviteAndMessageSymbols(t *testing.T) {
 		`id="lucide-redo-dot"`,
 		`id="lucide-user-plus"`,
 		`id="lucide-mail"`,
+		`id="lucide-languages"`,
+		`id="lucide-lock"`,
+		`id="lucide-brain-cog"`,
 	} {
 		if !strings.Contains(sprite, symbolID) {
 			t.Fatalf("LucideSprite() missing symbol %s", symbolID)

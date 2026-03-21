@@ -200,6 +200,11 @@ var catalog = []Definition{
 		Description: "Secret or API key actions.",
 	},
 	{
+		ID:          commonv1.IconId_ICON_ID_LOCK,
+		Name:        "Lock",
+		Description: "Security settings and protected account actions.",
+	},
+	{
 		ID:          commonv1.IconId_ICON_ID_INVITES,
 		Name:        "Invites",
 		Description: "Campaign invitations and membership requests.",
@@ -218,6 +223,11 @@ var catalog = []Definition{
 		ID:          commonv1.IconId_ICON_ID_AI,
 		Name:        "AI",
 		Description: "AI key management and integrations.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_BRAIN_COG,
+		Name:        "Brain Cog",
+		Description: "AI agents and automation configuration.",
 	},
 	{
 		ID:          commonv1.IconId_ICON_ID_LOG_OUT,

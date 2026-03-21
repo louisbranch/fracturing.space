@@ -128,7 +128,7 @@ func TestMountSettingsProfileGetRendersPortugueseCopyWhenLanguageResolved(t *tes
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`<h1 class="mb-0">Configurações</h1>`,
+		`<h1 class="mb-0 text-3xl">Configurações</h1>`,
 		`<h2 class="card-title">Perfil</h2>`,
 		`<span class="label-text">Nome de usuário</span>`,
 		`<button class="btn btn-primary" type="submit">Salvar perfil</button>`,
@@ -156,6 +156,49 @@ func TestMountSettingsProfileMenuUsesPublicProfileLabelInEnglish(t *testing.T) {
 	body := rr.Body.String()
 	if !strings.Contains(body, `>Profile`) {
 		t.Fatalf("body missing English profile menu label: %q", body)
+	}
+}
+
+func TestMountSettingsMenuGroupsAIItemsAfterAccountItems(t *testing.T) {
+	t.Parallel()
+
+	m := newSettingsModuleFromGateways(newPopulatedFakeGateway(), nil, settingsTestBase())
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfile, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-app-side-menu-group="AI"`,
+		`<h2 class="menu-title">AI</h2>`,
+		`data-app-side-menu-item="/app/settings/profile"`,
+		`data-app-side-menu-item="/app/settings/locale"`,
+		`data-app-side-menu-item="/app/settings/security"`,
+		`data-app-side-menu-item="/app/settings/ai-keys"`,
+		`data-app-side-menu-item="/app/settings/ai-agents"`,
+		`href="#lucide-lock"`,
+		`href="#lucide-brain-cog"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing settings menu marker %q: %q", marker, body)
+		}
+	}
+
+	profileIdx := strings.Index(body, `data-app-side-menu-item="/app/settings/profile"`)
+	localeIdx := strings.Index(body, `data-app-side-menu-item="/app/settings/locale"`)
+	securityIdx := strings.Index(body, `data-app-side-menu-item="/app/settings/security"`)
+	aiTitleIdx := strings.Index(body, `<h2 class="menu-title">AI</h2>`)
+	keysIdx := strings.Index(body, `data-app-side-menu-item="/app/settings/ai-keys"`)
+	agentsIdx := strings.Index(body, `data-app-side-menu-item="/app/settings/ai-agents"`)
+	if !(profileIdx >= 0 && localeIdx > profileIdx && securityIdx > localeIdx && aiTitleIdx > securityIdx && keysIdx > aiTitleIdx && agentsIdx > keysIdx) {
+		t.Fatalf("settings menu order is incorrect: %q", body)
 	}
 }
 
@@ -496,7 +539,7 @@ func TestMountServesSettingsSubpaths(t *testing.T) {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("path %q body missing marker %q: %q", path, marker, body)
 		}
-		if !strings.Contains(body, `<h1 class="mb-0">Settings</h1>`) {
+		if !strings.Contains(body, `<h1 class="mb-0 text-3xl">Settings</h1>`) {
 			t.Fatalf("path %q body missing settings heading", path)
 		}
 		for _, href := range []string{routepath.AppSettingsProfile, routepath.AppSettingsLocale, routepath.AppSettingsAIKeys, routepath.AppSettingsAIAgents} {
@@ -564,6 +607,41 @@ func TestMountSettingsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	}
 }
 
+func TestMountAIKeysGetShowsEmptyStateBeforeAddForm(t *testing.T) {
+	t.Parallel()
+
+	gateway := newPopulatedFakeGateway()
+	gateway.keys = nil
+
+	m := newSettingsModuleFromGateways(gateway, nil, settingsTestBase())
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsAIKeys, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`You don&#39;t have any API Keys`,
+		`<h3 class="card-title">Add API Key</h3>`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing AI keys empty-state marker %q: %q", marker, body)
+		}
+	}
+	if strings.Contains(body, `Your Keys`) {
+		t.Fatalf("body should not render removed AI keys list title: %q", body)
+	}
+	if strings.Index(body, `You don&#39;t have any API Keys`) > strings.Index(body, `<h3 class="card-title">Add API Key</h3>`) {
+		t.Fatalf("AI keys empty state should render before the add form: %q", body)
+	}
+}
+
 func TestMountAIAgentsGetLoadsModelsAndListsAgents(t *testing.T) {
 	t.Parallel()
 
@@ -582,6 +660,7 @@ func TestMountAIAgentsGetLoadsModelsAndListsAgents(t *testing.T) {
 	for _, marker := range []string{
 		`id="settings-ai-agents"`,
 		`action="/app/settings/ai-agents"`,
+		`<h3 class="card-title">Add Agent</h3>`,
 		`name="label"`,
 		`name="credential_id"`,
 		`name="model"`,
@@ -593,6 +672,42 @@ func TestMountAIAgentsGetLoadsModelsAndListsAgents(t *testing.T) {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing marker %q: %q", marker, body)
 		}
+	}
+}
+
+func TestMountAIAgentsGetShowsEmptyStateBeforeAddForm(t *testing.T) {
+	t.Parallel()
+
+	gateway := newPopulatedFakeGateway()
+	gateway.agents = nil
+
+	m := newSettingsModuleFromGateways(gateway, nil, settingsTestBase())
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsAIAgents, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`You don&#39;t have any AI Agents`,
+		`<h3 class="card-title">Add Agent</h3>`,
+		`Load Models`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing AI agents empty-state marker %q: %q", marker, body)
+		}
+	}
+	if strings.Contains(body, `Your Agents`) {
+		t.Fatalf("body should not render removed AI agents list title: %q", body)
+	}
+	if strings.Index(body, `You don&#39;t have any AI Agents`) > strings.Index(body, `<h3 class="card-title">Add Agent</h3>`) {
+		t.Fatalf("AI agents empty state should render before the add form: %q", body)
 	}
 }
 

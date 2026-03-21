@@ -4,29 +4,12 @@ body {
   font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
 }
 
-/* Typography */
-
-h1 {
-  font-size: 2rem;
-}
-
-h2 {
-  font-size: 1.8rem;
-}
-
-h3 {
-  font-size: 1.5rem;
-}
-
-h4 {
-  font-size: 1rem;
-}
-
 @keyframes app-toast-enter {
   from {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -38,6 +21,7 @@ h4 {
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(-8px);

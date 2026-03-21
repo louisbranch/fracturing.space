@@ -236,37 +236,6 @@ templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, l
 		<div class="card bg-base-200">
 			<div class="card-body">
 				<h2 class="card-title">{ T(loc, "web.settings.ai_keys.title") }</h2>
-				if form.ErrorMessage != "" {
-					<div class="alert alert-error">{ form.ErrorMessage }</div>
-				}
-				<form method="post" action={ routepath.AppSettingsAIKeys } class="space-y-4">
-					<div class="form-control">
-						<label class="label">
-							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_provider") }</span>
-						</label>
-						<input class="input input-bordered w-full" type="text" value={ settingsAIKeyProviderLabel(form) } disabled/>
-					</div>
-					<div class="form-control">
-						<label class="label">
-							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_label") }</span>
-						</label>
-						<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
-					</div>
-					<div class="form-control">
-						<label class="label">
-							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_secret") }</span>
-						</label>
-						<input class="input input-bordered w-full" type="password" name="secret" required/>
-					</div>
-					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.ai_keys.submit_add") }</button>
-					</div>
-				</form>
-			</div>
-		</div>
-		<div class="card bg-base-200">
-			<div class="card-body">
-				<h3 class="card-title">{ T(loc, "web.settings.ai_keys.list_title") }</h3>
 				if len(keys) == 0 {
 					<div class="text-sm opacity-80">{ T(loc, "web.settings.ai_keys.empty") }</div>
 				} else {
@@ -307,6 +276,37 @@ templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, l
 				}
 			</div>
 		</div>
+		<div class="card bg-base-200">
+			<div class="card-body">
+				<h3 class="card-title">{ T(loc, "web.settings.ai_keys.add_title") }</h3>
+				if form.ErrorMessage != "" {
+					<div class="alert alert-error">{ form.ErrorMessage }</div>
+				}
+				<form method="post" action={ routepath.AppSettingsAIKeys } class="space-y-4">
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_provider") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="text" value={ settingsAIKeyProviderLabel(form) } disabled/>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_label") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_secret") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="password" name="secret" required/>
+					</div>
+					<div class="card-actions justify-end">
+						<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.ai_keys.submit_add") }</button>
+					</div>
+				</form>
+			</div>
+		</div>
 	</section>
 }
 
@@ -315,6 +315,57 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 		<div class="card bg-base-200">
 			<div class="card-body">
 				<h2 class="card-title">{ T(loc, "web.settings.ai_agents.title") }</h2>
+				if len(agents) == 0 {
+					<div class="text-sm opacity-80">{ T(loc, "web.settings.ai_agents.empty") }</div>
+				} else {
+					<div class="overflow-x-auto">
+						<table class="table table-zebra">
+							<thead>
+								<tr>
+									<th>{ T(loc, "web.settings.ai_agents.table.label") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.provider") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.model") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.status") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.active_campaigns") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.created") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.instructions") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.actions") }</th>
+								</tr>
+							</thead>
+							<tbody>
+								for _, agent := range agents {
+									<tr>
+										<td>{ agent.Label }</td>
+										<td>{ agent.Provider }</td>
+										<td>{ agent.Model }</td>
+										<td>{ agent.AuthState }</td>
+										<td>{ agent.ActiveCampaignCount }</td>
+										<td>{ agent.CreatedAt }</td>
+										<td>{ agent.Instructions }</td>
+										<td>
+											if agent.CanDelete {
+												<form method="post" action={ routepath.AppSettingsAIAgentDelete(agent.ID) }>
+													<button class="btn btn-error btn-xs" type="submit">{ T(loc, "web.settings.ai_agents.delete") }</button>
+												</form>
+											} else if agent.ActiveCampaignCount > 0 {
+												<div class="tooltip tooltip-left" data-tip={ T(loc, "web.settings.ai_agents.tooltip_delete_disabled_in_use") }>
+													<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ T(loc, "web.settings.ai_agents.delete") }</button>
+												</div>
+											} else {
+												<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ T(loc, "web.settings.ai_agents.delete") }</button>
+											}
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			</div>
+		</div>
+		<div class="card bg-base-200">
+			<div class="card-body">
+				<h3 class="card-title">{ T(loc, "web.settings.ai_agents.add_title") }</h3>
 				<p class="text-sm opacity-80">{ T(loc, "web.settings.ai_agents.description") }</p>
 				if form.ErrorMessage != "" {
 					<div class="alert alert-error">{ form.ErrorMessage }</div>
@@ -385,57 +436,6 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 							<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.ai_agents.submit_create") }</button>
 						</div>
 					</form>
-				}
-			</div>
-		</div>
-		<div class="card bg-base-200">
-			<div class="card-body">
-				<h3 class="card-title">{ T(loc, "web.settings.ai_agents.list_title") }</h3>
-				if len(agents) == 0 {
-					<div class="text-sm opacity-80">{ T(loc, "web.settings.ai_agents.empty") }</div>
-				} else {
-					<div class="overflow-x-auto">
-						<table class="table table-zebra">
-							<thead>
-								<tr>
-									<th>{ T(loc, "web.settings.ai_agents.table.label") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.provider") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.model") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.status") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.active_campaigns") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.created") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.instructions") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.actions") }</th>
-								</tr>
-							</thead>
-							<tbody>
-								for _, agent := range agents {
-									<tr>
-										<td>{ agent.Label }</td>
-										<td>{ agent.Provider }</td>
-										<td>{ agent.Model }</td>
-										<td>{ agent.AuthState }</td>
-										<td>{ agent.ActiveCampaignCount }</td>
-										<td>{ agent.CreatedAt }</td>
-										<td>{ agent.Instructions }</td>
-										<td>
-											if agent.CanDelete {
-												<form method="post" action={ routepath.AppSettingsAIAgentDelete(agent.ID) }>
-													<button class="btn btn-error btn-xs" type="submit">{ T(loc, "web.settings.ai_agents.delete") }</button>
-												</form>
-											} else if agent.ActiveCampaignCount > 0 {
-												<div class="tooltip tooltip-left" data-tip={ T(loc, "web.settings.ai_agents.tooltip_delete_disabled_in_use") }>
-													<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ T(loc, "web.settings.ai_agents.delete") }</button>
-												</div>
-											} else {
-												<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ T(loc, "web.settings.ai_agents.delete") }</button>
-											}
-										</td>
-									</tr>
-								}
-							</tbody>
-						</table>
-					</div>
 				}
 			</div>
 		</div>

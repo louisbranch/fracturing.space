@@ -48,6 +48,8 @@ var lucideIconNames = map[commonv1.IconId]string{
 	commonv1.IconId_ICON_ID_NOTIFICATION: "bell",
 	commonv1.IconId_ICON_ID_AI:           "bot",
 	commonv1.IconId_ICON_ID_KEY:          "key",
+	commonv1.IconId_ICON_ID_LOCK:         "lock",
+	commonv1.IconId_ICON_ID_BRAIN_COG:    "brain-cog",
 	commonv1.IconId_ICON_ID_LOG_OUT:      "log-out",
 	commonv1.IconId_ICON_ID_SETTINGS:     "settings",
 	commonv1.IconId_ICON_ID_LOCALE:       "languages",

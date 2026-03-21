@@ -176,7 +176,7 @@ func TestMountCampaignsPageRendersHeadingWithStartLink(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`<h1 class="mb-0">Campaigns</h1>`,
+		`<h1 class="mb-0 text-3xl">Campaigns</h1>`,
 		`href="/app/campaigns/new"`,
 		`>Start a new Campaign</a>`,
 		`data-campaign-id="c1"`,
@@ -226,7 +226,7 @@ func TestMountCampaignsHTMXRendersHeadingWithStartLink(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`<h1 class="mb-0">Campaigns</h1>`,
+		`<h1 class="mb-0 text-3xl">Campaigns</h1>`,
 		`href="/app/campaigns/new"`,
 		`data-campaign-id="c1"`,
 	} {
@@ -256,7 +256,7 @@ func TestMountCampaignStartNewGetRendersChoiceCards(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`<h1 class="mb-0">New Campaign</h1>`,
+		`<h1 class="mb-0 text-3xl">New Campaign</h1>`,
 		`data-campaign-start-option="browse"`,
 		`data-campaign-start-divider="or"`,
 		`class="divider lg:divider-horizontal`,
@@ -287,7 +287,7 @@ func TestMountCampaignCreateGetRendersCreateForm(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`href="/app/campaigns"`,
-		`<h1 class="mb-0">Create Campaign</h1>`,
+		`<h1 class="mb-0 text-3xl">Create Campaign</h1>`,
 		`<form method="post" action="/app/campaigns/create"`,
 		`name="name"`,
 		`name="system"`,
@@ -321,7 +321,7 @@ func TestMountCampaignCreateGetRendersPTBRCopy(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`<h1 class="mb-0">Criar campanha</h1>`,
+		`<h1 class="mb-0 text-3xl">Criar campanha</h1>`,
 		`<span class="label-text">Modo de MJ</span>`,
 		`placeholder="Ex.: Crepúsculo de Outono"`,
 	} {

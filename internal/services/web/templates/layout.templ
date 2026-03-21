@@ -127,6 +127,11 @@ type AppSideMenuItem struct {
 	SubItems    []AppSideMenuSubItem
 }
 
+type AppSideMenuGroup struct {
+	Title string
+	Items []AppSideMenuItem
+}
+
 type AppSideMenuSubItem struct {
 	Label         string
 	URL           string
@@ -140,6 +145,7 @@ type AppSideMenuSubItem struct {
 type AppSideMenu struct {
 	CurrentPath string
 	Items       []AppSideMenuItem
+	Groups      []AppSideMenuGroup
 }
 
 	type AppMainLayoutOptions struct {
@@ -236,15 +242,23 @@ func appMainContainerClass(mainStyle, mainClass string) string {
 
 func appSideMenuHasItems(menu *AppSideMenu) bool {
 	if menu == nil || len(menu.Items) == 0 {
-		return false
+		return len(appSideMenuGroups(menu)) > 0
 	}
+	return len(appSideMenuItems(menu)) > 0 || len(appSideMenuGroups(menu)) > 0
+}
+
+func appSideMenuItems(menu *AppSideMenu) []AppSideMenuItem {
+	if menu == nil || len(menu.Items) == 0 {
+		return nil
+	}
+	result := make([]AppSideMenuItem, 0, len(menu.Items))
 	for _, item := range menu.Items {
 		if appSideMenuItemLabel(item) == "" || appSideMenuItemURL(item) == "" {
 			continue
 		}
-		return true
+		result = append(result, item)
 	}
-	return false
+	return result
 }
 
 func appSideMenuItemLabel(item AppSideMenuItem) string {
@@ -303,6 +317,33 @@ func appSideMenuItemSubItems(item AppSideMenuItem) []AppSideMenuSubItem {
 			continue
 		}
 		result = append(result, subItem)
+	}
+	return result
+}
+
+func appSideMenuGroups(menu *AppSideMenu) []AppSideMenuGroup {
+	if menu == nil || len(menu.Groups) == 0 {
+		return nil
+	}
+	result := make([]AppSideMenuGroup, 0, len(menu.Groups))
+	for _, group := range menu.Groups {
+		title := strings.TrimSpace(group.Title)
+		if title == "" {
+			continue
+		}
+		items := make([]AppSideMenuItem, 0, len(group.Items))
+		for _, item := range group.Items {
+			if appSideMenuItemLabel(item) == "" || appSideMenuItemURL(item) == "" {
+				continue
+			}
+			items = append(items, item)
+		}
+		if len(items) == 0 {
+			continue
+		}
+		group.Title = title
+		group.Items = items
+		result = append(result, group)
 	}
 	return result
 }
@@ -477,64 +518,76 @@ func appToastAriaLive(toast *AppToast) string {
 templ AppSideMenuComponent(menu *AppSideMenu) {
 	if appSideMenuHasItems(menu) {
 		<ul class="menu bg-base-200 rounded-box w-full">
-			for _, item := range menu.Items {
-				if appSideMenuItemLabel(item) != "" && appSideMenuItemURL(item) != "" {
-					<li data-app-side-menu-item={ appSideMenuItemURL(item) }>
-						<a
-							class={ appSideMenuLinkClass(menu, item) }
-							href={ appSideMenuItemURL(item) }
-							hx-get={ appSideMenuItemURL(item) }
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-						>
-							if appSideMenuItemIconID(item) != commonv1.IconId_ICON_ID_UNSPECIFIED {
-								@sharedtemplates.LucideIconID(appSideMenuItemIconID(item), "size-4 me-2")
-							}
-							{ appSideMenuItemLabel(item) }
-							if appSideMenuItemBadge(item) != "" {
-								<div class="badge badge-sm badge-soft badge-primary">{ appSideMenuItemBadge(item) }</div>
-							}
-						</a>
-						if subItems := appSideMenuItemSubItems(item); len(subItems) > 0 {
-							<ul class="mt-1 space-y-1 ps-4" data-app-side-menu-subitems="true">
-								for _, subItem := range subItems {
-									<li data-app-side-menu-subitem={ appSideMenuSubItemURL(subItem) } data-app-side-menu-subitem-active-session={ appSideMenuSubItemActiveSession(subItem) }>
-										if appSideMenuSubItemJoinURL(subItem) != "" {
-											<div class={ appSideMenuSubItemClass(menu, subItem) }>
-												<a class="block truncate text-sm font-medium hover:underline" href={ appSideMenuSubItemURL(subItem) } hx-get={ appSideMenuSubItemURL(subItem) } hx-target="#main" hx-swap="innerHTML" hx-push-url="true">{ appSideMenuSubItemLabel(subItem) }</a>
-												if appSideMenuSubItemStartDetail(subItem) != "" {
-													<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
-												}
-												<a class="btn btn-primary btn-xs mt-1" href={ appSideMenuSubItemJoinURL(subItem) }>{ appSideMenuSubItemJoinLabel(subItem) }</a>
-											</div>
-										} else {
-											<a
-												class={ appSideMenuSubItemClass(menu, subItem) }
-												href={ appSideMenuSubItemURL(subItem) }
-												hx-get={ appSideMenuSubItemURL(subItem) }
-												hx-target="#main"
-												hx-swap="innerHTML"
-												hx-push-url="true"
-											>
-												<span class="block truncate text-sm font-medium">{ appSideMenuSubItemLabel(subItem) }</span>
-												if appSideMenuSubItemStartDetail(subItem) != "" {
-													<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
-												}
-												if appSideMenuSubItemEndDetail(subItem) != "" {
-													<span class={ appSideMenuSubItemEndClass(subItem) } data-app-side-menu-subitem-end={ appSideMenuSubItemEndDetail(subItem) }>{ appSideMenuSubItemEndDetail(subItem) }</span>
-												}
-											</a>
-										}
-									</li>
-								}
-							</ul>
+			for _, item := range appSideMenuItems(menu) {
+				@appSideMenuItemComponent(menu, item)
+			}
+			for _, group := range appSideMenuGroups(menu) {
+				<li data-app-side-menu-group={ group.Title }>
+					<h2 class="menu-title">{ group.Title }</h2>
+					<ul>
+						for _, item := range group.Items {
+							@appSideMenuItemComponent(menu, item)
 						}
-					</li>
-				}
+					</ul>
+				</li>
 			}
 		</ul>
 	}
+}
+
+templ appSideMenuItemComponent(menu *AppSideMenu, item AppSideMenuItem) {
+	<li data-app-side-menu-item={ appSideMenuItemURL(item) }>
+		<a
+			class={ appSideMenuLinkClass(menu, item) }
+			href={ appSideMenuItemURL(item) }
+			hx-get={ appSideMenuItemURL(item) }
+			hx-target="#main"
+			hx-swap="innerHTML"
+			hx-push-url="true"
+		>
+			if appSideMenuItemIconID(item) != commonv1.IconId_ICON_ID_UNSPECIFIED {
+				@sharedtemplates.LucideIconID(appSideMenuItemIconID(item), "size-4 me-2")
+			}
+			{ appSideMenuItemLabel(item) }
+			if appSideMenuItemBadge(item) != "" {
+				<div class="badge badge-sm badge-soft badge-primary">{ appSideMenuItemBadge(item) }</div>
+			}
+		</a>
+		if subItems := appSideMenuItemSubItems(item); len(subItems) > 0 {
+			<ul class="mt-1 space-y-1 ps-4" data-app-side-menu-subitems="true">
+				for _, subItem := range subItems {
+					<li data-app-side-menu-subitem={ appSideMenuSubItemURL(subItem) } data-app-side-menu-subitem-active-session={ appSideMenuSubItemActiveSession(subItem) }>
+						if appSideMenuSubItemJoinURL(subItem) != "" {
+							<div class={ appSideMenuSubItemClass(menu, subItem) }>
+								<a class="block truncate text-sm font-medium hover:underline" href={ appSideMenuSubItemURL(subItem) } hx-get={ appSideMenuSubItemURL(subItem) } hx-target="#main" hx-swap="innerHTML" hx-push-url="true">{ appSideMenuSubItemLabel(subItem) }</a>
+								if appSideMenuSubItemStartDetail(subItem) != "" {
+									<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
+								}
+								<a class="btn btn-primary btn-xs mt-1" href={ appSideMenuSubItemJoinURL(subItem) }>{ appSideMenuSubItemJoinLabel(subItem) }</a>
+							</div>
+						} else {
+							<a
+								class={ appSideMenuSubItemClass(menu, subItem) }
+								href={ appSideMenuSubItemURL(subItem) }
+								hx-get={ appSideMenuSubItemURL(subItem) }
+								hx-target="#main"
+								hx-swap="innerHTML"
+								hx-push-url="true"
+							>
+								<span class="block truncate text-sm font-medium">{ appSideMenuSubItemLabel(subItem) }</span>
+								if appSideMenuSubItemStartDetail(subItem) != "" {
+									<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
+								}
+								if appSideMenuSubItemEndDetail(subItem) != "" {
+									<span class={ appSideMenuSubItemEndClass(subItem) } data-app-side-menu-subitem-end={ appSideMenuSubItemEndDetail(subItem) }>{ appSideMenuSubItemEndDetail(subItem) }</span>
+								}
+							</a>
+						}
+					</li>
+				}
+			</ul>
+		}
+	</li>
 }
 
 templ AppMainContent(header *AppMainHeader) {
@@ -549,7 +602,7 @@ templ AppMainContentWithLayout(header *AppMainHeader, layout AppMainLayoutOption
 					@sharedtemplates.Breadcrumbs(appMainHeaderBreadcrumbs(header), false)
 				}
 				if appMainHeaderTitle(header) != "" {
-					<h1 class="mb-0">{ appMainHeaderTitle(header) }</h1>
+					<h1 class="mb-0 text-3xl">{ appMainHeaderTitle(header) }</h1>
 				}
 			</div>
 			if action := appMainHeaderAction(header); action != nil {
