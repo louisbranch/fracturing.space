@@ -39,6 +39,41 @@ func TestCloudinaryPublicID_RejectsMissingSelectors(t *testing.T) {
 	}
 }
 
+func TestCloudinaryPublicID_ResolvesDaggerheartCatalogIDs(t *testing.T) {
+	tests := []struct {
+		name    string
+		setID   string
+		assetID string
+		pattern string
+	}{
+		{
+			name:    "domain card",
+			setID:   "daggerheart_domain_card_set_v1",
+			assetID: "domain_card.book-of-ava",
+			pattern: `^v[0-9]+/high_fantasy/daggerheart_domain_card_illustration/v1/codex_book_of_ava$`,
+		},
+		{
+			name:    "weapon none",
+			setID:   "daggerheart_weapon_set_v1",
+			assetID: "weapon.no-secondary",
+			pattern: `^v[0-9]+/high_fantasy/daggerheart_weapon_illustration/v1/no_secondary_weapon$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			publicID, ok := CloudinaryPublicID(tc.setID, tc.assetID)
+			if !ok {
+				t.Fatalf("CloudinaryPublicID(%q, %q) missing", tc.setID, tc.assetID)
+			}
+			matcher := regexp.MustCompile(tc.pattern)
+			if !matcher.MatchString(publicID) {
+				t.Fatalf("CloudinaryPublicID(%q, %q) = %q, want match %q", tc.setID, tc.assetID, publicID, tc.pattern)
+			}
+		})
+	}
+}
+
 func TestDecodeCloudinaryAssetPaths_ParsesAnyAssetArrayKey(t *testing.T) {
 	raw := []byte(`{
 		"schema_version": 1,

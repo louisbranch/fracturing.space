@@ -50,8 +50,7 @@ Root-level export files are temporary import inputs only. When a new export is d
 
 ## System Content Asset Mapping
 
-For game-system content (for example Daggerheart class/domain/adversary imagery), the
-shared catalog package also owns:
+For game-system content (for example Daggerheart class/domain/adversary imagery), the shared catalog package also owns:
 
 1. A system-scoped manifest (`daggerheart_assets.v1.json`) with:
    - system metadata (`system_id`, `system_version`, `locale`, `theme`),
@@ -61,8 +60,8 @@ shared catalog package also owns:
    - `mapped`: explicit entity mapping with a deliverable CDN asset,
    - `set_default`: deterministic set fallback with a deliverable CDN asset,
    - `unavailable`: no deliverable asset currently available.
-3. Additive API exposure through a separate content-asset map RPC so content contracts
-   and image contracts evolve independently.
+3. Additive API exposure through a separate content-asset map RPC so content contracts and image contracts evolve independently.
+4. Daggerheart canonical selectors use catalog IDs themselves (for example `class.bard` or `domain_card.book-of-ava`); provider slugs remain delivery metadata only.
 
 ## Data Model Contract
 
