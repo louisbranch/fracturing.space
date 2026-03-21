@@ -117,6 +117,14 @@ bundle, run this from the repo root:
 make play-ui-check
 ```
 
+If Storybook is already running from the same workspace, use the non-destructive
+root target instead. It reuses the current `node_modules` tree and avoids
+`npm ci`, which can destabilize a live `storybook dev` process:
+
+```sh
+make play-ui-check-live
+```
+
 ## Extending the pattern
 
 When adding the next isolated component:

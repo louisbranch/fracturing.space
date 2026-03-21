@@ -3,7 +3,7 @@ import type { DaggerheartCharacterSheetData } from "./contract";
 
 // CharacterSheetFixtures keeps the known mock-data set explicit for preview and
 // test reuse across the isolated workflow.
-type CharacterSheetFixtures = Record<"full" | "damaged", DaggerheartCharacterSheetData>;
+type CharacterSheetFixtures = Record<"full" | "damaged" | "fortified", DaggerheartCharacterSheetData>;
 
 const [miraAvatar] = characterAvatarPreviewAssets;
 
@@ -132,6 +132,87 @@ export const characterSheetFixtures: CharacterSheetFixtures = {
 
     lifeState: "unconscious",
     conditions: ["Frightened", "Vulnerable"],
+  },
+
+  fortified: {
+    id: "char-fortified",
+    name: "Seren",
+    portrait: {
+      alt: "Portrait of Seren, a Daggerheart guardian with a battered tower shield.",
+      src: miraAvatar?.imageUrl,
+      width: miraAvatar?.crop.widthPx,
+      height: miraAvatar?.crop.heightPx,
+    },
+    pronouns: "they/them",
+    level: 7,
+    className: "Guardian",
+    subclassName: "Vanguard",
+    ancestryName: "Dwarf",
+    communityName: "Stoneborne",
+    proficiency: 4,
+    kind: "PC",
+    controller: "June",
+
+    traits: [
+      { name: "Agility", abbreviation: "AGI", value: 0, skills: ["Sprint", "Leap", "Maneuver"] },
+      { name: "Strength", abbreviation: "STR", value: 3, skills: ["Lift", "Smash", "Grapple"] },
+      { name: "Finesse", abbreviation: "FIN", value: 1, skills: ["Control", "Hide", "Tinker"] },
+      { name: "Instinct", abbreviation: "INS", value: 2, skills: ["Perceive", "Sense", "Navigate"] },
+      { name: "Presence", abbreviation: "PRE", value: 1, skills: ["Charm", "Perform", "Deceive"] },
+      { name: "Knowledge", abbreviation: "KNO", value: 0, skills: ["Recall", "Analyze", "Comprehend"] },
+    ],
+
+    hp: { current: 7, max: 8 },
+    stress: { current: 3, max: 6 },
+    majorThreshold: 8,
+    severeThreshold: 13,
+
+    evasion: 9,
+    armor: { current: 9, max: 12 },
+
+    hope: { current: 3, max: 6 },
+    hopeFeature: "Iron Bulwark — Spend 3 Hope to hold your ground and blunt the next incoming blow.",
+
+    classFeature: "Shield Wall — When an ally within melee range would take damage, you can intercept part of the blow.",
+
+    primaryWeapon: {
+      name: "Tower Shield",
+      trait: "Strength",
+      range: "melee",
+      damageDice: "1d8",
+      damageType: "physical",
+      feature: "Barrier",
+    },
+    secondaryWeapon: {
+      name: "War Pick",
+      trait: "Strength",
+      range: "melee",
+      damageDice: "1d10",
+      damageType: "physical",
+    },
+    activeArmor: {
+      name: "Bulwark Plate",
+      baseScore: 8,
+      feature: "Layered with warded steel and tower-shield reinforcements.",
+    },
+
+    experiences: [
+      { name: "Breach Veteran", modifier: 2 },
+      { name: "Siege Engineer", modifier: 1 },
+    ],
+    domainCards: [
+      { name: "Stand Firm", domain: "Valor" },
+      { name: "Hold the Line", domain: "Blade" },
+    ],
+
+    gold: { handfuls: 1, bags: 2, chests: 1 },
+
+    description: "Seren moves like a fortress given legs, shield always angled to catch the worst of a strike.",
+    background: "They served as the last defender on collapsing walls long enough to treat every hallway like a choke point.",
+    connections: "Keeps a running tally of debts repaid in bruises and broken spearheads.",
+
+    lifeState: "alive",
+    conditions: [],
   },
 };
 

@@ -6,5 +6,6 @@ describe("character sheet fixtures", () => {
   it("reuses the shared character preview assets", () => {
     expect(characterSheetFixtures.full.portrait.src).toBe(characterAvatarPreviewAssets[0]?.imageUrl);
     expect(characterSheetFixtures.damaged.portrait.src).toBe(characterAvatarPreviewAssets[0]?.imageUrl);
+    expect(characterSheetFixtures.fortified.portrait.src).toBe(characterAvatarPreviewAssets[0]?.imageUrl);
   });
 });

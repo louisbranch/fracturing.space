@@ -33,6 +33,7 @@ COPY internal/services/play/ui/tsconfig.node.json ./
 COPY internal/services/play/ui/vite.config.ts ./
 COPY internal/services/play/ui/vitest.setup.ts ./
 COPY internal/services/play/ui/src ./src
+COPY internal/platform/assets/catalog/data /src/internal/platform/assets/catalog/data
 
 RUN npm ci
 RUN npm run build

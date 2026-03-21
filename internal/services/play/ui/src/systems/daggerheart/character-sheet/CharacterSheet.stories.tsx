@@ -42,3 +42,14 @@ export const DamagedCharacter: Story = {
     </CharacterSheetStoryStage>
   ),
 };
+
+export const FortifiedCharacter: Story = {
+  args: {
+    character: characterSheetFixtures.fortified,
+  },
+  render: (args) => (
+    <CharacterSheetStoryStage>
+      <CharacterSheet {...args} />
+    </CharacterSheetStoryStage>
+  ),
+};

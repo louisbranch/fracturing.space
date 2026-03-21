@@ -48,11 +48,45 @@ describe("CharacterSheet", () => {
   });
 
   it("renders defense stats: evasion and armor", () => {
-    render(<CharacterSheet character={characterSheetFixtures.full} />);
+    const { container } = render(
+      <CharacterSheet
+        character={{
+          ...characterSheetFixtures.full,
+          armor: { current: 4, max: 5 },
+        }}
+      />,
+    );
 
     const defense = screen.getByLabelText("Defense");
     expect(within(defense).getByText("10")).toBeInTheDocument();
-    expect(within(defense).getByText("4/4")).toBeInTheDocument();
+    expect(within(defense).getByText("5")).toBeInTheDocument();
+    expect(within(defense).getByLabelText("Armor grid: 4 filled, 1 spent, 7 unavailable")).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-armor-state="filled"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-armor-state="spent"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-armor-state="muted"]')).toHaveLength(7);
+  });
+
+  it("renders spent armor slots as shield-off icons and preserves the 12-slot grid", () => {
+    const { container } = render(<CharacterSheet character={characterSheetFixtures.damaged} />);
+
+    const defense = screen.getByLabelText("Defense");
+    expect(within(defense).getByText("4")).toBeInTheDocument();
+    expect(within(defense).getByLabelText("Armor grid: 0 filled, 4 spent, 8 unavailable")).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-armor-state="filled"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-armor-state="spent"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-armor-state="muted"]')).toHaveLength(8);
+  });
+
+  it("renders the full 12-slot armor grid capacity for fortified characters", () => {
+    const { container } = render(<CharacterSheet character={characterSheetFixtures.fortified} />);
+
+    const defense = screen.getByLabelText("Defense");
+    expect(within(defense).getByText("9")).toBeInTheDocument();
+    expect(within(defense).getByText("12")).toBeInTheDocument();
+    expect(within(defense).getByLabelText("Armor grid: 9 filled, 3 spent, 0 unavailable")).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-armor-state="filled"]')).toHaveLength(9);
+    expect(container.querySelectorAll('[data-armor-state="spent"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-armor-state="muted"]')).toHaveLength(0);
   });
 
   it("renders hope section with diamonds and feature", () => {
