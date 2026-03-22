@@ -96,6 +96,15 @@ type CampaignCreationExperienceView struct {
 	Modifier string
 }
 
+// CampaignCreationTraitOptionView carries one enriched trait card for the creation form.
+type CampaignCreationTraitOptionView struct {
+	FieldName    string // form POST name: "agility"
+	LabelKey     string // i18n key: "game.character_creation.field.agility"
+	Abbreviation string // "AGI"
+	SkillsKey    string // i18n key: "game.character_creation.trait_skills.agility"
+	Current      string // "-1", "0", "1", "2"
+}
+
 // CampaignCreationCompanionExperienceOptionView carries one companion experience catalog option.
 type CampaignCreationCompanionExperienceOptionView struct {
 	ID          string
@@ -155,6 +164,7 @@ type CampaignCharacterCreationView struct {
 	Instinct                     string
 	Presence                     string
 	Knowledge                    string
+	TraitOptions                 []CampaignCreationTraitOptionView
 	PrimaryWeaponID              string
 	SecondaryWeaponID            string
 	ArmorID                      string

@@ -5,7 +5,7 @@ import campaignworkflow "github.com/louisbranch/fracturing.space/internal/servic
 // NewCharacterCreationView adapts the workflow-owned creation model to the
 // render contract used by templates and detail views.
 func NewCharacterCreationView(view campaignworkflow.CharacterCreationView) CampaignCharacterCreationView {
-	return CampaignCharacterCreationView{
+	rv := CampaignCharacterCreationView{
 		Ready:                        view.Ready,
 		NextStep:                     view.NextStep,
 		UnmetReasons:                 append([]string(nil), view.UnmetReasons...),
@@ -45,6 +45,8 @@ func NewCharacterCreationView(view campaignworkflow.CharacterCreationView) Campa
 		PotionItems:                  mapItemViews(view.PotionItems),
 		DomainCards:                  mapDomainCardViews(view.DomainCards),
 	}
+	rv.TraitOptions = daggerheartCreationTraitOptions(rv)
+	return rv
 }
 
 // NewCharacterCreationPageView adapts one workflow-owned page result to the

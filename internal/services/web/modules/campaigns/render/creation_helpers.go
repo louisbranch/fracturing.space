@@ -286,6 +286,18 @@ func campaignCreationHeritageAutoLabel(view CampaignCharacterCreationView) strin
 	return campaignCreationHeritageDisplayName(view)
 }
 
+// daggerheartCreationTraitOptions builds the enriched trait card slice from flat trait fields.
+func daggerheartCreationTraitOptions(view CampaignCharacterCreationView) []CampaignCreationTraitOptionView {
+	return []CampaignCreationTraitOptionView{
+		{FieldName: "agility", LabelKey: "game.character_creation.field.agility", Abbreviation: "AGI", SkillsKey: "game.character_creation.trait_skills.agility", Current: view.Agility},
+		{FieldName: "strength", LabelKey: "game.character_creation.field.strength", Abbreviation: "STR", SkillsKey: "game.character_creation.trait_skills.strength", Current: view.Strength},
+		{FieldName: "finesse", LabelKey: "game.character_creation.field.finesse", Abbreviation: "FIN", SkillsKey: "game.character_creation.trait_skills.finesse", Current: view.Finesse},
+		{FieldName: "instinct", LabelKey: "game.character_creation.field.instinct", Abbreviation: "INS", SkillsKey: "game.character_creation.trait_skills.instinct", Current: view.Instinct},
+		{FieldName: "presence", LabelKey: "game.character_creation.field.presence", Abbreviation: "PRE", SkillsKey: "game.character_creation.trait_skills.presence", Current: view.Presence},
+		{FieldName: "knowledge", LabelKey: "game.character_creation.field.knowledge", Abbreviation: "KNO", SkillsKey: "game.character_creation.trait_skills.knowledge", Current: view.Knowledge},
+	}
+}
+
 // campaignCreationCompanionExperienceName returns one companion experience name or empty.
 func campaignCreationCompanionExperienceName(companion *CampaignCreationCompanionView, index int) string {
 	if companion == nil || index < 0 || index >= len(companion.Experiences) {
