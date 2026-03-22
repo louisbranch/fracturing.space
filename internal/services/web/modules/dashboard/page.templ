@@ -149,9 +149,18 @@ func dashboardCampaignStartNudgeURL(entry DashboardCampaignStartNudgeEntry) stri
 		return routepath.AppCampaignInvites(campaignID)
 	case "manage_participants":
 		return routepath.AppCampaignParticipants(campaignID)
+	case "start_session":
+		return routepath.AppCampaignSessionCreate(campaignID)
 	default:
 		return routepath.AppCampaign(campaignID)
 	}
+}
+
+func dashboardCampaignStartNudgeMessage(entry DashboardCampaignStartNudgeEntry, loc Localizer) string {
+	if strings.TrimSpace(entry.ActionKind) == "start_session" {
+		return T(loc, "web.dashboard.campaign_start_nudges.message_start_session")
+	}
+	return entry.Message
 }
 
 func dashboardCampaignStartNudgeCTA(entry DashboardCampaignStartNudgeEntry, loc Localizer) string {
@@ -166,6 +175,8 @@ func dashboardCampaignStartNudgeCTA(entry DashboardCampaignStartNudgeEntry, loc 
 		return T(loc, "web.dashboard.campaign_start_nudges.cta_invite_player")
 	case "manage_participants":
 		return T(loc, "web.dashboard.campaign_start_nudges.cta_manage_participants")
+	case "start_session":
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_start_session")
 	default:
 		return T(loc, "web.dashboard.campaign_start_nudges.cta_view_campaign")
 	}
@@ -231,7 +242,7 @@ templ DashboardFragment(view DashboardPageView, loc Localizer) {
 							<li class="flex items-center justify-between gap-3 rounded-box bg-base-100 px-4 py-3">
 								<div class="min-w-0">
 									<p class="truncate font-medium">{ entry.CampaignName }</p>
-									<p class="text-sm opacity-70">{ entry.Message }</p>
+									<p class="text-sm opacity-70">{ dashboardCampaignStartNudgeMessage(entry, loc) }</p>
 								</div>
 								<a href={ dashboardCampaignStartNudgeURL(entry) } hx-get={ dashboardCampaignStartNudgeURL(entry) } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary btn-sm shrink-0">{ dashboardCampaignStartNudgeCTA(entry, loc) }</a>
 							</li>

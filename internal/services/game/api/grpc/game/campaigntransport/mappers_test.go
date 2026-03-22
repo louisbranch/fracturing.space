@@ -15,6 +15,7 @@ func TestCampaignToProto(t *testing.T) {
 	now := time.Unix(1700000000, 0).UTC()
 	completedAt := now.Add(time.Hour)
 	archivedAt := now.Add(2 * time.Hour)
+	latestSessionAt := now.Add(-30 * time.Minute)
 
 	record := storage.CampaignRecord{
 		ID:               "camp-1",
@@ -35,6 +36,7 @@ func TestCampaignToProto(t *testing.T) {
 		UpdatedAt:        now,
 		CompletedAt:      &completedAt,
 		ArchivedAt:       &archivedAt,
+		LatestSessionAt:  &latestSessionAt,
 	}
 
 	got := CampaignToProto(record)
@@ -62,7 +64,7 @@ func TestCampaignToProto(t *testing.T) {
 	if got.GetParticipantCount() != 4 || got.GetCharacterCount() != 6 {
 		t.Fatalf("counts = %d/%d", got.GetParticipantCount(), got.GetCharacterCount())
 	}
-	if got.GetCreatedAt() == nil || got.GetUpdatedAt() == nil || got.GetCompletedAt() == nil || got.GetArchivedAt() == nil {
+	if got.GetCreatedAt() == nil || got.GetUpdatedAt() == nil || got.GetCompletedAt() == nil || got.GetArchivedAt() == nil || got.GetLatestSessionAt() == nil {
 		t.Fatalf("expected timestamps to be populated")
 	}
 }

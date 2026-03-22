@@ -100,8 +100,22 @@ func missingInviteHandlerServices(services inviteHandlerServices) []string {
 
 // handleSessions handles this route in the module transport layer.
 func (h sessionHandlers) handleSessions(w http.ResponseWriter, r *http.Request, campaignID string) {
+	_, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
+	if !ok {
+		return
+	}
+	view := page.sessionsView(campaignID)
+	h.writeCampaignDetailPage(w, r, page, campaignID, campaignrender.SessionsFragment(view, page.loc), page.sessionsBreadcrumbs()...)
+}
+
+// handleSessionCreatePage handles this route in the module transport layer.
+func (h sessionHandlers) handleSessionCreatePage(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
+		return
+	}
+	if err := h.pages.authorization.RequireManageSession(ctx, campaignID); err != nil {
+		h.WriteError(w, r, err)
 		return
 	}
 	readiness, err := h.pages.sessionReads.CampaignSessionReadiness(ctx, campaignID, page.locale)
@@ -109,8 +123,15 @@ func (h sessionHandlers) handleSessions(w http.ResponseWriter, r *http.Request, 
 		h.WriteError(w, r, err)
 		return
 	}
-	view := page.sessionsView(campaignID, readiness)
-	h.writeCampaignDetailPage(w, r, page, campaignID, campaignrender.SessionsFragment(view, page.loc), page.sessionsBreadcrumbs()...)
+	view := page.sessionCreateView(campaignID, readiness)
+	h.writeCampaignDetailPage(
+		w,
+		r,
+		page,
+		campaignID,
+		campaignrender.SessionCreateFragment(view, page.loc),
+		page.sessionCreateBreadcrumbs(campaignID)...,
+	)
 }
 
 // handleSessionDetail handles this route in the module transport layer.

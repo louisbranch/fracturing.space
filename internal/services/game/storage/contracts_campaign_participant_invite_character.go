@@ -31,6 +31,7 @@ type CampaignRecord struct {
 	UpdatedAt        time.Time
 	CompletedAt      *time.Time
 	ArchivedAt       *time.Time
+	LatestSessionAt  *time.Time
 }
 
 // CampaignReader provides read-only access to campaign projections.

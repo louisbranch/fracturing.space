@@ -16,6 +16,7 @@ type CampaignDetailBaseView struct {
 	ActionsLocked         bool
 	CanEditCampaign       bool
 	CanManageParticipants bool
+	CanManageSession      bool
 	CanManageInvites      bool
 	CanCreateCharacter    bool
 }

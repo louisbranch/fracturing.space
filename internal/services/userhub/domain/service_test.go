@@ -398,6 +398,91 @@ func TestGetDashboardIncludesCampaignStartNudgesForCurrentUser(t *testing.T) {
 	}
 }
 
+func TestGetDashboardIncludesStartSessionNudgeForReadyStaleCampaign(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 21, 12, 0, 0, 0, time.UTC)
+	oldSession := now.Add(-8 * 24 * time.Hour)
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
+	game := &fakeGameGateway{
+		campaignPage: CampaignPage{},
+		invitePage:   InvitePage{},
+		readinessCampaigns: []CampaignPreview{{
+			CampaignID:       "camp-ready",
+			Name:             "Sunfall",
+			Status:           CampaignStatusActive,
+			UpdatedAt:        now.Add(-2 * time.Hour),
+			LatestSessionAt:  &oldSession,
+			CanManageSession: true,
+		}},
+		readinessByCampaign: map[string]CampaignReadiness{
+			"camp-ready": {},
+		},
+	}
+	svc := NewService(auth, game, &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}, &fakeNotificationsGateway{}, Config{
+		Clock: func() time.Time { return now },
+	})
+
+	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1"})
+	if err != nil {
+		t.Fatalf("GetDashboard error: %v", err)
+	}
+	if len(dashboard.CampaignStartNudges.Nudges) != 1 {
+		t.Fatalf("nudges = %+v, want one entry", dashboard.CampaignStartNudges.Nudges)
+	}
+	nudge := dashboard.CampaignStartNudges.Nudges[0]
+	if nudge.ActionKind != CampaignStartNudgeActionStartSession {
+		t.Fatalf("action kind = %v, want %v", nudge.ActionKind, CampaignStartNudgeActionStartSession)
+	}
+	if nudge.BlockerCode != "START_SESSION_STALE" {
+		t.Fatalf("blocker code = %q, want %q", nudge.BlockerCode, "START_SESSION_STALE")
+	}
+}
+
+func TestGetDashboardSkipsStartSessionNudgeWhenCampaignIsRecentOrUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 21, 12, 0, 0, 0, time.UTC)
+	recentSession := now.Add(-2 * 24 * time.Hour)
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
+	game := &fakeGameGateway{
+		campaignPage: CampaignPage{},
+		invitePage:   InvitePage{},
+		readinessCampaigns: []CampaignPreview{
+			{
+				CampaignID:       "camp-recent",
+				Name:             "Recent",
+				Status:           CampaignStatusActive,
+				UpdatedAt:        now.Add(-2 * time.Hour),
+				LatestSessionAt:  &recentSession,
+				CanManageSession: true,
+			},
+			{
+				CampaignID:       "camp-no-access",
+				Name:             "No Access",
+				Status:           CampaignStatusDraft,
+				UpdatedAt:        now.Add(-3 * time.Hour),
+				CanManageSession: false,
+			},
+		},
+		readinessByCampaign: map[string]CampaignReadiness{
+			"camp-recent":    {},
+			"camp-no-access": {},
+		},
+	}
+	svc := NewService(auth, game, &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}, &fakeNotificationsGateway{}, Config{
+		Clock: func() time.Time { return now },
+	})
+
+	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1"})
+	if err != nil {
+		t.Fatalf("GetDashboard error: %v", err)
+	}
+	if len(dashboard.CampaignStartNudges.Nudges) != 0 {
+		t.Fatalf("nudges = %+v, want none", dashboard.CampaignStartNudges.Nudges)
+	}
+}
+
 func TestGetDashboardDegradesReadinessWithoutFailingWholeDashboard(t *testing.T) {
 	t.Parallel()
 

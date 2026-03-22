@@ -105,6 +105,9 @@ func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 		`data-campaign-session-name="First Light"`,
 		`data-campaign-session-status="Active"`,
 		`href="/app/campaigns/c1/sessions/s1"`,
+		`data-campaign-session-join-link="true"`,
+		`href="/app/campaigns/c1/game"`,
+		`data-campaign-session-end-form="true"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing sessions marker %q: %q", marker, body)
@@ -253,7 +256,46 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 	}
 }
 
-func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
+func TestMountCampaignSessionsRouteShowsNewSessionActionWithoutInlineCreateForm(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+	}, modulehandlertest.NewBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignSessions("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-sessions-header="true"`,
+		`data-campaign-session-create-link="true"`,
+		routepath.AppCampaignSessionCreate("c1"),
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing new-session header marker %q: %q", marker, body)
+		}
+	}
+	for _, marker := range []string{
+		`data-campaign-session-create-form="true"`,
+		`data-campaign-session-readiness-blocked="true"`,
+		`data-campaign-session-readiness-blockers="true"`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body unexpectedly contains %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignSessionCreateRouteRendersReadinessBlockers(t *testing.T) {
 	t.Parallel()
 
 	m := New(configWithGateway(fakeGateway{
@@ -274,7 +316,7 @@ func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignSessions("c1"), nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignSessionCreate("c1"), nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -286,7 +328,7 @@ func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 		`data-campaign-session-readiness-blockers="true"`,
 		`data-campaign-session-readiness-blocker-code="SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED"`,
 		`Campaign readiness requires at least one AI-controlled GM participant for AI GM mode`,
-		`data-campaign-session-start-disabled="true"`,
+		`data-campaign-session-create-submit-disabled="true"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing readiness marker %q: %q", marker, body)
@@ -1896,7 +1938,7 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 		`href="/app/campaigns/c1/characters"`,
 		`data-campaign-character-create-entry="true"`,
 		`data-campaign-character-create-link="true"`,
-		`Add Character`,
+		`New Character`,
 		`class="grid grid-cols-1 md:grid-cols-2 gap-4"`,
 		`data-campaign-character-card-id="ch-a"`,
 		`data-campaign-character-name="Aria"`,
@@ -1954,7 +1996,7 @@ func TestMountCampaignCharactersEmptyStateStillShowsCreateEntry(t *testing.T) {
 		`No characters yet.`,
 		`data-campaign-character-create-entry="true"`,
 		`data-campaign-character-create-link="true"`,
-		`Add Character`,
+		`New Character`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing empty-state create marker %q: %q", marker, body)

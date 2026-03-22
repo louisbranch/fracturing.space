@@ -3,6 +3,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
+	(SELECT MAX(COALESCE(s.ended_at, s.started_at)) FROM sessions s WHERE s.campaign_id = c.id) AS latest_session_at,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c WHERE c.id = ?;
@@ -37,6 +38,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
+	(SELECT MAX(COALESCE(s.ended_at, s.started_at)) FROM sessions s WHERE s.campaign_id = c.id) AS latest_session_at,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c
@@ -49,6 +51,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
+	(SELECT MAX(COALESCE(s.ended_at, s.started_at)) FROM sessions s WHERE s.campaign_id = c.id) AS latest_session_at,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c

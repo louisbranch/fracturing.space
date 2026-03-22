@@ -8,6 +8,7 @@ import (
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // campaignPageHandlerServices groups the shared workspace shell dependencies
@@ -88,9 +89,23 @@ func (h campaignDetailHandlers) writeCampaignDetailPage(
 	body templ.Component,
 	extra ...sharedtemplates.BreadcrumbItem,
 ) {
+	h.writeCampaignDetailPageWithHeaderAction(w, r, page, campaignID, nil, body, extra...)
+}
+
+// writeCampaignDetailPageWithHeaderAction renders one populated campaign
+// detail view with an optional header action and extra breadcrumbs.
+func (h campaignDetailHandlers) writeCampaignDetailPageWithHeaderAction(
+	w http.ResponseWriter,
+	r *http.Request,
+	page *campaignPageContext,
+	campaignID string,
+	action *webtemplates.AppMainHeaderAction,
+	body templ.Component,
+	extra ...sharedtemplates.BreadcrumbItem,
+) {
 	crumbs := campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc, extra...)
 	h.WritePage(w, r, page.title(campaignID), http.StatusOK,
-		page.header(campaignID, crumbs),
+		page.headerWithAction(campaignID, crumbs, action),
 		page.layout(campaignID, r.URL.Path),
 		body)
 }

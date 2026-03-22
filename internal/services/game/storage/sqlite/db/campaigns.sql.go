@@ -15,6 +15,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
+	(SELECT MAX(COALESCE(s.ended_at, s.started_at)) FROM sessions s WHERE s.campaign_id = c.id) AS latest_session_at,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c WHERE c.id = ?
@@ -31,6 +32,7 @@ type GetCampaignRow struct {
 	AccessPolicy     string         `json:"access_policy"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
+	LatestSessionAt  interface{}    `json:"latest_session_at"`
 	ThemePrompt      string         `json:"theme_prompt"`
 	CoverAssetID     string         `json:"cover_asset_id"`
 	CoverSetID       string         `json:"cover_set_id"`
@@ -59,6 +61,7 @@ func (q *Queries) GetCampaign(ctx context.Context, id string) (GetCampaignRow, e
 		&i.AccessPolicy,
 		&i.ParticipantCount,
 		&i.CharacterCount,
+		&i.LatestSessionAt,
 		&i.ThemePrompt,
 		&i.CoverAssetID,
 		&i.CoverSetID,
@@ -80,6 +83,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
+	(SELECT MAX(COALESCE(s.ended_at, s.started_at)) FROM sessions s WHERE s.campaign_id = c.id) AS latest_session_at,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c
@@ -98,6 +102,7 @@ type ListAllCampaignsRow struct {
 	AccessPolicy     string         `json:"access_policy"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
+	LatestSessionAt  interface{}    `json:"latest_session_at"`
 	ThemePrompt      string         `json:"theme_prompt"`
 	CoverAssetID     string         `json:"cover_asset_id"`
 	CoverSetID       string         `json:"cover_set_id"`
@@ -132,6 +137,7 @@ func (q *Queries) ListAllCampaigns(ctx context.Context, limit int64) ([]ListAllC
 			&i.AccessPolicy,
 			&i.ParticipantCount,
 			&i.CharacterCount,
+			&i.LatestSessionAt,
 			&i.ThemePrompt,
 			&i.CoverAssetID,
 			&i.CoverSetID,
@@ -194,6 +200,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
+	(SELECT MAX(COALESCE(s.ended_at, s.started_at)) FROM sessions s WHERE s.campaign_id = c.id) AS latest_session_at,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c
@@ -218,6 +225,7 @@ type ListCampaignsRow struct {
 	AccessPolicy     string         `json:"access_policy"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
+	LatestSessionAt  interface{}    `json:"latest_session_at"`
 	ThemePrompt      string         `json:"theme_prompt"`
 	CoverAssetID     string         `json:"cover_asset_id"`
 	CoverSetID       string         `json:"cover_set_id"`
@@ -252,6 +260,7 @@ func (q *Queries) ListCampaigns(ctx context.Context, arg ListCampaignsParams) ([
 			&i.AccessPolicy,
 			&i.ParticipantCount,
 			&i.CharacterCount,
+			&i.LatestSessionAt,
 			&i.ThemePrompt,
 			&i.CoverAssetID,
 			&i.CoverSetID,

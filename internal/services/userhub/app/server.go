@@ -181,6 +181,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		gamev1.NewCampaignServiceClient(gameMc.Conn()),
 		invitev1.NewInviteServiceClient(inviteMc.Conn()),
 		gamev1.NewSessionServiceClient(gameMc.Conn()),
+		gamev1.NewAuthorizationServiceClient(gameMc.Conn()),
 	)
 	eventClient := gamev1.NewEventServiceClient(gameMc.Conn())
 	socialGateway := newGRPCSocialGateway(socialv1.NewSocialServiceClient(socialMc.Conn()))

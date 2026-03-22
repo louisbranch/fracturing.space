@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -14,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/userhub/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const readinessCampaignPageSize = 10
@@ -45,9 +47,10 @@ func (g *grpcAuthGateway) GetUserIdentity(ctx context.Context, userID string) (d
 
 // grpcGameGateway adapts game.v1 and invite.v1 clients to domain game gateway behavior.
 type grpcGameGateway struct {
-	campaigns gamev1.CampaignServiceClient
-	invites   invitev1.InviteServiceClient
-	sessions  gamev1.SessionServiceClient
+	campaigns     gamev1.CampaignServiceClient
+	invites       invitev1.InviteServiceClient
+	sessions      gamev1.SessionServiceClient
+	authorization gamev1.AuthorizationServiceClient
 }
 
 // newGRPCGameGateway constructs a game gateway from gRPC clients.
@@ -55,11 +58,13 @@ func newGRPCGameGateway(
 	campaigns gamev1.CampaignServiceClient,
 	invites invitev1.InviteServiceClient,
 	sessions gamev1.SessionServiceClient,
+	authorization gamev1.AuthorizationServiceClient,
 ) *grpcGameGateway {
 	return &grpcGameGateway{
-		campaigns: campaigns,
-		invites:   invites,
-		sessions:  sessions,
+		campaigns:     campaigns,
+		invites:       invites,
+		sessions:      sessions,
+		authorization: authorization,
 	}
 }
 
@@ -88,6 +93,7 @@ func (g *grpcGameGateway) ListCampaignPreviews(ctx context.Context, userID strin
 			ParticipantCount: int(campaign.GetParticipantCount()),
 			CharacterCount:   int(campaign.GetCharacterCount()),
 			UpdatedAt:        campaign.GetUpdatedAt().AsTime(),
+			LatestSessionAt:  protoTimePtr(campaign.GetLatestSessionAt()),
 		})
 	}
 	return page, nil
@@ -124,10 +130,18 @@ func (g *grpcGameGateway) ListReadinessCampaigns(ctx context.Context, userID str
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
 				UpdatedAt:        campaign.GetUpdatedAt().AsTime(),
+				LatestSessionAt:  protoTimePtr(campaign.GetLatestSessionAt()),
 			})
 		}
 		pageToken = strings.TrimSpace(resp.GetNextPageToken())
 		if pageToken == "" {
+			permissions, err := g.sessionManagePermissions(callCtx, campaigns)
+			if err != nil {
+				return nil, err
+			}
+			for i := range campaigns {
+				campaigns[i].CanManageSession = permissions[campaigns[i].CampaignID]
+			}
 			return campaigns, nil
 		}
 	}
@@ -314,6 +328,53 @@ func readinessActionKindFromProto(value gamev1.CampaignSessionReadinessResolutio
 	}
 }
 
+func (g *grpcGameGateway) sessionManagePermissions(ctx context.Context, campaigns []domain.CampaignPreview) (map[string]bool, error) {
+	if len(campaigns) == 0 {
+		return map[string]bool{}, nil
+	}
+	if g == nil || g.authorization == nil {
+		return nil, errors.New("game authorization client is not configured")
+	}
+	checks := make([]*gamev1.BatchCanCheck, 0, len(campaigns))
+	for _, campaign := range campaigns {
+		campaignID := strings.TrimSpace(campaign.CampaignID)
+		if campaignID == "" {
+			continue
+		}
+		checks = append(checks, &gamev1.BatchCanCheck{
+			CheckId:    campaignID,
+			CampaignId: campaignID,
+			Action:     gamev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			Resource:   gamev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
+		})
+	}
+	if len(checks) == 0 {
+		return map[string]bool{}, nil
+	}
+	resp, err := g.authorization.BatchCan(ctx, &gamev1.BatchCanRequest{Checks: checks})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return map[string]bool{}, nil
+	}
+	permissions := make(map[string]bool, len(checks))
+	for idx, result := range resp.GetResults() {
+		if result == nil {
+			continue
+		}
+		campaignID := strings.TrimSpace(result.GetCheckId())
+		if campaignID == "" && idx < len(checks) {
+			campaignID = strings.TrimSpace(checks[idx].GetCampaignId())
+		}
+		if campaignID == "" {
+			continue
+		}
+		permissions[campaignID] = result.GetAllowed()
+	}
+	return permissions, nil
+}
+
 func normalizedIDs(values []string) []string {
 	if len(values) == 0 {
 		return nil
@@ -335,6 +396,14 @@ func normalizedIDs(values []string) []string {
 		return nil
 	}
 	return result
+}
+
+func protoTimePtr(value *timestamppb.Timestamp) *time.Time {
+	if value == nil {
+		return nil
+	}
+	result := value.AsTime()
+	return &result
 }
 
 var (

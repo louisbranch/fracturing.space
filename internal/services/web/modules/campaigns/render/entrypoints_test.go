@@ -63,7 +63,6 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 			component: func() templ.Component {
 				return SessionsFragment(SessionsPageView{
 					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
-					SessionReadiness:       SessionReadinessView{Ready: true},
 					Sessions: []SessionView{{
 						ID:     "s-1",
 						Name:   "First Session",
@@ -72,6 +71,16 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 				}, nil)
 			},
 			marker: `data-campaign-session-card-id="s-1"`,
+		},
+		{
+			name: "session create",
+			component: func() templ.Component {
+				return SessionCreateFragment(SessionCreatePageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					SessionReadiness:       SessionReadinessView{Ready: true},
+				}, nil)
+			},
+			marker: `data-campaign-session-create-page="true"`,
 		},
 		{
 			name: "invites",

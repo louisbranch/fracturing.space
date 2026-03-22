@@ -34,7 +34,7 @@ func TestSessionMutationsTriggerDashboardSyncOnSuccess(t *testing.T) {
 	m := New(configWithGatewayAndSync(managerMutationGateway(), managerMutationBase(), nil, sync))
 	mount, _ := m.Mount()
 
-	startReq := httptest.NewRequest(http.MethodPost, routepath.AppCampaignSessionStart("c1"), strings.NewReader("name=Session+Two"))
+	startReq := httptest.NewRequest(http.MethodPost, routepath.AppCampaignSessionCreate("c1"), strings.NewReader("name=Session+Two"))
 	startReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	startRR := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(startRR, startReq)

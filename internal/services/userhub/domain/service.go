@@ -12,8 +12,9 @@ const (
 	defaultPreviewLimit = 3
 	maxPreviewLimit     = 10
 
-	defaultCacheFreshTTL = 15 * time.Second
-	defaultCacheStaleTTL = 2 * time.Minute
+	defaultCacheFreshTTL        = 15 * time.Second
+	defaultCacheStaleTTL        = 2 * time.Minute
+	sessionStartNudgeStaleAfter = 7 * 24 * time.Hour
 
 	dependencyAuthUser          = "auth.user"
 	dependencyGameCampaigns     = "game.campaigns"
@@ -193,6 +194,8 @@ type CampaignPreview struct {
 	ParticipantCount int
 	CharacterCount   int
 	UpdatedAt        time.Time
+	LatestSessionAt  *time.Time
+	CanManageSession bool
 }
 
 // ActiveSessionSummary captures active-session join previews for one user.
@@ -288,6 +291,8 @@ const (
 	CampaignStartNudgeActionInvitePlayer
 	// CampaignStartNudgeActionManageParticipants asks the user to manage participant seats.
 	CampaignStartNudgeActionManageParticipants
+	// CampaignStartNudgeActionStartSession asks the user to start a new session.
+	CampaignStartNudgeActionStartSession
 )
 
 // CampaignReadiness captures current campaign start blockers for one campaign.
@@ -762,6 +767,7 @@ func (s *Service) buildCampaignStartNudges(ctx context.Context, userID string, l
 	if len(campaigns) == 0 {
 		return nil, false, nil
 	}
+	now := s.nowUTC()
 	collected := make([]CampaignStartNudge, 0, len(campaigns))
 	for _, campaign := range campaigns {
 		readiness, err := s.game.GetCampaignReadiness(ctx, userID, campaign.CampaignID)
@@ -769,19 +775,29 @@ func (s *Service) buildCampaignStartNudges(ctx context.Context, userID string, l
 			return nil, false, err
 		}
 		blocker, ok := actionableReadinessBlockerForUser(userID, readiness.Blockers)
-		if !ok {
+		if ok {
+			collected = append(collected, CampaignStartNudge{
+				CampaignID:          campaign.CampaignID,
+				CampaignName:        campaign.Name,
+				CampaignUpdatedAt:   campaign.UpdatedAt,
+				BlockerCode:         blocker.Code,
+				BlockerMessage:      blocker.Message,
+				ActionKind:          blocker.ActionKind,
+				TargetParticipantID: blocker.TargetParticipantID,
+				TargetCharacterID:   blocker.TargetCharacterID,
+			})
 			continue
 		}
-		collected = append(collected, CampaignStartNudge{
-			CampaignID:          campaign.CampaignID,
-			CampaignName:        campaign.Name,
-			CampaignUpdatedAt:   campaign.UpdatedAt,
-			BlockerCode:         blocker.Code,
-			BlockerMessage:      blocker.Message,
-			ActionKind:          blocker.ActionKind,
-			TargetParticipantID: blocker.TargetParticipantID,
-			TargetCharacterID:   blocker.TargetCharacterID,
-		})
+		if campaignSessionStartNudgeReady(now, campaign, readiness) {
+			collected = append(collected, CampaignStartNudge{
+				CampaignID:        campaign.CampaignID,
+				CampaignName:      campaign.Name,
+				CampaignUpdatedAt: campaign.UpdatedAt,
+				BlockerCode:       "START_SESSION_STALE",
+				BlockerMessage:    "Start a new session for this campaign.",
+				ActionKind:        CampaignStartNudgeActionStartSession,
+			})
+		}
 	}
 	if len(collected) == 0 {
 		return nil, false, nil
@@ -798,6 +814,19 @@ func (s *Service) buildCampaignStartNudges(ctx context.Context, userID string, l
 		return collected, false, nil
 	}
 	return append([]CampaignStartNudge{}, collected[:limit]...), true, nil
+}
+
+func campaignSessionStartNudgeReady(now time.Time, campaign CampaignPreview, readiness CampaignReadiness) bool {
+	if len(readiness.Blockers) > 0 {
+		return false
+	}
+	if !campaign.CanManageSession {
+		return false
+	}
+	if campaign.LatestSessionAt == nil {
+		return true
+	}
+	return !campaign.LatestSessionAt.UTC().After(now.UTC().Add(-sessionStartNudgeStaleAfter))
 }
 
 func actionableReadinessBlockerForUser(userID string, blockers []CampaignReadinessBlocker) (CampaignReadinessBlocker, bool) {

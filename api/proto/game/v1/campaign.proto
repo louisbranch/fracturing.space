@@ -43,6 +43,8 @@ message Campaign {
   google.protobuf.Timestamp completed_at = 17;
   // Timestamp when the campaign was archived.
   google.protobuf.Timestamp archived_at = 18;
+  // Most recent effective session timestamp for this campaign.
+  google.protobuf.Timestamp latest_session_at = 19;
 }
 
 enum CampaignStatus {

@@ -64,8 +64,8 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	if got := AppCampaignSessions("camp-1"); got != "/app/campaigns/camp-1/sessions" {
 		t.Fatalf("AppCampaignSessions() = %q", got)
 	}
-	if got := AppCampaignSessionStart("camp-1"); got != "/app/campaigns/camp-1/sessions/start" {
-		t.Fatalf("AppCampaignSessionStart() = %q", got)
+	if got := AppCampaignSessionCreate("camp-1"); got != "/app/campaigns/camp-1/sessions/create" {
+		t.Fatalf("AppCampaignSessionCreate() = %q", got)
 	}
 	if got := AppCampaignSessionEnd("camp-1"); got != "/app/campaigns/camp-1/sessions/end" {
 		t.Fatalf("AppCampaignSessionEnd() = %q", got)
@@ -143,6 +143,9 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	}
 	if AppCampaignSessionsPattern != "/app/campaigns/{campaignID}/sessions" {
 		t.Fatalf("AppCampaignSessionsPattern = %q", AppCampaignSessionsPattern)
+	}
+	if AppCampaignSessionCreatePattern != "/app/campaigns/{campaignID}/sessions/create" {
+		t.Fatalf("AppCampaignSessionCreatePattern = %q", AppCampaignSessionCreatePattern)
 	}
 	if AppCampaignSessionPattern != "/app/campaigns/{campaignID}/sessions/{sessionID}" {
 		t.Fatalf("AppCampaignSessionPattern = %q", AppCampaignSessionPattern)
@@ -249,6 +252,9 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppCampaignSession("camp-1", "sess/1"); got != "/app/campaigns/camp-1/sessions/sess%2F1" {
 		t.Fatalf("AppCampaignSession() escaped = %q", got)
+	}
+	if got := AppCampaignSessionCreate("camp/1"); got != "/app/campaigns/camp%2F1/sessions/create" {
+		t.Fatalf("AppCampaignSessionCreate() escaped = %q", got)
 	}
 	if got := AppCampaignGame("camp/1"); got != "/app/campaigns/camp%2F1/game" {
 		t.Fatalf("AppCampaignGame() escaped = %q", got)

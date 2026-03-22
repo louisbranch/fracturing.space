@@ -169,6 +169,8 @@ func buildWeapons(weapons []campaignworkflow.Weapon) ([]campaignworkflow.Weapon,
 	return primary, secondary
 }
 
+// normalizeWeaponDisplayGroup collapses imported weapon grouping values into
+// the fixed presentation groups used by character creation.
 func normalizeWeaponDisplayGroup(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "magic":
