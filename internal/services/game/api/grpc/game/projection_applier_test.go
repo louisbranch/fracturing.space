@@ -485,8 +485,9 @@ func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 func TestStoresApplier_ApplyCampaignUpdatedAndSessionLifecycle(t *testing.T) {
 	ctx := context.Background()
 	stores := testStoresWithProjection(ProjectionStores{
-		Campaign: gametest.NewFakeCampaignStore(),
-		Session:  gametest.NewFakeSessionStore(),
+		Campaign:           gametest.NewFakeCampaignStore(),
+		Session:            gametest.NewFakeSessionStore(),
+		SessionInteraction: gametest.NewFakeSessionInteractionStore(),
 	})
 	applier := testProjectionApplierFromStores(t, stores)
 	now := time.Date(2026, 2, 14, 1, 0, 0, 0, time.UTC)

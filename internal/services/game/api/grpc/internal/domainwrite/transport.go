@@ -77,7 +77,7 @@ func TransportExecuteAndApply(
 	options Options,
 	normalizeConfig NormalizeDomainWriteOptionsConfig,
 ) (engine.Result, error) {
-	NormalizeDomainWriteOptions(&options, normalizeConfig)
+	NormalizeDomainWriteOptions(ctx, &options, normalizeConfig)
 	setDefaultOnRejection(&options, deps)
 	runtime := deps.DomainWriteRuntime()
 	if runtime == nil {
@@ -95,7 +95,7 @@ func TransportExecuteWithoutInlineApply(
 	options Options,
 	normalizeConfig NormalizeDomainWriteOptionsConfig,
 ) (engine.Result, error) {
-	NormalizeDomainWriteOptions(&options, normalizeConfig)
+	NormalizeDomainWriteOptions(ctx, &options, normalizeConfig)
 	setDefaultOnRejection(&options, deps)
 	runtime := deps.DomainWriteRuntime()
 	if runtime == nil {
@@ -105,8 +105,9 @@ func TransportExecuteWithoutInlineApply(
 }
 
 // NormalizeDomainWriteOptions applies gRPC-aware defaults to Options while
-// allowing callers to override callbacks explicitly.
-func NormalizeDomainWriteOptions(options *Options, config NormalizeDomainWriteOptionsConfig) {
+// allowing callers to override callbacks explicitly. The context is used to
+// derive the caller's locale for rejection message formatting.
+func NormalizeDomainWriteOptions(ctx context.Context, options *Options, config NormalizeDomainWriteOptionsConfig) {
 	if options == nil {
 		return
 	}
@@ -136,8 +137,9 @@ func NormalizeDomainWriteOptions(options *Options, config NormalizeDomainWriteOp
 		}
 	}
 	if options.RejectErr == nil {
+		locale := grpcmeta.LocaleFromContext(ctx)
 		options.RejectErr = func(code, message string) error {
-			cat := errori18n.GetCatalog("en-US")
+			cat := errori18n.GetCatalog(locale)
 			if localized := cat.Format(code, nil); localized != code {
 				return status.Error(codes.FailedPrecondition, localized)
 			}

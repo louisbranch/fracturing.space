@@ -1,6 +1,7 @@
 package campaign
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -8,6 +9,36 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
+
+func TestValidateEmptyPayload(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   json.RawMessage
+		wantErr bool
+	}{
+		{name: "exact empty object", input: json.RawMessage(`{}`), wantErr: false},
+		{name: "whitespace-padded empty object", input: json.RawMessage(`{  }`), wantErr: false},
+		{name: "newline-padded empty object", input: json.RawMessage("{ \n }"), wantErr: false},
+		{name: "null literal", input: json.RawMessage(`null`), wantErr: false},
+		{name: "empty input", input: json.RawMessage(``), wantErr: false},
+		{name: "whitespace-only input", input: json.RawMessage(`   `), wantErr: false},
+		{name: "nil input", input: nil, wantErr: false},
+		{name: "object with field", input: json.RawMessage(`{"key":"val"}`), wantErr: true},
+		{name: "invalid JSON", input: json.RawMessage(`{`), wantErr: true},
+		{name: "array", input: json.RawMessage(`[]`), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateEmptyPayload(tt.input)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
 
 func TestRegisterCommands_ValidatesCreatePayload(t *testing.T) {
 	registry := command.NewRegistry()

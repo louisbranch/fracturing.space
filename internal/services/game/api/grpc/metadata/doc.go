@@ -8,4 +8,5 @@
 //   - InvocationIDHeader: tracks AI tool invocations
 //   - ParticipantIDHeader/UserIDHeader: identity hints for callers and impersonation
 //   - CampaignIDHeader/SessionIDHeader: routing and scoping hints
+//   - LocaleHeader: caller locale for i18n error formatting (defaults to en-US)
 package metadata

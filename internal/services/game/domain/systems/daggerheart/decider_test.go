@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
 	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
@@ -789,7 +790,7 @@ func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
+		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
 		},
 	}
@@ -820,7 +821,7 @@ func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
+		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
 		},
 	}
@@ -1022,7 +1023,7 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1",
 				HP:          7,
@@ -1141,7 +1142,7 @@ func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
+		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
 		},
 	}
@@ -1172,7 +1173,7 @@ func TestDecideCountdownUpdate_BeforeMismatchRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
+		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
 		},
 	}
@@ -1298,7 +1299,7 @@ func TestDecideAdversaryConditionChange_UnchangedStateRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1329,7 +1330,7 @@ func TestDecideAdversaryConditionChange_RemoveMissingConditionRejected(t *testin
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1418,7 +1419,7 @@ func TestDecideAdversaryCreate_UnchangedStateRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1", Name: "Goblin", Kind: "bruiser", SessionID: "sess-1", Notes: "note",
 				HP: 6, HPMax: 6, Stress: 2, StressMax: 2, Evasion: 1, Major: 2, Severe: 3, Armor: 1,

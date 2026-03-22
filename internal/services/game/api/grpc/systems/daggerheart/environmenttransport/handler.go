@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -96,7 +97,7 @@ func (h *Handler) CreateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 		return nil, grpcerror.Internal("generate environment entity id", err)
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.EnvironmentEntityCreatePayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
+		EnvironmentEntityID: dhids.EnvironmentEntityID(environmentEntityID),
 		EnvironmentID:       environmentID,
 		Name:                entry.Name,
 		Type:                entry.Type,
@@ -192,7 +193,7 @@ func (h *Handler) UpdateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 	}
 
 	payloadJSON, err := json.Marshal(daggerheartpayload.EnvironmentEntityUpdatePayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
+		EnvironmentEntityID: dhids.EnvironmentEntityID(environmentEntityID),
 		EnvironmentID:       current.EnvironmentID,
 		Name:                current.Name,
 		Type:                current.Type,
@@ -273,7 +274,7 @@ func (h *Handler) DeleteEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 	}
 
 	payloadJSON, err := json.Marshal(daggerheartpayload.EnvironmentEntityDeletePayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
+		EnvironmentEntityID: dhids.EnvironmentEntityID(environmentEntityID),
 		Reason:              strings.TrimSpace(in.GetReason()),
 	})
 	if err != nil {

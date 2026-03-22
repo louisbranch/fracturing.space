@@ -3,7 +3,7 @@ package damagetransport
 import (
 	"context"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
@@ -42,21 +42,9 @@ type EventStore interface {
 	GetEventBySeq(ctx context.Context, campaignID string, seq uint64) (event.Event, error)
 }
 
-// SystemCommandInput describes one Daggerheart system command emitted by the
-// damage transport slice.
-type SystemCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+// SystemCommandInput is an alias for the shared workflow runtime type, kept for
+// local readability inside the damage transport slice.
+type SystemCommandInput = workflowruntime.SystemCommandInput
 
 // CharacterDamageResult is the read-model state returned after applying
 // character damage.

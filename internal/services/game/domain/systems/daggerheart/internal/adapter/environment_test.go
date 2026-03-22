@@ -9,6 +9,7 @@ import (
 
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -26,7 +27,7 @@ func TestEnvironmentEntityHandlersPersistProjectionState(t *testing.T) {
 		CampaignID: ids.CampaignID("camp-1"),
 		Timestamp:  createdAt,
 	}, payload.EnvironmentEntityCreatedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID(" env-1 "),
+		EnvironmentEntityID: dhids.EnvironmentEntityID(" env-1 "),
 		EnvironmentID:       " environment.ruins ",
 		Name:                " Falling Pillar ",
 		Type:                " hazard ",
@@ -55,7 +56,7 @@ func TestEnvironmentEntityHandlersPersistProjectionState(t *testing.T) {
 		CampaignID: ids.CampaignID("camp-1"),
 		Timestamp:  updatedAt,
 	}, payload.EnvironmentEntityUpdatedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID(" env-1 "),
+		EnvironmentEntityID: dhids.EnvironmentEntityID(" env-1 "),
 		EnvironmentID:       " environment.keep ",
 		Name:                " Arcane Lens ",
 		Type:                " feature ",
@@ -79,7 +80,7 @@ func TestEnvironmentEntityHandlersPersistProjectionState(t *testing.T) {
 	if err := a.HandleEnvironmentEntityDeleted(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.EnvironmentEntityDeletedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID(" env-1 "),
+		EnvironmentEntityID: dhids.EnvironmentEntityID(" env-1 "),
 	}); err != nil {
 		t.Fatalf("HandleEnvironmentEntityDeleted() returned error: %v", err)
 	}
@@ -99,7 +100,7 @@ func TestEnvironmentEntityHandlersPropagateStoreErrors(t *testing.T) {
 	if err := a.HandleEnvironmentEntityCreated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.EnvironmentEntityCreatedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID("env-1"),
+		EnvironmentEntityID: dhids.EnvironmentEntityID("env-1"),
 	}); err == nil || !strings.Contains(err.Error(), "write failed") {
 		t.Fatalf("HandleEnvironmentEntityCreated() error = %v, want write error", err)
 	}
@@ -108,7 +109,7 @@ func TestEnvironmentEntityHandlersPropagateStoreErrors(t *testing.T) {
 	if err := a.HandleEnvironmentEntityUpdated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.EnvironmentEntityUpdatedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID("missing"),
+		EnvironmentEntityID: dhids.EnvironmentEntityID("missing"),
 	}); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("HandleEnvironmentEntityUpdated() error = %v, want storage.ErrNotFound", err)
 	}
@@ -121,7 +122,7 @@ func TestEnvironmentEntityHandlersPropagateStoreErrors(t *testing.T) {
 	if err := a.HandleEnvironmentEntityUpdated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.EnvironmentEntityUpdatedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID("env-1"),
+		EnvironmentEntityID: dhids.EnvironmentEntityID("env-1"),
 	}); err == nil || !strings.Contains(err.Error(), "read failed") {
 		t.Fatalf("HandleEnvironmentEntityUpdated() get error = %v, want get error", err)
 	}
@@ -131,7 +132,7 @@ func TestEnvironmentEntityHandlersPropagateStoreErrors(t *testing.T) {
 	if err := a.HandleEnvironmentEntityUpdated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.EnvironmentEntityUpdatedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID("env-1"),
+		EnvironmentEntityID: dhids.EnvironmentEntityID("env-1"),
 	}); err == nil || !strings.Contains(err.Error(), "write failed") {
 		t.Fatalf("HandleEnvironmentEntityUpdated() put error = %v, want put error", err)
 	}
@@ -141,7 +142,7 @@ func TestEnvironmentEntityHandlersPropagateStoreErrors(t *testing.T) {
 	if err := a.HandleEnvironmentEntityDeleted(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.EnvironmentEntityDeletedPayload{
-		EnvironmentEntityID: ids.EnvironmentEntityID("env-1"),
+		EnvironmentEntityID: dhids.EnvironmentEntityID("env-1"),
 	}); err == nil || !strings.Contains(err.Error(), "delete failed") {
 		t.Fatalf("HandleEnvironmentEntityDeleted() error = %v, want delete error", err)
 	}

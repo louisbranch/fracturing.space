@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"strings"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
@@ -42,8 +42,14 @@ func ApplyParticipantProfileSnapshot(
 	}
 
 	snapshot := LoadSocialProfileSnapshot(ctx, socialClient, userID)
-	log.Printf("[game] profile snapshot for user %s participant %s: name=%q pronouns=%q avatar_set=%q avatar_asset=%q",
-		userID, participantID, snapshot.Name, snapshot.Pronouns, snapshot.AvatarSetID, snapshot.AvatarAssetID)
+	slog.Info("profile snapshot loaded",
+		"user_id", userID,
+		"participant_id", participantID,
+		"name", snapshot.Name,
+		"pronouns", snapshot.Pronouns,
+		"avatar_set_id", snapshot.AvatarSetID,
+		"avatar_asset_id", snapshot.AvatarAssetID,
+	)
 
 	// Apply name/pronouns and avatars as separate commands so that avatar
 	// resolution failures (e.g. unknown set in the manifest) don't silently
@@ -118,7 +124,7 @@ func applyParticipantUpdateFields(
 			ApplyErr: ApplyErrorWithCodePreserve("apply participant event"),
 		},
 	); err != nil {
-		log.Printf("[game] apply participant profile snapshot: %v", err)
+		slog.Error("apply participant profile snapshot", "error", err)
 		return err
 	}
 	return nil

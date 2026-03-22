@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -91,7 +92,7 @@ func (h *Handler) recordAdversarySpotlight(ctx context.Context, campaignID, sess
 		nextCount = adversary.SpotlightCount + 1
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryUpdatePayload{
-		AdversaryID:      ids.AdversaryID(adversary.AdversaryID),
+		AdversaryID:      dhids.AdversaryID(adversary.AdversaryID),
 		AdversaryEntryID: adversary.AdversaryEntryID,
 		Name:             adversary.Name,
 		Kind:             adversary.Kind,
@@ -260,8 +261,8 @@ func stagedFearFeaturePayload(adversary projectionstore.DaggerheartAdversary, fe
 		FocusedTargetID: strings.TrimSpace(focusedTargetID),
 	})
 	return &daggerheartpayload.AdversaryFeatureApplyPayload{
-		ActorAdversaryID:        ids.AdversaryID(adversary.AdversaryID),
-		AdversaryID:             ids.AdversaryID(adversary.AdversaryID),
+		ActorAdversaryID:        dhids.AdversaryID(adversary.AdversaryID),
+		AdversaryID:             dhids.AdversaryID(adversary.AdversaryID),
 		FeatureID:               strings.TrimSpace(feature.ID),
 		FeatureStatesBefore:     toBridgeAdversaryFeatureStates(adversary.FeatureStates),
 		FeatureStatesAfter:      toBridgeAdversaryFeatureStates(nextStates),

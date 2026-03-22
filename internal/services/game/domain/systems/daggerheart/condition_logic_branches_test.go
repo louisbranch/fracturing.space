@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartfolder "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/folder"
 	daggerheartvalidator "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/validator"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -246,7 +247,7 @@ func TestFoldGMFearChangedAndCountdownUpdate_Branches(t *testing.T) {
 
 	t.Run("countdown update sets looping on looped payload", func(t *testing.T) {
 		state := &daggerheartstate.SnapshotState{
-			CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
+			CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
 				"cd-1": {CountdownID: "cd-1", Current: 1, Looping: false},
 			},
 		}

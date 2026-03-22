@@ -118,7 +118,7 @@ func TestTransportExecuteAndApply_MapsApplyErrorToInternalWithoutPreserveConfig(
 
 func TestNormalizeDomainWriteOptionsDefaults(t *testing.T) {
 	options := Options{}
-	NormalizeDomainWriteOptions(&options, NormalizeDomainWriteOptionsConfig{})
+	NormalizeDomainWriteOptions(context.Background(), &options, NormalizeDomainWriteOptionsConfig{})
 
 	if options.ExecuteErr == nil || options.ApplyErr == nil || options.RejectErr == nil {
 		t.Fatal("expected execute/apply/reject handlers to be initialized")
@@ -142,7 +142,7 @@ func TestNormalizeDomainWriteOptionsDefaults(t *testing.T) {
 
 func TestNormalizeDomainWriteOptionsPreservesDomainApplyCode(t *testing.T) {
 	options := Options{}
-	NormalizeDomainWriteOptions(&options, NormalizeDomainWriteOptionsConfig{
+	NormalizeDomainWriteOptions(context.Background(), &options, NormalizeDomainWriteOptionsConfig{
 		PreserveDomainCodeOnApply: true,
 	})
 

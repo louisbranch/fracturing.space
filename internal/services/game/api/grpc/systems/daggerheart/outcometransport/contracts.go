@@ -3,6 +3,7 @@ package outcometransport
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
@@ -55,22 +56,9 @@ type SessionSpotlightStore interface {
 	GetSessionSpotlight(ctx context.Context, campaignID, sessionID string) (storage.SessionSpotlight, error)
 }
 
-// SystemCommandInput describes one Daggerheart system command emitted by the
-// outcome transport slice.
-type SystemCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	CorrelationID   string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+// SystemCommandInput is an alias for the shared workflow runtime type, kept for
+// local readability inside the outcome transport slice.
+type SystemCommandInput = workflowruntime.SystemCommandInput
 
 // CoreCommandInput describes one core command emitted by the outcome transport
 // slice.

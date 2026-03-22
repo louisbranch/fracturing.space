@@ -8,7 +8,7 @@ func String(s string) string {
 }
 
 // ID trims leading and trailing whitespace from any string-based identifier
-// type (ids.CharacterID, ids.AdversaryID, etc.).
+// type (ids.CharacterID, dhids.AdversaryID, etc.).
 func ID[T ~string](id T) T {
 	return T(strings.TrimSpace(string(id)))
 }

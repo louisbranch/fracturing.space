@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -78,6 +80,168 @@ func TestValidateSystemMetadataConsistency_SkipsCoreEvents(t *testing.T) {
 
 	// Should pass even with no modules, because core events are skipped.
 	if err := ValidateSystemMetadataConsistency(events, modules); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- ValidateStateFactoryFoldCompatibility tests ---
+
+// compatTestState is a concrete state type for compatibility tests.
+type compatTestState struct {
+	Value int
+}
+
+// compatFactory produces *compatTestState from NewSnapshotState.
+type compatFactory struct{}
+
+func (f *compatFactory) NewSnapshotState(_ ids.CampaignID) (any, error) {
+	return &compatTestState{Value: 1}, nil
+}
+
+func (f *compatFactory) NewCharacterState(_ ids.CampaignID, _ ids.CharacterID, _ string) (any, error) {
+	return &compatTestState{}, nil
+}
+
+// compatFolder is a Folder backed by a FoldRouter[*compatTestState].
+type compatFolder struct {
+	router *module.FoldRouter[*compatTestState]
+}
+
+func newCompatFolder() *compatFolder {
+	assertState := func(state any) (*compatTestState, error) {
+		switch v := state.(type) {
+		case nil:
+			return &compatTestState{}, nil
+		case *compatTestState:
+			return v, nil
+		default:
+			return nil, fmt.Errorf("unsupported state type %T", state)
+		}
+	}
+	router := module.NewFoldRouter(assertState)
+	module.HandleFold(router, event.Type("sys.compat.tested"), func(s *compatTestState, _ struct{}) error {
+		return nil
+	})
+	return &compatFolder{router: router}
+}
+
+func (f *compatFolder) Fold(state any, evt event.Event) (any, error) {
+	return f.router.Fold(state, evt)
+}
+
+func (f *compatFolder) FoldHandledTypes() []event.Type {
+	return f.router.FoldHandledTypes()
+}
+
+// incompatibleState is a different type that won't match *compatTestState.
+type incompatibleState struct {
+	Other string
+}
+
+// incompatibleFactory produces *incompatibleState — mismatched with compatFolder.
+type incompatibleFactory struct{}
+
+func (f *incompatibleFactory) NewSnapshotState(_ ids.CampaignID) (any, error) {
+	return &incompatibleState{Other: "wrong"}, nil
+}
+
+func (f *incompatibleFactory) NewCharacterState(_ ids.CampaignID, _ ids.CharacterID, _ string) (any, error) {
+	return &incompatibleState{}, nil
+}
+
+// compatModule wires a configurable factory and folder for compat tests.
+type compatModule struct {
+	id      string
+	version string
+	factory module.StateFactory
+	folder  module.Folder
+}
+
+func (m *compatModule) ID() string                                 { return m.id }
+func (m *compatModule) Version() string                            { return m.version }
+func (m *compatModule) RegisterCommands(_ *command.Registry) error { return nil }
+func (m *compatModule) RegisterEvents(_ *event.Registry) error     { return nil }
+func (m *compatModule) EmittableEventTypes() []event.Type          { return nil }
+func (m *compatModule) Decider() module.Decider                    { return nil }
+func (m *compatModule) Folder() module.Folder                      { return m.folder }
+func (m *compatModule) StateFactory() module.StateFactory          { return m.factory }
+
+func TestValidateStateFactoryFoldCompatibility_PassesWhenTypesMatch(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &compatModule{
+		id:      "compat-ok",
+		version: "v1",
+		factory: &compatFactory{},
+		folder:  newCompatFolder(),
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := ValidateStateFactoryFoldCompatibility(registry); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateStateFactoryFoldCompatibility_FailsWhenTypesMismatch(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &compatModule{
+		id:      "compat-bad",
+		version: "v1",
+		factory: &incompatibleFactory{},
+		folder:  newCompatFolder(),
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	err := ValidateStateFactoryFoldCompatibility(registry)
+	if err == nil {
+		t.Fatal("expected error for incompatible state factory and fold router")
+	}
+	if !strings.Contains(err.Error(), "state factory / fold type mismatch") {
+		t.Fatalf("expected type mismatch error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "compat-bad@v1") {
+		t.Fatalf("expected error to mention module label, got: %v", err)
+	}
+}
+
+func TestValidateStateFactoryFoldCompatibility_SkipsModulesWithoutFactory(t *testing.T) {
+	registry := module.NewRegistry()
+	// paramModule returns nil for both StateFactory and Folder.
+	if err := registry.Register(paramModule{id: "no-factory", version: "v1"}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := ValidateStateFactoryFoldCompatibility(registry); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateStateFactoryFoldCompatibility_SkipsModulesWithoutFolder(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &compatModule{
+		id:      "no-folder",
+		version: "v1",
+		factory: &compatFactory{},
+		folder:  nil,
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := ValidateStateFactoryFoldCompatibility(registry); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateStateFactoryFoldCompatibility_RejectsNilRegistry(t *testing.T) {
+	err := ValidateStateFactoryFoldCompatibility(nil)
+	if err == nil {
+		t.Fatal("expected error for nil registry")
+	}
+	if !strings.Contains(err.Error(), "module registry is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -5,8 +5,8 @@ import "github.com/louisbranch/fracturing.space/internal/services/game/domain/se
 func registerSessionProjectionHandlers(r *CoreRouter) {
 	// SessionID comes from payload with EntityID fallback, so EntityID is not a
 	// hard envelope requirement for started/ended.
-	HandleProjection(r, session.EventTypeStarted, requirements(needsStores(storeSession), needsEnvelope(fieldCampaignID)), Applier.applySessionStarted)
-	HandleProjection(r, session.EventTypeEnded, requirements(needsStores(storeSession), needsEnvelope(fieldCampaignID)), Applier.applySessionEnded)
+	HandleProjection(r, session.EventTypeStarted, requirements(needsStores(storeSession, storeSessionInteraction), needsEnvelope(fieldCampaignID)), Applier.applySessionStarted)
+	HandleProjection(r, session.EventTypeEnded, requirements(needsStores(storeSession, storeSessionInteraction), needsEnvelope(fieldCampaignID)), Applier.applySessionEnded)
 
 	// Gate handlers derive GateID from payload with EntityID fallback.
 	HandleProjection(r, session.EventTypeGateOpened, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateOpened)

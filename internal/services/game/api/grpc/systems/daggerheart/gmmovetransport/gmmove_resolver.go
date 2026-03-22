@@ -6,7 +6,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
@@ -80,7 +80,7 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 			if err != nil {
 				return gmMoveResolution{}, err
 			}
-			resolution.target.AdversaryID = ids.AdversaryID(adversaryID)
+			resolution.target.AdversaryID = dhids.AdversaryID(adversaryID)
 			resolution.spotlightAdversary = &adversary
 		}
 		return resolution, nil
@@ -113,7 +113,7 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 		}
 		resolution := gmMoveResolution{target: daggerheartpayload.GMMoveTarget{
 			Type:        rules.GMMoveTargetTypeAdversaryFeature,
-			AdversaryID: ids.AdversaryID(adversaryID),
+			AdversaryID: dhids.AdversaryID(adversaryID),
 			FeatureID:   featureID,
 			Description: strings.TrimSpace(target.AdversaryFeature.GetDescription()),
 		}}
@@ -143,7 +143,7 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 		}
 		return gmMoveResolution{target: daggerheartpayload.GMMoveTarget{
 			Type:                rules.GMMoveTargetTypeEnvironmentFeature,
-			EnvironmentEntityID: ids.EnvironmentEntityID(environmentEntityID),
+			EnvironmentEntityID: dhids.EnvironmentEntityID(environmentEntityID),
 			EnvironmentID:       environmentEntity.EnvironmentID,
 			FeatureID:           featureID,
 			Description:         strings.TrimSpace(target.EnvironmentFeature.GetDescription()),
@@ -174,12 +174,12 @@ func (h *Handler) gmMoveTargetFromProto(ctx context.Context, campaignID, session
 		}
 		return gmMoveResolution{target: daggerheartpayload.GMMoveTarget{
 			Type:           rules.GMMoveTargetTypeAdversaryExperience,
-			AdversaryID:    ids.AdversaryID(adversaryID),
+			AdversaryID:    dhids.AdversaryID(adversaryID),
 			ExperienceName: experienceName,
 			Description:    strings.TrimSpace(target.AdversaryExperience.GetDescription()),
 		}, adversaryFeaturePayload: &daggerheartpayload.AdversaryFeatureApplyPayload{
-			ActorAdversaryID:        ids.AdversaryID(adversaryID),
-			AdversaryID:             ids.AdversaryID(adversaryID),
+			ActorAdversaryID:        dhids.AdversaryID(adversaryID),
+			AdversaryID:             dhids.AdversaryID(adversaryID),
 			FeatureID:               "experience:" + experienceName,
 			FeatureStatesBefore:     toBridgeAdversaryFeatureStates(adversary.FeatureStates),
 			FeatureStatesAfter:      toBridgeAdversaryFeatureStates(adversary.FeatureStates),

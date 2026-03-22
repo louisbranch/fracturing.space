@@ -19,9 +19,9 @@ gRPC handler
   ├─ build command (commandbuild.Core / commandbuild.System)
   ├─ choose Options (empty or preset)
   │
-  └─ executeAndApplyDomainCommand(ctx, stores, applier, cmd, options)
+  └─ handler.ExecuteAndApplyDomainCommand(ctx, deps, applier, cmd, options)
        │
-       ├─ normalizeGRPCDefaults(&options)     ← inject gRPC-aware error handlers
+       ├─ domainwrite.NormalizeDomainWriteOptions(ctx, &options, config)  ← inject gRPC-aware error handlers
        │
        └─ WriteRuntime.ExecuteAndApply(ctx, domain, applier, cmd, options)
             │
@@ -36,16 +36,16 @@ Command-time mutation decisions replay from journal truth on every execution. Th
 
 | Helper | Inline projection | Use when |
 |---|---|---|
-| `executeAndApplyDomainCommand` | Yes | Default. Handler needs read-after-write consistency |
-| `executeDomainCommandWithoutInlineApply` | No | Outbox pattern or fire-and-forget writes |
+| `handler.ExecuteAndApplyDomainCommand` | Yes | Default. Handler needs read-after-write consistency |
+| `handler.ExecuteWithoutInlineApply` | No | Outbox pattern or fire-and-forget writes |
 
-Both call `normalizeGRPCDefaults` and `ensureGRPCStatus`; the only difference is whether events apply inline.
+Both normalize options via `NormalizeDomainWriteOptions` and wrap final errors via `grpcerror.EnsureStatus`; the only difference is whether events apply inline.
 
 ## Error handling boundaries
 
 The design keeps domain logic transport-agnostic. Error mapping happens at two boundaries:
 
-### 1. `normalizeGRPCDefaults` — injected error handlers
+### 1. `NormalizeDomainWriteOptions` — injected error handlers
 
 Sets three error handlers on `Options` if the caller didn't provide custom ones:
 
@@ -57,17 +57,17 @@ Sets three error handlers on `Options` if the caller didn't provide custom ones:
 
 These fire inside `WriteRuntime.ExecuteAndApply`.
 
-### 2. `ensureGRPCStatus` — final error wrapper
+### 2. `grpcerror.EnsureStatus` — final error wrapper
 
 Catches any error that escapes without a gRPC status:
 
 1. Already a gRPC status → pass through.
-2. Domain error (`apperrors.GetCode != CodeUnknown`) → `handleDomainError` maps to semantic gRPC code (NotFound, InvalidArgument, FailedPrecondition, etc.).
+2. Domain error (`apperrors.GetCode != CodeUnknown`) → `HandleDomainError` maps to semantic gRPC code (NotFound, InvalidArgument, FailedPrecondition, etc.).
 3. Unknown error → `codes.Internal`.
 
-### 3. `handleDomainError` — domain code mapping
+### 3. `grpcerror.HandleDomainError` / `HandleDomainErrorLocale` — domain code mapping
 
-Delegates to `apperrors.HandleError(err, apperrors.DefaultLocale)`, which maps domain error codes to gRPC codes with i18n-ready structured error details. Game and daggerheart handlers use the same pattern.
+Delegates to `apperrors.HandleError(err, locale)`, which maps domain error codes to gRPC codes with i18n-ready structured error details. `HandleDomainErrorLocale` accepts an explicit locale; `HandleDomainError` uses `DefaultLocale`. The `ErrorConversionUnaryInterceptor` uses `HandleDomainErrorLocale` with the caller's locale from request metadata.
 
 ## Options type
 
@@ -125,7 +125,7 @@ func (a *application) DoSomething(ctx context.Context, in *pb.Request) (*pb.Resp
         // ...
     })
 
-    _, err := executeAndApplyDomainCommand(ctx, a.stores, applier, cmd, domainwrite.Options{})
+    _, err := handler.ExecuteAndApplyDomainCommand(ctx, a.deps, applier, cmd, domainwrite.Options{})
     if err != nil {
         return nil, err // already gRPC-wrapped
     }
@@ -136,13 +136,13 @@ func (a *application) DoSomething(ctx context.Context, in *pb.Request) (*pb.Resp
 
 Key conventions:
 - Validate request fields before building commands (return `codes.InvalidArgument`).
-- The returned error from `executeAndApplyDomainCommand` is already gRPC-status-wrapped.
-- Use `handleDomainError` for errors from store lookups or other domain operations outside the command path.
+- The returned error from `ExecuteAndApplyDomainCommand` is already gRPC-status-wrapped.
+- Domain errors from store lookups outside the command path are handled by the `ErrorConversionUnaryInterceptor`.
 
 ## Adding a new write handler
 
 1. Define your command type and event types in the domain layer.
 2. Write a handler following the pattern above.
-3. Choose `executeAndApplyDomainCommand` (default) or `executeDomainCommandWithoutInlineApply`.
+3. Choose `handler.ExecuteAndApplyDomainCommand` (default) or `handler.ExecuteWithoutInlineApply`.
 4. Use `domainwrite.Options{}` or a preset — custom error handlers are rarely needed.
-5. Domain-operation errors flow through `handleDomainError`; command-path errors flow through the options handlers and `ensureGRPCStatus`.
+5. Domain-operation errors are caught by the `ErrorConversionUnaryInterceptor`; command-path errors flow through the options handlers and `grpcerror.EnsureStatus`.

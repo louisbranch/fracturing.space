@@ -33,7 +33,7 @@ func TestApplySceneCreated(t *testing.T) {
 	ctx := context.Background()
 	sceneStore := newFakeSceneStore()
 	charStore := newFakeSceneCharacterStore()
-	applier := Applier{Scene: sceneStore, SceneCharacter: charStore}
+	applier := Applier{Scene: sceneStore, SceneCharacter: charStore, SceneInteraction: newFakeSceneInteractionStore()}
 
 	payload := scene.CreatePayload{SceneID: "sc-1", Name: "Battle", Description: "Fierce", CharacterIDs: []ids.CharacterID{"char-1", "char-2"}}
 	data, _ := json.Marshal(payload)
@@ -78,7 +78,7 @@ func TestApplySceneCreated_MissingStore(t *testing.T) {
 func TestApplySceneCreated_MissingSessionID(t *testing.T) {
 	sceneStore := newFakeSceneStore()
 	charStore := newFakeSceneCharacterStore()
-	applier := Applier{Scene: sceneStore, SceneCharacter: charStore}
+	applier := Applier{Scene: sceneStore, SceneCharacter: charStore, SceneInteraction: newFakeSceneInteractionStore()}
 
 	data, _ := json.Marshal(scene.CreatePayload{SceneID: "sc-1", Name: "X"})
 	evt := sceneEvent(scene.EventTypeCreated, "camp-1", "", "sc-1", data, sceneStamp)
@@ -92,7 +92,7 @@ func TestApplySceneCreated_SkipsEmptyCharacterIDs(t *testing.T) {
 	ctx := context.Background()
 	sceneStore := newFakeSceneStore()
 	charStore := newFakeSceneCharacterStore()
-	applier := Applier{Scene: sceneStore, SceneCharacter: charStore}
+	applier := Applier{Scene: sceneStore, SceneCharacter: charStore, SceneInteraction: newFakeSceneInteractionStore()}
 
 	payload := scene.CreatePayload{SceneID: "sc-1", Name: "X", CharacterIDs: []ids.CharacterID{"char-1", "", " "}}
 	data, _ := json.Marshal(payload)
@@ -157,7 +157,7 @@ func TestApplySceneEnded(t *testing.T) {
 		CreatedAt: sceneStamp, UpdatedAt: sceneStamp,
 	}
 	spotlightStore := newFakeSceneSpotlightStore()
-	applier := Applier{Scene: sceneStore, SceneSpotlight: spotlightStore}
+	applier := Applier{Scene: sceneStore, SceneSpotlight: spotlightStore, SceneInteraction: newFakeSceneInteractionStore()}
 
 	data, _ := json.Marshal(scene.EndPayload{SceneID: "sc-1"})
 	later := sceneStamp.Add(time.Hour)

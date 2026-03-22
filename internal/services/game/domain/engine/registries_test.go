@@ -533,42 +533,6 @@ func TestValidateSystemFoldCoverage_FailsOnMissingHandler(t *testing.T) {
 	}
 }
 
-func TestValidateSystemReadinessCheckerCoverage_PassesWhenAllModulesImplementChecker(t *testing.T) {
-	registry := module.NewRegistry()
-	if err := registry.Register(fakeModule{}); err != nil {
-		t.Fatalf("register: %v", err)
-	}
-
-	if err := ValidateSystemReadinessCheckerCoverage(registry); err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-}
-
-func TestValidateSystemReadinessCheckerCoverage_FailsWhenModuleMissingChecker(t *testing.T) {
-	registry := module.NewRegistry()
-	if err := registry.Register(&fakeModuleWithoutReadiness{id: "system-1", version: "v1"}); err != nil {
-		t.Fatalf("register: %v", err)
-	}
-
-	err := ValidateSystemReadinessCheckerCoverage(registry)
-	if err == nil {
-		t.Fatal("expected error for missing CharacterReadinessChecker")
-	}
-	if !strings.Contains(err.Error(), "system-1@v1") {
-		t.Fatalf("expected error to mention module version, got: %v", err)
-	}
-}
-
-func TestBuildRegistries_FailsWhenSystemMissingReadinessChecker(t *testing.T) {
-	_, err := BuildRegistries(noReadinessModule{})
-	if err == nil {
-		t.Fatal("expected startup error for missing CharacterReadinessChecker")
-	}
-	if !strings.Contains(err.Error(), "CharacterReadinessChecker") {
-		t.Fatalf("expected error to mention CharacterReadinessChecker, got: %v", err)
-	}
-}
-
 func TestValidateAggregateFoldDispatch_PassesWithCurrentDomains(t *testing.T) {
 	registries, err := BuildRegistries()
 	if err != nil {
@@ -659,47 +623,6 @@ func (p *fakeFolderWithFoldTypes) Fold(state any, _ event.Event) (any, error) {
 func (p *fakeFolderWithFoldTypes) FoldHandledTypes() []event.Type {
 	return p.handled
 }
-
-type fakeModuleWithoutReadiness struct {
-	id      string
-	version string
-}
-
-func (m *fakeModuleWithoutReadiness) ID() string      { return m.id }
-func (m *fakeModuleWithoutReadiness) Version() string { return m.version }
-func (m *fakeModuleWithoutReadiness) RegisterCommands(_ *command.Registry) error {
-	return nil
-}
-func (m *fakeModuleWithoutReadiness) RegisterEvents(_ *event.Registry) error { return nil }
-func (m *fakeModuleWithoutReadiness) EmittableEventTypes() []event.Type      { return nil }
-func (m *fakeModuleWithoutReadiness) Decider() module.Decider                { return nil }
-func (m *fakeModuleWithoutReadiness) Folder() module.Folder                  { return nil }
-func (m *fakeModuleWithoutReadiness) StateFactory() module.StateFactory      { return nil }
-
-type noReadinessModule struct{}
-
-func (noReadinessModule) ID() string      { return "GAME_SYSTEM_NO_READY" }
-func (noReadinessModule) Version() string { return "v1" }
-func (noReadinessModule) RegisterCommands(registry *command.Registry) error {
-	return registry.Register(command.Definition{
-		Type:  command.Type("sys.no_ready.action.test"),
-		Owner: command.OwnerSystem,
-	})
-}
-func (noReadinessModule) RegisterEvents(registry *event.Registry) error {
-	return registry.Register(event.Definition{
-		Type:            event.Type("sys.no_ready.action.tested"),
-		Owner:           event.OwnerSystem,
-		Intent:          event.IntentAuditOnly,
-		ValidatePayload: noopValidator,
-	})
-}
-func (noReadinessModule) EmittableEventTypes() []event.Type {
-	return []event.Type{event.Type("sys.no_ready.action.tested")}
-}
-func (noReadinessModule) Decider() module.Decider           { return nil }
-func (noReadinessModule) Folder() module.Folder             { return nil }
-func (noReadinessModule) StateFactory() module.StateFactory { return nil }
 
 // CommandTyper tests ---
 

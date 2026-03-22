@@ -8,6 +8,7 @@ import (
 
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -306,7 +307,7 @@ func TestProgressionAndCharacterHandlerBranches(t *testing.T) {
 	if err := a.HandleCountdownUpdated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.CountdownUpdatedPayload{
-		CountdownID: ids.CountdownID("count-1"),
+		CountdownID: dhids.CountdownID("count-1"),
 		Value:       2,
 	}); err == nil || !strings.Contains(err.Error(), "countdown read failed") {
 		t.Fatalf("HandleCountdownUpdated() get error = %v, want get error", err)
@@ -322,7 +323,7 @@ func TestProgressionAndCharacterHandlerBranches(t *testing.T) {
 	if err := a.HandleCountdownUpdated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.CountdownUpdatedPayload{
-		CountdownID: ids.CountdownID("count-1"),
+		CountdownID: dhids.CountdownID("count-1"),
 		Value:       5,
 	}); err == nil {
 		t.Fatal("HandleCountdownUpdated() error = nil, want validation error")

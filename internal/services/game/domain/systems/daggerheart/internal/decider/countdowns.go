@@ -7,9 +7,9 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -176,7 +176,7 @@ func countdownUpdateSnapshotRejection(snapshot daggerheartstate.SnapshotState, p
 	return nil
 }
 
-func snapshotCountdownState(snapshot daggerheartstate.SnapshotState, countdownID ids.CountdownID) (daggerheartstate.CountdownState, bool) {
+func snapshotCountdownState(snapshot daggerheartstate.SnapshotState, countdownID dhids.CountdownID) (daggerheartstate.CountdownState, bool) {
 	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
 		return daggerheartstate.CountdownState{}, false

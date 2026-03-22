@@ -11,7 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -49,7 +49,7 @@ func (h *Handler) DeleteCountdown(ctx context.Context, in *pb.DaggerheartDeleteC
 	}
 
 	payloadJSON, err := json.Marshal(daggerheartpayload.CountdownDeletePayload{
-		CountdownID: ids.CountdownID(countdownID),
+		CountdownID: dhids.CountdownID(countdownID),
 		Reason:      strings.TrimSpace(in.GetReason()),
 	})
 	if err != nil {

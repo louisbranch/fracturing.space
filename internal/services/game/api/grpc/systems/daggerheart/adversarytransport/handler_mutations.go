@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -83,7 +84,7 @@ func (h *Handler) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateA
 		return nil, grpcerror.Internal("generate adversary id", err)
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryCreatePayload{
-		AdversaryID:      ids.AdversaryID(adversaryID),
+		AdversaryID:      dhids.AdversaryID(adversaryID),
 		AdversaryEntryID: adversaryEntryID,
 		Name:             entry.Name,
 		Kind:             entry.Role,
@@ -181,7 +182,7 @@ func (h *Handler) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateA
 	sessionID := current.SessionID
 
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryUpdatePayload{
-		AdversaryID:       ids.AdversaryID(adversaryID),
+		AdversaryID:       dhids.AdversaryID(adversaryID),
 		AdversaryEntryID:  current.AdversaryEntryID,
 		Name:              current.Name,
 		Kind:              current.Kind,
@@ -268,7 +269,7 @@ func (h *Handler) DeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteA
 		}
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryDeletePayload{
-		AdversaryID: ids.AdversaryID(adversaryID),
+		AdversaryID: dhids.AdversaryID(adversaryID),
 		Reason:      strings.TrimSpace(in.GetReason()),
 	})
 	if err != nil {
@@ -372,11 +373,11 @@ func (h *Handler) ApplyAdversaryFeature(ctx context.Context, in *pb.DaggerheartA
 		FocusedTargetID: strings.TrimSpace(in.GetTargetCharacterId()),
 	})
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryFeatureApplyPayload{
-		ActorAdversaryID:        ids.AdversaryID(adversaryID),
-		AdversaryID:             ids.AdversaryID(adversaryID),
+		ActorAdversaryID:        dhids.AdversaryID(adversaryID),
+		AdversaryID:             dhids.AdversaryID(adversaryID),
 		FeatureID:               featureID,
 		TargetCharacterID:       ids.CharacterID(strings.TrimSpace(in.GetTargetCharacterId())),
-		TargetAdversaryID:       ids.AdversaryID(strings.TrimSpace(in.GetTargetAdversaryId())),
+		TargetAdversaryID:       dhids.AdversaryID(strings.TrimSpace(in.GetTargetAdversaryId())),
 		StressBefore:            intPtr(adversary.Stress),
 		StressAfter:             intPtr(nextStress),
 		FeatureStatesBefore:     toBridgeAdversaryFeatureStates(adversary.FeatureStates),

@@ -133,10 +133,11 @@ func TestEndSession_Success(t *testing.T) {
 
 	svc := newTestSessionService(
 		Deps{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
+			Campaign:           campaignStore,
+			Session:            sessionStore,
+			Participant:        participantStore,
+			SessionInteraction: gametest.NewFakeSessionInteractionStore(),
+			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		gametest.FixedIDGenerator("session-123"),
@@ -188,10 +189,11 @@ func TestEndSession_UsesDomainEngine(t *testing.T) {
 
 	svc := newTestSessionService(
 		Deps{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
+			Campaign:           campaignStore,
+			Session:            sessionStore,
+			Participant:        participantStore,
+			SessionInteraction: gametest.NewFakeSessionInteractionStore(),
+			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		gametest.FixedClock(now),
 		nil,

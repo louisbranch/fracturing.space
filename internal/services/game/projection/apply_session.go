@@ -32,9 +32,6 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event, paylo
 	}); err != nil {
 		return err
 	}
-	if a.SessionInteraction == nil {
-		return nil
-	}
 	return a.SessionInteraction.PutSessionInteraction(ctx, storage.SessionInteraction{
 		CampaignID:                  string(evt.CampaignID),
 		SessionID:                   sessionID,
@@ -58,9 +55,6 @@ func (a Applier) applySessionEnded(ctx context.Context, evt event.Event, payload
 	_, _, err = a.Session.EndSession(ctx, string(evt.CampaignID), sessionID, endedAt)
 	if err != nil {
 		return err
-	}
-	if a.SessionInteraction == nil {
-		return nil
 	}
 	return a.SessionInteraction.PutSessionInteraction(ctx, storage.SessionInteraction{
 		CampaignID:                  string(evt.CampaignID),

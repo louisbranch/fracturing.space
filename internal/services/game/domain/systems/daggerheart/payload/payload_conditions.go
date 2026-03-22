@@ -2,6 +2,7 @@ package payload
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
@@ -32,7 +33,7 @@ type ConditionChangedPayload struct {
 
 // AdversaryConditionChangePayload captures the payload for sys.daggerheart.adversary_condition.change commands.
 type AdversaryConditionChangePayload struct {
-	AdversaryID      ids.AdversaryID        `json:"adversary_id"`
+	AdversaryID      dhids.AdversaryID      `json:"adversary_id"`
 	ConditionsBefore []rules.ConditionState `json:"conditions_before,omitempty"`
 	ConditionsAfter  []rules.ConditionState `json:"conditions_after"`
 	Added            []rules.ConditionState `json:"added,omitempty"`
@@ -43,7 +44,7 @@ type AdversaryConditionChangePayload struct {
 
 // AdversaryConditionChangedPayload captures the payload for sys.daggerheart.adversary_condition_changed events.
 type AdversaryConditionChangedPayload struct {
-	AdversaryID ids.AdversaryID        `json:"adversary_id"`
+	AdversaryID dhids.AdversaryID      `json:"adversary_id"`
 	Conditions  []rules.ConditionState `json:"conditions_after"`
 	Added       []rules.ConditionState `json:"added,omitempty"`
 	Removed     []rules.ConditionState `json:"removed,omitempty"`

@@ -50,7 +50,7 @@ func TestApplyCampaignUpdated_StatusAndName(t *testing.T) {
 func TestApplySessionStarted_UsesEntityID(t *testing.T) {
 	ctx := context.Background()
 	sessionStore := &fakeSessionStore{}
-	applier := Applier{Session: sessionStore}
+	applier := Applier{Session: sessionStore, SessionInteraction: newFakeSessionInteractionStore()}
 
 	payload := testevent.SessionStartedPayload{SessionID: "", SessionName: "Session 1"}
 	data, _ := json.Marshal(payload)
@@ -71,7 +71,7 @@ func TestApplySessionStarted_UsesEntityID(t *testing.T) {
 func TestApplySessionEnded(t *testing.T) {
 	ctx := context.Background()
 	sessionStore := &fakeSessionStore{}
-	applier := Applier{Session: sessionStore}
+	applier := Applier{Session: sessionStore, SessionInteraction: newFakeSessionInteractionStore()}
 
 	payload := testevent.SessionEndedPayload{SessionID: "sess-1"}
 	data, _ := json.Marshal(payload)
@@ -96,7 +96,7 @@ func TestApplySessionEnded_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionEndedPayload{SessionID: "sess-1"})
 	evt := testevent.Event{CampaignID: "", Type: testevent.TypeSessionEnded, PayloadJSON: data}
-	applier := Applier{Session: &fakeSessionStore{}}
+	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
 	}
@@ -475,7 +475,7 @@ func TestApplySessionStarted_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionStartedPayload{SessionID: "sess-1"})
 	evt := testevent.Event{CampaignID: "", Type: testevent.TypeSessionStarted, PayloadJSON: data}
-	applier := Applier{Session: &fakeSessionStore{}}
+	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
 	}
@@ -494,7 +494,7 @@ func TestApplySessionStarted_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionStartedPayload{SessionID: ""})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeSessionStarted, PayloadJSON: data}
-	applier := Applier{Session: &fakeSessionStore{}}
+	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
 	}
@@ -505,7 +505,7 @@ func TestApplySessionStarted_MissingSessionID(t *testing.T) {
 func TestApplySessionEnded_EntityIDFallback(t *testing.T) {
 	ctx := context.Background()
 	sessionStore := &fakeSessionStore{}
-	applier := Applier{Session: sessionStore}
+	applier := Applier{Session: sessionStore, SessionInteraction: newFakeSessionInteractionStore()}
 
 	payload := testevent.SessionEndedPayload{SessionID: ""}
 	data, _ := json.Marshal(payload)
@@ -520,7 +520,7 @@ func TestApplySessionEnded_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionEndedPayload{SessionID: ""})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeSessionEnded, PayloadJSON: data}
-	applier := Applier{Session: &fakeSessionStore{}}
+	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
 	}
@@ -539,7 +539,7 @@ func TestApplyCampaignForked_InvalidJSON(t *testing.T) {
 // --- marshalResolutionPayload missing branches ---
 
 func TestApplySessionStarted_InvalidJSON(t *testing.T) {
-	applier := Applier{Session: &fakeSessionStore{}}
+	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeSessionStarted, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
@@ -549,7 +549,7 @@ func TestApplySessionStarted_InvalidJSON(t *testing.T) {
 // --- applySessionEnded missing branches ---
 
 func TestApplySessionEnded_InvalidJSON(t *testing.T) {
-	applier := Applier{Session: &fakeSessionStore{}}
+	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeSessionEnded, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")

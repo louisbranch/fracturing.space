@@ -8,7 +8,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/outcometransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workfloweffects"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 )
 
@@ -31,29 +30,14 @@ func (s *DaggerheartService) ApplyReactionOutcome(ctx context.Context, in *pb.Da
 func (s *DaggerheartService) outcomeHandler() *outcometransport.Handler {
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	return outcometransport.NewHandler(outcometransport.Dependencies{
-		Campaign:         s.stores.Campaign,
-		Session:          s.stores.Session,
-		SessionGate:      s.stores.SessionGate,
-		SessionSpotlight: s.stores.SessionSpotlight,
-		Daggerheart:      s.stores.Daggerheart,
-		Content:          s.stores.Content,
-		Event:            s.stores.Event,
-		ExecuteSystemCommand: func(ctx context.Context, in outcometransport.SystemCommandInput) error {
-			return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
-				CampaignID:      in.CampaignID,
-				CommandType:     in.CommandType,
-				SessionID:       in.SessionID,
-				SceneID:         in.SceneID,
-				RequestID:       in.RequestID,
-				InvocationID:    in.InvocationID,
-				CorrelationID:   in.CorrelationID,
-				EntityType:      in.EntityType,
-				EntityID:        in.EntityID,
-				PayloadJSON:     in.PayloadJSON,
-				MissingEventMsg: in.MissingEventMsg,
-				ApplyErrMessage: in.ApplyErrMessage,
-			})
-		},
+		Campaign:             s.stores.Campaign,
+		Session:              s.stores.Session,
+		SessionGate:          s.stores.SessionGate,
+		SessionSpotlight:     s.stores.SessionSpotlight,
+		Daggerheart:          s.stores.Daggerheart,
+		Content:              s.stores.Content,
+		Event:                s.stores.Event,
+		ExecuteSystemCommand: runtime.ExecuteSystemCommand,
 		ExecuteCoreCommand: func(ctx context.Context, in outcometransport.CoreCommandInput) error {
 			applier, err := s.resolvedApplier()
 			if err != nil {

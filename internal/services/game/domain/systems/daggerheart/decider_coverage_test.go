@@ -3,20 +3,20 @@ package daggerheart
 import (
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
 	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
 
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 func TestSnapshotEnvironmentEntityState_Branches(t *testing.T) {
 	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		EnvironmentStates: map[ids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState{
+		EnvironmentStates: map[dhids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState{
 			"ee-1": {
 				EnvironmentID: "env-1",
 				Name:          "Trap",
@@ -64,7 +64,7 @@ func TestSnapshotEnvironmentEntityState_Branches(t *testing.T) {
 func TestIsEnvironmentEntityCreateNoMutation_Branches(t *testing.T) {
 	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		EnvironmentStates: map[ids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState{
+		EnvironmentStates: map[dhids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState{
 			"ee-1": {
 				EnvironmentID: "env-1",
 				Name:          "Trap",
@@ -111,7 +111,7 @@ func TestIsAdversaryFeatureApplyNoMutation_Branches(t *testing.T) {
 	xp := &rules.AdversaryPendingExperience{Name: "xp", Modifier: 10}
 	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				FeatureStates:     []rules.AdversaryFeatureState{{FeatureID: "f1", Status: "active"}},
 				PendingExperience: xp,
@@ -184,7 +184,7 @@ func TestCompanionStatePtrValue(t *testing.T) {
 func TestSnapshotAdversaryState_Branches(t *testing.T) {
 	snapshot := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {Name: "Goblin"},
 		},
 	}

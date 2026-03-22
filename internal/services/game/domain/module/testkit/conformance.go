@@ -25,6 +25,7 @@ import (
 //   - every emittable event with projection intent has an adapter handler
 //   - no fold or adapter handler is orphaned from emittable types
 //   - the state factory is deterministic
+//   - the state factory output is type-compatible with the fold router
 func ValidateSystemConformance(t *testing.T, mod module.Module, adapter bridge.Adapter) {
 	t.Helper()
 
@@ -62,6 +63,9 @@ func ValidateSystemConformance(t *testing.T, mod module.Module, adapter bridge.A
 	}
 	if err := engine.ValidateStateFactoryDeterminism(modules); err != nil {
 		t.Errorf("state factory determinism: %v", err)
+	}
+	if err := engine.ValidateStateFactoryFoldCompatibility(modules); err != nil {
+		t.Errorf("state factory fold compatibility: %v", err)
 	}
 
 	// G3: Fold idempotency — folding the same event into fresh state twice

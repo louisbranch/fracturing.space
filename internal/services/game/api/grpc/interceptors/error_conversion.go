@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
@@ -11,8 +12,9 @@ import (
 // ErrorConversionUnaryInterceptor normalizes handler errors at the transport
 // boundary so individual handlers never need to convert domain errors to gRPC
 // status. Errors that are already gRPC status pass through unchanged; domain
-// errors are mapped through the structured error system; anything else becomes
-// codes.Internal with a generic message.
+// errors are mapped through the structured error system using the caller's
+// locale from request metadata; anything else becomes codes.Internal with a
+// generic message.
 func ErrorConversionUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
@@ -22,7 +24,7 @@ func ErrorConversionUnaryInterceptor() grpc.UnaryServerInterceptor {
 		if _, ok := status.FromError(err); ok {
 			return resp, err
 		}
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorLocale(err, grpcmeta.LocaleFromContext(ctx))
 	}
 }
 
@@ -37,6 +39,10 @@ func ErrorConversionStreamInterceptor() grpc.StreamServerInterceptor {
 		if _, ok := status.FromError(err); ok {
 			return err
 		}
-		return grpcerror.HandleDomainError(err)
+		var locale string
+		if stream != nil {
+			locale = grpcmeta.LocaleFromContext(stream.Context())
+		}
+		return grpcerror.HandleDomainErrorLocale(err, locale)
 	}
 }

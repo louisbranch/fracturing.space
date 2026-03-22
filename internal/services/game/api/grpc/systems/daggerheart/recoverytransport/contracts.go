@@ -4,7 +4,7 @@ import (
 	"context"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -28,21 +28,9 @@ type DaggerheartStore interface {
 	GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
 }
 
-// SystemCommandInput describes one Daggerheart system command emitted by the
-// recovery transport slice.
-type SystemCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+// SystemCommandInput is an alias for the shared workflow runtime type, kept for
+// local readability inside the recovery transport slice.
+type SystemCommandInput = workflowruntime.SystemCommandInput
 
 // StressConditionInput describes one stress/vulnerable repair callback request.
 type StressConditionInput struct {

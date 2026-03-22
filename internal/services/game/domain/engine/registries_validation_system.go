@@ -35,32 +35,6 @@ func validateEmittableEventTypes(mod module.Module, events *event.Registry) erro
 	return nil
 }
 
-// ValidateSystemReadinessCheckerCoverage verifies that every registered system
-// module participates in session-start readiness by implementing
-// module.CharacterReadinessChecker.
-func ValidateSystemReadinessCheckerCoverage(modules *module.Registry) error {
-	if modules == nil {
-		return fmt.Errorf("module registry is required")
-	}
-
-	missing := make([]string, 0)
-	for _, mod := range modules.List() {
-		if _, ok := mod.(module.CharacterReadinessChecker); ok {
-			continue
-		}
-		missing = append(missing, fmt.Sprintf("%s@%s", mod.ID(), mod.Version()))
-	}
-	if len(missing) == 0 {
-		return nil
-	}
-
-	sort.Strings(missing)
-	return fmt.Errorf(
-		"system modules missing CharacterReadinessChecker: %s",
-		strings.Join(missing, ", "),
-	)
-}
-
 // ValidateSystemFoldCoverage verifies that every system module's emittable
 // event types with IntentProjectionAndReplay or IntentReplayOnly are handled
 // by the module's folder. This is the system-event counterpart of
@@ -261,6 +235,56 @@ func ValidateStateFactoryDeterminism(modules *module.Registry) error {
 		}
 		if !reflect.DeepEqual(firstChar, secondChar) {
 			return fmt.Errorf("state factory determinism check failed for %s: NewCharacterState returned different results", label)
+		}
+	}
+	return nil
+}
+
+// ValidateStateFactoryFoldCompatibility verifies that each module's
+// StateFactory produces state whose type is accepted by the module's Folder.
+// Because StateFactory returns `any` and Folder.Fold takes `any`, a module
+// author can wire a FooState factory with a FoldRouter[*BarState] and only
+// discover the mismatch at runtime when the first event folds. This validator
+// catches that class of error at startup by feeding factory output into the
+// fold and distinguishing a type-assertion error (incompatible) from an
+// unhandled-event-type error (expected, since the probe event is synthetic).
+func ValidateStateFactoryFoldCompatibility(modules *module.Registry) error {
+	if modules == nil {
+		return fmt.Errorf("module registry is required for state factory fold compatibility check")
+	}
+
+	const testCampaignID = "fold-compat-check"
+	probeEvent := event.Event{Type: "nonexistent-validation-check"}
+
+	for _, mod := range modules.List() {
+		factory := mod.StateFactory()
+		if factory == nil {
+			continue
+		}
+		folder := mod.Folder()
+		if folder == nil {
+			continue
+		}
+		label := mod.ID() + "@" + mod.Version()
+
+		state, err := factory.NewSnapshotState(testCampaignID)
+		if err != nil {
+			return fmt.Errorf("state factory %s NewSnapshotState error: %w", label, err)
+		}
+
+		_, foldErr := folder.Fold(state, probeEvent)
+		if foldErr == nil {
+			// An unknown event type should always error — a nil error is
+			// unexpected but not a compatibility failure.
+			continue
+		}
+
+		// The fold router returns "unhandled fold event type" when the type
+		// assertion succeeded but no handler matched the synthetic event
+		// type. Any other error indicates the state type is incompatible.
+		if !strings.Contains(foldErr.Error(), "unhandled fold event type") {
+			return fmt.Errorf("state factory / fold type mismatch for %s: factory produces %T but folder rejects it: %v",
+				label, state, foldErr)
 		}
 	}
 	return nil

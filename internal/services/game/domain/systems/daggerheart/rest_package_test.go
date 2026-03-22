@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -181,7 +182,7 @@ func TestResolveRestPackage_LongRestMovesAndProjectAdvance(t *testing.T) {
 				},
 			},
 		},
-		AvailableCountdowns: map[ids.CountdownID]rules.Countdown{
+		AvailableCountdowns: map[dhids.CountdownID]rules.Countdown{
 			"cd-1": {
 				ID:        "cd-1",
 				Name:      "Map the Hidden Pass",
@@ -231,7 +232,7 @@ func TestResolveRestPackage_LongRestMovesAndProjectAdvance(t *testing.T) {
 func TestResolveRestPackage_WorkOnProjectValidation(t *testing.T) {
 	t.Parallel()
 
-	countdowns := map[ids.CountdownID]rules.Countdown{
+	countdowns := map[dhids.CountdownID]rules.Countdown{
 		"cd-1": {
 			ID:        "cd-1",
 			Name:      "Map the Hidden Pass",

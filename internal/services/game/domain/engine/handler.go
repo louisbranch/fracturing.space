@@ -169,6 +169,8 @@ type Result struct {
 	State    any
 }
 
+// Execute validates, gates, loads state, decides, persists, and folds a single
+// domain command through the full engine pipeline.
 func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, error) {
 	validated, state, decision, err := h.prepareExecution(ctx, cmd)
 	if err != nil {
@@ -282,7 +284,7 @@ func (h Handler) validateCommand(cmd command.Command) (command.Command, error) {
 }
 
 func (h Handler) evaluateSessionGate(ctx context.Context, cmd command.Command) (command.Decision, bool, error) {
-	return h.evaluateGate(ctx, cmd, command.GateScopeSession, func() (command.Decision, error) {
+	return h.evaluateGate(cmd, command.GateScopeSession, func() (command.Decision, error) {
 		if h.GateStateLoader == nil {
 			return command.Decision{}, ErrGateStateLoaderRequired
 		}
@@ -295,7 +297,7 @@ func (h Handler) evaluateSessionGate(ctx context.Context, cmd command.Command) (
 }
 
 func (h Handler) evaluateSceneGate(ctx context.Context, cmd command.Command) (command.Decision, bool, error) {
-	return h.evaluateGate(ctx, cmd, command.GateScopeScene, func() (command.Decision, error) {
+	return h.evaluateGate(cmd, command.GateScopeScene, func() (command.Decision, error) {
 		if cmd.SceneID == "" {
 			return command.Decision{}, ErrSceneIDRequired
 		}
@@ -312,7 +314,7 @@ func (h Handler) evaluateSceneGate(ctx context.Context, cmd command.Command) (co
 
 // evaluateGate is a shared gate evaluation flow: check scope applicability,
 // delegate to loader+checker, and short-circuit on rejections.
-func (h Handler) evaluateGate(_ context.Context, cmd command.Command, scope command.GateScope, check func() (command.Decision, error)) (command.Decision, bool, error) {
+func (h Handler) evaluateGate(cmd command.Command, scope command.GateScope, check func() (command.Decision, error)) (command.Decision, bool, error) {
 	def, ok := h.Commands.Definition(cmd.Type)
 	if !ok || def.Gate.Scope != scope {
 		return command.Decision{}, false, nil

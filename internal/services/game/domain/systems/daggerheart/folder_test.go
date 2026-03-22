@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartfolder "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/folder"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
@@ -203,7 +204,7 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 	projector := NewFolder()
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",

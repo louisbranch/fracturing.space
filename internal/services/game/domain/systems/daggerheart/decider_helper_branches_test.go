@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
 	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
@@ -139,7 +140,7 @@ func TestSnapshotCharacterState_DefaultsLifeStateAndCampaignID(t *testing.T) {
 
 func TestIsCountdownUpdateNoMutation_LoopedBranch(t *testing.T) {
 	snapshot := daggerheartstate.SnapshotState{
-		CountdownStates: map[ids.CountdownID]daggerheartstate.CountdownState{
+		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Looping: false},
 		},
 	}
@@ -153,7 +154,7 @@ func TestIsCountdownUpdateNoMutation_LoopedBranch(t *testing.T) {
 }
 
 func TestSnapshotCountdownState_BlankIDReturnsFalse(t *testing.T) {
-	if _, ok := daggerheartdecider.SnapshotCountdownState(daggerheartstate.SnapshotState{}, ids.CountdownID("  ")); ok {
+	if _, ok := daggerheartdecider.SnapshotCountdownState(daggerheartstate.SnapshotState{}, dhids.CountdownID("  ")); ok {
 		t.Fatal("expected blank countdown id to return false")
 	}
 }

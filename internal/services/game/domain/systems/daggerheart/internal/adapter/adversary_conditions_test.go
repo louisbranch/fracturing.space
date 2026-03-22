@@ -10,6 +10,7 @@ import (
 
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -28,7 +29,7 @@ func TestAdversaryHandlersPersistProjectionState(t *testing.T) {
 		CampaignID: ids.CampaignID("camp-1"),
 		Timestamp:  createdAt,
 	}, payload.AdversaryCreatedPayload{
-		AdversaryID:      ids.AdversaryID(" adv-1 "),
+		AdversaryID:      dhids.AdversaryID(" adv-1 "),
 		AdversaryEntryID: " adversary.goblin ",
 		Name:             " Goblin Cutter ",
 		Kind:             " minion ",
@@ -89,7 +90,7 @@ func TestAdversaryHandlersPersistProjectionState(t *testing.T) {
 		CampaignID: ids.CampaignID("camp-1"),
 		Timestamp:  updatedAt,
 	}, payload.AdversaryUpdatedPayload{
-		AdversaryID:      ids.AdversaryID(" adv-1 "),
+		AdversaryID:      dhids.AdversaryID(" adv-1 "),
 		AdversaryEntryID: " adversary.hobgoblin ",
 		Name:             " Hobgoblin Captain ",
 		Kind:             " elite ",
@@ -135,7 +136,7 @@ func TestAdversaryHandlersPersistProjectionState(t *testing.T) {
 		CampaignID: ids.CampaignID("camp-1"),
 		Timestamp:  damageAt,
 	}, payload.AdversaryDamageAppliedPayload{
-		AdversaryID: ids.AdversaryID(" adv-1 "),
+		AdversaryID: dhids.AdversaryID(" adv-1 "),
 		Hp:          &hpAfter,
 		Armor:       &armorAfter,
 	}); err != nil {
@@ -149,7 +150,7 @@ func TestAdversaryHandlersPersistProjectionState(t *testing.T) {
 	if err := a.HandleAdversaryDeleted(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryDeletedPayload{
-		AdversaryID: ids.AdversaryID(" adv-1 "),
+		AdversaryID: dhids.AdversaryID(" adv-1 "),
 	}); err != nil {
 		t.Fatalf("HandleAdversaryDeleted() returned error: %v", err)
 	}
@@ -171,7 +172,7 @@ func TestAdversaryHandlersValidateAndWrapStoreErrors(t *testing.T) {
 	if err := a.HandleAdversaryCreated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryCreatedPayload{
-		AdversaryID: ids.AdversaryID("adv-1"),
+		AdversaryID: dhids.AdversaryID("adv-1"),
 		HP:          1,
 		HPMax:       0,
 	}); err == nil || !strings.Contains(err.Error(), "hp_max must be positive") {
@@ -181,7 +182,7 @@ func TestAdversaryHandlersValidateAndWrapStoreErrors(t *testing.T) {
 	if err := a.HandleAdversaryUpdated(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryUpdatedPayload{
-		AdversaryID: ids.AdversaryID("missing"),
+		AdversaryID: dhids.AdversaryID("missing"),
 		HP:          1,
 		HPMax:       1,
 	}); !errors.Is(err, storage.ErrNotFound) {
@@ -202,7 +203,7 @@ func TestAdversaryHandlersValidateAndWrapStoreErrors(t *testing.T) {
 	if err := a.HandleAdversaryDamageApplied(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryDamageAppliedPayload{
-		AdversaryID: ids.AdversaryID("adv-1"),
+		AdversaryID: dhids.AdversaryID("adv-1"),
 		Hp:          &hpTooHigh,
 	}); err == nil || !strings.Contains(err.Error(), "hp must be in range 0..4") {
 		t.Fatalf("HandleAdversaryDamageApplied() error = %v, want hp bounds error", err)
@@ -224,7 +225,7 @@ func TestAdversaryHandlersValidateAndWrapStoreErrors(t *testing.T) {
 	if err := a.HandleAdversaryDeleted(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryDeletedPayload{
-		AdversaryID: ids.AdversaryID("adv-1"),
+		AdversaryID: dhids.AdversaryID("adv-1"),
 	}); err == nil || !strings.Contains(err.Error(), "delete failed") {
 		t.Fatalf("HandleAdversaryDeleted() error = %v, want delete error", err)
 	}
@@ -269,7 +270,7 @@ func TestConditionHandlersNormalizeAndPersistConditions(t *testing.T) {
 	if err := a.HandleAdversaryConditionChanged(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryConditionChangedPayload{
-		AdversaryID: ids.AdversaryID("adv-1"),
+		AdversaryID: dhids.AdversaryID("adv-1"),
 		Conditions:  []rules.ConditionState{vulnerable, hidden, hidden},
 		RollSeq:     uint64Ptr(3),
 	}); err != nil {
@@ -301,7 +302,7 @@ func TestConditionHandlersNormalizeAndPersistConditions(t *testing.T) {
 	if err := a.HandleAdversaryConditionChanged(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryConditionChangedPayload{
-		AdversaryID: ids.AdversaryID("adv-1"),
+		AdversaryID: dhids.AdversaryID("adv-1"),
 		RollSeq:     uint64Ptr(0),
 	}); err == nil || !strings.Contains(err.Error(), "adversary_condition_changed roll_seq must be positive") {
 		t.Fatalf("HandleAdversaryConditionChanged() zero roll_seq error = %v, want validation error", err)
@@ -310,7 +311,7 @@ func TestConditionHandlersNormalizeAndPersistConditions(t *testing.T) {
 	if err := a.HandleAdversaryConditionChanged(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
 	}, payload.AdversaryConditionChangedPayload{
-		AdversaryID: ids.AdversaryID("adv-1"),
+		AdversaryID: dhids.AdversaryID("adv-1"),
 		Conditions:  []rules.ConditionState{invalid},
 	}); err == nil || !strings.Contains(err.Error(), "adversary_condition_changed conditions_after") {
 		t.Fatalf("HandleAdversaryConditionChanged() invalid conditions error = %v, want wrapped normalization error", err)

@@ -2,6 +2,7 @@ package payload
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
@@ -9,7 +10,7 @@ import (
 
 // AdversaryCreatePayload captures the payload for sys.daggerheart.adversary.create commands.
 type AdversaryCreatePayload struct {
-	AdversaryID       ids.AdversaryID                   `json:"adversary_id"`
+	AdversaryID       dhids.AdversaryID                 `json:"adversary_id"`
 	AdversaryEntryID  string                            `json:"adversary_entry_id"`
 	Name              string                            `json:"name"`
 	Kind              string                            `json:"kind,omitempty"`
@@ -35,7 +36,7 @@ type AdversaryCreatedPayload = AdversaryCreatePayload
 
 // AdversaryUpdatePayload captures the payload for sys.daggerheart.adversary.update commands.
 type AdversaryUpdatePayload struct {
-	AdversaryID       ids.AdversaryID                   `json:"adversary_id"`
+	AdversaryID       dhids.AdversaryID                 `json:"adversary_id"`
 	AdversaryEntryID  string                            `json:"adversary_entry_id"`
 	Name              string                            `json:"name"`
 	Kind              string                            `json:"kind,omitempty"`
@@ -59,11 +60,11 @@ type AdversaryUpdatePayload struct {
 // AdversaryFeatureApplyPayload captures one supported adversary feature state
 // mutation and the resulting adversary projection update.
 type AdversaryFeatureApplyPayload struct {
-	ActorAdversaryID        ids.AdversaryID                   `json:"actor_adversary_id"`
-	AdversaryID             ids.AdversaryID                   `json:"adversary_id"`
+	ActorAdversaryID        dhids.AdversaryID                 `json:"actor_adversary_id"`
+	AdversaryID             dhids.AdversaryID                 `json:"adversary_id"`
 	FeatureID               string                            `json:"feature_id"`
 	TargetCharacterID       ids.CharacterID                   `json:"target_character_id,omitempty"`
-	TargetAdversaryID       ids.AdversaryID                   `json:"target_adversary_id,omitempty"`
+	TargetAdversaryID       dhids.AdversaryID                 `json:"target_adversary_id,omitempty"`
 	StressBefore            *int                              `json:"stress_before,omitempty"`
 	StressAfter             *int                              `json:"stress_after,omitempty"`
 	FeatureStatesBefore     []rules.AdversaryFeatureState     `json:"feature_states_before,omitempty"`
@@ -77,8 +78,8 @@ type AdversaryUpdatedPayload = AdversaryUpdatePayload
 
 // AdversaryDeletePayload captures the payload for sys.daggerheart.adversary.delete commands.
 type AdversaryDeletePayload struct {
-	AdversaryID ids.AdversaryID `json:"adversary_id"`
-	Reason      string          `json:"reason,omitempty"`
+	AdversaryID dhids.AdversaryID `json:"adversary_id"`
+	Reason      string            `json:"reason,omitempty"`
 }
 
 // AdversaryDeletedPayload captures the payload for sys.daggerheart.adversary_deleted events.

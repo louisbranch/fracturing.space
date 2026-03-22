@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -135,7 +136,7 @@ func (s *DaggerheartService) executeSessionFlowCharacterStatePatch(ctx context.C
 
 func (s *DaggerheartService) executeSessionFlowAdversaryUpdate(ctx context.Context, in sessionflowtransport.AdversaryUpdateInput) error {
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryUpdatePayload{
-		AdversaryID:      ids.AdversaryID(in.Adversary.AdversaryID),
+		AdversaryID:      dhids.AdversaryID(in.Adversary.AdversaryID),
 		AdversaryEntryID: in.Adversary.AdversaryEntryID,
 		Name:             in.Adversary.Name,
 		Kind:             in.Adversary.Kind,

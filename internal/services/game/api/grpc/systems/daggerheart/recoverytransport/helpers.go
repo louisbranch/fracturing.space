@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -138,7 +139,7 @@ func downtimeSelectionFromProto(
 	case *pb.DaggerheartDowntimeSelection_WorkOnProject:
 		return daggerheart.DowntimeSelection{
 			Move:                daggerheart.DowntimeMoveWorkOnProject,
-			CountdownID:         ids.CountdownID(strings.TrimSpace(move.WorkOnProject.GetCountdownId())),
+			CountdownID:         dhids.CountdownID(strings.TrimSpace(move.WorkOnProject.GetCountdownId())),
 			ProjectAdvanceMode:  projectAdvanceModeFromProto(move.WorkOnProject.GetAdvanceMode()),
 			ProjectAdvanceDelta: int(move.WorkOnProject.GetAdvanceDelta()),
 			ProjectReason:       strings.TrimSpace(move.WorkOnProject.GetReason()),
