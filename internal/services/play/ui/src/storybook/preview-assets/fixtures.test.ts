@@ -5,6 +5,7 @@ import {
   campaignCoverPreviewAssets,
   characterAvatarPreviewAssets,
   participantAvatarPreviewAssets,
+  portraitSheetPreviewAssets,
 } from "./fixtures";
 
 type AssetSetJSON = {
@@ -18,6 +19,8 @@ type AvatarCatalogJSON = {
   };
   sheets: Array<{
     set_id: string;
+    width_px: number;
+    height_px: number;
     portraits: Array<{
       slot: number;
       x: number;
@@ -36,11 +39,12 @@ const avatarCatalog = avatarsCatalogJSON as AvatarCatalogJSON;
 const campaignCoverCatalog = campaignCoverCatalogJSON as CampaignCoverCatalogJSON;
 
 describe("preview asset fixtures", () => {
-  it("preserves the checked-in people avatar order for participant and character previews", () => {
+  it("preserves the checked-in people avatar order for avatar-based preview arrays", () => {
     const expectedAssetIDs = assetIDsForSet(avatarCatalog.manifest.sets, "avatar_set_v1");
 
     expect(participantAvatarPreviewAssets.map((asset) => asset.assetId)).toEqual(expectedAssetIDs);
     expect(characterAvatarPreviewAssets.map((asset) => asset.assetId)).toEqual(expectedAssetIDs);
+    expect(portraitSheetPreviewAssets.map((asset) => asset.assetId)).toEqual(expectedAssetIDs);
   });
 
   it("preserves the checked-in campaign cover order", () => {
@@ -52,12 +56,14 @@ describe("preview asset fixtures", () => {
   it("excludes blank-avatar assets from the main preview arrays", () => {
     expect(participantAvatarPreviewAssets.every((asset) => !asset.assetId.startsWith("blank_"))).toBe(true);
     expect(characterAvatarPreviewAssets.every((asset) => !asset.assetId.startsWith("blank_"))).toBe(true);
+    expect(portraitSheetPreviewAssets.every((asset) => !asset.assetId.startsWith("blank_"))).toBe(true);
   });
 
   it("resolves cloudinary delivery URLs for every preview asset", () => {
     const allAssets = [
       ...participantAvatarPreviewAssets,
       ...characterAvatarPreviewAssets,
+      ...portraitSheetPreviewAssets,
       ...campaignCoverPreviewAssets,
     ];
 
@@ -91,18 +97,34 @@ describe("preview asset fixtures", () => {
     expect(firstSixSlots).toEqual([2, 4, 3, 4, 3, 2]);
     expect(characterAvatarPreviewAssets.every((asset) => [2, 3, 4].includes(asset.crop.slot))).toBe(true);
   });
+
+  it("keeps portrait-sheet previews uncropped at the avatar-sheet dimensions", () => {
+    const sheet = requiredAvatarSheet();
+
+    expect(portraitSheetPreviewAssets[0]?.imageUrl).not.toContain("c_crop,w_");
+    expect(portraitSheetPreviewAssets.every((asset) => asset.widthPx === sheet.width_px)).toBe(true);
+    expect(portraitSheetPreviewAssets.every((asset) => asset.heightPx === sheet.height_px)).toBe(true);
+    expect(portraitSheetPreviewAssets[0]).toMatchObject({
+      widthPx: sheet.width_px,
+      heightPx: sheet.height_px,
+    });
+  });
 });
 
 function assetIDsForSet(sets: AssetSetJSON[], setId: string): string[] {
   const assetSet = sets.find((entry) => entry.id === setId);
   expect(assetSet).toBeDefined();
-  return [...(assetSet?.asset_ids ?? [])];
+  return [...(assetSet?.asset_ids ?? [])].filter((assetId) => !assetId.startsWith("blank_"));
+}
+
+function requiredAvatarSheet() {
+  const sheet = avatarCatalog.sheets.find((entry) => entry.set_id === "avatar_set_v1");
+  expect(sheet).toBeDefined();
+  return sheet!;
 }
 
 function requiredPortrait(slot: number) {
-  const sheet = avatarCatalog.sheets.find((entry) => entry.set_id === "avatar_set_v1");
-  expect(sheet).toBeDefined();
-  const portrait = sheet?.portraits.find((entry) => entry.slot === slot);
+  const portrait = requiredAvatarSheet().portraits.find((entry) => entry.slot === slot);
   expect(portrait).toBeDefined();
   return portrait!;
 }
