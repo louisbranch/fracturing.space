@@ -183,17 +183,26 @@ func classifyMethodKind(fullMethod string) string {
 		campaignv1.ParticipantService_ListParticipants_FullMethodName,
 		campaignv1.ParticipantService_GetParticipant_FullMethodName,
 		campaignv1.CharacterService_ListCharacters_FullMethodName,
+		campaignv1.CharacterService_ListCharacterProfiles_FullMethodName,
 		campaignv1.CharacterService_GetCharacterSheet_FullMethodName,
 		campaignv1.CharacterService_GetCharacterCreationProgress_FullMethodName,
 		campaignv1.SessionService_ListSessions_FullMethodName,
+		campaignv1.SessionService_ListActiveSessionsForUser_FullMethodName,
 		campaignv1.SessionService_GetSession_FullMethodName,
 		campaignv1.SessionService_GetSessionSpotlight_FullMethodName,
+		campaignv1.SceneService_GetScene_FullMethodName,
+		campaignv1.SceneService_ListScenes_FullMethodName,
 		campaignv1.SnapshotService_GetSnapshot_FullMethodName,
 		campaignv1.EventService_ListEvents_FullMethodName,
 		campaignv1.EventService_ListTimelineEntries_FullMethodName,
+		campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName,
 		campaignv1.ForkService_GetLineage_FullMethodName,
 		campaignv1.ForkService_ListForks_FullMethodName,
+		campaignv1.InteractionService_GetInteractionState_FullMethodName,
+		campaignv1.CampaignAIService_GetCampaignAIBindingUsage_FullMethodName,
+		campaignv1.CampaignAIService_GetCampaignAIAuthState_FullMethodName,
 		invitev1.InviteService_GetInvite_FullMethodName,
+		invitev1.InviteService_GetPublicInvite_FullMethodName,
 		invitev1.InviteService_ListInvites_FullMethodName,
 		invitev1.InviteService_ListPendingInvites_FullMethodName,
 		invitev1.InviteService_ListPendingInvitesForUser_FullMethodName,
@@ -201,8 +210,7 @@ func classifyMethodKind(fullMethod string) string {
 		campaignv1.SystemService_GetGameSystem_FullMethodName,
 		campaignv1.StatisticsService_GetGameStatistics_FullMethodName,
 		campaignv1.AuthorizationService_Can_FullMethodName,
-		campaignv1.AuthorizationService_BatchCan_FullMethodName,
-		campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName:
+		campaignv1.AuthorizationService_BatchCan_FullMethodName:
 		return "read"
 	default:
 		return "write"

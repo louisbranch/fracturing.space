@@ -7,6 +7,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -140,7 +141,7 @@ func (h *Handler) resolveSubclassFeaturePayload(
 					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.Internal("add vulnerable condition", diffErr)
 				}
 				payload.AdversaryConditionTargets = []daggerheartpayload.AdversaryConditionChangePayload{{
-					AdversaryID:      ids.AdversaryID(targetID),
+					AdversaryID:      dhids.AdversaryID(targetID),
 					ConditionsBefore: before,
 					ConditionsAfter:  after,
 					Added:            added,

@@ -2,6 +2,7 @@ package errors
 
 import (
 	"errors"
+	"log/slog"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/errors/i18n"
 	"google.golang.org/grpc/codes"
@@ -30,7 +31,9 @@ func HandleError(err error, locale string) error {
 		return appErr.ToGRPCStatus(catalog.Locale(), userMsg)
 	}
 
-	// Unknown error - return internal with generic message
+	// Unknown error — log the original so it is not silently swallowed, then
+	// return a sanitized internal status to the caller.
+	slog.Error("unhandled error converted to gRPC Internal", "error", err)
 	return status.Error(codes.Internal, "an unexpected error occurred")
 }
 

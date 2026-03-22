@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -131,8 +132,8 @@ func (s *DaggerheartService) executeArmorBackedHopeSpend(ctx context.Context, in
 func (s *DaggerheartService) executeSessionRollAdversaryFeatureApply(ctx context.Context, in sessionrolltransport.AdversaryFeatureApplyInput) error {
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryFeatureApplyPayload{
-		ActorAdversaryID:    ids.AdversaryID(in.Adversary.AdversaryID),
-		AdversaryID:         ids.AdversaryID(in.Adversary.AdversaryID),
+		ActorAdversaryID:    dhids.AdversaryID(in.Adversary.AdversaryID),
+		AdversaryID:         dhids.AdversaryID(in.Adversary.AdversaryID),
 		FeatureID:           in.FeatureID,
 		FeatureStatesBefore: nil,
 		FeatureStatesAfter:  nil,

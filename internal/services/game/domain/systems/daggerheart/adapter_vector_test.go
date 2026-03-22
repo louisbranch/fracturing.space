@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartadapter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
@@ -620,9 +621,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		CharacterSubclassStates: make(map[ids.CharacterID]daggerheartstate.CharacterSubclassState),
 		CharacterCompanions:     make(map[ids.CharacterID]daggerheartstate.CharacterCompanionState),
 		CharacterStatModifiers:  make(map[ids.CharacterID][]rules.StatModifierState),
-		AdversaryStates:         make(map[ids.AdversaryID]daggerheartstate.AdversaryState),
-		EnvironmentStates:       make(map[ids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState),
-		CountdownStates:         make(map[ids.CountdownID]daggerheartstate.CountdownState),
+		AdversaryStates:         make(map[dhids.AdversaryID]daggerheartstate.AdversaryState),
+		EnvironmentStates:       make(map[dhids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState),
+		CountdownStates:         make(map[dhids.CountdownID]daggerheartstate.CountdownState),
 	}
 	if snap, ok := m.snapshots[campaignID]; ok {
 		state.GMFear = snap.GMFear
@@ -664,9 +665,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.AdversaryStates[ids.AdversaryID(stored.AdversaryID)] = daggerheartstate.AdversaryState{
+		state.AdversaryStates[dhids.AdversaryID(stored.AdversaryID)] = daggerheartstate.AdversaryState{
 			CampaignID:  ids.CampaignID(stored.CampaignID),
-			AdversaryID: ids.AdversaryID(stored.AdversaryID),
+			AdversaryID: dhids.AdversaryID(stored.AdversaryID),
 			Name:        stored.Name,
 			Kind:        stored.Kind,
 			SessionID:   ids.SessionID(stored.SessionID),
@@ -686,9 +687,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.CountdownStates[ids.CountdownID(stored.CountdownID)] = daggerheartstate.CountdownState{
+		state.CountdownStates[dhids.CountdownID(stored.CountdownID)] = daggerheartstate.CountdownState{
 			CampaignID:        ids.CampaignID(stored.CampaignID),
-			CountdownID:       ids.CountdownID(stored.CountdownID),
+			CountdownID:       dhids.CountdownID(stored.CountdownID),
 			Name:              stored.Name,
 			Kind:              stored.Kind,
 			Current:           stored.Current,
@@ -697,7 +698,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 			Looping:           stored.Looping,
 			Variant:           stored.Variant,
 			TriggerEventType:  stored.TriggerEventType,
-			LinkedCountdownID: ids.CountdownID(stored.LinkedCountdownID),
+			LinkedCountdownID: dhids.CountdownID(stored.LinkedCountdownID),
 		}
 	}
 	environmentPrefix := campaignID + ":"
@@ -705,9 +706,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		if !strings.HasPrefix(key, environmentPrefix) {
 			continue
 		}
-		state.EnvironmentStates[ids.EnvironmentEntityID(stored.EnvironmentEntityID)] = daggerheartstate.EnvironmentEntityState{
+		state.EnvironmentStates[dhids.EnvironmentEntityID(stored.EnvironmentEntityID)] = daggerheartstate.EnvironmentEntityState{
 			CampaignID:          ids.CampaignID(stored.CampaignID),
-			EnvironmentEntityID: ids.EnvironmentEntityID(stored.EnvironmentEntityID),
+			EnvironmentEntityID: dhids.EnvironmentEntityID(stored.EnvironmentEntityID),
 			EnvironmentID:       stored.EnvironmentID,
 			Name:                stored.Name,
 			Type:                stored.Type,

@@ -6,6 +6,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -30,7 +31,7 @@ func snapshotCharacterState(snapshot daggerheartstate.SnapshotState, characterID
 	return character, true
 }
 
-func snapshotAdversaryState(snapshot daggerheartstate.SnapshotState, adversaryID ids.AdversaryID) (daggerheartstate.AdversaryState, bool) {
+func snapshotAdversaryState(snapshot daggerheartstate.SnapshotState, adversaryID dhids.AdversaryID) (daggerheartstate.AdversaryState, bool) {
 	trimmed, ok := normalize.RequireID(adversaryID)
 	if !ok {
 		return daggerheartstate.AdversaryState{}, false

@@ -17,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -123,8 +124,8 @@ func campaignReadinessAggregateState(
 			GMFear:            daggerheartstate.GMFearDefault,
 			CharacterProfiles: make(map[ids.CharacterID]daggerheartstate.CharacterProfile),
 			CharacterStates:   make(map[ids.CharacterID]daggerheartstate.CharacterState),
-			AdversaryStates:   make(map[ids.AdversaryID]daggerheartstate.AdversaryState),
-			CountdownStates:   make(map[ids.CountdownID]daggerheartstate.CountdownState),
+			AdversaryStates:   make(map[dhids.AdversaryID]daggerheartstate.AdversaryState),
+			CountdownStates:   make(map[dhids.CountdownID]daggerheartstate.CountdownState),
 		}
 		for characterID, characterState := range state.Characters {
 			profile, err := daggerheartStore.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, string(characterID))

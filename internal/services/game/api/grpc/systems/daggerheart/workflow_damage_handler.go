@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/adversarytransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/damagetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/statetransport"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
@@ -15,27 +14,13 @@ import (
 func (s *DaggerheartService) damageHandler() *damagetransport.Handler {
 	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	return damagetransport.NewHandler(damagetransport.Dependencies{
-		Campaign:    s.stores.Campaign,
-		SessionGate: s.stores.SessionGate,
-		Daggerheart: s.stores.Daggerheart,
-		Content:     s.stores.Content,
-		Event:       s.stores.Event,
-		SeedFunc:    s.seedFunc,
-		ExecuteSystemCommand: func(ctx context.Context, in damagetransport.SystemCommandInput) error {
-			return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
-				CampaignID:      in.CampaignID,
-				CommandType:     in.CommandType,
-				SessionID:       in.SessionID,
-				SceneID:         in.SceneID,
-				RequestID:       in.RequestID,
-				InvocationID:    in.InvocationID,
-				EntityType:      in.EntityType,
-				EntityID:        in.EntityID,
-				PayloadJSON:     in.PayloadJSON,
-				MissingEventMsg: in.MissingEventMsg,
-				ApplyErrMessage: in.ApplyErrMessage,
-			})
-		},
+		Campaign:             s.stores.Campaign,
+		SessionGate:          s.stores.SessionGate,
+		Daggerheart:          s.stores.Daggerheart,
+		Content:              s.stores.Content,
+		Event:                s.stores.Event,
+		SeedFunc:             s.seedFunc,
+		ExecuteSystemCommand: runtime.ExecuteSystemCommand,
 		LoadAdversaryForSession: func(ctx context.Context, campaignID, sessionID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 			return adversarytransport.LoadAdversaryForSession(ctx, s.stores.Daggerheart, campaignID, sessionID, adversaryID)
 		},

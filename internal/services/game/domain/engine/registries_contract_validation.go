@@ -30,9 +30,6 @@ func (v registryContractValidator) ValidateWritePath(bootstrap registryBootstrap
 	allFoldHandled := collectFoldHandledTypes(v.domains, v.modules)
 	return runNamedRegistryValidationPipeline(
 		bootstrap,
-		namedRegistryValidationStep{name: "system readiness checker coverage", run: func(state registryBootstrap) error {
-			return ValidateSystemReadinessCheckerCoverage(state.systemRegistry)
-		}},
 		namedRegistryValidationStep{name: "system fold coverage", run: func(state registryBootstrap) error {
 			return ValidateSystemFoldCoverage(state.systemRegistry, state.eventRegistry)
 		}},
@@ -62,6 +59,9 @@ func (v registryContractValidator) ValidateWritePath(bootstrap registryBootstrap
 		}},
 		namedRegistryValidationStep{name: "state factory determinism", run: func(state registryBootstrap) error {
 			return ValidateStateFactoryDeterminism(state.systemRegistry)
+		}},
+		namedRegistryValidationStep{name: "state factory fold compatibility", run: func(state registryBootstrap) error {
+			return ValidateStateFactoryFoldCompatibility(state.systemRegistry)
 		}},
 		namedRegistryValidationStep{name: "system metadata consistency", run: func(state registryBootstrap) error {
 			return ValidateSystemMetadataConsistency(state.eventRegistry, state.systemRegistry)

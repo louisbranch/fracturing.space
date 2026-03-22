@@ -3,7 +3,7 @@ package countdowns
 import (
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
@@ -47,7 +47,7 @@ func ResolveCountdownMutation(input CountdownMutationInput) (CountdownMutation, 
 	return CountdownMutation{
 		Update: update,
 		Payload: payload.CountdownUpdatePayload{
-			CountdownID: ids.CountdownID(strings.TrimSpace(input.Countdown.ID)),
+			CountdownID: dhids.CountdownID(strings.TrimSpace(input.Countdown.ID)),
 			Before:      update.Before,
 			After:       update.After,
 			Delta:       update.Delta,

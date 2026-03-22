@@ -302,8 +302,19 @@ func validateForkPayload(raw json.RawMessage) error {
 }
 
 // validateEmptyPayload enforces payload-free lifecycle commands.
+// Accepts null, empty/whitespace-only input, and {} with any internal
+// whitespace as valid "empty". Rejects objects that contain fields.
 func validateEmptyPayload(raw json.RawMessage) error {
-	if string(raw) != "{}" {
+	trimmed := strings.TrimSpace(string(raw))
+	if len(trimmed) == 0 || trimmed == "null" {
+		return nil
+	}
+
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return errors.New("payload must be empty")
+	}
+	if len(fields) != 0 {
 		return errors.New("payload must be empty")
 	}
 	return nil

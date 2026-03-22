@@ -195,6 +195,11 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 	}
 
 	campaignID := string(validated[0].CampaignID)
+	for i := 1; i < len(validated); i++ {
+		if validated[i].CampaignID != validated[0].CampaignID {
+			return nil, fmt.Errorf("batch contains mixed campaign IDs: expected %q, got %q at index %d", campaignID, validated[i].CampaignID, i)
+		}
+	}
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {

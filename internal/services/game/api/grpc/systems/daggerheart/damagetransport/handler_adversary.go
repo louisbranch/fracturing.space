@@ -14,7 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -128,7 +128,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 	}
 
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryDamageApplyPayload{
-		AdversaryID:        ids.AdversaryID(adversaryID),
+		AdversaryID:        dhids.AdversaryID(adversaryID),
 		HpBefore:           &hpBefore,
 		HpAfter:            &hpAfter,
 		ArmorBefore:        &armorBefore,
@@ -240,7 +240,7 @@ func (h *Handler) applyMinionSpillover(ctx context.Context, campaignID, sessionI
 
 func (h *Handler) deleteAdversary(ctx context.Context, campaignID, sessionID, sceneID, adversaryID, reason string) error {
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryDeletePayload{
-		AdversaryID: ids.AdversaryID(adversaryID),
+		AdversaryID: dhids.AdversaryID(adversaryID),
 		Reason:      reason,
 	})
 	if err != nil {

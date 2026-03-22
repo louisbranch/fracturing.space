@@ -53,18 +53,16 @@ func (a Applier) applySceneCreated(ctx context.Context, evt event.Event, payload
 	}); err != nil {
 		return err
 	}
-	if a.SceneInteraction != nil {
-		if err := a.SceneInteraction.PutSceneInteraction(ctx, storage.SceneInteraction{
-			CampaignID:           string(evt.CampaignID),
-			SceneID:              sceneID,
-			SessionID:            sessionID,
-			ActingCharacterIDs:   []string{},
-			ActingParticipantIDs: []string{},
-			Slots:                []storage.ScenePlayerSlot{},
-			UpdatedAt:            createdAt,
-		}); err != nil {
-			return err
-		}
+	if err := a.SceneInteraction.PutSceneInteraction(ctx, storage.SceneInteraction{
+		CampaignID:           string(evt.CampaignID),
+		SceneID:              sceneID,
+		SessionID:            sessionID,
+		ActingCharacterIDs:   []string{},
+		ActingParticipantIDs: []string{},
+		Slots:                []storage.ScenePlayerSlot{},
+		UpdatedAt:            createdAt,
+	}); err != nil {
+		return err
 	}
 
 	// Add initial characters.
@@ -124,22 +122,20 @@ func (a Applier) applySceneEnded(ctx context.Context, evt event.Event, payload s
 	if err := a.Scene.EndScene(ctx, string(evt.CampaignID), sceneID, endedAt); err != nil {
 		return err
 	}
-	if a.SceneInteraction != nil {
-		sceneState, err := a.SceneInteraction.GetSceneInteraction(ctx, string(evt.CampaignID), sceneID)
-		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return fmt.Errorf("get scene interaction on end: %w", err)
-		}
-		if err == nil {
-			sceneState.PhaseOpen = false
-			sceneState.PhaseID = ""
-			sceneState.PhaseStatus = ""
-			sceneState.ActingCharacterIDs = []string{}
-			sceneState.ActingParticipantIDs = []string{}
-			sceneState.Slots = []storage.ScenePlayerSlot{}
-			sceneState.UpdatedAt = endedAt
-			if err := a.SceneInteraction.PutSceneInteraction(ctx, sceneState); err != nil {
-				return fmt.Errorf("put scene interaction on end: %w", err)
-			}
+	sceneState, err := a.SceneInteraction.GetSceneInteraction(ctx, string(evt.CampaignID), sceneID)
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return fmt.Errorf("get scene interaction on end: %w", err)
+	}
+	if err == nil {
+		sceneState.PhaseOpen = false
+		sceneState.PhaseID = ""
+		sceneState.PhaseStatus = ""
+		sceneState.ActingCharacterIDs = []string{}
+		sceneState.ActingParticipantIDs = []string{}
+		sceneState.Slots = []storage.ScenePlayerSlot{}
+		sceneState.UpdatedAt = endedAt
+		if err := a.SceneInteraction.PutSceneInteraction(ctx, sceneState); err != nil {
+			return fmt.Errorf("put scene interaction on end: %w", err)
 		}
 	}
 	// Clear spotlight when scene ends. Suppress ErrNotFound (no spotlight was

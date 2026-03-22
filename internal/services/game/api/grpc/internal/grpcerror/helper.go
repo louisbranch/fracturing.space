@@ -15,9 +15,22 @@ func Internal(msg string, err error) error {
 	return status.Error(codes.Internal, msg)
 }
 
-// HandleDomainError maps domain errors through the structured app error system.
+// HandleDomainError maps domain errors through the structured app error system
+// using the default locale. Prefer HandleDomainErrorLocale when the caller's
+// locale is available so error messages are formatted correctly.
+//
+// TODO: migrate direct HandleDomainError call sites in handler packages
+// (adversarytransport, conditiontransport, charactermutationtransport, etc.)
+// to HandleDomainErrorLocale so all error paths respect the caller's locale.
 func HandleDomainError(err error) error {
 	return apperrors.HandleError(err, apperrors.DefaultLocale)
+}
+
+// HandleDomainErrorLocale maps domain errors through the structured app error
+// system using the provided locale string. Callers with a request context
+// should extract the locale via grpcmeta.LocaleFromContext before calling.
+func HandleDomainErrorLocale(err error, locale string) error {
+	return apperrors.HandleError(err, locale)
 }
 
 // EnsureStatus guarantees transport boundaries always return gRPC status

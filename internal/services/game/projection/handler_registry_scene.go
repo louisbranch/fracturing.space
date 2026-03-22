@@ -3,9 +3,9 @@ package projection
 import "github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 
 func registerSceneProjectionHandlers(r *CoreRouter) {
-	HandleProjection(r, scene.EventTypeCreated, requirements(needsStores(storeScene, storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCreated)
+	HandleProjection(r, scene.EventTypeCreated, requirements(needsStores(storeScene, storeSceneCharacter, storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applySceneCreated)
 	HandleProjection(r, scene.EventTypeUpdated, requirements(needsStores(storeScene), needsEnvelope(fieldCampaignID)), Applier.applySceneUpdated)
-	HandleProjection(r, scene.EventTypeEnded, requirements(needsStores(storeScene, storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneEnded)
+	HandleProjection(r, scene.EventTypeEnded, requirements(needsStores(storeScene, storeSceneSpotlight, storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applySceneEnded)
 	HandleProjection(r, scene.EventTypeCharacterAdded, requirements(needsStores(storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCharacterAdded)
 	HandleProjection(r, scene.EventTypeCharacterRemoved, requirements(needsStores(storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCharacterRemoved)
 	HandleProjection(r, scene.EventTypeGateOpened, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateOpened)

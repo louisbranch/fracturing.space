@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
@@ -80,7 +80,7 @@ func isEnvironmentEntityCreateNoMutation(snapshot daggerheartstate.SnapshotState
 		environmentEntity.Notes == normalize.String(p.Notes)
 }
 
-func snapshotEnvironmentEntityState(snapshot daggerheartstate.SnapshotState, environmentEntityID ids.EnvironmentEntityID) (daggerheartstate.EnvironmentEntityState, bool) {
+func snapshotEnvironmentEntityState(snapshot daggerheartstate.SnapshotState, environmentEntityID dhids.EnvironmentEntityID) (daggerheartstate.EnvironmentEntityState, bool) {
 	trimmed, ok := normalize.RequireID(environmentEntityID)
 	if !ok {
 		return daggerheartstate.EnvironmentEntityState{}, false

@@ -49,6 +49,14 @@ const AuthzOverrideReasonHeader = "x-fracturing-space-authz-override-reason"
 // ServiceIDHeader is the gRPC metadata key for internal service identity.
 const ServiceIDHeader = "x-fracturing-space-service-id"
 
+// LocaleHeader is the gRPC metadata key for the caller's preferred locale.
+// When present, error messages and domain rejections are formatted for this
+// locale; when absent, DefaultLocale is used.
+const LocaleHeader = "x-fracturing-space-locale"
+
+// DefaultLocale is the fallback locale when no locale metadata is present.
+const DefaultLocale = "en-US"
+
 // PlatformRoleAdmin identifies platform administrators.
 const PlatformRoleAdmin = "ADMIN"
 
@@ -103,6 +111,16 @@ func SessionIDFromContext(ctx context.Context) string {
 // ServiceIDFromContext returns the internal service ID from incoming metadata.
 func ServiceIDFromContext(ctx context.Context) string {
 	return metadataValueFromIncomingContext(ctx, ServiceIDHeader)
+}
+
+// LocaleFromContext returns the caller's preferred locale from incoming gRPC
+// metadata. If the header is absent or empty, DefaultLocale ("en-US") is
+// returned so callers always get a usable value.
+func LocaleFromContext(ctx context.Context) string {
+	if locale := metadataValueFromIncomingContext(ctx, LocaleHeader); locale != "" {
+		return locale
+	}
+	return DefaultLocale
 }
 
 // WithRequestID stores the request ID in context.
