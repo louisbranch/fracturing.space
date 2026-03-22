@@ -236,14 +236,21 @@ type DaggerheartContentString struct {
 }
 
 type DaggerheartCountdown struct {
-	CampaignID  string `json:"campaign_id"`
-	CountdownID string `json:"countdown_id"`
-	Name        string `json:"name"`
-	Kind        string `json:"kind"`
-	Current     int64  `json:"current"`
-	Max         int64  `json:"max"`
-	Direction   string `json:"direction"`
-	Looping     int64  `json:"looping"`
+	CampaignID        string `json:"campaign_id"`
+	CountdownID       string `json:"countdown_id"`
+	SessionID         string `json:"session_id"`
+	SceneID           string `json:"scene_id"`
+	Name              string `json:"name"`
+	Tone              string `json:"tone"`
+	AdvancementPolicy string `json:"advancement_policy"`
+	StartingValue     int64  `json:"starting_value"`
+	RemainingValue    int64  `json:"remaining_value"`
+	LoopBehavior      string `json:"loop_behavior"`
+	Status            string `json:"status"`
+	LinkedCountdownID string `json:"linked_countdown_id"`
+	StartingRollMin   int64  `json:"starting_roll_min"`
+	StartingRollMax   int64  `json:"starting_roll_max"`
+	StartingRollValue int64  `json:"starting_roll_value"`
 }
 
 type DaggerheartDamageType struct {

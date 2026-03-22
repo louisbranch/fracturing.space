@@ -568,7 +568,7 @@ message DaggerheartRestRequest {
   DaggerheartRestType rest_type = 1;
   bool interrupted = 2;
   common.v1.RngRequest rng = 3;
-  string long_term_countdown_id = 4;
+  string long_rest_campaign_countdown_id = 4;
   repeated DaggerheartRestParticipant participants = 5;
 }
 
@@ -619,7 +619,7 @@ message DaggerheartRepairAllArmorMove {
 }
 
 message DaggerheartWorkOnProjectMove {
-  string countdown_id = 1;
+  string project_campaign_countdown_id = 1;
   DaggerheartProjectAdvanceMode advance_mode = 2;
   int32 advance_delta = 3;
   string reason = 4;

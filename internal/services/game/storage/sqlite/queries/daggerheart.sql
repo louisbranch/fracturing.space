@@ -131,19 +131,28 @@ WHERE campaign_id = ? AND countdown_id = ?;
 
 -- name: ListDaggerheartCountdowns :many
 SELECT * FROM daggerheart_countdowns
-WHERE campaign_id = ?;
+WHERE campaign_id = ?
+ORDER BY name, countdown_id;
 
 -- name: PutDaggerheartCountdown :exec
 INSERT INTO daggerheart_countdowns (
-    campaign_id, countdown_id, name, kind, current, max, direction, looping
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, countdown_id, session_id, scene_id, name, tone, advancement_policy, starting_value, remaining_value,
+    loop_behavior, status, linked_countdown_id, starting_roll_min, starting_roll_max, starting_roll_value
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, countdown_id) DO UPDATE SET
+    session_id = excluded.session_id,
+    scene_id = excluded.scene_id,
     name = excluded.name,
-    kind = excluded.kind,
-    current = excluded.current,
-    max = excluded.max,
-    direction = excluded.direction,
-    looping = excluded.looping;
+    tone = excluded.tone,
+    advancement_policy = excluded.advancement_policy,
+    starting_value = excluded.starting_value,
+    remaining_value = excluded.remaining_value,
+    loop_behavior = excluded.loop_behavior,
+    status = excluded.status,
+    linked_countdown_id = excluded.linked_countdown_id,
+    starting_roll_min = excluded.starting_roll_min,
+    starting_roll_max = excluded.starting_roll_max,
+    starting_roll_value = excluded.starting_roll_value;
 
 -- name: DeleteDaggerheartCountdown :exec
 DELETE FROM daggerheart_countdowns

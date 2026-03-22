@@ -47,6 +47,6 @@ type Dependencies struct {
 
 	ConditionChangeAlreadyApplied func(ctx context.Context, in ConditionChangeReplayCheckInput) (bool, error)
 	ExecuteConditionChange        func(ctx context.Context, in ConditionChangeCommandInput) error
-	CreateCountdown               func(ctx context.Context, in *pb.DaggerheartCreateCountdownRequest) error
-	UpdateCountdown               func(ctx context.Context, in *pb.DaggerheartUpdateCountdownRequest) error
+	CreateSceneCountdown          func(ctx context.Context, in *pb.DaggerheartCreateSceneCountdownRequest) error
+	AdvanceSceneCountdown         func(ctx context.Context, in *pb.DaggerheartAdvanceSceneCountdownRequest) error
 }

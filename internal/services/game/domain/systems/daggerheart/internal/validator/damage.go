@@ -149,7 +149,7 @@ func ValidateDowntimeMoveAppliedPayloadFields(p payload.DowntimeMoveAppliedPaylo
 		p.Hope == nil &&
 		p.Stress == nil &&
 		p.Armor == nil &&
-		strings.TrimSpace(p.CountdownID.String()) == "" {
+		strings.TrimSpace(p.CampaignCountdownID.String()) == "" {
 		return errors.New("downtime_move applied must target a character or countdown")
 	}
 	if strings.TrimSpace(p.TargetCharacterID.String()) != "" &&
@@ -157,7 +157,7 @@ func ValidateDowntimeMoveAppliedPayloadFields(p payload.DowntimeMoveAppliedPaylo
 		p.Hope == nil &&
 		p.Stress == nil &&
 		p.Armor == nil &&
-		strings.TrimSpace(p.CountdownID.String()) == "" {
+		strings.TrimSpace(p.CampaignCountdownID.String()) == "" {
 		return errors.New("downtime_move applied target requires a state change or countdown update")
 	}
 	return nil

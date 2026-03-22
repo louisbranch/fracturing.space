@@ -27,20 +27,22 @@ func (s *Store) PutDaggerheartCountdown(ctx context.Context, countdown projectio
 		return fmt.Errorf("countdown id is required")
 	}
 
-	looping := int64(0)
-	if countdown.Looping {
-		looping = 1
-	}
-
 	return s.q.PutDaggerheartCountdown(ctx, db.PutDaggerheartCountdownParams{
-		CampaignID:  countdown.CampaignID,
-		CountdownID: countdown.CountdownID,
-		Name:        countdown.Name,
-		Kind:        countdown.Kind,
-		Current:     int64(countdown.Current),
-		Max:         int64(countdown.Max),
-		Direction:   countdown.Direction,
-		Looping:     looping,
+		CampaignID:        countdown.CampaignID,
+		CountdownID:       countdown.CountdownID,
+		SessionID:         countdown.SessionID,
+		SceneID:           countdown.SceneID,
+		Name:              countdown.Name,
+		Tone:              countdown.Tone,
+		AdvancementPolicy: countdown.AdvancementPolicy,
+		StartingValue:     int64(countdown.StartingValue),
+		RemainingValue:    int64(countdown.RemainingValue),
+		LoopBehavior:      countdown.LoopBehavior,
+		Status:            countdown.Status,
+		LinkedCountdownID: countdown.LinkedCountdownID,
+		StartingRollMin:   int64(countdown.StartingRollMin),
+		StartingRollMax:   int64(countdown.StartingRollMax),
+		StartingRollValue: int64(countdown.StartingRollValue),
 	})
 }
 
@@ -71,14 +73,21 @@ func (s *Store) GetDaggerheartCountdown(ctx context.Context, campaignID, countdo
 	}
 
 	return projectionstore.DaggerheartCountdown{
-		CampaignID:  row.CampaignID,
-		CountdownID: row.CountdownID,
-		Name:        row.Name,
-		Kind:        row.Kind,
-		Current:     int(row.Current),
-		Max:         int(row.Max),
-		Direction:   row.Direction,
-		Looping:     row.Looping != 0,
+		CampaignID:        row.CampaignID,
+		CountdownID:       row.CountdownID,
+		SessionID:         row.SessionID,
+		SceneID:           row.SceneID,
+		Name:              row.Name,
+		Tone:              row.Tone,
+		AdvancementPolicy: row.AdvancementPolicy,
+		StartingValue:     int(row.StartingValue),
+		RemainingValue:    int(row.RemainingValue),
+		LoopBehavior:      row.LoopBehavior,
+		Status:            row.Status,
+		LinkedCountdownID: row.LinkedCountdownID,
+		StartingRollMin:   int(row.StartingRollMin),
+		StartingRollMax:   int(row.StartingRollMax),
+		StartingRollValue: int(row.StartingRollValue),
 	}, nil
 }
 
@@ -102,14 +111,21 @@ func (s *Store) ListDaggerheartCountdowns(ctx context.Context, campaignID string
 	countdowns := make([]projectionstore.DaggerheartCountdown, 0, len(rows))
 	for _, row := range rows {
 		countdowns = append(countdowns, projectionstore.DaggerheartCountdown{
-			CampaignID:  row.CampaignID,
-			CountdownID: row.CountdownID,
-			Name:        row.Name,
-			Kind:        row.Kind,
-			Current:     int(row.Current),
-			Max:         int(row.Max),
-			Direction:   row.Direction,
-			Looping:     row.Looping != 0,
+			CampaignID:        row.CampaignID,
+			CountdownID:       row.CountdownID,
+			SessionID:         row.SessionID,
+			SceneID:           row.SceneID,
+			Name:              row.Name,
+			Tone:              row.Tone,
+			AdvancementPolicy: row.AdvancementPolicy,
+			StartingValue:     int(row.StartingValue),
+			RemainingValue:    int(row.RemainingValue),
+			LoopBehavior:      row.LoopBehavior,
+			Status:            row.Status,
+			LinkedCountdownID: row.LinkedCountdownID,
+			StartingRollMin:   int(row.StartingRollMin),
+			StartingRollMax:   int(row.StartingRollMax),
+			StartingRollValue: int(row.StartingRollValue),
 		})
 	}
 

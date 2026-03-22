@@ -554,36 +554,91 @@ func scenarioSwapLoadout(state *lua.State) int {
 	return 0
 }
 
-func scenarioCountdownCreate(state *lua.State) int {
-	handle := checkSystemHandle(state, "countdown_create")
+func scenarioSceneCountdownCreate(state *lua.State) int {
+	handle := checkSystemHandle(state, "scene_countdown_create")
 	if handle == nil {
 		return 0
 	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStepWithSystem(handle.scenario, handle.system, "countdown_create", data)
+	appendStepWithSystem(handle.scenario, handle.system, "scene_countdown_create", data)
 	return 0
 }
 
-func scenarioCountdownUpdate(state *lua.State) int {
-	handle := checkSystemHandle(state, "countdown_update")
+func scenarioSceneCountdownUpdate(state *lua.State) int {
+	handle := checkSystemHandle(state, "scene_countdown_update")
 	if handle == nil {
 		return 0
 	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStepWithSystem(handle.scenario, handle.system, "countdown_update", data)
+	appendStepWithSystem(handle.scenario, handle.system, "scene_countdown_update", data)
 	return 0
 }
 
-func scenarioCountdownDelete(state *lua.State) int {
-	handle := checkSystemHandle(state, "countdown_delete")
+func scenarioSceneCountdownResolveTrigger(state *lua.State) int {
+	handle := checkSystemHandle(state, "scene_countdown_resolve_trigger")
 	if handle == nil {
 		return 0
 	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStepWithSystem(handle.scenario, handle.system, "countdown_delete", data)
+	appendStepWithSystem(handle.scenario, handle.system, "scene_countdown_resolve_trigger", data)
+	return 0
+}
+
+func scenarioSceneCountdownDelete(state *lua.State) int {
+	handle := checkSystemHandle(state, "scene_countdown_delete")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "scene_countdown_delete", data)
+	return 0
+}
+
+func scenarioCampaignCountdownCreate(state *lua.State) int {
+	handle := checkSystemHandle(state, "campaign_countdown_create")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "campaign_countdown_create", data)
+	return 0
+}
+
+func scenarioCampaignCountdownUpdate(state *lua.State) int {
+	handle := checkSystemHandle(state, "campaign_countdown_update")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "campaign_countdown_update", data)
+	return 0
+}
+
+func scenarioCampaignCountdownResolveTrigger(state *lua.State) int {
+	handle := checkSystemHandle(state, "campaign_countdown_resolve_trigger")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "campaign_countdown_resolve_trigger", data)
+	return 0
+}
+
+func scenarioCampaignCountdownDelete(state *lua.State) int {
+	handle := checkSystemHandle(state, "campaign_countdown_delete")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "campaign_countdown_delete", data)
 	return 0
 }
 

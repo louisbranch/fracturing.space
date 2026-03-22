@@ -31,12 +31,12 @@ func TestHandlerSessionActionRollSuccess(t *testing.T) {
 
 	ctx := grpcmeta.WithInvocationID(grpcmeta.WithRequestID(context.Background(), "req-1"), "inv-1")
 	resp, err := handler.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
-		CampaignId:        "camp-1",
-		SessionId:         "sess-1",
-		CharacterId:       "char-1",
-		Trait:             "agility",
-		Difficulty:        10,
-		BreathCountdownId: "countdown-1",
+		CampaignId:             "camp-1",
+		SessionId:              "sess-1",
+		CharacterId:            "char-1",
+		Trait:                  "agility",
+		Difficulty:             10,
+		BreathSceneCountdownId: "countdown-1",
 		Modifiers: []*pb.ActionRollModifier{
 			{Value: 2, Source: "experience"},
 		},

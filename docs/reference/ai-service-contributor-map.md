@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 17
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-18"
+last_reviewed: "2026-03-22"
 ---
 
 # AI service contributor map
@@ -19,8 +19,9 @@ Read in this order:
 2. [Campaign AI orchestration](../architecture/platform/campaign-ai-orchestration.md)
 3. [Campaign AI session bootstrap](../architecture/platform/campaign-ai-session-bootstrap.md)
 4. [Campaign AI agent system](../architecture/platform/campaign-ai-agent-system.md)
-5. [AI service lifecycle terms](ai-service-lifecycle-terms.md)
-6. This page
+5. [Campaign AI mechanics quality](../architecture/platform/campaign-ai-mechanics-quality.md)
+6. [AI service lifecycle terms](ai-service-lifecycle-terms.md)
+7. This page
 
 Use [Verification commands](../running/verification.md) for the canonical local
 check sequence.
@@ -99,6 +100,7 @@ Add these when applicable:
 - [AI service architecture](../architecture/platform/ai-service-architecture.md)
 - [AI service lifecycle terms](ai-service-lifecycle-terms.md)
 - [Campaign AI agent system](../architecture/platform/campaign-ai-agent-system.md)
+- [Campaign AI mechanics quality](../architecture/platform/campaign-ai-mechanics-quality.md)
 - [Campaign AI orchestration](../architecture/platform/campaign-ai-orchestration.md)
 - [Campaign AI session bootstrap](../architecture/platform/campaign-ai-session-bootstrap.md)
 - [Small services topology](small-services-topology.md)

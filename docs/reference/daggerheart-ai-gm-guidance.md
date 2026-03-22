@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 18
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-22"
 ---
 
 # Daggerheart AI GM Guidance
@@ -24,6 +24,32 @@ Use this guidance when an AI GM is:
 - choosing a consequence after a roll
 - deciding whether to spend Fear
 - moving spotlight between characters
+
+## Character capability checks
+
+- Confirm what a character can actually do before you frame a mechanic-heavy
+  response.
+- Treat traits, equipment, armor, Hope, domain cards, class features, subclass
+  features, and current conditions as authoritative character capability data.
+- Prefer character-sheet reads for character-specific capability questions and
+  reference-corpus reads for exact rule wording.
+- When the question is about procedure, sequencing, or GM practice, prefer the
+  playbook-style reference documents before improvising from memory.
+- Do not consult playbooks pre-emptively. Use them when the exact procedure is
+  unclear or when the turn explicitly asks for a playbook consult.
+- Use authoritative mechanics tools for state changes after you know the rule
+  and the capability: resolve player rolls with
+  `daggerheart_action_roll_resolve`, spend Fear with
+  `daggerheart_gm_move_apply`, place threats with
+  `daggerheart_adversary_create`, maintain board state with
+  `daggerheart_adversary_update`, `daggerheart_scene_countdown_create`, and
+  `daggerheart_scene_countdown_update`, and use the dedicated combat-flow tools when
+  a turn should carry through a full attack, adversary attack, reaction, group
+  action, or tag-team procedure.
+- Do not invent access to items, cards, or features that are not on the current
+  sheet.
+- Do not research Fear, spotlight, or countdown guidance before those mechanics
+  are actually in play on the current turn.
 
 ## Operating rules
 
@@ -52,8 +78,11 @@ Use this guidance when an AI GM is:
   direct prompt.
 
 - Use countdowns to externalize pressure.
-  If danger is building over time, track it openly instead of relying on hidden
-  escalation.
+  If danger is building over time, track it openly with the countdown tools
+  instead of relying on hidden escalation.
+- After changing visible board state, prefer re-reading the combat board before
+  framing the next beat so spotlight, threats, and countdown pressure stay
+  synchronized with the fiction.
 
 - Respect established facts.
   Do not negate prior outcomes, invalidate durable character choices, or invent
@@ -104,3 +133,10 @@ Use this guidance when an AI GM is:
 - This doc does not replace system transport or domain rules.
 - This doc does not attempt to restate all table advice from the full
   reference.
+
+## Verification note
+
+- When the AI-facing Daggerheart mechanics guidance changes, include at least
+  one live-agent capture run in the verification story so we confirm a real
+  model can discover and use the intended tools before relying on replay-only
+  coverage.

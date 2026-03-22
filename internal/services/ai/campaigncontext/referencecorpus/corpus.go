@@ -44,6 +44,7 @@ type indexEntry struct {
 	Kind    string   `json:"kind"`
 	Path    string   `json:"path"`
 	Aliases []string `json:"aliases"`
+	absPath string   `json:"-"`
 }
 
 // Corpus serves a read-only filesystem-backed system corpus.
@@ -214,6 +215,12 @@ func (c *Corpus) indexEntries() ([]indexEntry, error) {
 			c.loadErr = fmt.Errorf("parse reference index: %w", err)
 			return
 		}
+		repoEntries, err := loadRepoPlaybookEntries()
+		if err != nil {
+			c.loadErr = err
+			return
+		}
+		c.entries = mergeIndexEntries(c.entries, repoEntries)
 	})
 	if c.loadErr != nil {
 		return nil, c.loadErr
@@ -222,6 +229,13 @@ func (c *Corpus) indexEntries() ([]indexEntry, error) {
 }
 
 func (c *Corpus) readEntryContent(entry indexEntry) (string, error) {
+	if entry.absPath != "" {
+		data, err := os.ReadFile(entry.absPath)
+		if err != nil {
+			return "", fmt.Errorf("read reference document %q: %w", entry.ID, err)
+		}
+		return string(data), nil
+	}
 	root := strings.TrimSpace(c.root)
 	if root == "" {
 		return "", fmt.Errorf("reference root is not configured")

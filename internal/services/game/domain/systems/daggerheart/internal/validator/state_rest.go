@@ -41,8 +41,8 @@ func ValidateRestTakePayload(raw json.RawMessage) error {
 				return err
 			}
 		}
-		for _, update := range p.CountdownUpdates {
-			if err := ValidateRestLongTermCountdownPayload(update); err != nil {
+		for _, advance := range p.CampaignCountdownAdvances {
+			if err := ValidateRestCampaignCountdownPayload(advance); err != nil {
 				return err
 			}
 		}
@@ -73,14 +73,18 @@ func ValidateRestTakenPayload(raw json.RawMessage) error {
 	})
 }
 
-func ValidateRestLongTermCountdownPayload(p payload.CountdownUpdatePayload) error {
+func ValidateRestCampaignCountdownPayload(p payload.CampaignCountdownAdvancePayload) error {
 	if strings.TrimSpace(p.CountdownID.String()) == "" {
-		return errors.New("long_term_countdown.countdown_id is required")
+		return errors.New("campaign_countdown.countdown_id is required")
 	}
-	if p.Before == p.After && p.Delta == 0 {
-		return errors.New("long_term_countdown must change value")
+	if p.AdvancedBy <= 0 {
+		return errors.New("campaign_countdown advance must be positive")
 	}
 	return nil
+}
+
+func ValidateRestLongTermCountdownPayload(p payload.CampaignCountdownAdvancePayload) error {
+	return ValidateRestCampaignCountdownPayload(p)
 }
 
 func HasRestTakeMutation(p payload.RestTakePayload) bool {
@@ -89,7 +93,8 @@ func HasRestTakeMutation(p payload.RestTakePayload) bool {
 		p.RefreshRest ||
 		p.RefreshLongRest ||
 		p.Interrupted ||
-		len(p.CountdownUpdates) > 0 ||
+		len(p.CampaignCountdownAdvances) > 0 ||
+		len(p.CountdownAdvances) > 0 ||
 		len(p.DowntimeMoves) > 0 {
 		return true
 	}

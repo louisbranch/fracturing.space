@@ -17,11 +17,11 @@ scn:start_session("Pitons")
 -- Example: on a failed climb, mark Stress instead of ticking up.
 -- Partial mapping: failure branch intercept is explicit and avoids countdown setback.
 -- Missing DSL: direct stress mark operation for characters.
-dh:countdown_create{ name = "Misty Ascent", kind = "progress", current = 0, max = 12, direction = "increase" }
+dh:scene_countdown_create{ name = "Misty Ascent", kind = "progress", current = 0, max = 12, direction = "increase" }
 dh:action_roll{ actor = "Frodo", trait = "agility", difficulty = 12, outcome = "failure_fear" }
 dh:apply_roll_outcome{
   on_success = {
-    {kind = "countdown_update", name = "Misty Ascent", delta = 1, reason = "climb_progress"},
+    {kind = "scene_countdown_update", name = "Misty Ascent", delta = 1, reason = "climb_progress"},
   },
   on_failure = {
     {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "pitons_stress_tradeoff"},

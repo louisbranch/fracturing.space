@@ -28,14 +28,14 @@ func TestStateFactory_NewSnapshotStateDefaults(t *testing.T) {
 	if snapshot.AdversaryStates == nil {
 		t.Fatal("AdversaryStates map should be initialized, got nil")
 	}
-	if snapshot.CountdownStates == nil {
-		t.Fatal("CountdownStates map should be initialized, got nil")
+	if snapshot.SceneCountdownStates == nil || snapshot.CampaignCountdownStates == nil {
+		t.Fatal("countdown maps should be initialized, got nil")
 	}
 }
 
 func TestSnapshotState_EnsureMaps(t *testing.T) {
 	s := daggerheartstate.SnapshotState{}
-	if s.CharacterStates != nil || s.AdversaryStates != nil || s.CountdownStates != nil {
+	if s.CharacterStates != nil || s.AdversaryStates != nil || s.SceneCountdownStates != nil || s.CampaignCountdownStates != nil {
 		t.Fatal("expected nil maps before EnsureMaps")
 	}
 	s.EnsureMaps()
@@ -45,8 +45,8 @@ func TestSnapshotState_EnsureMaps(t *testing.T) {
 	if s.AdversaryStates == nil {
 		t.Fatal("AdversaryStates should be initialized after EnsureMaps")
 	}
-	if s.CountdownStates == nil {
-		t.Fatal("CountdownStates should be initialized after EnsureMaps")
+	if s.SceneCountdownStates == nil || s.CampaignCountdownStates == nil {
+		t.Fatal("countdown maps should be initialized after EnsureMaps")
 	}
 
 	// EnsureMaps should not overwrite existing maps.

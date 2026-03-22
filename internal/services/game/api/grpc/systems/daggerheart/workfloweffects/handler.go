@@ -68,7 +68,7 @@ func (h *Handler) AdvanceBreathCountdown(ctx context.Context, campaignID, sessio
 	if countdownID == "" {
 		return nil
 	}
-	if h == nil || h.deps.Daggerheart == nil || h.deps.CreateCountdown == nil || h.deps.UpdateCountdown == nil {
+	if h == nil || h.deps.Daggerheart == nil || h.deps.CreateSceneCountdown == nil || h.deps.AdvanceSceneCountdown == nil {
 		return status.Error(codes.Internal, "workflow effects dependencies are not configured")
 	}
 
@@ -76,16 +76,18 @@ func (h *Handler) AdvanceBreathCountdown(ctx context.Context, campaignID, sessio
 		if !errors.Is(err, storage.ErrNotFound) {
 			return grpcerror.HandleDomainError(err)
 		}
-		createErr := h.deps.CreateCountdown(ctx, &pb.DaggerheartCreateCountdownRequest{
-			CampaignId:  campaignID,
-			SessionId:   sessionID,
-			CountdownId: countdownID,
-			Name:        countdowns.BreathCountdownName,
-			Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE,
-			Current:     countdowns.BreathCountdownInitial,
-			Max:         countdowns.BreathCountdownMax,
-			Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-			Looping:     false,
+		createErr := h.deps.CreateSceneCountdown(ctx, &pb.DaggerheartCreateSceneCountdownRequest{
+			CampaignId:        campaignID,
+			SessionId:         sessionID,
+			SceneId:           "",
+			CountdownId:       countdownID,
+			Name:              countdowns.BreathCountdownName,
+			Tone:              pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_NEUTRAL,
+			AdvancementPolicy: pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_MANUAL,
+			StartingValue: &pb.DaggerheartCreateSceneCountdownRequest_FixedStartingValue{
+				FixedStartingValue: 3,
+			},
+			LoopBehavior: pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE,
 		})
 		if createErr != nil && status.Code(createErr) != codes.FailedPrecondition {
 			return createErr
@@ -93,11 +95,12 @@ func (h *Handler) AdvanceBreathCountdown(ctx context.Context, campaignID, sessio
 	}
 
 	advance := countdowns.ResolveBreathCountdownAdvance(failed)
-	return h.deps.UpdateCountdown(ctx, &pb.DaggerheartUpdateCountdownRequest{
+	return h.deps.AdvanceSceneCountdown(ctx, &pb.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
+		SceneId:     "",
 		CountdownId: countdownID,
-		Delta:       int32(advance.Delta),
+		Amount:      int32(advance.Amount),
 		Reason:      advance.Reason,
 	})
 }

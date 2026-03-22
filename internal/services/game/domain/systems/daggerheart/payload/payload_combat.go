@@ -1,9 +1,6 @@
 package payload
 
-import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
-)
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 
 // --- Roll ---
 
@@ -73,7 +70,7 @@ type MultiTargetDamageApplyPayload struct {
 
 // AdversaryDamageApplyPayload captures the payload for sys.daggerheart.adversary_damage.apply commands.
 type AdversaryDamageApplyPayload struct {
-	AdversaryID        dhids.AdversaryID `json:"adversary_id"`
+	AdversaryID        ids.AdversaryID   `json:"adversary_id"`
 	HpBefore           *int              `json:"hp_before,omitempty"`
 	HpAfter            *int              `json:"hp_after,omitempty"`
 	ArmorBefore        *int              `json:"armor_before,omitempty"`
@@ -96,7 +93,7 @@ type AdversaryDamageApplyPayload struct {
 
 // AdversaryDamageAppliedPayload captures the payload for sys.daggerheart.adversary_damage_applied events.
 type AdversaryDamageAppliedPayload struct {
-	AdversaryID        dhids.AdversaryID `json:"adversary_id"`
+	AdversaryID        ids.AdversaryID   `json:"adversary_id"`
 	Hp                 *int              `json:"hp_after,omitempty"`
 	Armor              *int              `json:"armor_after,omitempty"`
 	ArmorSpent         int               `json:"armor_spent,omitempty"`
@@ -119,14 +116,15 @@ type AdversaryDamageAppliedPayload struct {
 
 // DowntimeMoveAppliedPayload captures the payload for sys.daggerheart.downtime_move_applied events.
 type DowntimeMoveAppliedPayload struct {
-	ActorCharacterID  ids.CharacterID   `json:"actor_character_id"`
-	TargetCharacterID ids.CharacterID   `json:"target_character_id,omitempty"`
-	Move              string            `json:"move"`
-	RestType          string            `json:"rest_type,omitempty"`
-	GroupID           string            `json:"group_id,omitempty"`
-	CountdownID       dhids.CountdownID `json:"countdown_id,omitempty"`
-	HP                *int              `json:"hp_after,omitempty"`
-	Hope              *int              `json:"hope_after,omitempty"`
-	Stress            *int              `json:"stress_after,omitempty"`
-	Armor             *int              `json:"armor_after,omitempty"`
+	ActorCharacterID    ids.CharacterID `json:"actor_character_id"`
+	TargetCharacterID   ids.CharacterID `json:"target_character_id,omitempty"`
+	Move                string          `json:"move"`
+	RestType            string          `json:"rest_type,omitempty"`
+	GroupID             string          `json:"group_id,omitempty"`
+	CampaignCountdownID ids.CountdownID `json:"campaign_countdown_id,omitempty"`
+	CountdownID         ids.CountdownID `json:"-"`
+	HP                  *int            `json:"hp_after,omitempty"`
+	Hope                *int            `json:"hope_after,omitempty"`
+	Stress              *int            `json:"stress_after,omitempty"`
+	Armor               *int            `json:"armor_after,omitempty"`
 }

@@ -4,24 +4,29 @@ import event "github.com/louisbranch/fracturing.space/internal/services/game/dom
 
 // EventType constants for Daggerheart projection and adapter event handling.
 const (
-	EventTypeDamageApplied                  event.Type = "sys.daggerheart.damage_applied"
-	EventTypeRestTaken                      event.Type = "sys.daggerheart.rest_taken"
-	EventTypeDowntimeMoveApplied            event.Type = "sys.daggerheart.downtime_move_applied"
-	EventTypeLoadoutSwapped                 event.Type = "sys.daggerheart.loadout_swapped"
-	EventTypeCharacterProfileReplaced       event.Type = "sys.daggerheart.character_profile_replaced"
-	EventTypeCharacterProfileDeleted        event.Type = "sys.daggerheart.character_profile_deleted"
-	EventTypeCharacterStatePatched          event.Type = "sys.daggerheart.character_state_patched"
-	EventTypeBeastformTransformed           event.Type = "sys.daggerheart.beastform_transformed"
-	EventTypeBeastformDropped               event.Type = "sys.daggerheart.beastform_dropped"
-	EventTypeCompanionExperienceBegun       event.Type = "sys.daggerheart.companion_experience_begun"
-	EventTypeCompanionReturned              event.Type = "sys.daggerheart.companion_returned"
-	EventTypeConditionChanged               event.Type = "sys.daggerheart.condition_changed"
-	EventTypeGMMoveApplied                  event.Type = "sys.daggerheart.gm_move_applied"
-	EventTypeGMFearChanged                  event.Type = "sys.daggerheart.gm_fear_changed"
-	EventTypeCountdownCreated               event.Type = "sys.daggerheart.countdown_created"
-	EventTypeCountdownUpdated               event.Type = "sys.daggerheart.countdown_updated"
-	EventTypeCountdownDeleted               event.Type = "sys.daggerheart.countdown_deleted"
-	EventTypeCharacterTemporaryArmorApplied event.Type = "sys.daggerheart.character_temporary_armor_applied"
+	EventTypeDamageApplied                    event.Type = "sys.daggerheart.damage_applied"
+	EventTypeRestTaken                        event.Type = "sys.daggerheart.rest_taken"
+	EventTypeDowntimeMoveApplied              event.Type = "sys.daggerheart.downtime_move_applied"
+	EventTypeLoadoutSwapped                   event.Type = "sys.daggerheart.loadout_swapped"
+	EventTypeCharacterProfileReplaced         event.Type = "sys.daggerheart.character_profile_replaced"
+	EventTypeCharacterProfileDeleted          event.Type = "sys.daggerheart.character_profile_deleted"
+	EventTypeCharacterStatePatched            event.Type = "sys.daggerheart.character_state_patched"
+	EventTypeBeastformTransformed             event.Type = "sys.daggerheart.beastform_transformed"
+	EventTypeBeastformDropped                 event.Type = "sys.daggerheart.beastform_dropped"
+	EventTypeCompanionExperienceBegun         event.Type = "sys.daggerheart.companion_experience_begun"
+	EventTypeCompanionReturned                event.Type = "sys.daggerheart.companion_returned"
+	EventTypeConditionChanged                 event.Type = "sys.daggerheart.condition_changed"
+	EventTypeGMMoveApplied                    event.Type = "sys.daggerheart.gm_move_applied"
+	EventTypeGMFearChanged                    event.Type = "sys.daggerheart.gm_fear_changed"
+	EventTypeSceneCountdownCreated            event.Type = "sys.daggerheart.scene_countdown_created"
+	EventTypeSceneCountdownAdvanced           event.Type = "sys.daggerheart.scene_countdown_advanced"
+	EventTypeSceneCountdownTriggerResolved    event.Type = "sys.daggerheart.scene_countdown_trigger_resolved"
+	EventTypeSceneCountdownDeleted            event.Type = "sys.daggerheart.scene_countdown_deleted"
+	EventTypeCampaignCountdownCreated         event.Type = "sys.daggerheart.campaign_countdown_created"
+	EventTypeCampaignCountdownAdvanced        event.Type = "sys.daggerheart.campaign_countdown_advanced"
+	EventTypeCampaignCountdownTriggerResolved event.Type = "sys.daggerheart.campaign_countdown_trigger_resolved"
+	EventTypeCampaignCountdownDeleted         event.Type = "sys.daggerheart.campaign_countdown_deleted"
+	EventTypeCharacterTemporaryArmorApplied   event.Type = "sys.daggerheart.character_temporary_armor_applied"
 
 	EventTypeAdversaryCreated          event.Type = "sys.daggerheart.adversary_created"
 	EventTypeAdversaryConditionChanged event.Type = "sys.daggerheart.adversary_condition_changed"
@@ -38,4 +43,12 @@ const (
 	EventTypeConsumableUsed            event.Type = "sys.daggerheart.consumable_used"
 	EventTypeConsumableAcquired        event.Type = "sys.daggerheart.consumable_acquired"
 	EventTypeStatModifierChanged       event.Type = "sys.daggerheart.stat_modifier_changed"
+)
+
+const (
+	EventTypeCountdownCreated         = EventTypeSceneCountdownCreated
+	EventTypeCountdownUpdated         = EventTypeSceneCountdownAdvanced
+	EventTypeCountdownDeleted         = EventTypeSceneCountdownDeleted
+	EventTypeSceneCountdownUpdated    = EventTypeSceneCountdownAdvanced
+	EventTypeCampaignCountdownUpdated = EventTypeCampaignCountdownAdvanced
 )

@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartfolder "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/folder"
 	daggerheartvalidator "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/validator"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -245,25 +244,28 @@ func TestFoldGMFearChangedAndCountdownUpdate_Branches(t *testing.T) {
 		}
 	})
 
-	t.Run("countdown update sets looping on looped payload", func(t *testing.T) {
+	t.Run("countdown advance updates remaining value and status", func(t *testing.T) {
 		state := &daggerheartstate.SnapshotState{
-			CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
-				"cd-1": {CountdownID: "cd-1", Current: 1, Looping: false},
+			SceneCountdownStates: map[ids.CountdownID]daggerheartstate.SceneCountdownState{
+				"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 1, LoopBehavior: "reset", Status: "active"},
 			},
 		}
 		if err := daggerheartfolder.FoldCountdownUpdated(state, daggerheartpayload.CountdownUpdatedPayload{
-			CountdownID: "cd-1",
-			Value:       2,
-			Looped:      true,
+			CountdownID:     "cd-1",
+			BeforeRemaining: 1,
+			AfterRemaining:  0,
+			AdvancedBy:      1,
+			StatusBefore:    "active",
+			StatusAfter:     "trigger_pending",
 		}); err != nil {
 			t.Fatalf("foldCountdownUpdated() error = %v", err)
 		}
-		got := state.CountdownStates["cd-1"]
-		if got.Current != 2 {
-			t.Fatalf("countdown current = %d, want 2", got.Current)
+		got := state.SceneCountdownStates["cd-1"]
+		if got.RemainingValue != 0 {
+			t.Fatalf("countdown remaining_value = %d, want 0", got.RemainingValue)
 		}
-		if !got.Looping {
-			t.Fatal("countdown looping = false, want true")
+		if got.Status != "trigger_pending" {
+			t.Fatalf("countdown status = %q, want trigger_pending", got.Status)
 		}
 	})
 }

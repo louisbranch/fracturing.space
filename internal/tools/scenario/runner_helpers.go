@@ -1924,6 +1924,17 @@ func resolveCountdownID(state *scenarioState, args map[string]any) (string, erro
 	return countdownID, nil
 }
 
+func resolveCountdownReference(state *scenarioState, value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if countdownID, ok := state.countdowns[value]; ok {
+		return countdownID
+	}
+	return value
+}
+
 func resolveOutcomeTargets(state *scenarioState, args map[string]any) ([]string, error) {
 	list := readStringSlice(args, "targets")
 	if len(list) == 0 {
@@ -2572,27 +2583,70 @@ func parseRestType(value string) (daggerheartv1.DaggerheartRestType, error) {
 	}
 }
 
-func parseCountdownKind(value string) (daggerheartv1.DaggerheartCountdownKind, error) {
+func parseCountdownKind(value string) (daggerheartv1.DaggerheartCountdownTone, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "progress":
-		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS, nil
+		return daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS, nil
 	case "consequence":
-		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE, nil
+		return daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_CONSEQUENCE, nil
 	case "loop", "long_term":
-		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS, nil
+		return daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS, nil
+	case "neutral":
+		return daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_NEUTRAL, nil
 	default:
-		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED, fmt.Errorf("unsupported countdown kind %q", value)
+		return daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_UNSPECIFIED, fmt.Errorf("unsupported countdown kind %q", value)
 	}
 }
 
-func parseCountdownDirection(value string) (daggerheartv1.DaggerheartCountdownDirection, error) {
+func parseCountdownAdvancementPolicy(value string) (daggerheartv1.DaggerheartCountdownAdvancementPolicy, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "manual":
+		return daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_MANUAL, nil
+	case "action_standard", "action standard":
+		return daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_ACTION_STANDARD, nil
+	case "action_dynamic", "action dynamic":
+		return daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_ACTION_DYNAMIC, nil
+	case "long_rest", "long rest":
+		return daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_LONG_REST, nil
+	default:
+		return daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_UNSPECIFIED, fmt.Errorf("unsupported countdown advancement policy %q", value)
+	}
+}
+
+func parseCountdownDirection(value string) (daggerheartv1.DaggerheartCountdownLoopBehavior, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "increase":
-		return daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE, nil
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE, nil
 	case "decrease":
-		return daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE, nil
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_DECREASE_START, nil
 	default:
-		return daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED, fmt.Errorf("unsupported countdown direction %q", value)
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_UNSPECIFIED, fmt.Errorf("unsupported countdown direction %q", value)
+	}
+}
+
+func parseCountdownLoopBehavior(value string) (daggerheartv1.DaggerheartCountdownLoopBehavior, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "none":
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE, nil
+	case "reset":
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET, nil
+	case "reset_increase_start", "reset increase start":
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_INCREASE_START, nil
+	case "reset_decrease_start", "reset decrease start":
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_DECREASE_START, nil
+	default:
+		return daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_UNSPECIFIED, fmt.Errorf("unsupported countdown loop behavior %q", value)
+	}
+}
+
+func parseCountdownStatus(value string) (daggerheartv1.DaggerheartCountdownStatus, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "active":
+		return daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_ACTIVE, nil
+	case "trigger_pending", "trigger pending":
+		return daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_TRIGGER_PENDING, nil
+	default:
+		return daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_UNSPECIFIED, fmt.Errorf("unsupported countdown status %q", value)
 	}
 }
 

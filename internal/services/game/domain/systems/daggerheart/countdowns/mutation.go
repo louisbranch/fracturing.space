@@ -3,72 +3,82 @@ package countdowns
 import (
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 const (
-	// BreathCountdownName is the canonical countdown label for underwater breath.
-	BreathCountdownName = "Breath"
-	// BreathCountdownInitial is the canonical initial breath countdown value.
-	BreathCountdownInitial = 0
-	// BreathCountdownMax is the canonical breath countdown max value.
-	BreathCountdownMax = 3
-	// CountdownReasonLongRest identifies a long-rest-triggered countdown advance.
-	CountdownReasonLongRest = "long_rest"
-	// CountdownReasonBreathTick identifies a successful breath countdown tick.
+	BreathCountdownName       = "Breath"
+	CountdownReasonLongRest   = "long_rest"
 	CountdownReasonBreathTick = "breath_tick"
-	// CountdownReasonBreathFailure identifies a failed breath countdown tick.
-	CountdownReasonBreathFailure = "breath_failure"
+	CountdownReasonBreathFail = "breath_failure"
 )
 
-// CountdownMutationInput captures transport-agnostic countdown mutation input.
-type CountdownMutationInput struct {
+type CountdownAdvanceInput struct {
 	Countdown rules.Countdown
-	Delta     int
-	Override  *int
+	Amount    int
 	Reason    string
 }
 
-// CountdownMutation captures resolved countdown update state and event payload.
-type CountdownMutation struct {
-	Update  rules.CountdownUpdate
-	Payload payload.CountdownUpdatePayload
+type CountdownAdvanceMutation struct {
+	Advance rules.CountdownAdvance
+	Payload payload.CampaignCountdownAdvancePayload
 }
 
-// ResolveCountdownMutation applies countdown rules and builds a canonical
-// countdown update payload for command/event emission.
-func ResolveCountdownMutation(input CountdownMutationInput) (CountdownMutation, error) {
-	update, err := rules.ApplyCountdownUpdate(input.Countdown, input.Delta, input.Override)
+func ResolveCountdownAdvance(input CountdownAdvanceInput) (CountdownAdvanceMutation, error) {
+	advance, err := rules.ApplyCountdownAdvance(input.Countdown, input.Amount)
 	if err != nil {
-		return CountdownMutation{}, err
+		return CountdownAdvanceMutation{}, err
 	}
-	return CountdownMutation{
-		Update: update,
-		Payload: payload.CountdownUpdatePayload{
-			CountdownID: dhids.CountdownID(strings.TrimSpace(input.Countdown.ID)),
-			Before:      update.Before,
-			After:       update.After,
-			Delta:       update.Delta,
-			Looped:      update.Looped,
-			Reason:      strings.TrimSpace(input.Reason),
+	return CountdownAdvanceMutation{
+		Advance: advance,
+		Payload: payload.CampaignCountdownAdvancePayload{
+			CountdownID:     ids.CountdownID(strings.TrimSpace(input.Countdown.ID)),
+			BeforeRemaining: advance.BeforeRemaining,
+			AfterRemaining:  advance.AfterRemaining,
+			AdvancedBy:      advance.AdvancedBy,
+			StatusBefore:    advance.StatusBefore,
+			StatusAfter:     advance.StatusAfter,
+			Triggered:       advance.Triggered,
+			Reason:          strings.TrimSpace(input.Reason),
 		},
 	}, nil
 }
 
-// BreathCountdownAdvance captures the countdown delta/reason for one breath
-// advancement step.
+type CountdownTriggerResolution struct {
+	Result  rules.CountdownTriggerResolution
+	Payload payload.CampaignCountdownTriggerResolvedPayload
+}
+
+func ResolveCountdownTrigger(countdown rules.Countdown, reason string) (CountdownTriggerResolution, error) {
+	result, err := rules.ResolveCountdownTrigger(countdown)
+	if err != nil {
+		return CountdownTriggerResolution{}, err
+	}
+	return CountdownTriggerResolution{
+		Result: result,
+		Payload: payload.CampaignCountdownTriggerResolvedPayload{
+			CountdownID:          ids.CountdownID(strings.TrimSpace(countdown.ID)),
+			StartingValueBefore:  result.StartingValueBefore,
+			StartingValueAfter:   result.StartingValueAfter,
+			RemainingValueBefore: result.RemainingValueBefore,
+			RemainingValueAfter:  result.RemainingValueAfter,
+			StatusBefore:         result.StatusBefore,
+			StatusAfter:          result.StatusAfter,
+			Reason:               strings.TrimSpace(reason),
+		},
+	}, nil
+}
+
 type BreathCountdownAdvance struct {
-	Delta  int
+	Amount int
 	Reason string
 }
 
-// ResolveBreathCountdownAdvance returns the canonical mutation for a breath
-// countdown advance.
 func ResolveBreathCountdownAdvance(failed bool) BreathCountdownAdvance {
 	if failed {
-		return BreathCountdownAdvance{Delta: 2, Reason: CountdownReasonBreathFailure}
+		return BreathCountdownAdvance{Amount: 2, Reason: CountdownReasonBreathFail}
 	}
-	return BreathCountdownAdvance{Delta: 1, Reason: CountdownReasonBreathTick}
+	return BreathCountdownAdvance{Amount: 1, Reason: CountdownReasonBreathTick}
 }

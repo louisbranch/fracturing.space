@@ -346,12 +346,22 @@ func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, s
 		return r.runAdversaryUpdateStep(ctx, state, step)
 	case "swap_loadout":
 		return r.runSwapLoadoutStep(ctx, state, step)
-	case "countdown_create":
+	case "scene_countdown_create":
 		return r.runCountdownCreateStep(ctx, state, step)
-	case "countdown_update":
+	case "scene_countdown_update":
 		return r.runCountdownUpdateStep(ctx, state, step)
-	case "countdown_delete":
+	case "scene_countdown_resolve_trigger":
+		return r.runCountdownResolveTriggerStep(ctx, state, step)
+	case "scene_countdown_delete":
 		return r.runCountdownDeleteStep(ctx, state, step)
+	case "campaign_countdown_create":
+		return r.runCampaignCountdownCreateStep(ctx, state, step)
+	case "campaign_countdown_update":
+		return r.runCampaignCountdownUpdateStep(ctx, state, step)
+	case "campaign_countdown_resolve_trigger":
+		return r.runCampaignCountdownResolveTriggerStep(ctx, state, step)
+	case "campaign_countdown_delete":
+		return r.runCampaignCountdownDeleteStep(ctx, state, step)
 	case "action_roll":
 		return r.runActionRollStep(ctx, state, step)
 	case "reaction_roll":

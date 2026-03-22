@@ -25,14 +25,14 @@ func TestModuleEmittableEventTypes_MatchesDefinitions(t *testing.T) {
 }
 
 func TestValidateCountdownCreatePayload_Branches(t *testing.T) {
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(`{"countdown_id":"","name":"n","kind":"k","direction":"inc","max":1}`)); err == nil {
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"","name":"n","tone":"progress","advancement_policy":"manual","starting_value":1,"remaining_value":1,"loop_behavior":"none","status":"active"}`)); err == nil {
 		t.Fatal("expected missing countdown_id error")
 	}
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(`{"countdown_id":"c1","name":"n","kind":"k","direction":"inc","max":0}`)); err == nil {
-		t.Fatal("expected max-positive error")
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"c1","name":"n","tone":"progress","advancement_policy":"manual","starting_value":0,"remaining_value":0,"loop_behavior":"none","status":"active"}`)); err == nil {
+		t.Fatal("expected starting_value-positive error")
 	}
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(`{"countdown_id":"c1","name":"n","kind":"k","direction":"inc","current":2,"max":1}`)); err == nil {
-		t.Fatal("expected current range error")
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"c1","name":"n","tone":"progress","advancement_policy":"manual","starting_value":1,"remaining_value":2,"loop_behavior":"none","status":"active"}`)); err == nil {
+		t.Fatal("expected remaining_value range error")
 	}
 }
 
@@ -77,7 +77,7 @@ func TestValidateRestLongTermCountdownPayload(t *testing.T) {
 	if err := daggerheartvalidator.ValidateRestLongTermCountdownPayload(daggerheartpayload.CountdownUpdatePayload{CountdownID: "c1"}); err == nil {
 		t.Fatal("expected change-required error")
 	}
-	if err := daggerheartvalidator.ValidateRestLongTermCountdownPayload(daggerheartpayload.CountdownUpdatePayload{CountdownID: "c1", Before: 1, After: 2}); err != nil {
+	if err := daggerheartvalidator.ValidateRestLongTermCountdownPayload(daggerheartpayload.CountdownUpdatePayload{CountdownID: "c1", BeforeRemaining: 1, AfterRemaining: 2, AdvancedBy: 1}); err != nil {
 		t.Fatalf("expected valid countdown payload, got %v", err)
 	}
 }

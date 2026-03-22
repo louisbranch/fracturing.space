@@ -20,9 +20,9 @@ scn:start_session("Ritual Objectives")
 
 -- Example: three objectives run in parallel during the fight.
 -- Missing DSL: connect action rolls to each objective's progress.
-dh:countdown_create{ name = "Ritual Completion", kind = "consequence", current = 0, max = 6, direction = "increase" }
-dh:countdown_create{ name = "Bilbo Rescued", kind = "progress", current = 0, max = 4, direction = "increase" }
-dh:countdown_create{ name = "Saruman Captured", kind = "progress", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_create{ name = "Ritual Completion", kind = "consequence", current = 0, max = 6, direction = "increase" }
+dh:scene_countdown_create{ name = "Bilbo Rescued", kind = "progress", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_create{ name = "Saruman Captured", kind = "progress", current = 0, max = 4, direction = "increase" }
 
 scn:end_session()
 

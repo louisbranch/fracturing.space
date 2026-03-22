@@ -16,7 +16,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -78,12 +77,15 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 		return RestResult{}, status.Error(codes.InvalidArgument, "rest participants are required")
 	}
 
-	countdownsByID := make(map[dhids.CountdownID]rules.Countdown)
-	longTermCountdownID := dhids.CountdownID(strings.TrimSpace(in.Rest.GetLongTermCountdownId()))
+	countdownsByID := make(map[ids.CountdownID]rules.Countdown)
+	longTermCountdownID := ids.CountdownID(strings.TrimSpace(in.Rest.GetLongRestCampaignCountdownId()))
 	if longTermCountdownID != "" {
 		storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID.String())
 		if err != nil {
 			return RestResult{}, handleDomainError(err)
+		}
+		if storedCountdown.SessionID != "" || storedCountdown.SceneID != "" {
+			return RestResult{}, status.Error(codes.InvalidArgument, "campaign_countdown_id must reference a campaign countdown")
 		}
 		countdown := countdownFromStorage(storedCountdown)
 		countdownsByID[longTermCountdownID] = countdown
@@ -120,6 +122,9 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 					storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, move.CountdownID.String())
 					if err != nil {
 						return RestResult{}, handleDomainError(err)
+					}
+					if storedCountdown.SessionID != "" || storedCountdown.SceneID != "" {
+						return RestResult{}, status.Error(codes.InvalidArgument, "work_on_project requires a campaign countdown")
 					}
 					countdown := countdownFromStorage(storedCountdown)
 					countdownsByID[move.CountdownID] = countdown
@@ -215,7 +220,12 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 		}
 		countdowns = append(countdowns, countdown)
 	}
-	return RestResult{Snapshot: updatedSnap, CharacterStates: entries, Countdowns: countdowns}, nil
+	return RestResult{
+		Snapshot:                  updatedSnap,
+		CharacterStates:           entries,
+		Countdowns:                countdowns,
+		CampaignCountdownAdvances: result.Payload.CampaignCountdownAdvances,
+	}, nil
 }
 
 func affectedRestCharacterIDs(payload daggerheartpayload.RestTakePayload) []string {

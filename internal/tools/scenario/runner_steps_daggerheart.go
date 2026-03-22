@@ -1080,7 +1080,7 @@ func (r *Runner) runRestStep(ctx context.Context, state *scenarioState, step Ste
 		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeDowntimeMoveApplied)
 	}
 	if restContainsProjectWork(participants) {
-		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeCountdownUpdated)
+		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeCampaignCountdownUpdated)
 	}
 	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, expectedEvents...); err != nil {
 		return err
@@ -1206,10 +1206,10 @@ func (r *Runner) buildRestDowntimeSelections(state *scenarioState, participant m
 			selections = append(selections, &daggerheartv1.DaggerheartDowntimeSelection{
 				Move: &daggerheartv1.DaggerheartDowntimeSelection_WorkOnProject{
 					WorkOnProject: &daggerheartv1.DaggerheartWorkOnProjectMove{
-						CountdownId:  projectID,
-						AdvanceMode:  mode,
-						AdvanceDelta: int32(optionalInt(entry, "advance_delta", 0)),
-						Reason:       optionalString(entry, "reason", ""),
+						ProjectCampaignCountdownId: projectID,
+						AdvanceMode:                mode,
+						AdvanceDelta:               int32(optionalInt(entry, "advance_delta", 0)),
+						Reason:                     optionalString(entry, "reason", ""),
 					},
 				},
 			})
@@ -1432,6 +1432,146 @@ func (r *Runner) runBlazeOfGloryStep(ctx context.Context, state *scenarioState, 
 		return err
 	}
 	return r.requireAnyEventTypesAfterSeq(ctx, state, before, event.TypeCharacterDeleted)
+}
+
+type scenarioCountdownView struct {
+	ID                string
+	Name              string
+	Tone              daggerheartv1.DaggerheartCountdownTone
+	AdvancementPolicy daggerheartv1.DaggerheartCountdownAdvancementPolicy
+	StartingValue     int32
+	RemainingValue    int32
+	LoopBehavior      daggerheartv1.DaggerheartCountdownLoopBehavior
+	Status            daggerheartv1.DaggerheartCountdownStatus
+	LinkedCountdownID string
+	StartingRoll      *daggerheartv1.DaggerheartCountdownStartingRoll
+}
+
+func scenarioCountdownViewFromScene(countdown *daggerheartv1.DaggerheartSceneCountdown) scenarioCountdownView {
+	if countdown == nil {
+		return scenarioCountdownView{}
+	}
+	return scenarioCountdownView{
+		ID:                countdown.GetCountdownId(),
+		Name:              countdown.GetName(),
+		Tone:              countdown.GetTone(),
+		AdvancementPolicy: countdown.GetAdvancementPolicy(),
+		StartingValue:     countdown.GetStartingValue(),
+		RemainingValue:    countdown.GetRemainingValue(),
+		LoopBehavior:      countdown.GetLoopBehavior(),
+		Status:            countdown.GetStatus(),
+		LinkedCountdownID: countdown.GetLinkedCountdownId(),
+		StartingRoll:      countdown.GetStartingRoll(),
+	}
+}
+
+func scenarioCountdownViewFromCampaign(countdown *daggerheartv1.DaggerheartCampaignCountdown) scenarioCountdownView {
+	if countdown == nil {
+		return scenarioCountdownView{}
+	}
+	return scenarioCountdownView{
+		ID:                countdown.GetCountdownId(),
+		Name:              countdown.GetName(),
+		Tone:              countdown.GetTone(),
+		AdvancementPolicy: countdown.GetAdvancementPolicy(),
+		StartingValue:     countdown.GetStartingValue(),
+		RemainingValue:    countdown.GetRemainingValue(),
+		LoopBehavior:      countdown.GetLoopBehavior(),
+		Status:            countdown.GetStatus(),
+		LinkedCountdownID: countdown.GetLinkedCountdownId(),
+		StartingRoll:      countdown.GetStartingRoll(),
+	}
+}
+
+func (r *Runner) assertScenarioCountdown(state *scenarioState, step Step, view scenarioCountdownView) error {
+	if view.ID == "" {
+		return r.failf("expected countdown response")
+	}
+	if want := strings.TrimSpace(optionalString(step.Args, "expect_name", "")); want != "" && view.Name != want {
+		return r.assertf("countdown name = %q, want %q", view.Name, want)
+	}
+	if want := strings.TrimSpace(optionalString(step.Args, "expect_tone", "")); want != "" {
+		parsed, err := parseCountdownKind(want)
+		if err != nil {
+			return err
+		}
+		if view.Tone != parsed {
+			return r.assertf("countdown tone = %s, want %s", view.Tone, parsed)
+		}
+	}
+	if want := strings.TrimSpace(optionalString(step.Args, "expect_advancement_policy", "")); want != "" {
+		parsed, err := parseCountdownAdvancementPolicy(want)
+		if err != nil {
+			return err
+		}
+		if view.AdvancementPolicy != parsed {
+			return r.assertf("countdown advancement_policy = %s, want %s", view.AdvancementPolicy, parsed)
+		}
+	}
+	if want, ok := readInt(step.Args, "expect_starting_value"); ok && view.StartingValue != int32(want) {
+		return r.assertf("countdown starting_value = %d, want %d", view.StartingValue, want)
+	}
+	if want, ok := readInt(step.Args, "expect_remaining_value"); ok && view.RemainingValue != int32(want) {
+		return r.assertf("countdown remaining_value = %d, want %d", view.RemainingValue, want)
+	}
+	if want := strings.TrimSpace(optionalString(step.Args, "expect_loop_behavior", "")); want != "" {
+		parsed, err := parseCountdownLoopBehavior(want)
+		if err != nil {
+			return err
+		}
+		if view.LoopBehavior != parsed {
+			return r.assertf("countdown loop_behavior = %s, want %s", view.LoopBehavior, parsed)
+		}
+	}
+	if want := strings.TrimSpace(optionalString(step.Args, "expect_status", "")); want != "" {
+		parsed, err := parseCountdownStatus(want)
+		if err != nil {
+			return err
+		}
+		if view.Status != parsed {
+			return r.assertf("countdown status = %s, want %s", view.Status, parsed)
+		}
+	}
+	if _, present := step.Args["expect_linked_countdown_id"]; present {
+		want := resolveCountdownReference(state, optionalString(step.Args, "expect_linked_countdown_id", ""))
+		if view.LinkedCountdownID != want {
+			return r.assertf("countdown linked_countdown_id = %q, want %q", view.LinkedCountdownID, want)
+		}
+	}
+	if _, present := step.Args["expect_starting_roll_value"]; present || step.Args["expect_starting_roll_min"] != nil || step.Args["expect_starting_roll_max"] != nil {
+		if view.StartingRoll == nil {
+			return r.failf("expected countdown starting_roll")
+		}
+		if want, ok := readInt(step.Args, "expect_starting_roll_min"); ok && view.StartingRoll.GetMin() != int32(want) {
+			return r.assertf("countdown starting_roll.min = %d, want %d", view.StartingRoll.GetMin(), want)
+		}
+		if want, ok := readInt(step.Args, "expect_starting_roll_max"); ok && view.StartingRoll.GetMax() != int32(want) {
+			return r.assertf("countdown starting_roll.max = %d, want %d", view.StartingRoll.GetMax(), want)
+		}
+		if want, ok := readInt(step.Args, "expect_starting_roll_value"); ok && view.StartingRoll.GetValue() != int32(want) {
+			return r.assertf("countdown starting_roll.value = %d, want %d", view.StartingRoll.GetValue(), want)
+		}
+	}
+	return nil
+}
+
+func (r *Runner) assertScenarioCountdownAdvance(step Step, advance *daggerheartv1.DaggerheartCountdownAdvance) error {
+	if advance == nil {
+		return r.failf("expected countdown advance response")
+	}
+	if want, ok := readInt(step.Args, "expect_before_remaining"); ok && advance.GetRemainingBefore() != int32(want) {
+		return r.assertf("countdown advance remaining_before = %d, want %d", advance.GetRemainingBefore(), want)
+	}
+	if want, ok := readInt(step.Args, "expect_after_remaining"); ok && advance.GetRemainingAfter() != int32(want) {
+		return r.assertf("countdown advance remaining_after = %d, want %d", advance.GetRemainingAfter(), want)
+	}
+	if want, ok := readInt(step.Args, "expect_advanced_by"); ok && advance.GetAdvancedBy() != int32(want) {
+		return r.assertf("countdown advance advanced_by = %d, want %d", advance.GetAdvancedBy(), want)
+	}
+	if want, ok := readBool(step.Args, "expect_triggered"); ok && advance.GetTriggered() != want {
+		return r.assertf("countdown advance triggered = %t, want %t", advance.GetTriggered(), want)
+	}
+	return nil
 }
 
 func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2311,117 +2451,218 @@ func (r *Runner) runCountdownCreateStep(ctx context.Context, state *scenarioStat
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
 	}
+	if err := r.ensureDefaultScene(ctx, state); err != nil {
+		return err
+	}
 	name := requiredString(step.Args, "name")
 	if name == "" {
-		return r.failf("countdown_create name is required")
+		return r.failf("scene_countdown_create name is required")
 	}
-	maxValue := optionalInt(step.Args, "max", 0)
-	if maxValue <= 0 {
-		maxValue = 4
-	}
-	kindValue := optionalString(step.Args, "kind", "progress")
-	parsedKind, err := parseCountdownKind(kindValue)
+	toneValue := optionalString(step.Args, "tone", optionalString(step.Args, "kind", "progress"))
+	parsedKind, err := parseCountdownKind(toneValue)
 	if err != nil {
 		return err
 	}
-	parsedDirection, err := parseCountdownDirection(optionalString(step.Args, "direction", "increase"))
+	policyValue := optionalString(step.Args, "advancement_policy", "")
+	if policyValue == "" && strings.EqualFold(toneValue, "long_term") {
+		policyValue = "long_rest"
+	}
+	if policyValue == "" {
+		policyValue = "manual"
+	}
+	parsedPolicy, err := parseCountdownAdvancementPolicy(policyValue)
 	if err != nil {
 		return err
+	}
+	loopBehaviorValue := optionalString(step.Args, "loop_behavior", "")
+	looping := optionalBool(step.Args, "looping", false)
+	if strings.EqualFold(toneValue, "loop") {
+		looping = true
+	}
+	if loopBehaviorValue == "" {
+		if looping {
+			loopBehaviorValue = "reset"
+		} else {
+			loopBehaviorValue = optionalString(step.Args, "direction", "increase")
+		}
+	}
+	parsedLoopBehavior, err := func() (daggerheartv1.DaggerheartCountdownLoopBehavior, error) {
+		if strings.EqualFold(loopBehaviorValue, "increase") || strings.EqualFold(loopBehaviorValue, "decrease") {
+			return parseCountdownDirection(loopBehaviorValue)
+		}
+		return parseCountdownLoopBehavior(loopBehaviorValue)
+	}()
+	if err != nil {
+		return err
+	}
+
+	request := &daggerheartv1.DaggerheartCreateSceneCountdownRequest{
+		CampaignId:        state.campaignID,
+		SessionId:         state.sessionID,
+		SceneId:           state.activeSceneID,
+		Name:              name,
+		Tone:              parsedKind,
+		AdvancementPolicy: parsedPolicy,
+		LoopBehavior:      parsedLoopBehavior,
+		LinkedCountdownId: resolveCountdownReference(state, optionalString(step.Args, "linked_countdown_id", "")),
+	}
+	if randomized := readMap(step.Args, "randomized_start"); randomized != nil {
+		minValue, ok := readInt(randomized, "min")
+		if !ok || minValue <= 0 {
+			return r.failf("scene_countdown_create randomized_start.min must be a positive integer")
+		}
+		maxValue, ok := readInt(randomized, "max")
+		if !ok || maxValue < minValue {
+			return r.failf("scene_countdown_create randomized_start.max must be an integer >= min")
+		}
+		seedValue, ok := readInt(randomized, "seed")
+		if !ok || seedValue <= 0 {
+			return r.failf("scene_countdown_create randomized_start.seed must be a positive integer")
+		}
+		seed := uint64(seedValue)
+		request.StartingValue = &daggerheartv1.DaggerheartCreateSceneCountdownRequest_RandomizedStart{
+			RandomizedStart: &daggerheartv1.DaggerheartCountdownRandomizedStart{
+				Min: int32(minValue),
+				Max: int32(maxValue),
+				Rng: &commonv1.RngRequest{
+					Seed:     &seed,
+					RollMode: commonv1.RollMode_REPLAY,
+				},
+			},
+		}
+	} else {
+		fixedStartingValue := optionalInt(step.Args, "fixed_starting_value", optionalInt(step.Args, "max", 0))
+		if fixedStartingValue <= 0 {
+			fixedStartingValue = 4
+		}
+		request.StartingValue = &daggerheartv1.DaggerheartCreateSceneCountdownRequest_FixedStartingValue{FixedStartingValue: int32(fixedStartingValue)}
 	}
 
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
 		return err
 	}
-	looping := optionalBool(step.Args, "looping", false)
-	if strings.EqualFold(kindValue, "loop") {
-		looping = true
-	}
-	request := &daggerheartv1.DaggerheartCreateCountdownRequest{
-		CampaignId: state.campaignID,
-		SessionId:  state.sessionID,
-		SceneId:    state.activeSceneID,
-		Name:       name,
-		Kind:       parsedKind,
-		Current:    int32(optionalInt(step.Args, "current", 0)),
-		Max:        int32(maxValue),
-		Direction:  parsedDirection,
-		Looping:    looping,
-	}
 	if countdownID := optionalString(step.Args, "countdown_id", ""); countdownID != "" {
 		request.CountdownId = countdownID
 	}
-	response, err := r.env.daggerheartClient.CreateCountdown(ctx, request)
+	response, err := r.env.daggerheartClient.CreateSceneCountdown(ctx, request)
 	if err != nil {
-		return fmt.Errorf("countdown_create: %w", err)
+		return fmt.Errorf("scene_countdown_create: %w", err)
 	}
 	if response.GetCountdown() == nil {
 		return r.failf("expected countdown")
 	}
 	state.countdowns[name] = response.GetCountdown().GetCountdownId()
 	r.logf("countdown created: name=%s id=%s", name, state.countdowns[name])
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCountdownCreated)
+	if err := r.assertScenarioCountdown(state, step, scenarioCountdownViewFromScene(response.GetCountdown())); err != nil {
+		return err
+	}
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeSceneCountdownCreated)
 }
 
 func (r *Runner) runCountdownUpdateStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
 	}
+	if err := r.ensureDefaultScene(ctx, state); err != nil {
+		return err
+	}
 	countdownID, err := resolveCountdownID(state, step.Args)
 	if err != nil {
 		return err
 	}
 	if countdownID == "" {
-		return r.failf("countdown_update countdown_id or name is required")
+		return r.failf("scene_countdown_update countdown_id or name is required")
 	}
 
-	delta := optionalInt(step.Args, "delta", 0)
-	current, hasCurrent := readInt(step.Args, "current")
-	if delta == 0 && !hasCurrent {
-		return r.failf("countdown_update requires delta or current")
+	amount := optionalInt(step.Args, "amount", optionalInt(step.Args, "delta", 0))
+	if amount <= 0 {
+		return r.failf("scene_countdown_update requires positive amount")
 	}
 
-	request := &daggerheartv1.DaggerheartUpdateCountdownRequest{
+	request := &daggerheartv1.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId:  state.campaignID,
 		SessionId:   state.sessionID,
 		SceneId:     state.activeSceneID,
 		CountdownId: countdownID,
-		Delta:       int32(delta),
+		Amount:      int32(amount),
 		Reason:      optionalString(step.Args, "reason", ""),
-	}
-	if hasCurrent {
-		value := int32(current)
-		request.Current = &value
 	}
 
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
 		return err
 	}
-	_, err = r.env.daggerheartClient.UpdateCountdown(ctx, request)
+	response, err := r.env.daggerheartClient.AdvanceSceneCountdown(ctx, request)
 	if err != nil {
-		return fmt.Errorf("countdown_update: %w", err)
+		return fmt.Errorf("scene_countdown_update: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCountdownUpdated)
+	if err := r.assertScenarioCountdown(state, step, scenarioCountdownViewFromScene(response.GetCountdown())); err != nil {
+		return err
+	}
+	if err := r.assertScenarioCountdownAdvance(step, response.GetAdvance()); err != nil {
+		return err
+	}
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeSceneCountdownUpdated)
+}
+
+func (r *Runner) runCountdownResolveTriggerStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	if err := r.ensureDefaultScene(ctx, state); err != nil {
+		return err
+	}
+	countdownID, err := resolveCountdownID(state, step.Args)
+	if err != nil {
+		return err
+	}
+	if countdownID == "" {
+		return r.failf("scene_countdown_resolve_trigger countdown_id or name is required")
+	}
+
+	request := &daggerheartv1.DaggerheartResolveSceneCountdownTriggerRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		SceneId:     state.activeSceneID,
+		CountdownId: countdownID,
+		Reason:      optionalString(step.Args, "reason", ""),
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	response, err := r.env.daggerheartClient.ResolveSceneCountdownTrigger(ctx, request)
+	if err != nil {
+		return fmt.Errorf("scene_countdown_resolve_trigger: %w", err)
+	}
+	if err := r.assertScenarioCountdown(state, step, scenarioCountdownViewFromScene(response.GetCountdown())); err != nil {
+		return err
+	}
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeSceneCountdownTriggerResolved)
 }
 
 func (r *Runner) runCountdownDeleteStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
 	}
+	if err := r.ensureDefaultScene(ctx, state); err != nil {
+		return err
+	}
 	countdownID, err := resolveCountdownID(state, step.Args)
 	if err != nil {
 		return err
 	}
 	if countdownID == "" {
-		return r.failf("countdown_delete countdown_id or name is required")
+		return r.failf("scene_countdown_delete countdown_id or name is required")
 	}
 
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
 		return err
 	}
-	_, err = r.env.daggerheartClient.DeleteCountdown(ctx, &daggerheartv1.DaggerheartDeleteCountdownRequest{
+	_, err = r.env.daggerheartClient.DeleteSceneCountdown(ctx, &daggerheartv1.DaggerheartDeleteSceneCountdownRequest{
 		CampaignId:  state.campaignID,
 		SessionId:   state.sessionID,
 		SceneId:     state.activeSceneID,
@@ -2429,9 +2670,223 @@ func (r *Runner) runCountdownDeleteStep(ctx context.Context, state *scenarioStat
 		Reason:      optionalString(step.Args, "reason", ""),
 	})
 	if err != nil {
-		return fmt.Errorf("countdown_delete: %w", err)
+		return fmt.Errorf("scene_countdown_delete: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCountdownDeleted); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeSceneCountdownDeleted); err != nil {
+		return err
+	}
+	if name := optionalString(step.Args, "name", ""); name != "" {
+		delete(state.countdowns, name)
+	}
+	return nil
+}
+
+func (r *Runner) runCampaignCountdownCreateStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureCampaign(state); err != nil {
+		return err
+	}
+	name := optionalString(step.Args, "name", "")
+	if name == "" {
+		return r.failf("campaign_countdown_create name is required")
+	}
+	toneValue := optionalString(step.Args, "tone", optionalString(step.Args, "kind", "progress"))
+	parsedKind, err := parseCountdownKind(toneValue)
+	if err != nil {
+		return err
+	}
+	policyValue := optionalString(step.Args, "advancement_policy", "")
+	if policyValue == "" && strings.EqualFold(toneValue, "long_term") {
+		policyValue = "long_rest"
+	}
+	if policyValue == "" {
+		policyValue = "manual"
+	}
+	parsedPolicy, err := parseCountdownAdvancementPolicy(policyValue)
+	if err != nil {
+		return err
+	}
+	loopBehaviorValue := optionalString(step.Args, "loop_behavior", "")
+	looping := optionalBool(step.Args, "looping", false)
+	if strings.EqualFold(toneValue, "loop") {
+		looping = true
+	}
+	if loopBehaviorValue == "" {
+		if looping {
+			loopBehaviorValue = "reset"
+		} else {
+			loopBehaviorValue = optionalString(step.Args, "direction", "increase")
+		}
+	}
+	parsedLoopBehavior, err := func() (daggerheartv1.DaggerheartCountdownLoopBehavior, error) {
+		if strings.EqualFold(loopBehaviorValue, "increase") || strings.EqualFold(loopBehaviorValue, "decrease") {
+			return parseCountdownDirection(loopBehaviorValue)
+		}
+		return parseCountdownLoopBehavior(loopBehaviorValue)
+	}()
+	if err != nil {
+		return err
+	}
+
+	request := &daggerheartv1.DaggerheartCreateCampaignCountdownRequest{
+		CampaignId:        state.campaignID,
+		Name:              name,
+		Tone:              parsedKind,
+		AdvancementPolicy: parsedPolicy,
+		LoopBehavior:      parsedLoopBehavior,
+		LinkedCountdownId: resolveCountdownReference(state, optionalString(step.Args, "linked_countdown_id", "")),
+	}
+	if randomized := readMap(step.Args, "randomized_start"); randomized != nil {
+		minValue, ok := readInt(randomized, "min")
+		if !ok || minValue <= 0 {
+			return r.failf("campaign_countdown_create randomized_start.min must be a positive integer")
+		}
+		maxValue, ok := readInt(randomized, "max")
+		if !ok || maxValue < minValue {
+			return r.failf("campaign_countdown_create randomized_start.max must be an integer >= min")
+		}
+		seedValue, ok := readInt(randomized, "seed")
+		if !ok || seedValue <= 0 {
+			return r.failf("campaign_countdown_create randomized_start.seed must be a positive integer")
+		}
+		seed := uint64(seedValue)
+		request.StartingValue = &daggerheartv1.DaggerheartCreateCampaignCountdownRequest_RandomizedStart{
+			RandomizedStart: &daggerheartv1.DaggerheartCountdownRandomizedStart{
+				Min: int32(minValue),
+				Max: int32(maxValue),
+				Rng: &commonv1.RngRequest{
+					Seed:     &seed,
+					RollMode: commonv1.RollMode_REPLAY,
+				},
+			},
+		}
+	} else {
+		fixedStartingValue := optionalInt(step.Args, "fixed_starting_value", optionalInt(step.Args, "max", 0))
+		if fixedStartingValue <= 0 {
+			fixedStartingValue = 4
+		}
+		request.StartingValue = &daggerheartv1.DaggerheartCreateCampaignCountdownRequest_FixedStartingValue{FixedStartingValue: int32(fixedStartingValue)}
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	if countdownID := optionalString(step.Args, "countdown_id", ""); countdownID != "" {
+		request.CountdownId = countdownID
+	}
+	response, err := r.env.daggerheartClient.CreateCampaignCountdown(ctx, request)
+	if err != nil {
+		return fmt.Errorf("campaign_countdown_create: %w", err)
+	}
+	if response.GetCountdown() == nil {
+		return r.failf("expected countdown")
+	}
+	state.countdowns[name] = response.GetCountdown().GetCountdownId()
+	r.logf("campaign countdown created: name=%s id=%s", name, state.countdowns[name])
+	if err := r.assertScenarioCountdown(state, step, scenarioCountdownViewFromCampaign(response.GetCountdown())); err != nil {
+		return err
+	}
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCampaignCountdownCreated)
+}
+
+func (r *Runner) runCampaignCountdownUpdateStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureCampaign(state); err != nil {
+		return err
+	}
+	countdownID, err := resolveCountdownID(state, step.Args)
+	if err != nil {
+		return err
+	}
+	if countdownID == "" {
+		return r.failf("campaign_countdown_update countdown_id or name is required")
+	}
+
+	amount := optionalInt(step.Args, "amount", optionalInt(step.Args, "delta", 0))
+	if amount <= 0 {
+		return r.failf("campaign_countdown_update requires positive amount")
+	}
+
+	request := &daggerheartv1.DaggerheartAdvanceCampaignCountdownRequest{
+		CampaignId:  state.campaignID,
+		CountdownId: countdownID,
+		Amount:      int32(amount),
+		Reason:      optionalString(step.Args, "reason", ""),
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	response, err := r.env.daggerheartClient.AdvanceCampaignCountdown(ctx, request)
+	if err != nil {
+		return fmt.Errorf("campaign_countdown_update: %w", err)
+	}
+	if err := r.assertScenarioCountdown(state, step, scenarioCountdownViewFromCampaign(response.GetCountdown())); err != nil {
+		return err
+	}
+	if err := r.assertScenarioCountdownAdvance(step, response.GetAdvance()); err != nil {
+		return err
+	}
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCampaignCountdownUpdated)
+}
+
+func (r *Runner) runCampaignCountdownResolveTriggerStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureCampaign(state); err != nil {
+		return err
+	}
+	countdownID, err := resolveCountdownID(state, step.Args)
+	if err != nil {
+		return err
+	}
+	if countdownID == "" {
+		return r.failf("campaign_countdown_resolve_trigger countdown_id or name is required")
+	}
+
+	request := &daggerheartv1.DaggerheartResolveCampaignCountdownTriggerRequest{
+		CampaignId:  state.campaignID,
+		CountdownId: countdownID,
+		Reason:      optionalString(step.Args, "reason", ""),
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	response, err := r.env.daggerheartClient.ResolveCampaignCountdownTrigger(ctx, request)
+	if err != nil {
+		return fmt.Errorf("campaign_countdown_resolve_trigger: %w", err)
+	}
+	if err := r.assertScenarioCountdown(state, step, scenarioCountdownViewFromCampaign(response.GetCountdown())); err != nil {
+		return err
+	}
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCampaignCountdownTriggerResolved)
+}
+
+func (r *Runner) runCampaignCountdownDeleteStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureCampaign(state); err != nil {
+		return err
+	}
+	countdownID, err := resolveCountdownID(state, step.Args)
+	if err != nil {
+		return err
+	}
+	if countdownID == "" {
+		return r.failf("campaign_countdown_delete countdown_id or name is required")
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	_, err = r.env.daggerheartClient.DeleteCampaignCountdown(ctx, &daggerheartv1.DaggerheartDeleteCampaignCountdownRequest{
+		CampaignId:  state.campaignID,
+		CountdownId: countdownID,
+		Reason:      optionalString(step.Args, "reason", ""),
+	})
+	if err != nil {
+		return fmt.Errorf("campaign_countdown_delete: %w", err)
+	}
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCampaignCountdownDeleted); err != nil {
 		return err
 	}
 	if name := optionalString(step.Args, "name", ""); name != "" {

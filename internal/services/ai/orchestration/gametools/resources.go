@@ -23,11 +23,20 @@ func (s *DirectSession) readResource(ctx context.Context, uri string) (string, e
 	case strings.HasPrefix(uri, "daggerheart://campaign/") && strings.HasSuffix(uri, "/snapshot"):
 		return s.readDaggerheartSnapshot(ctx, uri)
 
+	case strings.HasPrefix(uri, "daggerheart://campaign/") && strings.Contains(uri, "/sessions/") && strings.HasSuffix(uri, "/combat_board"):
+		return s.readDaggerheartCombatBoard(ctx, uri)
+
+	case strings.HasPrefix(uri, "daggerheart://campaign/") && strings.HasSuffix(uri, "/campaign_countdowns"):
+		return s.readDaggerheartCampaignCountdowns(ctx, uri)
+
 	case uri == "context://current":
 		return s.readContextCurrent()
 
 	case matchCampaignArtifactURI(uri):
 		return s.readCampaignArtifact(ctx, uri)
+
+	case strings.HasPrefix(uri, "campaign://") && strings.Contains(uri, "/characters/") && strings.HasSuffix(uri, "/sheet"):
+		return s.readCharacterSheet(ctx, uri)
 
 	case strings.HasSuffix(uri, "/interaction"):
 		return s.readInteraction(ctx, uri)
@@ -273,6 +282,20 @@ func (s *DirectSession) readCharacterList(ctx context.Context, uri string) (stri
 			CreatedAt:  formatTimestamp(ch.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(ch.GetUpdatedAt()),
 		})
+	}
+	return marshalIndent(payload)
+}
+
+// --- campaign://{id}/characters/{character_id}/sheet ---
+
+func (s *DirectSession) readCharacterSheet(ctx context.Context, uri string) (string, error) {
+	campaignID, characterID, err := parseCharacterSheetURI(uri)
+	if err != nil {
+		return "", err
+	}
+	payload, err := s.loadCharacterSheetPayload(ctx, campaignID, characterID)
+	if err != nil {
+		return "", err
 	}
 	return marshalIndent(payload)
 }
@@ -531,6 +554,49 @@ func (s *DirectSession) readDaggerheartSnapshot(ctx context.Context, uri string)
 	return marshalIndent(payload)
 }
 
+// --- daggerheart://campaign/{id}/sessions/{session_id}/combat_board ---
+
+func (s *DirectSession) readDaggerheartCombatBoard(ctx context.Context, uri string) (string, error) {
+	campaignID, sessionID, err := parseDaggerheartCombatBoardURI(uri)
+	if err != nil {
+		return "", err
+	}
+	payload, err := s.loadDaggerheartCombatBoardPayload(ctx, campaignID, sessionID)
+	if err != nil {
+		return "", err
+	}
+	return marshalIndent(payload)
+}
+
+// --- daggerheart://campaign/{id}/campaign_countdowns ---
+
+type daggerheartCampaignCountdownsPayload struct {
+	Countdowns []countdownSummary `json:"countdowns,omitempty"`
+}
+
+func (s *DirectSession) readDaggerheartCampaignCountdowns(ctx context.Context, uri string) (string, error) {
+	campaignID, err := parseDaggerheartCampaignCountdownsURI(uri)
+	if err != nil {
+		return "", err
+	}
+	callCtx, cancel := outgoingContext(ctx, s.sc)
+	defer cancel()
+
+	resp, err := s.clients.Daggerheart.ListCampaignCountdowns(callCtx, &pb.DaggerheartListCampaignCountdownsRequest{
+		CampaignId: campaignID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("list campaign countdowns failed: %w", err)
+	}
+	payload := daggerheartCampaignCountdownsPayload{
+		Countdowns: make([]countdownSummary, 0, len(resp.GetCountdowns())),
+	}
+	for _, countdown := range resp.GetCountdowns() {
+		payload.Countdowns = append(payload.Countdowns, countdownSummaryFromCampaignProto(countdown))
+	}
+	return marshalIndent(payload)
+}
+
 // --- URI parsers ---
 
 func matchCampaignArtifactURI(uri string) bool {
@@ -581,6 +647,51 @@ func parseSceneListURI(uri string) (string, string, error) {
 		return "", "", fmt.Errorf("campaign and session IDs are required in URI")
 	}
 	return parts[0], parts[2], nil
+}
+
+func parseCharacterSheetURI(uri string) (string, string, error) {
+	if !strings.HasPrefix(uri, "campaign://") {
+		return "", "", fmt.Errorf("URI must start with \"campaign://\"")
+	}
+	rest := strings.TrimPrefix(uri, "campaign://")
+	parts := strings.Split(rest, "/")
+	if len(parts) != 4 || parts[1] != "characters" || parts[3] != "sheet" {
+		return "", "", fmt.Errorf("URI must match campaign://{campaign_id}/characters/{character_id}/sheet")
+	}
+	if parts[0] == "" || parts[2] == "" {
+		return "", "", fmt.Errorf("campaign and character IDs are required in URI")
+	}
+	return parts[0], parts[2], nil
+}
+
+func parseDaggerheartCombatBoardURI(uri string) (string, string, error) {
+	if !strings.HasPrefix(uri, "daggerheart://campaign/") {
+		return "", "", fmt.Errorf("URI must start with \"daggerheart://campaign/\"")
+	}
+	rest := strings.TrimPrefix(uri, "daggerheart://campaign/")
+	parts := strings.Split(rest, "/")
+	if len(parts) != 4 || parts[1] != "sessions" || parts[3] != "combat_board" {
+		return "", "", fmt.Errorf("URI must match daggerheart://campaign/{campaign_id}/sessions/{session_id}/combat_board")
+	}
+	if parts[0] == "" || parts[2] == "" {
+		return "", "", fmt.Errorf("campaign and session IDs are required in URI")
+	}
+	return parts[0], parts[2], nil
+}
+
+func parseDaggerheartCampaignCountdownsURI(uri string) (string, error) {
+	if !strings.HasPrefix(uri, "daggerheart://campaign/") {
+		return "", fmt.Errorf("URI must start with \"daggerheart://campaign/\"")
+	}
+	rest := strings.TrimPrefix(uri, "daggerheart://campaign/")
+	parts := strings.Split(rest, "/")
+	if len(parts) != 2 || parts[1] != "campaign_countdowns" {
+		return "", fmt.Errorf("URI must match daggerheart://campaign/{campaign_id}/campaign_countdowns")
+	}
+	if parts[0] == "" {
+		return "", fmt.Errorf("campaign ID is required in URI")
+	}
+	return parts[0], nil
 }
 
 func marshalIndent(v any) (string, error) {

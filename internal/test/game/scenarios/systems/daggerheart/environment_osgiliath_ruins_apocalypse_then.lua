@@ -17,11 +17,11 @@ dh:gm_fear(1)
 
 -- Example: spend Fear to activate a progress countdown (5).
 dh:gm_spend_fear(1):spotlight("Osgiliath Ruins")
-dh:countdown_create{ name = "Escape the Apocalypse", kind = "progress", current = 0, max = 5, direction = "increase" }
+dh:scene_countdown_create{ name = "Escape the Apocalypse", kind = "progress", current = 0, max = 5, direction = "increase" }
 dh:action_roll{ actor = "Frodo", trait = "agility", difficulty = 14, outcome = "success_fear" }
 dh:apply_roll_outcome{
   on_success = {
-    {kind = "countdown_update", name = "Escape the Apocalypse", delta = 1, reason = "escape_progress"},
+    {kind = "scene_countdown_update", name = "Escape the Apocalypse", delta = 1, reason = "escape_progress"},
   },
 }
 

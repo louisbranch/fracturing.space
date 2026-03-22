@@ -220,6 +220,9 @@ func TestBuildPromptBuilderReturnsExplicitBuilderWithoutLoader(t *testing.T) {
 	if !strings.Contains(prompt, "Daggerheart duality rules") {
 		t.Fatalf("prompt missing configured context-source content: %q", prompt)
 	}
+	if !strings.Contains(prompt, "Daggerheart active character capabilities") {
+		t.Fatalf("prompt missing active character capabilities content: %q", prompt)
+	}
 }
 
 func TestLoadPromptInstructionsAllowsPartialInstructionLoad(t *testing.T) {
@@ -259,16 +262,18 @@ func (s promptTestSession) Close() error { return nil }
 
 func promptTestResources(activeSceneID string) map[string]string {
 	return map[string]string{
-		"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`,
-		"campaign://camp-1":                        `{"campaign":{"id":"camp-1","name":"Ashes","theme_prompt":"Ruined empire"}}`,
-		"campaign://camp-1/participants":           `{"participants":[{"id":"gm-1","role":"GM"},{"id":"p-1","role":"PLAYER"}]}`,
-		"campaign://camp-1/characters":             `{"characters":[{"id":"char-1","name":"Theron"}]}`,
-		"campaign://camp-1/sessions":               `{"sessions":[{"id":"sess-1","status":"ACTIVE"}]}`,
-		"campaign://camp-1/sessions/sess-1/scenes": `{"scenes":[{"scene_id":"scene-1"}]}`,
-		"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"` + activeSceneID + `"}}`,
-		"campaign://camp-1/artifacts/memory.md":    "",
-		"daggerheart://rules/version":              `{"system":"Daggerheart","module":"duality"}`,
-		"daggerheart://campaign/camp-1/snapshot":   `{"gm_fear":3,"characters":[]}`,
+		"context://current":                                          `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`,
+		"campaign://camp-1":                                          `{"campaign":{"id":"camp-1","name":"Ashes","theme_prompt":"Ruined empire"}}`,
+		"campaign://camp-1/participants":                             `{"participants":[{"id":"gm-1","role":"GM"},{"id":"p-1","role":"PLAYER"}]}`,
+		"campaign://camp-1/characters":                               `{"characters":[{"id":"char-1","name":"Theron"}]}`,
+		"campaign://camp-1/sessions":                                 `{"sessions":[{"id":"sess-1","status":"ACTIVE"}]}`,
+		"campaign://camp-1/sessions/sess-1/scenes":                   `{"scenes":[{"scene_id":"scene-1","character_ids":["char-1"]}]}`,
+		"campaign://camp-1/interaction":                              `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"` + activeSceneID + `"}}`,
+		"campaign://camp-1/characters/char-1/sheet":                  `{"character":{"id":"char-1","name":"Theron"},"daggerheart":{"class":{"name":"Guardian"},"resources":{"hope":2},"domain_cards":[{"name":"Shield Wall","domain":"Valor"}]}}`,
+		"campaign://camp-1/artifacts/memory.md":                      "",
+		"daggerheart://rules/version":                                `{"system":"Daggerheart","module":"duality"}`,
+		"daggerheart://campaign/camp-1/sessions/sess-1/combat_board": `{"gm_fear":3,"session_id":"sess-1","scene_id":"` + activeSceneID + `","countdowns":[{"id":"cd-1","name":"Breach","kind":"CONSEQUENCE","current":1,"max":4,"direction":"INCREASE"}]}`,
+		"daggerheart://campaign/camp-1/snapshot":                     `{"gm_fear":3,"characters":[]}`,
 	}
 }
 

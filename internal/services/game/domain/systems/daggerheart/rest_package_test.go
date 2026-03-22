@@ -184,12 +184,14 @@ func TestResolveRestPackage_LongRestMovesAndProjectAdvance(t *testing.T) {
 		},
 		AvailableCountdowns: map[dhids.CountdownID]rules.Countdown{
 			"cd-1": {
-				ID:        "cd-1",
-				Name:      "Map the Hidden Pass",
-				Kind:      rules.CountdownKindProgress,
-				Current:   0,
-				Max:       4,
-				Direction: rules.CountdownDirectionIncrease,
+				ID:                "cd-1",
+				Name:              "Map the Hidden Pass",
+				Tone:              "progress",
+				AdvancementPolicy: "manual",
+				StartingValue:     4,
+				RemainingValue:    4,
+				LoopBehavior:      "none",
+				Status:            "active",
 			},
 		},
 	})
@@ -199,8 +201,8 @@ func TestResolveRestPackage_LongRestMovesAndProjectAdvance(t *testing.T) {
 	if got, want := len(result.Payload.DowntimeMoves), 4; got != want {
 		t.Fatalf("downtime move count = %d, want %d", got, want)
 	}
-	if got, want := len(result.Payload.CountdownUpdates), 1; got != want {
-		t.Fatalf("countdown update count = %d, want %d", got, want)
+	if got, want := len(result.Payload.CampaignCountdownAdvances), 1; got != want {
+		t.Fatalf("countdown advance count = %d, want %d", got, want)
 	}
 
 	tendAll := result.Payload.DowntimeMoves[0]
@@ -223,9 +225,9 @@ func TestResolveRestPackage_LongRestMovesAndProjectAdvance(t *testing.T) {
 		t.Fatalf("repair all armor move = %+v, want char-3 armor 3", repairAll)
 	}
 
-	update := result.Payload.CountdownUpdates[0]
-	if update.CountdownID != "cd-1" || update.Delta != 2 || update.After != 2 || update.Reason != "breakthrough" {
-		t.Fatalf("countdown update = %+v, want gm_set_delta applied", update)
+	update := result.Payload.CampaignCountdownAdvances[0]
+	if update.CountdownID != "cd-1" || update.AdvancedBy != 2 || update.AfterRemaining != 2 || update.Reason != "breakthrough" {
+		t.Fatalf("countdown advance = %+v, want gm_set_delta applied", update)
 	}
 }
 
@@ -234,12 +236,14 @@ func TestResolveRestPackage_WorkOnProjectValidation(t *testing.T) {
 
 	countdowns := map[dhids.CountdownID]rules.Countdown{
 		"cd-1": {
-			ID:        "cd-1",
-			Name:      "Map the Hidden Pass",
-			Kind:      rules.CountdownKindProgress,
-			Current:   0,
-			Max:       4,
-			Direction: rules.CountdownDirectionIncrease,
+			ID:                "cd-1",
+			Name:              "Map the Hidden Pass",
+			Tone:              "progress",
+			AdvancementPolicy: "manual",
+			StartingValue:     4,
+			RemainingValue:    4,
+			LoopBehavior:      "none",
+			Status:            "active",
 		},
 	}
 

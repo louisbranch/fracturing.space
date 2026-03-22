@@ -460,52 +460,61 @@ func (f *fakeSessionClient) ClearSessionSpotlight(ctx context.Context, in *gamev
 
 // fakeDaggerheartClient implements daggerheartv1.DaggerheartServiceClient for testing.
 type fakeDaggerheartClient struct {
-	actionRoll                  func(context.Context, *daggerheartv1.ActionRollRequest, ...grpc.CallOption) (*daggerheartv1.ActionRollResponse, error)
-	rollDice                    func(context.Context, *daggerheartv1.RollDiceRequest, ...grpc.CallOption) (*daggerheartv1.RollDiceResponse, error)
-	applyDamage                 func(context.Context, *daggerheartv1.DaggerheartApplyDamageRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error)
-	applyAdversaryDamage        func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryDamageRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryDamageResponse, error)
-	applyTemporaryArmor         func(context.Context, *daggerheartv1.DaggerheartApplyTemporaryArmorRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyTemporaryArmorResponse, error)
-	applyRest                   func(context.Context, *daggerheartv1.DaggerheartApplyRestRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error)
-	swapLoadout                 func(context.Context, *daggerheartv1.DaggerheartSwapLoadoutRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartSwapLoadoutResponse, error)
-	applyDeathMove              func(context.Context, *daggerheartv1.DaggerheartApplyDeathMoveRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDeathMoveResponse, error)
-	applyConditions             func(context.Context, *daggerheartv1.DaggerheartApplyConditionsRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyConditionsResponse, error)
-	applyAdversaryConditions    func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryConditionsRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryConditionsResponse, error)
-	applyGmMove                 func(context.Context, *daggerheartv1.DaggerheartApplyGmMoveRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error)
-	createCountdown             func(context.Context, *daggerheartv1.DaggerheartCreateCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCountdownResponse, error)
-	updateCountdown             func(context.Context, *daggerheartv1.DaggerheartUpdateCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateCountdownResponse, error)
-	deleteCountdown             func(context.Context, *daggerheartv1.DaggerheartDeleteCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteCountdownResponse, error)
-	createAdversary             func(context.Context, *daggerheartv1.DaggerheartCreateAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateAdversaryResponse, error)
-	updateAdversary             func(context.Context, *daggerheartv1.DaggerheartUpdateAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error)
-	deleteAdversary             func(context.Context, *daggerheartv1.DaggerheartDeleteAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteAdversaryResponse, error)
-	getAdversary                func(context.Context, *daggerheartv1.DaggerheartGetAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error)
-	listAdversaries             func(context.Context, *daggerheartv1.DaggerheartListAdversariesRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartListAdversariesResponse, error)
-	resolveBlazeOfGlory         func(context.Context, *daggerheartv1.DaggerheartResolveBlazeOfGloryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveBlazeOfGloryResponse, error)
-	sessionActionRoll           func(context.Context, *daggerheartv1.SessionActionRollRequest, ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error)
-	sessionDamageRoll           func(context.Context, *daggerheartv1.SessionDamageRollRequest, ...grpc.CallOption) (*daggerheartv1.SessionDamageRollResponse, error)
-	sessionAttackFlow           func(context.Context, *daggerheartv1.SessionAttackFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionAttackFlowResponse, error)
-	sessionReactionFlow         func(context.Context, *daggerheartv1.SessionReactionFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionReactionFlowResponse, error)
-	sessionAdversaryAttackRoll  func(context.Context, *daggerheartv1.SessionAdversaryAttackRollRequest, ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackRollResponse, error)
-	sessionAdversaryAttackFlow  func(context.Context, *daggerheartv1.SessionAdversaryAttackFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error)
-	sessionGroupActionFlow      func(context.Context, *daggerheartv1.SessionGroupActionFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionGroupActionFlowResponse, error)
-	sessionTagTeamFlow          func(context.Context, *daggerheartv1.SessionTagTeamFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionTagTeamFlowResponse, error)
-	applyRollOutcome            func(context.Context, *daggerheartv1.ApplyRollOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error)
-	applyAttackOutcome          func(context.Context, *daggerheartv1.DaggerheartApplyAttackOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAttackOutcomeResponse, error)
-	applyAdversaryAttackOutcome func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeResponse, error)
-	applyReactionOutcome        func(context.Context, *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error)
-	applyLevelUp                func(context.Context, *daggerheartv1.DaggerheartApplyLevelUpRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error)
-	applyStatModifiers          func(context.Context, *daggerheartv1.DaggerheartApplyStatModifiersRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyStatModifiersResponse, error)
-	applyClassFeature           func(context.Context, *daggerheartv1.DaggerheartApplyClassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyClassFeatureResponse, error)
-	applyAdversaryFeature       func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryFeatureResponse, error)
-	applySubclassFeature        func(context.Context, *daggerheartv1.DaggerheartApplySubclassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplySubclassFeatureResponse, error)
-	transformBeastform          func(context.Context, *daggerheartv1.DaggerheartTransformBeastformRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartTransformBeastformResponse, error)
-	dropBeastform               func(context.Context, *daggerheartv1.DaggerheartDropBeastformRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDropBeastformResponse, error)
-	beginCompanionExperience    func(context.Context, *daggerheartv1.DaggerheartBeginCompanionExperienceRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartBeginCompanionExperienceResponse, error)
-	returnCompanion             func(context.Context, *daggerheartv1.DaggerheartReturnCompanionRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartReturnCompanionResponse, error)
-	createEnvironmentEntity     func(context.Context, *daggerheartv1.DaggerheartCreateEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateEnvironmentEntityResponse, error)
-	updateEnvironmentEntity     func(context.Context, *daggerheartv1.DaggerheartUpdateEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateEnvironmentEntityResponse, error)
-	deleteEnvironmentEntity     func(context.Context, *daggerheartv1.DaggerheartDeleteEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteEnvironmentEntityResponse, error)
-	getEnvironmentEntity        func(context.Context, *daggerheartv1.DaggerheartGetEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartGetEnvironmentEntityResponse, error)
-	listEnvironmentEntities     func(context.Context, *daggerheartv1.DaggerheartListEnvironmentEntitiesRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartListEnvironmentEntitiesResponse, error)
+	actionRoll                      func(context.Context, *daggerheartv1.ActionRollRequest, ...grpc.CallOption) (*daggerheartv1.ActionRollResponse, error)
+	rollDice                        func(context.Context, *daggerheartv1.RollDiceRequest, ...grpc.CallOption) (*daggerheartv1.RollDiceResponse, error)
+	applyDamage                     func(context.Context, *daggerheartv1.DaggerheartApplyDamageRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error)
+	applyAdversaryDamage            func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryDamageRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryDamageResponse, error)
+	applyTemporaryArmor             func(context.Context, *daggerheartv1.DaggerheartApplyTemporaryArmorRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyTemporaryArmorResponse, error)
+	applyRest                       func(context.Context, *daggerheartv1.DaggerheartApplyRestRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error)
+	swapLoadout                     func(context.Context, *daggerheartv1.DaggerheartSwapLoadoutRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartSwapLoadoutResponse, error)
+	applyDeathMove                  func(context.Context, *daggerheartv1.DaggerheartApplyDeathMoveRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDeathMoveResponse, error)
+	applyConditions                 func(context.Context, *daggerheartv1.DaggerheartApplyConditionsRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyConditionsResponse, error)
+	applyAdversaryConditions        func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryConditionsRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryConditionsResponse, error)
+	applyGmMove                     func(context.Context, *daggerheartv1.DaggerheartApplyGmMoveRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error)
+	createCountdown                 func(context.Context, *daggerheartv1.DaggerheartCreateSceneCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateSceneCountdownResponse, error)
+	advanceCountdown                func(context.Context, *daggerheartv1.DaggerheartAdvanceSceneCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartAdvanceSceneCountdownResponse, error)
+	resolveCountdownTrigger         func(context.Context, *daggerheartv1.DaggerheartResolveSceneCountdownTriggerRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveSceneCountdownTriggerResponse, error)
+	deleteCountdown                 func(context.Context, *daggerheartv1.DaggerheartDeleteSceneCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteSceneCountdownResponse, error)
+	getCountdown                    func(context.Context, *daggerheartv1.DaggerheartGetSceneCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartGetSceneCountdownResponse, error)
+	listCountdowns                  func(context.Context, *daggerheartv1.DaggerheartListSceneCountdownsRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartListSceneCountdownsResponse, error)
+	createCampaignCountdown         func(context.Context, *daggerheartv1.DaggerheartCreateCampaignCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCampaignCountdownResponse, error)
+	advanceCampaignCountdown        func(context.Context, *daggerheartv1.DaggerheartAdvanceCampaignCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartAdvanceCampaignCountdownResponse, error)
+	resolveCampaignCountdownTrigger func(context.Context, *daggerheartv1.DaggerheartResolveCampaignCountdownTriggerRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveCampaignCountdownTriggerResponse, error)
+	deleteCampaignCountdown         func(context.Context, *daggerheartv1.DaggerheartDeleteCampaignCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteCampaignCountdownResponse, error)
+	getCampaignCountdown            func(context.Context, *daggerheartv1.DaggerheartGetCampaignCountdownRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartGetCampaignCountdownResponse, error)
+	listCampaignCountdowns          func(context.Context, *daggerheartv1.DaggerheartListCampaignCountdownsRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartListCampaignCountdownsResponse, error)
+	createAdversary                 func(context.Context, *daggerheartv1.DaggerheartCreateAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateAdversaryResponse, error)
+	updateAdversary                 func(context.Context, *daggerheartv1.DaggerheartUpdateAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error)
+	deleteAdversary                 func(context.Context, *daggerheartv1.DaggerheartDeleteAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteAdversaryResponse, error)
+	getAdversary                    func(context.Context, *daggerheartv1.DaggerheartGetAdversaryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error)
+	listAdversaries                 func(context.Context, *daggerheartv1.DaggerheartListAdversariesRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartListAdversariesResponse, error)
+	resolveBlazeOfGlory             func(context.Context, *daggerheartv1.DaggerheartResolveBlazeOfGloryRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveBlazeOfGloryResponse, error)
+	sessionActionRoll               func(context.Context, *daggerheartv1.SessionActionRollRequest, ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error)
+	sessionDamageRoll               func(context.Context, *daggerheartv1.SessionDamageRollRequest, ...grpc.CallOption) (*daggerheartv1.SessionDamageRollResponse, error)
+	sessionAttackFlow               func(context.Context, *daggerheartv1.SessionAttackFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionAttackFlowResponse, error)
+	sessionReactionFlow             func(context.Context, *daggerheartv1.SessionReactionFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionReactionFlowResponse, error)
+	sessionAdversaryAttackRoll      func(context.Context, *daggerheartv1.SessionAdversaryAttackRollRequest, ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackRollResponse, error)
+	sessionAdversaryAttackFlow      func(context.Context, *daggerheartv1.SessionAdversaryAttackFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error)
+	sessionGroupActionFlow          func(context.Context, *daggerheartv1.SessionGroupActionFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionGroupActionFlowResponse, error)
+	sessionTagTeamFlow              func(context.Context, *daggerheartv1.SessionTagTeamFlowRequest, ...grpc.CallOption) (*daggerheartv1.SessionTagTeamFlowResponse, error)
+	applyRollOutcome                func(context.Context, *daggerheartv1.ApplyRollOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error)
+	applyAttackOutcome              func(context.Context, *daggerheartv1.DaggerheartApplyAttackOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAttackOutcomeResponse, error)
+	applyAdversaryAttackOutcome     func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeResponse, error)
+	applyReactionOutcome            func(context.Context, *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error)
+	applyLevelUp                    func(context.Context, *daggerheartv1.DaggerheartApplyLevelUpRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error)
+	applyStatModifiers              func(context.Context, *daggerheartv1.DaggerheartApplyStatModifiersRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyStatModifiersResponse, error)
+	applyClassFeature               func(context.Context, *daggerheartv1.DaggerheartApplyClassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyClassFeatureResponse, error)
+	applyAdversaryFeature           func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryFeatureResponse, error)
+	applySubclassFeature            func(context.Context, *daggerheartv1.DaggerheartApplySubclassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplySubclassFeatureResponse, error)
+	transformBeastform              func(context.Context, *daggerheartv1.DaggerheartTransformBeastformRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartTransformBeastformResponse, error)
+	dropBeastform                   func(context.Context, *daggerheartv1.DaggerheartDropBeastformRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDropBeastformResponse, error)
+	beginCompanionExperience        func(context.Context, *daggerheartv1.DaggerheartBeginCompanionExperienceRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartBeginCompanionExperienceResponse, error)
+	returnCompanion                 func(context.Context, *daggerheartv1.DaggerheartReturnCompanionRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartReturnCompanionResponse, error)
+	createEnvironmentEntity         func(context.Context, *daggerheartv1.DaggerheartCreateEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateEnvironmentEntityResponse, error)
+	updateEnvironmentEntity         func(context.Context, *daggerheartv1.DaggerheartUpdateEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateEnvironmentEntityResponse, error)
+	deleteEnvironmentEntity         func(context.Context, *daggerheartv1.DaggerheartDeleteEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteEnvironmentEntityResponse, error)
+	getEnvironmentEntity            func(context.Context, *daggerheartv1.DaggerheartGetEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartGetEnvironmentEntityResponse, error)
+	listEnvironmentEntities         func(context.Context, *daggerheartv1.DaggerheartListEnvironmentEntitiesRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartListEnvironmentEntitiesResponse, error)
 }
 
 func (f *fakeDaggerheartClient) ActionRoll(ctx context.Context, in *daggerheartv1.ActionRollRequest, opts ...grpc.CallOption) (*daggerheartv1.ActionRollResponse, error) {
@@ -601,6 +610,34 @@ func (f *fakeDaggerheartClient) ApplyGmMove(ctx context.Context, in *daggerheart
 	return nil, unimplemented("ApplyGmMove")
 }
 
+func (f *fakeDaggerheartClient) GetSceneCountdown(ctx context.Context, in *daggerheartv1.DaggerheartGetSceneCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartGetSceneCountdownResponse, error) {
+	if f.getCountdown != nil {
+		return f.getCountdown(ctx, in, opts...)
+	}
+	return nil, unimplemented("GetSceneCountdown")
+}
+
+func (f *fakeDaggerheartClient) ListSceneCountdowns(ctx context.Context, in *daggerheartv1.DaggerheartListSceneCountdownsRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartListSceneCountdownsResponse, error) {
+	if f.listCountdowns != nil {
+		return f.listCountdowns(ctx, in, opts...)
+	}
+	return nil, unimplemented("ListSceneCountdowns")
+}
+
+func (f *fakeDaggerheartClient) GetCampaignCountdown(ctx context.Context, in *daggerheartv1.DaggerheartGetCampaignCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartGetCampaignCountdownResponse, error) {
+	if f.getCampaignCountdown != nil {
+		return f.getCampaignCountdown(ctx, in, opts...)
+	}
+	return nil, unimplemented("GetCampaignCountdown")
+}
+
+func (f *fakeDaggerheartClient) ListCampaignCountdowns(ctx context.Context, in *daggerheartv1.DaggerheartListCampaignCountdownsRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartListCampaignCountdownsResponse, error) {
+	if f.listCampaignCountdowns != nil {
+		return f.listCampaignCountdowns(ctx, in, opts...)
+	}
+	return nil, unimplemented("ListCampaignCountdowns")
+}
+
 func (f *fakeDaggerheartClient) ApplyClassFeature(ctx context.Context, in *daggerheartv1.DaggerheartApplyClassFeatureRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyClassFeatureResponse, error) {
 	if f.applyClassFeature != nil {
 		return f.applyClassFeature(ctx, in, opts...)
@@ -678,25 +715,60 @@ func (f *fakeDaggerheartClient) ListEnvironmentEntities(ctx context.Context, in 
 	return nil, unimplemented("ListEnvironmentEntities")
 }
 
-func (f *fakeDaggerheartClient) CreateCountdown(ctx context.Context, in *daggerheartv1.DaggerheartCreateCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCountdownResponse, error) {
+func (f *fakeDaggerheartClient) CreateSceneCountdown(ctx context.Context, in *daggerheartv1.DaggerheartCreateSceneCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateSceneCountdownResponse, error) {
 	if f.createCountdown != nil {
 		return f.createCountdown(ctx, in, opts...)
 	}
-	return nil, unimplemented("CreateCountdown")
+	return nil, unimplemented("CreateSceneCountdown")
 }
 
-func (f *fakeDaggerheartClient) UpdateCountdown(ctx context.Context, in *daggerheartv1.DaggerheartUpdateCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateCountdownResponse, error) {
-	if f.updateCountdown != nil {
-		return f.updateCountdown(ctx, in, opts...)
+func (f *fakeDaggerheartClient) CreateCampaignCountdown(ctx context.Context, in *daggerheartv1.DaggerheartCreateCampaignCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCampaignCountdownResponse, error) {
+	if f.createCampaignCountdown != nil {
+		return f.createCampaignCountdown(ctx, in, opts...)
 	}
-	return nil, unimplemented("UpdateCountdown")
+	return nil, unimplemented("CreateCampaignCountdown")
 }
 
-func (f *fakeDaggerheartClient) DeleteCountdown(ctx context.Context, in *daggerheartv1.DaggerheartDeleteCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteCountdownResponse, error) {
+func (f *fakeDaggerheartClient) AdvanceSceneCountdown(ctx context.Context, in *daggerheartv1.DaggerheartAdvanceSceneCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartAdvanceSceneCountdownResponse, error) {
+	if f.advanceCountdown != nil {
+		return f.advanceCountdown(ctx, in, opts...)
+	}
+	return nil, unimplemented("AdvanceSceneCountdown")
+}
+
+func (f *fakeDaggerheartClient) ResolveSceneCountdownTrigger(ctx context.Context, in *daggerheartv1.DaggerheartResolveSceneCountdownTriggerRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveSceneCountdownTriggerResponse, error) {
+	if f.resolveCountdownTrigger != nil {
+		return f.resolveCountdownTrigger(ctx, in, opts...)
+	}
+	return nil, unimplemented("ResolveSceneCountdownTrigger")
+}
+
+func (f *fakeDaggerheartClient) AdvanceCampaignCountdown(ctx context.Context, in *daggerheartv1.DaggerheartAdvanceCampaignCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartAdvanceCampaignCountdownResponse, error) {
+	if f.advanceCampaignCountdown != nil {
+		return f.advanceCampaignCountdown(ctx, in, opts...)
+	}
+	return nil, unimplemented("AdvanceCampaignCountdown")
+}
+
+func (f *fakeDaggerheartClient) ResolveCampaignCountdownTrigger(ctx context.Context, in *daggerheartv1.DaggerheartResolveCampaignCountdownTriggerRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveCampaignCountdownTriggerResponse, error) {
+	if f.resolveCampaignCountdownTrigger != nil {
+		return f.resolveCampaignCountdownTrigger(ctx, in, opts...)
+	}
+	return nil, unimplemented("ResolveCampaignCountdownTrigger")
+}
+
+func (f *fakeDaggerheartClient) DeleteSceneCountdown(ctx context.Context, in *daggerheartv1.DaggerheartDeleteSceneCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteSceneCountdownResponse, error) {
 	if f.deleteCountdown != nil {
 		return f.deleteCountdown(ctx, in, opts...)
 	}
-	return nil, unimplemented("DeleteCountdown")
+	return nil, unimplemented("DeleteSceneCountdown")
+}
+
+func (f *fakeDaggerheartClient) DeleteCampaignCountdown(ctx context.Context, in *daggerheartv1.DaggerheartDeleteCampaignCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteCampaignCountdownResponse, error) {
+	if f.deleteCampaignCountdown != nil {
+		return f.deleteCampaignCountdown(ctx, in, opts...)
+	}
+	return nil, unimplemented("DeleteCampaignCountdown")
 }
 
 func (f *fakeDaggerheartClient) CreateAdversary(ctx context.Context, in *daggerheartv1.DaggerheartCreateAdversaryRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateAdversaryResponse, error) {

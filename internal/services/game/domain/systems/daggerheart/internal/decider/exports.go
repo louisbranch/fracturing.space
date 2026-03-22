@@ -23,7 +23,9 @@ var (
 var (
 	IsCharacterStatePatchNoMutation      = isCharacterStatePatchNoMutation
 	IsConditionChangeNoMutation          = isConditionChangeNoMutation
-	IsCountdownUpdateNoMutation          = isCountdownUpdateNoMutation
+	IsSceneCountdownUpdateNoMutation     = isSceneCountdownAdvanceNoMutation
+	IsCampaignCountdownUpdateNoMutation  = isCampaignCountdownAdvanceNoMutation
+	IsCountdownUpdateNoMutation          = isSceneCountdownAdvanceNoMutation
 	IsEnvironmentEntityCreateNoMutation  = isEnvironmentEntityCreateNoMutation
 	IsAdversaryFeatureApplyNoMutation    = isAdversaryFeatureApplyNoMutation
 	IsAdversaryCreateNoMutation          = isAdversaryCreateNoMutation
@@ -31,7 +33,9 @@ var (
 	HasMissingAdversaryConditionRemovals = hasMissingAdversaryConditionRemovals
 	HasMissingCharacterConditionRemovals = hasMissingCharacterConditionRemovals
 	SnapshotCharacterState               = snapshotCharacterState
-	SnapshotCountdownState               = snapshotCountdownState
+	SnapshotSceneCountdownState          = snapshotSceneCountdownState
+	SnapshotCampaignCountdownState       = snapshotCampaignCountdownState
+	SnapshotCountdownState               = snapshotCampaignCountdownState
 	SnapshotAdversaryState               = snapshotAdversaryState
 	DerefInt                             = derefInt
 	HasMissingConditionRemovals          = hasMissingConditionRemovals
@@ -43,44 +47,54 @@ var (
 // --- Exported constants ---
 
 const (
-	CommandTypeGMMoveApply                  = commandTypeGMMoveApply
-	CommandTypeGMFearSet                    = commandTypeGMFearSet
-	CommandTypeCharacterProfileReplace      = commandTypeCharacterProfileReplace
-	CommandTypeCharacterProfileDelete       = commandTypeCharacterProfileDelete
-	CommandTypeCharacterStatePatch          = commandTypeCharacterStatePatch
-	CommandTypeConditionChange              = commandTypeConditionChange
-	CommandTypeHopeSpend                    = commandTypeHopeSpend
-	CommandTypeStressSpend                  = commandTypeStressSpend
-	CommandTypeLoadoutSwap                  = commandTypeLoadoutSwap
-	CommandTypeRestTake                     = commandTypeRestTake
-	CommandTypeCountdownCreate              = commandTypeCountdownCreate
-	CommandTypeCountdownUpdate              = commandTypeCountdownUpdate
-	CommandTypeCountdownDelete              = commandTypeCountdownDelete
-	CommandTypeDamageApply                  = commandTypeDamageApply
-	CommandTypeAdversaryDamageApply         = commandTypeAdversaryDamageApply
-	CommandTypeCharacterTemporaryArmorApply = commandTypeCharacterTemporaryArmorApply
-	CommandTypeAdversaryConditionChange     = commandTypeAdversaryConditionChange
-	CommandTypeAdversaryCreate              = commandTypeAdversaryCreate
-	CommandTypeAdversaryUpdate              = commandTypeAdversaryUpdate
-	CommandTypeAdversaryFeatureApply        = commandTypeAdversaryFeatureApply
-	CommandTypeAdversaryDelete              = commandTypeAdversaryDelete
-	CommandTypeEnvironmentEntityCreate      = commandTypeEnvironmentEntityCreate
-	CommandTypeEnvironmentEntityUpdate      = commandTypeEnvironmentEntityUpdate
-	CommandTypeEnvironmentEntityDelete      = commandTypeEnvironmentEntityDelete
-	CommandTypeMultiTargetDamageApply       = commandTypeMultiTargetDamageApply
-	CommandTypeLevelUpApply                 = commandTypeLevelUpApply
-	CommandTypeClassFeatureApply            = commandTypeClassFeatureApply
-	CommandTypeSubclassFeatureApply         = commandTypeSubclassFeatureApply
-	CommandTypeBeastformTransform           = commandTypeBeastformTransform
-	CommandTypeBeastformDrop                = commandTypeBeastformDrop
-	CommandTypeCompanionExperienceBegin     = commandTypeCompanionExperienceBegin
-	CommandTypeCompanionReturn              = commandTypeCompanionReturn
-	CommandTypeGoldUpdate                   = commandTypeGoldUpdate
-	CommandTypeDomainCardAcquire            = commandTypeDomainCardAcquire
-	CommandTypeEquipmentSwap                = commandTypeEquipmentSwap
-	CommandTypeConsumableUse                = commandTypeConsumableUse
-	CommandTypeConsumableAcquire            = commandTypeConsumableAcquire
-	CommandTypeStatModifierChange           = commandTypeStatModifierChange
+	CommandTypeGMMoveApply                     = commandTypeGMMoveApply
+	CommandTypeGMFearSet                       = commandTypeGMFearSet
+	CommandTypeCharacterProfileReplace         = commandTypeCharacterProfileReplace
+	CommandTypeCharacterProfileDelete          = commandTypeCharacterProfileDelete
+	CommandTypeCharacterStatePatch             = commandTypeCharacterStatePatch
+	CommandTypeConditionChange                 = commandTypeConditionChange
+	CommandTypeHopeSpend                       = commandTypeHopeSpend
+	CommandTypeStressSpend                     = commandTypeStressSpend
+	CommandTypeLoadoutSwap                     = commandTypeLoadoutSwap
+	CommandTypeRestTake                        = commandTypeRestTake
+	CommandTypeSceneCountdownCreate            = commandTypeSceneCountdownCreate
+	CommandTypeSceneCountdownAdvance           = commandTypeSceneCountdownAdvance
+	CommandTypeSceneCountdownTriggerResolve    = commandTypeSceneCountdownTriggerResolve
+	CommandTypeSceneCountdownUpdate            = commandTypeSceneCountdownAdvance
+	CommandTypeSceneCountdownDelete            = commandTypeSceneCountdownDelete
+	CommandTypeCampaignCountdownCreate         = commandTypeCampaignCountdownCreate
+	CommandTypeCampaignCountdownAdvance        = commandTypeCampaignCountdownAdvance
+	CommandTypeCampaignCountdownTriggerResolve = commandTypeCampaignCountdownTriggerResolve
+	CommandTypeCampaignCountdownUpdate         = commandTypeCampaignCountdownAdvance
+	CommandTypeCampaignCountdownDelete         = commandTypeCampaignCountdownDelete
+	CommandTypeCountdownCreate                 = commandTypeSceneCountdownCreate
+	CommandTypeCountdownUpdate                 = commandTypeSceneCountdownAdvance
+	CommandTypeCountdownDelete                 = commandTypeSceneCountdownDelete
+	CommandTypeDamageApply                     = commandTypeDamageApply
+	CommandTypeAdversaryDamageApply            = commandTypeAdversaryDamageApply
+	CommandTypeCharacterTemporaryArmorApply    = commandTypeCharacterTemporaryArmorApply
+	CommandTypeAdversaryConditionChange        = commandTypeAdversaryConditionChange
+	CommandTypeAdversaryCreate                 = commandTypeAdversaryCreate
+	CommandTypeAdversaryUpdate                 = commandTypeAdversaryUpdate
+	CommandTypeAdversaryFeatureApply           = commandTypeAdversaryFeatureApply
+	CommandTypeAdversaryDelete                 = commandTypeAdversaryDelete
+	CommandTypeEnvironmentEntityCreate         = commandTypeEnvironmentEntityCreate
+	CommandTypeEnvironmentEntityUpdate         = commandTypeEnvironmentEntityUpdate
+	CommandTypeEnvironmentEntityDelete         = commandTypeEnvironmentEntityDelete
+	CommandTypeMultiTargetDamageApply          = commandTypeMultiTargetDamageApply
+	CommandTypeLevelUpApply                    = commandTypeLevelUpApply
+	CommandTypeClassFeatureApply               = commandTypeClassFeatureApply
+	CommandTypeSubclassFeatureApply            = commandTypeSubclassFeatureApply
+	CommandTypeBeastformTransform              = commandTypeBeastformTransform
+	CommandTypeBeastformDrop                   = commandTypeBeastformDrop
+	CommandTypeCompanionExperienceBegin        = commandTypeCompanionExperienceBegin
+	CommandTypeCompanionReturn                 = commandTypeCompanionReturn
+	CommandTypeGoldUpdate                      = commandTypeGoldUpdate
+	CommandTypeDomainCardAcquire               = commandTypeDomainCardAcquire
+	CommandTypeEquipmentSwap                   = commandTypeEquipmentSwap
+	CommandTypeConsumableUse                   = commandTypeConsumableUse
+	CommandTypeConsumableAcquire               = commandTypeConsumableAcquire
+	CommandTypeStatModifierChange              = commandTypeStatModifierChange
 )
 
 const (
@@ -95,7 +109,7 @@ const (
 	RejectionCodeCharacterStatePatchNoMutation     = rejectionCodeCharacterStatePatchNoMutation
 	RejectionCodeConditionChangeNoMutation         = rejectionCodeConditionChangeNoMutation
 	RejectionCodeConditionChangeRemoveMissing      = rejectionCodeConditionChangeRemoveMissing
-	RejectionCodeCountdownUpdateNoMutation         = rejectionCodeCountdownUpdateNoMutation
+	RejectionCodeCountdownUpdateNoMutation         = rejectionCodeCountdownAdvanceNoMutation
 	RejectionCodeCountdownBeforeMismatch           = rejectionCodeCountdownBeforeMismatch
 	RejectionCodeDamageBeforeMismatch              = rejectionCodeDamageBeforeMismatch
 	RejectionCodeDamageArmorSpendLimit             = rejectionCodeDamageArmorSpendLimit
@@ -131,6 +145,10 @@ var CompanionStatePtrValue = companionStatePtrValue
 // tests.
 var SnapshotEnvironmentEntityState = snapshotEnvironmentEntityState
 
-// CountdownUpdateSnapshotRejection exposes countdown precondition logic for
-// root tests.
-var CountdownUpdateSnapshotRejection = countdownUpdateSnapshotRejection
+// SceneCountdownUpdateSnapshotRejection exposes scene-countdown precondition
+// logic for root tests.
+var SceneCountdownUpdateSnapshotRejection = sceneCountdownAdvanceSnapshotRejection
+
+// CampaignCountdownUpdateSnapshotRejection exposes campaign-countdown
+// precondition logic for root tests.
+var CampaignCountdownUpdateSnapshotRejection = campaignCountdownAdvanceSnapshotRejection

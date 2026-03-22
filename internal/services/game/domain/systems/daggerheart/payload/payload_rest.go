@@ -29,17 +29,18 @@ type LoadoutSwappedPayload struct {
 
 // RestTakePayload captures the payload for sys.daggerheart.rest.take commands.
 type RestTakePayload struct {
-	RestType         string                       `json:"rest_type"`
-	Interrupted      bool                         `json:"interrupted"`
-	GMFearBefore     int                          `json:"gm_fear_before"`
-	GMFearAfter      int                          `json:"gm_fear_after"`
-	ShortRestsBefore int                          `json:"short_rests_before"`
-	ShortRestsAfter  int                          `json:"short_rests_after"`
-	RefreshRest      bool                         `json:"refresh_rest"`
-	RefreshLongRest  bool                         `json:"refresh_long_rest"`
-	Participants     []ids.CharacterID            `json:"participants,omitempty"`
-	DowntimeMoves    []DowntimeMoveAppliedPayload `json:"downtime_moves,omitempty"`
-	CountdownUpdates []CountdownUpdatePayload     `json:"countdown_updates,omitempty"`
+	RestType                  string                            `json:"rest_type"`
+	Interrupted               bool                              `json:"interrupted"`
+	GMFearBefore              int                               `json:"gm_fear_before"`
+	GMFearAfter               int                               `json:"gm_fear_after"`
+	ShortRestsBefore          int                               `json:"short_rests_before"`
+	ShortRestsAfter           int                               `json:"short_rests_after"`
+	RefreshRest               bool                              `json:"refresh_rest"`
+	RefreshLongRest           bool                              `json:"refresh_long_rest"`
+	Participants              []ids.CharacterID                 `json:"participants,omitempty"`
+	DowntimeMoves             []DowntimeMoveAppliedPayload      `json:"downtime_moves,omitempty"`
+	CampaignCountdownAdvances []CampaignCountdownAdvancePayload `json:"campaign_countdown_advances,omitempty"`
+	CountdownAdvances         []CampaignCountdownAdvancePayload `json:"-"`
 }
 
 // RestTakenPayload captures the payload for sys.daggerheart.rest_taken events.

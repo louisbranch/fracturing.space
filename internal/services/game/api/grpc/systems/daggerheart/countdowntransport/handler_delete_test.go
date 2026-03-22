@@ -12,12 +12,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestHandlerDeleteCountdownRequiresExecutor(t *testing.T) {
+func TestHandlerDeleteSceneCountdownRequiresExecutor(t *testing.T) {
 	handler := newTestHandler(Dependencies{})
 
-	_, err := handler.DeleteCountdown(testContext(), &pb.DaggerheartDeleteCountdownRequest{
+	_, err := handler.DeleteSceneCountdown(testContext(), &pb.DaggerheartDeleteSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
 	})
 	if status.Code(err) != codes.Internal {
@@ -25,20 +26,22 @@ func TestHandlerDeleteCountdownRequiresExecutor(t *testing.T) {
 	}
 }
 
-func TestHandlerDeleteCountdownRejectsNilRequest(t *testing.T) {
+func TestHandlerDeleteSceneCountdownRejectsNilRequest(t *testing.T) {
 	handler := newTestHandler(Dependencies{})
 
-	_, err := handler.DeleteCountdown(context.Background(), nil)
+	_, err := handler.DeleteSceneCountdown(context.Background(), nil)
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.InvalidArgument)
 	}
 }
 
-func TestHandlerDeleteCountdownSuccess(t *testing.T) {
+func TestHandlerDeleteSceneCountdownSuccess(t *testing.T) {
 	store := &testDaggerheartStore{
 		countdowns: map[string]projectionstore.DaggerheartCountdown{
 			"camp-1:cd-1": {
 				CampaignID:  "camp-1",
+				SessionID:   "sess-1",
+				SceneID:     "scene-1",
 				CountdownID: "cd-1",
 			},
 		},
@@ -53,23 +56,24 @@ func TestHandlerDeleteCountdownSuccess(t *testing.T) {
 		},
 	})
 
-	resp, err := handler.DeleteCountdown(testContext(), &pb.DaggerheartDeleteCountdownRequest{
+	resp, err := handler.DeleteSceneCountdown(testContext(), &pb.DaggerheartDeleteSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
 	})
 	if err != nil {
-		t.Fatalf("DeleteCountdown returned error: %v", err)
+		t.Fatalf("DeleteSceneCountdown returned error: %v", err)
 	}
-	if commandInput.CommandType != commandids.DaggerheartCountdownDelete {
-		t.Fatalf("command type = %q, want %q", commandInput.CommandType, commandids.DaggerheartCountdownDelete)
+	if commandInput.CommandType != commandids.DaggerheartSceneCountdownDelete {
+		t.Fatalf("command type = %q, want %q", commandInput.CommandType, commandids.DaggerheartSceneCountdownDelete)
 	}
 	if resp.CountdownID != "cd-1" {
 		t.Fatalf("countdown_id = %q, want cd-1", resp.CountdownID)
 	}
 }
 
-func TestHandlerDeleteCountdownRejectsMissingCountdown(t *testing.T) {
+func TestHandlerDeleteSceneCountdownRejectsMissingCountdown(t *testing.T) {
 	handler := newTestHandler(Dependencies{
 		Daggerheart: testDaggerheartStore{},
 		ExecuteDomainCommand: func(context.Context, DomainCommandInput) error {
@@ -78,9 +82,10 @@ func TestHandlerDeleteCountdownRejectsMissingCountdown(t *testing.T) {
 		},
 	})
 
-	_, err := handler.DeleteCountdown(testContext(), &pb.DaggerheartDeleteCountdownRequest{
+	_, err := handler.DeleteSceneCountdown(testContext(), &pb.DaggerheartDeleteSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
 	})
 	if status.Code(err) != codes.NotFound {
@@ -88,7 +93,7 @@ func TestHandlerDeleteCountdownRejectsMissingCountdown(t *testing.T) {
 	}
 }
 
-func TestHandlerDeleteCountdownRejectsOpenSessionGate(t *testing.T) {
+func TestHandlerDeleteSceneCountdownRejectsOpenSessionGate(t *testing.T) {
 	handler := newTestHandler(Dependencies{
 		SessionGate: testGateStore{gate: storage.SessionGate{GateID: "gate-1"}},
 		ExecuteDomainCommand: func(context.Context, DomainCommandInput) error {
@@ -97,9 +102,10 @@ func TestHandlerDeleteCountdownRejectsOpenSessionGate(t *testing.T) {
 		},
 	})
 
-	_, err := handler.DeleteCountdown(testContext(), &pb.DaggerheartDeleteCountdownRequest{
+	_, err := handler.DeleteSceneCountdown(testContext(), &pb.DaggerheartDeleteSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
 	})
 	if status.Code(err) != codes.FailedPrecondition {

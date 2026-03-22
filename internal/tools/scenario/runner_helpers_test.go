@@ -953,11 +953,11 @@ func TestParseRestType(t *testing.T) {
 
 func TestParseCountdownKind(t *testing.T) {
 	ck, err := parseCountdownKind("progress")
-	if err != nil || ck != daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS {
+	if err != nil || ck != daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS {
 		t.Fatal("expected PROGRESS")
 	}
 	ck, err = parseCountdownKind("consequence")
-	if err != nil || ck != daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE {
+	if err != nil || ck != daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_CONSEQUENCE {
 		t.Fatal("expected CONSEQUENCE")
 	}
 	_, err = parseCountdownKind("bad")
@@ -966,16 +966,61 @@ func TestParseCountdownKind(t *testing.T) {
 	}
 }
 
+func TestParseCountdownAdvancementPolicy(t *testing.T) {
+	policy, err := parseCountdownAdvancementPolicy("manual")
+	if err != nil || policy != daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_MANUAL {
+		t.Fatal("expected MANUAL")
+	}
+	policy, err = parseCountdownAdvancementPolicy("long_rest")
+	if err != nil || policy != daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_LONG_REST {
+		t.Fatal("expected LONG_REST")
+	}
+	_, err = parseCountdownAdvancementPolicy("bad")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestParseCountdownDirection(t *testing.T) {
 	cd, err := parseCountdownDirection("increase")
-	if err != nil || cd != daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE {
+	if err != nil || cd != daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE {
 		t.Fatal("expected INCREASE")
 	}
 	cd, err = parseCountdownDirection("decrease")
-	if err != nil || cd != daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE {
+	if err != nil || cd != daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_DECREASE_START {
 		t.Fatal("expected DECREASE")
 	}
 	_, err = parseCountdownDirection("bad")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestParseCountdownLoopBehavior(t *testing.T) {
+	loop, err := parseCountdownLoopBehavior("reset")
+	if err != nil || loop != daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET {
+		t.Fatal("expected RESET")
+	}
+	loop, err = parseCountdownLoopBehavior("reset_increase_start")
+	if err != nil || loop != daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_INCREASE_START {
+		t.Fatal("expected RESET_INCREASE_START")
+	}
+	_, err = parseCountdownLoopBehavior("bad")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestParseCountdownStatus(t *testing.T) {
+	statusValue, err := parseCountdownStatus("active")
+	if err != nil || statusValue != daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_ACTIVE {
+		t.Fatal("expected ACTIVE")
+	}
+	statusValue, err = parseCountdownStatus("trigger_pending")
+	if err != nil || statusValue != daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_TRIGGER_PENDING {
+		t.Fatal("expected TRIGGER_PENDING")
+	}
+	_, err = parseCountdownStatus("bad")
 	if err == nil {
 		t.Fatal("expected error")
 	}

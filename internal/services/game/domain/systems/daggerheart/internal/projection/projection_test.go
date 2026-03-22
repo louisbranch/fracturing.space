@@ -188,10 +188,10 @@ func TestApplyAdversaryDamagePatch(t *testing.T) {
 
 func TestApplyCountdownUpdate(t *testing.T) {
 	countdown := projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-1",
-		CountdownID: "cd-1",
-		Current:     1,
-		Max:         4,
+		CampaignID:     "camp-1",
+		CountdownID:    "cd-1",
+		StartingValue:  4,
+		RemainingValue: 1,
 	}
 	if _, err := ApplyCountdownUpdate(countdown, 5); err == nil {
 		t.Fatal("expected out-of-range error")
@@ -200,7 +200,7 @@ func TestApplyCountdownUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ApplyCountdownUpdate: %v", err)
 	}
-	if next.Current != 2 {
-		t.Fatalf("current = %d, want 2", next.Current)
+	if next.RemainingValue != 2 {
+		t.Fatalf("remaining_value = %d, want 2", next.RemainingValue)
 	}
 }

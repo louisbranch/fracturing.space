@@ -70,6 +70,119 @@ go test -tags='integration liveai' ./internal/test/integration \
   -run TestAIGMCampaignContextLiveCaptureBootstrap -count=1
 ```
 
+For Daggerheart capability/mechanics guidance changes, also run the live
+character-capability lane so the recording proves the model can inspect a sheet
+before committing a mechanics-aware beat:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureCapabilityLookup -count=1
+```
+
+For authoritative Daggerheart mechanics-tool changes, also run the live review
+lane so the recording proves the model can combine sheet lookup, action
+resolution, and GM review resolution in one turn:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureMechanicsReview -count=1
+```
+
+For Daggerheart combat-procedure changes, also run the live attack-review lane
+so the recording proves the model can combine sheet lookup, combat-board
+inspection, and the full attack-flow tool during GM review:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureAttackReview -count=1
+```
+
+For Daggerheart reaction-procedure changes, also run the live reaction-review
+lane so the recording proves the model can combine sheet lookup and the
+reaction-flow tool during GM review:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureReactionReview -count=1
+```
+
+For Daggerheart playbook/reference changes, also run the live playbook attack
+lane so the recording proves the model can discover a repo-owned playbook via
+`system_reference_search/read` before resolving combat:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCapturePlaybookAttackReview -count=1
+```
+
+For Daggerheart board-control changes, also run the live spotlight-board review
+lane so the recording proves the model can discover the spotlight/countdown
+playbook guidance, mutate adversary and countdown state, and then re-read the
+board before opening the next beat:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureSpotlightBoardReview -count=1
+```
+
+For Daggerheart countdown-trigger lifecycle changes, also run the live
+countdown-trigger review lane so the recording proves the model can create a
+scene countdown, advance it to `TRIGGER_PENDING`, resolve the trigger, and
+re-read the board before opening the next beat:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureCountdownTriggerReview -count=1
+```
+
+For Daggerheart GM Fear placement changes, also run the live GM-move placement
+lane so the recording proves the model can create an adversary, spend Fear
+through `daggerheart_gm_move_apply`, and re-read the board before reopening the
+scene:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureGMMovePlacementReview -count=1
+```
+
+For Daggerheart adversary combat-procedure changes, also run the live
+adversary-attack review lane so the recording proves the model can inspect the
+board, resolve an adversary attack, and then reopen play:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureAdversaryAttackReview -count=1
+```
+
+For Daggerheart group-action and tag-team tooling changes, also run the live
+group-action and tag-team lanes so the recording proves the model can read the
+relevant character sheets before using the coordinated combat tools:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run 'TestAIGMCampaignContextLiveCapture(GroupActionReview|TagTeamReview)$' -count=1
+```
+
+To run the full Daggerheart live mechanics suite added on this branch in one
+batch:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run 'TestAIGMCampaignContextLiveCapture(CapabilityLookup|MechanicsReview|AttackReview|ReactionReview|PlaybookAttackReview|SpotlightBoardReview|CountdownTriggerReview|GMMovePlacementReview|AdversaryAttackReview|GroupActionReview|TagTeamReview)$' \
+  -count=1
+```
+
 Optional environment variables:
 
 - `INTEGRATION_AI_MODEL`: model name to use; defaults to `gpt-5.4`
@@ -82,9 +195,16 @@ Behavior:
 
 - Raw live provider captures are always written under `.tmp/ai-live-captures/`
   for local inspection.
+- Each successful live capture also writes a sibling `.summary.json` file with
+  scenario, model, result class, tool names, tool-error count, reference-search
+  counts, token usage, and the related raw/markdown artifact names.
 - The committed replay fixture is updated only when
   `INTEGRATION_AI_WRITE_FIXTURE=1` is set.
 - Failed live runs do not overwrite the committed fixture.
+
+For the current checked-in Daggerheart mechanics comparison table built from
+those summaries, see
+[daggerheart-live-mechanics-matrix.md](../reference/daggerheart-live-mechanics-matrix.md).
 
 ## Supported verification commands
 

@@ -16,8 +16,8 @@ dh:adversary("Saruman")
 scn:start_session("Final Preparations")
 
 -- Fear-cap override (15) remains unresolved in this fixture.
-dh:countdown_create{ name = "Saruman Ritual", kind = "long_term", current = 0, max = 8, direction = "increase" }
-dh:countdown_update{ name = "Saruman Ritual", delta = 1, reason = "long_term_tick" }
+dh:scene_countdown_create{ name = "Saruman Ritual", kind = "long_term", current = 0, max = 8, direction = "increase" }
+dh:scene_countdown_update{ name = "Saruman Ritual", delta = 1, reason = "long_term_tick" }
 
 scn:end_session()
 

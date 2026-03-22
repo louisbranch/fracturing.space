@@ -21,6 +21,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (
@@ -52,10 +53,20 @@ type aiGMCampaignScenarioSpec struct {
 	Prompt          string
 	StorySeed       string
 	MemorySeed      string
+	ExtraCharacters []string
 	PromptContains  []string
 	RequiredToolSet []string
+	ForbiddenTools  []string
+	MaxToolErrors   *int
+	ReferenceLimits *aiGMReferenceLimits
 	Prepare         func(t *testing.T, setup *aiGMCampaignScenarioSetup)
 	Assert          func(t *testing.T, result aiGMCampaignScenarioResult)
+	AssertFixture   func(t *testing.T, fixture openAIReplayFixture)
+}
+
+type aiGMReferenceLimits struct {
+	MaxSearches int
+	MaxReads    int
 }
 
 type aiGMCampaignScenarioSetup struct {
@@ -75,8 +86,11 @@ type aiGMCampaignScenarioSetup struct {
 	SceneClient       gamev1.SceneServiceClient
 	InteractionClient gamev1.InteractionServiceClient
 	ArtifactClient    aiv1.CampaignArtifactServiceClient
+	SnapshotClient    gamev1.SnapshotServiceClient
+	DaggerheartClient pb.DaggerheartServiceClient
 
-	ReplayTokens map[string]string
+	ReplayTokens      map[string]string
+	ExtraCharacterIDs map[string]string
 }
 
 type aiGMCampaignScenarioOptions struct {
@@ -365,6 +379,16 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 	}); err != nil {
 		t.Fatalf("seed memory artifact: %v", err)
 	}
+	extraCharacterIDs := make(map[string]string, len(spec.ExtraCharacters))
+	for _, name := range spec.ExtraCharacters {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		id := createCharacter(t, ctxWithUser, characterClient, campaignID, name)
+		ensureDaggerheartCreationReadiness(t, ctxWithUser, characterClient, campaignID, id)
+		extraCharacterIDs[name] = id
+	}
 
 	startResp, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -391,6 +415,9 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		SceneClient:        sceneClient,
 		InteractionClient:  interactionClient,
 		ArtifactClient:     artifactClient,
+		SnapshotClient:     gamev1.NewSnapshotServiceClient(gameConn),
+		DaggerheartClient:  pb.NewDaggerheartServiceClient(gameConn),
+		ExtraCharacterIDs:  extraCharacterIDs,
 		ReplayTokens: map[string]string{
 			"campaign_id":       campaignID,
 			"session_id":        sessionID,
@@ -524,15 +551,17 @@ type aiGMInteractionBeat struct {
 
 func createScenarioScene(t *testing.T, setup *aiGMCampaignScenarioSetup, name, description string, activate *bool, characterIDs ...string) string {
 	t.Helper()
+	activateValue := true
+	if activate != nil {
+		activateValue = *activate
+	}
 	req := &gamev1.CreateSceneRequest{
 		CampaignId:   setup.CampaignID,
 		SessionId:    setup.SessionID,
 		Name:         name,
 		Description:  description,
 		CharacterIds: append([]string(nil), characterIDs...),
-	}
-	if activate != nil {
-		req.Activate = activate
+		Activate:     &activateValue,
 	}
 	resp, err := setup.SceneClient.CreateScene(setup.AIGMCtx, req)
 	if err != nil {
@@ -592,6 +621,40 @@ func submitScenarioPlayerAction(t *testing.T, setup *aiGMCampaignScenarioSetup, 
 	}
 }
 
+func waitForGMReviewReady(t *testing.T, setup *aiGMCampaignScenarioSetup, sceneID string) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		resp, err := setup.InteractionClient.GetInteractionState(setup.UserCtx, &gamev1.GetInteractionStateRequest{
+			CampaignId: setup.CampaignID,
+		})
+		if err != nil {
+			t.Fatalf("get interaction state while waiting for GM review: %v", err)
+		}
+		state := resp.GetState()
+		if activeSceneID(state) == strings.TrimSpace(sceneID) &&
+			state.GetPlayerPhase().GetStatus() == gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW &&
+			len(state.GetPlayerPhase().GetSlots()) > 0 &&
+			state.GetPlayerPhase().GetSlots()[0].GetYielded() {
+			time.Sleep(300 * time.Millisecond)
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for GM review readiness on scene %q", sceneID)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func extraCharacterID(t *testing.T, setup *aiGMCampaignScenarioSetup, name string) string {
+	t.Helper()
+	id := strings.TrimSpace(setup.ExtraCharacterIDs[name])
+	if id == "" {
+		t.Fatalf("missing extra character %q", name)
+	}
+	return id
+}
+
 func openScenarioOOC(t *testing.T, setup *aiGMCampaignScenarioSetup, reason string) {
 	t.Helper()
 	if _, err := setup.InteractionClient.OpenSessionOOC(setup.OwnerCtx, &gamev1.OpenSessionOOCRequest{
@@ -638,6 +701,56 @@ func activeSceneID(state *gamev1.InteractionState) string {
 		return ""
 	}
 	return strings.TrimSpace(state.GetActiveScene().GetSceneId())
+}
+
+func requireActiveScene(t *testing.T, setup *aiGMCampaignScenarioSetup, wantSceneID string) {
+	t.Helper()
+	resp, err := setup.InteractionClient.GetInteractionState(setup.UserCtx, &gamev1.GetInteractionStateRequest{
+		CampaignId: setup.CampaignID,
+	})
+	if err != nil {
+		t.Fatalf("get interaction state: %v", err)
+	}
+	if got := activeSceneID(resp.GetState()); got != strings.TrimSpace(wantSceneID) {
+		t.Fatalf("active_scene_id = %q, want %q", got, wantSceneID)
+	}
+}
+
+func requireVisibleAdversaryOnSceneBoard(t *testing.T, setup *aiGMCampaignScenarioSetup, sceneID, adversaryID string) {
+	t.Helper()
+	resp, err := setup.DaggerheartClient.ListAdversaries(setup.UserCtx, &pb.DaggerheartListAdversariesRequest{
+		CampaignId: setup.CampaignID,
+		SessionId:  wrapperspb.String(setup.SessionID),
+	})
+	if err != nil {
+		t.Fatalf("list adversaries: %v", err)
+	}
+	for _, adversary := range resp.GetAdversaries() {
+		if strings.TrimSpace(adversary.GetId()) != strings.TrimSpace(adversaryID) {
+			continue
+		}
+		if got := strings.TrimSpace(adversary.GetSceneId()); got != strings.TrimSpace(sceneID) {
+			t.Fatalf("adversary %q scene_id = %q, want %q", adversaryID, got, sceneID)
+		}
+		return
+	}
+	t.Fatalf("expected adversary %q to be visible on scene board", adversaryID)
+}
+
+func requireNoVisibleAdversaryOnSceneBoard(t *testing.T, setup *aiGMCampaignScenarioSetup, sceneID string) {
+	t.Helper()
+	resp, err := setup.DaggerheartClient.ListAdversaries(setup.UserCtx, &pb.DaggerheartListAdversariesRequest{
+		CampaignId: setup.CampaignID,
+		SessionId:  wrapperspb.String(setup.SessionID),
+	})
+	if err != nil {
+		t.Fatalf("list adversaries: %v", err)
+	}
+	for _, adversary := range resp.GetAdversaries() {
+		if strings.TrimSpace(adversary.GetSceneId()) == strings.TrimSpace(sceneID) {
+			t.Fatalf("expected no visible adversary on scene board, found %q", strings.TrimSpace(adversary.GetId()))
+		}
+	}
 }
 
 func sceneOpenByID(scenes []*gamev1.Scene, sceneID string) bool {

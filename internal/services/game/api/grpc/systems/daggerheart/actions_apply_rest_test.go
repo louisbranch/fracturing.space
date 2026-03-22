@@ -188,6 +188,92 @@ func TestApplyRest_LongRest_Success(t *testing.T) {
 	}
 }
 
+func TestApplyRest_LongRest_ResponseIncludesCountdownAdvances(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := testTimestamp
+
+	dhStore.Countdowns["camp-1:cd-1"] = projectionstore.DaggerheartCountdown{
+		CampaignID:        "camp-1",
+		CountdownID:       "cd-1",
+		Name:              "Long-Term Countdown",
+		Tone:              "consequence",
+		AdvancementPolicy: "long_rest",
+		StartingValue:     4,
+		RemainingValue:    3,
+		LoopBehavior:      "none",
+		Status:            "active",
+	}
+
+	payloadJSON, err := json.Marshal(daggerheartpayload.RestTakePayload{
+		RestType:         "long",
+		Interrupted:      false,
+		GMFearBefore:     0,
+		GMFearAfter:      0,
+		ShortRestsBefore: 0,
+		ShortRestsAfter:  0,
+		CampaignCountdownAdvances: []daggerheartpayload.CampaignCountdownAdvancePayload{{
+			CountdownID:     "cd-1",
+			BeforeRemaining: 3,
+			AfterRemaining:  2,
+			AdvancedBy:      1,
+			StatusBefore:    "active",
+			StatusAfter:     "active",
+			Reason:          "long_rest",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("encode rest payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("sys.daggerheart.rest.take"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.rest_taken"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "session",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Write.Executor = domain
+	ctx := contextWithSessionID("sess-1")
+
+	resp, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
+		CampaignId: "camp-1",
+		Rest: &pb.DaggerheartRestRequest{
+			RestType:                    pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
+			LongRestCampaignCountdownId: "cd-1",
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyRest returned error: %v", err)
+	}
+	if len(resp.GetCountdownAdvances()) != 1 {
+		t.Fatalf("countdown advances = %d, want 1", len(resp.GetCountdownAdvances()))
+	}
+	advance := resp.GetCountdownAdvances()[0]
+	if advance.GetCountdownId() != "cd-1" {
+		t.Fatalf("countdown id = %q, want %q", advance.GetCountdownId(), "cd-1")
+	}
+	if advance.GetRemainingBefore() != 3 || advance.GetRemainingAfter() != 2 || advance.GetAdvancedBy() != 1 {
+		t.Fatalf("unexpected countdown advance = %#v", advance)
+	}
+	if advance.GetAdvancementPolicy() != pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_LONG_REST {
+		t.Fatalf("advancement policy = %s, want LONG_REST", advance.GetAdvancementPolicy())
+	}
+}
+
 func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
@@ -225,8 +311,8 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
-			RestType:            pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
-			LongTermCountdownId: "missing-countdown",
+			RestType:                    pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
+			LongRestCampaignCountdownId: "missing-countdown",
 			Participants: []*pb.DaggerheartRestParticipant{
 				{CharacterId: "char-1"},
 			},
@@ -244,14 +330,15 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.Countdowns["camp-1:cd-1"] = projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-1",
-		CountdownID: "cd-1",
-		Name:        "Long Term",
-		Kind:        "progress",
-		Current:     2,
-		Max:         6,
-		Direction:   "increase",
-		Looping:     false,
+		CampaignID:        "camp-1",
+		CountdownID:       "cd-1",
+		Name:              "Long Term",
+		Tone:              "progress",
+		AdvancementPolicy: "long_rest",
+		StartingValue:     6,
+		RemainingValue:    4,
+		LoopBehavior:      "none",
+		Status:            "active",
 	}
 	now := testTimestamp
 
@@ -287,8 +374,8 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
-			RestType:            pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
-			LongTermCountdownId: "cd-1",
+			RestType:                    pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
+			LongRestCampaignCountdownId: "cd-1",
 			Participants: []*pb.DaggerheartRestParticipant{
 				{CharacterId: "char-1"},
 			},
@@ -310,10 +397,63 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode rest command payload: %v", err)
 	}
-	if len(got.CountdownUpdates) != 1 {
-		t.Fatalf("countdown updates = %d, want 1", len(got.CountdownUpdates))
+	if len(got.CampaignCountdownAdvances) != 1 {
+		t.Fatalf("campaign countdown advances = %d, want 1", len(got.CampaignCountdownAdvances))
 	}
-	if got.CountdownUpdates[0].CountdownID != "cd-1" {
-		t.Fatalf("countdown id = %s, want %s", got.CountdownUpdates[0].CountdownID, "cd-1")
+	if got.CampaignCountdownAdvances[0].CountdownID != "cd-1" {
+		t.Fatalf("countdown id = %s, want %s", got.CampaignCountdownAdvances[0].CountdownID, "cd-1")
 	}
+}
+
+func TestApplyRest_RejectsSceneCountdownForCampaignCountdownFields(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.Countdowns["camp-1:scene-cd-1"] = projectionstore.DaggerheartCountdown{
+		CampaignID:        "camp-1",
+		CountdownID:       "scene-cd-1",
+		SessionID:         "sess-1",
+		SceneID:           "scene-1",
+		Name:              "Breach",
+		Tone:              "consequence",
+		AdvancementPolicy: "manual",
+		StartingValue:     4,
+		RemainingValue:    3,
+		LoopBehavior:      "none",
+		Status:            "active",
+	}
+
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
+		CampaignId: "camp-1",
+		Rest: &pb.DaggerheartRestRequest{
+			RestType:                    pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
+			LongRestCampaignCountdownId: "scene-cd-1",
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
+		},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+
+	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
+		CampaignId: "camp-1",
+		Rest: &pb.DaggerheartRestRequest{
+			RestType: pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
+			Participants: []*pb.DaggerheartRestParticipant{
+				{
+					CharacterId: "char-1",
+					DowntimeMoves: []*pb.DaggerheartDowntimeSelection{
+						{
+							Move: &pb.DaggerheartDowntimeSelection_WorkOnProject{
+								WorkOnProject: &pb.DaggerheartWorkOnProjectMove{
+									ProjectCampaignCountdownId: "scene-cd-1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
 }

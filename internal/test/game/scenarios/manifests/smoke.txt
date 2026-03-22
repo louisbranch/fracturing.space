@@ -4,10 +4,13 @@ systems/daggerheart/action_roll_outcomes.lua
 systems/daggerheart/reaction_flow.lua
 systems/daggerheart/condition_lifecycle.lua
 systems/daggerheart/countdown_lifecycle.lua
+systems/daggerheart/countdown_variants.lua
+systems/daggerheart/countdown_linked_pair.lua
 systems/daggerheart/group_action.lua
 systems/daggerheart/tag_team.lua
 systems/daggerheart/rest_and_downtime.lua
 systems/daggerheart/rest_long_project.lua
+systems/daggerheart/long_term_countdown.lua
 systems/daggerheart/temporary_armor_bonus.lua
 systems/daggerheart/death_move.lua
 systems/daggerheart/death_move_last_hope_slot.lua

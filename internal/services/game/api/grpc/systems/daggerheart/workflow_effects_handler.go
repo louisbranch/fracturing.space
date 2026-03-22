@@ -38,12 +38,12 @@ func (s *DaggerheartService) workflowEffectsHandler() *workfloweffects.Handler {
 				ApplyErrMessage: "apply condition event",
 			})
 		},
-		CreateCountdown: func(ctx context.Context, in *pb.DaggerheartCreateCountdownRequest) error {
-			_, err := s.CreateCountdown(ctx, in)
+		CreateSceneCountdown: func(ctx context.Context, in *pb.DaggerheartCreateSceneCountdownRequest) error {
+			_, err := s.CreateSceneCountdown(ctx, in)
 			return err
 		},
-		UpdateCountdown: func(ctx context.Context, in *pb.DaggerheartUpdateCountdownRequest) error {
-			_, err := s.UpdateCountdown(ctx, in)
+		AdvanceSceneCountdown: func(ctx context.Context, in *pb.DaggerheartAdvanceSceneCountdownRequest) error {
+			_, err := s.AdvanceSceneCountdown(ctx, in)
 			return err
 		},
 	})

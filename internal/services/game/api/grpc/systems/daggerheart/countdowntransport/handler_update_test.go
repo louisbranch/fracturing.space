@@ -2,6 +2,7 @@ package countdowntransport
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -10,21 +11,22 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func TestHandlerUpdateCountdownRejectsMissingMutation(t *testing.T) {
+func TestHandlerAdvanceSceneCountdownRejectsMissingMutation(t *testing.T) {
 	handler := newTestHandler(Dependencies{
 		ExecuteDomainCommand: func(context.Context, DomainCommandInput) error { return nil },
 	})
 
-	_, err := handler.UpdateCountdown(testContext(), &pb.DaggerheartUpdateCountdownRequest{
+	_, err := handler.AdvanceSceneCountdown(testContext(), &pb.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
 	})
 	if status.Code(err) != codes.InvalidArgument {
@@ -32,26 +34,30 @@ func TestHandlerUpdateCountdownRejectsMissingMutation(t *testing.T) {
 	}
 }
 
-func TestHandlerUpdateCountdownRejectsNilRequest(t *testing.T) {
+func TestHandlerAdvanceSceneCountdownRejectsNilRequest(t *testing.T) {
 	handler := newTestHandler(Dependencies{})
 
-	_, err := handler.UpdateCountdown(context.Background(), nil)
+	_, err := handler.AdvanceSceneCountdown(context.Background(), nil)
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.InvalidArgument)
 	}
 }
 
-func TestHandlerUpdateCountdownSuccess(t *testing.T) {
+func TestHandlerAdvanceSceneCountdownSuccess(t *testing.T) {
 	store := &testDaggerheartStore{
 		countdowns: map[string]projectionstore.DaggerheartCountdown{
 			"camp-1:cd-1": {
-				CampaignID:  "camp-1",
-				CountdownID: "cd-1",
-				Name:        "Clock",
-				Kind:        rules.CountdownKindProgress,
-				Current:     1,
-				Max:         4,
-				Direction:   rules.CountdownDirectionIncrease,
+				CampaignID:        "camp-1",
+				SessionID:         "sess-1",
+				SceneID:           "scene-1",
+				CountdownID:       "cd-1",
+				Name:              "Clock",
+				Tone:              "progress",
+				AdvancementPolicy: "manual",
+				StartingValue:     4,
+				RemainingValue:    3,
+				LoopBehavior:      "none",
+				Status:            "active",
 			},
 		},
 	}
@@ -60,40 +66,49 @@ func TestHandlerUpdateCountdownSuccess(t *testing.T) {
 		Daggerheart: store,
 		ExecuteDomainCommand: func(_ context.Context, in DomainCommandInput) error {
 			commandInput = in
+			var payload daggerheartpayload.SceneCountdownAdvancedPayload
+			if err := json.Unmarshal(in.PayloadJSON, &payload); err != nil {
+				return err
+			}
 			store.countdowns["camp-1:cd-1"] = projectionstore.DaggerheartCountdown{
-				CampaignID:  "camp-1",
-				CountdownID: "cd-1",
-				Name:        "Clock",
-				Kind:        rules.CountdownKindProgress,
-				Current:     2,
-				Max:         4,
-				Direction:   rules.CountdownDirectionIncrease,
+				CampaignID:        "camp-1",
+				SessionID:         "sess-1",
+				SceneID:           "scene-1",
+				CountdownID:       "cd-1",
+				Name:              "Clock",
+				Tone:              "progress",
+				AdvancementPolicy: "manual",
+				StartingValue:     4,
+				RemainingValue:    payload.AfterRemaining,
+				LoopBehavior:      "none",
+				Status:            payload.StatusAfter,
 			}
 			return nil
 		},
 	})
 
-	resp, err := handler.UpdateCountdown(testContext(), &pb.DaggerheartUpdateCountdownRequest{
+	resp, err := handler.AdvanceSceneCountdown(testContext(), &pb.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
-		Delta:       1,
+		Amount:      1,
 	})
 	if err != nil {
-		t.Fatalf("UpdateCountdown returned error: %v", err)
+		t.Fatalf("AdvanceSceneCountdown returned error: %v", err)
 	}
-	if commandInput.CommandType != commandids.DaggerheartCountdownUpdate {
-		t.Fatalf("command type = %q, want %q", commandInput.CommandType, commandids.DaggerheartCountdownUpdate)
+	if commandInput.CommandType != commandids.DaggerheartSceneCountdownAdvance {
+		t.Fatalf("command type = %q, want %q", commandInput.CommandType, commandids.DaggerheartSceneCountdownAdvance)
 	}
-	if resp.After != 2 || resp.Delta != 1 || resp.Before != 1 {
-		t.Fatalf("update summary = (%d,%d,%d), want (1,2,1)", resp.Before, resp.After, resp.Delta)
+	if resp.Summary.BeforeRemaining != 3 || resp.Summary.AfterRemaining != 2 || resp.Summary.AdvancedBy != 1 {
+		t.Fatalf("advance summary = (%d,%d,%d), want (3,2,1)", resp.Summary.BeforeRemaining, resp.Summary.AfterRemaining, resp.Summary.AdvancedBy)
 	}
-	if resp.Countdown.Current != 2 {
-		t.Fatalf("countdown current = %d, want 2", resp.Countdown.Current)
+	if resp.Countdown.RemainingValue != 2 {
+		t.Fatalf("countdown remaining value = %d, want 2", resp.Countdown.RemainingValue)
 	}
 }
 
-func TestHandlerUpdateCountdownWrapsCountdownStoreErrors(t *testing.T) {
+func TestHandlerAdvanceSceneCountdownWrapsCountdownStoreErrors(t *testing.T) {
 	handler := newTestHandler(Dependencies{
 		Daggerheart: testDaggerheartStore{getErr: errors.New("boom")},
 		ExecuteDomainCommand: func(context.Context, DomainCommandInput) error {
@@ -102,18 +117,19 @@ func TestHandlerUpdateCountdownWrapsCountdownStoreErrors(t *testing.T) {
 		},
 	})
 
-	_, err := handler.UpdateCountdown(testContext(), &pb.DaggerheartUpdateCountdownRequest{
+	_, err := handler.AdvanceSceneCountdown(testContext(), &pb.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
-		Delta:       1,
+		Amount:      1,
 	})
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.Internal)
 	}
 }
 
-func TestHandlerUpdateCountdownRejectsInactiveSession(t *testing.T) {
+func TestHandlerAdvanceSceneCountdownRejectsInactiveSession(t *testing.T) {
 	handler := newTestHandler(Dependencies{
 		Session: testSessionStore{record: storage.SessionRecord{
 			ID:         "sess-1",
@@ -126,18 +142,19 @@ func TestHandlerUpdateCountdownRejectsInactiveSession(t *testing.T) {
 		},
 	})
 
-	_, err := handler.UpdateCountdown(testContext(), &pb.DaggerheartUpdateCountdownRequest{
+	_, err := handler.AdvanceSceneCountdown(testContext(), &pb.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
-		Delta:       1,
+		Amount:      1,
 	})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}
 }
 
-func TestHandlerUpdateCountdownRejectsUnsupportedSystem(t *testing.T) {
+func TestHandlerAdvanceSceneCountdownRejectsUnsupportedSystem(t *testing.T) {
 	handler := newTestHandler(Dependencies{
 		Campaign: testCampaignStore{record: storage.CampaignRecord{
 			ID:     "camp-1",
@@ -150,11 +167,12 @@ func TestHandlerUpdateCountdownRejectsUnsupportedSystem(t *testing.T) {
 		},
 	})
 
-	_, err := handler.UpdateCountdown(testContext(), &pb.DaggerheartUpdateCountdownRequest{
+	_, err := handler.AdvanceSceneCountdown(testContext(), &pb.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
+		SceneId:     "scene-1",
 		CountdownId: "cd-1",
-		Delta:       1,
+		Amount:      1,
 	})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)

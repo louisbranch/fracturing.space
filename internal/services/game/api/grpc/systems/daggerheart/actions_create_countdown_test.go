@@ -11,111 +11,101 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
-// --- CreateCountdown tests ---
-
-func TestCreateCountdown_MissingStores(t *testing.T) {
+func TestCreateSceneCountdown_MissingStores(t *testing.T) {
 	svc := &DaggerheartService{}
-	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+	_, err := svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
 
-func TestCreateCountdown_MissingCampaignId(t *testing.T) {
+func TestCreateSceneCountdown_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
-	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+	_, err := svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
 		SessionId: "sess-1",
+		SceneId:   "scene-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateCountdown_MissingSessionId(t *testing.T) {
+func TestCreateSceneCountdown_MissingSessionOrScene(t *testing.T) {
 	svc := newActionTestService()
-	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+	_, err := svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
 		CampaignId: "camp-1",
+		SceneId:    "scene-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
 
-func TestCreateCountdown_MissingName(t *testing.T) {
-	svc := newActionTestService()
-	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
-		CampaignId: "camp-1", SessionId: "sess-1",
-	})
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestCreateCountdown_InvalidMax(t *testing.T) {
-	svc := newActionTestService()
-	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+	_, err = svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
 		CampaignId: "camp-1",
 		SessionId:  "sess-1",
-		Name:       "Test Countdown",
-		Kind:       pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS,
-		Direction:  pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-		Max:        0,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateCountdown_CurrentOutOfRange(t *testing.T) {
+func TestCreateSceneCountdown_InvalidShape(t *testing.T) {
 	svc := newActionTestService()
-	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
-		CampaignId: "camp-1",
-		SessionId:  "sess-1",
-		Name:       "Test Countdown",
-		Kind:       pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS,
-		Direction:  pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-		Max:        4,
-		Current:    5,
+	_, err := svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
+		CampaignId:        "camp-1",
+		SessionId:         "sess-1",
+		SceneId:           "scene-1",
+		Name:              "Test Countdown",
+		Tone:              pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS,
+		AdvancementPolicy: pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_MANUAL,
+		StartingValue:     &pb.DaggerheartCreateSceneCountdownRequest_FixedStartingValue{FixedStartingValue: 0},
+		LoopBehavior:      pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateCountdown_RequiresDomainEngine(t *testing.T) {
+func TestCreateSceneCountdown_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
-	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
-		CampaignId: "camp-1",
-		SessionId:  "sess-1",
-		Name:       "Test Countdown",
-		Kind:       pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS,
-		Direction:  pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-		Max:        4,
-		Current:    0,
+	_, err := svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
+		CampaignId:        "camp-1",
+		SessionId:         "sess-1",
+		SceneId:           "scene-1",
+		Name:              "Test Countdown",
+		Tone:              pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS,
+		AdvancementPolicy: pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_MANUAL,
+		StartingValue:     &pb.DaggerheartCreateSceneCountdownRequest_FixedStartingValue{FixedStartingValue: 4},
+		LoopBehavior:      pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE,
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
 
-func TestCreateCountdown_Success(t *testing.T) {
+func TestCreateSceneCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	countdownPayload := daggerheartpayload.CountdownCreatedPayload{
-		CountdownID: "cd-1",
-		Name:        "Test Countdown",
-		Kind:        rules.CountdownKindProgress,
-		Current:     0,
-		Max:         4,
-		Direction:   rules.CountdownDirectionIncrease,
-		Looping:     false,
+	countdownPayload := daggerheartpayload.SceneCountdownCreatedPayload{
+		SessionID:         "sess-1",
+		SceneID:           "scene-1",
+		CountdownID:       "cd-1",
+		Name:              "Test Countdown",
+		Tone:              "progress",
+		AdvancementPolicy: "manual",
+		StartingValue:     4,
+		RemainingValue:    4,
+		LoopBehavior:      "none",
+		Status:            "active",
 	}
 	countdownPayloadJSON, err := json.Marshal(countdownPayload)
 	if err != nil {
 		t.Fatalf("encode countdown payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("sys.daggerheart.countdown.create"): {
+		command.Type("sys.daggerheart.scene_countdown.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("sys.daggerheart.countdown_created"),
+				Type:          event.Type("sys.daggerheart.scene_countdown_created"),
 				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
-				RequestID:     "req-countdown-success",
-				EntityType:    "countdown",
+				SceneID:       "scene-1",
+				RequestID:     "req-scene-countdown-create-success",
+				EntityType:    "scene_countdown",
 				EntityID:      "cd-1",
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
@@ -124,94 +114,21 @@ func TestCreateCountdown_Success(t *testing.T) {
 		},
 	}}
 	svc.stores.Write.Executor = serviceDomain
-	resp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		Name:        "Test Countdown",
-		Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS,
-		Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-		Max:         4,
-		Current:     0,
-		CountdownId: "cd-1",
+	resp, err := svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
+		CampaignId:        "camp-1",
+		SessionId:         "sess-1",
+		SceneId:           "scene-1",
+		Name:              "Test Countdown",
+		Tone:              pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS,
+		AdvancementPolicy: pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_MANUAL,
+		StartingValue:     &pb.DaggerheartCreateSceneCountdownRequest_FixedStartingValue{FixedStartingValue: 4},
+		LoopBehavior:      pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE,
+		CountdownId:       "cd-1",
 	})
 	if err != nil {
-		t.Fatalf("CreateCountdown returned error: %v", err)
+		t.Fatalf("CreateSceneCountdown returned error: %v", err)
 	}
-	if resp.Countdown == nil {
-		t.Fatal("expected countdown in response")
-	}
-	if resp.Countdown.Name != "Test Countdown" {
-		t.Fatalf("name = %q, want Test Countdown", resp.Countdown.Name)
-	}
-}
-
-func TestCreateCountdown_UsesDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	eventStore := svc.stores.Event.(*fakeEventStore)
-	countdownPayload := daggerheartpayload.CountdownCreatedPayload{
-		CountdownID: "cd-1",
-		Name:        "Signal",
-		Kind:        rules.CountdownKindProgress,
-		Current:     1,
-		Max:         4,
-		Direction:   rules.CountdownDirectionIncrease,
-		Looping:     true,
-	}
-	countdownPayloadJSON, err := json.Marshal(countdownPayload)
-	if err != nil {
-		t.Fatalf("encode countdown payload: %v", err)
-	}
-
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("sys.daggerheart.countdown.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "camp-1",
-				Type:          event.Type("sys.daggerheart.countdown_created"),
-				Timestamp:     testTimestamp,
-				ActorType:     event.ActorTypeSystem,
-				SessionID:     "sess-1",
-				RequestID:     "req-countdown-create",
-				EntityType:    "countdown",
-				EntityID:      "cd-1",
-				SystemID:      daggerheart.SystemID,
-				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   countdownPayloadJSON,
-			}),
-		},
-	}}
-
-	svc.stores.Write.Executor = domain
-
-	resp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		CountdownId: "cd-1",
-		Name:        "Signal",
-		Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS,
-		Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-		Max:         4,
-		Current:     1,
-		Looping:     true,
-	})
-	if err != nil {
-		t.Fatalf("CreateCountdown returned error: %v", err)
-	}
-	if resp.Countdown == nil {
-		t.Fatal("expected countdown in response")
-	}
-	if resp.Countdown.CountdownId != "cd-1" {
-		t.Fatalf("countdown_id = %q, want cd-1", resp.Countdown.CountdownId)
-	}
-	if domain.calls != 1 {
-		t.Fatalf("expected domain to be called once, got %d", domain.calls)
-	}
-	if domain.lastCommand.Type != command.Type("sys.daggerheart.countdown.create") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.countdown.create")
-	}
-	if got := len(eventStore.Events["camp-1"]); got != 1 {
-		t.Fatalf("expected 1 event, got %d", got)
-	}
-	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.countdown_created") {
-		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.countdown_created"))
+	if resp.Countdown == nil || resp.Countdown.Name != "Test Countdown" || resp.Countdown.StartingValue != 4 || resp.Countdown.RemainingValue != 4 {
+		t.Fatalf("unexpected response countdown: %#v", resp.Countdown)
 	}
 }

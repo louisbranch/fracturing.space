@@ -19,8 +19,8 @@ scn:start_session("On My Signal")
 -- Example: reaction starts a countdown for coordinated archer fire.
 -- Partial mapping: explicit countdown tick and advantaged archer volley are represented.
 -- Missing DSL: automatic trigger of countdown ticks from qualifying PC attack outcomes.
-dh:countdown_create{ name = "On My Signal", kind = "consequence", current = 0, max = 3, direction = "increase" }
-dh:countdown_update{ name = "On My Signal", delta = 1, reason = "pc_attack_trigger" }
+dh:scene_countdown_create{ name = "On My Signal", kind = "consequence", current = 0, max = 3, direction = "increase" }
+dh:scene_countdown_update{ name = "On My Signal", delta = 1, reason = "pc_attack_trigger" }
 dh:adversary_attack{
   actor = "Gondor Archers",
   target = "Frodo",

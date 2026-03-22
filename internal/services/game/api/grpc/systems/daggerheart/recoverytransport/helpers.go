@@ -12,7 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -59,16 +58,46 @@ func resolveSeed(rng *commonv1.RngRequest, seedFunc func() (int64, error), resol
 }
 
 func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) rules.Countdown {
-	return rules.Countdown{
-		CampaignID: countdown.CampaignID,
-		ID:         countdown.CountdownID,
-		Name:       countdown.Name,
-		Kind:       countdown.Kind,
-		Current:    countdown.Current,
-		Max:        countdown.Max,
-		Direction:  countdown.Direction,
-		Looping:    countdown.Looping,
+	value := rules.Countdown{
+		CampaignID:        countdown.CampaignID,
+		ID:                countdown.CountdownID,
+		Name:              countdown.Name,
+		Tone:              countdown.Tone,
+		AdvancementPolicy: countdown.AdvancementPolicy,
+		StartingValue:     countdown.StartingValue,
+		RemainingValue:    countdown.RemainingValue,
+		LoopBehavior:      countdown.LoopBehavior,
+		Status:            countdown.Status,
+		LinkedCountdownID: countdown.LinkedCountdownID,
+		Kind:              countdown.Kind,
+		Current:           countdown.Current,
+		Max:               countdown.Max,
+		Direction:         countdown.Direction,
+		Looping:           countdown.Looping,
 	}
+	if value.Tone == "" && countdown.Kind != "" {
+		value.Tone = countdown.Kind
+	}
+	if value.StartingValue == 0 && countdown.Max > 0 {
+		value.StartingValue = countdown.Max
+	}
+	if value.RemainingValue == 0 && (countdown.Current > 0 || countdown.Max > 0) {
+		value.RemainingValue = countdown.Current
+	}
+	if value.LoopBehavior == "" {
+		if countdown.Looping {
+			value.LoopBehavior = rules.CountdownLoopBehaviorReset
+		} else {
+			value.LoopBehavior = rules.CountdownLoopBehaviorNone
+		}
+	}
+	if value.AdvancementPolicy == "" {
+		value.AdvancementPolicy = rules.CountdownAdvancementPolicyManual
+	}
+	if value.Status == "" {
+		value.Status = rules.CountdownStatusActive
+	}
+	return value
 }
 
 func restTypeFromProto(t pb.DaggerheartRestType) (daggerheart.RestType, error) {
@@ -139,7 +168,7 @@ func downtimeSelectionFromProto(
 	case *pb.DaggerheartDowntimeSelection_WorkOnProject:
 		return daggerheart.DowntimeSelection{
 			Move:                daggerheart.DowntimeMoveWorkOnProject,
-			CountdownID:         dhids.CountdownID(strings.TrimSpace(move.WorkOnProject.GetCountdownId())),
+			CountdownID:         ids.CountdownID(strings.TrimSpace(move.WorkOnProject.GetProjectCampaignCountdownId())),
 			ProjectAdvanceMode:  projectAdvanceModeFromProto(move.WorkOnProject.GetAdvanceMode()),
 			ProjectAdvanceDelta: int(move.WorkOnProject.GetAdvanceDelta()),
 			ProjectReason:       strings.TrimSpace(move.WorkOnProject.GetReason()),

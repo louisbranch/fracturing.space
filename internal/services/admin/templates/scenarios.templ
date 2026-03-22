@@ -142,10 +142,10 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
 						<p class="text-xs opacity-70 mb-3">Actions, clocks, and recovery outside direct combat.</p>
-						<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">countdown_create</span>&#123;name = <span class="text-success">"Escape Route"</span>, kind = <span class="text-success">"progress"</span>, current = 0, max = 4, direction = <span class="text-success">"increase"</span>&#125;<br/>
+						<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">scene_countdown_create</span>&#123;name = <span class="text-success">"Escape Route"</span>, kind = <span class="text-success">"progress"</span>, current = 0, max = 4, direction = <span class="text-success">"increase"</span>&#125;<br/>
 <span class="text-info">dh</span>:<span class="text-primary">action_roll</span>&#123;actor = <span class="text-success">"Frodo"</span>, trait = <span class="text-success">"finesse"</span>, difficulty = 14, outcome = <span class="text-success">"hope"</span>&#125;<br/>
 <span class="text-info">dh</span>:<span class="text-primary">apply_roll_outcome</span>&#123;<br/>
-on_success = &#123;&#123;kind = <span class="text-success">"countdown_update"</span>, name = <span class="text-success">"Escape Route"</span>, delta = 1, reason = <span class="text-success">"gain_ground"</span>&#125;&#125;,<br/>
+on_success = &#123;&#123;kind = <span class="text-success">"scene_countdown_update"</span>, name = <span class="text-success">"Escape Route"</span>, delta = 1, reason = <span class="text-success">"gain_ground"</span>&#125;&#125;,<br/>
 &#125;<br/>
 <span class="text-info">dh</span>:<span class="text-primary">group_action</span>&#123;<br/>
 leader = <span class="text-success">"Frodo"</span>, leader_trait = <span class="text-success">"instinct"</span>, difficulty = 12,<br/>
@@ -166,8 +166,8 @@ participants = &#123;<br/>
 									@sharedtemplates.LucideIcon("chevron-down", "size-3.5")
 								</span>
 							</summary>
-							<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">countdown_update</span>&#123;name = <span class="text-success">"Escape Route"</span>, delta = 1, reason = <span class="text-success">"good_lead"</span>&#125;<br/>
-<span class="text-info">dh</span>:<span class="text-primary">countdown_delete</span>&#123;name = <span class="text-success">"Escape Route"</span>, reason = <span class="text-success">"resolved"</span>&#125;<br/>
+							<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">scene_countdown_update</span>&#123;name = <span class="text-success">"Escape Route"</span>, delta = 1, reason = <span class="text-success">"good_lead"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">scene_countdown_delete</span>&#123;name = <span class="text-success">"Escape Route"</span>, reason = <span class="text-success">"resolved"</span>&#125;<br/>
 <span class="text-info">dh</span>:<span class="text-primary">reaction</span>&#123;actor = <span class="text-success">"Frodo"</span>, trait = <span class="text-success">"agility"</span>, difficulty = 12, outcome = <span class="text-success">"hope"</span>&#125;<br/>
 <span class="text-info">dh</span>:<span class="text-primary">group_reaction</span>&#123;targets = &#123;<span class="text-success">"Frodo"</span>, <span class="text-success">"Sam"</span>&#125;, trait = <span class="text-success">"agility"</span>, difficulty = 14, damage = 8, source = <span class="text-success">"hail_of_arrows"</span>&#125;</code></pre>
 						</details>

@@ -125,7 +125,7 @@ func interactionContractText(instructions PromptInstructions) string {
 		"Use interaction_session_ooc_resolve when OOC has resumed but players are still blocked pending interaction resolution.",
 		"Once interaction_open_scene_player_phase, interaction_resolve_scene_player_review opening the next player phase, or interaction_session_ooc_resolve replacing or resuming a player phase succeeds, the GM turn is complete unless OOC or GM review still needs resolution.",
 		"Use interaction_open_session_ooc, interaction_post_session_ooc, interaction_mark_ooc_ready_to_resume, interaction_clear_ooc_ready_to_resume, and interaction_session_ooc_resolve for out-of-character rules guidance, coordination, pauses, and resumptions.",
-		"Use system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.",
+		"Use system_reference_search and system_reference_read only when exact Daggerheart wording or procedure choice is unclear.",
 		"Use tools for authoritative state changes; do not rely on free-form narration to mutate game state.",
 	}, "\n")
 }

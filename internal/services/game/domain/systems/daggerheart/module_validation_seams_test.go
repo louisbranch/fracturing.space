@@ -59,8 +59,8 @@ func TestValidateRestTakePayload_Branches(t *testing.T) {
 	if err := daggerheartvalidator.ValidateRestTakePayload(json.RawMessage(`{"rest_type":" "}`)); err == nil {
 		t.Fatal("expected missing rest_type error")
 	}
-	if err := daggerheartvalidator.ValidateRestTakePayload(json.RawMessage(`{"rest_type":"short","participants":["char-1"],"countdown_updates":[{"countdown_id":"","before":1,"after":2}]}`)); err == nil {
-		t.Fatal("expected invalid countdown_updates error")
+	if err := daggerheartvalidator.ValidateRestTakePayload(json.RawMessage(`{"rest_type":"short","participants":["char-1"],"campaign_countdown_advances":[{"countdown_id":"","before_remaining":1,"after_remaining":2,"advanced_by":1}]}`)); err == nil {
+		t.Fatal("expected invalid campaign_countdown_advances error")
 	}
 	if err := daggerheartvalidator.ValidateRestTakePayload(json.RawMessage(`{"rest_type":"short","gm_fear_before":1,"gm_fear_after":1,"short_rests_before":1,"short_rests_after":1}`)); err == nil {
 		t.Fatal("expected participants required error")
@@ -101,7 +101,7 @@ func TestValidateDowntimeMoveAppliedPayload_Branches(t *testing.T) {
 	if err := daggerheartvalidator.ValidateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","target_character_id":"char-1","move":"prepare","hope_after":3}`)); err != nil {
 		t.Fatalf("expected valid target state change payload, got: %v", err)
 	}
-	if err := daggerheartvalidator.ValidateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","move":"work_on_project","countdown_id":"cd-1"}`)); err != nil {
+	if err := daggerheartvalidator.ValidateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","move":"work_on_project","campaign_countdown_id":"cd-1"}`)); err != nil {
 		t.Fatalf("expected valid countdown-only payload, got: %v", err)
 	}
 }
@@ -156,29 +156,21 @@ func TestValidateDomainCardAcquirePayload_CardLevel(t *testing.T) {
 	}
 }
 
-func TestValidateCountdownCreatePayload_VariantValidation(t *testing.T) {
-	base := func(variant string) string {
-		return `{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","variant":"` + variant + `"}`
+func TestValidateSceneCountdownCreatePayload_SRDValidation(t *testing.T) {
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"cd-1","name":"Doom","tone":"progress","advancement_policy":"action_dynamic","starting_value":4,"remaining_value":4,"loop_behavior":"none","status":"active"}`)); err != nil {
+		t.Fatalf("expected valid srd countdown payload, got: %v", err)
 	}
-	// Valid standard variant.
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(base("standard"))); err != nil {
-		t.Fatalf("expected standard variant valid, got: %v", err)
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"cd-1","name":"Doom","tone":"chaos","advancement_policy":"action_dynamic","starting_value":4,"remaining_value":4,"loop_behavior":"none","status":"active"}`)); err == nil {
+		t.Fatal("expected invalid tone rejection")
 	}
-	// Empty variant normalizes to standard.
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(`{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase"}`)); err != nil {
-		t.Fatalf("expected empty variant valid, got: %v", err)
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"cd-1","name":"Doom","tone":"progress","advancement_policy":"action_dynamic","starting_value":4,"remaining_value":4,"loop_behavior":"spiral","status":"active"}`)); err == nil {
+		t.Fatal("expected invalid loop_behavior rejection")
 	}
-	// Unknown variant rejected.
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(base("chaos"))); err == nil {
-		t.Fatal("expected unknown variant rejection")
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"cd-1","name":"Doom","tone":"progress","advancement_policy":"action_dynamic","starting_value":4,"remaining_value":4,"loop_behavior":"none","status":"active","starting_roll":{"min":6,"max":4,"value":5}}`)); err == nil {
+		t.Fatal("expected invalid starting_roll range rejection")
 	}
-	// Dynamic without trigger_event_type rejected.
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(base("dynamic"))); err == nil {
-		t.Fatal("expected dynamic variant without trigger_event_type rejection")
-	}
-	// Linked without linked_countdown_id rejected.
-	if err := daggerheartvalidator.ValidateCountdownCreatePayload(json.RawMessage(base("linked"))); err == nil {
-		t.Fatal("expected linked variant without linked_countdown_id rejection")
+	if err := daggerheartvalidator.ValidateSceneCountdownCreatePayload(json.RawMessage(`{"countdown_id":"cd-1","name":"Doom","tone":"progress","advancement_policy":"action_dynamic","starting_value":4,"remaining_value":4,"loop_behavior":"none","status":"trigger_pending","starting_roll":{"min":1,"max":6,"value":7}}`)); err == nil {
+		t.Fatal("expected invalid starting_roll value rejection")
 	}
 }
 

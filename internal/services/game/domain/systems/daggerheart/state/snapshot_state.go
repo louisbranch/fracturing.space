@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
 type TemporaryArmorBucket = mechanics.TemporaryArmorBucket
 type CharacterState = mechanics.CharacterState
+type CountdownState = CampaignCountdownState
 
 // SnapshotState captures campaign-level Daggerheart state.
 type SnapshotState struct {
@@ -23,9 +23,11 @@ type SnapshotState struct {
 	CharacterSubclassStates map[ids.CharacterID]CharacterSubclassState
 	CharacterCompanions     map[ids.CharacterID]CharacterCompanionState
 	CharacterStatModifiers  map[ids.CharacterID][]rules.StatModifierState
-	AdversaryStates         map[dhids.AdversaryID]AdversaryState
-	EnvironmentStates       map[dhids.EnvironmentEntityID]EnvironmentEntityState
-	CountdownStates         map[dhids.CountdownID]CountdownState
+	AdversaryStates         map[ids.AdversaryID]AdversaryState
+	EnvironmentStates       map[ids.EnvironmentEntityID]EnvironmentEntityState
+	SceneCountdownStates    map[ids.CountdownID]SceneCountdownState
+	CampaignCountdownStates map[ids.CountdownID]CampaignCountdownState
+	CountdownStates         map[ids.CountdownID]CampaignCountdownState
 }
 
 // EnsureMaps initializes nil maps on SnapshotState. Call this for
@@ -52,20 +54,27 @@ func (s *SnapshotState) EnsureMaps() {
 		s.CharacterStatModifiers = make(map[ids.CharacterID][]rules.StatModifierState)
 	}
 	if s.AdversaryStates == nil {
-		s.AdversaryStates = make(map[dhids.AdversaryID]AdversaryState)
+		s.AdversaryStates = make(map[ids.AdversaryID]AdversaryState)
 	}
 	if s.EnvironmentStates == nil {
-		s.EnvironmentStates = make(map[dhids.EnvironmentEntityID]EnvironmentEntityState)
+		s.EnvironmentStates = make(map[ids.EnvironmentEntityID]EnvironmentEntityState)
+	}
+	if s.SceneCountdownStates == nil {
+		s.SceneCountdownStates = make(map[ids.CountdownID]SceneCountdownState)
+	}
+	if s.CampaignCountdownStates == nil {
+		s.CampaignCountdownStates = make(map[ids.CountdownID]CampaignCountdownState)
 	}
 	if s.CountdownStates == nil {
-		s.CountdownStates = make(map[dhids.CountdownID]CountdownState)
+		s.CountdownStates = s.CampaignCountdownStates
 	}
+	s.CountdownStates = s.CampaignCountdownStates
 }
 
 // AdversaryState captures Daggerheart adversary state for aggregate projections.
 type AdversaryState struct {
 	CampaignID        ids.CampaignID
-	AdversaryID       dhids.AdversaryID
+	AdversaryID       ids.AdversaryID
 	AdversaryEntryID  string
 	Name              string
 	Kind              string
@@ -91,7 +100,7 @@ type AdversaryState struct {
 // aggregate projections and GM move validation.
 type EnvironmentEntityState struct {
 	CampaignID          ids.CampaignID
-	EnvironmentEntityID dhids.EnvironmentEntityID
+	EnvironmentEntityID ids.EnvironmentEntityID
 	EnvironmentID       string
 	Name                string
 	Type                string
@@ -102,19 +111,54 @@ type EnvironmentEntityState struct {
 	Notes               string
 }
 
-// CountdownState captures Daggerheart countdown state for aggregate projections.
-type CountdownState struct {
+// SceneCountdownState captures scene-owned Daggerheart countdown state for
+// spotlight/combat board projections.
+type SceneCountdownState struct {
 	CampaignID        ids.CampaignID
-	CountdownID       dhids.CountdownID
+	SessionID         ids.SessionID
+	SceneID           ids.SceneID
+	CountdownID       ids.CountdownID
 	Name              string
-	Kind              string
-	Current           int
-	Max               int
-	Direction         string
-	Looping           bool
-	Variant           string
-	TriggerEventType  string
-	LinkedCountdownID dhids.CountdownID
+	Tone              string
+	AdvancementPolicy string
+	StartingValue     int
+	RemainingValue    int
+	LoopBehavior      string
+	Status            string
+	LinkedCountdownID ids.CountdownID
+	StartingRoll      *rules.CountdownStartingRoll
+
+	Kind             string
+	Current          int
+	Max              int
+	Direction        string
+	Looping          bool
+	Variant          string
+	TriggerEventType string
+}
+
+// CampaignCountdownState captures campaign-owned Daggerheart countdown state
+// for persistent clocks such as rest/project progress.
+type CampaignCountdownState struct {
+	CampaignID        ids.CampaignID
+	CountdownID       ids.CountdownID
+	Name              string
+	Tone              string
+	AdvancementPolicy string
+	StartingValue     int
+	RemainingValue    int
+	LoopBehavior      string
+	Status            string
+	LinkedCountdownID ids.CountdownID
+	StartingRoll      *rules.CountdownStartingRoll
+
+	Kind             string
+	Current          int
+	Max              int
+	Direction        string
+	Looping          bool
+	Variant          string
+	TriggerEventType string
 }
 
 // SnapshotOrDefault extracts a SnapshotState from the state value for the
@@ -178,7 +222,7 @@ func AppendUnique(slice []string, value string) []string {
 // GMFear starts neutral here; first-session bootstrap owns the actual initial
 // Fear seed once campaign readiness resolves the created-PC roster.
 func NewSnapshotState(campaignID ids.CampaignID) SnapshotState {
-	return SnapshotState{
+	state := SnapshotState{
 		CampaignID:              ids.CampaignID(strings.TrimSpace(string(campaignID))),
 		GMFear:                  GMFearDefault,
 		CharacterProfiles:       make(map[ids.CharacterID]CharacterProfile),
@@ -187,8 +231,12 @@ func NewSnapshotState(campaignID ids.CampaignID) SnapshotState {
 		CharacterSubclassStates: make(map[ids.CharacterID]CharacterSubclassState),
 		CharacterCompanions:     make(map[ids.CharacterID]CharacterCompanionState),
 		CharacterStatModifiers:  make(map[ids.CharacterID][]rules.StatModifierState),
-		AdversaryStates:         make(map[dhids.AdversaryID]AdversaryState),
-		EnvironmentStates:       make(map[dhids.EnvironmentEntityID]EnvironmentEntityState),
-		CountdownStates:         make(map[dhids.CountdownID]CountdownState),
+		AdversaryStates:         make(map[ids.AdversaryID]AdversaryState),
+		EnvironmentStates:       make(map[ids.EnvironmentEntityID]EnvironmentEntityState),
+		SceneCountdownStates:    make(map[ids.CountdownID]SceneCountdownState),
+		CampaignCountdownStates: make(map[ids.CountdownID]CampaignCountdownState),
+		CountdownStates:         nil,
 	}
+	state.CountdownStates = state.CampaignCountdownStates
+	return state
 }

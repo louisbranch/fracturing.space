@@ -621,7 +621,7 @@ func TestSnapshotStateHelpers(t *testing.T) {
 
 	var snapshot SnapshotState
 	snapshot.EnsureMaps()
-	if snapshot.CharacterProfiles == nil || snapshot.CountdownStates == nil || snapshot.CharacterStatModifiers == nil {
+	if snapshot.CharacterProfiles == nil || snapshot.SceneCountdownStates == nil || snapshot.CampaignCountdownStates == nil || snapshot.CharacterStatModifiers == nil {
 		t.Fatalf("EnsureMaps() left nil maps: %+v", snapshot)
 	}
 

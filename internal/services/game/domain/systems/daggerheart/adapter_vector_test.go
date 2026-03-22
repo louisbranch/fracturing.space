@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartadapter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
@@ -56,9 +55,14 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 		daggerheartpayload.EventTypeRestTaken,
 		daggerheartpayload.EventTypeDamageApplied,
 		daggerheartpayload.EventTypeDowntimeMoveApplied,
-		daggerheartpayload.EventTypeCountdownCreated,
-		daggerheartpayload.EventTypeCountdownUpdated,
-		daggerheartpayload.EventTypeCountdownDeleted,
+		daggerheartpayload.EventTypeSceneCountdownCreated,
+		daggerheartpayload.EventTypeSceneCountdownUpdated,
+		daggerheartpayload.EventTypeSceneCountdownTriggerResolved,
+		daggerheartpayload.EventTypeSceneCountdownDeleted,
+		daggerheartpayload.EventTypeCampaignCountdownCreated,
+		daggerheartpayload.EventTypeCampaignCountdownUpdated,
+		daggerheartpayload.EventTypeCampaignCountdownTriggerResolved,
+		daggerheartpayload.EventTypeCampaignCountdownDeleted,
 		daggerheartpayload.EventTypeAdversaryCreated,
 		daggerheartpayload.EventTypeAdversaryConditionChanged,
 		daggerheartpayload.EventTypeAdversaryDamageApplied,
@@ -256,26 +260,67 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			Move:              "prepare",
 			Hope:              intPtr(4),
 		},
-		daggerheartpayload.EventTypeCountdownCreated: daggerheartpayload.CountdownCreatedPayload{
+		daggerheartpayload.EventTypeSceneCountdownCreated: daggerheartpayload.SceneCountdownCreatedPayload{
+			SessionID:         "sess-1",
+			SceneID:           "scene-1",
 			CountdownID:       "cd-1",
 			Name:              "Doom Clock",
-			Kind:              "progress",
-			Current:           0,
-			Max:               4,
-			Direction:         "increase",
-			Looping:           true,
-			Variant:           "dynamic",
-			TriggerEventType:  "sys.daggerheart.damage_applied",
-			LinkedCountdownID: "",
+			Tone:              "progress",
+			AdvancementPolicy: "action_dynamic",
+			StartingValue:     4,
+			RemainingValue:    4,
+			LoopBehavior:      "reset",
+			Status:            "active",
 		},
-		daggerheartpayload.EventTypeCountdownUpdated: daggerheartpayload.CountdownUpdatedPayload{
-			CountdownID: "cd-1",
-			Value:       1,
-			Delta:       1,
-			Looped:      false,
+		daggerheartpayload.EventTypeSceneCountdownUpdated: daggerheartpayload.SceneCountdownUpdatedPayload{
+			CountdownID:     "cd-1",
+			BeforeRemaining: 4,
+			AfterRemaining:  3,
+			AdvancedBy:      1,
+			StatusBefore:    "active",
+			StatusAfter:     "active",
 		},
-		daggerheartpayload.EventTypeCountdownDeleted: daggerheartpayload.CountdownDeletedPayload{
+		daggerheartpayload.EventTypeSceneCountdownTriggerResolved: daggerheartpayload.SceneCountdownTriggerResolvedPayload{
+			CountdownID:          "cd-1",
+			StartingValueBefore:  4,
+			StartingValueAfter:   4,
+			RemainingValueBefore: 0,
+			RemainingValueAfter:  4,
+			StatusBefore:         "trigger_pending",
+			StatusAfter:          "active",
+		},
+		daggerheartpayload.EventTypeSceneCountdownDeleted: daggerheartpayload.SceneCountdownDeletedPayload{
 			CountdownID: "cd-1",
+		},
+		daggerheartpayload.EventTypeCampaignCountdownCreated: daggerheartpayload.CampaignCountdownCreatedPayload{
+			CountdownID:       "camp-cd-1",
+			Name:              "Long Project",
+			Tone:              "progress",
+			AdvancementPolicy: "long_rest",
+			StartingValue:     6,
+			RemainingValue:    4,
+			LoopBehavior:      "none",
+			Status:            "active",
+		},
+		daggerheartpayload.EventTypeCampaignCountdownUpdated: daggerheartpayload.CampaignCountdownUpdatedPayload{
+			CountdownID:     "camp-cd-1",
+			BeforeRemaining: 4,
+			AfterRemaining:  3,
+			AdvancedBy:      1,
+			StatusBefore:    "active",
+			StatusAfter:     "active",
+		},
+		daggerheartpayload.EventTypeCampaignCountdownTriggerResolved: daggerheartpayload.CampaignCountdownTriggerResolvedPayload{
+			CountdownID:          "camp-cd-1",
+			StartingValueBefore:  6,
+			StartingValueAfter:   6,
+			RemainingValueBefore: 0,
+			RemainingValueAfter:  6,
+			StatusBefore:         "trigger_pending",
+			StatusAfter:          "active",
+		},
+		daggerheartpayload.EventTypeCampaignCountdownDeleted: daggerheartpayload.CampaignCountdownDeletedPayload{
+			CountdownID: "camp-cd-1",
 		},
 		daggerheartpayload.EventTypeAdversaryCreated: daggerheartpayload.AdversaryCreatedPayload{
 			AdversaryID: "adv-1",
@@ -621,10 +666,12 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		CharacterSubclassStates: make(map[ids.CharacterID]daggerheartstate.CharacterSubclassState),
 		CharacterCompanions:     make(map[ids.CharacterID]daggerheartstate.CharacterCompanionState),
 		CharacterStatModifiers:  make(map[ids.CharacterID][]rules.StatModifierState),
-		AdversaryStates:         make(map[dhids.AdversaryID]daggerheartstate.AdversaryState),
-		EnvironmentStates:       make(map[dhids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState),
-		CountdownStates:         make(map[dhids.CountdownID]daggerheartstate.CountdownState),
+		AdversaryStates:         make(map[ids.AdversaryID]daggerheartstate.AdversaryState),
+		EnvironmentStates:       make(map[ids.EnvironmentEntityID]daggerheartstate.EnvironmentEntityState),
+		SceneCountdownStates:    make(map[ids.CountdownID]daggerheartstate.SceneCountdownState),
+		CampaignCountdownStates: make(map[ids.CountdownID]daggerheartstate.CampaignCountdownState),
 	}
+	state.EnsureMaps()
 	if snap, ok := m.snapshots[campaignID]; ok {
 		state.GMFear = snap.GMFear
 	}
@@ -665,9 +712,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.AdversaryStates[dhids.AdversaryID(stored.AdversaryID)] = daggerheartstate.AdversaryState{
+		state.AdversaryStates[ids.AdversaryID(stored.AdversaryID)] = daggerheartstate.AdversaryState{
 			CampaignID:  ids.CampaignID(stored.CampaignID),
-			AdversaryID: dhids.AdversaryID(stored.AdversaryID),
+			AdversaryID: ids.AdversaryID(stored.AdversaryID),
 			Name:        stored.Name,
 			Kind:        stored.Kind,
 			SessionID:   ids.SessionID(stored.SessionID),
@@ -687,10 +734,40 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.CountdownStates[dhids.CountdownID(stored.CountdownID)] = daggerheartstate.CountdownState{
+		if stored.SessionID != "" || stored.SceneID != "" {
+			state.SceneCountdownStates[ids.CountdownID(stored.CountdownID)] = daggerheartstate.SceneCountdownState{
+				CampaignID:        ids.CampaignID(stored.CampaignID),
+				SessionID:         ids.SessionID(stored.SessionID),
+				SceneID:           ids.SceneID(stored.SceneID),
+				CountdownID:       ids.CountdownID(stored.CountdownID),
+				Name:              stored.Name,
+				Tone:              stored.Tone,
+				AdvancementPolicy: stored.AdvancementPolicy,
+				StartingValue:     stored.StartingValue,
+				RemainingValue:    stored.RemainingValue,
+				LoopBehavior:      stored.LoopBehavior,
+				Status:            stored.Status,
+				Kind:              stored.Kind,
+				Current:           stored.Current,
+				Max:               stored.Max,
+				Direction:         stored.Direction,
+				Looping:           stored.Looping,
+				Variant:           stored.Variant,
+				TriggerEventType:  stored.TriggerEventType,
+				LinkedCountdownID: ids.CountdownID(stored.LinkedCountdownID),
+			}
+			continue
+		}
+		state.CampaignCountdownStates[ids.CountdownID(stored.CountdownID)] = daggerheartstate.CampaignCountdownState{
 			CampaignID:        ids.CampaignID(stored.CampaignID),
-			CountdownID:       dhids.CountdownID(stored.CountdownID),
+			CountdownID:       ids.CountdownID(stored.CountdownID),
 			Name:              stored.Name,
+			Tone:              stored.Tone,
+			AdvancementPolicy: stored.AdvancementPolicy,
+			StartingValue:     stored.StartingValue,
+			RemainingValue:    stored.RemainingValue,
+			LoopBehavior:      stored.LoopBehavior,
+			Status:            stored.Status,
 			Kind:              stored.Kind,
 			Current:           stored.Current,
 			Max:               stored.Max,
@@ -698,7 +775,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 			Looping:           stored.Looping,
 			Variant:           stored.Variant,
 			TriggerEventType:  stored.TriggerEventType,
-			LinkedCountdownID: dhids.CountdownID(stored.LinkedCountdownID),
+			LinkedCountdownID: ids.CountdownID(stored.LinkedCountdownID),
 		}
 	}
 	environmentPrefix := campaignID + ":"
@@ -706,9 +783,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) daggerheartsta
 		if !strings.HasPrefix(key, environmentPrefix) {
 			continue
 		}
-		state.EnvironmentStates[dhids.EnvironmentEntityID(stored.EnvironmentEntityID)] = daggerheartstate.EnvironmentEntityState{
+		state.EnvironmentStates[ids.EnvironmentEntityID(stored.EnvironmentEntityID)] = daggerheartstate.EnvironmentEntityState{
 			CampaignID:          ids.CampaignID(stored.CampaignID),
-			EnvironmentEntityID: dhids.EnvironmentEntityID(stored.EnvironmentEntityID),
+			EnvironmentEntityID: ids.EnvironmentEntityID(stored.EnvironmentEntityID),
 			EnvironmentID:       stored.EnvironmentID,
 			Name:                stored.Name,
 			Type:                stored.Type,
@@ -818,6 +895,24 @@ func canonicalizeSnapshotForParity(state daggerheartstate.SnapshotState) daggerh
 			adversary.Conditions = nil
 		}
 		state.AdversaryStates[id] = adversary
+	}
+	for id, countdown := range state.SceneCountdownStates {
+		if countdown.Tone != "" || countdown.AdvancementPolicy != "" || countdown.StartingValue != 0 || countdown.RemainingValue != 0 || countdown.Status != "" || countdown.LoopBehavior != "" {
+			countdown.Current = 0
+			countdown.Max = 0
+			countdown.Direction = ""
+			countdown.Looping = false
+		}
+		state.SceneCountdownStates[id] = countdown
+	}
+	for id, countdown := range state.CampaignCountdownStates {
+		if countdown.Tone != "" || countdown.AdvancementPolicy != "" || countdown.StartingValue != 0 || countdown.RemainingValue != 0 || countdown.Status != "" || countdown.LoopBehavior != "" {
+			countdown.Current = 0
+			countdown.Max = 0
+			countdown.Direction = ""
+			countdown.Looping = false
+		}
+		state.CampaignCountdownStates[id] = countdown
 	}
 	return state
 }
