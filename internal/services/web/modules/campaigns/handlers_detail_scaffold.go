@@ -2,6 +2,7 @@ package campaigns
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/a-h/templ"
@@ -28,12 +29,24 @@ type campaignDetailHandlers struct {
 
 // newCampaignPageHandlerServices keeps shared detail-page dependencies explicit
 // at the campaign-page seam.
-func newCampaignPageHandlerServices(config pageServiceConfig) campaignPageHandlerServices {
-	return campaignPageHandlerServices{
-		workspace:     campaignapp.NewWorkspaceService(config.Workspace),
-		sessionReads:  campaignapp.NewSessionReadService(config.SessionRead),
-		authorization: campaignapp.NewAuthorizationService(config.Authorization),
+func newCampaignPageHandlerServices(config pageServiceConfig) (campaignPageHandlerServices, error) {
+	workspace, err := campaignapp.NewWorkspaceService(config.Workspace)
+	if err != nil {
+		return campaignPageHandlerServices{}, fmt.Errorf("page workspace: %w", err)
 	}
+	sessionReads, err := campaignapp.NewSessionReadService(config.SessionRead)
+	if err != nil {
+		return campaignPageHandlerServices{}, fmt.Errorf("page sessions: %w", err)
+	}
+	authorization, err := campaignapp.NewAuthorizationService(config.Authorization)
+	if err != nil {
+		return campaignPageHandlerServices{}, fmt.Errorf("page authorization: %w", err)
+	}
+	return campaignPageHandlerServices{
+		workspace:     workspace,
+		sessionReads:  sessionReads,
+		authorization: authorization,
+	}, nil
 }
 
 // newCampaignDetailHandlers assembles shared detail-route support for the
@@ -43,22 +56,6 @@ func newCampaignDetailHandlers(support campaignRouteSupport, pages campaignPageH
 		campaignRouteSupport: support,
 		pages:                pages,
 	}
-}
-
-// missingCampaignPageHandlerServices reports which shared page-loading
-// dependencies are absent before any detail route owner is constructed.
-func missingCampaignPageHandlerServices(services campaignPageHandlerServices) []string {
-	missing := []string{}
-	if services.workspace == nil {
-		missing = append(missing, "page-workspace")
-	}
-	if services.sessionReads == nil {
-		missing = append(missing, "page-sessions")
-	}
-	if services.authorization == nil {
-		missing = append(missing, "page-authorization")
-	}
-	return missing
 }
 
 // --- Campaign detail route handlers ---

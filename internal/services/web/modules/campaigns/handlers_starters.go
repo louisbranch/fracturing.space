@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -25,10 +26,12 @@ type starterHandlers struct {
 
 // newStarterHandlerServices keeps starter transport dependencies owned by the
 // starter surface instead of the root constructor.
-func newStarterHandlerServices(config starterServiceConfig) starterHandlerServices {
-	return starterHandlerServices{
-		starters: campaignapp.NewStarterService(config.Starter),
+func newStarterHandlerServices(config starterServiceConfig) (starterHandlerServices, error) {
+	starters, err := campaignapp.NewStarterService(config.Starter)
+	if err != nil {
+		return starterHandlerServices{}, fmt.Errorf("starters: %w", err)
 	}
+	return starterHandlerServices{starters: starters}, nil
 }
 
 // newStarterHandlers assembles the starter route-owner handler.

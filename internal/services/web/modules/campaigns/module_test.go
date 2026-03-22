@@ -550,7 +550,7 @@ func TestGRPCGatewayCampaignSessionsMapsSessionRows(t *testing.T) {
 	if len(sessions) != 1 {
 		t.Fatalf("len(sessions) = %d, want 1", len(sessions))
 	}
-	if sessions[0].ID != "s1" || sessions[0].Name != "First Light" || sessions[0].Status != "Active" {
+	if sessions[0].ID != "s1" || sessions[0].Name != "First Light" || sessions[0].Status != "active" {
 		t.Fatalf("sessions[0] = %+v, want mapped session fields", sessions[0])
 	}
 	if sessions[0].UpdatedAt == "" {
@@ -845,27 +845,27 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (ca
 		}
 		system := strings.TrimSpace(f.workspaceSystem)
 		if system == "" {
-			system = "Daggerheart"
+			system = "daggerheart"
 		}
 		gmMode := strings.TrimSpace(f.workspaceGMMode)
 		if gmMode == "" {
-			gmMode = "Human"
+			gmMode = "human"
 		}
 		status := strings.TrimSpace(f.workspaceStatus)
 		if status == "" {
-			status = "Active"
+			status = "active"
 		}
 		locale := strings.TrimSpace(f.workspaceLocale)
 		if locale == "" {
-			locale = "English (US)"
+			locale = "en_us"
 		}
 		intent := strings.TrimSpace(f.workspaceIntent)
 		if intent == "" {
-			intent = "Standard"
+			intent = "standard"
 		}
 		accessPolicy := strings.TrimSpace(f.workspaceAccessPolicy)
 		if accessPolicy == "" {
-			accessPolicy = "Public"
+			accessPolicy = "public"
 		}
 		return campaignapp.CampaignWorkspace{
 			ID:               campaignID,
@@ -1339,6 +1339,9 @@ func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPC
 	if deps.Starter.Starter.Fork == nil {
 		deps.Starter.Starter.Fork = stubForkClient{}
 	}
+	if deps.Starter.Starter.CampaignArtifact == nil {
+		deps.Starter.Starter.CampaignArtifact = stubCampaignArtifactClient{}
+	}
 	if deps.Catalog.Read.Campaign == nil {
 		deps.Catalog.Read.Campaign = fakeCampaignClient{}
 	}
@@ -1483,6 +1486,9 @@ type stubDaggerheartContentClient struct {
 }
 type stubDaggerheartAssetClient struct {
 	campaigngateway.DaggerheartAssetClient
+}
+type stubCampaignArtifactClient struct {
+	campaigngateway.CampaignArtifactClient
 }
 type stubAuthorizationClient struct {
 	campaigngateway.AuthorizationClient

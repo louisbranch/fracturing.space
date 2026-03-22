@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"errors"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"golang.org/x/text/language"
@@ -17,20 +18,23 @@ type mutationAppAdapter struct {
 	app campaignapp.CampaignCharacterCreationMutationService
 }
 
-// NewPageAppService adapts the campaigns app page seam to the workflow-owned page contract.
-func NewPageAppService(app campaignapp.CampaignCharacterCreationPageService) PageAppService {
+// NewPageAppService adapts the campaigns app page seam to the workflow-owned
+// page contract. Returns an error when the app service is absent.
+func NewPageAppService(app campaignapp.CampaignCharacterCreationPageService) (PageAppService, error) {
 	if app == nil {
-		return nil
+		return nil, errors.New("workflow page adapter: missing creation page service")
 	}
-	return pageAppAdapter{app: app}
+	return pageAppAdapter{app: app}, nil
 }
 
-// NewMutationAppService adapts the campaigns app mutation seam to the workflow-owned mutation contract.
-func NewMutationAppService(app campaignapp.CampaignCharacterCreationMutationService) MutationAppService {
+// NewMutationAppService adapts the campaigns app mutation seam to the
+// workflow-owned mutation contract. Returns an error when the app service is
+// absent.
+func NewMutationAppService(app campaignapp.CampaignCharacterCreationMutationService) (MutationAppService, error) {
 	if app == nil {
-		return nil
+		return nil, errors.New("workflow mutation adapter: missing creation mutation service")
 	}
-	return mutationAppAdapter{app: app}
+	return mutationAppAdapter{app: app}, nil
 }
 
 // CampaignCharacterCreationProgress forwards the app read and normalizes it to workflow-owned progress data.

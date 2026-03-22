@@ -13,7 +13,11 @@ type Viewer struct {
 
 // Mount describes a module route mount.
 type Mount struct {
-	Prefix        string
+	Prefix string
+	// CanonicalRoot controls trailing-slash canonicalization. When true,
+	// requests to the bare prefix (e.g. /app/campaigns/) are redirected to
+	// the slashless canonical form (e.g. /app/campaigns). The slashless
+	// path is also claimed as a route so both forms resolve to this module.
 	CanonicalRoot bool
 	Handler       http.Handler
 }

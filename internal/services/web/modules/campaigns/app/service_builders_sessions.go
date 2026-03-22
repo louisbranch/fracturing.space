@@ -1,5 +1,7 @@
 package app
 
+import "errors"
+
 // sessionReadService keeps session reads on one capability seam.
 type sessionReadService struct {
 	read CampaignSessionReadGateway
@@ -30,62 +32,66 @@ type configurationService struct {
 	auth      authorizationSupport
 }
 
-// NewSessionReadService constructs the session read service surface from explicit
-// gateway seams.
-func NewSessionReadService(config SessionReadServiceConfig) CampaignSessionReadService {
+// NewSessionReadService constructs the session read service surface from
+// explicit gateway seams. Returns an error when the read gateway is absent.
+func NewSessionReadService(config SessionReadServiceConfig) (CampaignSessionReadService, error) {
 	if config.Read == nil {
-		return nil
+		return nil, errors.New("session read service: missing required read gateway")
 	}
 	return sessionReadService{
 		read: config.Read,
-	}
+	}, nil
 }
 
 // NewSessionMutationService constructs the session mutation service surface
-// from explicit gateway seams.
-func NewSessionMutationService(config SessionMutationServiceConfig, authorization AuthorizationGateway) CampaignSessionMutationService {
+// from explicit gateway seams. Returns an error when required dependencies
+// are absent.
+func NewSessionMutationService(config SessionMutationServiceConfig, authorization AuthorizationGateway) (CampaignSessionMutationService, error) {
 	if config.Mutation == nil || authorization == nil {
-		return nil
+		return nil, errors.New("session mutation service: missing required dependencies")
 	}
 	return sessionMutationService{
 		mutation: config.Mutation,
 		auth:     authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
-// NewInviteReadService constructs the invite read service surface from explicit gateway
-// seams.
-func NewInviteReadService(config InviteReadServiceConfig, authorization AuthorizationGateway) CampaignInviteReadService {
+// NewInviteReadService constructs the invite read service surface from
+// explicit gateway seams. Returns an error when required dependencies are
+// absent.
+func NewInviteReadService(config InviteReadServiceConfig, authorization AuthorizationGateway) (CampaignInviteReadService, error) {
 	if config.Read == nil || authorization == nil {
-		return nil
+		return nil, errors.New("invite read service: missing required dependencies")
 	}
 	return inviteReadService{
 		read: config.Read,
 		auth: authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewInviteMutationService constructs the invite mutation service surface from
-// explicit gateway seams.
-func NewInviteMutationService(config InviteMutationServiceConfig, authorization AuthorizationGateway) CampaignInviteMutationService {
+// explicit gateway seams. Returns an error when required dependencies are
+// absent.
+func NewInviteMutationService(config InviteMutationServiceConfig, authorization AuthorizationGateway) (CampaignInviteMutationService, error) {
 	if config.Mutation == nil || authorization == nil {
-		return nil
+		return nil, errors.New("invite mutation service: missing required dependencies")
 	}
 	return inviteMutationService{
 		mutation: config.Mutation,
 		auth:     authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewConfigurationService constructs the campaign-configuration service
-// surface from explicit gateway seams.
-func NewConfigurationService(config ConfigurationServiceConfig, authorization AuthorizationGateway) CampaignConfigurationService {
+// surface from explicit gateway seams. Returns an error when required
+// dependencies are absent.
+func NewConfigurationService(config ConfigurationServiceConfig, authorization AuthorizationGateway) (CampaignConfigurationService, error) {
 	if config.Workspace == nil || config.Mutation == nil || authorization == nil {
-		return nil
+		return nil, errors.New("configuration service: missing required dependencies")
 	}
 	return configurationService{
 		workspace: config.Workspace,
 		mutation:  config.Mutation,
 		auth:      authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }

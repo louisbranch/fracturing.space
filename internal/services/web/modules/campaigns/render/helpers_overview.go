@@ -45,9 +45,9 @@ func campaignOverviewLocale(loc Localizer, value string) string {
 	switch strings.ToLower(raw) {
 	case "", "unspecified":
 		return T(loc, "game.campaign.system_unspecified")
-	case "english (us)":
+	case "en_us":
 		return T(loc, "game.campaign.overview.value_locale_en_us")
-	case "portuguese (brazil)":
+	case "pt_br":
 		return T(loc, "game.campaign.overview.value_locale_pt_br")
 	default:
 		return raw

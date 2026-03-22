@@ -82,6 +82,8 @@ func newCompletedDependencyBundle(principalDeps principal.Dependencies, moduleDe
 func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dependencies {
 	hasCampaignDependency := moduleDeps.Campaigns.CampaignClient != nil ||
 		moduleDeps.Campaigns.DiscoveryClient != nil ||
+		moduleDeps.Campaigns.AgentClient != nil ||
+		moduleDeps.Campaigns.CampaignArtifactClient != nil ||
 		moduleDeps.Campaigns.ParticipantClient != nil ||
 		moduleDeps.Campaigns.CharacterClient != nil ||
 		moduleDeps.Campaigns.DaggerheartContentClient != nil ||
@@ -125,6 +127,12 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 		}
 		if moduleDeps.Campaigns.AuthorizationClient == nil {
 			moduleDeps.Campaigns.AuthorizationClient = defaultAuthorizationClient()
+		}
+		if moduleDeps.Campaigns.AgentClient == nil {
+			moduleDeps.Campaigns.AgentClient = defaultAgentClient()
+		}
+		if moduleDeps.Campaigns.CampaignArtifactClient == nil {
+			moduleDeps.Campaigns.CampaignArtifactClient = defaultCampaignArtifactClient()
 		}
 		if moduleDeps.Campaigns.ForkClient == nil {
 			moduleDeps.Campaigns.ForkClient = defaultForkClient()

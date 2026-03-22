@@ -1884,12 +1884,15 @@ func TestMountCampaignParticipantsFailsClosedWhenParticipantClientMissing(t *tes
 	t.Parallel()
 
 	deps := campaigngateway.GRPCGatewayDeps{Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}}
-	m := New(configWithGRPCDeps(deps, modulehandlertest.NewBase(), nil))
+	m := Compose(CompositionConfig{
+		Options: ProtectedSurfaceOptions{Base: modulehandlertest.NewBase()},
+		Gateway: deps,
+	})
 	_, err := m.Mount()
 	if err == nil {
 		t.Fatalf("expected Mount() validation error")
 	}
-	if !strings.Contains(err.Error(), "participant-reads") {
+	if !strings.Contains(err.Error(), "participant") {
 		t.Fatalf("Mount() error = %v, want participant validation failure", err)
 	}
 }
@@ -2260,12 +2263,15 @@ func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing
 	t.Parallel()
 
 	deps := campaigngateway.GRPCGatewayDeps{Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}}
-	m := New(configWithGRPCDeps(deps, modulehandlertest.NewBase(), nil))
+	m := Compose(CompositionConfig{
+		Options: ProtectedSurfaceOptions{Base: modulehandlertest.NewBase()},
+		Gateway: deps,
+	})
 	_, err := m.Mount()
 	if err == nil {
 		t.Fatalf("expected Mount() validation error")
 	}
-	if !strings.Contains(err.Error(), "character-reads") {
+	if !strings.Contains(err.Error(), "character") {
 		t.Fatalf("Mount() error = %v, want character validation failure", err)
 	}
 }

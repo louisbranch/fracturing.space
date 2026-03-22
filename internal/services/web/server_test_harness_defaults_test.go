@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
@@ -87,7 +88,8 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           defaultCampaignClient(),
 					DiscoveryClient:          defaultDiscoveryClient(),
-					AgentClient:              fakeAgentClient{},
+					AgentClient:              defaultAgentClient(),
+					CampaignArtifactClient:   defaultCampaignArtifactClient(),
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),
 					DaggerheartContentClient: defaultDaggerheartContentClient(),
@@ -191,6 +193,14 @@ func defaultDiscoveryClient() fakeWebDiscoveryClient {
 	return fakeWebDiscoveryClient{}
 }
 
+func defaultAgentClient() fakeAgentClient {
+	return fakeAgentClient{}
+}
+
+func defaultCampaignArtifactClient() fakeCampaignArtifactClient {
+	return fakeCampaignArtifactClient{}
+}
+
 func defaultForkClient() fakeWebForkClient {
 	return fakeWebForkClient{}
 }
@@ -201,6 +211,10 @@ func (fakeWebDiscoveryClient) ListDiscoveryEntries(_ context.Context, _ *discove
 
 type fakeWebDiscoveryClient struct {
 	discoveryv1.DiscoveryServiceClient
+}
+
+type fakeCampaignArtifactClient struct {
+	aiv1.CampaignArtifactServiceClient
 }
 
 type fakeWebForkClient struct {

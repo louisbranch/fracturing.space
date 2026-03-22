@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -39,20 +40,30 @@ type inviteHandlers struct {
 
 // newSessionHandlerServices keeps session transport dependencies owned by the
 // session surface instead of the root constructor.
-func newSessionHandlerServices(config sessionServiceConfig, authorization campaignapp.AuthorizationGateway) sessionHandlerServices {
-	return sessionHandlerServices{
-		mutation: campaignapp.NewSessionMutationService(config.Mutation, authorization),
+func newSessionHandlerServices(config sessionServiceConfig, authorization campaignapp.AuthorizationGateway) (sessionHandlerServices, error) {
+	mutation, err := campaignapp.NewSessionMutationService(config.Mutation, authorization)
+	if err != nil {
+		return sessionHandlerServices{}, fmt.Errorf("session-mutation: %w", err)
 	}
+	return sessionHandlerServices{mutation: mutation}, nil
 }
 
 // newInviteHandlerServices keeps invite transport dependencies owned by the
 // invite surface instead of the root constructor.
-func newInviteHandlerServices(config inviteServiceConfig) inviteHandlerServices {
-	return inviteHandlerServices{
-		reads:            campaignapp.NewInviteReadService(config.Read, config.Authorization),
-		mutation:         campaignapp.NewInviteMutationService(config.Mutation, config.Authorization),
-		participantReads: campaignapp.NewParticipantReadService(config.ParticipantRead, config.Authorization),
+func newInviteHandlerServices(config inviteServiceConfig) (inviteHandlerServices, error) {
+	reads, err := campaignapp.NewInviteReadService(config.Read, config.Authorization)
+	if err != nil {
+		return inviteHandlerServices{}, fmt.Errorf("invite-reads: %w", err)
 	}
+	mutation, err := campaignapp.NewInviteMutationService(config.Mutation, config.Authorization)
+	if err != nil {
+		return inviteHandlerServices{}, fmt.Errorf("invite-mutation: %w", err)
+	}
+	participantReads, err := campaignapp.NewParticipantReadService(config.ParticipantRead, config.Authorization)
+	if err != nil {
+		return inviteHandlerServices{}, fmt.Errorf("invite participant-reads: %w", err)
+	}
+	return inviteHandlerServices{reads: reads, mutation: mutation, participantReads: participantReads}, nil
 }
 
 // newSessionHandlers assembles the session route-owner handler.
@@ -71,31 +82,6 @@ func newInviteHandlers(detail campaignDetailHandlers, services inviteHandlerServ
 		campaignDetailHandlers: detail,
 		invites:                services,
 	}
-}
-
-// missingSessionHandlerServices reports which session controls are absent
-// before session mutation routes are mounted.
-func missingSessionHandlerServices(services sessionHandlerServices) []string {
-	if services.mutation == nil {
-		return []string{"session-mutation"}
-	}
-	return nil
-}
-
-// missingInviteHandlerServices reports which invite capabilities are absent
-// before invite routes are mounted.
-func missingInviteHandlerServices(services inviteHandlerServices) []string {
-	missing := []string{}
-	if services.reads == nil {
-		missing = append(missing, "invite-reads")
-	}
-	if services.mutation == nil {
-		missing = append(missing, "invite-mutation")
-	}
-	if services.participantReads == nil {
-		missing = append(missing, "invite-participant-reads")
-	}
-	return missing
 }
 
 // handleSessions handles this route in the module transport layer.

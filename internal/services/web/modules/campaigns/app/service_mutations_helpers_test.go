@@ -143,9 +143,9 @@ func TestParticipantUpdateHasChanges(t *testing.T) {
 	current := CampaignParticipant{
 		ID:             "p-1",
 		Name:           "Player One",
-		Role:           "GM",
+		Role:           "gm",
 		Pronouns:       "they/them",
-		CampaignAccess: "Owner",
+		CampaignAccess: "owner",
 	}
 	request := participantUpdateRequest{
 		CampaignID:      "c-1",

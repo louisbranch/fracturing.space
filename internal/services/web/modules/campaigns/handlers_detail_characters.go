@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"fmt"
 	"net/http"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -44,21 +45,42 @@ type creationHandlers struct {
 
 // newCharacterHandlerServices keeps character transport dependencies owned by
 // the character surface instead of the root constructor.
-func newCharacterHandlerServices(config characterServiceConfig) characterHandlerServices {
-	return characterHandlerServices{
-		reads:    campaignapp.NewCharacterReadService(config.Read, config.Authorization),
-		control:  campaignapp.NewCharacterControlService(config.Control, config.Authorization),
-		mutation: campaignapp.NewCharacterMutationService(config.Mutation, config.Authorization),
+func newCharacterHandlerServices(config characterServiceConfig) (characterHandlerServices, error) {
+	reads, err := campaignapp.NewCharacterReadService(config.Read, config.Authorization)
+	if err != nil {
+		return characterHandlerServices{}, fmt.Errorf("character-reads: %w", err)
 	}
+	control, err := campaignapp.NewCharacterControlService(config.Control, config.Authorization)
+	if err != nil {
+		return characterHandlerServices{}, fmt.Errorf("character-control: %w", err)
+	}
+	mutation, err := campaignapp.NewCharacterMutationService(config.Mutation, config.Authorization)
+	if err != nil {
+		return characterHandlerServices{}, fmt.Errorf("character-mutation: %w", err)
+	}
+	return characterHandlerServices{reads: reads, control: control, mutation: mutation}, nil
 }
 
 // newCampaignCreationAppServices keeps creation app-service assembly separate
 // from workflow-owned route handling.
-func newCampaignCreationAppServices(config characterServiceConfig) campaignCreationAppServices {
-	return campaignCreationAppServices{
-		Pages: campaignworkflow.NewPageAppService(campaignapp.NewCharacterCreationPageService(config.Creation)),
-		Flow:  campaignworkflow.NewMutationAppService(campaignapp.NewCharacterCreationMutationService(config.Creation, config.Authorization)),
+func newCampaignCreationAppServices(config characterServiceConfig) (campaignCreationAppServices, error) {
+	pageService, err := campaignapp.NewCharacterCreationPageService(config.Creation)
+	if err != nil {
+		return campaignCreationAppServices{}, fmt.Errorf("creation-pages: %w", err)
 	}
+	pages, err := campaignworkflow.NewPageAppService(pageService)
+	if err != nil {
+		return campaignCreationAppServices{}, fmt.Errorf("creation-pages adapter: %w", err)
+	}
+	mutationService, err := campaignapp.NewCharacterCreationMutationService(config.Creation, config.Authorization)
+	if err != nil {
+		return campaignCreationAppServices{}, fmt.Errorf("creation-flow: %w", err)
+	}
+	flow, err := campaignworkflow.NewMutationAppService(mutationService)
+	if err != nil {
+		return campaignCreationAppServices{}, fmt.Errorf("creation-flow adapter: %w", err)
+	}
+	return campaignCreationAppServices{Pages: pages, Flow: flow}, nil
 }
 
 // newCreationHandlerServices assembles workflow-owned creation services from
@@ -85,35 +107,6 @@ func newStandaloneCreationHandlers(detail campaignDetailHandlers, creation creat
 		campaignDetailHandlers: detail,
 		creation:               creation,
 	}
-}
-
-// missingCharacterHandlerServices reports which character routes would fail
-// closed so module composition can reject an incomplete surface bundle early.
-func missingCharacterHandlerServices(services characterHandlerServices) []string {
-	missing := []string{}
-	if services.reads == nil {
-		missing = append(missing, "character-reads")
-	}
-	if services.control == nil {
-		missing = append(missing, "character-control")
-	}
-	if services.mutation == nil {
-		missing = append(missing, "character-mutation")
-	}
-	return missing
-}
-
-// missingCampaignCreationAppServices reports which workflow-owned creation
-// services are absent before the standalone creation routes are mounted.
-func missingCampaignCreationAppServices(services campaignCreationAppServices) []string {
-	missing := []string{}
-	if services.Pages == nil {
-		missing = append(missing, "creation-pages")
-	}
-	if services.Flow == nil {
-		missing = append(missing, "creation-flow")
-	}
-	return missing
 }
 
 // handleCharacters handles this route in the module transport layer.

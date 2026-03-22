@@ -101,6 +101,23 @@ const (
 	DependencyNameStatus = "status"
 )
 
+// startupDependencyDescriptors is the canonical table of backend dependencies
+// the web service can bind during startup.
+//
+// Adding a new backend dependency (contributor checklist):
+//
+//  1. Add a DependencyName constant and a new StartupDependencyDescriptor entry
+//     to this table with the correct Policy, Capability, Surfaces, and
+//     DefaultGRPCService.
+//  2. Add client fields to the relevant DependencyBundle sub-struct in
+//     dependencies.go (e.g. bundle.Modules.YourModule.NewClient).
+//  3. Implement a Bind function (Bind<Name>Dependency) in dependencies.go that
+//     populates those fields from a *grpc.ClientConn.
+//  4. For required dependencies, add a Validate closure that returns a
+//     *StartupDependencyIssue listing any missing client fields.
+//
+// Optional dependencies omit the Validate closure and degrade gracefully via
+// the unavailable-gateway pattern in the consuming module's app layer.
 var startupDependencyDescriptors = []StartupDependencyDescriptor{
 	{
 		Name:               DependencyNameAuth,

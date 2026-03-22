@@ -26,16 +26,52 @@ func newTestCampaignSystems(workflows ...campaignworkflow.Registry) campaignSyst
 }
 
 func newHandlerServices(config serviceConfigs) handlerServices {
+	page, err := newCampaignPageHandlerServices(config.Page)
+	if err != nil {
+		panic(err)
+	}
+	catalog, err := newCatalogHandlerServices(config.Catalog)
+	if err != nil {
+		panic(err)
+	}
+	starter, err := newStarterHandlerServices(config.Starter)
+	if err != nil {
+		panic(err)
+	}
+	overview, err := newOverviewHandlerServices(config.Overview)
+	if err != nil {
+		panic(err)
+	}
+	participants, err := newParticipantHandlerServices(config.Participants)
+	if err != nil {
+		panic(err)
+	}
+	characters, err := newCharacterHandlerServices(config.Characters)
+	if err != nil {
+		panic(err)
+	}
+	creation, err := newCampaignCreationAppServices(config.Characters)
+	if err != nil {
+		panic(err)
+	}
+	sessions, err := newSessionHandlerServices(config.Sessions, config.Page.Authorization)
+	if err != nil {
+		panic(err)
+	}
+	invites, err := newInviteHandlerServices(config.Invites)
+	if err != nil {
+		panic(err)
+	}
 	return handlerServices{
-		Page:         newCampaignPageHandlerServices(config.Page),
-		Catalog:      newCatalogHandlerServices(config.Catalog),
-		Starter:      newStarterHandlerServices(config.Starter),
-		Overview:     newOverviewHandlerServices(config.Overview),
-		Participants: newParticipantHandlerServices(config.Participants),
-		Characters:   newCharacterHandlerServices(config.Characters),
-		Creation:     newCampaignCreationAppServices(config.Characters),
-		Sessions:     newSessionHandlerServices(config.Sessions, config.Page.Authorization),
-		Invites:      newInviteHandlerServices(config.Invites),
+		Page:         page,
+		Catalog:      catalog,
+		Starter:      starter,
+		Overview:     overview,
+		Participants: participants,
+		Characters:   characters,
+		Creation:     creation,
+		Sessions:     sessions,
+		Invites:      invites,
 	}
 }
 

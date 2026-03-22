@@ -73,10 +73,15 @@ type ProtectedSurfaceOptions struct {
 }
 
 // Compose builds the production campaigns module from area-owned startup
-// dependencies.
+// dependencies. Dependency validation errors are stored in the module and
+// surface when Mount is called.
 func Compose(config CompositionConfig) module.Module {
+	services, err := newProductionHandlerServices(config)
+	if err != nil {
+		return Module{mountErr: err}
+	}
 	return New(Config{
-		Services:         newProductionHandlerServices(config),
+		Services:         services,
 		Base:             config.Options.Base,
 		PlayFallbackPort: config.Options.PlayFallbackPort,
 		PlayLaunchGrant:  config.Options.PlayLaunchGrant,
@@ -120,6 +125,7 @@ func (deps Dependencies) configured() bool {
 	return deps.CampaignClient != nil &&
 		deps.DiscoveryClient != nil &&
 		deps.AgentClient != nil &&
+		deps.CampaignArtifactClient != nil &&
 		deps.ParticipantClient != nil &&
 		deps.CharacterClient != nil &&
 		deps.DaggerheartContentClient != nil &&
