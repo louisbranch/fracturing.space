@@ -205,4 +205,37 @@
     max-width: none;
   }
 
+  .scene-fade-overlay {
+    @apply pointer-events-none fixed inset-0 z-30;
+    background: var(--scene-fade-bg, rgb(0 0 0 / 0.55));
+    animation: scene-fade var(--scene-fade-duration, 2000ms) ease-out forwards;
+  }
+
+  .interaction-pulse {
+    animation: interaction-pulse var(--pulse-duration, 2000ms) ease-out;
+  }
+
+  @keyframes scene-fade {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes interaction-pulse {
+    0% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+    50% {
+      box-shadow:
+        0 0 var(--pulse-blur, 12px) var(--pulse-spread, 2px)
+        var(--pulse-color, color-mix(in oklch, var(--color-primary) 45%, transparent));
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+
 }

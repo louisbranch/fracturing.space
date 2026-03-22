@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, BookOpen, CircleHelp, Compass, Dices, Zap } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { PlayerHUDStatusPill } from "../../shared/PlayerHUDStatusPill";
 import type { PlayerHUDStatusBadge } from "../../shared/view-models";
@@ -49,7 +49,31 @@ export function OnStageGMInteractionCard({
   currentInteraction,
   interactionHistory,
   currentStatus,
+  transitionActive,
+  onTransitionEnd,
 }: OnStageGMInteractionCardProps) {
+  const fallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFallback = useCallback(() => {
+    if (fallbackRef.current) {
+      clearTimeout(fallbackRef.current);
+      fallbackRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!transitionActive) return;
+    fallbackRef.current = setTimeout(() => {
+      fallbackRef.current = null;
+      onTransitionEnd?.();
+    }, 2100);
+    return clearFallback;
+  }, [transitionActive, onTransitionEnd, clearFallback]);
+
+  const handleAnimationEnd = useCallback(() => {
+    clearFallback();
+    onTransitionEnd?.();
+  }, [clearFallback, onTransitionEnd]);
   const interactions = useMemo(
     () => (currentInteraction ? [currentInteraction, ...interactionHistory] : interactionHistory),
     [currentInteraction, interactionHistory],
@@ -80,7 +104,10 @@ export function OnStageGMInteractionCard({
 
   return (
     <section aria-label="On-stage GM interaction" className="mx-3 mt-4 min-w-0">
-      <article className="min-w-0 rounded-box border border-base-300/70 bg-base-100 px-4 py-4 shadow-sm">
+      <article
+        className={`min-w-0 rounded-box border border-base-300/70 bg-base-100 px-4 py-4 shadow-sm${transitionActive ? " interaction-pulse" : ""}`}
+        onAnimationEnd={transitionActive ? handleAnimationEnd : undefined}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
             {canGoOlder ? (

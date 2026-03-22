@@ -3,6 +3,11 @@
 import type { DaggerheartCharacterCardData } from "../systems/daggerheart/character-card/contract";
 import type { DaggerheartCharacterSheetData } from "../systems/daggerheart/character-sheet/contract";
 
+export type WireTransitionSFX = {
+  scene_change_url?: string;
+  interaction_change_url?: string;
+};
+
 export type BootstrapResponse = {
   campaign_id: string;
   ai_debug_enabled?: boolean;
@@ -13,6 +18,7 @@ export type BootstrapResponse = {
   character_inspection_catalog: Record<string, WireCharacterInspection> | null;
   chat: WireChatSnapshot;
   realtime: WireRealtimeConfig;
+  transition_sfx?: WireTransitionSFX;
 };
 
 export type WireViewer = {

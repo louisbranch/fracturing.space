@@ -9,6 +9,8 @@ import type { OnStagePanelProps } from "./contract";
 export function OnStagePanel({
   state,
   draft,
+  interactionTransitionActive,
+  onInteractionTransitionEnd,
   onDraftChange,
   onSubmit,
   onSubmitAndYield,
@@ -71,6 +73,8 @@ export function OnStagePanel({
           currentInteraction={state.currentInteraction}
           interactionHistory={state.interactionHistory}
           currentStatus={status}
+          transitionActive={interactionTransitionActive}
+          onTransitionEnd={onInteractionTransitionEnd}
         />
         <OnStageSlotList
           participants={state.participants}

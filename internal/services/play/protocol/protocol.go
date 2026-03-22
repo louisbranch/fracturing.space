@@ -24,6 +24,14 @@ type Bootstrap struct {
 	CharacterInspectionCatalog map[string]CharacterInspection `json:"character_inspection_catalog"`
 	Chat                       ChatSnapshot                   `json:"chat"`
 	Realtime                   RealtimeConfig                 `json:"realtime"`
+	TransitionSFX              *TransitionSFX                 `json:"transition_sfx,omitempty"`
+}
+
+// TransitionSFX holds resolved CDN URLs for scene and interaction transition
+// sound effects delivered to the play UI at bootstrap.
+type TransitionSFX struct {
+	SceneChangeURL       string `json:"scene_change_url,omitempty"`
+	InteractionChangeURL string `json:"interaction_change_url,omitempty"`
 }
 
 type System struct {

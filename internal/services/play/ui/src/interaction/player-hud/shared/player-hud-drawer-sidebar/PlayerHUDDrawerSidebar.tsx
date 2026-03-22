@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BookOpen, SquareUser } from "lucide-react";
+import { BookOpen, Settings, SquareUser } from "lucide-react";
 import { CharacterPortraitAvatar } from "../PlayerHUDCharacterInspector";
 import type {
   PlayerHUDCharacterController,
@@ -50,6 +50,7 @@ function characterAction(
 export function PlayerHUDDrawerSidebar({
   navigation,
   onCharacterInspect,
+  onSettingsOpen,
   onClose,
 }: PlayerHUDDrawerSidebarProps) {
   const [charactersExpanded, setCharactersExpanded] = useState(false);
@@ -122,6 +123,15 @@ export function PlayerHUDDrawerSidebar({
         </section>
 
         <div className="divider my-0" />
+
+        <button
+          type="button"
+          className="btn btn-ghost cursor-pointer justify-start gap-3 px-3"
+          onClick={() => { onSettingsOpen?.(); onClose(); }}
+        >
+          <Settings size={18} aria-hidden="true" />
+          <span>Settings</span>
+        </button>
 
         <a
           href={navigation.returnHref}
