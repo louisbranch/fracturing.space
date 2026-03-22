@@ -5,4 +5,6 @@ export type OnStageGMInteractionCardProps = {
   currentInteraction?: OnStageGMInteraction;
   interactionHistory: OnStageGMInteraction[];
   currentStatus: PlayerHUDStatusBadge;
+  transitionActive?: boolean;
+  onTransitionEnd?: () => void;
 };

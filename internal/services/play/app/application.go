@@ -12,6 +12,8 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 )
@@ -85,7 +87,42 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 			ProtocolVersion: playprotocol.RealtimeProtocolVersion,
 			TypingTTLMs:     int(defaultTypingTTL.Milliseconds()),
 		},
+		TransitionSFX: a.transitionSFX(),
 	}, nil
+}
+
+// transitionSFX resolves SFX URLs for scene and interaction transitions from the
+// embedded asset catalog. Returns nil when neither asset resolves.
+func (a playApplication) transitionSFX() *playprotocol.TransitionSFX {
+	const setID = "interface_sound_effect_set_v1"
+	sceneURL := audioAssetURL(a.assetBaseURL, setID, "scene_transition")
+	interactionURL := audioAssetURL(a.assetBaseURL, setID, "scene_interaction_transition")
+	if sceneURL == "" && interactionURL == "" {
+		return nil
+	}
+	return &playprotocol.TransitionSFX{
+		SceneChangeURL:       sceneURL,
+		InteractionChangeURL: interactionURL,
+	}
+}
+
+// audioAssetURL resolves a Cloudinary audio URL from the embedded catalog.
+// Cloudinary serves audio under /video/upload/ rather than /image/upload/.
+func audioAssetURL(imageBaseURL, setID, assetID string) string {
+	versionedPublicID := catalog.ResolveCDNAssetID(setID, assetID)
+	if versionedPublicID == assetID {
+		// No catalog entry found — ResolveCDNAssetID fell back to the raw asset ID.
+		return ""
+	}
+	audioBaseURL := strings.Replace(imageBaseURL, "/image/upload", "/video/upload", 1)
+	u, err := imagecdn.New(audioBaseURL).URL(imagecdn.Request{
+		AssetID:   versionedPublicID,
+		Extension: ".mp3",
+	})
+	if err != nil {
+		return ""
+	}
+	return u
 }
 
 func (a playApplication) aiDebugTurns(ctx context.Context, req playRequest, page aiDebugPage) (playprotocol.AIDebugTurnsPage, error) {

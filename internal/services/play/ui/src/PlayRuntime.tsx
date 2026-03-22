@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { fetchAIDebugTurn, fetchAIDebugTurns } from "./api/aiDebug";
 import { fetchBootstrap } from "./api/bootstrap";
 import * as mutations from "./api/mutations";
@@ -22,6 +22,12 @@ import {
 } from "./interaction/player-hud/shared/PlayerHUDCharacterInspector";
 import { isViewerReadyToResume, mapToPlayerHUDState } from "./state/mapper";
 import type { PlayShellConfig } from "./shell_config";
+import { TransitionPreferencesProvider } from "./transition/TransitionPreferencesContext";
+import { useTransitionEffects } from "./transition/useTransitionEffects";
+import { useTransitionAudio } from "./transition/useTransitionAudio";
+import { SceneTransitionOverlay } from "./transition/SceneTransitionOverlay";
+import { TransitionSettingsModal } from "./transition/TransitionSettingsModal";
+import { useTransitionPreferences } from "./transition/TransitionPreferencesContext";
 
 // --- State ---
 
@@ -342,6 +348,14 @@ function buildSceneScopedRequest(
 // --- Component ---
 
 export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
+  return (
+    <TransitionPreferencesProvider>
+      <PlayRuntimeInner shellConfig={shellConfig} />
+    </TransitionPreferencesProvider>
+  );
+}
+
+function PlayRuntimeInner({ shellConfig }: { shellConfig: PlayShellConfig }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const wsRef = useRef<WSConnection | null>(null);
   const typingSourceActiveRef = useRef<Record<ComposerTypingSource, boolean>>({
@@ -360,6 +374,38 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     openForParticipant,
     setActiveCharacter,
   } = usePlayerHUDCharacterInspector();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { preferences } = useTransitionPreferences();
+
+  // Derive scene/interaction IDs for transition detection (before early returns so hooks are unconditional).
+  const activeInteractionState = state.snapshot?.interaction_state ?? state.bootstrap?.interaction_state;
+  const currentSceneId = activeInteractionState?.active_scene?.scene_id;
+  const currentInteractionId = activeInteractionState?.active_scene?.current_interaction?.interaction_id;
+  const { sceneTransitionKey, interactionTransitionActive, clearInteractionTransition } =
+    useTransitionEffects(currentSceneId, currentInteractionId);
+
+  const { playSceneSound, playInteractionSound } = useTransitionAudio({
+    sceneUrl: state.bootstrap?.transition_sfx?.scene_change_url,
+    interactionUrl: state.bootstrap?.transition_sfx?.interaction_change_url,
+  });
+
+  // Fire audio when transition keys change.
+  const prevSceneKeyRef = useRef(0);
+  useEffect(() => {
+    if (sceneTransitionKey > 0 && sceneTransitionKey !== prevSceneKeyRef.current && preferences.sceneSound) {
+      playSceneSound();
+    }
+    prevSceneKeyRef.current = sceneTransitionKey;
+  }, [sceneTransitionKey, preferences.sceneSound, playSceneSound]);
+
+  const prevInteractionActiveRef = useRef(false);
+  useEffect(() => {
+    if (interactionTransitionActive && !prevInteractionActiveRef.current && preferences.interactionSound) {
+      playInteractionSound();
+    }
+    prevInteractionActiveRef.current = interactionTransitionActive;
+  }, [interactionTransitionActive, preferences.interactionSound, playInteractionSound]);
+
   const typingTTLMs = Math.max(500, state.bootstrap?.realtime.typing_ttl_ms ?? 3_000);
   const aiDebugEnabled = state.bootstrap?.ai_debug_enabled ?? false;
 
@@ -839,6 +885,9 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
         isSidebarOpen={state.isSidebarOpen}
         onSidebarOpenChange={(open) => dispatch({ type: "set-sidebar-open", open })}
         onTabChange={(tab) => dispatch({ type: "set-tab", tab })}
+        onSettingsOpen={() => setSettingsOpen(true)}
+        interactionTransitionActive={interactionTransitionActive}
+        onInteractionTransitionEnd={clearInteractionTransition}
         onStage={hudState.onStage}
         onStageDraft={state.onStageDraft}
         onOnStageDraftChange={(value) => {
@@ -880,6 +929,8 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
         onCharacterChange={setActiveCharacter}
         onClose={closeInspector}
       />
+      <SceneTransitionOverlay transitionKey={sceneTransitionKey} />
+      <TransitionSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       {state.mutationError && (
         <div className="toast toast-end toast-bottom z-50">
           <div role="alert" className="alert alert-error shadow-lg">

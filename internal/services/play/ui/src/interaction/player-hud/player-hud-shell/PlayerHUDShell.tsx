@@ -21,6 +21,9 @@ export function PlayerHUDShell({
   isSidebarOpen,
   onSidebarOpenChange,
   onTabChange,
+  onSettingsOpen,
+  interactionTransitionActive,
+  onInteractionTransitionEnd,
   onStage,
   onStageDraft,
   onOnStageDraftChange,
@@ -98,6 +101,8 @@ export function PlayerHUDShell({
                   <OnStagePanel
                     state={onStage}
                     draft={onStageDraft}
+                    interactionTransitionActive={interactionTransitionActive}
+                    onInteractionTransitionEnd={onInteractionTransitionEnd}
                     onDraftChange={onOnStageDraftChange}
                     onSubmit={onOnStageSubmit}
                     onSubmitAndYield={onOnStageSubmitAndYield}
@@ -150,6 +155,7 @@ export function PlayerHUDShell({
         <PlayerHUDDrawerSidebar
           navigation={campaignNavigation}
           onCharacterInspect={onCharacterInspect}
+          onSettingsOpen={onSettingsOpen}
           onClose={() => onSidebarOpenChange(false)}
         />
       </div>

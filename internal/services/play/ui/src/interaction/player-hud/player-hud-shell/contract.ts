@@ -16,6 +16,9 @@ export type PlayerHUDShellProps = {
   isSidebarOpen: boolean;
   onSidebarOpenChange: (open: boolean) => void;
   onTabChange: (tab: HUDNavbarTab) => void;
+  onSettingsOpen?: () => void;
+  interactionTransitionActive?: boolean;
+  onInteractionTransitionEnd?: () => void;
   onStage: OnStageState;
   onStageDraft: string;
   onOnStageDraftChange: (value: string) => void;
