@@ -6,6 +6,7 @@ import {
 import type {
   OnStageCharacterSummary,
   OnStageGMInteraction,
+  OnStageGMInteractionIllustration,
   OnStageParticipant,
   OnStageScene,
   OnStageSlot,
@@ -69,6 +70,23 @@ function scene(input: OnStageScene): OnStageScene {
   return input;
 }
 
+// Restored from the On Stage vNext preview so the stable card keeps a wide
+// illustration example even though this asset is preview-only fixture data.
+export const lanternVignetteIllustration: OnStageGMInteractionIllustration = {
+  imageUrl:
+    "https://res.cloudinary.com/fracturing-space/image/upload/v1773860418/high_fantasy/event_vignette/v1/lantern_in_the_dark.png",
+  alt: "A storm lantern burning in darkness while rigging and rain close around it.",
+  sizeHint: "wide",
+};
+
+export const archerGuardIllustration: OnStageGMInteractionIllustration = {
+  imageUrl:
+    "https://res.cloudinary.com/fracturing-space/image/upload/v1773619370/high_fantasy/daggerheart_adversary_illustration/v1/archer_guard.png",
+  alt: "An archer guard drawing and aiming from a fortified position.",
+  caption: "Enemy attack illustration example.",
+  sizeHint: "compact",
+};
+
 const sealedVaultScene = scene({
   id: "scene-sealed-vault",
   name: "Sealed Vault",
@@ -82,6 +100,7 @@ const sealedVaultCurrentInteraction = interaction({
   id: "gmint-sealed-vault-current",
   title: "At the Vault Seam",
   characterIds: ["aria", "corin"],
+  illustration: lanternVignetteIllustration,
   beats: [
     {
       id: "beat-sealed-vault-fiction",

@@ -111,6 +111,41 @@ describe("mapToPlayerHUDState", () => {
     expect(state.campaignNavigation.returnHref).toBe("http://example.com/app/campaigns/c1");
   });
 
+  it("maps GM interaction illustrations into the on-stage view model", () => {
+    const bootstrap = minimalBootstrap({
+      interaction_state: {
+        campaign_id: "c1",
+        campaign_name: "The Guildhouse",
+        viewer: { participant_id: "p1", name: "Avery", role: "player" },
+        active_session: { session_id: "s1", name: "Session 1" },
+        active_scene: {
+          scene_id: "sc1",
+          name: "The Tavern",
+          characters: [{ character_id: "ch1", name: "Lark", owner_participant_id: "p1" }],
+          current_interaction: {
+            interaction_id: "gm-1",
+            character_ids: ["ch1"],
+            illustration: {
+              image_url: "https://cdn.example.com/gm/sc1.png",
+              alt: "Lantern-lit ward seam",
+              caption: "Illustration preview.",
+            },
+            beats: [{ beat_id: "beat-1", type: "fiction", text: "The seam hums in the dark." }],
+          },
+          interaction_history: [],
+        },
+      },
+    });
+
+    const state = mapToPlayerHUDState(bootstrap, null, "connected", "on-stage", [], [], "http://example.com/app/campaigns/c1");
+
+    expect(state.onStage.currentInteraction?.illustration).toEqual({
+      imageUrl: "https://cdn.example.com/gm/sc1.png",
+      alt: "Lantern-lit ward seam",
+      caption: "Illustration preview.",
+    });
+  });
+
   it("maps chat messages to side chat", () => {
     const bootstrap = minimalBootstrap();
     const messages = [
