@@ -948,3 +948,84 @@ func TestCampaignCharacterCreationSummaryBodyRendersSharedSummary(t *testing.T) 
 		}
 	}
 }
+
+func TestCreationStepTraitsRendersTraitCards(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Agility:   "2",
+			Strength:  "1",
+			Finesse:   "1",
+			Instinct:  "0",
+			Presence:  "0",
+			Knowledge: "-1",
+			TraitOptions: daggerheartCreationTraitOptions(CampaignCharacterCreationView{
+				Agility:   "2",
+				Strength:  "1",
+				Finesse:   "1",
+				Instinct:  "0",
+				Presence:  "0",
+				Knowledge: "-1",
+			}),
+		},
+	}
+
+	loc := testLocalizer{
+		"game.character_creation.field.agility":          "Agility",
+		"game.character_creation.field.strength":         "Strength",
+		"game.character_creation.field.finesse":          "Finesse",
+		"game.character_creation.field.instinct":         "Instinct",
+		"game.character_creation.field.presence":         "Presence",
+		"game.character_creation.field.knowledge":        "Knowledge",
+		"game.character_creation.trait_skills.agility":   "Sprint, Leap, Maneuver",
+		"game.character_creation.trait_skills.strength":  "Lift, Smash, Grapple",
+		"game.character_creation.trait_skills.finesse":   "Control, Hide, Tinker",
+		"game.character_creation.trait_skills.instinct":  "Perceive, Sense, Navigate",
+		"game.character_creation.trait_skills.presence":  "Charm, Perform, Deceive",
+		"game.character_creation.trait_skills.knowledge": "Recall, Analyze, Comprehend",
+	}
+
+	var buf bytes.Buffer
+	if err := creationStepTraits(view, loc).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render creationStepTraits: %v", err)
+	}
+
+	got := buf.String()
+	markup := strings.SplitN(got, "<script>", 2)[0]
+
+	// All six abbreviations appear.
+	for _, abbr := range []string{"AGI", "STR", "FIN", "INS", "PRE", "KNO"} {
+		if !strings.Contains(markup, abbr) {
+			t.Fatalf("traits output missing abbreviation %q: %q", abbr, markup)
+		}
+	}
+
+	// Localized skill lists appear.
+	for _, skills := range []string{
+		"Sprint, Leap, Maneuver",
+		"Lift, Smash, Grapple",
+		"Control, Hide, Tinker",
+		"Perceive, Sense, Navigate",
+		"Charm, Perform, Deceive",
+		"Recall, Analyze, Comprehend",
+	} {
+		if !strings.Contains(markup, skills) {
+			t.Fatalf("traits output missing skill list %q: %q", skills, markup)
+		}
+	}
+
+	// Select elements with correct names.
+	for _, name := range []string{"agility", "strength", "finesse", "instinct", "presence", "knowledge"} {
+		if !strings.Contains(markup, `name="`+name+`"`) {
+			t.Fatalf("traits output missing select name %q: %q", name, markup)
+		}
+	}
+
+	// Validation script still present.
+	if !strings.Contains(got, `var expected = [-1, 0, 0, 1, 1, 2];`) {
+		t.Fatalf("traits output missing validation script: %q", got)
+	}
+}

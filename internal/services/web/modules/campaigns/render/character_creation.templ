@@ -1582,13 +1582,10 @@ templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="3">
 		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.traits") }</h3>
 		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.traits_guidance") }</p>
-		<div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-			@creationTraitSelect(loc, "agility", "game.character_creation.field.agility", view.Creation.Agility)
-			@creationTraitSelect(loc, "strength", "game.character_creation.field.strength", view.Creation.Strength)
-			@creationTraitSelect(loc, "finesse", "game.character_creation.field.finesse", view.Creation.Finesse)
-			@creationTraitSelect(loc, "instinct", "game.character_creation.field.instinct", view.Creation.Instinct)
-			@creationTraitSelect(loc, "presence", "game.character_creation.field.presence", view.Creation.Presence)
-			@creationTraitSelect(loc, "knowledge", "game.character_creation.field.knowledge", view.Creation.Knowledge)
+		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+			for _, trait := range view.Creation.TraitOptions {
+				@creationTraitCard(loc, trait)
+			}
 		</div>
 		<div class="alert alert-error hidden text-sm" data-traits-error>
 			<span>{ T(loc, "game.character_creation.traits_distribution_error") }</span>
@@ -1661,16 +1658,26 @@ templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
 	</script>
 }
 
-templ creationTraitSelect(loc Localizer, name string, labelKey string, current string) {
-	<label class="form-control">
-		<span class="label-text">{ T(loc, labelKey) }</span>
-		<select name={ name } required class="select select-bordered">
-			<option value="-1" selected?={ current == "-1" }>-1</option>
-			<option value="0" selected?={ current == "0" || current == "" }>0</option>
-			<option value="1" selected?={ current == "1" }>+1</option>
-			<option value="2" selected?={ current == "2" }>+2</option>
-		</select>
-	</label>
+templ creationTraitCard(loc Localizer, trait CampaignCreationTraitOptionView) {
+	<div class="rounded-lg border border-base-300/50 bg-base-200/25 px-2 py-3 text-center">
+		<p class="text-[0.65rem] font-bold uppercase tracking-wider text-base-content/50">
+			{ trait.Abbreviation }
+		</p>
+		<p class="mt-1 text-sm font-medium">
+			{ T(loc, trait.LabelKey) }
+		</p>
+		<div class="mt-2 flex justify-center">
+			<select name={ trait.FieldName } required class="select select-bordered select-sm w-full max-w-[5rem] text-center font-bold">
+				<option value="-1" selected?={ trait.Current == "-1" }>-1</option>
+				<option value="0" selected?={ trait.Current == "0" || trait.Current == "" }>0</option>
+				<option value="1" selected?={ trait.Current == "1" }>+1</option>
+				<option value="2" selected?={ trait.Current == "2" }>+2</option>
+			</select>
+		</div>
+		<p class="mt-2 text-xs leading-tight text-base-content/40">
+			{ T(loc, trait.SkillsKey) }
+		</p>
+	</div>
 }
 
 // --- Step 4: Equipment ---
