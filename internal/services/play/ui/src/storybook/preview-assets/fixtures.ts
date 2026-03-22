@@ -1,7 +1,12 @@
 import avatarCatalogJSON from "../../../../../../platform/assets/catalog/data/avatars.v1.json";
 import campaignCoverCatalogJSON from "../../../../../../platform/assets/catalog/data/campaign_covers.v1.json";
 import cloudinaryCatalogJSON from "../../../../../../platform/assets/catalog/data/cloudinary_assets.high_fantasy.v1.json";
-import type { PreviewAvatarAsset, PreviewAvatarCrop, PreviewCampaignCoverAsset } from "./contract";
+import type {
+  PreviewAvatarAsset,
+  PreviewAvatarCrop,
+  PreviewCampaignCoverAsset,
+  PreviewPortraitSheetAsset,
+} from "./contract";
 
 type AssetSetJSON = {
   id: string;
@@ -18,6 +23,8 @@ type AvatarPortraitJSON = {
 
 type AvatarSheetJSON = {
   set_id: string;
+  width_px: number;
+  height_px: number;
   portraits: AvatarPortraitJSON[];
 };
 
@@ -49,42 +56,69 @@ export const participantAvatarPreviewAssets: ReadonlyArray<PreviewAvatarAsset> =
 export const characterAvatarPreviewAssets: ReadonlyArray<PreviewAvatarAsset> =
   buildCharacterAvatarPreviewAssets();
 
+export const portraitSheetPreviewAssets: ReadonlyArray<PreviewPortraitSheetAsset> =
+  buildPortraitSheetPreviewAssets();
+
 export const campaignCoverPreviewAssets: ReadonlyArray<PreviewCampaignCoverAsset> =
   buildCampaignCoverPreviewAssets();
 
 function buildParticipantAvatarPreviewAssets(): ReadonlyArray<PreviewAvatarAsset> {
-  return orderedAssetIDs(avatarCatalog.manifest.sets, PEOPLE_AVATAR_SET_ID).map((assetId) =>
+  return orderedAvatarAssetIDs(PEOPLE_AVATAR_SET_ID).map((assetId) =>
     buildAvatarPreviewAsset(assetId, portraitCropForSlot(PARTICIPANT_SLOT)),
   );
 }
 
 function buildCharacterAvatarPreviewAssets(): ReadonlyArray<PreviewAvatarAsset> {
-  return orderedAssetIDs(avatarCatalog.manifest.sets, PEOPLE_AVATAR_SET_ID).map((assetId, index) => {
+  return orderedAvatarAssetIDs(PEOPLE_AVATAR_SET_ID).map((assetId, index) => {
     const entityId = `preview-character-${String(index + 1).padStart(2, "0")}`;
     const slot = deterministicAvatarSlot("character", entityId, CHARACTER_SLOT_CANDIDATES);
     return buildAvatarPreviewAsset(assetId, portraitCropForSlot(slot));
   });
 }
 
+function buildPortraitSheetPreviewAssets(): ReadonlyArray<PreviewPortraitSheetAsset> {
+  return orderedAvatarAssetIDs(PEOPLE_AVATAR_SET_ID).map((assetId) => ({
+    ...buildCatalogAsset(PEOPLE_AVATAR_SET_ID, assetId, requiredCloudinaryURL(PEOPLE_AVATAR_SET_ID, assetId)),
+    widthPx: avatarSheet.width_px,
+    heightPx: avatarSheet.height_px,
+  }));
+}
+
 function buildCampaignCoverPreviewAssets(): ReadonlyArray<PreviewCampaignCoverAsset> {
   return orderedAssetIDs(campaignCoverCatalog.sets, CAMPAIGN_COVER_SET_ID).map((assetId) => ({
-    id: `${CAMPAIGN_COVER_SET_ID}:${assetId}`,
-    label: humanizeAssetID(assetId),
-    setId: CAMPAIGN_COVER_SET_ID,
-    assetId,
-    imageUrl: requiredCloudinaryURL(CAMPAIGN_COVER_SET_ID, assetId),
+    ...buildCatalogAsset(
+      CAMPAIGN_COVER_SET_ID,
+      assetId,
+      requiredCloudinaryURL(CAMPAIGN_COVER_SET_ID, assetId),
+    ),
   }));
 }
 
 function buildAvatarPreviewAsset(assetId: string, crop: PreviewAvatarCrop): PreviewAvatarAsset {
   return {
-    id: `${PEOPLE_AVATAR_SET_ID}:${assetId}`,
-    label: humanizeAssetID(assetId),
-    setId: PEOPLE_AVATAR_SET_ID,
-    assetId,
-    imageUrl: cropCloudinaryImageURL(requiredCloudinaryURL(PEOPLE_AVATAR_SET_ID, assetId), crop),
+    ...buildCatalogAsset(
+      PEOPLE_AVATAR_SET_ID,
+      assetId,
+      cropCloudinaryImageURL(requiredCloudinaryURL(PEOPLE_AVATAR_SET_ID, assetId), crop),
+    ),
     crop,
   };
+}
+
+function buildCatalogAsset(setId: string, assetId: string, imageUrl: string) {
+  return {
+    id: `${setId}:${assetId}`,
+    label: humanizeAssetID(assetId),
+    setId,
+    assetId,
+    imageUrl,
+  };
+}
+
+function orderedAvatarAssetIDs(setId: string): string[] {
+  return orderedAssetIDs(avatarCatalog.manifest.sets, setId).filter(
+    (assetId) => !assetId.startsWith("blank_"),
+  );
 }
 
 function orderedAssetIDs(sets: AssetSetJSON[], setId: string): string[] {

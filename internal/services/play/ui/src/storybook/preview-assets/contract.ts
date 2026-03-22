@@ -1,3 +1,11 @@
+export type PreviewCatalogAsset = {
+  id: string;
+  label: string;
+  setId: string;
+  assetId: string;
+  imageUrl: string;
+};
+
 export type PreviewAvatarCrop = {
   slot: number;
   x: number;
@@ -7,19 +15,13 @@ export type PreviewAvatarCrop = {
   deliveryWidthPx: number;
 };
 
-export type PreviewAvatarAsset = {
-  id: string;
-  label: string;
-  setId: string;
-  assetId: string;
-  imageUrl: string;
+export type PreviewAvatarAsset = PreviewCatalogAsset & {
   crop: PreviewAvatarCrop;
 };
 
-export type PreviewCampaignCoverAsset = {
-  id: string;
-  label: string;
-  setId: string;
-  assetId: string;
-  imageUrl: string;
+export type PreviewPortraitSheetAsset = PreviewCatalogAsset & {
+  widthPx: number;
+  heightPx: number;
 };
+
+export type PreviewCampaignCoverAsset = PreviewCatalogAsset;
