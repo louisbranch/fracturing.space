@@ -9,6 +9,7 @@ import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/text/language"
 )
 
@@ -54,20 +55,42 @@ type campaignPageContext struct {
 }
 
 // loadCampaignPage loads the shared workspace page state needed by campaign
-// detail, chat, and creation routes.
+// detail, chat, and creation routes. The four backend calls — workspace fetch,
+// session list, and two authorization checks — run concurrently.
 func (h campaignDetailHandlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, error) {
 	loc, lang := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
-	workspace, err := h.pages.workspace.CampaignWorkspace(ctx, campaignID)
-	if err != nil {
+
+	var (
+		workspace        campaignapp.CampaignWorkspace
+		sessions         []campaignapp.CampaignSession
+		canManageSession bool
+		canManageInvites bool
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		workspace, err = h.pages.workspace.CampaignWorkspace(gctx, campaignID)
+		return err
+	})
+	g.Go(func() error {
+		var err error
+		sessions, err = h.pages.sessionReads.CampaignSessions(gctx, campaignID)
+		return err
+	})
+	g.Go(func() error {
+		canManageSession = h.pages.authorization.RequireManageSession(gctx, campaignID) == nil
+		return nil
+	})
+	g.Go(func() error {
+		canManageInvites = h.pages.authorization.RequireManageInvites(gctx, campaignID) == nil
+		return nil
+	})
+	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
-	sessions, err := h.pages.sessionReads.CampaignSessions(ctx, campaignID)
-	if err != nil {
-		return nil, nil, err
-	}
-	canManageSession := h.pages.authorization.RequireManageSession(ctx, campaignID) == nil
-	canManageInvites := h.pages.authorization.RequireManageInvites(ctx, campaignID) == nil
+
 	return ctx, &campaignPageContext{
 		workspace:        workspace,
 		sessions:         sessions,

@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"fmt"
 	"net/http"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -23,12 +24,24 @@ type overviewHandlers struct {
 
 // newOverviewHandlerServices keeps overview transport dependencies owned by the
 // overview surface instead of the root constructor.
-func newOverviewHandlerServices(config overviewServiceConfig) overviewHandlerServices {
-	return overviewHandlerServices{
-		automationReads:  campaignapp.NewAutomationReadService(config.AutomationRead, config.Authorization),
-		automationMutate: campaignapp.NewAutomationMutationService(config.AutomationMutation, config.Authorization),
-		configuration:    campaignapp.NewConfigurationService(config.Configuration, config.Authorization),
+func newOverviewHandlerServices(config overviewServiceConfig) (overviewHandlerServices, error) {
+	automationReads, err := campaignapp.NewAutomationReadService(config.AutomationRead, config.Authorization)
+	if err != nil {
+		return overviewHandlerServices{}, fmt.Errorf("overview automation-reads: %w", err)
 	}
+	automationMutate, err := campaignapp.NewAutomationMutationService(config.AutomationMutation, config.Authorization)
+	if err != nil {
+		return overviewHandlerServices{}, fmt.Errorf("overview automation-mutation: %w", err)
+	}
+	configuration, err := campaignapp.NewConfigurationService(config.Configuration, config.Authorization)
+	if err != nil {
+		return overviewHandlerServices{}, fmt.Errorf("overview configuration: %w", err)
+	}
+	return overviewHandlerServices{
+		automationReads:  automationReads,
+		automationMutate: automationMutate,
+		configuration:    configuration,
+	}, nil
 }
 
 // newOverviewHandlers assembles the overview route-owner handler.
@@ -37,22 +50,6 @@ func newOverviewHandlers(detail campaignDetailHandlers, services overviewHandler
 		campaignDetailHandlers: detail,
 		overview:               services,
 	}
-}
-
-// missingOverviewHandlerServices reports which overview capabilities are absent
-// before the detail overview surface is mounted.
-func missingOverviewHandlerServices(services overviewHandlerServices) []string {
-	missing := []string{}
-	if services.automationReads == nil {
-		missing = append(missing, "overview-automation-reads")
-	}
-	if services.automationMutate == nil {
-		missing = append(missing, "overview-automation-mutation")
-	}
-	if services.configuration == nil {
-		missing = append(missing, "overview-configuration")
-	}
-	return missing
 }
 
 // handleOverview renders the default campaign detail overview section.

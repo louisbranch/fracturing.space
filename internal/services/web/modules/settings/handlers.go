@@ -20,8 +20,8 @@ type settingsSurfaceAvailability struct {
 	aiAgents bool
 }
 
-// any reports whether at least one settings surface is available.
-func (a settingsSurfaceAvailability) any() bool {
+// anyAvailable reports whether at least one settings surface is available.
+func (a settingsSurfaceAvailability) anyAvailable() bool {
 	return a.profile || a.locale || a.security || a.aiKeys || a.aiAgents
 }
 

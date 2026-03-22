@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -27,10 +28,12 @@ type catalogHandlers struct {
 
 // newCatalogHandlerServices keeps catalog transport dependencies owned by the
 // list/create surface instead of the root constructor.
-func newCatalogHandlerServices(config catalogServiceConfig) catalogHandlerServices {
-	return catalogHandlerServices{
-		campaigns: campaignapp.NewCatalogService(config.Catalog),
+func newCatalogHandlerServices(config catalogServiceConfig) (catalogHandlerServices, error) {
+	campaigns, err := campaignapp.NewCatalogService(config.Catalog)
+	if err != nil {
+		return catalogHandlerServices{}, fmt.Errorf("catalog: %w", err)
 	}
+	return catalogHandlerServices{campaigns: campaigns}, nil
 }
 
 // newCatalogHandlers assembles the catalog route-owner handler from support,
@@ -41,15 +44,6 @@ func newCatalogHandlers(support campaignRouteSupport, services catalogHandlerSer
 		catalog:              services,
 		systems:              systems,
 	}
-}
-
-// missingCatalogHandlerServices reports whether the catalog list/create
-// surface has the campaigns service it needs before mounting routes.
-func missingCatalogHandlerServices(services catalogHandlerServices) []string {
-	if services.campaigns == nil {
-		return []string{"catalog"}
-	}
-	return nil
 }
 
 // --- Headers ---

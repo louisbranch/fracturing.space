@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"fmt"
 	"net/http"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -21,12 +22,16 @@ type participantHandlers struct {
 
 // newParticipantHandlerServices keeps participant transport dependencies owned
 // by the participant surface instead of the root constructor.
-func newParticipantHandlerServices(config participantServiceConfig) participantHandlerServices {
-	reads := campaignapp.NewParticipantReadService(config.Read, config.Authorization)
-	return participantHandlerServices{
-		reads:    reads,
-		mutation: campaignapp.NewParticipantMutationService(config.Mutation, config.Authorization),
+func newParticipantHandlerServices(config participantServiceConfig) (participantHandlerServices, error) {
+	reads, err := campaignapp.NewParticipantReadService(config.Read, config.Authorization)
+	if err != nil {
+		return participantHandlerServices{}, fmt.Errorf("participant-reads: %w", err)
 	}
+	mutation, err := campaignapp.NewParticipantMutationService(config.Mutation, config.Authorization)
+	if err != nil {
+		return participantHandlerServices{}, fmt.Errorf("participant-mutation: %w", err)
+	}
+	return participantHandlerServices{reads: reads, mutation: mutation}, nil
 }
 
 // newParticipantHandlers assembles the participant route-owner handler.
@@ -35,19 +40,6 @@ func newParticipantHandlers(detail campaignDetailHandlers, services participantH
 		campaignDetailHandlers: detail,
 		participants:           services,
 	}
-}
-
-// missingParticipantHandlerServices reports which participant route services
-// are absent before the participant surface is mounted.
-func missingParticipantHandlerServices(services participantHandlerServices) []string {
-	missing := []string{}
-	if services.reads == nil {
-		missing = append(missing, "participant-reads")
-	}
-	if services.mutation == nil {
-		missing = append(missing, "participant-mutation")
-	}
-	return missing
 }
 
 // handleParticipants handles this route in the module transport layer.

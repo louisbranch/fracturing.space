@@ -1,5 +1,7 @@
 package app
 
+import "errors"
+
 // participantReadService owns participant reads, edits, and row-level
 // authorization hydration.
 type participantReadService struct {
@@ -55,77 +57,83 @@ type characterMutationService struct {
 }
 
 // NewParticipantReadService constructs the participant read service surface
-// from explicit gateway seams.
-func NewParticipantReadService(config ParticipantReadServiceConfig, authorization AuthorizationGateway) CampaignParticipantReadService {
+// from explicit gateway seams. Returns an error when required dependencies
+// are absent.
+func NewParticipantReadService(config ParticipantReadServiceConfig, authorization AuthorizationGateway) (CampaignParticipantReadService, error) {
 	if config.Read == nil || config.Workspace == nil || config.BatchAuthorization == nil || authorization == nil {
-		return nil
+		return nil, errors.New("participant read service: missing required dependencies")
 	}
 	return participantReadService{
 		read:               config.Read,
 		workspace:          config.Workspace,
 		batchAuthorization: config.BatchAuthorization,
 		auth:               authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewParticipantMutationService constructs the participant mutation service
-// surface from explicit gateway seams.
-func NewParticipantMutationService(config ParticipantMutationServiceConfig, authorization AuthorizationGateway) CampaignParticipantMutationService {
+// surface from explicit gateway seams. Returns an error when required
+// dependencies are absent.
+func NewParticipantMutationService(config ParticipantMutationServiceConfig, authorization AuthorizationGateway) (CampaignParticipantMutationService, error) {
 	if config.Read == nil || config.Mutation == nil || config.Workspace == nil || authorization == nil {
-		return nil
+		return nil, errors.New("participant mutation service: missing required dependencies")
 	}
 	return participantMutationService{
 		read:      config.Read,
 		mutation:  config.Mutation,
 		workspace: config.Workspace,
 		auth:      authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewAutomationReadService constructs the campaign automation read surface from
-// explicit gateway seams.
-func NewAutomationReadService(config AutomationReadServiceConfig, authorization AuthorizationGateway) CampaignAutomationReadService {
+// explicit gateway seams. Returns an error when required dependencies are
+// absent.
+func NewAutomationReadService(config AutomationReadServiceConfig, authorization AuthorizationGateway) (CampaignAutomationReadService, error) {
 	if config.Participants == nil || config.Read == nil || authorization == nil {
-		return nil
+		return nil, errors.New("automation read service: missing required dependencies")
 	}
 	return automationReadService{
 		participants: config.Participants,
 		read:         config.Read,
 		auth:         authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewAutomationMutationService constructs the campaign automation mutation
-// surface from explicit gateway seams.
-func NewAutomationMutationService(config AutomationMutationServiceConfig, authorization AuthorizationGateway) CampaignAutomationMutationService {
+// surface from explicit gateway seams. Returns an error when required
+// dependencies are absent.
+func NewAutomationMutationService(config AutomationMutationServiceConfig, authorization AuthorizationGateway) (CampaignAutomationMutationService, error) {
 	if config.Participants == nil || config.Mutation == nil || authorization == nil {
-		return nil
+		return nil, errors.New("automation mutation service: missing required dependencies")
 	}
 	return automationMutationService{
 		participants: config.Participants,
 		mutation:     config.Mutation,
 		auth:         authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewCharacterReadService constructs the character read service surface from
-// explicit gateway seams.
-func NewCharacterReadService(config CharacterReadServiceConfig, authorization AuthorizationGateway) CampaignCharacterReadService {
+// explicit gateway seams. Returns an error when required dependencies are
+// absent.
+func NewCharacterReadService(config CharacterReadServiceConfig, authorization AuthorizationGateway) (CampaignCharacterReadService, error) {
 	if config.Read == nil || config.BatchAuthorization == nil || authorization == nil {
-		return nil
+		return nil, errors.New("character read service: missing required dependencies")
 	}
 	return characterReadService{
 		read:               config.Read,
 		batchAuthorization: config.BatchAuthorization,
 		auth:               authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewCharacterControlService constructs the character-control service surface
-// from explicit gateway seams.
-func NewCharacterControlService(config CharacterControlServiceConfig, authorization AuthorizationGateway) CampaignCharacterControlService {
+// from explicit gateway seams. Returns an error when required dependencies are
+// absent.
+func NewCharacterControlService(config CharacterControlServiceConfig, authorization AuthorizationGateway) (CampaignCharacterControlService, error) {
 	if config.Read == nil || config.Mutation == nil || config.Participants == nil || config.Sessions == nil || authorization == nil {
-		return nil
+		return nil, errors.New("character control service: missing required dependencies")
 	}
 	return characterControlService{
 		read:         config.Read,
@@ -133,18 +141,19 @@ func NewCharacterControlService(config CharacterControlServiceConfig, authorizat
 		participants: config.Participants,
 		sessions:     config.Sessions,
 		auth:         authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }
 
 // NewCharacterMutationService constructs the character mutation service
-// surface from explicit gateway seams.
-func NewCharacterMutationService(config CharacterMutationServiceConfig, authorization AuthorizationGateway) CampaignCharacterMutationService {
+// surface from explicit gateway seams. Returns an error when required
+// dependencies are absent.
+func NewCharacterMutationService(config CharacterMutationServiceConfig, authorization AuthorizationGateway) (CampaignCharacterMutationService, error) {
 	if config.Mutation == nil || config.Sessions == nil || authorization == nil {
-		return nil
+		return nil, errors.New("character mutation service: missing required dependencies")
 	}
 	return characterMutationService{
 		mutation: config.Mutation,
 		sessions: config.Sessions,
 		auth:     authorizationSupport{gateway: authorization},
-	}
+	}, nil
 }

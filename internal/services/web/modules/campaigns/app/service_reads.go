@@ -90,19 +90,19 @@ func normalizeCampaignWorkspace(campaignID string, workspace CampaignWorkspace) 
 	workspace.Theme = strings.TrimSpace(workspace.Theme)
 	workspace.System = strings.TrimSpace(workspace.System)
 	if workspace.System == "" {
-		workspace.System = "Unspecified"
+		workspace.System = "unspecified"
 	}
 	workspace.GMMode = strings.TrimSpace(workspace.GMMode)
 	if workspace.GMMode == "" {
-		workspace.GMMode = "Unspecified"
+		workspace.GMMode = "unspecified"
 	}
 	workspace.Status = strings.TrimSpace(workspace.Status)
 	if workspace.Status == "" {
-		workspace.Status = "Unspecified"
+		workspace.Status = "unspecified"
 	}
 	workspace.Locale = strings.TrimSpace(workspace.Locale)
 	if workspace.Locale == "" {
-		workspace.Locale = "Unspecified"
+		workspace.Locale = "unspecified"
 	}
 	workspace.ParticipantCount = strings.TrimSpace(workspace.ParticipantCount)
 	if workspace.ParticipantCount == "" {
@@ -114,11 +114,11 @@ func normalizeCampaignWorkspace(campaignID string, workspace CampaignWorkspace) 
 	}
 	workspace.Intent = strings.TrimSpace(workspace.Intent)
 	if workspace.Intent == "" {
-		workspace.Intent = "Unspecified"
+		workspace.Intent = "unspecified"
 	}
 	workspace.AccessPolicy = strings.TrimSpace(workspace.AccessPolicy)
 	if workspace.AccessPolicy == "" {
-		workspace.AccessPolicy = "Unspecified"
+		workspace.AccessPolicy = "unspecified"
 	}
 	workspace.CoverPreviewURL = strings.TrimSpace(workspace.CoverPreviewURL)
 	if workspace.CoverPreviewURL == "" {

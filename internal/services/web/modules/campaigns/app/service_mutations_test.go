@@ -64,7 +64,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 			Evaluated:           true,
 			Allowed:             true,
 			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
-			ActorCampaignAccess: "Owner",
+			ActorCampaignAccess: "owner",
 		},
 	}
 	svc := newService(gateway)
@@ -92,8 +92,8 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	gateway.campaignParticipant = CampaignParticipant{
 		ID:             "p-1",
 		Name:           "Player One",
-		Role:           "Player",
-		CampaignAccess: "Member",
+		Role:           "player",
+		CampaignAccess: "member",
 	}
 	if err := svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player Prime", Role: "gm"}); err != nil {
 		t.Fatalf("UpdateParticipant() error = %v", err)
@@ -242,7 +242,7 @@ func TestCreateParticipantRejectsHumanGMForAIGMCampaigns(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "AI"},
+		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "ai"},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
 			Allowed:   true,
@@ -270,13 +270,13 @@ func TestUpdateParticipantRejectsHumanGMForAIGMCampaigns(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "AI"},
+		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "ai"},
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-1",
 			Name:           "Pending GM",
-			Role:           "Player",
-			CampaignAccess: "Member",
-			Controller:     "Human",
+			Role:           "player",
+			CampaignAccess: "member",
+			Controller:     "human",
 		},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
@@ -390,8 +390,8 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 				campaignParticipant: CampaignParticipant{
 					ID:             "p-1",
 					Name:           "Player One",
-					Role:           "Player",
-					CampaignAccess: "Member",
+					Role:           "player",
+					CampaignAccess: "member",
 				},
 			}
 			svc := newService(gateway)
@@ -432,7 +432,7 @@ func TestCreateCharacterRejectsActiveSession(t *testing.T) {
 
 	gateway := &campaignGatewayStub{
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
-		campaignSessions:      []CampaignSession{{ID: "sess-1", Status: "Active"}},
+		campaignSessions:      []CampaignSession{{ID: "sess-1", Status: "active"}},
 	}
 	svc := newService(gateway)
 
@@ -456,7 +456,7 @@ func TestUpdateCharacterUsesTargetScopedAuthorizationAndRejectsActiveSession(t *
 
 	gateway := &campaignGatewayStub{
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
-		campaignSessions:      []CampaignSession{{ID: "sess-1", Status: "Active"}},
+		campaignSessions:      []CampaignSession{{ID: "sess-1", Status: "active"}},
 	}
 	svc := newService(gateway)
 
@@ -606,8 +606,8 @@ func TestUpdateParticipantDelegatesToGateway(t *testing.T) {
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-1",
 			Name:           "Player One",
-			Role:           "Player",
-			CampaignAccess: "Member",
+			Role:           "player",
+			CampaignAccess: "member",
 			Pronouns:       "they/them",
 		},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
@@ -643,11 +643,11 @@ func TestUpdateParticipantAllowsSelfOwnedProfileChanges(t *testing.T) {
 			ID:             "p-1",
 			UserID:         "user-1",
 			Name:           "Player One",
-			Role:           "Player",
-			CampaignAccess: "Member",
+			Role:           "player",
+			CampaignAccess: "member",
 			Pronouns:       "she/her",
 		},
-		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "Human"},
+		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "human"},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated:  true,
 			Allowed:    false,
@@ -681,8 +681,8 @@ func TestUpdateParticipantValidatesRoleAndAccess(t *testing.T) {
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-1",
 			Name:           "Player One",
-			Role:           "Player",
-			CampaignAccess: "Member",
+			Role:           "player",
+			CampaignAccess: "member",
 		},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
@@ -703,9 +703,9 @@ func TestUpdateParticipantRejectsAIInvariantTampering(t *testing.T) {
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-ai",
 			Name:           "Caretaker",
-			Role:           "GM",
-			CampaignAccess: "Member",
-			Controller:     "AI",
+			Role:           "gm",
+			CampaignAccess: "member",
+			Controller:     "ai",
 			Pronouns:       "it/its",
 		},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
@@ -740,7 +740,7 @@ func TestUpdateCampaignAIBindingRequiresOwnerAccess(t *testing.T) {
 		authorizationDecision: AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,
-			ActorCampaignAccess: "Manager",
+			ActorCampaignAccess: "manager",
 		},
 	}
 	svc := newService(gateway)
@@ -766,7 +766,7 @@ func TestUpdateCampaignAIBindingDelegatesForOwner(t *testing.T) {
 		authorizationDecision: AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,
-			ActorCampaignAccess: "Owner",
+			ActorCampaignAccess: "owner",
 		},
 	}
 	svc := newService(gateway)
@@ -790,7 +790,7 @@ func TestUpdateCampaignAIBindingFallsBackToParticipantAccessWhenAuthzOmitsActorA
 		campaignParticipants: []CampaignParticipant{{
 			ID:             "p-owner",
 			UserID:         "user-1",
-			CampaignAccess: "Owner",
+			CampaignAccess: "owner",
 		}},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
@@ -816,8 +816,8 @@ func TestUpdateParticipantRequiresMeaningfulChange(t *testing.T) {
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-1",
 			Name:           "Player One",
-			Role:           "Player",
-			CampaignAccess: "Member",
+			Role:           "player",
+			CampaignAccess: "member",
 			Pronouns:       "they/them",
 		},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
@@ -847,7 +847,7 @@ func TestUpdateCampaignDelegatesToGateway(t *testing.T) {
 			ID:     "c1",
 			Name:   "Campaign One",
 			Theme:  "Old Theme",
-			Locale: "English (US)",
+			Locale: "en_us",
 		},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
@@ -886,7 +886,7 @@ func TestUpdateCampaignNoOpReturnsNil(t *testing.T) {
 			ID:     "c1",
 			Name:   "Campaign One",
 			Theme:  "Old Theme",
-			Locale: "English (US)",
+			Locale: "en_us",
 		},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
@@ -912,7 +912,7 @@ func TestUpdateCampaignValidatesLocale(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace:     CampaignWorkspace{ID: "c1", Name: "Campaign One", Locale: "English (US)"},
+		campaignWorkspace:     CampaignWorkspace{ID: "c1", Name: "Campaign One", Locale: "en_us"},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
 	svc := newService(gateway)

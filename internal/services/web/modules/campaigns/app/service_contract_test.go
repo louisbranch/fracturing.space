@@ -13,60 +13,49 @@ import (
 func TestPackageServiceAndWorkflowResolverContracts(t *testing.T) {
 	t.Parallel()
 
-	if NewCatalogService(CatalogServiceConfig{}) != nil {
-		t.Fatalf("NewCatalogService() returned non-nil service for missing deps")
+	assertBuilderError := func(t *testing.T, err error, name string) {
+		t.Helper()
+		if err == nil {
+			t.Fatalf("%s returned nil error for missing deps", name)
+		}
 	}
-	if NewStarterService(StarterServiceConfig{}) != nil {
-		t.Fatalf("NewStarterService() returned non-nil service for missing deps")
-	}
-	if NewWorkspaceService(WorkspaceServiceConfig{}) != nil {
-		t.Fatalf("NewWorkspaceService() returned non-nil service for missing deps")
-	}
-	if NewParticipantReadService(ParticipantReadServiceConfig{}, nil) != nil {
-		t.Fatalf("NewParticipantReadService() returned non-nil service for missing deps")
-	}
-	if NewParticipantMutationService(ParticipantMutationServiceConfig{}, nil) != nil {
-		t.Fatalf("NewParticipantMutationService() returned non-nil service for missing deps")
-	}
-	if NewAutomationReadService(AutomationReadServiceConfig{}, nil) != nil {
-		t.Fatalf("NewAutomationReadService() returned non-nil service for missing deps")
-	}
-	if NewAutomationMutationService(AutomationMutationServiceConfig{}, nil) != nil {
-		t.Fatalf("NewAutomationMutationService() returned non-nil service for missing deps")
-	}
-	if NewCharacterReadService(CharacterReadServiceConfig{}, nil) != nil {
-		t.Fatalf("NewCharacterReadService() returned non-nil service for missing deps")
-	}
-	if NewCharacterControlService(CharacterControlServiceConfig{}, nil) != nil {
-		t.Fatalf("NewCharacterControlService() returned non-nil service for missing deps")
-	}
-	if NewCharacterMutationService(CharacterMutationServiceConfig{}, nil) != nil {
-		t.Fatalf("NewCharacterMutationService() returned non-nil service for missing deps")
-	}
-	if NewSessionReadService(SessionReadServiceConfig{}) != nil {
-		t.Fatalf("NewSessionReadService() returned non-nil service for missing deps")
-	}
-	if NewSessionMutationService(SessionMutationServiceConfig{}, nil) != nil {
-		t.Fatalf("NewSessionMutationService() returned non-nil service for missing deps")
-	}
-	if NewInviteReadService(InviteReadServiceConfig{}, nil) != nil {
-		t.Fatalf("NewInviteReadService() returned non-nil service for missing deps")
-	}
-	if NewInviteMutationService(InviteMutationServiceConfig{}, nil) != nil {
-		t.Fatalf("NewInviteMutationService() returned non-nil service for missing deps")
-	}
-	if NewConfigurationService(ConfigurationServiceConfig{}, nil) != nil {
-		t.Fatalf("NewConfigurationService() returned non-nil service for missing deps")
-	}
-	if NewAuthorizationService(nil) != nil {
-		t.Fatalf("NewAuthorizationService() returned non-nil service for missing deps")
-	}
-	if NewCharacterCreationPageService(CharacterCreationServiceConfig{}) != nil {
-		t.Fatalf("NewCharacterCreationPageService() returned non-nil service for missing deps")
-	}
-	if NewCharacterCreationMutationService(CharacterCreationServiceConfig{}, nil) != nil {
-		t.Fatalf("NewCharacterCreationMutationService() returned non-nil service for missing deps")
-	}
+
+	_, err := NewCatalogService(CatalogServiceConfig{})
+	assertBuilderError(t, err, "NewCatalogService")
+	_, err = NewStarterService(StarterServiceConfig{})
+	assertBuilderError(t, err, "NewStarterService")
+	_, err = NewWorkspaceService(WorkspaceServiceConfig{})
+	assertBuilderError(t, err, "NewWorkspaceService")
+	_, err = NewParticipantReadService(ParticipantReadServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewParticipantReadService")
+	_, err = NewParticipantMutationService(ParticipantMutationServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewParticipantMutationService")
+	_, err = NewAutomationReadService(AutomationReadServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewAutomationReadService")
+	_, err = NewAutomationMutationService(AutomationMutationServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewAutomationMutationService")
+	_, err = NewCharacterReadService(CharacterReadServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewCharacterReadService")
+	_, err = NewCharacterControlService(CharacterControlServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewCharacterControlService")
+	_, err = NewCharacterMutationService(CharacterMutationServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewCharacterMutationService")
+	_, err = NewSessionReadService(SessionReadServiceConfig{})
+	assertBuilderError(t, err, "NewSessionReadService")
+	_, err = NewSessionMutationService(SessionMutationServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewSessionMutationService")
+	_, err = NewInviteReadService(InviteReadServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewInviteReadService")
+	_, err = NewInviteMutationService(InviteMutationServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewInviteMutationService")
+	_, err = NewConfigurationService(ConfigurationServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewConfigurationService")
+	_, err = NewAuthorizationService(nil)
+	assertBuilderError(t, err, "NewAuthorizationService")
+	_, err = NewCharacterCreationPageService(CharacterCreationServiceConfig{})
+	assertBuilderError(t, err, "NewCharacterCreationPageService")
+	_, err = NewCharacterCreationMutationService(CharacterCreationServiceConfig{}, nil)
+	assertBuilderError(t, err, "NewCharacterCreationMutationService")
 }
 
 func TestParseGameSystemContracts(t *testing.T) {
@@ -96,9 +85,9 @@ func TestPackageServiceMethodContracts(t *testing.T) {
 	gateway := &campaignGatewayStub{
 		items:                     []CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		campaignName:              "Campaign",
-		campaignWorkspace:         CampaignWorkspace{Name: "Campaign", System: "Daggerheart", GMMode: "Human", Status: "Active", Locale: "English (US)", Intent: "Standard", AccessPolicy: "Private", ParticipantCount: "1", CharacterCount: "1", CoverImageURL: "https://cdn.example.com/cover.png"},
+		campaignWorkspace:         CampaignWorkspace{Name: "Campaign", System: "daggerheart", GMMode: "human", Status: "active", Locale: "en_us", Intent: "standard", AccessPolicy: "private", ParticipantCount: "1", CharacterCount: "1", CoverImageURL: "https://cdn.example.com/cover.png"},
 		campaignParticipants:      []CampaignParticipant{{ID: "p1", Name: "Owner"}},
-		campaignParticipant:       CampaignParticipant{ID: "p1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
+		campaignParticipant:       CampaignParticipant{ID: "p1", Name: "Owner", Role: "gm", CampaignAccess: "owner"},
 		campaignCharacters:        []CampaignCharacter{{ID: "char-1", Name: "Hero"}},
 		campaignSessions:          []CampaignSession{{ID: "sess-1", Name: "Session One"}},
 		campaignSessionReadiness:  CampaignSessionReadiness{Ready: true},

@@ -1,8 +1,8 @@
 package campaigns
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
@@ -46,29 +46,72 @@ type handlersConfig struct {
 }
 
 // newProductionHandlerServices constructs the handler-facing capability bundle
-// directly from production composition inputs so contributors can trace one
-// surface without hopping through an extra root config aggregate.
-func newProductionHandlerServices(config CompositionConfig) handlerServices {
-	characterSurface := newCharacterSurfaceConfig(config)
-	return handlerServices{
-		Page:         newCampaignPageHandlerServices(newPageServiceConfig(config)),
-		Catalog:      newCatalogHandlerServices(newCatalogSurfaceConfig(config)),
-		Starter:      newStarterHandlerServices(newStarterSurfaceConfig(config)),
-		Overview:     newOverviewHandlerServices(newOverviewSurfaceConfig(config)),
-		Participants: newParticipantHandlerServices(newParticipantSurfaceConfig(config)),
-		Characters:   newCharacterHandlerServices(characterSurface),
-		Creation:     newCampaignCreationAppServices(characterSurface),
-		Sessions:     newSessionHandlerServices(newSessionSurfaceConfig(config), newPageAuthorizationGateway(config)),
-		Invites:      newInviteHandlerServices(newInviteSurfaceConfig(config)),
+// directly from production composition inputs. Each surface validates its own
+// dependencies at construction time and returns an error on missing gateways.
+func newProductionHandlerServices(config CompositionConfig) (handlerServices, error) {
+	var errs []error
+
+	page, err := newCampaignPageHandlerServices(newPageServiceConfig(config))
+	if err != nil {
+		errs = append(errs, err)
 	}
+	catalog, err := newCatalogHandlerServices(newCatalogSurfaceConfig(config))
+	if err != nil {
+		errs = append(errs, err)
+	}
+	starter, err := newStarterHandlerServices(newStarterSurfaceConfig(config))
+	if err != nil {
+		errs = append(errs, err)
+	}
+	overview, err := newOverviewHandlerServices(newOverviewSurfaceConfig(config))
+	if err != nil {
+		errs = append(errs, err)
+	}
+	participants, err := newParticipantHandlerServices(newParticipantSurfaceConfig(config))
+	if err != nil {
+		errs = append(errs, err)
+	}
+	characterSurface := newCharacterSurfaceConfig(config)
+	characters, err := newCharacterHandlerServices(characterSurface)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	creation, err := newCampaignCreationAppServices(characterSurface)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	sessions, err := newSessionHandlerServices(newSessionSurfaceConfig(config), newPageAuthorizationGateway(config))
+	if err != nil {
+		errs = append(errs, err)
+	}
+	invites, err := newInviteHandlerServices(newInviteSurfaceConfig(config))
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return handlerServices{}, fmt.Errorf("campaigns module missing required services: %w", errors.Join(errs...))
+	}
+	return handlerServices{
+		Page:         page,
+		Catalog:      catalog,
+		Starter:      starter,
+		Overview:     overview,
+		Participants: participants,
+		Characters:   characters,
+		Creation:     creation,
+		Sessions:     sessions,
+		Invites:      invites,
+	}, nil
 }
 
-// newHandlers builds package wiring for this web seam from narrow app-facing contracts.
+// newHandlers builds package wiring for this web seam from narrow app-facing
+// contracts. Returns an error when core services are absent — this catches
+// callers that skip the builder-level validation in newProductionHandlerServices.
 func newHandlers(config handlersConfig) (handlers, error) {
 	services := config.Services
-	missing := missingHandlerServices(services)
-	if len(missing) > 0 {
-		return handlers{}, fmt.Errorf("campaigns module missing required services: %s", strings.Join(missing, ", "))
+	if services.Page.workspace == nil || services.Catalog.campaigns == nil {
+		return handlers{}, fmt.Errorf("campaigns module missing required services")
 	}
 
 	support := newCampaignRouteSupport(config.Base, config.RequestMeta, config.Sync)
@@ -85,19 +128,4 @@ func newHandlers(config handlersConfig) (handlers, error) {
 		sessions:     newSessionHandlers(detail, services.Sessions, config.PlayFallbackPort, config.PlayLaunchGrant),
 		invites:      newInviteHandlers(detail, services.Invites),
 	}, nil
-}
-
-// missingHandlerServices reports the owned handler seams that were not wired so
-// constructor failures can name the broken campaign surface directly.
-func missingHandlerServices(services handlerServices) []string {
-	missing := []string{}
-	missing = append(missing, missingCampaignPageHandlerServices(services.Page)...)
-	missing = append(missing, missingCatalogHandlerServices(services.Catalog)...)
-	missing = append(missing, missingOverviewHandlerServices(services.Overview)...)
-	missing = append(missing, missingParticipantHandlerServices(services.Participants)...)
-	missing = append(missing, missingCharacterHandlerServices(services.Characters)...)
-	missing = append(missing, missingCampaignCreationAppServices(services.Creation)...)
-	missing = append(missing, missingSessionHandlerServices(services.Sessions)...)
-	missing = append(missing, missingInviteHandlerServices(services.Invites)...)
-	return missing
 }

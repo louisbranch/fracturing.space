@@ -38,7 +38,10 @@ func TestStarterServicePreviewTrimsKeyAndDelegates(t *testing.T) {
 	t.Parallel()
 
 	gateway := &starterGatewayStub{preview: CampaignStarterPreview{EntryID: "starter:lantern"}}
-	svc := NewStarterService(StarterServiceConfig{Gateway: gateway})
+	svc, err := NewStarterService(StarterServiceConfig{Gateway: gateway})
+	if err != nil {
+		t.Fatalf("NewStarterService() error = %v", err)
+	}
 
 	preview, err := svc.StarterPreview(context.Background(), "  starter:lantern  ")
 	if err != nil {
@@ -55,9 +58,12 @@ func TestStarterServicePreviewTrimsKeyAndDelegates(t *testing.T) {
 func TestStarterServicePreviewRejectsEmptyKey(t *testing.T) {
 	t.Parallel()
 
-	svc := NewStarterService(StarterServiceConfig{Gateway: &starterGatewayStub{}})
+	svc, err := NewStarterService(StarterServiceConfig{Gateway: &starterGatewayStub{}})
+	if err != nil {
+		t.Fatalf("NewStarterService() error = %v", err)
+	}
 
-	_, err := svc.StarterPreview(context.Background(), " \n\t ")
+	_, err = svc.StarterPreview(context.Background(), " \n\t ")
 	if err == nil {
 		t.Fatal("expected StarterPreview() error")
 	}
@@ -70,7 +76,10 @@ func TestStarterServiceLaunchTrimsKeyAndDelegates(t *testing.T) {
 	t.Parallel()
 
 	gateway := &starterGatewayStub{launch: StarterLaunchResult{CampaignID: "camp-777"}}
-	svc := NewStarterService(StarterServiceConfig{Gateway: gateway})
+	svc, err := NewStarterService(StarterServiceConfig{Gateway: gateway})
+	if err != nil {
+		t.Fatalf("NewStarterService() error = %v", err)
+	}
 
 	result, err := svc.LaunchStarter(context.Background(), "  starter:lantern  ", LaunchStarterInput{AIAgentID: "agent-1"})
 	if err != nil {
@@ -90,9 +99,12 @@ func TestStarterServiceLaunchTrimsKeyAndDelegates(t *testing.T) {
 func TestStarterServiceLaunchRejectsEmptyKey(t *testing.T) {
 	t.Parallel()
 
-	svc := NewStarterService(StarterServiceConfig{Gateway: &starterGatewayStub{}})
+	svc, err := NewStarterService(StarterServiceConfig{Gateway: &starterGatewayStub{}})
+	if err != nil {
+		t.Fatalf("NewStarterService() error = %v", err)
+	}
 
-	_, err := svc.LaunchStarter(context.Background(), "", LaunchStarterInput{AIAgentID: "agent-1"})
+	_, err = svc.LaunchStarter(context.Background(), "", LaunchStarterInput{AIAgentID: "agent-1"})
 	if err == nil {
 		t.Fatal("expected LaunchStarter() error")
 	}

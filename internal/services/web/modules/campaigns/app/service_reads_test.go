@@ -128,12 +128,12 @@ func TestCampaignWorkspaceReturnsGatewayValues(t *testing.T) {
 		ID:               "c-1",
 		Name:             "The Guild",
 		Theme:            "Storm coast",
-		System:           "Daggerheart",
-		GMMode:           "AI",
-		Status:           "Active",
-		Locale:           "English (US)",
-		Intent:           "Standard",
-		AccessPolicy:     "Public",
+		System:           "daggerheart",
+		GMMode:           "ai",
+		Status:           "active",
+		Locale:           "en_us",
+		Intent:           "standard",
+		AccessPolicy:     "public",
 		ParticipantCount: "4",
 		CharacterCount:   "1",
 		CoverImageURL:    "https://cdn.example.com/covers/the-guild.png",
@@ -149,23 +149,23 @@ func TestCampaignWorkspaceReturnsGatewayValues(t *testing.T) {
 	if workspace.Theme != "Storm coast" {
 		t.Fatalf("workspace.Theme = %q, want %q", workspace.Theme, "Storm coast")
 	}
-	if workspace.System != "Daggerheart" {
-		t.Fatalf("workspace.System = %q, want %q", workspace.System, "Daggerheart")
+	if workspace.System != "daggerheart" {
+		t.Fatalf("workspace.System = %q, want %q", workspace.System, "daggerheart")
 	}
-	if workspace.GMMode != "AI" {
-		t.Fatalf("workspace.GMMode = %q, want %q", workspace.GMMode, "AI")
+	if workspace.GMMode != "ai" {
+		t.Fatalf("workspace.GMMode = %q, want %q", workspace.GMMode, "ai")
 	}
-	if workspace.Status != "Active" {
-		t.Fatalf("workspace.Status = %q, want %q", workspace.Status, "Active")
+	if workspace.Status != "active" {
+		t.Fatalf("workspace.Status = %q, want %q", workspace.Status, "active")
 	}
-	if workspace.Locale != "English (US)" {
-		t.Fatalf("workspace.Locale = %q, want %q", workspace.Locale, "English (US)")
+	if workspace.Locale != "en_us" {
+		t.Fatalf("workspace.Locale = %q, want %q", workspace.Locale, "en_us")
 	}
-	if workspace.Intent != "Standard" {
-		t.Fatalf("workspace.Intent = %q, want %q", workspace.Intent, "Standard")
+	if workspace.Intent != "standard" {
+		t.Fatalf("workspace.Intent = %q, want %q", workspace.Intent, "standard")
 	}
-	if workspace.AccessPolicy != "Public" {
-		t.Fatalf("workspace.AccessPolicy = %q, want %q", workspace.AccessPolicy, "Public")
+	if workspace.AccessPolicy != "public" {
+		t.Fatalf("workspace.AccessPolicy = %q, want %q", workspace.AccessPolicy, "public")
 	}
 	if workspace.ParticipantCount != "4" {
 		t.Fatalf("workspace.ParticipantCount = %q, want %q", workspace.ParticipantCount, "4")
@@ -198,17 +198,17 @@ func TestCampaignParticipantsSortByName(t *testing.T) {
 		{
 			ID:             "p-z",
 			Name:           "  Zara  ",
-			Role:           "Player",
-			CampaignAccess: "Member",
-			Controller:     "Human",
+			Role:           "player",
+			CampaignAccess: "member",
+			Controller:     "human",
 			AvatarURL:      "/static/avatars/zara.png",
 		},
 		{
 			ID:             "p-a",
 			Name:           "Aria",
-			Role:           "GM",
-			CampaignAccess: "Owner",
-			Controller:     "AI",
+			Role:           "gm",
+			CampaignAccess: "owner",
+			Controller:     "ai",
 			AvatarURL:      "/static/avatars/aria.png",
 		},
 	}})
@@ -223,7 +223,7 @@ func TestCampaignParticipantsSortByName(t *testing.T) {
 	if participants[0].Name != "Aria" || participants[1].Name != "Zara" {
 		t.Fatalf("participant order = [%s, %s], want [Aria, Zara]", participants[0].Name, participants[1].Name)
 	}
-	if participants[0].Role != "GM" || participants[0].CampaignAccess != "Owner" || participants[0].Controller != "AI" {
+	if participants[0].Role != "gm" || participants[0].CampaignAccess != "owner" || participants[0].Controller != "ai" {
 		t.Fatalf("participant metadata = %#v, want role/access/controller labels", participants[0])
 	}
 }
@@ -233,8 +233,8 @@ func TestCampaignParticipantsHydratesEditabilityFromBatchAuthorization(t *testin
 
 	gateway := &campaignGatewayStub{
 		campaignParticipants: []CampaignParticipant{
-			{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner"},
-			{ID: "p-b", Name: "Bram", Role: "Player", CampaignAccess: "Member"},
+			{ID: "p-a", Name: "Aria", Role: "gm", CampaignAccess: "owner"},
+			{ID: "p-b", Name: "Bram", Role: "player", CampaignAccess: "member"},
 		},
 		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "p-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
@@ -285,12 +285,12 @@ func TestCampaignParticipantEditorLoadsAccessOptions(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "Human"},
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "human"},
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-a",
 			Name:           "Aria",
-			Role:           "GM",
-			CampaignAccess: "Owner",
+			Role:           "gm",
+			CampaignAccess: "owner",
 			Pronouns:       "she/her",
 		},
 		authorizationDecision: AuthorizationDecision{
@@ -328,7 +328,7 @@ func TestCampaignParticipantCreatorLoadsDefaultsAndAccessOptions(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "Human"},
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "human"},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
 			Allowed:   true,
@@ -366,7 +366,7 @@ func TestCampaignParticipantCreatorDisablesGMRoleForAIGMCampaigns(t *testing.T) 
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "AI"},
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "ai"},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
 			Allowed:   true,
@@ -387,13 +387,13 @@ func TestCampaignParticipantEditorLocksAIInvariantFields(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "AI"},
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "ai"},
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-ai",
 			Name:           "Caretaker",
-			Role:           "Player",
-			CampaignAccess: "Owner",
-			Controller:     "AI",
+			Role:           "player",
+			CampaignAccess: "owner",
+			Controller:     "ai",
 		},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
@@ -412,11 +412,11 @@ func TestCampaignParticipantEditorLocksAIInvariantFields(t *testing.T) {
 	if !editor.AccessReadOnly {
 		t.Fatalf("editor.AccessReadOnly = %v, want true", editor.AccessReadOnly)
 	}
-	if got := editor.Participant.Role; got != "GM" {
-		t.Fatalf("editor.Participant.Role = %q, want %q", got, "GM")
+	if got := editor.Participant.Role; got != "gm" {
+		t.Fatalf("editor.Participant.Role = %q, want %q", got, "gm")
 	}
-	if got := editor.Participant.CampaignAccess; got != "Member" {
-		t.Fatalf("editor.Participant.CampaignAccess = %q, want %q", got, "Member")
+	if got := editor.Participant.CampaignAccess; got != "member" {
+		t.Fatalf("editor.Participant.CampaignAccess = %q, want %q", got, "member")
 	}
 	if len(editor.AccessOptions) != 1 || editor.AccessOptions[0].Value != "member" {
 		t.Fatalf("editor.AccessOptions = %#v, want single member option", editor.AccessOptions)
@@ -427,13 +427,13 @@ func TestCampaignParticipantEditorDisablesGMRoleForHumanSeatsInAIGMCampaigns(t *
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "AI"},
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "ai"},
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-human",
 			Name:           "Aria",
-			Role:           "GM",
-			CampaignAccess: "Member",
-			Controller:     "Human",
+			Role:           "gm",
+			CampaignAccess: "member",
+			Controller:     "human",
 		},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
@@ -465,12 +465,12 @@ func TestCampaignAIBindingSettingsLoadsOwnerOptionsAndPreservesCurrentBinding(t 
 		authorizationDecision: AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,
-			ActorCampaignAccess: "Owner",
+			ActorCampaignAccess: "owner",
 		},
 		campaignParticipants: []CampaignParticipant{{
 			ID:             "p-owner",
 			UserID:         "owner-user-1",
-			CampaignAccess: "Owner",
+			CampaignAccess: "owner",
 		}},
 	}
 	svc := newService(gateway)
@@ -496,7 +496,7 @@ func TestCampaignAIBindingSummaryFallsBackToParticipantAccessWhenAuthzOmitsActor
 		campaignParticipants: []CampaignParticipant{{
 			ID:             "p-owner",
 			UserID:         "user-1",
-			CampaignAccess: "Owner",
+			CampaignAccess: "owner",
 		}},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated: true,
@@ -505,7 +505,7 @@ func TestCampaignAIBindingSummaryFallsBackToParticipantAccessWhenAuthzOmitsActor
 	}
 	svc := newService(gateway)
 
-	summary, err := svc.campaignAIBindingSummary(contextWithResolvedUserID("user-1"), "c-1", "", "AI")
+	summary, err := svc.campaignAIBindingSummary(contextWithResolvedUserID("user-1"), "c-1", "", "ai")
 	if err != nil {
 		t.Fatalf("campaignAIBindingSummary() error = %v", err)
 	}
@@ -525,7 +525,7 @@ func TestCampaignAIBindingSettingsMarksUnavailableWithoutFailingPage(t *testing.
 		authorizationDecision: AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,
-			ActorCampaignAccess: "Owner",
+			ActorCampaignAccess: "owner",
 		},
 	}
 	svc := newService(gateway)
@@ -546,7 +546,7 @@ func TestCampaignParticipantEditorDeniesWhenManageParticipantForbidden(t *testin
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignParticipant: CampaignParticipant{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner"},
+		campaignParticipant: CampaignParticipant{ID: "p-a", Name: "Aria", Role: "gm", CampaignAccess: "owner"},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated:  true,
 			Allowed:    false,
@@ -568,13 +568,13 @@ func TestCampaignParticipantEditorAllowsSelfOwnedParticipant(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "Human"},
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "human"},
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-a",
 			UserID:         "user-1",
 			Name:           "Aria",
-			Role:           "Player",
-			CampaignAccess: "Member",
+			Role:           "player",
+			CampaignAccess: "member",
 			Pronouns:       "she/her",
 		},
 		authorizationDecision: AuthorizationDecision{
@@ -607,14 +607,14 @@ func TestCampaignCharactersSortByName(t *testing.T) {
 		{
 			ID:         "ch-z",
 			Name:       "  Zara  ",
-			Kind:       "NPC",
+			Kind:       "npc",
 			Controller: "Moss",
 			AvatarURL:  "/static/avatars/zara.png",
 		},
 		{
 			ID:         "ch-a",
 			Name:       "Aria",
-			Kind:       "PC",
+			Kind:       "pc",
 			Controller: "Ariadne",
 			AvatarURL:  "/static/avatars/aria.png",
 		},
@@ -630,7 +630,7 @@ func TestCampaignCharactersSortByName(t *testing.T) {
 	if characters[0].Name != "Aria" || characters[1].Name != "Zara" {
 		t.Fatalf("character order = [%s, %s], want [Aria, Zara]", characters[0].Name, characters[1].Name)
 	}
-	if characters[0].Kind != "PC" || characters[0].Controller != "Ariadne" {
+	if characters[0].Kind != "pc" || characters[0].Controller != "Ariadne" {
 		t.Fatalf("character metadata = %#v, want kind/controller labels", characters[0])
 	}
 }
@@ -640,8 +640,8 @@ func TestCampaignCharactersHydratesEditabilityFromBatchAuthorization(t *testing.
 
 	gateway := &campaignGatewayStub{
 		campaignCharacters: []CampaignCharacter{
-			{ID: "ch-z", Name: "Zara", Kind: "NPC", Controller: "Moss"},
-			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"},
+			{ID: "ch-z", Name: "Zara", Kind: "npc", Controller: "Moss"},
+			{ID: "ch-a", Name: "Aria", Kind: "pc", Controller: "Ariadne"},
 		},
 		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
@@ -693,8 +693,8 @@ func TestCampaignCharactersHydratesEditabilityForDuplicateCharacterIDs(t *testin
 
 	gateway := &campaignGatewayStub{
 		campaignCharacters: []CampaignCharacter{
-			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"},
-			{ID: "ch-a", Name: "Aria Clone", Kind: "PC", Controller: "Ariadne"},
+			{ID: "ch-a", Name: "Aria", Kind: "pc", Controller: "Ariadne"},
+			{ID: "ch-a", Name: "Aria Clone", Kind: "pc", Controller: "Ariadne"},
 		},
 		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
@@ -729,7 +729,7 @@ func TestCampaignCharactersFailClosedWhenBatchAuthorizationErrors(t *testing.T) 
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
-		campaignCharacters: []CampaignCharacter{{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"}},
+		campaignCharacters: []CampaignCharacter{{ID: "ch-a", Name: "Aria", Kind: "pc", Controller: "Ariadne"}},
 		batchAuthorizationErr: apperrors.E(
 			apperrors.KindUnavailable,
 			"authorization unavailable",
@@ -882,8 +882,8 @@ func TestCampaignCharacterControlResolvesViewerActionsAndManagerOptions(t *testi
 
 	svc := newService(&campaignGatewayStub{
 		campaignParticipants: []CampaignParticipant{
-			{ID: "p-1", UserID: "user-1", Name: "Ariadne", CampaignAccess: "Manager"},
-			{ID: "p-2", UserID: "user-2", Name: "Moss", CampaignAccess: "Member"},
+			{ID: "p-1", UserID: "user-1", Name: "Ariadne", CampaignAccess: "manager"},
+			{ID: "p-2", UserID: "user-2", Name: "Moss", CampaignAccess: "member"},
 		},
 		campaignCharacters: []CampaignCharacter{{
 			ID:         "char-1",

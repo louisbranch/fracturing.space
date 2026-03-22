@@ -1,3 +1,25 @@
+// Package weberror provides localized error rendering for web transport.
+//
+// Choose the writer that matches the route's authentication context:
+//
+//   - WriteModuleError: protected module routes that render inside the
+//     authenticated app shell. Requires a principal.PageResolver for viewer
+//     and locale resolution. Use this from module handlers.
+//
+//   - WriteAppError: protected routes where only the HTTP status code is
+//     known and no domain error is available. Same app-shell chrome as
+//     WriteModuleError but without a rich user-safe message.
+//
+//   - WritePublicError: public routes outside the authenticated app shell
+//     (e.g. login, invite accept, profile). Renders with public page chrome
+//     and does not require a PageResolver.
+//
+//   - WritePublicAppError: public routes where only the HTTP status code is
+//     known (no domain error). Same public chrome as WritePublicError.
+//
+// All writers resolve locale state via principal.ResolveLocalizedPage and
+// fall back through the error message cascade: i18n key → rich message →
+// HTTP status text.
 package weberror
 
 import (

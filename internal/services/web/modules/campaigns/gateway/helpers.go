@@ -13,83 +13,83 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-// campaignSystemLabel centralizes this web behavior in one helper seam.
+// campaignSystemLabel returns a stable lowercase key for render-layer i18n resolution.
 func campaignSystemLabel(system commonv1.GameSystem) string {
 	switch system {
 	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
-		return "Daggerheart"
+		return "daggerheart"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// campaignGMModeLabel centralizes this web behavior in one helper seam.
+// campaignGMModeLabel returns a stable lowercase key for render-layer i18n resolution.
 func campaignGMModeLabel(mode statev1.GmMode) string {
 	switch mode {
 	case statev1.GmMode_HUMAN:
-		return "Human"
+		return "human"
 	case statev1.GmMode_AI:
-		return "AI"
+		return "ai"
 	case statev1.GmMode_HYBRID:
-		return "Hybrid"
+		return "hybrid"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// campaignStatusLabel centralizes this web behavior in one helper seam.
+// campaignStatusLabel returns a stable lowercase key for render-layer i18n resolution.
 func campaignStatusLabel(status statev1.CampaignStatus) string {
 	switch status {
 	case statev1.CampaignStatus_DRAFT:
-		return "Draft"
+		return "draft"
 	case statev1.CampaignStatus_ACTIVE:
-		return "Active"
+		return "active"
 	case statev1.CampaignStatus_COMPLETED:
-		return "Completed"
+		return "completed"
 	case statev1.CampaignStatus_ARCHIVED:
-		return "Archived"
+		return "archived"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// campaignLocaleLabel centralizes this web behavior in one helper seam.
+// campaignLocaleLabel returns a stable lowercase key for render-layer i18n resolution.
 func campaignLocaleLabel(locale commonv1.Locale) string {
 	switch locale {
 	case commonv1.Locale_LOCALE_EN_US:
-		return "English (US)"
+		return "en_us"
 	case commonv1.Locale_LOCALE_PT_BR:
-		return "Portuguese (Brazil)"
+		return "pt_br"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// campaignIntentLabel centralizes this web behavior in one helper seam.
+// campaignIntentLabel returns a stable lowercase key for render-layer i18n resolution.
 func campaignIntentLabel(intent statev1.CampaignIntent) string {
 	switch intent {
 	case statev1.CampaignIntent_STANDARD:
-		return "Standard"
+		return "standard"
 	case statev1.CampaignIntent_STARTER:
-		return "Starter"
+		return "starter"
 	case statev1.CampaignIntent_SANDBOX:
-		return "Sandbox"
+		return "sandbox"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// campaignAccessPolicyLabel centralizes this web behavior in one helper seam.
+// campaignAccessPolicyLabel returns a stable lowercase key for render-layer i18n resolution.
 func campaignAccessPolicyLabel(policy statev1.CampaignAccessPolicy) string {
 	switch policy {
 	case statev1.CampaignAccessPolicy_PRIVATE:
-		return "Private"
+		return "private"
 	case statev1.CampaignAccessPolicy_RESTRICTED:
-		return "Restricted"
+		return "restricted"
 	case statev1.CampaignAccessPolicy_PUBLIC:
-		return "Public"
+		return "public"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
@@ -110,41 +110,41 @@ func participantDisplayName(participant *statev1.Participant) string {
 	return "Unknown participant"
 }
 
-// participantRoleLabel centralizes this web behavior in one helper seam.
+// participantRoleLabel returns a stable lowercase key for render-layer i18n resolution.
 func participantRoleLabel(role statev1.ParticipantRole) string {
 	switch role {
 	case statev1.ParticipantRole_GM:
-		return "GM"
+		return "gm"
 	case statev1.ParticipantRole_PLAYER:
-		return "Player"
+		return "player"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// participantCampaignAccessLabel centralizes this web behavior in one helper seam.
+// participantCampaignAccessLabel returns a stable lowercase key for render-layer i18n resolution.
 func participantCampaignAccessLabel(access statev1.CampaignAccess) string {
 	switch access {
 	case statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER:
-		return "Member"
+		return "member"
 	case statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER:
-		return "Manager"
+		return "manager"
 	case statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER:
-		return "Owner"
+		return "owner"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// participantControllerLabel centralizes this web behavior in one helper seam.
+// participantControllerLabel returns a stable lowercase key for render-layer i18n resolution.
 func participantControllerLabel(controller statev1.Controller) string {
 	switch controller {
 	case statev1.Controller_CONTROLLER_HUMAN:
-		return "Human"
+		return "human"
 	case statev1.Controller_CONTROLLER_AI:
-		return "AI"
+		return "ai"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
@@ -162,27 +162,27 @@ func characterDisplayName(character *statev1.Character) string {
 	return "Unknown character"
 }
 
-// characterKindLabel centralizes this web behavior in one helper seam.
+// characterKindLabel returns a stable lowercase key for render-layer i18n resolution.
 func characterKindLabel(kind statev1.CharacterKind) string {
 	switch kind {
 	case statev1.CharacterKind_PC:
-		return "PC"
+		return "pc"
 	case statev1.CharacterKind_NPC:
-		return "NPC"
+		return "npc"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 
-// sessionStatusLabel centralizes this web behavior in one helper seam.
+// sessionStatusLabel returns a stable lowercase key for render-layer i18n resolution.
 func sessionStatusLabel(status statev1.SessionStatus) string {
 	switch status {
 	case statev1.SessionStatus_SESSION_ACTIVE:
-		return "Active"
+		return "active"
 	case statev1.SessionStatus_SESSION_ENDED:
-		return "Ended"
+		return "ended"
 	default:
-		return "Unspecified"
+		return "unspecified"
 	}
 }
 

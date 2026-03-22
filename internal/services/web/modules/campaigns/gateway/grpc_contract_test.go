@@ -163,10 +163,10 @@ func TestListCampaignsAndWorkspaceMapping(t *testing.T) {
 	if workspace.Name != "c1" {
 		t.Fatalf("workspace.Name = %q, want id fallback", workspace.Name)
 	}
-	if workspace.System != "Daggerheart" || workspace.GMMode != "Hybrid" || workspace.Status != "Active" {
+	if workspace.System != "daggerheart" || workspace.GMMode != "hybrid" || workspace.Status != "active" {
 		t.Fatalf("workspace labels = %#v", workspace)
 	}
-	if workspace.Locale != "Portuguese (Brazil)" || workspace.Intent != "Standard" || workspace.AccessPolicy != "Private" {
+	if workspace.Locale != "pt_br" || workspace.Intent != "standard" || workspace.AccessPolicy != "private" {
 		t.Fatalf("workspace labels = %#v", workspace)
 	}
 
@@ -221,7 +221,7 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	if err != nil {
 		t.Fatalf("CampaignParticipants() error = %v", err)
 	}
-	if len(participants) != 1 || participants[0].Name != "Lead" || participants[0].Role != "GM" || participants[0].CampaignAccess != "Owner" {
+	if len(participants) != 1 || participants[0].Name != "Lead" || participants[0].Role != "gm" || participants[0].CampaignAccess != "owner" {
 		t.Fatalf("participants = %#v", participants)
 	}
 
@@ -229,7 +229,7 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	if err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}
-	if len(characters) != 1 || characters[0].Controller != "Lead" || characters[0].Kind != "PC" {
+	if len(characters) != 1 || characters[0].Controller != "Lead" || characters[0].Kind != "pc" {
 		t.Fatalf("characters = %#v", characters)
 	}
 
@@ -237,7 +237,7 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	if err != nil {
 		t.Fatalf("CampaignSessions() error = %v", err)
 	}
-	if len(sessions) != 1 || sessions[0].Status != "Active" {
+	if len(sessions) != 1 || sessions[0].Status != "active" {
 		t.Fatalf("sessions = %#v", sessions)
 	}
 
@@ -589,7 +589,7 @@ func TestCampaignParticipantMapsSingleResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CampaignParticipant() error = %v", err)
 	}
-	if participant.ID != "p1" || participant.Name != "Lead" || participant.Role != "GM" || participant.CampaignAccess != "Owner" {
+	if participant.ID != "p1" || participant.Name != "Lead" || participant.Role != "gm" || participant.CampaignAccess != "owner" {
 		t.Fatalf("participant = %#v", participant)
 	}
 }
@@ -963,68 +963,68 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 	if !decision.Evaluated || !decision.Allowed || decision.ReasonCode != "AUTHZ_ALLOW_RESOURCE_OWNER" {
 		t.Fatalf("decision = %#v", decision)
 	}
-	if decision.ActorCampaignAccess != "Owner" {
-		t.Fatalf("decision.ActorCampaignAccess = %q, want %q", decision.ActorCampaignAccess, "Owner")
+	if decision.ActorCampaignAccess != "owner" {
+		t.Fatalf("decision.ActorCampaignAccess = %q, want %q", decision.ActorCampaignAccess, "owner")
 	}
 
-	if got := campaignSystemLabel(commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED); got != "Unspecified" {
+	if got := campaignSystemLabel(commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("campaignSystemLabel() = %q", got)
 	}
-	if got := campaignGMModeLabel(statev1.GmMode_HUMAN); got != "Human" {
+	if got := campaignGMModeLabel(statev1.GmMode_HUMAN); got != "human" {
 		t.Fatalf("campaignGMModeLabel() = %q", got)
 	}
-	if got := campaignGMModeLabel(statev1.GmMode_AI); got != "AI" {
+	if got := campaignGMModeLabel(statev1.GmMode_AI); got != "ai" {
 		t.Fatalf("campaignGMModeLabel() = %q", got)
 	}
-	if got := campaignGMModeLabel(statev1.GmMode_GM_MODE_UNSPECIFIED); got != "Unspecified" {
+	if got := campaignGMModeLabel(statev1.GmMode_GM_MODE_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("campaignGMModeLabel() unspecified = %q", got)
 	}
-	if got := campaignStatusLabel(statev1.CampaignStatus_ARCHIVED); got != "Archived" {
+	if got := campaignStatusLabel(statev1.CampaignStatus_ARCHIVED); got != "archived" {
 		t.Fatalf("campaignStatusLabel() = %q", got)
 	}
-	if got := campaignStatusLabel(statev1.CampaignStatus_DRAFT); got != "Draft" {
+	if got := campaignStatusLabel(statev1.CampaignStatus_DRAFT); got != "draft" {
 		t.Fatalf("campaignStatusLabel(draft) = %q", got)
 	}
-	if got := campaignStatusLabel(statev1.CampaignStatus_ACTIVE); got != "Active" {
+	if got := campaignStatusLabel(statev1.CampaignStatus_ACTIVE); got != "active" {
 		t.Fatalf("campaignStatusLabel(active) = %q", got)
 	}
-	if got := campaignStatusLabel(statev1.CampaignStatus_COMPLETED); got != "Completed" {
+	if got := campaignStatusLabel(statev1.CampaignStatus_COMPLETED); got != "completed" {
 		t.Fatalf("campaignStatusLabel(completed) = %q", got)
 	}
-	if got := campaignStatusLabel(statev1.CampaignStatus_CAMPAIGN_STATUS_UNSPECIFIED); got != "Unspecified" {
+	if got := campaignStatusLabel(statev1.CampaignStatus_CAMPAIGN_STATUS_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("campaignStatusLabel(unspecified) = %q", got)
 	}
-	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_EN_US); got != "English (US)" {
+	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_EN_US); got != "en_us" {
 		t.Fatalf("campaignLocaleLabel() = %q", got)
 	}
-	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_PT_BR); got != "Portuguese (Brazil)" {
+	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_PT_BR); got != "pt_br" {
 		t.Fatalf("campaignLocaleLabel(pt-BR) = %q", got)
 	}
-	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_UNSPECIFIED); got != "Unspecified" {
+	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("campaignLocaleLabel(unspecified) = %q", got)
 	}
-	if got := campaignIntentLabel(statev1.CampaignIntent_STARTER); got != "Starter" {
+	if got := campaignIntentLabel(statev1.CampaignIntent_STARTER); got != "starter" {
 		t.Fatalf("campaignIntentLabel() = %q", got)
 	}
-	if got := campaignIntentLabel(statev1.CampaignIntent_STANDARD); got != "Standard" {
+	if got := campaignIntentLabel(statev1.CampaignIntent_STANDARD); got != "standard" {
 		t.Fatalf("campaignIntentLabel(standard) = %q", got)
 	}
-	if got := campaignIntentLabel(statev1.CampaignIntent_SANDBOX); got != "Sandbox" {
+	if got := campaignIntentLabel(statev1.CampaignIntent_SANDBOX); got != "sandbox" {
 		t.Fatalf("campaignIntentLabel(sandbox) = %q", got)
 	}
-	if got := campaignIntentLabel(statev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED); got != "Unspecified" {
+	if got := campaignIntentLabel(statev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("campaignIntentLabel(unspecified) = %q", got)
 	}
-	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_RESTRICTED); got != "Restricted" {
+	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_RESTRICTED); got != "restricted" {
 		t.Fatalf("campaignAccessPolicyLabel() = %q", got)
 	}
-	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_PRIVATE); got != "Private" {
+	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_PRIVATE); got != "private" {
 		t.Fatalf("campaignAccessPolicyLabel(private) = %q", got)
 	}
-	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_PUBLIC); got != "Public" {
+	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_PUBLIC); got != "public" {
 		t.Fatalf("campaignAccessPolicyLabel(public) = %q", got)
 	}
-	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED); got != "Unspecified" {
+	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("campaignAccessPolicyLabel(unspecified) = %q", got)
 	}
 	if got := participantDisplayName(nil); got != "Unknown participant" {
@@ -1039,34 +1039,34 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 	if got := participantDisplayName(&statev1.Participant{Id: " p-1 "}); got != "p-1" {
 		t.Fatalf("participantDisplayName(id) = %q", got)
 	}
-	if got := participantRoleLabel(statev1.ParticipantRole_PLAYER); got != "Player" {
+	if got := participantRoleLabel(statev1.ParticipantRole_PLAYER); got != "player" {
 		t.Fatalf("participantRoleLabel() = %q", got)
 	}
-	if got := participantRoleLabel(statev1.ParticipantRole_GM); got != "GM" {
+	if got := participantRoleLabel(statev1.ParticipantRole_GM); got != "gm" {
 		t.Fatalf("participantRoleLabel(gm) = %q", got)
 	}
-	if got := participantRoleLabel(statev1.ParticipantRole(99)); got != "Unspecified" {
+	if got := participantRoleLabel(statev1.ParticipantRole(99)); got != "unspecified" {
 		t.Fatalf("participantRoleLabel(unspecified) = %q", got)
 	}
-	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER); got != "Member" {
+	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER); got != "member" {
 		t.Fatalf("participantCampaignAccessLabel() = %q", got)
 	}
-	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER); got != "Manager" {
+	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER); got != "manager" {
 		t.Fatalf("participantCampaignAccessLabel(manager) = %q", got)
 	}
-	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER); got != "Owner" {
+	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER); got != "owner" {
 		t.Fatalf("participantCampaignAccessLabel(owner) = %q", got)
 	}
-	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED); got != "Unspecified" {
+	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("participantCampaignAccessLabel(unspecified) = %q", got)
 	}
-	if got := participantControllerLabel(statev1.Controller_CONTROLLER_AI); got != "AI" {
+	if got := participantControllerLabel(statev1.Controller_CONTROLLER_AI); got != "ai" {
 		t.Fatalf("participantControllerLabel() = %q", got)
 	}
-	if got := participantControllerLabel(statev1.Controller_CONTROLLER_HUMAN); got != "Human" {
+	if got := participantControllerLabel(statev1.Controller_CONTROLLER_HUMAN); got != "human" {
 		t.Fatalf("participantControllerLabel(human) = %q", got)
 	}
-	if got := participantControllerLabel(statev1.Controller_CONTROLLER_UNSPECIFIED); got != "Unspecified" {
+	if got := participantControllerLabel(statev1.Controller_CONTROLLER_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("participantControllerLabel(unspecified) = %q", got)
 	}
 	if got := characterDisplayName(nil); got != "Unknown character" {
@@ -1078,22 +1078,22 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 	if got := characterDisplayName(&statev1.Character{Id: " char-1 "}); got != "char-1" {
 		t.Fatalf("characterDisplayName(id) = %q", got)
 	}
-	if got := characterKindLabel(statev1.CharacterKind_NPC); got != "NPC" {
+	if got := characterKindLabel(statev1.CharacterKind_NPC); got != "npc" {
 		t.Fatalf("characterKindLabel() = %q", got)
 	}
-	if got := characterKindLabel(statev1.CharacterKind_PC); got != "PC" {
+	if got := characterKindLabel(statev1.CharacterKind_PC); got != "pc" {
 		t.Fatalf("characterKindLabel(pc) = %q", got)
 	}
-	if got := characterKindLabel(statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED); got != "Unspecified" {
+	if got := characterKindLabel(statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("characterKindLabel(unspecified) = %q", got)
 	}
-	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_ENDED); got != "Ended" {
+	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_ENDED); got != "ended" {
 		t.Fatalf("sessionStatusLabel() = %q", got)
 	}
-	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_ACTIVE); got != "Active" {
+	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_ACTIVE); got != "active" {
 		t.Fatalf("sessionStatusLabel(active) = %q", got)
 	}
-	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_STATUS_UNSPECIFIED); got != "Unspecified" {
+	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_STATUS_UNSPECIFIED); got != "unspecified" {
 		t.Fatalf("sessionStatusLabel(unspecified) = %q", got)
 	}
 	if got := inviteStatusLabel(invitev1.InviteStatus_CLAIMED); got != "Claimed" {

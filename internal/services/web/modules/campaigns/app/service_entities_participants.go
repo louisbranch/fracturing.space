@@ -123,8 +123,8 @@ func (s participantReadService) campaignParticipantEditor(ctx context.Context, c
 			AccessReadOnly: true,
 		}
 		if participantControllerCanonical(participant.Controller) == participantControllerAI {
-			editor.Participant.Role = "GM"
-			editor.Participant.CampaignAccess = "Member"
+			editor.Participant.Role = participantRoleGMValue
+			editor.Participant.CampaignAccess = participantAccessMember
 			editor.AccessOptions = []CampaignParticipantAccessOption{{Value: participantAccessMember, Allowed: true}}
 		}
 		return editor, nil
@@ -162,8 +162,8 @@ func (s participantReadService) campaignParticipantEditor(ctx context.Context, c
 		AccessReadOnly: accessReadOnly,
 	}
 	if participantControllerCanonical(participant.Controller) == participantControllerAI {
-		editor.Participant.Role = "GM"
-		editor.Participant.CampaignAccess = "Member"
+		editor.Participant.Role = participantRoleGMValue
+		editor.Participant.CampaignAccess = participantAccessMember
 		editor.RoleReadOnly = true
 		editor.AccessReadOnly = true
 		editor.AccessOptions = []CampaignParticipantAccessOption{{Value: participantAccessMember, Allowed: true}}
