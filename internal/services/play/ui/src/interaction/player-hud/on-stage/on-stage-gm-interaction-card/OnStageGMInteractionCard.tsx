@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { PlayerHUDStatusPill } from "../../shared/PlayerHUDStatusPill";
 import type { PlayerHUDStatusBadge } from "../../shared/view-models";
-import type { OnStageGMBeatType } from "../shared/contract";
+import type { OnStageGMBeatType, OnStageGMInteractionIllustration } from "../shared/contract";
 import type { OnStageGMInteractionCardProps } from "./contract";
 
 type IconProps = { className?: string };
@@ -29,6 +29,11 @@ const concludedStatus: PlayerHUDStatusBadge = {
   indicator: "none",
   label: "Concluded",
   tooltip: "This interaction is part of the resolved scene history.",
+};
+
+const sizeHintClass: Record<NonNullable<OnStageGMInteractionIllustration["sizeHint"]>, string> = {
+  compact: "max-w-[20%]",
+  wide: "max-w-[40%]",
 };
 
 const beatTextClass = (type: OnStageGMBeatType): string => {
@@ -71,6 +76,8 @@ export function OnStageGMInteractionCard({
     );
   }
 
+  const illustration = interaction.illustration;
+
   return (
     <section aria-label="On-stage GM interaction" className="mx-3 mt-4 min-w-0">
       <article className="min-w-0 rounded-box border border-base-300/70 bg-base-100 px-4 py-4 shadow-sm">
@@ -105,7 +112,19 @@ export function OnStageGMInteractionCard({
           />
         </div>
 
-        <div className="mt-2 min-w-0 space-y-3 text-base-content">
+        <div className="mt-2 min-w-0 overflow-hidden space-y-3 text-base-content">
+          {illustration ? (
+            <figure className={`float-end mb-3 ml-4 ${sizeHintClass[illustration.sizeHint ?? "wide"]}`}>
+              <img
+                src={illustration.imageUrl}
+                alt={illustration.alt}
+                className="w-full rounded-box object-cover"
+              />
+              {illustration.caption ? (
+                <figcaption className="mt-1 text-xs text-base-content/60">{illustration.caption}</figcaption>
+              ) : null}
+            </figure>
+          ) : null}
           {interaction.beats.map((beat, index) => {
             const Icon = beatIcon[beat.type];
             return (
@@ -121,6 +140,7 @@ export function OnStageGMInteractionCard({
               </div>
             );
           })}
+          <div className="clear-both" />
         </div>
       </article>
     </section>

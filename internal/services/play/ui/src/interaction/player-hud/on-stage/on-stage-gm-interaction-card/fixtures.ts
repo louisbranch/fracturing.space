@@ -1,1 +1,1 @@
-export { onStageFixtureCatalog } from "../shared/fixtures";
+export { archerGuardIllustration, lanternVignetteIllustration, onStageFixtureCatalog } from "../shared/fixtures";
