@@ -46,6 +46,7 @@ func campaignMainClass(coverImageURL string) string {
 type campaignPageContext struct {
 	workspace        campaignapp.CampaignWorkspace
 	sessions         []campaignapp.CampaignSession
+	canManageSession bool
 	canManageInvites bool
 	loc              webtemplates.Localizer
 	lang             string
@@ -65,10 +66,12 @@ func (h campaignDetailHandlers) loadCampaignPage(w http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, nil, err
 	}
+	canManageSession := h.pages.authorization.RequireManageSession(ctx, campaignID) == nil
 	canManageInvites := h.pages.authorization.RequireManageInvites(ctx, campaignID) == nil
 	return ctx, &campaignPageContext{
 		workspace:        workspace,
 		sessions:         sessions,
+		canManageSession: canManageSession,
 		canManageInvites: canManageInvites,
 		loc:              loc,
 		lang:             lang,
@@ -120,8 +123,19 @@ func (p *campaignPageContext) title(campaignID string) string {
 
 // header builds the shared campaign workspace page header.
 func (p *campaignPageContext) header(campaignID string, breadcrumbs []sharedtemplates.BreadcrumbItem) *webtemplates.AppMainHeader {
+	return p.headerWithAction(campaignID, breadcrumbs, nil)
+}
+
+// headerWithAction builds the shared campaign workspace page header with an
+// optional primary action.
+func (p *campaignPageContext) headerWithAction(
+	campaignID string,
+	breadcrumbs []sharedtemplates.BreadcrumbItem,
+	action *webtemplates.AppMainHeaderAction,
+) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{
 		Title:       p.title(campaignID),
+		Action:      action,
 		Breadcrumbs: breadcrumbs,
 	}
 }

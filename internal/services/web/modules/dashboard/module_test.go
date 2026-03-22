@@ -408,6 +408,54 @@ func TestMountRendersCampaignStartNudgesBlock(t *testing.T) {
 	}
 }
 
+func TestMountRendersStartSessionNudgeToSessionCreatePage(t *testing.T) {
+	t.Parallel()
+
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		CampaignStartNudges: &userhubv1.CampaignStartNudgeSummary{
+			Available: true,
+			Nudges: []*userhubv1.CampaignStartNudge{{
+				CampaignId:     "camp-1",
+				CampaignName:   "Sunfall",
+				ActionKind:     userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_START_SESSION,
+				BlockerCode:    "START_SESSION_STALE",
+				BlockerMessage: "Start a new session for this campaign.",
+			}},
+		},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	gateway := dashboardgateway.NewGRPCGateway(client)
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+	})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, routepath.AppCampaignSessionCreate("camp-1")) {
+		t.Fatalf("body = %q, want session create CTA", body)
+	}
+	if !strings.Contains(body, "Start session") {
+		t.Fatalf("body = %q, want start-session CTA label", body)
+	}
+	if !strings.Contains(body, "This campaign is ready for a new session.") {
+		t.Fatalf("body = %q, want localized start-session message", body)
+	}
+}
+
 type dashboardUserHubClientStub struct {
 	resp *userhubv1.GetDashboardResponse
 	err  error

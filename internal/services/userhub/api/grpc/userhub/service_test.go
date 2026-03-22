@@ -173,6 +173,15 @@ func TestGetDashboardRejectsNilRequest(t *testing.T) {
 	}
 }
 
+func TestCampaignStartNudgeActionKindToProtoMapsStartSession(t *testing.T) {
+	t.Parallel()
+
+	got := campaignStartNudgeActionKindToProto(domain.CampaignStartNudgeActionStartSession)
+	if got != userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_START_SESSION {
+		t.Fatalf("action kind = %v, want %v", got, userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_START_SESSION)
+	}
+}
+
 type fakeDashboardDomain struct {
 	result    domain.Dashboard
 	err       error

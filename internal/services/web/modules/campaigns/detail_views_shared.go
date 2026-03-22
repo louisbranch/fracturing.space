@@ -17,6 +17,7 @@ func (p *campaignPageContext) baseDetailView(campaignID string) campaignrender.C
 		Intent:           p.workspace.Intent,
 		AccessPolicy:     p.workspace.AccessPolicy,
 		ActionsLocked:    p.outOfGameActionsLocked(),
+		CanManageSession: p.canManageSession,
 		CanManageInvites: p.canManageInvites,
 	}
 }

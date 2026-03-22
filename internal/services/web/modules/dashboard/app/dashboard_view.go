@@ -46,6 +46,8 @@ const (
 	CampaignStartNudgeActionKindInvitePlayer CampaignStartNudgeActionKind = "invite_player"
 	// CampaignStartNudgeActionKindManageParticipants asks the viewer to manage participant seats.
 	CampaignStartNudgeActionKindManageParticipants CampaignStartNudgeActionKind = "manage_participants"
+	// CampaignStartNudgeActionKindStartSession asks the viewer to start a new session.
+	CampaignStartNudgeActionKindStartSession CampaignStartNudgeActionKind = "start_session"
 )
 
 // CampaignStartNudgeItem represents one campaign waiting on the current user.

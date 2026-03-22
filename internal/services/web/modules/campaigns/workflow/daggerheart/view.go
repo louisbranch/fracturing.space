@@ -389,6 +389,8 @@ func mapCreationWeapons(weapons []campaignworkflow.Weapon, cdn imagecdn.ImageCDN
 	return mapped
 }
 
+// groupCreationWeapons preserves the creation-screen weapon section ordering
+// while dropping empty display groups.
 func groupCreationWeapons(weapons []campaignworkflow.CreationWeaponView) []campaignworkflow.CreationWeaponGroupView {
 	if len(weapons) == 0 {
 		return nil

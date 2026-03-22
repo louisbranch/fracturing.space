@@ -156,9 +156,18 @@ func dashboardCampaignStartNudgeURL(entry DashboardCampaignStartNudgeEntry) stri
 		return routepath.AppCampaignInvites(campaignID)
 	case "manage_participants":
 		return routepath.AppCampaignParticipants(campaignID)
+	case "start_session":
+		return routepath.AppCampaignSessionCreate(campaignID)
 	default:
 		return routepath.AppCampaign(campaignID)
 	}
+}
+
+func dashboardCampaignStartNudgeMessage(entry DashboardCampaignStartNudgeEntry, loc Localizer) string {
+	if strings.TrimSpace(entry.ActionKind) == "start_session" {
+		return T(loc, "web.dashboard.campaign_start_nudges.message_start_session")
+	}
+	return entry.Message
 }
 
 func dashboardCampaignStartNudgeCTA(entry DashboardCampaignStartNudgeEntry, loc Localizer) string {
@@ -173,6 +182,8 @@ func dashboardCampaignStartNudgeCTA(entry DashboardCampaignStartNudgeEntry, loc 
 		return T(loc, "web.dashboard.campaign_start_nudges.cta_invite_player")
 	case "manage_participants":
 		return T(loc, "web.dashboard.campaign_start_nudges.cta_manage_participants")
+	case "start_session":
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_start_session")
 	default:
 		return T(loc, "web.dashboard.campaign_start_nudges.cta_view_campaign")
 	}
@@ -211,7 +222,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(dashboardStatusValue(view))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 180, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 191, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -229,7 +240,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.status.degraded.title"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 185, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 196, Col: 84}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -242,7 +253,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.status.degraded.body"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 186, Col: 82}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 197, Col: 82}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -260,7 +271,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.status.unavailable.title"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 188, Col: 87}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 199, Col: 87}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -273,7 +284,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.status.unavailable.body"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 189, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 200, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -297,7 +308,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.profile_pending.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 197, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 208, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -310,7 +321,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.profile_pending.body"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 198, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 209, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -323,7 +334,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var9 templ.SafeURL
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsProfile)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 200, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 211, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -336,7 +347,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppSettingsProfile)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 200, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 211, Col: 84}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -349,7 +360,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.profile_pending.cta"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 200, Col: 213}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 211, Col: 213}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -373,7 +384,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(entry.CampaignName)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 214, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 225, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -386,7 +397,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(entry.ParticipantName)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 215, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 226, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -399,7 +410,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var14 templ.SafeURL
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.PublicInvite(entry.InviteID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 217, Col: 56}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 228, Col: 56}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -423,7 +434,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_start_nudges.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 227, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 238, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -436,7 +447,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_start_nudges.body"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 228, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 239, Col: 87}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -454,7 +465,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var17 string
 				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(entry.CampaignName)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 233, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 244, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 				if templ_7745c5c3_Err != nil {
@@ -465,9 +476,9 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var18 string
-				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Message)
+				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(dashboardCampaignStartNudgeMessage(entry, loc))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 234, Col: 54}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 245, Col: 87}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
@@ -480,7 +491,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var19 templ.SafeURL
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(dashboardCampaignStartNudgeURL(entry))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 236, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 247, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -493,7 +504,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(dashboardCampaignStartNudgeURL(entry))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 236, Col: 104}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 247, Col: 104}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 				if templ_7745c5c3_Err != nil {
@@ -506,7 +517,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(dashboardCampaignStartNudgeCTA(entry, loc))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 236, Col: 248}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 247, Col: 248}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -529,7 +540,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var22 templ.SafeURL
 				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaigns)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 242, Col: 39}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 253, Col: 39}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 				if templ_7745c5c3_Err != nil {
@@ -542,7 +553,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var23 string
 				templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppCampaigns)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 242, Col: 73}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 253, Col: 73}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 				if templ_7745c5c3_Err != nil {
@@ -555,7 +566,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var24 string
 				templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_start_nudges.cta_view_all_campaigns"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 242, Col: 232}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 253, Col: 232}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 				if templ_7745c5c3_Err != nil {
@@ -579,7 +590,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_adventure.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 251, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 262, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -592,7 +603,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_adventure.body"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 252, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 263, Col: 84}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -605,7 +616,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var27 templ.SafeURL
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignsNew)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 254, Col: 41}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 265, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -618,7 +629,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var28 string
 			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppCampaignsNew)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 254, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 265, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 			if templ_7745c5c3_Err != nil {
@@ -631,7 +642,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_adventure.cta"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 254, Col: 210}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 265, Col: 210}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -650,7 +661,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.active_sessions.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 262, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 273, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -663,7 +674,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.active_sessions.body"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 263, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 274, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -681,7 +692,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var32 string
 				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(entry.CampaignName)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 268, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 279, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 				if templ_7745c5c3_Err != nil {
@@ -694,7 +705,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(dashboardSessionName(entry, loc))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 269, Col: 82}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 280, Col: 82}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 				if templ_7745c5c3_Err != nil {
@@ -707,7 +718,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var34 templ.SafeURL
 				templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignGame(entry.CampaignID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 271, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 282, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 				if templ_7745c5c3_Err != nil {
@@ -720,7 +731,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var35 string
 				templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppCampaignGame(entry.CampaignID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 271, Col: 116}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 282, Col: 116}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 				if templ_7745c5c3_Err != nil {
@@ -733,7 +744,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var36 string
 				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.sessions.action_join_game"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 271, Col: 258}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 282, Col: 258}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 				if templ_7745c5c3_Err != nil {
@@ -757,7 +768,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.service_health.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 281, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 292, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -775,7 +786,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var38 string
 				templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.service_health.all_operational"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 283, Col: 86}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 294, Col: 86}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 				if templ_7745c5c3_Err != nil {
@@ -813,7 +824,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var39 string
 					templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 293, Col: 28}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 304, Col: 28}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 					if templ_7745c5c3_Err != nil {
@@ -831,7 +842,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 						var templ_7745c5c3_Var40 string
 						templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.service_health.degraded"))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 295, Col: 84}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/dashboard/page.templ`, Line: 306, Col: 84}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 						if templ_7745c5c3_Err != nil {

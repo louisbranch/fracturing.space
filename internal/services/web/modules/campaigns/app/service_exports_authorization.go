@@ -7,6 +7,11 @@ func (s authorizationService) RequireManageCampaign(ctx context.Context, campaig
 	return s.auth.requireManageCampaign(ctx, campaignID)
 }
 
+// RequireManageSession enforces owner/manager session governance access.
+func (s authorizationService) RequireManageSession(ctx context.Context, campaignID string) error {
+	return s.auth.requirePolicy(ctx, campaignID, policyManageSession)
+}
+
 // RequireManageParticipants enforces owner/manager participant governance access.
 func (s authorizationService) RequireManageParticipants(ctx context.Context, campaignID string) error {
 	return s.auth.requireManageParticipants(ctx, campaignID)

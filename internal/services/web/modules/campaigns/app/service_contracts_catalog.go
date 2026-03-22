@@ -28,6 +28,7 @@ type CampaignConfigurationService interface {
 // CampaignAuthorizationService exposes transport-facing authorization checks.
 type CampaignAuthorizationService interface {
 	RequireManageCampaign(context.Context, string) error
+	RequireManageSession(context.Context, string) error
 	RequireManageParticipants(context.Context, string) error
 	RequireManageInvites(context.Context, string) error
 	RequireMutateCharacters(context.Context, string) error

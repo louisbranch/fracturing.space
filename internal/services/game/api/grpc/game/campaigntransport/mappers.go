@@ -34,6 +34,7 @@ func CampaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 		UpdatedAt:        timestamppb.New(c.UpdatedAt),
 		CompletedAt:      timestampOrNil(c.CompletedAt),
 		ArchivedAt:       timestampOrNil(c.ArchivedAt),
+		LatestSessionAt:  timestampOrNil(c.LatestSessionAt),
 	}
 }
 

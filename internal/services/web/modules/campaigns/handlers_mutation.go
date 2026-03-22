@@ -11,18 +11,19 @@ import (
 
 // --- Mutation route handlers ---
 
-// handleSessionStart starts a campaign session and redirects to the game surface.
-func (h sessionHandlers) handleSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {
-	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_session_start_form", routepath.AppCampaignSessions(campaignID)) {
+// handleSessionCreate starts a campaign session from the dedicated create page.
+func (h sessionHandlers) handleSessionCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
+	redirectURL := routepath.AppCampaignSessionCreate(campaignID)
+	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_session_start_form", redirectURL) {
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
 	if err := h.sessions.mutation.StartSession(ctx, campaignID, parseStartSessionInput(r.Form)); err != nil {
-		h.writeMutationError(w, r, err, "error.web.message.failed_to_start_session", routepath.AppCampaignSessions(campaignID))
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_start_session", redirectURL)
 		return
 	}
 	h.sync.SessionStarted(ctx, userID, campaignID)
-	h.writeMutationSuccess(w, r, "web.campaigns.notice_session_started", routepath.AppCampaignGame(campaignID))
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_session_started", routepath.AppCampaignSessions(campaignID))
 }
 
 // handleSessionEnd handles this route in the module transport layer.

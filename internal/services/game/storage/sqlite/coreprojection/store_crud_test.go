@@ -169,6 +169,14 @@ func TestSessionLifecycle(t *testing.T) {
 		t.Fatalf("expected active session conflict")
 	}
 
+	campaignAfterStart, err := store.Get(context.Background(), "camp-sessions")
+	if err != nil {
+		t.Fatalf("get campaign after start: %v", err)
+	}
+	if campaignAfterStart.LatestSessionAt == nil || !campaignAfterStart.LatestSessionAt.Equal(sess.StartedAt) {
+		t.Fatalf("latest session at after start = %v, want %v", campaignAfterStart.LatestSessionAt, sess.StartedAt)
+	}
+
 	endedAt := now.Add(2 * time.Hour)
 	ended, transitioned, err := store.EndSession(context.Background(), "camp-sessions", sess.ID, endedAt)
 	if err != nil {
@@ -182,6 +190,14 @@ func TestSessionLifecycle(t *testing.T) {
 	}
 	if ended.EndedAt == nil || !ended.EndedAt.Equal(endedAt.UTC()) {
 		t.Fatalf("expected ended timestamp to match")
+	}
+
+	campaignAfterEnd, err := store.Get(context.Background(), "camp-sessions")
+	if err != nil {
+		t.Fatalf("get campaign after end: %v", err)
+	}
+	if campaignAfterEnd.LatestSessionAt == nil || !campaignAfterEnd.LatestSessionAt.Equal(endedAt.UTC()) {
+		t.Fatalf("latest session at after end = %v, want %v", campaignAfterEnd.LatestSessionAt, endedAt.UTC())
 	}
 
 	_, err = store.GetActiveSession(context.Background(), "camp-sessions")

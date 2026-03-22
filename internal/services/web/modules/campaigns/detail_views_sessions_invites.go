@@ -12,10 +12,9 @@ import (
 )
 
 // sessionsView builds the sessions detail view for one campaign.
-func (p *campaignPageContext) sessionsView(campaignID string, readiness campaignapp.CampaignSessionReadiness) campaignrender.SessionsPageView {
+func (p *campaignPageContext) sessionsView(campaignID string) campaignrender.SessionsPageView {
 	view := campaignrender.SessionsPageView{CampaignDetailBaseView: p.baseDetailView(campaignID)}
 	view.Sessions = mapSessionsView(p.sessions)
-	view.SessionReadiness = mapSessionReadinessView(readiness)
 	return view
 }
 
@@ -23,6 +22,21 @@ func (p *campaignPageContext) sessionsView(campaignID string, readiness campaign
 func (p *campaignPageContext) sessionsBreadcrumbs() []sharedtemplates.BreadcrumbItem {
 	return []sharedtemplates.BreadcrumbItem{
 		{Label: webtemplates.T(p.loc, "game.sessions.title")},
+	}
+}
+
+// sessionCreateView builds the session-create detail view for one campaign.
+func (p *campaignPageContext) sessionCreateView(campaignID string, readiness campaignapp.CampaignSessionReadiness) campaignrender.SessionCreatePageView {
+	view := campaignrender.SessionCreatePageView{CampaignDetailBaseView: p.baseDetailView(campaignID)}
+	view.SessionReadiness = mapSessionReadinessView(readiness)
+	return view
+}
+
+// sessionCreateBreadcrumbs returns breadcrumbs for the session-create page.
+func (p *campaignPageContext) sessionCreateBreadcrumbs(campaignID string) []sharedtemplates.BreadcrumbItem {
+	return []sharedtemplates.BreadcrumbItem{
+		{Label: webtemplates.T(p.loc, "game.sessions.title"), URL: routepath.AppCampaignSessions(campaignID)},
+		{Label: webtemplates.T(p.loc, "game.sessions.action_new")},
 	}
 }
 

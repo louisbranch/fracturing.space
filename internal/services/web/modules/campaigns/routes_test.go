@@ -97,8 +97,8 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		{name: "campaign edit post", method: http.MethodPost, path: routepath.AppCampaignEdit("c1"), body: "name=Updated&theme_prompt=Theme&locale=en-US", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaign("c1")},
 		{name: "campaign ai binding get", method: http.MethodGet, path: routepath.AppCampaignAIBinding("c1"), wantStatus: http.StatusForbidden},
 		{name: "campaign ai binding post", method: http.MethodPost, path: routepath.AppCampaignAIBinding("c1"), body: "ai_agent_id=agent-1", wantStatus: http.StatusFound},
-		{name: "campaign session start get resolves session detail route", method: http.MethodGet, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusOK},
-		{name: "campaign session start post", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+One", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaignGame("c1")},
+		{name: "campaign session create get", method: http.MethodGet, path: routepath.AppCampaignSessionCreate("c1"), wantStatus: http.StatusOK},
+		{name: "campaign session create post", method: http.MethodPost, path: routepath.AppCampaignSessionCreate("c1"), body: "name=Session+One", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaignSessions("c1")},
 		{name: "campaign unknown subpath", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/unknown", wantStatus: http.StatusNotFound},
 	}
 
@@ -174,6 +174,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "character control release", method: http.MethodPost, path: routepath.AppCampaignCharacterControlRelease("c1", "char-1"), body: "", wantStatus: http.StatusFound},
 		{name: "character delete", method: http.MethodPost, path: routepath.AppCampaignCharacterDelete("c1", "char-1"), body: "", wantStatus: http.StatusFound},
 		{name: "sessions", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusOK},
+		{name: "session create", method: http.MethodGet, path: routepath.AppCampaignSessionCreate("c1"), wantStatus: http.StatusOK},
 		{name: "session detail", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
 		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
 		{name: "invite search", method: http.MethodPost, path: routepath.AppCampaignInviteSearch("c1"), body: `{"query":"al"}`, wantStatus: http.StatusOK},
@@ -183,7 +184,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "character update", method: http.MethodPost, path: routepath.AppCampaignCharacterEdit("c1", "char-1"), body: "name=Hero&pronouns=they%2Fthem", wantStatus: http.StatusFound},
 		{name: "campaign ai binding", method: http.MethodPost, path: routepath.AppCampaignAIBinding("c1"), body: "ai_agent_id=agent-1", wantStatus: http.StatusFound},
 		{name: "campaign update", method: http.MethodPost, path: routepath.AppCampaignEdit("c1"), body: "name=Updated&theme_prompt=Theme&locale=en-US", wantStatus: http.StatusFound},
-		{name: "session start", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
+		{name: "session create submit", method: http.MethodPost, path: routepath.AppCampaignSessionCreate("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
 		{name: "session end", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), body: "session_id=sess-1", wantStatus: http.StatusFound},
 		{name: "invite create", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&username=alice", wantStatus: http.StatusFound},
 		{name: "invite revoke", method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("c1"), body: "invite_id=inv-1", wantStatus: http.StatusFound},

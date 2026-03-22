@@ -5,7 +5,12 @@ import "github.com/a-h/templ"
 // SessionsPageView carries session-list page state only.
 type SessionsPageView struct {
 	CampaignDetailBaseView
-	Sessions         []SessionView
+	Sessions []SessionView
+}
+
+// SessionCreatePageView carries session-create page state.
+type SessionCreatePageView struct {
+	CampaignDetailBaseView
 	SessionReadiness SessionReadinessView
 }
 
@@ -19,6 +24,11 @@ type SessionDetailPageView struct {
 // SessionsFragment renders the session-list page.
 func SessionsFragment(view SessionsPageView, loc Localizer) templ.Component {
 	return sessionsFragment(view, loc)
+}
+
+// SessionCreateFragment renders the session-create page.
+func SessionCreateFragment(view SessionCreatePageView, loc Localizer) templ.Component {
+	return sessionCreateFragment(view, loc)
 }
 
 // SessionDetailFragment renders the selected session page.

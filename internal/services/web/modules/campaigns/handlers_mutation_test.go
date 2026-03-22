@@ -139,8 +139,8 @@ func TestStableMutationRoutesReturnParseErrorFlashKeys(t *testing.T) {
 			wantKey: "error.web.message.failed_to_parse_campaign_update_form",
 		},
 		{
-			name:    "session start parse error",
-			path:    routepath.AppCampaignSessionStart("c1"),
+			name:    "session create parse error",
+			path:    routepath.AppCampaignSessionCreate("c1"),
 			wantKey: "error.web.message.failed_to_parse_session_start_form",
 		},
 		{
@@ -348,10 +348,10 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			wantFlashKey: "web.campaigns.notice_campaign_updated",
 		},
 		{
-			name:         "session start",
-			path:         routepath.AppCampaignSessionStart("c1"),
+			name:         "session create",
+			path:         routepath.AppCampaignSessionCreate("c1"),
 			body:         "name=Session+Two",
-			wantLocation: routepath.AppCampaignGame("c1"),
+			wantLocation: routepath.AppCampaignSessions("c1"),
 			wantFlashKey: "web.campaigns.notice_session_started",
 		},
 		{

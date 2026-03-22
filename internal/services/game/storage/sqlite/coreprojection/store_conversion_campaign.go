@@ -2,6 +2,7 @@ package coreprojection
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -22,6 +23,7 @@ type campaignRowData struct {
 	AccessPolicy     string
 	ParticipantCount int64
 	CharacterCount   int64
+	LatestSessionAt  any
 	ThemePrompt      string
 	CoverAssetID     string
 	CoverSetID       string
@@ -34,6 +36,10 @@ type campaignRowData struct {
 }
 
 func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error) {
+	latestSessionAt, err := latestSessionMillis(row.LatestSessionAt)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
 	c := storage.CampaignRecord{
 		ID:               row.ID,
 		Name:             row.Name,
@@ -55,6 +61,7 @@ func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error
 	}
 	c.CompletedAt = sqliteutil.FromNullMillis(row.CompletedAt)
 	c.ArchivedAt = sqliteutil.FromNullMillis(row.ArchivedAt)
+	c.LatestSessionAt = sqliteutil.FromNullMillis(latestSessionAt)
 
 	return c, nil
 }
@@ -71,6 +78,7 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (storage.CampaignRecord, er
 		AccessPolicy:     row.AccessPolicy,
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
+		LatestSessionAt:  row.LatestSessionAt,
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
 		CoverSetID:       row.CoverSetID,
@@ -95,6 +103,7 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (storage.CampaignRecord
 		AccessPolicy:     row.AccessPolicy,
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
+		LatestSessionAt:  row.LatestSessionAt,
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
 		CoverSetID:       row.CoverSetID,
@@ -119,6 +128,7 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.Campaign
 		AccessPolicy:     row.AccessPolicy,
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
+		LatestSessionAt:  row.LatestSessionAt,
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
 		CoverSetID:       row.CoverSetID,
@@ -129,4 +139,17 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.Campaign
 		CompletedAt:      row.CompletedAt,
 		ArchivedAt:       row.ArchivedAt,
 	})
+}
+
+func latestSessionMillis(value any) (sql.NullInt64, error) {
+	switch typed := value.(type) {
+	case nil:
+		return sql.NullInt64{}, nil
+	case int64:
+		return sql.NullInt64{Int64: typed, Valid: true}, nil
+	case sql.NullInt64:
+		return typed, nil
+	default:
+		return sql.NullInt64{}, fmt.Errorf("latest session timestamp: unsupported type %T", value)
+	}
 }

@@ -215,6 +215,8 @@ func campaignStartNudgeActionKindFromProto(value userhubv1.CampaignStartNudgeAct
 		return dashboardapp.CampaignStartNudgeActionKindInvitePlayer
 	case userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_MANAGE_PARTICIPANTS:
 		return dashboardapp.CampaignStartNudgeActionKindManageParticipants
+	case userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_START_SESSION:
+		return dashboardapp.CampaignStartNudgeActionKindStartSession
 	default:
 		return dashboardapp.CampaignStartNudgeActionKindUnspecified
 	}

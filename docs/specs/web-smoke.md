@@ -491,7 +491,8 @@ async page => {
     { path: "/app/campaigns/" + campaignID + "/participants", selectors: ["#campaign-participants", '[data-campaign-participant-card-id]'] },
     { path: "/app/campaigns/" + campaignID + "/characters", selectors: ["#campaign-characters", '[data-campaign-character-create-entry="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/characters/create", selectors: ["#campaign-character-create", '[data-campaign-character-create-page="true"]'] },
-    { path: "/app/campaigns/" + campaignID + "/sessions", selectors: ["#campaign-sessions", '[data-campaign-session-start-form="true"]'] },
+    { path: "/app/campaigns/" + campaignID + "/sessions", selectors: ["#campaign-sessions", '[data-campaign-sessions-header="true"]'] },
+    { path: "/app/campaigns/" + campaignID + "/sessions/create", selectors: ["#campaign-session-create", '[data-campaign-session-create-form="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/invites", selectors: ["#campaign-invites", '[data-campaign-invite-create-form="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/game", selectors: ["#root"] },
   ];
@@ -569,11 +570,11 @@ async page => {
   const sessionsPath = "/app/campaigns/" + campaignID + "/sessions";
   const invitesPath = "/app/campaigns/" + campaignID + "/invites";
 
-  const sessionStartResp = await page.request.post(origin + "/app/campaigns/" + campaignID + "/sessions/start", {
+  const sessionStartResp = await page.request.post(origin + "/app/campaigns/" + campaignID + "/sessions/create", {
     maxRedirects: 0,
     headers: {
       ...mutationHeaders,
-      Referer: origin + sessionsPath,
+      Referer: origin + sessionsPath + "/create",
     },
     form: { name: "Smoke Session" },
   });
