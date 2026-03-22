@@ -65,13 +65,15 @@ func TestParseConfigUsesDefaultsAndAppliesFlags(t *testing.T) {
 func TestOpenRuntimeDependenciesWithClosesPartiallyOpenedResources(t *testing.T) {
 	t.Parallel()
 
-	t.Run("game dial failure closes auth", func(t *testing.T) {
+	t.Run("game dial failure closes auth and ai", func(t *testing.T) {
 		t.Parallel()
 
 		auth := &fakeManagedConn{name: "auth", conn: fakeClientConn{}}
+		ai := &fakeManagedConn{name: "ai", conn: fakeClientConn{}}
 		var gotConfigs []platformgrpc.ManagedConnConfig
 		_, _, err := openRuntimeDependenciesWith(context.Background(), Config{
 			AuthAddr: "auth:1",
+			AIAddr:   "ai:2",
 			GameAddr: "game:2",
 			DBPath:   "play.sqlite",
 		}, runtimeDependencyOpeners{
@@ -79,6 +81,9 @@ func TestOpenRuntimeDependenciesWithClosesPartiallyOpenedResources(t *testing.T)
 				gotConfigs = append(gotConfigs, cfg)
 				if cfg.Name == "auth" {
 					return auth, nil
+				}
+				if cfg.Name == "ai" {
+					return ai, nil
 				}
 				return nil, errors.New("game down")
 			},
@@ -90,27 +95,32 @@ func TestOpenRuntimeDependenciesWithClosesPartiallyOpenedResources(t *testing.T)
 		if err == nil || err.Error() != "connect game: game down" {
 			t.Fatalf("error = %v", err)
 		}
-		if auth.closeCalls != 1 {
-			t.Fatalf("auth close calls = %d, want 1", auth.closeCalls)
+		if auth.closeCalls != 1 || ai.closeCalls != 1 {
+			t.Fatalf("close calls = auth:%d ai:%d, want 1 each", auth.closeCalls, ai.closeCalls)
 		}
-		if len(gotConfigs) != 2 || gotConfigs[0].Name != "auth" || gotConfigs[1].Name != "game" {
+		if len(gotConfigs) != 3 || gotConfigs[0].Name != "auth" || gotConfigs[1].Name != "ai" || gotConfigs[2].Name != "game" {
 			t.Fatalf("managed conn configs = %#v", gotConfigs)
 		}
 	})
 
-	t.Run("store open failure closes auth and game", func(t *testing.T) {
+	t.Run("store open failure closes auth ai and game", func(t *testing.T) {
 		t.Parallel()
 
 		auth := &fakeManagedConn{name: "auth", conn: fakeClientConn{}}
+		ai := &fakeManagedConn{name: "ai", conn: fakeClientConn{}}
 		game := &fakeManagedConn{name: "game", conn: fakeClientConn{}}
 		_, _, err := openRuntimeDependenciesWith(context.Background(), Config{
 			AuthAddr: "auth:1",
+			AIAddr:   "ai:2",
 			GameAddr: "game:2",
 			DBPath:   "play.sqlite",
 		}, runtimeDependencyOpeners{
 			openManagedConn: func(_ context.Context, cfg platformgrpc.ManagedConnConfig) (managedConnResource, error) {
 				if cfg.Name == "auth" {
 					return auth, nil
+				}
+				if cfg.Name == "ai" {
+					return ai, nil
 				}
 				return game, nil
 			},
@@ -121,8 +131,8 @@ func TestOpenRuntimeDependenciesWithClosesPartiallyOpenedResources(t *testing.T)
 		if err == nil || err.Error() != "open play transcript store: disk full" {
 			t.Fatalf("error = %v", err)
 		}
-		if auth.closeCalls != 1 || game.closeCalls != 1 {
-			t.Fatalf("close calls = auth:%d game:%d, want 1 each", auth.closeCalls, game.closeCalls)
+		if auth.closeCalls != 1 || ai.closeCalls != 1 || game.closeCalls != 1 {
+			t.Fatalf("close calls = auth:%d ai:%d game:%d, want 1 each", auth.closeCalls, ai.closeCalls, game.closeCalls)
 		}
 	})
 }
@@ -131,21 +141,27 @@ func TestOpenRuntimeDependenciesWithSuccessBuildsDependenciesAndClosesIdempotent
 	t.Parallel()
 
 	auth := &fakeManagedConn{name: "auth", conn: fakeClientConn{}}
+	ai := &fakeManagedConn{name: "ai", conn: fakeClientConn{}}
 	game := &fakeManagedConn{name: "game", conn: fakeClientConn{}}
 	store := &fakeTranscriptStore{}
 	var closeOrder []string
 	auth.onClose = func() { closeOrder = append(closeOrder, "auth") }
+	ai.onClose = func() { closeOrder = append(closeOrder, "ai") }
 	game.onClose = func() { closeOrder = append(closeOrder, "game") }
 	store.onClose = func() { closeOrder = append(closeOrder, "store") }
 
 	resources, deps, err := openRuntimeDependenciesWith(context.Background(), Config{
 		AuthAddr: "auth:1",
+		AIAddr:   "ai:2",
 		GameAddr: "game:2",
 		DBPath:   "play.sqlite",
 	}, runtimeDependencyOpeners{
 		openManagedConn: func(_ context.Context, cfg platformgrpc.ManagedConnConfig) (managedConnResource, error) {
 			if cfg.Name == "auth" {
 				return auth, nil
+			}
+			if cfg.Name == "ai" {
+				return ai, nil
 			}
 			return game, nil
 		},
@@ -159,7 +175,7 @@ func TestOpenRuntimeDependenciesWithSuccessBuildsDependenciesAndClosesIdempotent
 	if err != nil {
 		t.Fatalf("openRuntimeDependenciesWith() error = %v", err)
 	}
-	if deps.Auth == nil || deps.Interaction == nil || deps.Campaign == nil || deps.System == nil || deps.Participants == nil || deps.Characters == nil || deps.DaggerheartContent == nil || deps.Events == nil {
+	if deps.Auth == nil || deps.AIDebug == nil || deps.Interaction == nil || deps.Campaign == nil || deps.System == nil || deps.Participants == nil || deps.Characters == nil || deps.DaggerheartContent == nil || deps.Events == nil {
 		t.Fatalf("dependencies = %#v", deps)
 	}
 	if deps.Transcripts != store {
@@ -172,11 +188,11 @@ func TestOpenRuntimeDependenciesWithSuccessBuildsDependenciesAndClosesIdempotent
 	if err := resources.Close(); err != nil {
 		t.Fatalf("second Close() error = %v", err)
 	}
-	if !reflect.DeepEqual(closeOrder, []string{"store", "game", "auth"}) {
-		t.Fatalf("close order = %#v, want %#v", closeOrder, []string{"store", "game", "auth"})
+	if !reflect.DeepEqual(closeOrder, []string{"store", "game", "ai", "auth"}) {
+		t.Fatalf("close order = %#v, want %#v", closeOrder, []string{"store", "game", "ai", "auth"})
 	}
-	if auth.closeCalls != 1 || game.closeCalls != 1 || store.closeCalls != 1 {
-		t.Fatalf("close calls = auth:%d game:%d store:%d, want 1 each", auth.closeCalls, game.closeCalls, store.closeCalls)
+	if auth.closeCalls != 1 || ai.closeCalls != 1 || game.closeCalls != 1 || store.closeCalls != 1 {
+		t.Fatalf("close calls = auth:%d ai:%d game:%d store:%d, want 1 each", auth.closeCalls, ai.closeCalls, game.closeCalls, store.closeCalls)
 	}
 }
 

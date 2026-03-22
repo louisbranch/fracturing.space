@@ -47,6 +47,14 @@ func (s *Server) playRoutes(launchGrantCfg playlaunchgrant.Config) []interaction
 			handler: http.HandlerFunc(s.handleChatHistory),
 		},
 		{
+			pattern: "GET /api/campaigns/{campaignID}/ai-debug/turns",
+			handler: http.HandlerFunc(s.handleAIDebugTurns),
+		},
+		{
+			pattern: "GET /api/campaigns/{campaignID}/ai-debug/turns/{turnID}",
+			handler: http.HandlerFunc(s.handleAIDebugTurn),
+		},
+		{
 			pattern: "GET /realtime",
 			handler: s.realtime.handler(),
 		},

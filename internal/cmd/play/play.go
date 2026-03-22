@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -29,6 +30,7 @@ type Config struct {
 	WebHTTPAddr         string `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"`
 	AssetBaseURL        string `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
 	AuthAddr            string `env:"FRACTURING_SPACE_AUTH_ADDR"`
+	AIAddr              string `env:"FRACTURING_SPACE_AI_ADDR"`
 	GameAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"`
 	StatusAddr          string `env:"FRACTURING_SPACE_STATUS_ADDR"`
 	DBPath              string `env:"FRACTURING_SPACE_PLAY_DB_PATH" envDefault:"data/play.db"`
@@ -44,6 +46,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}
 	cfg.WebHTTPAddr = serviceaddr.OrDefaultHTTPAddr(cfg.WebHTTPAddr, serviceaddr.ServiceWeb)
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
+	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
 	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
 	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
@@ -51,6 +54,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.WebHTTPAddr, "web-http-addr", cfg.WebHTTPAddr, "web HTTP listen address for browser fallback links")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "asset CDN base URL for avatar delivery")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "auth service gRPC address")
+	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "ai service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "game service gRPC address")
 	fs.StringVar(&cfg.DBPath, "db-path", cfg.DBPath, "play SQLite database path")
 	fs.StringVar(&cfg.PlayUIDevServerURL, "ui-dev-server-url", cfg.PlayUIDevServerURL, "optional play UI dev server URL")
@@ -75,6 +79,7 @@ func Run(ctx context.Context, cfg Config) error {
 			entrypoint.Capability("play.http", platformstatus.Operational),
 			entrypoint.Capability("play.game.integration", platformstatus.Operational),
 			entrypoint.Capability("play.auth.integration", platformstatus.Operational),
+			entrypoint.Capability("play.ai.integration", platformstatus.Operational),
 		)
 		defer stopReporter()
 
@@ -107,6 +112,7 @@ func Run(ctx context.Context, cfg Config) error {
 // can be closed deterministically after the app runtime stops.
 type runtimeDependencies struct {
 	authMC managedConnResource
+	aiMC   managedConnResource
 	gameMC managedConnResource
 	store  transcriptStoreResource
 	closed bool
@@ -171,6 +177,15 @@ func openRuntimeDependenciesWith(ctx context.Context, cfg Config, openers runtim
 	if err != nil {
 		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("connect auth: %w", err)
 	}
+	aiMC, err := openers.openManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "ai",
+		Addr: cfg.AIAddr,
+		Mode: platformgrpc.ModeRequired,
+	})
+	if err != nil {
+		_ = authMC.Close()
+		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("connect ai: %w", err)
+	}
 	gameMC, err := openers.openManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "game",
 		Addr: cfg.GameAddr,
@@ -182,28 +197,32 @@ func openRuntimeDependenciesWith(ctx context.Context, cfg Config, openers runtim
 		),
 	})
 	if err != nil {
+		_ = aiMC.Close()
 		_ = authMC.Close()
 		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("connect game: %w", err)
 	}
 	store, err := openers.openStore(cfg.DBPath)
 	if err != nil {
 		_ = gameMC.Close()
+		_ = aiMC.Close()
 		_ = authMC.Close()
 		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("open play transcript store: %w", err)
 	}
 	resources := runtimeDependencies{
 		authMC: authMC,
+		aiMC:   aiMC,
 		gameMC: gameMC,
 		store:  store,
 	}
-	return resources, dependenciesFromResources(authMC, gameMC, store), nil
+	return resources, dependenciesFromResources(authMC, aiMC, gameMC, store), nil
 }
 
 // dependenciesFromResources builds the app-facing dependency graph after the
 // composition root has opened transport/storage resources successfully.
-func dependenciesFromResources(authMC managedConnResource, gameMC managedConnResource, store transcriptStoreResource) playapp.Dependencies {
+func dependenciesFromResources(authMC managedConnResource, aiMC managedConnResource, gameMC managedConnResource, store transcriptStoreResource) playapp.Dependencies {
 	return playapp.Dependencies{
 		Auth:               authv1.NewAuthServiceClient(authMC.ClientConn()),
+		AIDebug:            aiv1.NewCampaignDebugServiceClient(aiMC.ClientConn()),
 		Interaction:        gamev1.NewInteractionServiceClient(gameMC.ClientConn()),
 		Campaign:           gamev1.NewCampaignServiceClient(gameMC.ClientConn()),
 		System:             gamev1.NewSystemServiceClient(gameMC.ClientConn()),
@@ -223,6 +242,7 @@ func (r *runtimeDependencies) Close() error {
 	return errors.Join(
 		closeIfPresent(r.store),
 		closeIfPresent(r.gameMC),
+		closeIfPresent(r.aiMC),
 		closeIfPresent(r.authMC),
 	)
 }

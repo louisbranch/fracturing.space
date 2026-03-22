@@ -16,6 +16,7 @@ const RealtimeProtocolVersion = 1
 
 type Bootstrap struct {
 	CampaignID                 string                         `json:"campaign_id"`
+	AIDebugEnabled             bool                           `json:"ai_debug_enabled,omitempty"`
 	Viewer                     *InteractionViewer             `json:"viewer,omitempty"`
 	System                     System                         `json:"system"`
 	InteractionState           InteractionState               `json:"interaction_state"`

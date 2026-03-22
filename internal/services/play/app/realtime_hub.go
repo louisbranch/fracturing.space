@@ -21,6 +21,7 @@ import (
 type realtimeHubDeps struct {
 	resolveUserID func(context.Context, *http.Request) (string, error)
 	application   func() playApplication
+	aiDebug       aiDebugClient
 	transcripts   transcript.Store
 	events        eventClient
 }
@@ -38,6 +39,7 @@ func newRealtimeHub(server *Server) *realtimeHub {
 	return newRealtimeHubWithRuntime(realtimeHubDeps{
 		resolveUserID: server.resolvePlayUserID,
 		application:   server.application,
+		aiDebug:       server.aiDebug,
 		transcripts:   server.transcripts,
 		events:        server.events,
 	}, defaultRealtimeRuntime())
@@ -205,6 +207,7 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 		Payload:   mustJSON(snapshot),
 	})
 	room.ensureProjectionSubscription()
+	room.reconcileAIDebugSubscription(session.activeSession())
 
 	if sessionID := session.activeSession(); sessionID != "" && payload.LastChatSeq < snapshot.Chat.LatestSequenceID {
 		messages, err := app.incrementalChatMessages(ctx, transcript.Scope{CampaignID: campaignID, SessionID: sessionID}, payload.LastChatSeq)

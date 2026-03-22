@@ -66,7 +66,10 @@ describe("player HUD view models", () => {
   });
 
   it("maps backstage, on-stage, and side-chat participants into portrait-rail view models", () => {
-    expect(backstageRailParticipants(backstageFixtureCatalog.openDiscussion)).toMatchObject([
+    expect(backstageRailParticipants(backstageFixtureCatalog.openDiscussion, {
+      ownerParticipantId: "p-guide",
+      status: "running",
+    })).toMatchObject([
       {
         id: "p-rhea",
         roleLabel: "PLAYER",
@@ -81,11 +84,15 @@ describe("player HUD view models", () => {
         id: "p-guide",
         roleLabel: "GM",
         status: "idle",
+        aiStatus: "thinking",
         ownsGMAuthority: true,
       },
     ]);
 
-    expect(onStageRailParticipants(onStageFixtureCatalog.yieldedWaiting.participants)).toMatchObject([
+    expect(onStageRailParticipants(onStageFixtureCatalog.yieldedWaiting.participants, {
+      ownerParticipantId: "p-guide",
+      status: "failed",
+    })).toMatchObject([
       {
         id: "p-rhea",
         roleLabel: "PLAYER",
@@ -100,11 +107,15 @@ describe("player HUD view models", () => {
         id: "p-guide",
         roleLabel: "GM",
         status: "idle",
+        aiStatus: "failed",
         ownsGMAuthority: true,
       },
     ]);
 
-    expect(sideChatRailParticipants(sideChatState.participants)).toMatchObject([
+    expect(sideChatRailParticipants(sideChatState.participants, {
+      ownerParticipantId: "p-guide",
+      status: "running",
+    })).toMatchObject([
       {
         id: "p-rhea",
         roleLabel: "PLAYER",
@@ -119,7 +130,21 @@ describe("player HUD view models", () => {
         id: "p-guide",
         roleLabel: "GM",
         status: "idle",
+        aiStatus: "thinking",
       },
     ]);
+  });
+
+  it("skips AI overlays when the owner participant is missing", () => {
+    const guide = onStageRailParticipants(onStageFixtureCatalog.yieldedWaiting.participants, {
+      ownerParticipantId: "p-missing",
+      status: "running",
+    }).find((participant) => participant.id === "p-guide");
+
+    expect(guide).toMatchObject({
+      id: "p-guide",
+      status: "idle",
+    });
+    expect(guide?.aiStatus).toBeUndefined();
   });
 });

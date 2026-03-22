@@ -5,12 +5,17 @@ import type { OnStageParticipantRailProps } from "./contract";
 export function OnStageParticipantRail({
   participants,
   viewerParticipantId,
+  aiOwnerParticipantId,
+  aiStatus,
   ariaLabel = "On-stage participants",
   onParticipantInspect,
 }: OnStageParticipantRailProps) {
   return (
     <ParticipantPortraitRail
-      participants={onStageRailParticipants(participants)}
+      participants={onStageRailParticipants(participants, {
+        ownerParticipantId: aiOwnerParticipantId,
+        status: aiStatus,
+      })}
       viewerParticipantId={viewerParticipantId}
       ariaLabel={ariaLabel}
       onParticipantInspect={onParticipantInspect}

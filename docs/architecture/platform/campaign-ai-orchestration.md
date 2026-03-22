@@ -140,7 +140,8 @@ session-readiness blocker codes and session start must remain blocked.
 - Provider-specific orchestration (prompt policy, subagents, tools, audit)
   remains AI-service owned and does not leak into game/chat boundaries.
 - Any future AI debug/thought-stream surface stays AI-service owned,
-  dev/operator only, and separate from the human transcript.
+  separate from the human transcript, even when `play` forwards an alpha
+  browser view of persisted turn-debug updates over its websocket.
 - Richer bootstrap material such as summaries, notes, imported files, and
   operator approvals should remain orchestrator-owned additions on top of the
   same campaign/session/participant grant boundary.

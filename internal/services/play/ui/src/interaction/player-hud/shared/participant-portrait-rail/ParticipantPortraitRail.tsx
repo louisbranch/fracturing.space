@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Check, Crown, RefreshCcw } from "lucide-react";
+import { Bot, Check, Crown, RefreshCcw } from "lucide-react";
 import type {
+  ParticipantPortraitAIStatus,
   ParticipantPortraitRailParticipant,
   ParticipantPortraitRailProps,
   ParticipantPortraitStatus,
@@ -58,6 +59,30 @@ function statusDisplay(status: ParticipantPortraitStatus): {
   }
 }
 
+function aiStatusDisplay(status: ParticipantPortraitAIStatus): {
+  badgeClassName: string;
+  label: string;
+  tooltip: string;
+  icon: ReactNode;
+} {
+  switch (status) {
+    case "thinking":
+      return {
+        badgeClassName: "badge-info",
+        label: "AI thinking",
+        tooltip: "AI thinking",
+        icon: <span aria-hidden="true" className="loading loading-dots loading-xs" />,
+      };
+    case "failed":
+      return {
+        badgeClassName: "badge-error",
+        label: "AI failed",
+        tooltip: "AI failed",
+        icon: <Bot size={12} aria-hidden="true" />,
+      };
+  }
+}
+
 function roleLabel(participant: ParticipantPortraitRailParticipant): string | null {
   const value = participant.roleLabel?.trim();
   return value ? value : null;
@@ -86,7 +111,7 @@ export function ParticipantPortraitRail({
       className="flex w-24 shrink-0 flex-col items-center gap-3 border-l border-base-300/70 bg-base-300 px-2 py-3"
     >
       {sortedParticipants.map((participant) => {
-        const status = statusDisplay(participant.status);
+        const status = participant.aiStatus ? aiStatusDisplay(participant.aiStatus) : statusDisplay(participant.status);
         const isViewer = participant.id === viewerParticipantId;
         const fallback = participant.name.charAt(0).toUpperCase();
         const secondaryLabel = roleLabel(participant);

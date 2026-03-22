@@ -1,6 +1,10 @@
 import type { BackstageParticipant, BackstageState } from "../backstage/shared/contract";
-import type { OnStageParticipant, OnStageState } from "../on-stage/shared/contract";
-import type { ParticipantPortraitRailParticipant, ParticipantPortraitStatus } from "./participant-portrait-rail/contract";
+import type { OnStageAIStatus, OnStageParticipant, OnStageState } from "../on-stage/shared/contract";
+import type {
+  ParticipantPortraitAIStatus,
+  ParticipantPortraitRailParticipant,
+  ParticipantPortraitStatus,
+} from "./participant-portrait-rail/contract";
 import type { SideChatParticipant } from "./contract";
 
 // PlayerHUDStatusBadge keeps panel and card components focused on rendering a
@@ -28,6 +32,30 @@ function backstageParticipantStatus(participant: BackstageParticipant): Particip
 
 function onStageParticipantStatus(participant: OnStageParticipant): ParticipantPortraitStatus {
   return participant.railStatus === "waiting" ? "idle" : participant.railStatus;
+}
+
+type ParticipantRailAIState = {
+  ownerParticipantId?: string;
+  status?: OnStageAIStatus;
+};
+
+function portraitAIStatus(
+  participantId: string,
+  aiState?: ParticipantRailAIState,
+): ParticipantPortraitAIStatus | undefined {
+  if (!aiState?.ownerParticipantId || aiState.ownerParticipantId !== participantId) {
+    return undefined;
+  }
+
+  switch (aiState.status) {
+    case "queued":
+    case "running":
+      return "thinking";
+    case "failed":
+      return "failed";
+    default:
+      return undefined;
+  }
 }
 
 export function backstageStatusBadge(
@@ -142,6 +170,7 @@ export function onStageStatusBadge(
 
 export function backstageRailParticipants(
   state: Pick<BackstageState, "participants" | "gmAuthorityParticipantId">,
+  aiState?: ParticipantRailAIState,
 ): ParticipantPortraitRailParticipant[] {
   return state.participants.map((participant) => ({
     id: participant.id,
@@ -150,12 +179,14 @@ export function backstageRailParticipants(
     characters: participant.characters,
     roleLabel: roleLabel(participant.role),
     status: backstageParticipantStatus(participant),
+    aiStatus: portraitAIStatus(participant.id, aiState),
     ownsGMAuthority: participant.id === state.gmAuthorityParticipantId,
   }));
 }
 
 export function onStageRailParticipants(
   participants: OnStageParticipant[],
+  aiState?: ParticipantRailAIState,
 ): ParticipantPortraitRailParticipant[] {
   return participants.map((participant) => ({
     id: participant.id,
@@ -164,12 +195,14 @@ export function onStageRailParticipants(
     characters: participant.characters,
     roleLabel: roleLabel(participant.role),
     status: onStageParticipantStatus(participant),
+    aiStatus: portraitAIStatus(participant.id, aiState),
     ownsGMAuthority: participant.ownsGMAuthority,
   }));
 }
 
 export function sideChatRailParticipants(
   participants: SideChatParticipant[],
+  aiState?: ParticipantRailAIState,
 ): ParticipantPortraitRailParticipant[] {
   return participants.map((participant) => ({
     id: participant.id,
@@ -178,5 +211,6 @@ export function sideChatRailParticipants(
     characters: participant.characters,
     roleLabel: roleLabel(participant.role),
     status: participant.typing ? "typing" : "idle",
+    aiStatus: portraitAIStatus(participant.id, aiState),
   }));
 }

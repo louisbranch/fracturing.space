@@ -89,6 +89,7 @@ type Input struct {
 	Instructions     string
 	CredentialSecret string
 	Provider         Provider
+	TraceRecorder    TraceRecorder
 }
 
 // Result contains the final narrated output for a campaign turn.
@@ -144,4 +145,11 @@ type ProviderToolResult struct {
 	CallID  string
 	Output  string
 	IsError bool
+}
+
+// TraceRecorder captures best-effort campaign-turn debug events without
+// affecting orchestration control flow when trace persistence fails.
+type TraceRecorder interface {
+	RecordProviderStep(ctx context.Context, output ProviderOutput)
+	RecordToolResult(ctx context.Context, call ProviderToolCall, result ProviderToolResult)
 }

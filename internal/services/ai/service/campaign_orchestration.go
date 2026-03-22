@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -21,8 +23,13 @@ type CampaignOrchestrationService struct {
 	gameCampaignAIClient    gamev1.CampaignAIServiceClient
 	providerToolAdapters    map[provider.Provider]orchestration.Provider
 	campaignTurnRunner      orchestration.CampaignTurnRunner
+	debugTraceStore         storage.DebugTraceStore
+	debugUpdateBroker       *CampaignDebugUpdateBroker
 	sessionGrantConfig      *aisessiongrant.Config
 	authTokenResolver       *AuthTokenResolver
+	clock                   Clock
+	idGenerator             IDGenerator
+	logger                  *slog.Logger
 }
 
 // CampaignOrchestrationServiceConfig declares dependencies for the campaign
@@ -33,8 +40,13 @@ type CampaignOrchestrationServiceConfig struct {
 	GameCampaignAIClient    gamev1.CampaignAIServiceClient
 	ProviderToolAdapters    map[provider.Provider]orchestration.Provider
 	CampaignTurnRunner      orchestration.CampaignTurnRunner
+	DebugTraceStore         storage.DebugTraceStore
+	DebugUpdateBroker       *CampaignDebugUpdateBroker
 	SessionGrantConfig      *aisessiongrant.Config
 	AuthTokenResolver       *AuthTokenResolver
+	Clock                   Clock
+	IDGenerator             IDGenerator
+	Logger                  *slog.Logger
 }
 
 // NewCampaignOrchestrationService builds a campaign orchestration service from
@@ -64,8 +76,13 @@ func NewCampaignOrchestrationService(cfg CampaignOrchestrationServiceConfig) (*C
 		gameCampaignAIClient:    cfg.GameCampaignAIClient,
 		providerToolAdapters:    providerToolAdapters,
 		campaignTurnRunner:      cfg.CampaignTurnRunner,
+		debugTraceStore:         cfg.DebugTraceStore,
+		debugUpdateBroker:       cfg.DebugUpdateBroker,
 		sessionGrantConfig:      sessionGrantConfig,
 		authTokenResolver:       cfg.AuthTokenResolver,
+		clock:                   withDefaultClock(cfg.Clock),
+		idGenerator:             withDefaultIDGenerator(cfg.IDGenerator),
+		logger:                  cfg.Logger,
 	}, nil
 }
 
@@ -74,6 +91,7 @@ type RunCampaignTurnInput struct {
 	SessionGrant    string
 	Input           string
 	ReasoningEffort string
+	TurnToken       string
 }
 
 // RunCampaignTurnResult is the domain result of a campaign turn.
@@ -153,6 +171,18 @@ func (s *CampaignOrchestrationService) RunCampaignTurn(ctx context.Context, inpu
 		return RunCampaignTurnResult{}, err
 	}
 
+	now := s.clock().UTC()
+	traceRecorder := newCampaignDebugTraceRecorder(ctx, s.debugTraceStore, s.clock, s.debugUpdateBroker, s.idGenerator, s.logger, debugtrace.Turn{
+		CampaignID:    claims.CampaignID,
+		SessionID:     claims.SessionID,
+		TurnToken:     strings.TrimSpace(input.TurnToken),
+		ParticipantID: strings.TrimSpace(state.GetParticipantId()),
+		Provider:      agentRecord.Provider,
+		Model:         agentRecord.Model,
+		StartedAt:     now,
+		UpdatedAt:     now,
+	})
+
 	result, err := s.campaignTurnRunner.Run(ctx, orchestration.Input{
 		CampaignID:       claims.CampaignID,
 		SessionID:        claims.SessionID,
@@ -163,7 +193,11 @@ func (s *CampaignOrchestrationService) RunCampaignTurn(ctx context.Context, inpu
 		Instructions:     agentRecord.Instructions,
 		CredentialSecret: token,
 		Provider:         adapter,
+		TraceRecorder:    traceRecorder,
 	})
+	if traceRecorder != nil {
+		traceRecorder.Finish(ctx, err)
+	}
 	if err != nil {
 		// Return the raw orchestration error for the transport layer to map.
 		return RunCampaignTurnResult{}, err

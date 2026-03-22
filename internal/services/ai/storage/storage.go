@@ -8,6 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 )
 
@@ -151,6 +152,15 @@ type CampaignArtifactStore interface {
 	ListCampaignArtifacts(ctx context.Context, campaignID string) ([]CampaignArtifactRecord, error)
 }
 
+// DebugTraceStore persists campaign/session-scoped AI GM turn traces.
+type DebugTraceStore interface {
+	PutCampaignDebugTurn(ctx context.Context, turn debugtrace.Turn) error
+	PutCampaignDebugTurnEntry(ctx context.Context, entry debugtrace.Entry) error
+	ListCampaignDebugTurns(ctx context.Context, campaignID string, sessionID string, pageSize int, pageToken string) (debugtrace.Page, error)
+	GetCampaignDebugTurn(ctx context.Context, campaignID string, turnID string) (debugtrace.Turn, error)
+	ListCampaignDebugTurnEntries(ctx context.Context, turnID string) ([]debugtrace.Entry, error)
+}
+
 // Store embeds all AI storage interfaces so composition roots and integration
 // tests can accept a single concrete store instead of enumerating every
 // sub-interface. Handler-level code should continue accepting narrow interfaces.
@@ -162,4 +172,5 @@ type Store interface {
 	AccessRequestStore
 	AuditEventStore
 	CampaignArtifactStore
+	DebugTraceStore
 }

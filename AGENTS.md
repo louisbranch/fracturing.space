@@ -74,6 +74,9 @@ Supported command surface:
 - Run `make check` immediately before push, PR open, or PR update.
 - Use `make cover` and `make cover-critical-domain` only for focused diagnostics
   when you need standalone coverage output separate from `make check`.
+- When changing `internal/services/play/ui/**`, rebuild the checked-in play UI
+  bundle under `internal/services/play/ui/dist` before finishing. Use
+  `npm run build` from `internal/services/play/ui` or `make play-ui-dist`.
 
 Agent progress workflow:
 
@@ -141,6 +144,8 @@ A change is done when:
 
 - architecture is cleaner than before,
 - tests validate meaningful behavior at the correct seams,
+- checked-in generated assets are refreshed when their source changes (for play
+  UI work, this includes `internal/services/play/ui/dist`),
 - obsolete paths are removed,
 - documentation is updated where knowledge should persist.
 

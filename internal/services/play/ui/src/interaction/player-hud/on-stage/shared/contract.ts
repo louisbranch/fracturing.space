@@ -99,6 +99,7 @@ export type OnStageMechanicsExtension = {
 export type OnStageState = {
   mode: OnStageMode;
   aiStatus: OnStageAIStatus;
+  aiOwnerParticipantId?: string;
   scene: OnStageScene;
   currentInteraction?: OnStageGMInteraction;
   interactionHistory: OnStageGMInteraction[];

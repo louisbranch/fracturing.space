@@ -194,6 +194,7 @@ function mapOnStageState(
   return {
     mode,
     aiStatus,
+    aiOwnerParticipantId: aiTurn?.owner_participant_id?.trim() || undefined,
     scene: mapOnStageScene(scene, catalog),
     currentInteraction: mapGMInteraction(currentInteraction),
     interactionHistory: (scene?.interaction_history ?? [])

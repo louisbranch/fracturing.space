@@ -771,6 +771,188 @@ var CampaignOrchestrationService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	CampaignDebugService_ListCampaignDebugTurns_FullMethodName        = "/ai.v1.CampaignDebugService/ListCampaignDebugTurns"
+	CampaignDebugService_GetCampaignDebugTurn_FullMethodName          = "/ai.v1.CampaignDebugService/GetCampaignDebugTurn"
+	CampaignDebugService_SubscribeCampaignDebugUpdates_FullMethodName = "/ai.v1.CampaignDebugService/SubscribeCampaignDebugUpdates"
+)
+
+// CampaignDebugServiceClient is the client API for CampaignDebugService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CampaignDebugServiceClient interface {
+	ListCampaignDebugTurns(ctx context.Context, in *ListCampaignDebugTurnsRequest, opts ...grpc.CallOption) (*ListCampaignDebugTurnsResponse, error)
+	GetCampaignDebugTurn(ctx context.Context, in *GetCampaignDebugTurnRequest, opts ...grpc.CallOption) (*GetCampaignDebugTurnResponse, error)
+	SubscribeCampaignDebugUpdates(ctx context.Context, in *SubscribeCampaignDebugUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignDebugTurnUpdate], error)
+}
+
+type campaignDebugServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCampaignDebugServiceClient(cc grpc.ClientConnInterface) CampaignDebugServiceClient {
+	return &campaignDebugServiceClient{cc}
+}
+
+func (c *campaignDebugServiceClient) ListCampaignDebugTurns(ctx context.Context, in *ListCampaignDebugTurnsRequest, opts ...grpc.CallOption) (*ListCampaignDebugTurnsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCampaignDebugTurnsResponse)
+	err := c.cc.Invoke(ctx, CampaignDebugService_ListCampaignDebugTurns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignDebugServiceClient) GetCampaignDebugTurn(ctx context.Context, in *GetCampaignDebugTurnRequest, opts ...grpc.CallOption) (*GetCampaignDebugTurnResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCampaignDebugTurnResponse)
+	err := c.cc.Invoke(ctx, CampaignDebugService_GetCampaignDebugTurn_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignDebugServiceClient) SubscribeCampaignDebugUpdates(ctx context.Context, in *SubscribeCampaignDebugUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignDebugTurnUpdate], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &CampaignDebugService_ServiceDesc.Streams[0], CampaignDebugService_SubscribeCampaignDebugUpdates_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeCampaignDebugUpdatesRequest, CampaignDebugTurnUpdate]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type CampaignDebugService_SubscribeCampaignDebugUpdatesClient = grpc.ServerStreamingClient[CampaignDebugTurnUpdate]
+
+// CampaignDebugServiceServer is the server API for CampaignDebugService service.
+// All implementations must embed UnimplementedCampaignDebugServiceServer
+// for forward compatibility.
+type CampaignDebugServiceServer interface {
+	ListCampaignDebugTurns(context.Context, *ListCampaignDebugTurnsRequest) (*ListCampaignDebugTurnsResponse, error)
+	GetCampaignDebugTurn(context.Context, *GetCampaignDebugTurnRequest) (*GetCampaignDebugTurnResponse, error)
+	SubscribeCampaignDebugUpdates(*SubscribeCampaignDebugUpdatesRequest, grpc.ServerStreamingServer[CampaignDebugTurnUpdate]) error
+	mustEmbedUnimplementedCampaignDebugServiceServer()
+}
+
+// UnimplementedCampaignDebugServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedCampaignDebugServiceServer struct{}
+
+func (UnimplementedCampaignDebugServiceServer) ListCampaignDebugTurns(context.Context, *ListCampaignDebugTurnsRequest) (*ListCampaignDebugTurnsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCampaignDebugTurns not implemented")
+}
+func (UnimplementedCampaignDebugServiceServer) GetCampaignDebugTurn(context.Context, *GetCampaignDebugTurnRequest) (*GetCampaignDebugTurnResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCampaignDebugTurn not implemented")
+}
+func (UnimplementedCampaignDebugServiceServer) SubscribeCampaignDebugUpdates(*SubscribeCampaignDebugUpdatesRequest, grpc.ServerStreamingServer[CampaignDebugTurnUpdate]) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeCampaignDebugUpdates not implemented")
+}
+func (UnimplementedCampaignDebugServiceServer) mustEmbedUnimplementedCampaignDebugServiceServer() {}
+func (UnimplementedCampaignDebugServiceServer) testEmbeddedByValue()                              {}
+
+// UnsafeCampaignDebugServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CampaignDebugServiceServer will
+// result in compilation errors.
+type UnsafeCampaignDebugServiceServer interface {
+	mustEmbedUnimplementedCampaignDebugServiceServer()
+}
+
+func RegisterCampaignDebugServiceServer(s grpc.ServiceRegistrar, srv CampaignDebugServiceServer) {
+	// If the following call pancis, it indicates UnimplementedCampaignDebugServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&CampaignDebugService_ServiceDesc, srv)
+}
+
+func _CampaignDebugService_ListCampaignDebugTurns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCampaignDebugTurnsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignDebugServiceServer).ListCampaignDebugTurns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignDebugService_ListCampaignDebugTurns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignDebugServiceServer).ListCampaignDebugTurns(ctx, req.(*ListCampaignDebugTurnsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignDebugService_GetCampaignDebugTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCampaignDebugTurnRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignDebugServiceServer).GetCampaignDebugTurn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignDebugService_GetCampaignDebugTurn_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignDebugServiceServer).GetCampaignDebugTurn(ctx, req.(*GetCampaignDebugTurnRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignDebugService_SubscribeCampaignDebugUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeCampaignDebugUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CampaignDebugServiceServer).SubscribeCampaignDebugUpdates(m, &grpc.GenericServerStream[SubscribeCampaignDebugUpdatesRequest, CampaignDebugTurnUpdate]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type CampaignDebugService_SubscribeCampaignDebugUpdatesServer = grpc.ServerStreamingServer[CampaignDebugTurnUpdate]
+
+// CampaignDebugService_ServiceDesc is the grpc.ServiceDesc for CampaignDebugService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CampaignDebugService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ai.v1.CampaignDebugService",
+	HandlerType: (*CampaignDebugServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListCampaignDebugTurns",
+			Handler:    _CampaignDebugService_ListCampaignDebugTurns_Handler,
+		},
+		{
+			MethodName: "GetCampaignDebugTurn",
+			Handler:    _CampaignDebugService_GetCampaignDebugTurn_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeCampaignDebugUpdates",
+			Handler:       _CampaignDebugService_SubscribeCampaignDebugUpdates_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "ai/v1/service.proto",
+}
+
+const (
 	CampaignArtifactService_EnsureCampaignArtifacts_FullMethodName = "/ai.v1.CampaignArtifactService/EnsureCampaignArtifacts"
 	CampaignArtifactService_ListCampaignArtifacts_FullMethodName   = "/ai.v1.CampaignArtifactService/ListCampaignArtifacts"
 	CampaignArtifactService_GetCampaignArtifact_FullMethodName     = "/ai.v1.CampaignArtifactService/GetCampaignArtifact"

@@ -22,6 +22,7 @@ func (h *CampaignOrchestrationHandlers) RunCampaignTurn(ctx context.Context, in 
 		SessionGrant:    strings.TrimSpace(in.GetSessionGrant()),
 		Input:           strings.TrimSpace(in.GetInput()),
 		ReasoningEffort: strings.TrimSpace(in.GetReasoningEffort()),
+		TurnToken:       strings.TrimSpace(in.GetTurnToken()),
 	})
 	if err != nil {
 		// Service-layer errors are mapped first; remaining errors go through

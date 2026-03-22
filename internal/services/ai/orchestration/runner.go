@@ -206,6 +206,9 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		stepSpan.End()
 		convo = step.ConversationID
 		usage = usage.Add(step.Usage)
+		if input.TraceRecorder != nil {
+			input.TraceRecorder.RecordProviderStep(ctx, step)
+		}
 		followUpPrompt = ""
 		if len(step.ToolCalls) == 0 {
 			text := step.OutputText
@@ -256,29 +259,41 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		results = make([]ProviderToolResult, 0, len(step.ToolCalls))
 		for _, call := range step.ToolCalls {
 			if _, ok := allowedToolNames[call.Name]; !ok {
-				results = append(results, ProviderToolResult{
+				result := ProviderToolResult{
 					CallID:  call.CallID,
 					Output:  fmt.Sprintf("tool %q is not allowed for campaign orchestration", call.Name),
 					IsError: true,
-				})
+				}
+				results = append(results, result)
+				if input.TraceRecorder != nil {
+					input.TraceRecorder.RecordToolResult(ctx, call, result)
+				}
 				continue
 			}
 			args, err := decodeArgs(call.Arguments)
 			if err != nil {
-				results = append(results, ProviderToolResult{
+				result := ProviderToolResult{
 					CallID:  call.CallID,
 					Output:  fmt.Sprintf("invalid tool arguments: %v", err),
 					IsError: true,
-				})
+				}
+				results = append(results, result)
+				if input.TraceRecorder != nil {
+					input.TraceRecorder.RecordToolResult(ctx, call, result)
+				}
 				continue
 			}
 			res, err := sess.CallTool(ctx, call.Name, args)
 			if err != nil {
-				results = append(results, ProviderToolResult{
+				result := ProviderToolResult{
 					CallID:  call.CallID,
 					Output:  fmt.Sprintf("tool call failed: %v", err),
 					IsError: true,
-				})
+				}
+				results = append(results, result)
+				if input.TraceRecorder != nil {
+					input.TraceRecorder.RecordToolResult(ctx, call, result)
+				}
 				continue
 			}
 			if !res.IsError {
@@ -300,11 +315,15 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				}
 			}
 			outputText, truncated := truncateToolResultOutput(res.Output, r.toolResultMaxBytes)
-			results = append(results, ProviderToolResult{
+			result := ProviderToolResult{
 				CallID:  call.CallID,
 				Output:  outputText,
 				IsError: res.IsError,
-			})
+			}
+			results = append(results, result)
+			if input.TraceRecorder != nil {
+				input.TraceRecorder.RecordToolResult(ctx, call, result)
+			}
 			if truncated {
 				span.AddEvent("ai.orchestration.tool_result_truncated",
 					trace.WithAttributes(

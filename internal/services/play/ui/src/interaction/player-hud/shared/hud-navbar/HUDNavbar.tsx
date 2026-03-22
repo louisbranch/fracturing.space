@@ -1,4 +1,4 @@
-import { ClipboardList, Drama, Menu, MessagesSquare } from "lucide-react";
+import { Bot, ClipboardList, Drama, Menu, MessagesSquare } from "lucide-react";
 import type { HUDNavbarTab } from "../contract";
 import { HUDConnectionBadge } from "../hud-connection-badge/HUDConnectionBadge";
 import type { HUDNavbarProps } from "./contract";
@@ -12,16 +12,19 @@ const tabs: { id: HUDNavbarTab; label: string; icon: typeof Drama; tooltip: stri
     tooltip: "Authoritative OOC pauses, rulings, and coordination.",
   },
   { id: "side-chat", label: "Side Chat", icon: MessagesSquare, tooltip: "Optional non-authoritative session chat." },
+  { id: "ai-debug", label: "AI Debug", icon: Bot, tooltip: "Inspect AI tool calling and model responses." },
 ];
 
 export function HUDNavbar({
   activeTab,
+  aiDebugEnabled = true,
   connectionState,
   isSidebarOpen,
   onSidebarOpenChange,
   onTabChange,
   tabsWithUpdates,
 }: HUDNavbarProps) {
+  const visibleTabs = aiDebugEnabled ? tabs : tabs.filter((tab) => tab.id !== "ai-debug");
   return (
     <nav aria-label="Player HUD navigation" className="navbar min-h-0 bg-base-300 px-2 py-1 shadow-sm">
       <div className="navbar-start">
@@ -35,7 +38,7 @@ export function HUDNavbar({
         </button>
       </div>
       <div className="navbar-center gap-1.5">
-        {tabs.map(({ id, label, icon: Icon, tooltip }) => {
+        {visibleTabs.map(({ id, label, icon: Icon, tooltip }) => {
           const active = activeTab === id;
           const updateCount = !active ? tabsWithUpdates?.get(id) : undefined;
           return (
