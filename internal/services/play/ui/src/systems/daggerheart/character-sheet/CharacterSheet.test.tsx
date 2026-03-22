@@ -120,15 +120,27 @@ describe("CharacterSheet", () => {
     expect(within(experiences).getByText("-1")).toBeInTheDocument();
   });
 
-  it("renders domain cards grouped by domain", () => {
-    render(<CharacterSheet character={characterSheetFixtures.full} />);
+  it("renders expanded domain cards with feature text and preserves order", () => {
+    const { container } = render(<CharacterSheet character={characterSheetFixtures.full} />);
 
     const domainCards = screen.getByLabelText("Domain cards");
+    const scrollRegion = within(domainCards).getByLabelText("Domain card list");
     expect(within(domainCards).getByText("Vanishing Dodge")).toBeInTheDocument();
     expect(within(domainCards).getByText("Cloaking Blast")).toBeInTheDocument();
     expect(within(domainCards).getByText("Bolt Beacon")).toBeInTheDocument();
-    expect(within(domainCards).getByText("Midnight:")).toBeInTheDocument();
-    expect(within(domainCards).getByText("Arcana:")).toBeInTheDocument();
+    expect(within(domainCards).getByText("Midnight")).toBeInTheDocument();
+    expect(within(domainCards).getByText("Arcana")).toBeInTheDocument();
+    expect(within(domainCards).getByText(/slip out of reach/)).toBeInTheDocument();
+    expect(scrollRegion).toHaveClass("overflow-y-auto");
+
+    const renderedCardIDs = Array.from(container.querySelectorAll("[data-domain-card-id]")).map((node) =>
+      node.getAttribute("data-domain-card-id"),
+    );
+    expect(renderedCardIDs).toEqual([
+      "domain_card.midnight-vanishing-dodge",
+      "domain_card.arcana-cloaking-blast",
+      "domain_card.splendor-bolt-beacon",
+    ]);
   });
 
   it("renders gold values", () => {
@@ -144,9 +156,13 @@ describe("CharacterSheet", () => {
     render(<CharacterSheet character={characterSheetFixtures.damaged} />);
 
     const status = screen.getByLabelText("Status");
+    const traitsAndDefense = screen.getByLabelText("Character traits and defense");
     expect(within(status).getByText("Unconscious")).toBeInTheDocument();
     expect(within(status).getByText("Frightened")).toBeInTheDocument();
     expect(within(status).getByText("Vulnerable")).toBeInTheDocument();
+    expect(
+      status.compareDocumentPosition(traitsAndDefense) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
   });
 
   it("renders class feature text", () => {

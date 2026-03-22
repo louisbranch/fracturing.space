@@ -10,6 +10,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 )
@@ -17,24 +18,32 @@ import (
 // playApplication owns browser-facing state assembly so transport handlers and
 // realtime orchestration can reuse one application seam.
 type playApplication struct {
-	interaction  interactionClient
-	campaign     campaignClient
-	system       systemClient
-	participants participantClient
-	characters   characterClient
-	transcripts  transcript.Store
-	assetBaseURL string
+	interaction        interactionClient
+	campaign           campaignClient
+	system             systemClient
+	participants       participantClient
+	characters         characterClient
+	daggerheartContent daggerheartContentClient
+	transcripts        transcript.Store
+	assetBaseURL       string
+}
+
+type characterSheetResult struct {
+	charID string
+	char   *gamev1.Character
+	resp   *gamev1.GetCharacterSheetResponse
 }
 
 func (s *Server) application() playApplication {
 	return playApplication{
-		interaction:  s.interaction,
-		campaign:     s.campaign,
-		system:       s.system,
-		participants: s.participants,
-		characters:   s.characters,
-		transcripts:  s.transcripts,
-		assetBaseURL: s.assetBaseURL,
+		interaction:        s.interaction,
+		campaign:           s.campaign,
+		system:             s.system,
+		participants:       s.participants,
+		characters:         s.characters,
+		daggerheartContent: s.daggerheartContent,
+		transcripts:        s.transcripts,
+		assetBaseURL:       s.assetBaseURL,
 	}
 }
 
@@ -51,7 +60,7 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 	if err != nil {
 		return playprotocol.Bootstrap{}, err
 	}
-	participants, catalog := a.enrichedData(ctx, req)
+	participants, catalog := a.enrichedData(ctx, req, state.GetLocale())
 	slog.InfoContext(ctx, "play: bootstrap assembled",
 		"campaign_id", strings.TrimSpace(req.CampaignID),
 		"user_id", strings.TrimSpace(req.UserID),
@@ -91,7 +100,7 @@ func (a playApplication) roomSnapshotFromState(ctx context.Context, req playRequ
 	participants, catalog := a.enrichedData(req.authContext(ctx), playRequest{
 		campaignRequest: campaignRequest{CampaignID: campaignID},
 		UserID:          req.UserID,
-	})
+	}, state.GetLocale())
 	slog.InfoContext(ctx, "play: room snapshot assembled",
 		"campaign_id", campaignID,
 		"user_id", strings.TrimSpace(req.UserID),
@@ -237,14 +246,14 @@ func gameSystemIDString(value commonv1.GameSystem) string {
 
 // enrichedData loads participant and character data for the bootstrap response
 // which has an authenticated playRequest available.
-func (a playApplication) enrichedData(ctx context.Context, req playRequest) ([]playprotocol.Participant, map[string]playprotocol.CharacterInspection) {
-	return a.enrichedDataForCampaign(req.authContext(ctx), req.CampaignID)
+func (a playApplication) enrichedData(ctx context.Context, req playRequest, locale commonv1.Locale) ([]playprotocol.Participant, map[string]playprotocol.CharacterInspection) {
+	return a.enrichedDataForCampaign(req.authContext(ctx), req.CampaignID, locale)
 }
 
 // enrichedDataForCampaign loads participant and character data using a raw
 // context and campaign ID — used by room snapshot paths where playRequest is
 // not always available.
-func (a playApplication) enrichedDataForCampaign(ctx context.Context, campaignID string) ([]playprotocol.Participant, map[string]playprotocol.CharacterInspection) {
+func (a playApplication) enrichedDataForCampaign(ctx context.Context, campaignID string, locale commonv1.Locale) ([]playprotocol.Participant, map[string]playprotocol.CharacterInspection) {
 	participants := a.listAllParticipants(ctx, campaignID)
 	characters := a.listAllCharacters(ctx, campaignID)
 
@@ -260,7 +269,7 @@ func (a playApplication) enrichedDataForCampaign(ctx context.Context, campaignID
 		participants[i].CharacterIDs = charsByParticipant[participants[i].ID]
 	}
 
-	catalog := a.buildCharacterInspectionCatalog(ctx, campaignID, characters)
+	catalog := a.buildCharacterInspectionCatalog(ctx, campaignID, locale, characters)
 	return participants, catalog
 }
 
@@ -316,20 +325,14 @@ func (a playApplication) listAllCharacters(ctx context.Context, campaignID strin
 
 // buildCharacterInspectionCatalog fetches character sheets in parallel and maps
 // them via the Daggerheart protocol functions.
-func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, campaignID string, characters []*gamev1.Character) map[string]playprotocol.CharacterInspection {
+func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, campaignID string, locale commonv1.Locale, characters []*gamev1.Character) map[string]playprotocol.CharacterInspection {
 	if len(characters) == 0 {
 		return nil
 	}
 
-	type sheetResult struct {
-		charID string
-		char   *gamev1.Character
-		resp   *gamev1.GetCharacterSheetResponse
-	}
-
 	var (
 		mu      sync.Mutex
-		results []sheetResult
+		results []characterSheetResult
 		wg      sync.WaitGroup
 	)
 	for _, char := range characters {
@@ -348,12 +351,13 @@ func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, ca
 				return
 			}
 			mu.Lock()
-			results = append(results, sheetResult{charID: id, char: c, resp: resp})
+			results = append(results, characterSheetResult{charID: id, char: c, resp: resp})
 			mu.Unlock()
 		}(char, charID)
 	}
 	wg.Wait()
 
+	domainCards := a.loadDaggerheartDomainCards(ctx, locale, results)
 	catalog := make(map[string]playprotocol.CharacterInspection, len(results))
 	for _, r := range results {
 		dhProfile := r.resp.GetProfile().GetDaggerheart()
@@ -364,11 +368,78 @@ func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, ca
 		catalog[r.charID] = playprotocol.CharacterInspection{
 			System: "daggerheart",
 			Card:   playprotocol.DaggerheartCardFromSheet(a.assetBaseURL, r.char, dhProfile, dhState),
-			Sheet:  playprotocol.DaggerheartSheetFromResponse(a.assetBaseURL, r.char, dhProfile, dhState),
+			Sheet:  playprotocol.DaggerheartSheetFromResponse(a.assetBaseURL, r.char, dhProfile, dhState, domainCards),
 		}
 	}
 	if len(catalog) == 0 {
 		return nil
 	}
 	return catalog
+}
+
+// loadDaggerheartDomainCards resolves unique domain-card ids into browser-ready
+// content so the sheet can render full card text without client-side fetches.
+func (a playApplication) loadDaggerheartDomainCards(
+	ctx context.Context,
+	locale commonv1.Locale,
+	results []characterSheetResult,
+) map[string]playprotocol.DaggerheartDomainCard {
+	if a.daggerheartContent == nil {
+		return nil
+	}
+
+	uniqueIDs := make(map[string]struct{})
+	for _, result := range results {
+		profile := result.resp.GetProfile().GetDaggerheart()
+		if profile == nil {
+			continue
+		}
+		for _, id := range profile.GetDomainCardIds() {
+			if trimmed := strings.TrimSpace(id); trimmed != "" {
+				uniqueIDs[trimmed] = struct{}{}
+			}
+		}
+	}
+	if len(uniqueIDs) == 0 {
+		return nil
+	}
+
+	var (
+		mu    sync.Mutex
+		wg    sync.WaitGroup
+		cards = make(map[string]playprotocol.DaggerheartDomainCard, len(uniqueIDs))
+	)
+	for id := range uniqueIDs {
+		cardID := id
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			resp, err := a.daggerheartContent.GetDomainCard(ctx, &daggerheartv1.GetDaggerheartDomainCardRequest{
+				Id:     cardID,
+				Locale: locale,
+			})
+			if err != nil {
+				slog.WarnContext(ctx, "play: daggerheart domain card enrichment skipped", "card_id", cardID, "error", err)
+				return
+			}
+			card := playprotocol.DaggerheartDomainCardFromContent(resp.GetDomainCard())
+			if card.Name == "" {
+				slog.WarnContext(ctx, "play: daggerheart domain card enrichment returned empty card", "card_id", cardID)
+				return
+			}
+			if card.ID == "" {
+				card.ID = cardID
+			}
+
+			mu.Lock()
+			cards[cardID] = card
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+	if len(cards) == 0 {
+		return nil
+	}
+	return cards
 }

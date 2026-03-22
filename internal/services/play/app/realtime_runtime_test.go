@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -41,7 +40,7 @@ func TestRealtimeSessionResetTypingTimerUsesInjectedRuntimeTimer(t *testing.T) {
 		sessions:   map[*realtimeSession]struct{}{},
 	}
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID: "user-1",
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},

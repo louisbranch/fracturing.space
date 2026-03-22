@@ -24,6 +24,7 @@ export function CharacterSheet({ character }: CharacterSheetProps) {
   return (
     <article className="character-sheet">
       <SheetIdentity character={character} />
+      <SheetStatus character={character} />
 
       {/* Row 1: Defense (25%) | Traits (75%) — mirrors PDF silhouette + trait columns */}
       <div className="grid border-b border-base-300/60 sm:grid-cols-[1fr_3fr]" aria-label="Character traits and defense">
@@ -54,8 +55,6 @@ export function CharacterSheet({ character }: CharacterSheetProps) {
         background={character.background}
         connections={character.connections}
       />
-
-      <SheetStatus character={character} />
     </article>
   );
 }
@@ -596,25 +595,29 @@ function SheetDomainCards({ domainCards }: { domainCards?: DaggerheartDomainCard
     return null;
   }
 
-  const grouped = new Map<string, string[]>();
-  for (const card of domainCards) {
-    const domain = card.domain ?? "Other";
-    const existing = grouped.get(domain) ?? [];
-    existing.push(card.name);
-    grouped.set(domain, existing);
-  }
-
   return (
     <section aria-label="Domain cards" className="space-y-2">
       <SectionHeader>Domain Cards</SectionHeader>
-      <div className="space-y-1.5">
-        {Array.from(grouped.entries()).map(([domain, names]) => (
-          <div key={domain} className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-medium text-base-content/45">{domain}:</span>
-            {names.map((name) => (
-              <span key={name} className="badge badge-outline badge-sm">{name}</span>
-            ))}
-          </div>
+      <div
+        aria-label="Domain card list"
+        className="max-h-[28rem] space-y-3 overflow-y-auto pr-1"
+      >
+        {domainCards.map((card) => (
+          <article
+            key={card.id}
+            className="space-y-2 rounded border border-base-300/40 bg-base-200/20 px-3 py-3"
+            data-domain-card-id={card.id}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h4 className="text-sm font-semibold text-base-content">{card.name}</h4>
+              {card.domain ? <span className="badge badge-outline badge-sm">{card.domain}</span> : null}
+            </div>
+            {card.featureText ? (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-base-content/70">
+                {card.featureText}
+              </p>
+            ) : null}
+          </article>
         ))}
       </div>
     </section>
@@ -685,11 +688,11 @@ function SheetStatus({ character }: { character: DaggerheartCharacterSheetData }
     dead: "badge-neutral",
   };
 
-  return (
-    <section
-      aria-label="Status"
-      className="flex flex-wrap items-center gap-2 border-t border-base-300/60 px-4 py-3 sm:px-5"
-    >
+    return (
+      <section
+        aria-label="Status"
+        className="flex flex-wrap items-center gap-2 border-b border-base-300/60 px-4 py-3 sm:px-5"
+      >
       <span className="sheet-field-label">Status</span>
       {hasLifeState ? (
         <span className={`badge ${lifeStateBadgeClass[character.lifeState!] ?? "badge-neutral"} badge-sm`}>
