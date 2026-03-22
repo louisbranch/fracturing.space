@@ -9,6 +9,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
@@ -202,14 +203,15 @@ func openRuntimeDependenciesWith(ctx context.Context, cfg Config, openers runtim
 // composition root has opened transport/storage resources successfully.
 func dependenciesFromResources(authMC managedConnResource, gameMC managedConnResource, store transcriptStoreResource) playapp.Dependencies {
 	return playapp.Dependencies{
-		Auth:         authv1.NewAuthServiceClient(authMC.ClientConn()),
-		Interaction:  gamev1.NewInteractionServiceClient(gameMC.ClientConn()),
-		Campaign:     gamev1.NewCampaignServiceClient(gameMC.ClientConn()),
-		System:       gamev1.NewSystemServiceClient(gameMC.ClientConn()),
-		Participants: gamev1.NewParticipantServiceClient(gameMC.ClientConn()),
-		Characters:   gamev1.NewCharacterServiceClient(gameMC.ClientConn()),
-		Events:       gamev1.NewEventServiceClient(gameMC.ClientConn()),
-		Transcripts:  store,
+		Auth:               authv1.NewAuthServiceClient(authMC.ClientConn()),
+		Interaction:        gamev1.NewInteractionServiceClient(gameMC.ClientConn()),
+		Campaign:           gamev1.NewCampaignServiceClient(gameMC.ClientConn()),
+		System:             gamev1.NewSystemServiceClient(gameMC.ClientConn()),
+		Participants:       gamev1.NewParticipantServiceClient(gameMC.ClientConn()),
+		Characters:         gamev1.NewCharacterServiceClient(gameMC.ClientConn()),
+		DaggerheartContent: daggerheartv1.NewDaggerheartContentServiceClient(gameMC.ClientConn()),
+		Events:             gamev1.NewEventServiceClient(gameMC.ClientConn()),
+		Transcripts:        store,
 	}
 }
 

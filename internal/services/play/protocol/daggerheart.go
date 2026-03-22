@@ -126,8 +126,10 @@ type DaggerheartExperience struct {
 
 // DaggerheartDomainCard is a selected domain card reference.
 type DaggerheartDomainCard struct {
-	Name   string `json:"name"`
-	Domain string `json:"domain,omitempty"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Domain      string `json:"domain,omitempty"`
+	FeatureText string `json:"featureText,omitempty"`
 }
 
 // DaggerheartWeapon is one active weapon entry on the full character sheet.
@@ -190,7 +192,7 @@ func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profi
 
 // DaggerheartSheetFromResponse builds the full sheet data from a
 // GetCharacterSheetResponse.
-func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) DaggerheartCharacterSheetData {
+func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState, domainCardLookup map[string]DaggerheartDomainCard) DaggerheartCharacterSheetData {
 	sheet := DaggerheartCharacterSheetData{
 		ID:       strings.TrimSpace(char.GetId()),
 		Name:     strings.TrimSpace(char.GetName()),
@@ -239,7 +241,7 @@ func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, p
 
 		sheet.Traits = daggerheartTraitSlice(profile)
 		sheet.Experiences = daggerheartExperiences(profile)
-		sheet.DomainCards = daggerheartDomainCards(profile)
+		sheet.DomainCards = daggerheartDomainCards(profile, domainCardLookup)
 	}
 
 	if state != nil {
@@ -248,6 +250,29 @@ func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, p
 	}
 
 	return sheet
+}
+
+// DaggerheartDomainCardFromContent converts catalog content into the browser
+// domain-card shape used by the play character sheet.
+func DaggerheartDomainCardFromContent(card *daggerheartv1.DaggerheartDomainCard) DaggerheartDomainCard {
+	if card == nil {
+		return DaggerheartDomainCard{}
+	}
+	fallbackName, fallbackDomain := domainCardLabelFromID(card.GetId())
+	name := strings.TrimSpace(card.GetName())
+	if name == "" {
+		name = fallbackName
+	}
+	domain := contentLabelFromID(card.GetDomainId())
+	if domain == "" {
+		domain = fallbackDomain
+	}
+	return DaggerheartDomainCard{
+		ID:          strings.TrimSpace(card.GetId()),
+		Name:        name,
+		Domain:      domain,
+		FeatureText: strings.TrimSpace(card.GetFeatureText()),
+	}
 }
 
 // --- Helpers ---
@@ -526,16 +551,30 @@ func daggerheartExperiences(profile *daggerheartv1.DaggerheartProfile) []Daggerh
 	return exps
 }
 
-func daggerheartDomainCards(profile *daggerheartv1.DaggerheartProfile) []DaggerheartDomainCard {
+func daggerheartDomainCards(profile *daggerheartv1.DaggerheartProfile, lookup map[string]DaggerheartDomainCard) []DaggerheartDomainCard {
 	ids := profile.GetDomainCardIds()
 	if len(ids) == 0 {
 		return nil
 	}
 	cards := make([]DaggerheartDomainCard, 0, len(ids))
 	for _, id := range ids {
-		name, domain := domainCardLabelFromID(id)
+		trimmedID := strings.TrimSpace(id)
+		if trimmedID == "" {
+			continue
+		}
+		if enriched, ok := lookup[trimmedID]; ok {
+			if enriched.ID == "" {
+				enriched.ID = trimmedID
+			}
+			if enriched.Name != "" {
+				cards = append(cards, enriched)
+				continue
+			}
+		}
+		name, domain := domainCardLabelFromID(trimmedID)
 		if name != "" {
 			cards = append(cards, DaggerheartDomainCard{
+				ID:     trimmedID,
 				Name:   name,
 				Domain: domain,
 			})

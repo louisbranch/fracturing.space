@@ -138,7 +138,7 @@ func TestDaggerheartSheetFromResponseIncludesConditions(t *testing.T) {
 		},
 	}
 
-	sheet := DaggerheartSheetFromResponse("https://cdn.example.com/assets", char, profile, state)
+	sheet := DaggerheartSheetFromResponse("https://cdn.example.com/assets", char, profile, state, nil)
 
 	if sheet.LifeState != "unconscious" {
 		t.Fatalf("lifeState = %q, want %q", sheet.LifeState, "unconscious")
@@ -151,6 +151,9 @@ func TestDaggerheartSheetFromResponseIncludesConditions(t *testing.T) {
 	}
 	if len(sheet.DomainCards) != 2 {
 		t.Fatalf("domain cards = %#v, want 2 readable titles", sheet.DomainCards)
+	}
+	if sheet.DomainCards[0].ID != "domain_card.valor-i-am-your-shield" {
+		t.Fatalf("domainCards[0].ID = %q, want %q", sheet.DomainCards[0].ID, "domain_card.valor-i-am-your-shield")
 	}
 	if sheet.DomainCards[0].Name != "I Am Your Shield" {
 		t.Fatalf("domainCards[0].Name = %q, want %q", sheet.DomainCards[0].Name, "I Am Your Shield")
@@ -166,6 +169,31 @@ func TestDaggerheartSheetFromResponseIncludesConditions(t *testing.T) {
 	}
 	if len(sheet.Traits) != 0 {
 		t.Fatalf("traits = %#v, want none when profile traits are unset", sheet.Traits)
+	}
+}
+
+func TestDaggerheartSheetFromResponseUsesEnrichedDomainCardLookup(t *testing.T) {
+	t.Parallel()
+
+	char := &gamev1.Character{Id: "c", Name: "Lark"}
+	profile := &daggerheartv1.DaggerheartProfile{
+		DomainCardIds: []string{"domain_card.valor-i-am-your-shield"},
+	}
+
+	sheet := DaggerheartSheetFromResponse("", char, profile, nil, map[string]DaggerheartDomainCard{
+		"domain_card.valor-i-am-your-shield": {
+			ID:          "domain_card.valor-i-am-your-shield",
+			Name:        "I Am Your Shield",
+			Domain:      "Valor",
+			FeatureText: "Protect an ally within very close range.",
+		},
+	})
+
+	if len(sheet.DomainCards) != 1 {
+		t.Fatalf("domain cards = %#v, want 1", sheet.DomainCards)
+	}
+	if sheet.DomainCards[0].FeatureText != "Protect an ally within very close range." {
+		t.Fatalf("featureText = %q", sheet.DomainCards[0].FeatureText)
 	}
 }
 
@@ -193,7 +221,7 @@ func TestDaggerheartSheetExperiences(t *testing.T) {
 		},
 		DomainCardIds: []string{"dc-1", "dc-2"},
 	}
-	sheet := DaggerheartSheetFromResponse("", char, profile, nil)
+	sheet := DaggerheartSheetFromResponse("", char, profile, nil, nil)
 
 	if len(sheet.Experiences) != 2 {
 		t.Fatalf("experiences count = %d, want 2", len(sheet.Experiences))
@@ -247,7 +275,7 @@ func TestDaggerheartSheetFromResponseIncludesFullFeatureTextAndEquipment(t *test
 		},
 	}
 
-	sheet := DaggerheartSheetFromResponse("", char, profile, nil)
+	sheet := DaggerheartSheetFromResponse("", char, profile, nil, nil)
 
 	if sheet.HopeFeature != "Rogue's Dodge: Spend 3 Hope to gain +2 Evasion until an attack succeeds against you." {
 		t.Fatalf("hope feature = %q", sheet.HopeFeature)
@@ -290,7 +318,7 @@ func TestDaggerheartHeritageDisplayFallsBackToAncestryLabel(t *testing.T) {
 		t.Fatalf("card communityName = %q, want empty", got)
 	}
 
-	sheet := DaggerheartSheetFromResponse("", char, profile, nil)
+	sheet := DaggerheartSheetFromResponse("", char, profile, nil, nil)
 	if got := sheet.AncestryName; got != "Half-Clank" {
 		t.Fatalf("sheet ancestryName = %q, want %q", got, "Half-Clank")
 	}
@@ -307,7 +335,7 @@ func TestDaggerheartSheetTraitsIncludeSkillLabels(t *testing.T) {
 		Agility: wrapperspb.Int32(2),
 	}
 
-	sheet := DaggerheartSheetFromResponse("", char, profile, nil)
+	sheet := DaggerheartSheetFromResponse("", char, profile, nil, nil)
 
 	if len(sheet.Traits) != 1 {
 		t.Fatalf("traits count = %d, want 1", len(sheet.Traits))
@@ -343,7 +371,7 @@ func TestDaggerheartArmorTrack_UsesBaseArmorSlotsAndArmorScore(t *testing.T) {
 		t.Fatalf("card armor = %#v, want 3/4", card.Daggerheart.Summary.Armor)
 	}
 
-	sheet := DaggerheartSheetFromResponse("", char, profile, state)
+	sheet := DaggerheartSheetFromResponse("", char, profile, state, nil)
 	if sheet.Armor == nil || sheet.Armor.Current != 3 || sheet.Armor.Max != 4 {
 		t.Fatalf("sheet armor = %#v, want 3/4", sheet.Armor)
 	}

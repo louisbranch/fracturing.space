@@ -191,9 +191,9 @@ const aria = createCharacter({
     feature: "Reinforced at the shoulders.",
   },
   domainCards: [
-    { name: "Stand Firm", domain: "Valor" },
-    { name: "Hold the Line", domain: "Blade" },
-    { name: "Turn the Blow", domain: "Bone" },
+    { id: "domain_card.valor-stand-firm", name: "Stand Firm", domain: "Valor", featureText: "Plant yourself and refuse to be moved until the exchange breaks." },
+    { id: "domain_card.blade-hold-the-line", name: "Hold the Line", domain: "Blade", featureText: "Meet the charge head-on and make any advance through your reach costly." },
+    { id: "domain_card.bone-turn-the-blow", name: "Turn the Blow", domain: "Bone", featureText: "Angle the hit away and bleed momentum off the strike before it reaches an ally." },
   ],
   experiences: [
     { name: "Breach Specialist", modifier: 2 },
@@ -249,9 +249,9 @@ const corin = createCharacter({
     feature: "Warded lining.",
   },
   domainCards: [
-    { name: "Sigil Sight", domain: "Codex" },
-    { name: "Echo Counter", domain: "Midnight" },
-    { name: "Widen the Pattern", domain: "Arcana" },
+    { id: "domain_card.codex-sigil-sight", name: "Sigil Sight", domain: "Codex", featureText: "Read the active glyphwork at a glance and expose the weak point in the sequence." },
+    { id: "domain_card.midnight-echo-counter", name: "Echo Counter", domain: "Midnight", featureText: "Answer hostile magic with a reflected afterimage that disrupts its timing." },
+    { id: "domain_card.arcana-widen-the-pattern", name: "Widen the Pattern", domain: "Arcana", featureText: "Expand the spell lattice so nearby allies can move through the same opening." },
   ],
   experiences: [
     { name: "Runic Archive", modifier: 2 },
@@ -307,9 +307,9 @@ const sable = createCharacter({
     feature: "Soft-soled and dark dyed.",
   },
   domainCards: [
-    { name: "Cut the Lantern", domain: "Midnight" },
-    { name: "Vanish in Motion", domain: "Grace" },
-    { name: "Ghost Step", domain: "Shadow" },
+    { id: "domain_card.midnight-cut-the-lantern", name: "Cut the Lantern", domain: "Midnight", featureText: "Snuff the nearest light source and turn the scene into your terrain." },
+    { id: "domain_card.grace-vanish-in-motion", name: "Vanish in Motion", domain: "Grace", featureText: "Keep moving through the chaos until no one can agree where you went." },
+    { id: "domain_card.shadow-ghost-step", name: "Ghost Step", domain: "Shadow", featureText: "Cross a dangerous gap in a blur and reappear where the guard line is weakest." },
   ],
   experiences: [
     { name: "Upper gallery scout", modifier: 2 },
@@ -365,9 +365,9 @@ const mira = createCharacter({
     feature: "Light and travel-worn.",
   },
   domainCards: [
-    { name: "Vanishing Dodge", domain: "Midnight" },
-    { name: "Cloaking Blast", domain: "Arcana" },
-    { name: "Bolt Beacon", domain: "Splendor" },
+    { id: "domain_card.midnight-vanishing-dodge", name: "Vanishing Dodge", domain: "Midnight", featureText: "Slip out of reach and reset your footing before the enemy can follow through." },
+    { id: "domain_card.arcana-cloaking-blast", name: "Cloaking Blast", domain: "Arcana", featureText: "Throw a burst of arcane cover into the lane and disappear behind it." },
+    { id: "domain_card.splendor-bolt-beacon", name: "Bolt Beacon", domain: "Splendor", featureText: "Tag the opening with radiant force so everyone else can press the same weakness." },
   ],
   experiences: [
     { name: "Wanderer", modifier: 2 },
@@ -423,9 +423,9 @@ const rowan = createCharacter({
     feature: "Weathered and reliable.",
   },
   domainCards: [
-    { name: "Root Yourself", domain: "Stone" },
-    { name: "Answer the Charge", domain: "Valor" },
-    { name: "Carry Them Out", domain: "Bone" },
+    { id: "domain_card.stone-root-yourself", name: "Root Yourself", domain: "Stone", featureText: "Drop your weight and become the anchor point the rest of the retreat can pivot around." },
+    { id: "domain_card.valor-answer-the-charge", name: "Answer the Charge", domain: "Valor", featureText: "Step into the rush and make the aggressor deal with you first." },
+    { id: "domain_card.bone-carry-them-out", name: "Carry Them Out", domain: "Bone", featureText: "Lift a fallen ally clear of the melee without surrendering the line." },
   ],
   experiences: [
     { name: "Pack mule humor", modifier: 1 },

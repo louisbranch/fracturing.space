@@ -43,8 +43,10 @@ export type DaggerheartExperience = {
 
 // DaggerheartDomainCard models a domain card reference on the sheet.
 export type DaggerheartDomainCard = {
+  id: string;
   name: string;
   domain?: string;
+  featureText?: string;
 };
 
 // DaggerheartCharacterSheetData is the full read-only data contract for the

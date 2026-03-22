@@ -78,9 +78,24 @@ export const characterSheetFixtures: CharacterSheetFixtures = {
       { name: "Scholar", modifier: -1 },
     ],
     domainCards: [
-      { name: "Vanishing Dodge", domain: "Midnight" },
-      { name: "Cloaking Blast", domain: "Arcana" },
-      { name: "Bolt Beacon", domain: "Splendor" },
+      {
+        id: "domain_card.midnight-vanishing-dodge",
+        name: "Vanishing Dodge",
+        domain: "Midnight",
+        featureText: "Spend 3 Hope to slip out of reach and reposition before the next blow lands.",
+      },
+      {
+        id: "domain_card.arcana-cloaking-blast",
+        name: "Cloaking Blast",
+        domain: "Arcana",
+        featureText: "Unleash a burst of arcane smoke that obscures the lane and buys you a clean escape.",
+      },
+      {
+        id: "domain_card.splendor-bolt-beacon",
+        name: "Bolt Beacon",
+        domain: "Splendor",
+        featureText: "Mark a target in radiant light so the rest of the crew can follow your opening.",
+      },
     ],
 
     gold: { handfuls: 3, bags: 1, chests: 0 },
@@ -201,8 +216,18 @@ export const characterSheetFixtures: CharacterSheetFixtures = {
       { name: "Siege Engineer", modifier: 1 },
     ],
     domainCards: [
-      { name: "Stand Firm", domain: "Valor" },
-      { name: "Hold the Line", domain: "Blade" },
+      {
+        id: "domain_card.valor-stand-firm",
+        name: "Stand Firm",
+        domain: "Valor",
+        featureText: "Plant yourself in place and deny forced movement until the exchange breaks.",
+      },
+      {
+        id: "domain_card.blade-hold-the-line",
+        name: "Hold the Line",
+        domain: "Blade",
+        featureText: "Intercept the rush and make advancing through your reach a costly decision.",
+      },
     ],
 
     gold: { handfuls: 1, bags: 2, chests: 1 },

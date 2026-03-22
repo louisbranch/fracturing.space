@@ -45,16 +45,17 @@ func hubDepsFromServer(s *Server) realtimeHubDeps {
 
 func newAuthedPlayServer(interaction *recordingInteractionClient, transcripts *scriptTranscriptStore) *Server {
 	server := &Server{
-		auth:            &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
-		interaction:     interaction,
-		campaign:        fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:          fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		participants:    fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
-		characters:      fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
-		transcripts:     transcripts,
-		shellAssets:     shellAssets{devServerURL: "http://localhost:5173"},
-		httpServer:      &http.Server{},
-		webFallbackPort: "8080",
+		auth:               &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
+		interaction:        interaction,
+		campaign:           fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+		system:             fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+		participants:       fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+		characters:         fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+		daggerheartContent: &fakeDaggerheartContentClient{},
+		transcripts:        transcripts,
+		shellAssets:        shellAssets{devServerURL: "http://localhost:5173"},
+		httpServer:         &http.Server{},
+		webFallbackPort:    "8080",
 	}
 	server.realtime = newRealtimeHub(server)
 	return server
@@ -74,9 +75,29 @@ func assertJSONError(t *testing.T, rr *httptest.ResponseRecorder, wantStatus int
 	}
 }
 
-func drainWSFrames(t *testing.T, buffer *bytes.Buffer) []wsFrame {
+type syncedFrameBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncedFrameBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncedFrameBuffer) drain() []byte {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	data := append([]byte(nil), b.buf.Bytes()...)
+	b.buf.Reset()
+	return data
+}
+
+func drainWSFrames(t *testing.T, buffer *syncedFrameBuffer) []wsFrame {
 	t.Helper()
-	decoder := json.NewDecoder(bytes.NewReader(buffer.Bytes()))
+	decoder := json.NewDecoder(bytes.NewReader(buffer.drain()))
 	frames := []wsFrame{}
 	for {
 		var frame wsFrame
@@ -88,7 +109,6 @@ func drainWSFrames(t *testing.T, buffer *bytes.Buffer) []wsFrame {
 		}
 		frames = append(frames, frame)
 	}
-	buffer.Reset()
 	return frames
 }
 
@@ -356,6 +376,30 @@ func (f *authSensitivePlayCharacterClient) GetCharacterSheet(ctx context.Context
 	return f.sheetResponse, nil
 }
 
+type fakeDaggerheartContentClient struct {
+	mu        sync.Mutex
+	responses map[string]*daggerheartv1.DaggerheartDomainCard
+	errByID   map[string]error
+	requests  []*daggerheartv1.GetDaggerheartDomainCardRequest
+}
+
+func (f *fakeDaggerheartContentClient) GetDomainCard(_ context.Context, req *daggerheartv1.GetDaggerheartDomainCardRequest, _ ...gogrpc.CallOption) (*daggerheartv1.GetDaggerheartDomainCardResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if req != nil {
+		copied := *req
+		f.requests = append(f.requests, &copied)
+	}
+	cardID := strings.TrimSpace(req.GetId())
+	if err := f.errByID[cardID]; err != nil {
+		return nil, err
+	}
+	return &daggerheartv1.GetDaggerheartDomainCardResponse{
+		DomainCard: f.responses[cardID],
+	}, nil
+}
+
 func enrichedParticipantResponse() *gamev1.ListParticipantsResponse {
 	return &gamev1.ListParticipantsResponse{
 		Participants: []*gamev1.Participant{
@@ -416,6 +460,10 @@ func enrichedCharacterSheetResponse() *gamev1.GetCharacterSheetResponse {
 						Name:      "Leather",
 						BaseScore: 2,
 						Feature:   "Quiet",
+					},
+					DomainCardIds: []string{
+						"domain_card.valor-i-am-your-shield",
+						"domain_card.blade-get-back-up",
 					},
 				},
 			},

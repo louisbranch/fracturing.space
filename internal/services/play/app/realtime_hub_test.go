@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -59,7 +58,7 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID: "user-1",
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
@@ -141,7 +140,7 @@ func TestRealtimeChatSendRequiresActiveSession(t *testing.T) {
 	server.realtime = hub
 	defer hub.Close()
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID: "user-1",
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
@@ -184,7 +183,7 @@ func TestRealtimeTypingRequiresCampaignRoom(t *testing.T) {
 	server.realtime = hub
 	defer hub.Close()
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID:          "user-1",
 		peer:            &wsPeer{encoder: json.NewEncoder(&buffer)},
@@ -230,7 +229,7 @@ func TestRealtimeTypingRequiresParticipantIdentity(t *testing.T) {
 	}
 	hub.rooms["c1"] = room
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID:        "user-1",
 		peer:          &wsPeer{encoder: json.NewEncoder(&buffer)},
@@ -266,7 +265,7 @@ func TestRealtimeTypingRejectsInvalidPayload(t *testing.T) {
 	server.realtime = hub
 	defer hub.Close()
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID: "user-1",
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
@@ -313,7 +312,7 @@ func TestRealtimeRoomLifecycleAndBroadcasts(t *testing.T) {
 	}
 	hub.rooms["c1"] = room
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID: "user-1",
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
@@ -394,7 +393,7 @@ func TestRealtimeUnregisterSessionClearsTypingPresence(t *testing.T) {
 	}
 	hub.rooms["c1"] = room
 
-	var buffer bytes.Buffer
+	var buffer syncedFrameBuffer
 	session := &realtimeSession{
 		userID: "user-1",
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},

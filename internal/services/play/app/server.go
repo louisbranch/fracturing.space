@@ -11,6 +11,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 	playui "github.com/louisbranch/fracturing.space/internal/services/play/ui"
@@ -34,14 +35,15 @@ type Config struct {
 
 // Dependencies defines the runtime collaborators required by the play service.
 type Dependencies struct {
-	Auth         authClient
-	Interaction  interactionClient
-	Campaign     campaignClient
-	System       systemClient
-	Participants participantClient
-	Characters   characterClient
-	Events       eventClient
-	Transcripts  transcript.Store
+	Auth               authClient
+	Interaction        interactionClient
+	Campaign           campaignClient
+	System             systemClient
+	Participants       participantClient
+	Characters         characterClient
+	DaggerheartContent daggerheartContentClient
+	Events             eventClient
+	Transcripts        transcript.Store
 }
 
 type authClient interface {
@@ -85,6 +87,10 @@ type characterClient interface {
 	GetCharacterSheet(context.Context, *gamev1.GetCharacterSheetRequest, ...gogrpc.CallOption) (*gamev1.GetCharacterSheetResponse, error)
 }
 
+type daggerheartContentClient interface {
+	GetDomainCard(context.Context, *daggerheartv1.GetDaggerheartDomainCardRequest, ...gogrpc.CallOption) (*daggerheartv1.GetDaggerheartDomainCardResponse, error)
+}
+
 type eventClient interface {
 	SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[gamev1.CampaignUpdate], error)
 }
@@ -103,6 +109,7 @@ type Server struct {
 	system              systemClient
 	participants        participantClient
 	characters          characterClient
+	daggerheartContent  daggerheartContentClient
 	events              eventClient
 	transcripts         transcript.Store
 	shellAssets         shellAssets
@@ -138,6 +145,7 @@ func NewServer(cfg Config, deps Dependencies) (*Server, error) {
 		system:              deps.System,
 		participants:        deps.Participants,
 		characters:          deps.Characters,
+		daggerheartContent:  deps.DaggerheartContent,
 		events:              deps.Events,
 		transcripts:         deps.Transcripts,
 		shellAssets:         shellAssets,
@@ -175,6 +183,9 @@ func (d Dependencies) validate() error {
 	}
 	if d.Characters == nil {
 		return errors.New("character dependency is required")
+	}
+	if d.DaggerheartContent == nil {
+		return errors.New("daggerheart content dependency is required")
 	}
 	if d.Events == nil {
 		return errors.New("event dependency is required")
