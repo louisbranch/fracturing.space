@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { HUDNavbar } from "./HUDNavbar";
 
 describe("HUDNavbar", () => {
-  it("renders the menu trigger and three navigation items", () => {
+  it("renders the menu trigger and top-level navigation items", () => {
     render(
       <HUDNavbar
         activeTab="on-stage"
@@ -20,6 +20,7 @@ describe("HUDNavbar", () => {
     expect(screen.getByText("On Stage")).toBeInTheDocument();
     expect(screen.getByText("Backstage")).toBeInTheDocument();
     expect(screen.getByText("Side Chat")).toBeInTheDocument();
+    expect(screen.getByText("AI Debug")).toBeInTheDocument();
     expect(screen.getByText("On Stage").closest(".tooltip")).toHaveAttribute("data-tip", "Play as your character.");
     expect(screen.getByText("Backstage").closest(".tooltip")).toHaveAttribute(
       "data-tip",
@@ -30,6 +31,21 @@ describe("HUDNavbar", () => {
       "Optional non-authoritative session chat.",
     );
     expect(screen.getByLabelText("Connection status: Connected")).toBeInTheDocument();
+  });
+
+  it("hides AI Debug when the feature flag is disabled", () => {
+    render(
+      <HUDNavbar
+        activeTab="on-stage"
+        aiDebugEnabled={false}
+        connectionState="connected"
+        isSidebarOpen={false}
+        onSidebarOpenChange={() => {}}
+        onTabChange={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText("AI Debug")).not.toBeInTheDocument();
   });
 
   it("marks the active tab with aria-current", () => {

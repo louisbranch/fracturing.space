@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -36,6 +37,7 @@ type Config struct {
 // Dependencies defines the runtime collaborators required by the play service.
 type Dependencies struct {
 	Auth               authClient
+	AIDebug            aiDebugClient
 	Interaction        interactionClient
 	Campaign           campaignClient
 	System             systemClient
@@ -49,6 +51,12 @@ type Dependencies struct {
 type authClient interface {
 	CreateWebSession(context.Context, *authv1.CreateWebSessionRequest, ...gogrpc.CallOption) (*authv1.CreateWebSessionResponse, error)
 	GetWebSession(context.Context, *authv1.GetWebSessionRequest, ...gogrpc.CallOption) (*authv1.GetWebSessionResponse, error)
+}
+
+type aiDebugClient interface {
+	ListCampaignDebugTurns(context.Context, *aiv1.ListCampaignDebugTurnsRequest, ...gogrpc.CallOption) (*aiv1.ListCampaignDebugTurnsResponse, error)
+	GetCampaignDebugTurn(context.Context, *aiv1.GetCampaignDebugTurnRequest, ...gogrpc.CallOption) (*aiv1.GetCampaignDebugTurnResponse, error)
+	SubscribeCampaignDebugUpdates(context.Context, *aiv1.SubscribeCampaignDebugUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[aiv1.CampaignDebugTurnUpdate], error)
 }
 
 type interactionClient interface {
@@ -104,6 +112,7 @@ type Server struct {
 	assetBaseURL        string
 	requestSchemePolicy requestmeta.SchemePolicy
 	auth                authClient
+	aiDebug             aiDebugClient
 	interaction         interactionClient
 	campaign            campaignClient
 	system              systemClient
@@ -140,6 +149,7 @@ func NewServer(cfg Config, deps Dependencies) (*Server, error) {
 		assetBaseURL:        strings.TrimSpace(cfg.AssetBaseURL),
 		requestSchemePolicy: cfg.RequestSchemePolicy,
 		auth:                deps.Auth,
+		aiDebug:             deps.AIDebug,
 		interaction:         deps.Interaction,
 		campaign:            deps.Campaign,
 		system:              deps.System,
@@ -168,6 +178,9 @@ func NewServer(cfg Config, deps Dependencies) (*Server, error) {
 func (d Dependencies) validate() error {
 	if d.Auth == nil {
 		return errors.New("auth dependency is required")
+	}
+	if d.AIDebug == nil {
+		return errors.New("ai debug dependency is required")
 	}
 	if d.Interaction == nil {
 		return errors.New("interaction dependency is required")

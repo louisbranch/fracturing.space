@@ -1,10 +1,11 @@
 import type { HUDConnectionState } from "../interaction/player-hud/shared/contract";
-import type { WireChatMessage, WireRoomSnapshot } from "./types";
+import type { WireAIDebugTurnUpdate, WireChatMessage, WireRoomSnapshot } from "./types";
 
 export type WSEvent =
   | { type: "ready"; snapshot: WireRoomSnapshot }
   | { type: "interaction.updated"; snapshot: WireRoomSnapshot }
   | { type: "chat.message"; message: WireChatMessage }
+  | { type: "ai-debug.turn.updated"; update: WireAIDebugTurnUpdate }
   | { type: "typing"; participantId: string; name: string; active: boolean }
   | { type: "connection"; state: HUDConnectionState }
   | { type: "resync" }
@@ -36,6 +37,7 @@ export const FrameType = {
   Ping: "play.ping",
   Pong: "play.pong",
   ChatMessage: "play.chat.message",
+  AIDebugTurnUpdated: "play.ai_debug.turn.updated",
   ChatSend: "play.chat.send",
   Typing: "play.typing",
   InteractionUpdated: "play.interaction.updated",
@@ -151,6 +153,13 @@ export function connectWebSocket(opts: WSOptions): WSConnection {
         if (msg) {
           if (msg.sequence_id > currentChatSeq) currentChatSeq = msg.sequence_id;
           opts.onEvent({ type: "chat.message", message: msg });
+        }
+        break;
+      }
+      case FrameType.AIDebugTurnUpdated: {
+        const update = payload as WireAIDebugTurnUpdate | undefined;
+        if (update?.turn?.id) {
+          opts.onEvent({ type: "ai-debug.turn.updated", update });
         }
         break;
       }

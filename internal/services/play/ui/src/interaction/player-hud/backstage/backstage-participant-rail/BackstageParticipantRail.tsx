@@ -6,6 +6,8 @@ export function BackstageParticipantRail({
   participants,
   viewerParticipantId,
   gmAuthorityParticipantId,
+  aiOwnerParticipantId,
+  aiStatus,
   ariaLabel = "Backstage participants",
   onParticipantInspect,
 }: BackstageParticipantRailProps) {
@@ -14,6 +16,9 @@ export function BackstageParticipantRail({
       participants={backstageRailParticipants({
         participants,
         gmAuthorityParticipantId,
+      }, {
+        ownerParticipantId: aiOwnerParticipantId,
+        status: aiStatus,
       })}
       viewerParticipantId={viewerParticipantId}
       ariaLabel={ariaLabel}

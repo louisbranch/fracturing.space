@@ -7,9 +7,11 @@ import (
 	"testing"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	gogrpc "google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestRealtimeSessionResetTypingTimerUsesInjectedRuntimeTimer(t *testing.T) {
@@ -178,4 +180,270 @@ type failingEventClient struct {
 func (f *failingEventClient) SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[gamev1.CampaignUpdate], error) {
 	f.calls++
 	return nil, f.err
+}
+
+func TestCampaignRoomConsumeProjectionStreamBroadcastsAndTracksSequence(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	participants := &authSensitivePlayParticipantClient{response: enrichedParticipantResponse()}
+	characters := &authSensitivePlayCharacterClient{
+		listResponse:  enrichedCharacterResponse(),
+		sheetResponse: enrichedCharacterSheetResponse(),
+	}
+	server.participants = participants
+	server.characters = characters
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+
+	room := &campaignRoom{
+		hub:        hub,
+		campaignID: "c1",
+		ctx:        context.Background(),
+		cancel:     func() {},
+		sessions:   map[*realtimeSession]struct{}{},
+	}
+
+	var buffer syncedFrameBuffer
+	session := &realtimeSession{
+		userID: "user-1",
+		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
+	}
+	session.attach(room, playprotocol.InteractionStateFromGameState(playTestState()))
+	room.add(session)
+
+	stream := &fakeCampaignUpdateStream{
+		updates: make(chan *gamev1.CampaignUpdate, 2),
+	}
+	stream.updates <- nil
+	stream.updates <- &gamev1.CampaignUpdate{
+		Seq:       12,
+		EventType: "projection.applied",
+		Update: &gamev1.CampaignUpdate_ProjectionApplied{
+			ProjectionApplied: &gamev1.ProjectionApplied{
+				Scopes: []string{"campaign_sessions"},
+			},
+		},
+	}
+	close(stream.updates)
+
+	runtime := hub.runtime
+	runtime.sleepUntilRetry = func(context.Context, time.Duration) bool { return false }
+	hub.runtime = runtime
+
+	if ok := room.consumeProjectionStream(stream); !ok {
+		t.Fatal("consumeProjectionStream returned false on EOF, want reconnect")
+	}
+	if got := room.latestGameSequence(); got != 12 {
+		t.Fatalf("latestGameSequence() = %d, want 12", got)
+	}
+
+	frames := drainWSFrames(t, &buffer)
+	if len(frames) != 1 || frames[0].Type != "play.interaction.updated" {
+		t.Fatalf("frames = %#v", frames)
+	}
+	if participants.lastUserID != "user-1" || characters.lastUserID != "user-1" {
+		t.Fatalf("auth metadata = participant:%q character:%q, want user-1", participants.lastUserID, characters.lastUserID)
+	}
+}
+
+func TestCampaignRoomConsumeProjectionStreamRetriesOnRecvError(t *testing.T) {
+	t.Parallel()
+
+	var delays []time.Duration
+	runtime := realtimeRuntime{
+		projectionRetryTTL: 175 * time.Millisecond,
+		sleepUntilRetry: func(_ context.Context, delay time.Duration) bool {
+			delays = append(delays, delay)
+			return false
+		},
+	}
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	hub := newRealtimeHubWithRuntime(hubDepsFromServer(server), runtime)
+	server.realtime = hub
+
+	room := &campaignRoom{
+		hub:        hub,
+		campaignID: "c1",
+		ctx:        context.Background(),
+		cancel:     func() {},
+		sessions:   map[*realtimeSession]struct{}{},
+	}
+
+	if ok := room.consumeProjectionStream(&fakeCampaignUpdateStream{recvErr: errors.New("stream failed")}); ok {
+		t.Fatal("consumeProjectionStream returned true, want false")
+	}
+	if len(delays) != 1 || delays[0] != 175*time.Millisecond {
+		t.Fatalf("retry delays = %#v", delays)
+	}
+}
+
+func TestCampaignRoomBroadcastResyncWritesFrame(t *testing.T) {
+	t.Parallel()
+
+	var buffer syncedFrameBuffer
+	session := &realtimeSession{
+		userID: "user-1",
+		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
+	}
+	room := &campaignRoom{campaignID: "c1"}
+
+	room.broadcastResync([]*realtimeSession{session})
+
+	frames := drainWSFrames(t, &buffer)
+	if len(frames) != 1 || frames[0].Type != "play.resync" {
+		t.Fatalf("frames = %#v", frames)
+	}
+}
+
+func TestCampaignRoomRunAIDebugSubscriptionUsesConfiguredRetryDelay(t *testing.T) {
+	t.Parallel()
+
+	var delays []time.Duration
+	runtime := realtimeRuntime{
+		projectionRetryTTL: 225 * time.Millisecond,
+		sleepUntilRetry: func(_ context.Context, delay time.Duration) bool {
+			delays = append(delays, delay)
+			return false
+		},
+	}
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	aiDebug := &fakePlayAIDebugClient{subscribeErr: errors.New("subscribe failed")}
+	server.aiDebug = aiDebug
+	hub := newRealtimeHubWithRuntime(hubDepsFromServer(server), runtime)
+	server.realtime = hub
+
+	room := &campaignRoom{
+		hub:        hub,
+		campaignID: "c1",
+		ctx:        context.Background(),
+		cancel:     func() {},
+		sessions:   map[*realtimeSession]struct{}{},
+		authUserID: "user-1",
+	}
+
+	room.runAIDebugSubscription(context.Background(), "s1")
+
+	if aiDebug.subscribeReq == nil {
+		t.Fatal("SubscribeCampaignDebugUpdates request = nil")
+	}
+	if aiDebug.subscribeReq.GetCampaignId() != "c1" || aiDebug.subscribeReq.GetSessionId() != "s1" {
+		t.Fatalf("SubscribeCampaignDebugUpdates request = %#v", aiDebug.subscribeReq)
+	}
+	if len(delays) != 1 || delays[0] != 225*time.Millisecond {
+		t.Fatalf("retry delays = %#v", delays)
+	}
+}
+
+func TestCampaignRoomConsumeAIDebugStreamSkipsInvalidUpdatesAndBroadcastsValidOnes(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+
+	room := &campaignRoom{
+		hub:              hub,
+		campaignID:       "c1",
+		ctx:              context.Background(),
+		cancel:           func() {},
+		sessions:         map[*realtimeSession]struct{}{},
+		aiDebugSessionID: "s1",
+	}
+
+	var buffer syncedFrameBuffer
+	session := &realtimeSession{
+		userID: "user-1",
+		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
+	}
+	room.add(session)
+
+	stream := &fakeCampaignDebugUpdateStream{
+		updates: make(chan *aiv1.CampaignDebugTurnUpdate, 3),
+	}
+	stream.updates <- nil
+	stream.updates <- &aiv1.CampaignDebugTurnUpdate{
+		Turn: &aiv1.CampaignDebugTurnSummary{
+			Id: "",
+		},
+	}
+	stream.updates <- &aiv1.CampaignDebugTurnUpdate{
+		Turn: &aiv1.CampaignDebugTurnSummary{
+			Id:         "turn-1",
+			CampaignId: "c1",
+			SessionId:  "s1",
+			Status:     aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_RUNNING,
+			StartedAt:  timestamppb.Now(),
+			UpdatedAt:  timestamppb.Now(),
+			EntryCount: 1,
+		},
+		AppendedEntries: []*aiv1.CampaignDebugEntry{{
+			Sequence:  1,
+			Kind:      aiv1.CampaignDebugEntryKind_CAMPAIGN_DEBUG_ENTRY_KIND_TOOL_CALL,
+			ToolName:  "scene_create",
+			Payload:   `{"name":"Harbor"}`,
+			CreatedAt: timestamppb.Now(),
+		}},
+	}
+	close(stream.updates)
+
+	runtime := hub.runtime
+	runtime.sleepUntilRetry = func(context.Context, time.Duration) bool { return false }
+	hub.runtime = runtime
+
+	if ok := room.consumeAIDebugStream(context.Background(), "s1", stream); ok {
+		t.Fatal("consumeAIDebugStream returned true after EOF retry-disabled, want false")
+	}
+
+	frames := drainWSFrames(t, &buffer)
+	if len(frames) != 1 || frames[0].Type != "play.ai_debug.turn.updated" {
+		t.Fatalf("frames = %#v", frames)
+	}
+}
+
+func TestCampaignRoomConsumeAIDebugStreamStopsOnSessionSwitch(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+
+	room := &campaignRoom{
+		hub:              hub,
+		campaignID:       "c1",
+		ctx:              context.Background(),
+		cancel:           func() {},
+		sessions:         map[*realtimeSession]struct{}{},
+		aiDebugSessionID: "s2",
+	}
+
+	var buffer syncedFrameBuffer
+	session := &realtimeSession{
+		userID: "user-1",
+		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
+	}
+	room.add(session)
+
+	stream := &fakeCampaignDebugUpdateStream{
+		updates: make(chan *aiv1.CampaignDebugTurnUpdate, 1),
+	}
+	stream.updates <- &aiv1.CampaignDebugTurnUpdate{
+		Turn: &aiv1.CampaignDebugTurnSummary{
+			Id:         "turn-1",
+			CampaignId: "c1",
+			SessionId:  "s1",
+			Status:     aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_RUNNING,
+			StartedAt:  timestamppb.Now(),
+			UpdatedAt:  timestamppb.Now(),
+			EntryCount: 1,
+		},
+	}
+
+	if ok := room.consumeAIDebugStream(context.Background(), "s1", stream); !ok {
+		t.Fatal("consumeAIDebugStream returned false on session switch, want true")
+	}
+	if frames := drainWSFrames(t, &buffer); len(frames) != 0 {
+		t.Fatalf("frames = %#v, want no broadcast", frames)
+	}
 }

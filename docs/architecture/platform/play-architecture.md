@@ -84,6 +84,9 @@ remains in `game.v1.InteractionService`.
   consume those request/query types instead of open-coding trim/default logic.
 - Human chat and typing indicators are `play` transport concerns, not `game`
   domain authority.
+- AI debug live updates are a `play` transport concern layered on top of
+  AI-owned debug traces. `play` may forward AI-session-scoped debug deltas over
+  websocket, but it must not become the source of truth for AI turn traces.
 - Browser payload contracts should be defined in
   `internal/services/play/protocol`. If the browser runtime starts consuming
   those contracts directly again, add an explicit TypeScript mirror instead of

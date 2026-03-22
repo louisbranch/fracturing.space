@@ -1,3 +1,4 @@
+import { AIDebugPanel } from "../ai-debug/ai-debug-panel/AIDebugPanel";
 import { BackstagePanel } from "../backstage/backstage-panel/BackstagePanel";
 import { BackstageParticipantRail } from "../backstage/backstage-participant-rail/BackstageParticipantRail";
 import { SideChatPanel } from "../chat/side-chat-panel/SideChatPanel";
@@ -14,6 +15,7 @@ import type { PlayerHUDShellProps } from "./contract";
 // so all three top-level tabs keep the same overall layout.
 export function PlayerHUDShell({
   activeTab,
+  aiDebugEnabled,
   connectionState,
   campaignNavigation,
   isSidebarOpen,
@@ -37,17 +39,24 @@ export function PlayerHUDShell({
   sideChatDraft,
   onSideChatDraftChange,
   onSideChatSend,
+  aiDebug,
+  onAIDebugLoadMore,
+  onAIDebugToggleTurn,
 }: PlayerHUDShellProps) {
-  const participantRail = activeTab === "side-chat" ? (
+  const participantRail = activeTab === "ai-debug" ? null : activeTab === "side-chat" ? (
     <SideChatParticipantRail
       participants={sideChat.participants}
       viewerParticipantId={sideChat.viewerParticipantId}
+      aiOwnerParticipantId={onStage.aiOwnerParticipantId}
+      aiStatus={onStage.aiStatus}
       onParticipantInspect={onParticipantInspect}
     />
   ) : activeTab === "on-stage" ? (
     <OnStageParticipantRail
       participants={onStage.participants}
       viewerParticipantId={onStage.viewerParticipantId}
+      aiOwnerParticipantId={onStage.aiOwnerParticipantId}
+      aiStatus={onStage.aiStatus}
       onParticipantInspect={onParticipantInspect}
     />
   ) : (
@@ -55,6 +64,8 @@ export function PlayerHUDShell({
       participants={backstage.participants}
       viewerParticipantId={backstage.viewerParticipantId}
       gmAuthorityParticipantId={backstage.gmAuthorityParticipantId}
+      aiOwnerParticipantId={onStage.aiOwnerParticipantId}
+      aiStatus={onStage.aiStatus}
       ariaLabel="Backstage participants"
       onParticipantInspect={onParticipantInspect}
     />
@@ -73,6 +84,7 @@ export function PlayerHUDShell({
         <main aria-label="Player HUD shell" className="play-density-hud flex h-dvh w-full flex-col bg-base-300">
           <HUDNavbar
             activeTab={activeTab}
+            aiDebugEnabled={aiDebugEnabled}
             connectionState={connectionState}
             isSidebarOpen={isSidebarOpen}
             onSidebarOpenChange={onSidebarOpenChange}
@@ -111,6 +123,14 @@ export function PlayerHUDShell({
                     draft={sideChatDraft}
                     onDraftChange={onSideChatDraftChange}
                     onSend={onSideChatSend}
+                  />
+                </PanelErrorBoundary>
+              ) : activeTab === "ai-debug" ? (
+                <PanelErrorBoundary panelName="AI Debug">
+                  <AIDebugPanel
+                    state={aiDebug ?? { phase: "idle", turns: [], detailsByTurnId: {} }}
+                    onLoadMore={onAIDebugLoadMore}
+                    onToggleTurn={onAIDebugToggleTurn}
                   />
                 </PanelErrorBoundary>
               ) : (

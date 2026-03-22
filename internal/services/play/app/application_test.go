@@ -4,10 +4,13 @@ import (
 	"context"
 	"testing"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestPlayApplicationSystemMetadata(t *testing.T) {
@@ -132,4 +135,106 @@ func TestBuildCharacterInspectionCatalogFallsBackWhenDomainCardLookupFails(t *te
 	if sheet.DomainCards[1].FeatureText != "Stand again and keep fighting." {
 		t.Fatalf("domainCards[1].FeatureText = %q", sheet.DomainCards[1].FeatureText)
 	}
+}
+
+func TestPlayApplicationAIDebugAccessors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ai debug turns use active session", func(t *testing.T) {
+		t.Parallel()
+
+		aiDebug := &fakePlayAIDebugClient{
+			listResp: &aiv1.ListCampaignDebugTurnsResponse{
+				Turns: []*aiv1.CampaignDebugTurnSummary{{
+					Id:         "turn-1",
+					Model:      "gpt-5.4",
+					Status:     aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_RUNNING,
+					EntryCount: 1,
+				}},
+				NextPageToken: "next-1",
+			},
+		}
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		page, err := server.application().aiDebugTurns(context.Background(), playRequest{
+			campaignRequest: campaignRequest{CampaignID: "c1"},
+			UserID:          "user-1",
+		}, aiDebugPage{PageSize: 10, PageToken: "next-0"})
+		if err != nil {
+			t.Fatalf("aiDebugTurns() error = %v", err)
+		}
+		if len(page.Turns) != 1 || page.Turns[0].ID != "turn-1" || page.NextPageToken != "next-1" {
+			t.Fatalf("page = %#v", page)
+		}
+		if aiDebug.listReq == nil || aiDebug.listReq.GetSessionId() != "s1" || aiDebug.listReq.GetPageSize() != 10 || aiDebug.listReq.GetPageToken() != "next-0" {
+			t.Fatalf("list request = %#v", aiDebug.listReq)
+		}
+	})
+
+	t.Run("ai debug turns without active session skip upstream", func(t *testing.T) {
+		t.Parallel()
+
+		state := playTestState()
+		state.ActiveSession = nil
+		aiDebug := &fakePlayAIDebugClient{}
+		server := newAuthedPlayServer(newRecordingInteractionClient(state), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		page, err := server.application().aiDebugTurns(context.Background(), playRequest{
+			campaignRequest: campaignRequest{CampaignID: "c1"},
+			UserID:          "user-1",
+		}, aiDebugPage{PageSize: 10})
+		if err != nil {
+			t.Fatalf("aiDebugTurns() error = %v", err)
+		}
+		if len(page.Turns) != 0 || aiDebug.listReq != nil {
+			t.Fatalf("page/listReq = (%#v, %#v), want empty result without upstream call", page, aiDebug.listReq)
+		}
+	})
+
+	t.Run("ai debug turn trims requested id", func(t *testing.T) {
+		t.Parallel()
+
+		aiDebug := &fakePlayAIDebugClient{
+			getResp: &aiv1.GetCampaignDebugTurnResponse{
+				Turn: &aiv1.CampaignDebugTurn{
+					Id:     "turn-1",
+					Model:  "gpt-5.4",
+					Status: aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_SUCCEEDED,
+				},
+			},
+		}
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		turn, err := server.application().aiDebugTurn(context.Background(), playRequest{
+			campaignRequest: campaignRequest{CampaignID: "c1"},
+			UserID:          "user-1",
+		}, " turn-1 ")
+		if err != nil {
+			t.Fatalf("aiDebugTurn() error = %v", err)
+		}
+		if turn.ID != "turn-1" {
+			t.Fatalf("turn = %#v", turn)
+		}
+		if aiDebug.getReq == nil || aiDebug.getReq.GetTurnId() != "turn-1" {
+			t.Fatalf("get request = %#v", aiDebug.getReq)
+		}
+	})
+
+	t.Run("ai debug turn propagates upstream error", func(t *testing.T) {
+		t.Parallel()
+
+		aiDebug := &fakePlayAIDebugClient{getErr: status.Error(codes.NotFound, "missing")}
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		if _, err := server.application().aiDebugTurn(context.Background(), playRequest{
+			campaignRequest: campaignRequest{CampaignID: "c1"},
+			UserID:          "user-1",
+		}, "turn-1"); status.Code(err) != codes.NotFound {
+			t.Fatalf("aiDebugTurn() code = %v, want %v", status.Code(err), codes.NotFound)
+		}
+	})
 }

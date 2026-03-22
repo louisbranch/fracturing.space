@@ -7,7 +7,7 @@ import type {
 
 // HUDNavbarTab identifies the three top-level navigation surfaces in the player
 // HUD.
-export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat";
+export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat" | "ai-debug";
 
 // HUDConnectionState identifies the transport health state shown in the shared
 // Player HUD navbar badge.

@@ -5,6 +5,7 @@ import type { DaggerheartCharacterSheetData } from "../systems/daggerheart/chara
 
 export type BootstrapResponse = {
   campaign_id: string;
+  ai_debug_enabled?: boolean;
   viewer?: WireViewer;
   system: WireSystem;
   interaction_state: WireInteractionState;
@@ -119,6 +120,55 @@ export type WireAITurn = {
   status?: string;
   owner_participant_id?: string;
   last_error?: string;
+};
+
+export type WireUsage = {
+  input_tokens?: number;
+  output_tokens?: number;
+  reasoning_tokens?: number;
+  total_tokens?: number;
+};
+
+export type WireAIDebugTurnSummary = {
+  id: string;
+  turn_token?: string;
+  participant_id?: string;
+  provider?: string;
+  model?: string;
+  status?: string;
+  last_error?: string;
+  usage?: WireUsage;
+  started_at?: string;
+  updated_at?: string;
+  completed_at?: string;
+  entry_count?: number;
+};
+
+export type WireAIDebugEntry = {
+  sequence: number;
+  kind?: string;
+  tool_name?: string;
+  payload?: string;
+  payload_truncated?: boolean;
+  call_id?: string;
+  response_id?: string;
+  is_error?: boolean;
+  created_at?: string;
+  usage?: WireUsage;
+};
+
+export type WireAIDebugTurn = WireAIDebugTurnSummary & {
+  entries: WireAIDebugEntry[];
+};
+
+export type WireAIDebugTurnUpdate = {
+  turn: WireAIDebugTurnSummary;
+  appended_entries: WireAIDebugEntry[];
+};
+
+export type WireAIDebugTurnsPage = {
+  turns: WireAIDebugTurnSummary[];
+  next_page_token?: string;
 };
 
 export type WireParticipant = {

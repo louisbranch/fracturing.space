@@ -5,9 +5,12 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	gogrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -27,6 +30,8 @@ type campaignRoom struct {
 	authUserID  string
 
 	subscriptionStarted bool
+	aiDebugSessionID    string
+	aiDebugCancel       context.CancelFunc
 }
 
 func (r *campaignRoom) runProjectionSubscription() {
@@ -163,6 +168,12 @@ func (r *campaignRoom) sessionsSnapshot() []*realtimeSession {
 	return values
 }
 
+func (r *campaignRoom) currentAIDebugSession() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.aiDebugSessionID
+}
+
 func (r *campaignRoom) ensureProjectionSubscription() {
 	start := false
 	r.mu.Lock()
@@ -176,7 +187,36 @@ func (r *campaignRoom) ensureProjectionSubscription() {
 	}
 }
 
-func (r *campaignRoom) subscriptionContext() (context.Context, string, bool) {
+func (r *campaignRoom) reconcileAIDebugSubscription(sessionID string) {
+	sessionID = strings.TrimSpace(sessionID)
+
+	var cancel context.CancelFunc
+	var startCtx context.Context
+	start := false
+
+	r.mu.Lock()
+	if r.aiDebugSessionID == sessionID {
+		r.mu.Unlock()
+		return
+	}
+	cancel = r.aiDebugCancel
+	r.aiDebugCancel = nil
+	r.aiDebugSessionID = sessionID
+	if sessionID != "" {
+		startCtx, r.aiDebugCancel = context.WithCancel(r.ctx)
+		start = true
+	}
+	r.mu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+	if start {
+		go r.runAIDebugSubscription(startCtx, sessionID)
+	}
+}
+
+func (r *campaignRoom) subscriptionContextWithBase(base context.Context) (context.Context, string, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	userID := r.authUserID
@@ -187,7 +227,11 @@ func (r *campaignRoom) subscriptionContext() (context.Context, string, bool) {
 	if userID == "" {
 		return nil, "", false
 	}
-	return grpcauthctx.WithUserID(r.ctx, userID), userID, true
+	return grpcauthctx.WithUserID(base, userID), userID, true
+}
+
+func (r *campaignRoom) subscriptionContext() (context.Context, string, bool) {
+	return r.subscriptionContextWithBase(r.ctx)
 }
 
 func (r *campaignRoom) firstSessionUserIDLocked() string {
@@ -233,6 +277,10 @@ func (r *campaignRoom) broadcastCurrent() {
 	if snapshot.InteractionState.ActiveScene != nil {
 		activeSceneID = snapshot.InteractionState.ActiveScene.SceneID
 	}
+	activeSessionID := ""
+	if snapshot.InteractionState.ActiveSession != nil {
+		activeSessionID = snapshot.InteractionState.ActiveSession.SessionID
+	}
 	aiTurnStatus := ""
 	if snapshot.InteractionState.AITurn != nil {
 		aiTurnStatus = snapshot.InteractionState.AITurn.Status
@@ -241,9 +289,11 @@ func (r *campaignRoom) broadcastCurrent() {
 		"campaign_id", r.campaignID,
 		"sessions", len(sessions),
 		"latest_game_seq", snapshot.LatestGameSeq,
+		"active_session_id", activeSessionID,
 		"active_scene_id", activeSceneID,
 		"ai_turn_status", aiTurnStatus,
 	)
+	r.reconcileAIDebugSubscription(activeSessionID)
 
 	payload := mustJSON(snapshot)
 	for _, session := range sessions {
@@ -266,5 +316,95 @@ func (r *campaignRoom) broadcastResync(sessions []*realtimeSession) {
 func (r *campaignRoom) broadcastFrame(frame wsFrame) {
 	for _, session := range r.sessionsSnapshot() {
 		_ = session.peer.writeFrame(frame)
+	}
+}
+
+func (r *campaignRoom) runAIDebugSubscription(ctx context.Context, sessionID string) {
+	retryDelay := r.hub.runtime.projectionRetryTTL
+	for {
+		authCtx, userID, ok := r.subscriptionContextWithBase(ctx)
+		if !ok {
+			if !r.hub.runtime.retryWithDelay(ctx, retryDelay) {
+				return
+			}
+			retryDelay = r.hub.runtime.backoff(retryDelay)
+			continue
+		}
+		slog.InfoContext(ctx, "play realtime: subscribing to ai debug updates",
+			"campaign_id", r.campaignID,
+			"session_id", sessionID,
+			"user_id", userID,
+		)
+		stream, err := r.hub.deps.aiDebug.SubscribeCampaignDebugUpdates(authCtx, &aiv1.SubscribeCampaignDebugUpdatesRequest{
+			CampaignId: r.campaignID,
+			SessionId:  sessionID,
+		})
+		if err != nil {
+			slog.WarnContext(ctx, "play realtime: ai debug subscribe failed",
+				"campaign_id", r.campaignID,
+				"session_id", sessionID,
+				"user_id", userID,
+				"grpc_code", status.Code(err).String(),
+				"error", err,
+			)
+			if !r.hub.runtime.retryWithDelay(ctx, retryDelay) {
+				return
+			}
+			retryDelay = r.hub.runtime.backoff(retryDelay)
+			continue
+		}
+		slog.InfoContext(ctx, "play realtime: ai debug stream connected",
+			"campaign_id", r.campaignID,
+			"session_id", sessionID,
+			"user_id", userID,
+		)
+		retryDelay = r.hub.runtime.projectionRetryTTL
+		if !r.consumeAIDebugStream(ctx, sessionID, stream) {
+			return
+		}
+	}
+}
+
+func (r *campaignRoom) consumeAIDebugStream(
+	ctx context.Context,
+	sessionID string,
+	stream gogrpc.ServerStreamingClient[aiv1.CampaignDebugTurnUpdate],
+) bool {
+	for {
+		update, recvErr := stream.Recv()
+		if recvErr != nil {
+			if errors.Is(recvErr, io.EOF) {
+				slog.InfoContext(ctx, "play realtime: ai debug stream closed by server",
+					"campaign_id", r.campaignID,
+					"session_id", sessionID,
+				)
+			} else {
+				slog.WarnContext(ctx, "play realtime: ai debug stream recv failed",
+					"campaign_id", r.campaignID,
+					"session_id", sessionID,
+					"grpc_code", status.Code(recvErr).String(),
+					"error", recvErr,
+				)
+			}
+			return r.hub.runtime.retryWithDelay(ctx, r.hub.runtime.projectionRetryTTL)
+		}
+		if update == nil {
+			continue
+		}
+		if r.currentAIDebugSession() != sessionID {
+			return true
+		}
+		payload := playprotocol.AIDebugTurnUpdateFromProto(update)
+		if strings.TrimSpace(payload.Turn.ID) == "" {
+			continue
+		}
+		slog.InfoContext(ctx, "play realtime: ai debug update received",
+			"campaign_id", r.campaignID,
+			"session_id", sessionID,
+			"turn_id", payload.Turn.ID,
+			"status", payload.Turn.Status,
+			"appended_entries", len(payload.AppendedEntries),
+		)
+		r.broadcastFrame(wsFrame{Type: "play.ai_debug.turn.updated", Payload: mustJSON(payload)})
 	}
 }

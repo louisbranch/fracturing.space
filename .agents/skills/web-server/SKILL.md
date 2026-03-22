@@ -26,6 +26,13 @@ Transport-layer guidance for the Web UI and related services.
 - Prefer integration tests at transport seams (request mapping, auth checks, response contracts).
 - Assert user-visible outcomes and explicit protocol invariants, not incidental markup trivia.
 
+## Play UI Build Output
+
+- If the change touches `internal/services/play/ui/**`, refresh the checked-in
+  production bundle in `internal/services/play/ui/dist` before finishing.
+- Use `npm run build` from `internal/services/play/ui` or `make play-ui-dist`.
+- Treat the checked-in dist as part of the deliverable, not an optional local artifact.
+
 ## Architecture Notes
 
 Refer to `docs/architecture/architecture.md` for system layout and service boundaries.

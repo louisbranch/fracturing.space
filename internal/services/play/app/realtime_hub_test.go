@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
@@ -125,6 +127,86 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 	}
 
 	hub.Close()
+}
+
+func TestRealtimeConnectSubscribesToAIDebugAndBroadcastsUpdates(t *testing.T) {
+	t.Parallel()
+
+	interaction := newRecordingInteractionClient(playTestState())
+	transcripts := &scriptTranscriptStore{}
+	server := newAuthedPlayServer(interaction, transcripts)
+	server.events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
+	aiDebug := &fakePlayAIDebugClient{
+		subscribeStream: &fakeCampaignDebugUpdateStream{updates: make(chan *aiv1.CampaignDebugTurnUpdate, 1)},
+		subscribeCh:     make(chan struct{}, 1),
+	}
+	server.aiDebug = aiDebug
+	hub := newRealtimeHub(server)
+	server.realtime = hub
+	defer hub.Close()
+
+	var buffer syncedFrameBuffer
+	session := &realtimeSession{
+		userID: "user-1",
+		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
+	}
+
+	hub.handleConnect(context.Background(), session, wsFrame{
+		Type:      "play.connect",
+		RequestID: "req-1",
+		Payload:   mustJSON(playprotocol.ConnectRequest{CampaignID: "c1"}),
+	})
+	_ = drainWSFrames(t, &buffer)
+
+	aiDebug.awaitSubscribe(t)
+	if aiDebug.subscribeUserID != "user-1" {
+		t.Fatalf("ai debug auth metadata = %q, want %q", aiDebug.subscribeUserID, "user-1")
+	}
+	if aiDebug.subscribeReq == nil {
+		t.Fatal("SubscribeCampaignDebugUpdates request = nil")
+	}
+	if aiDebug.subscribeReq.GetCampaignId() != "c1" || aiDebug.subscribeReq.GetSessionId() != "s1" {
+		t.Fatalf("SubscribeCampaignDebugUpdates request = %#v", aiDebug.subscribeReq)
+	}
+
+	stream := aiDebug.subscribeStream.(*fakeCampaignDebugUpdateStream)
+	stream.updates <- &aiv1.CampaignDebugTurnUpdate{
+		Turn: &aiv1.CampaignDebugTurnSummary{
+			Id:         "turn-1",
+			CampaignId: "c1",
+			SessionId:  "s1",
+			Status:     aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_RUNNING,
+			StartedAt:  timestamppb.Now(),
+			UpdatedAt:  timestamppb.Now(),
+			EntryCount: 1,
+		},
+		AppendedEntries: []*aiv1.CampaignDebugEntry{{
+			Sequence:  1,
+			Kind:      aiv1.CampaignDebugEntryKind_CAMPAIGN_DEBUG_ENTRY_KIND_TOOL_CALL,
+			ToolName:  "scene_create",
+			Payload:   `{"name":"Harbor"}`,
+			CreatedAt: timestamppb.Now(),
+		}},
+	}
+
+	var frames []wsFrame
+	for deadline := time.Now().Add(time.Second); time.Now().Before(deadline); {
+		frames = drainWSFrames(t, &buffer)
+		if len(frames) > 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if len(frames) != 1 || frames[0].Type != "play.ai_debug.turn.updated" {
+		t.Fatalf("ai debug frames = %#v", frames)
+	}
+	var payload playprotocol.AIDebugTurnUpdate
+	if err := json.Unmarshal(frames[0].Payload, &payload); err != nil {
+		t.Fatalf("decode ai debug update payload: %v", err)
+	}
+	if payload.Turn.ID != "turn-1" || len(payload.AppendedEntries) != 1 || payload.AppendedEntries[0].ToolName != "scene_create" {
+		t.Fatalf("ai debug payload = %#v", payload)
+	}
 }
 
 func TestRealtimeChatSendRequiresActiveSession(t *testing.T) {

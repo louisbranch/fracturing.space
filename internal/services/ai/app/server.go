@@ -235,6 +235,7 @@ type serviceHandlers struct {
 	agents                *aiservice.AgentHandlers
 	invocations           *aiservice.InvocationHandlers
 	campaignOrchestration *aiservice.CampaignOrchestrationHandlers
+	campaignDebug         *aiservice.CampaignDebugHandlers
 	campaignArtifacts     *aiservice.CampaignArtifactHandlers
 	systemReferences      *aiservice.SystemReferenceHandlers
 	providerGrants        *aiservice.ProviderGrantHandlers
@@ -242,6 +243,7 @@ type serviceHandlers struct {
 }
 
 func buildHandlers(d handlerDeps) (serviceHandlers, error) {
+	debugUpdateBroker := svcpkg.NewCampaignDebugUpdateBroker()
 	usageGuard := svcpkg.NewUsageGuard(d.store, d.gameClients.campaignAI)
 	credentialService, err := svcpkg.NewCredentialService(svcpkg.CredentialServiceConfig{
 		CredentialStore: d.store,
@@ -368,8 +370,11 @@ func buildHandlers(d handlerDeps) (serviceHandlers, error) {
 		GameCampaignAIClient:    d.gameClients.campaignAI,
 		ProviderToolAdapters:    d.providerToolAdapters,
 		CampaignTurnRunner:      campaignTurnRunner,
+		DebugTraceStore:         d.store,
+		DebugUpdateBroker:       debugUpdateBroker,
 		SessionGrantConfig:      d.cfg.SessionGrantConfig,
 		AuthTokenResolver:       authTokenResolver,
+		Logger:                  slog.Default().With("service", "ai", "component", "campaign_debug"),
 	})
 	if err != nil {
 		return serviceHandlers{}, fmt.Errorf("campaign orchestration service: %w", err)
@@ -380,12 +385,28 @@ func buildHandlers(d handlerDeps) (serviceHandlers, error) {
 	if err != nil {
 		return serviceHandlers{}, fmt.Errorf("campaign orchestration handlers: %w", err)
 	}
+	campaignDebugService, err := svcpkg.NewCampaignDebugService(svcpkg.CampaignDebugServiceConfig{
+		DebugTraceStore: d.store,
+		UpdateBroker:    debugUpdateBroker,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("campaign debug service: %w", err)
+	}
+	campaignDebugHandlers, err := aiservice.NewCampaignDebugHandlers(aiservice.CampaignDebugHandlersConfig{
+		CampaignDebugService:     campaignDebugService,
+		AuthorizationClient:      d.gameClients.authorization,
+		InternalServiceAllowlist: d.cfg.InternalServiceAllowlist,
+	})
+	if err != nil {
+		return serviceHandlers{}, fmt.Errorf("campaign debug handlers: %w", err)
+	}
 
 	return serviceHandlers{
 		credentials:           credentialHandlers,
 		agents:                agentHandlers,
 		invocations:           invocationHandlers,
 		campaignOrchestration: campaignOrchestrationHandlers,
+		campaignDebug:         campaignDebugHandlers,
 		campaignArtifacts:     campaignArtifactHandlers,
 		systemReferences:      d.systemReferenceHandlers,
 		providerGrants:        providerGrantHandlers,
@@ -398,6 +419,7 @@ func registerServices(grpcServer *grpc.Server, healthServer *health.Server, h se
 	aiv1.RegisterAgentServiceServer(grpcServer, h.agents)
 	aiv1.RegisterInvocationServiceServer(grpcServer, h.invocations)
 	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, h.campaignOrchestration)
+	aiv1.RegisterCampaignDebugServiceServer(grpcServer, h.campaignDebug)
 	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, h.campaignArtifacts)
 	aiv1.RegisterSystemReferenceServiceServer(grpcServer, h.systemReferences)
 	aiv1.RegisterProviderGrantServiceServer(grpcServer, h.providerGrants)
@@ -409,6 +431,7 @@ func registerServices(grpcServer *grpc.Server, healthServer *health.Server, h se
 	healthServer.SetServingStatus("ai.v1.AgentService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.InvocationService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.CampaignOrchestrationService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("ai.v1.CampaignDebugService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.CampaignArtifactService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.SystemReferenceService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.ProviderGrantService", grpc_health_v1.HealthCheckResponse_SERVING)

@@ -179,6 +179,12 @@ service CampaignOrchestrationService {
   rpc RunCampaignTurn(RunCampaignTurnRequest) returns (RunCampaignTurnResponse);
 }
 
+service CampaignDebugService {
+  rpc ListCampaignDebugTurns(ListCampaignDebugTurnsRequest) returns (ListCampaignDebugTurnsResponse);
+  rpc GetCampaignDebugTurn(GetCampaignDebugTurnRequest) returns (GetCampaignDebugTurnResponse);
+  rpc SubscribeCampaignDebugUpdates(SubscribeCampaignDebugUpdatesRequest) returns (stream CampaignDebugTurnUpdate);
+}
+
 service CampaignArtifactService {
   rpc EnsureCampaignArtifacts(EnsureCampaignArtifactsRequest) returns (EnsureCampaignArtifactsResponse);
   rpc ListCampaignArtifacts(ListCampaignArtifactsRequest) returns (ListCampaignArtifactsResponse);
@@ -314,6 +320,7 @@ message RunCampaignTurnRequest {
   string session_grant = 1;
   string input = 2;
   string reasoning_effort = 3;
+  string turn_token = 4;
 }
 
 message RunCampaignTurnResponse {
@@ -321,6 +328,98 @@ message RunCampaignTurnResponse {
   Provider provider = 2;
   string model = 3;
   Usage usage = 4;
+}
+
+enum CampaignDebugTurnStatus {
+  CAMPAIGN_DEBUG_TURN_STATUS_UNSPECIFIED = 0;
+  CAMPAIGN_DEBUG_TURN_STATUS_RUNNING = 1;
+  CAMPAIGN_DEBUG_TURN_STATUS_SUCCEEDED = 2;
+  CAMPAIGN_DEBUG_TURN_STATUS_FAILED = 3;
+}
+
+enum CampaignDebugEntryKind {
+  CAMPAIGN_DEBUG_ENTRY_KIND_UNSPECIFIED = 0;
+  CAMPAIGN_DEBUG_ENTRY_KIND_MODEL_RESPONSE = 1;
+  CAMPAIGN_DEBUG_ENTRY_KIND_TOOL_CALL = 2;
+  CAMPAIGN_DEBUG_ENTRY_KIND_TOOL_RESULT = 3;
+}
+
+message CampaignDebugEntry {
+  int32 sequence = 1;
+  CampaignDebugEntryKind kind = 2;
+  string tool_name = 3;
+  string payload = 4;
+  bool payload_truncated = 5;
+  string call_id = 6;
+  string response_id = 7;
+  bool is_error = 8;
+  google.protobuf.Timestamp created_at = 9;
+  Usage usage = 10;
+}
+
+message CampaignDebugTurn {
+  string id = 1;
+  string campaign_id = 2;
+  string session_id = 3;
+  string turn_token = 4;
+  string participant_id = 5;
+  Provider provider = 6;
+  string model = 7;
+  CampaignDebugTurnStatus status = 8;
+  string last_error = 9;
+  Usage usage = 10;
+  google.protobuf.Timestamp started_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  google.protobuf.Timestamp completed_at = 13;
+  repeated CampaignDebugEntry entries = 14;
+}
+
+message CampaignDebugTurnSummary {
+  string id = 1;
+  string campaign_id = 2;
+  string session_id = 3;
+  string turn_token = 4;
+  string participant_id = 5;
+  Provider provider = 6;
+  string model = 7;
+  CampaignDebugTurnStatus status = 8;
+  string last_error = 9;
+  Usage usage = 10;
+  google.protobuf.Timestamp started_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  google.protobuf.Timestamp completed_at = 13;
+  int32 entry_count = 14;
+}
+
+message ListCampaignDebugTurnsRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListCampaignDebugTurnsResponse {
+  repeated CampaignDebugTurnSummary turns = 1;
+  string next_page_token = 2;
+}
+
+message GetCampaignDebugTurnRequest {
+  string campaign_id = 1;
+  string turn_id = 2;
+}
+
+message GetCampaignDebugTurnResponse {
+  CampaignDebugTurn turn = 1;
+}
+
+message SubscribeCampaignDebugUpdatesRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+}
+
+message CampaignDebugTurnUpdate {
+  CampaignDebugTurnSummary turn = 1;
+  repeated CampaignDebugEntry appended_entries = 2;
 }
 
 message CampaignArtifact {

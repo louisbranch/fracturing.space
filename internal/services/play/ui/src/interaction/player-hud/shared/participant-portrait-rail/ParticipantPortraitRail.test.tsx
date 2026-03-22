@@ -51,6 +51,67 @@ describe("ParticipantPortraitRail", () => {
     expect(screen.getByLabelText("Rhea status: Changes requested")).toBeInTheDocument();
   });
 
+  it("renders AI thinking on the GM portrait without hiding GM authority", () => {
+    render(
+      <ParticipantPortraitRail
+        participants={[
+          {
+            id: "p-rhea",
+            name: "Rhea",
+            roleLabel: "PLAYER",
+            characters: [],
+            status: "idle",
+          },
+          {
+            id: "p-guide",
+            name: "Guide",
+            roleLabel: "GM",
+            characters: [],
+            status: "idle",
+            aiStatus: "thinking",
+            ownsGMAuthority: true,
+          },
+        ]}
+        viewerParticipantId="p-rhea"
+        ariaLabel="AI participants"
+      />,
+    );
+
+    expect(screen.getByLabelText("Guide: AI thinking")).toBeInTheDocument();
+    expect(screen.getByLabelText("Guide status: AI thinking")).toBeInTheDocument();
+    expect(screen.getByLabelText("Guide GM authority")).toBeInTheDocument();
+  });
+
+  it("renders AI failure on the GM portrait", () => {
+    render(
+      <ParticipantPortraitRail
+        participants={[
+          {
+            id: "p-rhea",
+            name: "Rhea",
+            roleLabel: "PLAYER",
+            characters: [],
+            status: "idle",
+          },
+          {
+            id: "p-guide",
+            name: "Guide",
+            roleLabel: "GM",
+            characters: [],
+            status: "idle",
+            aiStatus: "failed",
+            ownsGMAuthority: true,
+          },
+        ]}
+        viewerParticipantId="p-rhea"
+        ariaLabel="AI participants"
+      />,
+    );
+
+    expect(screen.getByLabelText("Guide: AI failed")).toBeInTheDocument();
+    expect(screen.getByLabelText("Guide status: AI failed")).toBeInTheDocument();
+  });
+
   it("emits participant inspection clicks when portraits are interactive", async () => {
     const user = userEvent.setup();
     const onParticipantInspect = vi.fn();

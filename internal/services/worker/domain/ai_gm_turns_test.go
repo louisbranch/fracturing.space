@@ -134,6 +134,9 @@ func TestAIGMTurnRequestedHandlerHandleRunsFullLifecycle(t *testing.T) {
 	if ai.reqs[0].GetSessionGrant() != "grant-1" {
 		t.Fatalf("run request = %#v", ai.reqs[0])
 	}
+	if ai.reqs[0].GetTurnToken() != "turn-1" {
+		t.Fatalf("run turn token = %q", ai.reqs[0].GetTurnToken())
+	}
 	if len(orchestration.failReqs) != 0 {
 		t.Fatalf("unexpected fail requests = %#v", orchestration.failReqs)
 	}

@@ -6,8 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestParseChatHistoryPage(t *testing.T) {
@@ -217,6 +220,225 @@ func TestHandleChatHistoryVariants(t *testing.T) {
 		}
 		if payload.SessionID != "" || len(payload.Messages) != 0 {
 			t.Fatalf("payload = %#v", payload)
+		}
+	})
+}
+
+func TestHandleAIDebugVariants(t *testing.T) {
+	t.Parallel()
+
+	t.Run("list turns", func(t *testing.T) {
+		t.Parallel()
+
+		aiDebug := &fakePlayAIDebugClient{
+			listResp: &aiv1.ListCampaignDebugTurnsResponse{
+				Turns: []*aiv1.CampaignDebugTurnSummary{{
+					Id:         "turn-1",
+					Model:      "gpt-4.1-mini",
+					Status:     aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_RUNNING,
+					EntryCount: 3,
+				}},
+				NextPageToken: "next-1",
+			},
+		}
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns?page_size=10", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleAIDebugTurns(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+		}
+		var payload playprotocol.AIDebugTurnsPage
+		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("decode ai debug list: %v", err)
+		}
+		if len(payload.Turns) != 1 || payload.Turns[0].ID != "turn-1" {
+			t.Fatalf("turns = %#v", payload.Turns)
+		}
+		if aiDebug.listReq == nil || aiDebug.listReq.GetSessionId() != "s1" {
+			t.Fatalf("list request = %#v", aiDebug.listReq)
+		}
+	})
+
+	t.Run("get turn", func(t *testing.T) {
+		t.Parallel()
+
+		aiDebug := &fakePlayAIDebugClient{
+			getResp: &aiv1.GetCampaignDebugTurnResponse{
+				Turn: &aiv1.CampaignDebugTurn{
+					Id:     "turn-1",
+					Model:  "gpt-4.1-mini",
+					Status: aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_FAILED,
+					Entries: []*aiv1.CampaignDebugEntry{{
+						Sequence: 1,
+						Kind:     aiv1.CampaignDebugEntryKind_CAMPAIGN_DEBUG_ENTRY_KIND_TOOL_RESULT,
+						ToolName: "scene_create",
+						Payload:  "tool failed",
+						IsError:  true,
+					}},
+				},
+			},
+		}
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns/turn-1", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.SetPathValue("turnID", "turn-1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleAIDebugTurn(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+		}
+		var payload playprotocol.AIDebugTurn
+		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("decode ai debug turn: %v", err)
+		}
+		if payload.ID != "turn-1" || len(payload.Entries) != 1 {
+			t.Fatalf("payload = %#v", payload)
+		}
+		if aiDebug.getReq == nil || aiDebug.getReq.GetTurnId() != "turn-1" {
+			t.Fatalf("get request = %#v", aiDebug.getReq)
+		}
+	})
+
+	t.Run("invalid page size", func(t *testing.T) {
+		t.Parallel()
+
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns?page_size=oops", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleAIDebugTurns(rr, req)
+
+		assertJSONError(t, rr, http.StatusBadRequest, "invalid page_size")
+	})
+
+	t.Run("list turns without active session returns empty payload", func(t *testing.T) {
+		t.Parallel()
+
+		state := playTestState()
+		state.ActiveSession = nil
+		aiDebug := &fakePlayAIDebugClient{}
+		server := newAuthedPlayServer(newRecordingInteractionClient(state), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleAIDebugTurns(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+		}
+		var payload playprotocol.AIDebugTurnsPage
+		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("decode ai debug list: %v", err)
+		}
+		if len(payload.Turns) != 0 || aiDebug.listReq != nil {
+			t.Fatalf("payload/listReq = (%#v, %#v), want empty result without upstream call", payload, aiDebug.listReq)
+		}
+	})
+
+	t.Run("list turns maps upstream error", func(t *testing.T) {
+		t.Parallel()
+
+		aiDebug := &fakePlayAIDebugClient{listErr: status.Error(codes.Unavailable, "down")}
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleAIDebugTurns(rr, req)
+
+		assertJSONError(t, rr, http.StatusBadGateway, "upstream request failed")
+	})
+
+	t.Run("missing turn id returns not found", func(t *testing.T) {
+		t.Parallel()
+
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns/", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleAIDebugTurn(rr, req)
+
+		if rr.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+		}
+	})
+
+	t.Run("get turn maps upstream error", func(t *testing.T) {
+		t.Parallel()
+
+		aiDebug := &fakePlayAIDebugClient{getErr: status.Error(codes.NotFound, "missing")}
+		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		server.aiDebug = aiDebug
+
+		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns/turn-1", nil)
+		req.SetPathValue("campaignID", "c1")
+		req.SetPathValue("turnID", "turn-1")
+		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
+		rr := httptest.NewRecorder()
+
+		server.handleAIDebugTurn(rr, req)
+
+		assertJSONError(t, rr, http.StatusNotFound, "resource not found")
+	})
+}
+
+func TestParseAIDebugPage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("defaults", func(t *testing.T) {
+		t.Parallel()
+
+		page, err := parseAIDebugPage(httptest.NewRequest(http.MethodGet, "/api/campaigns/c1/ai-debug/turns", nil))
+		if err != nil {
+			t.Fatalf("parseAIDebugPage(defaults) error = %v", err)
+		}
+		if page.PageSize != 20 || page.PageToken != "" {
+			t.Fatalf("page = %#v", page)
+		}
+	})
+
+	t.Run("clamps page size", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/api/campaigns/c1/ai-debug/turns?page_size=200&page_token=next-1", nil)
+		page, err := parseAIDebugPage(req)
+		if err != nil {
+			t.Fatalf("parseAIDebugPage(clamps) error = %v", err)
+		}
+		if page.PageSize != 50 || page.PageToken != "next-1" {
+			t.Fatalf("page = %#v", page)
+		}
+	})
+
+	t.Run("rejects non-positive page size", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodGet, "/api/campaigns/c1/ai-debug/turns?page_size=0", nil)
+		if _, err := parseAIDebugPage(req); err != errInvalidAIDebugPageSize {
+			t.Fatalf("parseAIDebugPage(non-positive) error = %v, want %v", err, errInvalidAIDebugPageSize)
 		}
 	})
 }

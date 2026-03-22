@@ -5,11 +5,16 @@ import type { SideChatParticipantRailProps } from "./contract";
 export function SideChatParticipantRail({
   participants,
   viewerParticipantId,
+  aiOwnerParticipantId,
+  aiStatus,
   onParticipantInspect,
 }: SideChatParticipantRailProps) {
   return (
     <ParticipantPortraitRail
-      participants={sideChatRailParticipants(participants)}
+      participants={sideChatRailParticipants(participants, {
+        ownerParticipantId: aiOwnerParticipantId,
+        status: aiStatus,
+      })}
       viewerParticipantId={viewerParticipantId}
       ariaLabel="Side chat participants"
       onParticipantInspect={onParticipantInspect}

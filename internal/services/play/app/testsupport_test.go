@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
@@ -38,6 +39,7 @@ func hubDepsFromServer(s *Server) realtimeHubDeps {
 	return realtimeHubDeps{
 		resolveUserID: s.resolvePlayUserID,
 		application:   s.application,
+		aiDebug:       s.aiDebug,
 		transcripts:   s.transcripts,
 		events:        s.events,
 	}
@@ -46,6 +48,7 @@ func hubDepsFromServer(s *Server) realtimeHubDeps {
 func newAuthedPlayServer(interaction *recordingInteractionClient, transcripts *scriptTranscriptStore) *Server {
 	server := &Server{
 		auth:               &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
+		aiDebug:            &fakePlayAIDebugClient{},
 		interaction:        interaction,
 		campaign:           fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
 		system:             fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
@@ -59,6 +62,95 @@ func newAuthedPlayServer(interaction *recordingInteractionClient, transcripts *s
 	}
 	server.realtime = newRealtimeHub(server)
 	return server
+}
+
+type fakePlayAIDebugClient struct {
+	mu sync.Mutex
+
+	listResp *aiv1.ListCampaignDebugTurnsResponse
+	listErr  error
+	listReq  *aiv1.ListCampaignDebugTurnsRequest
+
+	getResp *aiv1.GetCampaignDebugTurnResponse
+	getErr  error
+	getReq  *aiv1.GetCampaignDebugTurnRequest
+
+	subscribeStream gogrpc.ServerStreamingClient[aiv1.CampaignDebugTurnUpdate]
+	subscribeErr    error
+	subscribeReq    *aiv1.SubscribeCampaignDebugUpdatesRequest
+	subscribeUserID string
+	subscribeCh     chan struct{}
+}
+
+func (f *fakePlayAIDebugClient) ListCampaignDebugTurns(_ context.Context, req *aiv1.ListCampaignDebugTurnsRequest, _ ...gogrpc.CallOption) (*aiv1.ListCampaignDebugTurnsResponse, error) {
+	f.mu.Lock()
+	f.listReq = req
+	resp := f.listResp
+	err := f.listErr
+	f.mu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		return resp, nil
+	}
+	return &aiv1.ListCampaignDebugTurnsResponse{}, nil
+}
+
+func (f *fakePlayAIDebugClient) GetCampaignDebugTurn(_ context.Context, req *aiv1.GetCampaignDebugTurnRequest, _ ...gogrpc.CallOption) (*aiv1.GetCampaignDebugTurnResponse, error) {
+	f.mu.Lock()
+	f.getReq = req
+	resp := f.getResp
+	err := f.getErr
+	f.mu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		return resp, nil
+	}
+	return &aiv1.GetCampaignDebugTurnResponse{}, nil
+}
+
+func (f *fakePlayAIDebugClient) SubscribeCampaignDebugUpdates(ctx context.Context, req *aiv1.SubscribeCampaignDebugUpdatesRequest, _ ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[aiv1.CampaignDebugTurnUpdate], error) {
+	f.mu.Lock()
+	f.subscribeUserID = grpcauthctx.UserIDFromOutgoingContext(ctx)
+	if req != nil {
+		cloned := *req
+		f.subscribeReq = &cloned
+	}
+	subscribeCh := f.subscribeCh
+	stream := f.subscribeStream
+	err := f.subscribeErr
+	f.mu.Unlock()
+	if subscribeCh != nil {
+		select {
+		case subscribeCh <- struct{}{}:
+		default:
+		}
+	}
+	if streamState, ok := stream.(*fakeCampaignDebugUpdateStream); ok && streamState.ctx == nil {
+		streamState.ctx = ctx
+	}
+	if err != nil {
+		return nil, err
+	}
+	if stream != nil {
+		return stream, nil
+	}
+	return &fakeCampaignDebugUpdateStream{ctx: ctx}, nil
+}
+
+func (f *fakePlayAIDebugClient) awaitSubscribe(t *testing.T) {
+	t.Helper()
+	if f.subscribeCh == nil {
+		t.Fatal("subscribeCh is nil")
+	}
+	select {
+	case <-f.subscribeCh:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for SubscribeCampaignDebugUpdates")
+	}
 }
 
 func assertJSONError(t *testing.T, rr *httptest.ResponseRecorder, wantStatus int, wantMessage string) {
@@ -337,6 +429,42 @@ func (f *fakeCampaignUpdateStream) Context() context.Context {
 }
 func (f *fakeCampaignUpdateStream) SendMsg(any) error { return nil }
 func (f *fakeCampaignUpdateStream) RecvMsg(any) error { return nil }
+
+type fakeCampaignDebugUpdateStream struct {
+	ctx     context.Context
+	updates chan *aiv1.CampaignDebugTurnUpdate
+	recvErr error
+}
+
+func (f *fakeCampaignDebugUpdateStream) Recv() (*aiv1.CampaignDebugTurnUpdate, error) {
+	if f.recvErr != nil {
+		return nil, f.recvErr
+	}
+	if f.updates != nil {
+		select {
+		case update, ok := <-f.updates:
+			if !ok {
+				return nil, io.EOF
+			}
+			return update, nil
+		case <-f.Context().Done():
+			return nil, f.Context().Err()
+		}
+	}
+	<-f.Context().Done()
+	return nil, f.Context().Err()
+}
+func (f *fakeCampaignDebugUpdateStream) Header() (gogrpcmetadata.MD, error) { return nil, nil }
+func (f *fakeCampaignDebugUpdateStream) Trailer() gogrpcmetadata.MD         { return nil }
+func (f *fakeCampaignDebugUpdateStream) CloseSend() error                   { return nil }
+func (f *fakeCampaignDebugUpdateStream) Context() context.Context {
+	if f.ctx == nil {
+		return context.Background()
+	}
+	return f.ctx
+}
+func (f *fakeCampaignDebugUpdateStream) SendMsg(any) error { return nil }
+func (f *fakeCampaignDebugUpdateStream) RecvMsg(any) error { return nil }
 
 type authSensitivePlayParticipantClient struct {
 	response   *gamev1.ListParticipantsResponse

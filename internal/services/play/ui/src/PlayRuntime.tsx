@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { fetchAIDebugTurn, fetchAIDebugTurns } from "./api/aiDebug";
 import { fetchBootstrap } from "./api/bootstrap";
 import * as mutations from "./api/mutations";
 import type { WSConnection, WSEvent } from "./api/websocket";
 import { FrameType, connectWebSocket } from "./api/websocket";
-import type { BootstrapResponse, WireChatMessage, WireRoomSnapshot } from "./api/types";
+import type {
+  BootstrapResponse,
+  WireAIDebugTurn,
+  WireAIDebugTurnSummary,
+  WireAIDebugTurnUpdate,
+  WireAIDebugTurnsPage,
+  WireChatMessage,
+  WireRoomSnapshot,
+} from "./api/types";
+import type { AIDebugPanelState } from "./interaction/player-hud/ai-debug/shared/contract";
 import type { HUDConnectionState, HUDNavbarTab } from "./interaction/player-hud/shared/contract";
 import { PlayerHUDShell } from "./interaction/player-hud/player-hud-shell/PlayerHUDShell";
 import {
@@ -30,6 +40,7 @@ type RuntimeState = {
   backstageDraft: string;
   sideChatDraft: string;
   isSidebarOpen: boolean;
+  aiDebug: AIDebugPanelState;
 };
 
 type RuntimeAction =
@@ -39,6 +50,7 @@ type RuntimeAction =
   | { type: "ws-ready"; snapshot: WireRoomSnapshot }
   | { type: "ws-interaction-updated"; snapshot: WireRoomSnapshot }
   | { type: "ws-chat-message"; message: WireChatMessage }
+  | { type: "ws-ai-debug-turn-updated"; update: WireAIDebugTurnUpdate }
   | { type: "ws-typing"; participantId: string; active: boolean }
   | { type: "ws-connection"; state: HUDConnectionState }
   | { type: "mutation-snapshot"; snapshot: WireRoomSnapshot }
@@ -49,7 +61,13 @@ type RuntimeAction =
   | { type: "set-on-stage-draft"; value: string }
   | { type: "set-backstage-draft"; value: string }
   | { type: "set-side-chat-draft"; value: string }
-  | { type: "set-sidebar-open"; open: boolean };
+  | { type: "set-sidebar-open"; open: boolean }
+  | { type: "ai-debug-loading" }
+  | { type: "ai-debug-loaded"; page: WireAIDebugTurnsPage; append: boolean }
+  | { type: "ai-debug-error"; message: string }
+  | { type: "ai-debug-toggle-turn"; turnId: string }
+  | { type: "ai-debug-turn-loading"; turnId: string }
+  | { type: "ai-debug-turn-loaded"; turn: WireAIDebugTurn };
 
 type ComposerTypingSource = "on-stage" | "backstage" | "side-chat";
 
@@ -77,6 +95,7 @@ function initialState(): RuntimeState {
     backstageDraft: "",
     sideChatDraft: "",
     isSidebarOpen: false,
+    aiDebug: { phase: "idle", turns: [], detailsByTurnId: {} },
   };
 }
 
@@ -104,6 +123,25 @@ function addTypingParticipant(ids: string[], participantId: string): string[] {
 
 function removeTypingParticipant(ids: string[], participantId: string): string[] {
   return ids.filter((id) => id !== participantId);
+}
+
+function upsertAIDebugTurnSummary(turns: WireAIDebugTurnSummary[], next: WireAIDebugTurnSummary): WireAIDebugTurnSummary[] {
+  const index = turns.findIndex((turn) => turn.id === next.id);
+  if (index === -1) {
+    return [next, ...turns];
+  }
+  return turns.map((turn, turnIndex) => (turnIndex === index ? { ...turn, ...next } : turn));
+}
+
+function mergeAIDebugEntries(existing: WireAIDebugTurn["entries"], appended: WireAIDebugTurnUpdate["appended_entries"]): WireAIDebugTurn["entries"] {
+  if (appended.length === 0) {
+    return existing;
+  }
+  const bySequence = new Map(existing.map((entry) => [entry.sequence, entry]));
+  for (const entry of appended) {
+    bySequence.set(entry.sequence, entry);
+  }
+  return [...bySequence.values()].sort((left, right) => left.sequence - right.sequence);
 }
 
 function viewerParticipantID(
@@ -144,6 +182,30 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
       return { ...state, snapshot: action.snapshot, mutationError: undefined };
     case "ws-chat-message":
       return { ...state, chatMessages: [...state.chatMessages, action.message] };
+    case "ws-ai-debug-turn-updated": {
+      const turn = action.update.turn;
+      if (!turn?.id) {
+        return state;
+      }
+      const existingDetail = state.aiDebug.detailsByTurnId[turn.id];
+      return {
+        ...state,
+        aiDebug: {
+          ...state.aiDebug,
+          turns: upsertAIDebugTurnSummary(state.aiDebug.turns, turn),
+          detailsByTurnId: existingDetail
+            ? {
+              ...state.aiDebug.detailsByTurnId,
+              [turn.id]: {
+                ...existingDetail,
+                ...turn,
+                entries: mergeAIDebugEntries(existingDetail.entries, action.update.appended_entries ?? []),
+              },
+            }
+            : state.aiDebug.detailsByTurnId,
+        },
+      };
+    }
     case "ws-typing": {
       const participantId = action.participantId.trim();
       if (!participantId) {
@@ -176,6 +238,65 @@ function reducer(state: RuntimeState, action: RuntimeAction): RuntimeState {
       return { ...state, sideChatDraft: action.value };
     case "set-sidebar-open":
       return { ...state, isSidebarOpen: action.open };
+    case "ai-debug-loading":
+      return {
+        ...state,
+        aiDebug: {
+          ...state.aiDebug,
+          phase: state.aiDebug.turns.length === 0 ? "loading" : state.aiDebug.phase,
+          errorMessage: undefined,
+        },
+      };
+    case "ai-debug-loaded":
+      return {
+        ...state,
+        aiDebug: {
+          ...state.aiDebug,
+          phase: "ready",
+          turns: action.append ? [...state.aiDebug.turns, ...action.page.turns] : action.page.turns,
+          nextPageToken: action.page.next_page_token,
+          errorMessage: undefined,
+        },
+      };
+    case "ai-debug-error":
+      return {
+        ...state,
+        aiDebug: {
+          ...state.aiDebug,
+          phase: "error",
+          errorMessage: action.message,
+        },
+      };
+    case "ai-debug-toggle-turn":
+      return {
+        ...state,
+        aiDebug: {
+          ...state.aiDebug,
+          expandedTurnId: state.aiDebug.expandedTurnId === action.turnId ? undefined : action.turnId,
+        },
+      };
+    case "ai-debug-turn-loading":
+      return {
+        ...state,
+        aiDebug: {
+          ...state.aiDebug,
+          loadingTurnId: action.turnId,
+          errorMessage: undefined,
+        },
+      };
+    case "ai-debug-turn-loaded":
+      return {
+        ...state,
+        aiDebug: {
+          ...state.aiDebug,
+          phase: "ready",
+          loadingTurnId: state.aiDebug.loadingTurnId === action.turn.id ? undefined : state.aiDebug.loadingTurnId,
+          detailsByTurnId: {
+            ...state.aiDebug.detailsByTurnId,
+            [action.turn.id]: action.turn,
+          },
+        },
+      };
   }
 }
 
@@ -231,6 +352,7 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
   const typingSourceIdleTimersRef = useRef<Partial<Record<ComposerTypingSource, ReturnType<typeof setTimeout>>>>({});
   const typingHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const viewerTypingRef = useRef(false);
+  const previousConnectionStateRef = useRef<HUDConnectionState>("disconnected");
   const {
     inspector,
     close: closeInspector,
@@ -239,6 +361,7 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     setActiveCharacter,
   } = usePlayerHUDCharacterInspector();
   const typingTTLMs = Math.max(500, state.bootstrap?.realtime.typing_ttl_ms ?? 3_000);
+  const aiDebugEnabled = state.bootstrap?.ai_debug_enabled ?? false;
 
   const clearTypingSourceIdleTimer = useCallback((source: ComposerTypingSource) => {
     const timer = typingSourceIdleTimersRef.current[source];
@@ -321,6 +444,26 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     }
   }, [shellConfig.bootstrapPath]);
 
+  const loadAIDebugTurns = useCallback(async (pageToken?: string) => {
+    dispatch({ type: "ai-debug-loading" });
+    try {
+      const page = await fetchAIDebugTurns(shellConfig.campaignId, pageToken);
+      dispatch({ type: "ai-debug-loaded", page, append: Boolean(pageToken) });
+    } catch (err) {
+      dispatch({ type: "ai-debug-error", message: err instanceof Error ? err.message : "Failed to load AI debug turns" });
+    }
+  }, [shellConfig.campaignId]);
+
+  const loadAIDebugTurn = useCallback(async (turnId: string) => {
+    dispatch({ type: "ai-debug-turn-loading", turnId });
+    try {
+      const turn = await fetchAIDebugTurn(shellConfig.campaignId, turnId);
+      dispatch({ type: "ai-debug-turn-loaded", turn });
+    } catch (err) {
+      dispatch({ type: "ai-debug-error", message: err instanceof Error ? err.message : "Failed to load AI debug turn" });
+    }
+  }, [shellConfig.campaignId]);
+
   // Bootstrap
   useEffect(() => {
     let cancelled = false;
@@ -357,6 +500,9 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
           case "chat.message":
             dispatch({ type: "ws-chat-message", message: event.message });
             break;
+          case "ai-debug.turn.updated":
+            dispatch({ type: "ws-ai-debug-turn-updated", update: event.update });
+            break;
           case "typing":
             dispatch({ type: "ws-typing", participantId: event.participantId, active: event.active });
             break;
@@ -380,6 +526,48 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     clearAllTypingSources();
     stopTypingHeartbeat();
   }, [clearAllTypingSources, stopTypingHeartbeat]);
+
+  useEffect(() => {
+    if (!aiDebugEnabled || state.activeTab !== "ai-debug") {
+      return;
+    }
+    if (state.aiDebug.phase === "idle") {
+      void loadAIDebugTurns();
+    }
+  }, [aiDebugEnabled, loadAIDebugTurns, state.activeTab, state.aiDebug.phase]);
+
+  useEffect(() => {
+    if (!aiDebugEnabled || state.activeTab !== "ai-debug") {
+      return;
+    }
+    const turnId = state.aiDebug.expandedTurnId;
+    if (!turnId || state.aiDebug.detailsByTurnId[turnId]) {
+      return;
+    }
+    void loadAIDebugTurn(turnId);
+  }, [aiDebugEnabled, loadAIDebugTurn, state.activeTab, state.aiDebug.detailsByTurnId, state.aiDebug.expandedTurnId]);
+
+  useEffect(() => {
+    const previous = previousConnectionStateRef.current;
+    previousConnectionStateRef.current = state.connectionState;
+    if (!aiDebugEnabled || state.aiDebug.phase === "idle") {
+      return;
+    }
+    if (state.connectionState !== "connected" || previous === "connected") {
+      return;
+    }
+    void loadAIDebugTurns();
+    if (state.aiDebug.expandedTurnId) {
+      void loadAIDebugTurn(state.aiDebug.expandedTurnId);
+    }
+  }, [
+    aiDebugEnabled,
+    loadAIDebugTurn,
+    loadAIDebugTurns,
+    state.aiDebug.expandedTurnId,
+    state.aiDebug.phase,
+    state.connectionState,
+  ]);
 
   // --- Handlers ---
 
@@ -529,6 +717,17 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
     setTypingSource("side-chat", false);
   }, [setTypingSource, state.sideChatDraft]);
 
+  const handleAIDebugLoadMore = useCallback(() => {
+    if (!state.aiDebug.nextPageToken) {
+      return;
+    }
+    void loadAIDebugTurns(state.aiDebug.nextPageToken);
+  }, [loadAIDebugTurns, state.aiDebug.nextPageToken]);
+
+  const handleAIDebugToggleTurn = useCallback((turnId: string) => {
+    dispatch({ type: "ai-debug-toggle-turn", turnId });
+  }, []);
+
   // --- Render ---
 
   if (state.phase === "loading") {
@@ -632,9 +831,10 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
 
   return (
     <>
-      <PlayerHUDShell
-        activeTab={hudState.activeTab}
-        connectionState={hudState.connectionState}
+        <PlayerHUDShell
+          activeTab={hudState.activeTab}
+          aiDebugEnabled={aiDebugEnabled}
+          connectionState={hudState.connectionState}
         campaignNavigation={hudState.campaignNavigation}
         isSidebarOpen={state.isSidebarOpen}
         onSidebarOpenChange={(open) => dispatch({ type: "set-sidebar-open", open })}
@@ -666,6 +866,9 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
           setTypingSource("side-chat", value.trim().length > 0);
         }}
         onSideChatSend={handleSideChatSend}
+        aiDebug={state.aiDebug}
+        onAIDebugLoadMore={handleAIDebugLoadMore}
+        onAIDebugToggleTurn={handleAIDebugToggleTurn}
       />
       <PlayerHUDCharacterInspectorDialog
         isOpen={Boolean(inspector)}

@@ -10,6 +10,8 @@ import {
 } from "./interaction/player-hud/shared/character-inspection-fixtures";
 
 const fetchBootstrapMock = vi.fn<(path: string) => Promise<BootstrapResponse>>();
+const fetchAIDebugTurnsMock = vi.fn();
+const fetchAIDebugTurnMock = vi.fn();
 const connectWebSocketMock = vi.fn();
 const submitScenePlayerPostMock = vi.fn();
 const yieldScenePlayerPhaseMock = vi.fn();
@@ -21,6 +23,11 @@ const websocketConnection = {
 
 vi.mock("./api/bootstrap", () => ({
   fetchBootstrap: (path: string) => fetchBootstrapMock(path),
+}));
+
+vi.mock("./api/aiDebug", () => ({
+  fetchAIDebugTurns: (campaignId: string, pageToken?: string) => fetchAIDebugTurnsMock(campaignId, pageToken),
+  fetchAIDebugTurn: (campaignId: string, turnId: string) => fetchAIDebugTurnMock(campaignId, turnId),
 }));
 
 vi.mock("./api/mutations", () => ({
@@ -46,12 +53,14 @@ vi.mock("./api/websocket", async () => {
 function runtimeBootstrap(): BootstrapResponse {
   return {
     campaign_id: "c1",
+    ai_debug_enabled: true,
     viewer: { participant_id: "p1", name: "Avery", role: "player" },
     system: { id: "daggerheart", version: "1.0", name: "Daggerheart" },
     interaction_state: {
       campaign_id: "c1",
       campaign_name: "The Guildhouse",
       viewer: { participant_id: "p1", name: "Avery", role: "player" },
+      gm_authority_participant_id: "p2",
       active_session: { session_id: "s1", name: "Session 1" },
       active_scene: {
         scene_id: "sc1",
@@ -147,6 +156,20 @@ function waitingOnGMBootstrap(): BootstrapResponse {
   };
 }
 
+function runtimeBootstrapWithAITurn(status: "queued" | "running" | "failed"): BootstrapResponse {
+  const bootstrap = runtimeBootstrap();
+  return {
+    ...bootstrap,
+    interaction_state: {
+      ...bootstrap.interaction_state,
+      ai_turn: {
+        owner_participant_id: "p2",
+        status,
+      },
+    },
+  };
+}
+
 function switchedSceneSnapshot(): WireRoomSnapshot {
   const snapshot = runtimeSnapshot();
   return {
@@ -166,6 +189,10 @@ function switchedSceneSnapshot(): WireRoomSnapshot {
 describe("PlayRuntime", () => {
   beforeEach(() => {
     fetchBootstrapMock.mockReset();
+    fetchAIDebugTurnsMock.mockReset();
+    fetchAIDebugTurnsMock.mockResolvedValue({ turns: [], next_page_token: "" });
+    fetchAIDebugTurnMock.mockReset();
+    fetchAIDebugTurnMock.mockResolvedValue({ id: "turn-1", entries: [] });
     connectWebSocketMock.mockReset();
     submitScenePlayerPostMock.mockReset();
     submitScenePlayerPostMock.mockResolvedValue(runtimeSnapshot());
@@ -516,5 +543,147 @@ describe("PlayRuntime", () => {
     await waitFor(() => expect(fetchBootstrapMock).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("The Observatory")).toBeInTheDocument();
     expect(screen.queryByText("The Vault")).not.toBeInTheDocument();
+  });
+
+  it("renders live AI debug websocket updates without manual refresh", async () => {
+    const user = userEvent.setup();
+    fetchBootstrapMock.mockResolvedValue(runtimeBootstrap());
+    fetchAIDebugTurnMock.mockResolvedValue({
+      id: "turn-1",
+      model: "gpt-5.4",
+      status: "running",
+      entry_count: 0,
+      entries: [],
+    });
+
+    render(
+      <PlayRuntime
+        shellConfig={{
+          campaignId: "c1",
+          bootstrapPath: "/api/campaigns/c1/bootstrap",
+          realtimePath: "/realtime",
+          backURL: "http://example.com/app/campaigns/c1",
+        }}
+      />,
+    );
+
+    await screen.findByLabelText("Player HUD shell");
+    await user.click(screen.getByRole("button", { name: "AI Debug" }));
+    await waitFor(() => expect(fetchAIDebugTurnsMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(connectWebSocketMock).toHaveBeenCalledTimes(1));
+
+    const websocketOptions = connectWebSocketMock.mock.calls[0][0] as {
+      onEvent: (event: { type: "ai-debug.turn.updated"; update: unknown }) => void;
+    };
+    act(() => {
+      websocketOptions.onEvent({
+        type: "ai-debug.turn.updated",
+        update: {
+          turn: {
+            id: "turn-1",
+            model: "gpt-5.4",
+            status: "running",
+            started_at: "2026-03-22T12:00:00Z",
+            updated_at: "2026-03-22T12:00:01Z",
+            entry_count: 1,
+          },
+          appended_entries: [],
+        },
+      });
+    });
+
+    expect(await screen.findByText("gpt-5.4")).toBeInTheDocument();
+    expect(screen.getByText("1 entries")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /gpt-5.4/i }));
+    await waitFor(() => expect(fetchAIDebugTurnMock).toHaveBeenCalledWith("c1", "turn-1"));
+
+    act(() => {
+      websocketOptions.onEvent({
+        type: "ai-debug.turn.updated",
+        update: {
+          turn: {
+            id: "turn-1",
+            model: "gpt-5.4",
+            status: "running",
+            started_at: "2026-03-22T12:00:00Z",
+            updated_at: "2026-03-22T12:00:02Z",
+            entry_count: 1,
+          },
+          appended_entries: [{
+            sequence: 1,
+            kind: "tool_call",
+            tool_name: "scene_create",
+            payload: "{\"name\":\"Harbor\"}",
+            created_at: "2026-03-22T12:00:02Z",
+          }],
+        },
+      });
+    });
+
+    expect(await screen.findByText("Tool call")).toBeInTheDocument();
+    expect(screen.getByText("scene_create")).toBeInTheDocument();
+  });
+
+  it("shows AI status on the GM portrait across rails instead of on the AI Debug tab", async () => {
+    const user = userEvent.setup();
+    fetchBootstrapMock.mockResolvedValue(runtimeBootstrapWithAITurn("running"));
+
+    render(
+      <PlayRuntime
+        shellConfig={{
+          campaignId: "c1",
+          bootstrapPath: "/api/campaigns/c1/bootstrap",
+          realtimePath: "/realtime",
+          backURL: "http://example.com/app/campaigns/c1",
+        }}
+      />,
+    );
+
+    await screen.findByLabelText("Player HUD shell");
+
+    expect(screen.getByLabelText("Guide: AI thinking")).toBeInTheDocument();
+    expect(screen.getByLabelText("Guide status: AI thinking")).toBeInTheDocument();
+    expect(screen.getByLabelText("Guide GM authority")).toBeInTheDocument();
+
+    // Invariant: AI status moved from the navbar badge to the GM portrait.
+    expect(screen.getByRole("button", { name: "AI Debug" }).closest(".indicator")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Backstage" }));
+    expect(screen.getByLabelText("Guide: AI thinking")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Side Chat" }));
+    expect(screen.getByLabelText("Guide: AI thinking")).toBeInTheDocument();
+  });
+
+  it("resyncs AI debug history after websocket reconnect once the panel was opened", async () => {
+    const user = userEvent.setup();
+    fetchBootstrapMock.mockResolvedValue(runtimeBootstrap());
+
+    render(
+      <PlayRuntime
+        shellConfig={{
+          campaignId: "c1",
+          bootstrapPath: "/api/campaigns/c1/bootstrap",
+          realtimePath: "/realtime",
+          backURL: "http://example.com/app/campaigns/c1",
+        }}
+      />,
+    );
+
+    await screen.findByLabelText("Player HUD shell");
+    await user.click(screen.getByRole("button", { name: "AI Debug" }));
+    await waitFor(() => expect(fetchAIDebugTurnsMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(connectWebSocketMock).toHaveBeenCalledTimes(1));
+
+    const websocketOptions = connectWebSocketMock.mock.calls[0][0] as {
+      onEvent: (event: { type: "connection"; state: "reconnecting" | "connected" }) => void;
+    };
+    act(() => {
+      websocketOptions.onEvent({ type: "connection", state: "reconnecting" });
+      websocketOptions.onEvent({ type: "connection", state: "connected" });
+    });
+
+    await waitFor(() => expect(fetchAIDebugTurnsMock).toHaveBeenCalledTimes(2));
   });
 });

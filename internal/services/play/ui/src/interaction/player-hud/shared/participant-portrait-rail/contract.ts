@@ -8,6 +8,8 @@ export type ParticipantPortraitStatus =
   | "yielded"
   | "changes-requested";
 
+export type ParticipantPortraitAIStatus = "thinking" | "failed";
+
 export type ParticipantPortraitRailParticipant = {
   id: string;
   name: string;
@@ -15,6 +17,7 @@ export type ParticipantPortraitRailParticipant = {
   characters: PlayerHUDCharacterReference[];
   roleLabel?: string;
   status: ParticipantPortraitStatus;
+  aiStatus?: ParticipantPortraitAIStatus;
   ownsGMAuthority?: boolean;
 };
 

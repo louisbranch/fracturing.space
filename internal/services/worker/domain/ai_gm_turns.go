@@ -113,6 +113,7 @@ func (h *AIGMTurnRequestedHandler) Handle(ctx context.Context, event OutboxEvent
 	}
 	if _, err := h.ai.RunCampaignTurn(callCtx, &aiv1.RunCampaignTurnRequest{
 		SessionGrant: token,
+		TurnToken:    turnToken,
 	}); err != nil {
 		return fail(fmt.Errorf("run campaign turn: %w", err))
 	}

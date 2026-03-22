@@ -1,3 +1,4 @@
+import type { AIDebugPanelState } from "../ai-debug/shared/contract";
 import type { BackstageState } from "../backstage/shared/contract";
 import type { OnStageState } from "../on-stage/shared/contract";
 import type {
@@ -9,6 +10,7 @@ import type {
 
 export type PlayerHUDShellProps = {
   activeTab: HUDNavbarTab;
+  aiDebugEnabled?: boolean;
   connectionState: HUDConnectionState;
   campaignNavigation: PlayerHUDCampaignNavigation;
   isSidebarOpen: boolean;
@@ -32,4 +34,7 @@ export type PlayerHUDShellProps = {
   sideChatDraft: string;
   onSideChatDraftChange: (value: string) => void;
   onSideChatSend: () => void;
+  aiDebug?: AIDebugPanelState;
+  onAIDebugLoadMore?: () => void;
+  onAIDebugToggleTurn?: (turnId: string) => void;
 };

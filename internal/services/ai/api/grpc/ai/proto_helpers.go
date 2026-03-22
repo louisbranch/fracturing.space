@@ -9,8 +9,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -192,6 +194,105 @@ func campaignArtifactToProto(record storage.CampaignArtifactRecord) *aiv1.Campai
 		CreatedAt:  timestamppb.New(record.CreatedAt),
 		UpdatedAt:  timestamppb.New(record.UpdatedAt),
 	}
+}
+
+func campaignDebugTurnStatusToProto(value debugtrace.Status) aiv1.CampaignDebugTurnStatus {
+	switch value {
+	case debugtrace.StatusRunning:
+		return aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_RUNNING
+	case debugtrace.StatusSucceeded:
+		return aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_SUCCEEDED
+	case debugtrace.StatusFailed:
+		return aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_FAILED
+	default:
+		return aiv1.CampaignDebugTurnStatus_CAMPAIGN_DEBUG_TURN_STATUS_UNSPECIFIED
+	}
+}
+
+func campaignDebugEntryKindToProto(value debugtrace.EntryKind) aiv1.CampaignDebugEntryKind {
+	switch value {
+	case debugtrace.EntryKindModelResponse:
+		return aiv1.CampaignDebugEntryKind_CAMPAIGN_DEBUG_ENTRY_KIND_MODEL_RESPONSE
+	case debugtrace.EntryKindToolCall:
+		return aiv1.CampaignDebugEntryKind_CAMPAIGN_DEBUG_ENTRY_KIND_TOOL_CALL
+	case debugtrace.EntryKindToolResult:
+		return aiv1.CampaignDebugEntryKind_CAMPAIGN_DEBUG_ENTRY_KIND_TOOL_RESULT
+	default:
+		return aiv1.CampaignDebugEntryKind_CAMPAIGN_DEBUG_ENTRY_KIND_UNSPECIFIED
+	}
+}
+
+func campaignDebugEntryToProto(entry debugtrace.Entry) *aiv1.CampaignDebugEntry {
+	return &aiv1.CampaignDebugEntry{
+		Sequence:         int32(entry.Sequence),
+		Kind:             campaignDebugEntryKindToProto(entry.Kind),
+		ToolName:         entry.ToolName,
+		Payload:          entry.Payload,
+		PayloadTruncated: entry.PayloadTruncated,
+		CallId:           entry.CallID,
+		ResponseId:       entry.ResponseID,
+		IsError:          entry.IsError,
+		CreatedAt:        timestamppb.New(entry.CreatedAt),
+		Usage:            usageToProto(entry.Usage),
+	}
+}
+
+func campaignDebugTurnSummaryToProto(turn debugtrace.Turn) *aiv1.CampaignDebugTurnSummary {
+	proto := &aiv1.CampaignDebugTurnSummary{
+		Id:            turn.ID,
+		CampaignId:    turn.CampaignID,
+		SessionId:     turn.SessionID,
+		TurnToken:     turn.TurnToken,
+		ParticipantId: turn.ParticipantID,
+		Provider:      providerToProto(string(turn.Provider)),
+		Model:         turn.Model,
+		Status:        campaignDebugTurnStatusToProto(turn.Status),
+		LastError:     turn.LastError,
+		Usage:         usageToProto(turn.Usage),
+		StartedAt:     timestamppb.New(turn.StartedAt),
+		UpdatedAt:     timestamppb.New(turn.UpdatedAt),
+		EntryCount:    int32(turn.EntryCount),
+	}
+	if turn.CompletedAt != nil {
+		proto.CompletedAt = timestamppb.New(*turn.CompletedAt)
+	}
+	return proto
+}
+
+func campaignDebugTurnToProto(turn debugtrace.Turn, entries []debugtrace.Entry) *aiv1.CampaignDebugTurn {
+	proto := &aiv1.CampaignDebugTurn{
+		Id:            turn.ID,
+		CampaignId:    turn.CampaignID,
+		SessionId:     turn.SessionID,
+		TurnToken:     turn.TurnToken,
+		ParticipantId: turn.ParticipantID,
+		Provider:      providerToProto(string(turn.Provider)),
+		Model:         turn.Model,
+		Status:        campaignDebugTurnStatusToProto(turn.Status),
+		LastError:     turn.LastError,
+		Usage:         usageToProto(turn.Usage),
+		StartedAt:     timestamppb.New(turn.StartedAt),
+		UpdatedAt:     timestamppb.New(turn.UpdatedAt),
+		Entries:       make([]*aiv1.CampaignDebugEntry, 0, len(entries)),
+	}
+	if turn.CompletedAt != nil {
+		proto.CompletedAt = timestamppb.New(*turn.CompletedAt)
+	}
+	for _, entry := range entries {
+		proto.Entries = append(proto.Entries, campaignDebugEntryToProto(entry))
+	}
+	return proto
+}
+
+func campaignDebugTurnUpdateToProto(update service.CampaignDebugTurnUpdate) *aiv1.CampaignDebugTurnUpdate {
+	proto := &aiv1.CampaignDebugTurnUpdate{
+		Turn:            campaignDebugTurnSummaryToProto(update.Turn),
+		AppendedEntries: make([]*aiv1.CampaignDebugEntry, 0, len(update.AppendedEntries)),
+	}
+	for _, entry := range update.AppendedEntries {
+		proto.AppendedEntries = append(proto.AppendedEntries, campaignDebugEntryToProto(entry))
+	}
+	return proto
 }
 
 func referenceDocumentSummaryToProto(result referencecorpus.SearchResult) *aiv1.SystemReferenceDocumentSummary {

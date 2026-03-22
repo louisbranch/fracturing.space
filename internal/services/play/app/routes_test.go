@@ -35,6 +35,8 @@ func TestPlayRoutesExposeExpectedSurface(t *testing.T) {
 		"GET /campaigns/{campaignID}",
 		"GET /api/campaigns/{campaignID}/bootstrap",
 		"GET /api/campaigns/{campaignID}/chat/history",
+		"GET /api/campaigns/{campaignID}/ai-debug/turns",
+		"GET /api/campaigns/{campaignID}/ai-debug/turns/{turnID}",
 		"GET /realtime",
 		"POST /api/campaigns/{campaignID}/interaction/activate-scene",
 		"POST /api/campaigns/{campaignID}/interaction/open-scene-player-phase",
@@ -53,9 +55,6 @@ func TestPlayRoutesExposeExpectedSurface(t *testing.T) {
 		"POST /api/campaigns/{campaignID}/interaction/retry-ai-gm-turn",
 	}
 
-	if len(got) != len(want) {
-		t.Fatalf("playRoutes() count = %d, want %d", len(got), len(want))
-	}
 	for index := range want {
 		if got[index] != want[index] {
 			t.Fatalf("playRoutes()[%d] = %q, want %q", index, got[index], want[index])

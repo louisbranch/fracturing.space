@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -18,6 +19,7 @@ import (
 // playApplication owns browser-facing state assembly so transport handlers and
 // realtime orchestration can reuse one application seam.
 type playApplication struct {
+	aiDebug            aiDebugClient
 	interaction        interactionClient
 	campaign           campaignClient
 	system             systemClient
@@ -36,6 +38,7 @@ type characterSheetResult struct {
 
 func (s *Server) application() playApplication {
 	return playApplication{
+		aiDebug:            s.aiDebug,
 		interaction:        s.interaction,
 		campaign:           s.campaign,
 		system:             s.system,
@@ -70,6 +73,7 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 	)
 	return playprotocol.Bootstrap{
 		CampaignID:                 strings.TrimSpace(req.CampaignID),
+		AIDebugEnabled:             true,
 		Viewer:                     playprotocol.ViewerFromGameViewer(state.GetViewer()),
 		System:                     system,
 		InteractionState:           playprotocol.InteractionStateFromGameState(state),
@@ -82,6 +86,38 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 			TypingTTLMs:     int(defaultTypingTTL.Milliseconds()),
 		},
 	}, nil
+}
+
+func (a playApplication) aiDebugTurns(ctx context.Context, req playRequest, page aiDebugPage) (playprotocol.AIDebugTurnsPage, error) {
+	state, err := a.interactionState(ctx, req)
+	if err != nil {
+		return playprotocol.AIDebugTurnsPage{}, err
+	}
+	sessionID := strings.TrimSpace(state.GetActiveSession().GetSessionId())
+	if sessionID == "" {
+		return playprotocol.AIDebugTurnsPage{Turns: []playprotocol.AIDebugTurnSummary{}}, nil
+	}
+	resp, err := a.aiDebug.ListCampaignDebugTurns(req.authContext(ctx), &aiv1.ListCampaignDebugTurnsRequest{
+		CampaignId: req.CampaignID,
+		SessionId:  sessionID,
+		PageSize:   int32(page.PageSize),
+		PageToken:  page.PageToken,
+	})
+	if err != nil {
+		return playprotocol.AIDebugTurnsPage{}, err
+	}
+	return playprotocol.AIDebugTurnsPageFromProto(resp), nil
+}
+
+func (a playApplication) aiDebugTurn(ctx context.Context, req playRequest, turnID string) (playprotocol.AIDebugTurn, error) {
+	resp, err := a.aiDebug.GetCampaignDebugTurn(req.authContext(ctx), &aiv1.GetCampaignDebugTurnRequest{
+		CampaignId: req.CampaignID,
+		TurnId:     strings.TrimSpace(turnID),
+	})
+	if err != nil {
+		return playprotocol.AIDebugTurn{}, err
+	}
+	return playprotocol.AIDebugTurnFromProto(resp.GetTurn()), nil
 }
 
 func (a playApplication) interactionResponse(ctx context.Context, req playRequest, state *gamev1.InteractionState) (playprotocol.RoomSnapshot, error) {
