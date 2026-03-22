@@ -98,6 +98,134 @@ func TestProductionToolDescriptionsUseBeatBasedInteractionGuidance(t *testing.T)
 	if interactionSchemaHasProperty(interrupt.InputSchema, "open_player_phase", "interaction", "illustration") {
 		t.Fatalf("interrupt schema unexpectedly exposes illustration: %#v", interrupt.InputSchema)
 	}
+
+	sheet, ok := byName["character_sheet_read"]
+	if !ok {
+		t.Fatal("missing character_sheet_read tool")
+	}
+	if !strings.Contains(sheet.Description, "traits") || !strings.Contains(sheet.Description, "domain cards") {
+		t.Fatalf("character_sheet_read description = %q", sheet.Description)
+	}
+
+	interactionState, ok := byName["interaction_state_read"]
+	if !ok {
+		t.Fatal("missing interaction_state_read tool")
+	}
+	if !strings.Contains(interactionState.Description, "diagnose") || !strings.Contains(interactionState.Description, "active scene") {
+		t.Fatalf("interaction_state_read description = %q", interactionState.Description)
+	}
+
+	board, ok := byName["daggerheart_combat_board_read"]
+	if !ok {
+		t.Fatal("missing daggerheart_combat_board_read tool")
+	}
+	if !strings.Contains(board.Description, "GM Fear") || !strings.Contains(board.Description, "countdowns") || !strings.Contains(board.Description, "adversaries") || !strings.Contains(board.Description, "diagnostic") {
+		t.Fatalf("daggerheart_combat_board_read description = %q", board.Description)
+	}
+
+	actionResolve, ok := byName["daggerheart_action_roll_resolve"]
+	if !ok {
+		t.Fatal("missing daggerheart_action_roll_resolve tool")
+	}
+	if !strings.Contains(actionResolve.Description, "authoritative Daggerheart action roll") || !strings.Contains(actionResolve.Description, "applies its outcome") {
+		t.Fatalf("daggerheart_action_roll_resolve description = %q", actionResolve.Description)
+	}
+
+	gmMove, ok := byName["daggerheart_gm_move_apply"]
+	if !ok {
+		t.Fatal("missing daggerheart_gm_move_apply tool")
+	}
+	if !strings.Contains(gmMove.Description, "Spends Fear") || !strings.Contains(gmMove.Description, "authoritative Daggerheart GM move") || !strings.Contains(gmMove.Description, "exactly one spend target") {
+		t.Fatalf("daggerheart_gm_move_apply description = %q", gmMove.Description)
+	}
+
+	adversaryCreate, ok := byName["daggerheart_adversary_create"]
+	if !ok {
+		t.Fatal("missing daggerheart_adversary_create tool")
+	}
+	if !strings.Contains(adversaryCreate.Description, "Creates one Daggerheart adversary") || !strings.Contains(adversaryCreate.Description, "current session scene") {
+		t.Fatalf("daggerheart_adversary_create description = %q", adversaryCreate.Description)
+	}
+
+	countdownCreate, ok := byName["daggerheart_scene_countdown_create"]
+	if !ok {
+		t.Fatal("missing daggerheart_scene_countdown_create tool")
+	}
+	if !strings.Contains(countdownCreate.Description, "Creates one Daggerheart scene countdown") || !strings.Contains(countdownCreate.Description, "current session scene") || !strings.Contains(countdownCreate.Description, "fixed_starting_value") {
+		t.Fatalf("daggerheart_scene_countdown_create description = %q", countdownCreate.Description)
+	}
+
+	countdownUpdate, ok := byName["daggerheart_scene_countdown_advance"]
+	if !ok {
+		t.Fatal("missing daggerheart_scene_countdown_advance tool")
+	}
+	if !strings.Contains(countdownUpdate.Description, "Advances one Daggerheart scene countdown") || !strings.Contains(countdownUpdate.Description, "positive amount") {
+		t.Fatalf("daggerheart_scene_countdown_advance description = %q", countdownUpdate.Description)
+	}
+
+	adversaryUpdate, ok := byName["daggerheart_adversary_update"]
+	if !ok {
+		t.Fatal("missing daggerheart_adversary_update tool")
+	}
+	if !strings.Contains(adversaryUpdate.Description, "Updates one Daggerheart adversary") || !strings.Contains(adversaryUpdate.Description, "current scene board") {
+		t.Fatalf("daggerheart_adversary_update description = %q", adversaryUpdate.Description)
+	}
+
+	attackFlow, ok := byName["daggerheart_attack_flow_resolve"]
+	if !ok {
+		t.Fatal("missing daggerheart_attack_flow_resolve tool")
+	}
+	if !strings.Contains(attackFlow.Description, "authoritative Daggerheart attack flow") || !strings.Contains(attackFlow.Description, "damage application") || !strings.Contains(attackFlow.Description, "default attack profile") {
+		t.Fatalf("daggerheart_attack_flow_resolve description = %q", attackFlow.Description)
+	}
+
+	adversaryAttackFlow, ok := byName["daggerheart_adversary_attack_flow_resolve"]
+	if !ok {
+		t.Fatal("missing daggerheart_adversary_attack_flow_resolve tool")
+	}
+	if !strings.Contains(adversaryAttackFlow.Description, "authoritative Daggerheart adversary attack flow") || !strings.Contains(adversaryAttackFlow.Description, "damage application") {
+		t.Fatalf("daggerheart_adversary_attack_flow_resolve description = %q", adversaryAttackFlow.Description)
+	}
+
+	groupActionFlow, ok := byName["daggerheart_group_action_flow_resolve"]
+	if !ok {
+		t.Fatal("missing daggerheart_group_action_flow_resolve tool")
+	}
+	if !strings.Contains(groupActionFlow.Description, "authoritative Daggerheart group action flow") || !strings.Contains(groupActionFlow.Description, "leader roll") {
+		t.Fatalf("daggerheart_group_action_flow_resolve description = %q", groupActionFlow.Description)
+	}
+
+	reactionFlow, ok := byName["daggerheart_reaction_flow_resolve"]
+	if !ok {
+		t.Fatal("missing daggerheart_reaction_flow_resolve tool")
+	}
+	if !strings.Contains(reactionFlow.Description, "authoritative Daggerheart reaction flow") || !strings.Contains(reactionFlow.Description, "reaction outcome") {
+		t.Fatalf("daggerheart_reaction_flow_resolve description = %q", reactionFlow.Description)
+	}
+
+	tagTeamFlow, ok := byName["daggerheart_tag_team_flow_resolve"]
+	if !ok {
+		t.Fatal("missing daggerheart_tag_team_flow_resolve tool")
+	}
+	if !strings.Contains(tagTeamFlow.Description, "authoritative Daggerheart tag-team flow") || !strings.Contains(tagTeamFlow.Description, "selected combined outcome") {
+		t.Fatalf("daggerheart_tag_team_flow_resolve description = %q", tagTeamFlow.Description)
+	}
+
+	referenceSearch, ok := byName["system_reference_search"]
+	if !ok {
+		t.Fatal("missing system_reference_search tool")
+	}
+	if !strings.Contains(referenceSearch.Description, "exact wording") || !strings.Contains(referenceSearch.Description, "procedure choice is unclear") {
+		t.Fatalf("system_reference_search description = %q", referenceSearch.Description)
+	}
+
+	referenceRead, ok := byName["system_reference_read"]
+	if !ok {
+		t.Fatal("missing system_reference_read tool")
+	}
+	if !strings.Contains(referenceRead.Description, "search result still needs exact wording") {
+		t.Fatalf("system_reference_read description = %q", referenceRead.Description)
+	}
 }
 
 func promptBeatDescription(schema any) string {

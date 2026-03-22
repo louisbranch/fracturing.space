@@ -61,14 +61,41 @@ service DaggerheartService {
   rpc ApplyGmMove(DaggerheartApplyGmMoveRequest) returns (DaggerheartApplyGmMoveResponse);
   rpc ApplyAdversaryFeature(DaggerheartApplyAdversaryFeatureRequest) returns (DaggerheartApplyAdversaryFeatureResponse);
 
-  // Create a countdown (system-specific).
-  rpc CreateCountdown(DaggerheartCreateCountdownRequest) returns (DaggerheartCreateCountdownResponse);
+  // Create a scene countdown (system-specific).
+  rpc CreateSceneCountdown(DaggerheartCreateSceneCountdownRequest) returns (DaggerheartCreateSceneCountdownResponse);
 
-  // Update a countdown (system-specific).
-  rpc UpdateCountdown(DaggerheartUpdateCountdownRequest) returns (DaggerheartUpdateCountdownResponse);
+  // Advance a scene countdown manually (system-specific).
+  rpc AdvanceSceneCountdown(DaggerheartAdvanceSceneCountdownRequest) returns (DaggerheartAdvanceSceneCountdownResponse);
 
-  // Delete a countdown (system-specific).
-  rpc DeleteCountdown(DaggerheartDeleteCountdownRequest) returns (DaggerheartDeleteCountdownResponse);
+  // Resolve a pending scene countdown trigger (system-specific).
+  rpc ResolveSceneCountdownTrigger(DaggerheartResolveSceneCountdownTriggerRequest) returns (DaggerheartResolveSceneCountdownTriggerResponse);
+
+  // Delete a scene countdown (system-specific).
+  rpc DeleteSceneCountdown(DaggerheartDeleteSceneCountdownRequest) returns (DaggerheartDeleteSceneCountdownResponse);
+
+  // Get a scene countdown (system-specific).
+  rpc GetSceneCountdown(DaggerheartGetSceneCountdownRequest) returns (DaggerheartGetSceneCountdownResponse);
+
+  // List scene countdowns (system-specific).
+  rpc ListSceneCountdowns(DaggerheartListSceneCountdownsRequest) returns (DaggerheartListSceneCountdownsResponse);
+
+  // Create a campaign countdown (system-specific).
+  rpc CreateCampaignCountdown(DaggerheartCreateCampaignCountdownRequest) returns (DaggerheartCreateCampaignCountdownResponse);
+
+  // Advance a campaign countdown manually (system-specific).
+  rpc AdvanceCampaignCountdown(DaggerheartAdvanceCampaignCountdownRequest) returns (DaggerheartAdvanceCampaignCountdownResponse);
+
+  // Resolve a pending campaign countdown trigger (system-specific).
+  rpc ResolveCampaignCountdownTrigger(DaggerheartResolveCampaignCountdownTriggerRequest) returns (DaggerheartResolveCampaignCountdownTriggerResponse);
+
+  // Delete a campaign countdown (system-specific).
+  rpc DeleteCampaignCountdown(DaggerheartDeleteCampaignCountdownRequest) returns (DaggerheartDeleteCampaignCountdownResponse);
+
+  // Get a campaign countdown (system-specific).
+  rpc GetCampaignCountdown(DaggerheartGetCampaignCountdownRequest) returns (DaggerheartGetCampaignCountdownResponse);
+
+  // List campaign countdowns (system-specific).
+  rpc ListCampaignCountdowns(DaggerheartListCampaignCountdownsRequest) returns (DaggerheartListCampaignCountdownsResponse);
 
   // Create an adversary (system-specific).
   rpc CreateAdversary(DaggerheartCreateAdversaryRequest) returns (DaggerheartCreateAdversaryResponse);
@@ -219,7 +246,8 @@ message DaggerheartCharacterStateEntry {
 message DaggerheartApplyRestResponse {
   DaggerheartSnapshot snapshot = 1;
   repeated DaggerheartCharacterStateEntry character_states = 2;
-  repeated DaggerheartCountdown countdowns = 3;
+  repeated DaggerheartCampaignCountdown campaign_countdowns = 3;
+  repeated DaggerheartCountdownAdvance countdown_advances = 4;
 }
 
 message DaggerheartTemporaryArmor {
@@ -390,63 +418,138 @@ message DaggerheartApplyAdversaryFeatureResponse {
   DaggerheartAdversary adversary = 1;
 }
 
-enum DaggerheartCountdownKind {
-  DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED = 0;
-  DAGGERHEART_COUNTDOWN_KIND_PROGRESS = 1;
-  DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE = 2;
+enum DaggerheartCountdownTone {
+  DAGGERHEART_COUNTDOWN_TONE_UNSPECIFIED = 0;
+  DAGGERHEART_COUNTDOWN_TONE_NEUTRAL = 1;
+  DAGGERHEART_COUNTDOWN_TONE_PROGRESS = 2;
+  DAGGERHEART_COUNTDOWN_TONE_CONSEQUENCE = 3;
 }
 
-enum DaggerheartCountdownDirection {
-  DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED = 0;
-  DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE = 1;
-  DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE = 2;
+enum DaggerheartCountdownAdvancementPolicy {
+  DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_UNSPECIFIED = 0;
+  DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_MANUAL = 1;
+  DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_ACTION_STANDARD = 2;
+  DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_ACTION_DYNAMIC = 3;
+  DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_LONG_REST = 4;
 }
 
-message DaggerheartCountdown {
+enum DaggerheartCountdownLoopBehavior {
+  DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_UNSPECIFIED = 0;
+  DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE = 1;
+  DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET = 2;
+  DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_INCREASE_START = 3;
+  DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_DECREASE_START = 4;
+}
+
+enum DaggerheartCountdownStatus {
+  DAGGERHEART_COUNTDOWN_STATUS_UNSPECIFIED = 0;
+  DAGGERHEART_COUNTDOWN_STATUS_ACTIVE = 1;
+  DAGGERHEART_COUNTDOWN_STATUS_TRIGGER_PENDING = 2;
+}
+
+message DaggerheartCountdownRandomizedStart {
+  int32 min = 1;
+  int32 max = 2;
+  common.v1.RngRequest rng = 3;
+}
+
+message DaggerheartCountdownStartingRoll {
+  int32 min = 1;
+  int32 max = 2;
+  int32 value = 3;
+}
+
+message DaggerheartCountdownAdvance {
   string countdown_id = 1;
   string name = 2;
-  DaggerheartCountdownKind kind = 3;
-  int32 current = 4;
-  int32 max = 5;
-  DaggerheartCountdownDirection direction = 6;
-  bool looping = 7;
+  DaggerheartCountdownTone tone = 3;
+  DaggerheartCountdownAdvancementPolicy advancement_policy = 4;
+  int32 starting_value = 5;
+  int32 remaining_before = 6;
+  int32 remaining_after = 7;
+  int32 advanced_by = 8;
+  DaggerheartCountdownStatus status_before = 9;
+  DaggerheartCountdownStatus status_after = 10;
+  bool triggered = 11;
+  string reason = 12;
 }
 
-message DaggerheartCreateCountdownRequest {
+message DaggerheartSceneCountdown {
+  string countdown_id = 1;
+  string campaign_id = 2;
+  string session_id = 3;
+  string scene_id = 4;
+  string name = 5;
+  DaggerheartCountdownTone tone = 6;
+  DaggerheartCountdownAdvancementPolicy advancement_policy = 7;
+  int32 starting_value = 8;
+  int32 remaining_value = 9;
+  DaggerheartCountdownLoopBehavior loop_behavior = 10;
+  DaggerheartCountdownStatus status = 11;
+  string linked_countdown_id = 12;
+  DaggerheartCountdownStartingRoll starting_roll = 13;
+}
+
+message DaggerheartCampaignCountdown {
+  string countdown_id = 1;
+  string name = 2;
+  DaggerheartCountdownTone tone = 3;
+  DaggerheartCountdownAdvancementPolicy advancement_policy = 4;
+  int32 starting_value = 5;
+  int32 remaining_value = 6;
+  DaggerheartCountdownLoopBehavior loop_behavior = 7;
+  DaggerheartCountdownStatus status = 8;
+  string linked_countdown_id = 9;
+  DaggerheartCountdownStartingRoll starting_roll = 10;
+}
+
+message DaggerheartCreateSceneCountdownRequest {
   string campaign_id = 1;
   string session_id = 2;
   string countdown_id = 3;
   string name = 4;
-  DaggerheartCountdownKind kind = 5;
-  int32 current = 6;
-  int32 max = 7;
-  DaggerheartCountdownDirection direction = 8;
-  bool looping = 9;
-  string scene_id = 10;
+  string scene_id = 5;
+  DaggerheartCountdownTone tone = 6;
+  DaggerheartCountdownAdvancementPolicy advancement_policy = 7;
+  oneof starting_value {
+    int32 fixed_starting_value = 8;
+    DaggerheartCountdownRandomizedStart randomized_start = 9;
+  }
+  DaggerheartCountdownLoopBehavior loop_behavior = 10;
+  string linked_countdown_id = 11;
 }
 
-message DaggerheartCreateCountdownResponse {
-  DaggerheartCountdown countdown = 1;
+message DaggerheartCreateSceneCountdownResponse {
+  DaggerheartSceneCountdown countdown = 1;
 }
 
-message DaggerheartUpdateCountdownRequest {
+message DaggerheartAdvanceSceneCountdownRequest {
   string campaign_id = 1;
   string session_id = 2;
   string countdown_id = 3;
-  int32 delta = 4;
-  optional int32 current = 5;
+  string scene_id = 4;
+  int32 amount = 5;
   string reason = 6;
-  string scene_id = 7;
 }
 
-message DaggerheartUpdateCountdownResponse {
-  DaggerheartCountdown countdown = 1;
-  int32 before = 2;
-  int32 after = 3;
-  int32 delta = 4;
+message DaggerheartAdvanceSceneCountdownResponse {
+  DaggerheartSceneCountdown countdown = 1;
+  DaggerheartCountdownAdvance advance = 2;
 }
 
-message DaggerheartDeleteCountdownRequest {
+message DaggerheartResolveSceneCountdownTriggerRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string countdown_id = 3;
+  string scene_id = 4;
+  string reason = 5;
+}
+
+message DaggerheartResolveSceneCountdownTriggerResponse {
+  DaggerheartSceneCountdown countdown = 1;
+}
+
+message DaggerheartDeleteSceneCountdownRequest {
   string campaign_id = 1;
   string session_id = 2;
   string countdown_id = 3;
@@ -454,8 +557,96 @@ message DaggerheartDeleteCountdownRequest {
   string scene_id = 5;
 }
 
-message DaggerheartDeleteCountdownResponse {
+message DaggerheartDeleteSceneCountdownResponse {
   string countdown_id = 1;
+}
+
+message DaggerheartGetSceneCountdownRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string scene_id = 3;
+  string countdown_id = 4;
+}
+
+message DaggerheartGetSceneCountdownResponse {
+  DaggerheartSceneCountdown countdown = 1;
+}
+
+message DaggerheartListSceneCountdownsRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string scene_id = 3;
+}
+
+message DaggerheartListSceneCountdownsResponse {
+  repeated DaggerheartSceneCountdown countdowns = 1;
+}
+
+message DaggerheartCreateCampaignCountdownRequest {
+  string campaign_id = 1;
+  string countdown_id = 2;
+  string name = 3;
+  DaggerheartCountdownTone tone = 4;
+  DaggerheartCountdownAdvancementPolicy advancement_policy = 5;
+  oneof starting_value {
+    int32 fixed_starting_value = 6;
+    DaggerheartCountdownRandomizedStart randomized_start = 7;
+  }
+  DaggerheartCountdownLoopBehavior loop_behavior = 8;
+  string linked_countdown_id = 9;
+}
+
+message DaggerheartCreateCampaignCountdownResponse {
+  DaggerheartCampaignCountdown countdown = 1;
+}
+
+message DaggerheartAdvanceCampaignCountdownRequest {
+  string campaign_id = 1;
+  string countdown_id = 2;
+  int32 amount = 3;
+  string reason = 4;
+}
+
+message DaggerheartAdvanceCampaignCountdownResponse {
+  DaggerheartCampaignCountdown countdown = 1;
+  DaggerheartCountdownAdvance advance = 2;
+}
+
+message DaggerheartResolveCampaignCountdownTriggerRequest {
+  string campaign_id = 1;
+  string countdown_id = 2;
+  string reason = 3;
+}
+
+message DaggerheartResolveCampaignCountdownTriggerResponse {
+  DaggerheartCampaignCountdown countdown = 1;
+}
+
+message DaggerheartDeleteCampaignCountdownRequest {
+  string campaign_id = 1;
+  string countdown_id = 2;
+  string reason = 3;
+}
+
+message DaggerheartDeleteCampaignCountdownResponse {
+  string countdown_id = 1;
+}
+
+message DaggerheartGetCampaignCountdownRequest {
+  string campaign_id = 1;
+  string countdown_id = 2;
+}
+
+message DaggerheartGetCampaignCountdownResponse {
+  DaggerheartCampaignCountdown countdown = 1;
+}
+
+message DaggerheartListCampaignCountdownsRequest {
+  string campaign_id = 1;
+}
+
+message DaggerheartListCampaignCountdownsResponse {
+  repeated DaggerheartCampaignCountdown countdowns = 1;
 }
 
 message DaggerheartAdversary {
@@ -793,8 +984,8 @@ message SessionActionRollRequest {
   // Whether the roll is underwater (optional rules).
   bool underwater = 10;
 
-  // Optional breath countdown to advance for underwater actions.
-  string breath_countdown_id = 11;
+  // Optional scene countdown to advance for underwater actions.
+  string breath_scene_countdown_id = 11;
 
   // Optional RNG configuration for deterministic rolls.
   common.v1.RngRequest rng = 12;
@@ -819,6 +1010,7 @@ message SessionActionRollResponse {
   string flavor = 7;
   bool crit = 8;
   common.v1.RngResponse rng = 9;
+  repeated DaggerheartCountdownAdvance countdown_advances = 10;
 }
 
 message SessionDamageRollRequest {
@@ -887,7 +1079,7 @@ message SessionAttackFlowRequest {
   int32 difficulty = 5;
   repeated ActionRollModifier modifiers = 6;
   bool underwater = 7;
-  string breath_countdown_id = 8;
+  string breath_scene_countdown_id = 8;
   string target_id = 9;
   DaggerheartAttackDamageSpec damage = 12;
   bool require_damage_roll = 13;

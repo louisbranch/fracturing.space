@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
@@ -53,7 +52,7 @@ type DowntimeSelection struct {
 	TargetCharacterID   ids.CharacterID
 	GroupID             string
 	RollSeed            *int64
-	CountdownID         dhids.CountdownID
+	CountdownID         ids.CountdownID
 	ProjectAdvanceMode  string
 	ProjectAdvanceDelta int
 	ProjectReason       string
@@ -68,7 +67,7 @@ type RestPackageInput struct {
 	CurrentGMFear         int
 	ConsecutiveShortRests int
 	Participants          []RestParticipantInput
-	AvailableCountdowns   map[dhids.CountdownID]rules.Countdown
+	AvailableCountdowns   map[ids.CountdownID]rules.Countdown
 	LongTermCountdown     *rules.Countdown
 }
 
@@ -77,7 +76,7 @@ type RestPackageInput struct {
 type RestPackageResult struct {
 	Payload             daggerheartpayload.RestTakePayload
 	ParticipantIDs      []ids.CharacterID
-	UpdatedCountdownIDs []dhids.CountdownID
+	UpdatedCountdownIDs []ids.CountdownID
 }
 
 // ResolveRestPackage builds the canonical atomic rest payload, including
@@ -129,21 +128,22 @@ func ResolveRestPackage(input RestPackageInput) (RestPackageResult, error) {
 		return RestPackageResult{Payload: payload, ParticipantIDs: participants}, nil
 	}
 
-	countdownStates := make(map[dhids.CountdownID]rules.Countdown, len(input.AvailableCountdowns)+1)
+	countdownStates := make(map[ids.CountdownID]rules.Countdown, len(input.AvailableCountdowns)+1)
 	for countdownID, countdown := range input.AvailableCountdowns {
 		countdownStates[countdownID] = countdown
 	}
-	updatedCountdownIDs := make([]dhids.CountdownID, 0, 1)
+	updatedCountdownIDs := make([]ids.CountdownID, 0, 1)
 	if outcome.AdvanceCountdown && input.LongTermCountdown != nil {
-		countdownStates[dhids.CountdownID(strings.TrimSpace(input.LongTermCountdown.ID))] = *input.LongTermCountdown
+		countdownStates[ids.CountdownID(strings.TrimSpace(input.LongTermCountdown.ID))] = *input.LongTermCountdown
 	}
 
 	if outcome.AdvanceCountdown && input.LongTermCountdown != nil {
-		mutation, err := nextCountdownMutation(countdownStates, dhids.CountdownID(input.LongTermCountdown.ID), 1, nil, countdowns.CountdownReasonLongRest)
+		mutation, err := nextCountdownMutation(countdownStates, ids.CountdownID(input.LongTermCountdown.ID), 1, nil, countdowns.CountdownReasonLongRest)
 		if err != nil {
 			return RestPackageResult{}, err
 		}
-		payload.CountdownUpdates = append(payload.CountdownUpdates, mutation)
+		payload.CampaignCountdownAdvances = append(payload.CampaignCountdownAdvances, mutation)
+		payload.CountdownAdvances = append(payload.CountdownAdvances, mutation)
 		updatedCountdownIDs = append(updatedCountdownIDs, mutation.CountdownID)
 	}
 
@@ -166,7 +166,8 @@ func ResolveRestPackage(input RestPackageInput) (RestPackageResult, error) {
 			}
 			payload.DowntimeMoves = append(payload.DowntimeMoves, movePayload)
 			if countdownUpdate != nil {
-				payload.CountdownUpdates = append(payload.CountdownUpdates, *countdownUpdate)
+				payload.CampaignCountdownAdvances = append(payload.CampaignCountdownAdvances, *countdownUpdate)
+				payload.CountdownAdvances = append(payload.CountdownAdvances, *countdownUpdate)
 				updatedCountdownIDs = append(updatedCountdownIDs, countdownUpdate.CountdownID)
 			}
 		}
@@ -237,8 +238,8 @@ func resolveDowntimeSelection(
 	selection DowntimeSelection,
 	participantStates map[ids.CharacterID]*daggerheartstate.CharacterState,
 	groupParticipantCounts map[string]int,
-	countdownStates map[dhids.CountdownID]rules.Countdown,
-) (daggerheartpayload.DowntimeMoveAppliedPayload, *daggerheartpayload.CountdownUpdatePayload, error) {
+	countdownStates map[ids.CountdownID]rules.Countdown,
+) (daggerheartpayload.DowntimeMoveAppliedPayload, *daggerheartpayload.CampaignCountdownAdvancePayload, error) {
 	move := strings.TrimSpace(strings.ToLower(selection.Move))
 	if move == "" {
 		return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("downtime move is required for %q", participant.CharacterID)
@@ -344,7 +345,7 @@ func resolveDowntimeSelection(
 		payload.TargetCharacterID = targetID
 		payload.Armor = &targetState.Armor
 	case DowntimeMoveWorkOnProject:
-		countdownID := dhids.CountdownID(strings.TrimSpace(selection.CountdownID.String()))
+		countdownID := ids.CountdownID(strings.TrimSpace(selection.CountdownID.String()))
 		if countdownID == "" {
 			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project requires countdown_id")
 		}
@@ -377,6 +378,7 @@ func resolveDowntimeSelection(
 		if err != nil {
 			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, err
 		}
+		payload.CampaignCountdownID = countdownID
 		payload.CountdownID = countdownID
 		return payload, &mutation, nil
 	default:
@@ -430,26 +432,28 @@ func restTypeAllowsMove(restType RestType, move string) bool {
 }
 
 func nextCountdownMutation(
-	countdownStates map[dhids.CountdownID]rules.Countdown,
-	countdownID dhids.CountdownID,
+	countdownStates map[ids.CountdownID]rules.Countdown,
+	countdownID ids.CountdownID,
 	delta int,
 	override *int,
 	reason string,
-) (daggerheartpayload.CountdownUpdatePayload, error) {
+) (daggerheartpayload.CampaignCountdownAdvancePayload, error) {
 	current, ok := countdownStates[countdownID]
 	if !ok {
-		return daggerheartpayload.CountdownUpdatePayload{}, fmt.Errorf("countdown %q is not available", countdownID)
+		return daggerheartpayload.CampaignCountdownAdvancePayload{}, fmt.Errorf("countdown %q is not available", countdownID)
 	}
-	mutation, err := countdowns.ResolveCountdownMutation(countdowns.CountdownMutationInput{
+	if override != nil {
+		return daggerheartpayload.CampaignCountdownAdvancePayload{}, fmt.Errorf("countdown override is no longer supported")
+	}
+	mutation, err := countdowns.ResolveCountdownAdvance(countdowns.CountdownAdvanceInput{
 		Countdown: current,
-		Delta:     delta,
-		Override:  override,
+		Amount:    delta,
 		Reason:    strings.TrimSpace(reason),
 	})
 	if err != nil {
-		return daggerheartpayload.CountdownUpdatePayload{}, err
+		return daggerheartpayload.CampaignCountdownAdvancePayload{}, err
 	}
-	countdownStates[countdownID] = mutation.Update.Countdown
+	countdownStates[countdownID] = mutation.Advance.Countdown
 	return mutation.Payload, nil
 }
 

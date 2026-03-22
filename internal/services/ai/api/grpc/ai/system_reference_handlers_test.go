@@ -38,11 +38,18 @@ func TestSystemReferenceHandlersRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SearchSystemReference() error = %v", err)
 	}
-	if len(searchResp.GetResults()) != 1 {
-		t.Fatalf("SearchSystemReference() results = %d, want 1", len(searchResp.GetResults()))
+	if len(searchResp.GetResults()) == 0 {
+		t.Fatal("SearchSystemReference() returned no results")
 	}
-	if got := searchResp.GetResults()[0].GetDocumentId(); got != "combat-basics" {
-		t.Fatalf("SearchSystemReference() document id = %q, want %q", got, "combat-basics")
+	found := false
+	for _, result := range searchResp.GetResults() {
+		if result.GetDocumentId() == "combat-basics" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("SearchSystemReference() results = %+v, want combat-basics present", searchResp.GetResults())
 	}
 
 	readResp, err := svc.ReadSystemReferenceDocument(context.Background(), &aiv1.ReadSystemReferenceDocumentRequest{

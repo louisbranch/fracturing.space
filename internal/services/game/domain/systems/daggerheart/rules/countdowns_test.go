@@ -2,185 +2,111 @@ package rules
 
 import "testing"
 
-func TestNormalizeCountdownKind(t *testing.T) {
+func TestNormalizeCountdownTone(t *testing.T) {
 	tests := []struct {
-		name    string
 		value   string
 		want    string
 		wantErr bool
 	}{
-		{"progress", " progress ", CountdownKindProgress, false},
-		{"consequence", "CONSEQUENCE", CountdownKindConsequence, false},
-		{"empty", "  ", "", true},
-		{"invalid", "other", "", true},
+		{" progress ", CountdownToneProgress, false},
+		{"CONSEQUENCE", CountdownToneConsequence, false},
+		{"neutral", CountdownToneNeutral, false},
+		{"", "", true},
+		{"other", "", true},
 	}
-
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NormalizeCountdownKind(tt.value)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-				return
+		got, err := NormalizeCountdownTone(tt.value)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("NormalizeCountdownTone(%q) expected error", tt.value)
 			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got != tt.want {
-				t.Fatalf("kind = %q, want %q", got, tt.want)
-			}
-		})
+			continue
+		}
+		if err != nil {
+			t.Fatalf("NormalizeCountdownTone(%q) error = %v", tt.value, err)
+		}
+		if got != tt.want {
+			t.Fatalf("NormalizeCountdownTone(%q) = %q, want %q", tt.value, got, tt.want)
+		}
 	}
 }
 
-func TestNormalizeCountdownDirection(t *testing.T) {
-	tests := []struct {
-		name    string
-		value   string
-		want    string
-		wantErr bool
-	}{
-		{"increase", " increase ", CountdownDirectionIncrease, false},
-		{"decrease", "DECREASE", CountdownDirectionDecrease, false},
-		{"empty", "", "", true},
-		{"invalid", "sideways", "", true},
+func TestApplyCountdownAdvance(t *testing.T) {
+	countdown := Countdown{
+		Tone:              CountdownToneProgress,
+		AdvancementPolicy: CountdownAdvancementPolicyManual,
+		StartingValue:     4,
+		RemainingValue:    3,
+		LoopBehavior:      CountdownLoopBehaviorReset,
+		Status:            CountdownStatusActive,
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NormalizeCountdownDirection(tt.value)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got != tt.want {
-				t.Fatalf("direction = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestApplyCountdownUpdate(t *testing.T) {
-	tests := []struct {
-		name       string
-		countdown  Countdown
-		delta      int
-		override   *int
-		wantAfter  int
-		wantDelta  int
-		wantLooped bool
-		wantErr    bool
-	}{
-		{
-			name:      "delta increase",
-			countdown: Countdown{Current: 2, Max: 6},
-			delta:     2,
-			wantAfter: 4,
-			wantDelta: 2,
-		},
-		{
-			name:      "delta clamp no loop",
-			countdown: Countdown{Current: 5, Max: 6},
-			delta:     3,
-			wantAfter: 6,
-			wantDelta: 1,
-		},
-		{
-			name:       "delta underflow loop",
-			countdown:  Countdown{Current: 1, Max: 4, Looping: true},
-			delta:      -3,
-			wantAfter:  4,
-			wantDelta:  3,
-			wantLooped: true,
-		},
-		{
-			name:      "override wins",
-			countdown: Countdown{Current: 2, Max: 6},
-			override:  intPointer(5),
-			wantAfter: 5,
-			wantDelta: 3,
-		},
-		{
-			name:      "invalid max",
-			countdown: Countdown{Current: 0, Max: 0},
-			delta:     1,
-			wantErr:   true,
-		},
-		{
-			name:      "invalid current",
-			countdown: Countdown{Current: 5, Max: 3},
-			delta:     1,
-			wantErr:   true,
-		},
-		{
-			name:      "missing update",
-			countdown: Countdown{Current: 1, Max: 3},
-			wantErr:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			update, err := ApplyCountdownUpdate(tt.countdown, tt.delta, tt.override)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if update.After != tt.wantAfter {
-				t.Fatalf("after = %d, want %d", update.After, tt.wantAfter)
-			}
-			if update.Delta != tt.wantDelta {
-				t.Fatalf("delta = %d, want %d", update.Delta, tt.wantDelta)
-			}
-			if update.Looped != tt.wantLooped {
-				t.Fatalf("looped = %v, want %v", update.Looped, tt.wantLooped)
-			}
-			if update.Countdown.Current != tt.wantAfter {
-				t.Fatalf("countdown current = %d, want %d", update.Countdown.Current, tt.wantAfter)
-			}
-		})
-	}
-}
-
-func TestApplyCountdownUpdateOverflowLoop(t *testing.T) {
-	cd := Countdown{Current: 5, Max: 6, Looping: true}
-	update, err := ApplyCountdownUpdate(cd, 3, nil)
+	update, err := ApplyCountdownAdvance(countdown, 2)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("ApplyCountdownAdvance() error = %v", err)
 	}
-	if !update.Looped {
-		t.Fatal("expected looped")
+	if update.BeforeRemaining != 3 || update.AfterRemaining != 1 || update.AdvancedBy != 2 {
+		t.Fatalf("unexpected update = %+v", update)
 	}
-	if update.After != 0 {
-		t.Fatalf("after = %d, want 0", update.After)
+	if update.StatusAfter != CountdownStatusActive || update.Triggered {
+		t.Fatalf("unexpected trigger status = %+v", update)
 	}
 }
 
-func TestApplyCountdownUpdateClampNoLoop(t *testing.T) {
-	cd := Countdown{Current: 1, Max: 4}
-	update, err := ApplyCountdownUpdate(cd, -3, nil)
+func TestApplyCountdownAdvanceTriggersPending(t *testing.T) {
+	countdown := Countdown{
+		Tone:              CountdownToneConsequence,
+		AdvancementPolicy: CountdownAdvancementPolicyActionDynamic,
+		StartingValue:     3,
+		RemainingValue:    1,
+		LoopBehavior:      CountdownLoopBehaviorResetIncreaseStart,
+		Status:            CountdownStatusActive,
+	}
+	update, err := ApplyCountdownAdvance(countdown, 2)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("ApplyCountdownAdvance() error = %v", err)
 	}
-	if update.Looped {
-		t.Fatal("expected no loop")
-	}
-	if update.After != 0 {
-		t.Fatalf("after = %d, want 0", update.After)
+	if !update.Triggered || update.AfterRemaining != 0 || update.StatusAfter != CountdownStatusTriggerPending {
+		t.Fatalf("unexpected trigger update = %+v", update)
 	}
 }
 
-func intPointer(value int) *int {
-	return &value
+func TestResolveCountdownTrigger(t *testing.T) {
+	countdown := Countdown{
+		Tone:              CountdownToneProgress,
+		AdvancementPolicy: CountdownAdvancementPolicyActionDynamic,
+		StartingValue:     3,
+		RemainingValue:    0,
+		LoopBehavior:      CountdownLoopBehaviorResetIncreaseStart,
+		Status:            CountdownStatusTriggerPending,
+	}
+	result, err := ResolveCountdownTrigger(countdown)
+	if err != nil {
+		t.Fatalf("ResolveCountdownTrigger() error = %v", err)
+	}
+	if result.StartingValueAfter != 4 || result.RemainingValueAfter != 4 || result.StatusAfter != CountdownStatusActive {
+		t.Fatalf("unexpected trigger resolution = %+v", result)
+	}
+}
+
+func TestDynamicCountdownAdvanceAmount(t *testing.T) {
+	tests := []struct {
+		tone    string
+		outcome string
+		want    int
+	}{
+		{CountdownToneProgress, "failure_with_fear", 0},
+		{CountdownToneConsequence, "failure_with_fear", 3},
+		{CountdownToneProgress, "success_with_hope", 2},
+		{CountdownToneConsequence, "success_with_hope", 0},
+		{CountdownToneProgress, "critical_success", 3},
+	}
+	for _, tt := range tests {
+		got, err := DynamicCountdownAdvanceAmount(tt.tone, tt.outcome)
+		if err != nil {
+			t.Fatalf("DynamicCountdownAdvanceAmount(%q, %q) error = %v", tt.tone, tt.outcome, err)
+		}
+		if got != tt.want {
+			t.Fatalf("DynamicCountdownAdvanceAmount(%q, %q) = %d, want %d", tt.tone, tt.outcome, got, tt.want)
+		}
+	}
 }

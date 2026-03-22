@@ -652,7 +652,7 @@ func (q *Queries) GetDaggerheartCompanionExperience(ctx context.Context, id stri
 
 const getDaggerheartCountdown = `-- name: GetDaggerheartCountdown :one
 
-SELECT campaign_id, countdown_id, name, kind, "current", max, direction, looping FROM daggerheart_countdowns
+SELECT campaign_id, countdown_id, session_id, scene_id, name, tone, advancement_policy, starting_value, remaining_value, loop_behavior, status, linked_countdown_id, starting_roll_min, starting_roll_max, starting_roll_value FROM daggerheart_countdowns
 WHERE campaign_id = ? AND countdown_id = ?
 `
 
@@ -668,12 +668,19 @@ func (q *Queries) GetDaggerheartCountdown(ctx context.Context, arg GetDaggerhear
 	err := row.Scan(
 		&i.CampaignID,
 		&i.CountdownID,
+		&i.SessionID,
+		&i.SceneID,
 		&i.Name,
-		&i.Kind,
-		&i.Current,
-		&i.Max,
-		&i.Direction,
-		&i.Looping,
+		&i.Tone,
+		&i.AdvancementPolicy,
+		&i.StartingValue,
+		&i.RemainingValue,
+		&i.LoopBehavior,
+		&i.Status,
+		&i.LinkedCountdownID,
+		&i.StartingRollMin,
+		&i.StartingRollMax,
+		&i.StartingRollValue,
 	)
 	return i, err
 }
@@ -1494,8 +1501,9 @@ func (q *Queries) ListDaggerheartContentStringsByIDs(ctx context.Context, arg Li
 }
 
 const listDaggerheartCountdowns = `-- name: ListDaggerheartCountdowns :many
-SELECT campaign_id, countdown_id, name, kind, "current", max, direction, looping FROM daggerheart_countdowns
+SELECT campaign_id, countdown_id, session_id, scene_id, name, tone, advancement_policy, starting_value, remaining_value, loop_behavior, status, linked_countdown_id, starting_roll_min, starting_roll_max, starting_roll_value FROM daggerheart_countdowns
 WHERE campaign_id = ?
+ORDER BY name, countdown_id
 `
 
 func (q *Queries) ListDaggerheartCountdowns(ctx context.Context, campaignID string) ([]DaggerheartCountdown, error) {
@@ -1510,12 +1518,19 @@ func (q *Queries) ListDaggerheartCountdowns(ctx context.Context, campaignID stri
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.CountdownID,
+			&i.SessionID,
+			&i.SceneID,
 			&i.Name,
-			&i.Kind,
-			&i.Current,
-			&i.Max,
-			&i.Direction,
-			&i.Looping,
+			&i.Tone,
+			&i.AdvancementPolicy,
+			&i.StartingValue,
+			&i.RemainingValue,
+			&i.LoopBehavior,
+			&i.Status,
+			&i.LinkedCountdownID,
+			&i.StartingRollMin,
+			&i.StartingRollMax,
+			&i.StartingRollValue,
 		); err != nil {
 			return nil, err
 		}
@@ -2581,38 +2596,60 @@ func (q *Queries) PutDaggerheartContentString(ctx context.Context, arg PutDagger
 
 const putDaggerheartCountdown = `-- name: PutDaggerheartCountdown :exec
 INSERT INTO daggerheart_countdowns (
-    campaign_id, countdown_id, name, kind, current, max, direction, looping
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, countdown_id, session_id, scene_id, name, tone, advancement_policy, starting_value, remaining_value,
+    loop_behavior, status, linked_countdown_id, starting_roll_min, starting_roll_max, starting_roll_value
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, countdown_id) DO UPDATE SET
+    session_id = excluded.session_id,
+    scene_id = excluded.scene_id,
     name = excluded.name,
-    kind = excluded.kind,
-    current = excluded.current,
-    max = excluded.max,
-    direction = excluded.direction,
-    looping = excluded.looping
+    tone = excluded.tone,
+    advancement_policy = excluded.advancement_policy,
+    starting_value = excluded.starting_value,
+    remaining_value = excluded.remaining_value,
+    loop_behavior = excluded.loop_behavior,
+    status = excluded.status,
+    linked_countdown_id = excluded.linked_countdown_id,
+    starting_roll_min = excluded.starting_roll_min,
+    starting_roll_max = excluded.starting_roll_max,
+    starting_roll_value = excluded.starting_roll_value
 `
 
 type PutDaggerheartCountdownParams struct {
-	CampaignID  string `json:"campaign_id"`
-	CountdownID string `json:"countdown_id"`
-	Name        string `json:"name"`
-	Kind        string `json:"kind"`
-	Current     int64  `json:"current"`
-	Max         int64  `json:"max"`
-	Direction   string `json:"direction"`
-	Looping     int64  `json:"looping"`
+	CampaignID        string `json:"campaign_id"`
+	CountdownID       string `json:"countdown_id"`
+	SessionID         string `json:"session_id"`
+	SceneID           string `json:"scene_id"`
+	Name              string `json:"name"`
+	Tone              string `json:"tone"`
+	AdvancementPolicy string `json:"advancement_policy"`
+	StartingValue     int64  `json:"starting_value"`
+	RemainingValue    int64  `json:"remaining_value"`
+	LoopBehavior      string `json:"loop_behavior"`
+	Status            string `json:"status"`
+	LinkedCountdownID string `json:"linked_countdown_id"`
+	StartingRollMin   int64  `json:"starting_roll_min"`
+	StartingRollMax   int64  `json:"starting_roll_max"`
+	StartingRollValue int64  `json:"starting_roll_value"`
 }
 
 func (q *Queries) PutDaggerheartCountdown(ctx context.Context, arg PutDaggerheartCountdownParams) error {
 	_, err := q.db.ExecContext(ctx, putDaggerheartCountdown,
 		arg.CampaignID,
 		arg.CountdownID,
+		arg.SessionID,
+		arg.SceneID,
 		arg.Name,
-		arg.Kind,
-		arg.Current,
-		arg.Max,
-		arg.Direction,
-		arg.Looping,
+		arg.Tone,
+		arg.AdvancementPolicy,
+		arg.StartingValue,
+		arg.RemainingValue,
+		arg.LoopBehavior,
+		arg.Status,
+		arg.LinkedCountdownID,
+		arg.StartingRollMin,
+		arg.StartingRollMax,
+		arg.StartingRollValue,
 	)
 	return err
 }

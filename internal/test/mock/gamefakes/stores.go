@@ -2,6 +2,7 @@ package gamefakes
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"time"
 
@@ -183,6 +184,12 @@ func (s *DaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaign
 			result = append(result, cd)
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Name != result[j].Name {
+			return result[i].Name < result[j].Name
+		}
+		return result[i].CountdownID < result[j].CountdownID
+	})
 	return result, nil
 }
 

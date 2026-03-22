@@ -95,15 +95,13 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	}
 	sessionID := startSession.GetSession().GetId()
 
-	createCountdown, err := daggerheartClient.CreateCountdown(ctxWithUser, &daggerheartv1.DaggerheartCreateCountdownRequest{
-		CampaignId: campaignID,
-		SessionId:  sessionID,
-		Name:       "Long-Term Countdown",
-		Kind:       daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE,
-		Current:    0,
-		Max:        4,
-		Direction:  daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-		Looping:    false,
+	createCountdown, err := daggerheartClient.CreateCampaignCountdown(ctxWithUser, &daggerheartv1.DaggerheartCreateCampaignCountdownRequest{
+		CampaignId:        campaignID,
+		Name:              "Long-Term Countdown",
+		Tone:              daggerheartv1.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_CONSEQUENCE,
+		AdvancementPolicy: daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_LONG_REST,
+		StartingValue:     &daggerheartv1.DaggerheartCreateCampaignCountdownRequest_FixedStartingValue{FixedStartingValue: 4},
+		LoopBehavior:      daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE,
 	})
 	if err != nil {
 		t.Fatalf("create countdown: %v", err)
@@ -153,10 +151,10 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	resp, err := daggerheartClient.ApplyRest(sessionCtx, &daggerheartv1.DaggerheartApplyRestRequest{
 		CampaignId: campaignID,
 		Rest: &daggerheartv1.DaggerheartRestRequest{
-			RestType:            daggerheartv1.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
-			Interrupted:         false,
-			LongTermCountdownId: countdownID,
-			Participants:        participants,
+			RestType:                    daggerheartv1.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
+			Interrupted:                 false,
+			LongRestCampaignCountdownId: countdownID,
+			Participants:                participants,
 			Rng: &commonv1.RngRequest{
 				Seed:     &seed,
 				RollMode: commonv1.RollMode_REPLAY,
@@ -175,8 +173,22 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	if resp.GetSnapshot().GetConsecutiveShortRests() != 0 {
 		t.Fatalf("short rests = %d, want 0", resp.GetSnapshot().GetConsecutiveShortRests())
 	}
+	if got := resp.GetCountdownAdvances(); len(got) != 1 {
+		t.Fatalf("countdown advances = %d, want 1", len(got))
+	} else {
+		advance := got[0]
+		if advance.GetCountdownId() != countdownID {
+			t.Fatalf("countdown advance id = %q, want %q", advance.GetCountdownId(), countdownID)
+		}
+		if advance.GetAdvancementPolicy() != daggerheartv1.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_LONG_REST {
+			t.Fatalf("countdown advancement_policy = %s, want LONG_REST", advance.GetAdvancementPolicy())
+		}
+		if advance.GetRemainingBefore() != 4 || advance.GetRemainingAfter() != 3 || advance.GetAdvancedBy() != 1 {
+			t.Fatalf("countdown advance remaining = %d -> %d by %d, want 4 -> 3 by 1", advance.GetRemainingBefore(), advance.GetRemainingAfter(), advance.GetAdvancedBy())
+		}
+	}
 
-	if err := findCountdownUpdated(ctxWithUser, eventClient, campaignID, sessionID, countdownID, 0, 1); err != nil {
+	if err := findCountdownUpdated(ctxWithUser, eventClient, campaignID, "", countdownID, 4, 3); err != nil {
 		t.Fatalf("find countdown updated: %v", err)
 	}
 }

@@ -16,8 +16,8 @@ scn:start_session("Icy Winds")
 
 -- Example: countdown loop 4 triggers Strength reaction or Stress.
 -- Stress consequence and loop-reset automation remain unresolved in the fixture DSL.
-dh:countdown_create{ name = "Icy Winds", kind = "loop", current = 0, max = 4, direction = "increase" }
-dh:countdown_update{ name = "Icy Winds", delta = 4, reason = "loop_trigger" }
+dh:scene_countdown_create{ name = "Icy Winds", kind = "loop", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_update{ name = "Icy Winds", delta = 4, reason = "loop_trigger" }
 dh:reaction_roll{ actor = "Frodo", trait = "strength", difficulty = 15, outcome = "fear", advantage = 1 }
 
 scn:end_session()

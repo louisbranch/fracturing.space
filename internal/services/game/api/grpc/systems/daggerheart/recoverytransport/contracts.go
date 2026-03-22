@@ -4,7 +4,8 @@ import (
 	"context"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -28,9 +29,21 @@ type DaggerheartStore interface {
 	GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
 }
 
-// SystemCommandInput is an alias for the shared workflow runtime type, kept for
-// local readability inside the recovery transport slice.
-type SystemCommandInput = workflowruntime.SystemCommandInput
+// SystemCommandInput describes one Daggerheart system command emitted by the
+// recovery transport slice.
+type SystemCommandInput struct {
+	CampaignID      string
+	CommandType     command.Type
+	SessionID       string
+	SceneID         string
+	RequestID       string
+	InvocationID    string
+	EntityType      string
+	EntityID        string
+	PayloadJSON     []byte
+	MissingEventMsg string
+	ApplyErrMessage string
+}
 
 // StressConditionInput describes one stress/vulnerable repair callback request.
 type StressConditionInput struct {
@@ -55,9 +68,10 @@ type CharacterDeleteInput struct {
 
 // RestResult is the canonical output for ApplyRest.
 type RestResult struct {
-	Snapshot        projectionstore.DaggerheartSnapshot
-	CharacterStates []CharacterStateEntry
-	Countdowns      []projectionstore.DaggerheartCountdown
+	Snapshot                  projectionstore.DaggerheartSnapshot
+	CharacterStates           []CharacterStateEntry
+	Countdowns                []projectionstore.DaggerheartCountdown
+	CampaignCountdownAdvances []daggerheartpayload.CampaignCountdownAdvancePayload
 }
 
 // CharacterStateEntry couples a character ID with its updated gameplay state.

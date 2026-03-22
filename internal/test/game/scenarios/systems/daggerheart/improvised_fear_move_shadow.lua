@@ -15,7 +15,7 @@ scn:pc("Frodo")
 scn:start_session("Fear Move")
 dh:gm_fear(2)
 
-dh:countdown_create{ name = "Looming Shadow", kind = "consequence", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_create{ name = "Looming Shadow", kind = "consequence", current = 0, max = 4, direction = "increase" }
 dh:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 12, outcome = "success_fear" }
 
 -- Example: the GM spends fear to introduce a looming shadow.
@@ -24,7 +24,7 @@ dh:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 12, outcome = 
 dh:apply_roll_outcome{
   on_success_fear = {
     {kind = "gm_spend_fear", amount = 1, target = "Frodo", description = "looming_shadow_overtakes_path"},
-    {kind = "countdown_update", name = "Looming Shadow", delta = 1, reason = "shadow_closes_in"},
+    {kind = "scene_countdown_update", name = "Looming Shadow", delta = 1, reason = "shadow_closes_in"},
     {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "looming_shadow"},
     {kind = "set_spotlight", type = "gm"},
   },

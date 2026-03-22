@@ -18,16 +18,16 @@ dh:gm_fear(1)
 
 -- Example: GM move steals an artifact and forces a chase.
 dh:gm_spend_fear(1):move("custom", { description = "Golum snatches the artifact and bolts into the crowd." })
-dh:countdown_create{ name = "Recover Artifact", kind = "progress", current = 0, max = 6, direction = "increase" }
-dh:countdown_create{ name = "Thief Escape", kind = "consequence", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_create{ name = "Recover Artifact", kind = "progress", current = 0, max = 6, direction = "increase" }
+dh:scene_countdown_create{ name = "Thief Escape", kind = "consequence", current = 0, max = 4, direction = "increase" }
 dh:action_roll{ actor = "Gandalf", trait = "instinct", difficulty = 12, outcome = "success_fear" }
 dh:apply_roll_outcome{
   on_success_fear = {
-    {kind = "countdown_update", name = "Recover Artifact", delta = 1, reason = "gain_ground"},
-    {kind = "countdown_update", name = "Thief Escape", delta = 1, reason = "thief_keeps_distance"},
+    {kind = "scene_countdown_update", name = "Recover Artifact", delta = 1, reason = "gain_ground"},
+    {kind = "scene_countdown_update", name = "Thief Escape", delta = 1, reason = "thief_keeps_distance"},
   },
   on_failure_fear = {
-    {kind = "countdown_update", name = "Thief Escape", delta = 2, reason = "artifact_lost_in_crowd"},
+    {kind = "scene_countdown_update", name = "Thief Escape", delta = 2, reason = "artifact_lost_in_crowd"},
   },
 }
 scn:set_spotlight{ target = "Gandalf" }

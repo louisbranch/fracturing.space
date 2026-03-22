@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/rand"
 	"strings"
+	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -12,23 +14,21 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// CreateCountdown validates a new countdown request, allocates identity when
-// needed, emits the create command, and reloads the resulting projection.
-func (h *Handler) CreateCountdown(ctx context.Context, in *pb.DaggerheartCreateCountdownRequest) (CreateResult, error) {
+func (h *Handler) CreateSceneCountdown(ctx context.Context, in *pb.DaggerheartCreateSceneCountdownRequest) (CreateResult, error) {
 	if in == nil {
-		return CreateResult{}, status.Error(codes.InvalidArgument, "create countdown request is required")
+		return CreateResult{}, status.Error(codes.InvalidArgument, "create scene countdown request is required")
 	}
 	if err := h.requireDependencies(); err != nil {
 		return CreateResult{}, err
 	}
-
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {
 		return CreateResult{}, err
@@ -37,76 +37,192 @@ func (h *Handler) CreateCountdown(ctx context.Context, in *pb.DaggerheartCreateC
 	if err != nil {
 		return CreateResult{}, err
 	}
-	sceneID := strings.TrimSpace(in.GetSceneId())
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return CreateResult{}, err
+	}
 	name, err := validate.RequiredID(in.GetName(), "name")
 	if err != nil {
 		return CreateResult{}, err
 	}
-	kind, err := countdownKindFromProto(in.GetKind())
+	tone, err := countdownToneFromProto(in.GetTone())
 	if err != nil {
 		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	direction, err := countdownDirectionFromProto(in.GetDirection())
+	policy, err := countdownPolicyFromProto(in.GetAdvancementPolicy())
 	if err != nil {
 		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	max := int(in.GetMax())
-	if max <= 0 {
-		return CreateResult{}, status.Error(codes.InvalidArgument, "max must be positive")
+	loopBehavior, err := countdownLoopBehaviorFromProto(in.GetLoopBehavior())
+	if err != nil {
+		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	current := int(in.GetCurrent())
-	if current < 0 || current > max {
-		return CreateResult{}, status.Errorf(codes.InvalidArgument, "current must be in range 0..%d", max)
-	}
-
-	if err := h.validateCampaignSession(ctx, campaignID, sessionID, campaign.CampaignOpSessionAction, "campaign system does not support daggerheart countdowns"); err != nil {
+	if err := h.validateCampaignSession(ctx, campaignID, sessionID, campaign.CampaignOpSessionAction, "campaign system does not support daggerheart scene countdowns"); err != nil {
 		return CreateResult{}, err
 	}
-
-	countdownID := strings.TrimSpace(in.GetCountdownId())
-	if countdownID == "" {
-		countdownID, err = h.deps.NewID()
-		if err != nil {
-			return CreateResult{}, grpcerror.Internal("generate countdown id", err)
-		}
+	countdownID, err := h.resolveCountdownID(strings.TrimSpace(in.GetCountdownId()))
+	if err != nil {
+		return CreateResult{}, err
 	}
-	if _, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err == nil {
-		return CreateResult{}, status.Error(codes.FailedPrecondition, "countdown already exists")
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return CreateResult{}, grpcerror.HandleDomainError(err)
+	if err := h.ensureCountdownMissing(ctx, campaignID, countdownID); err != nil {
+		return CreateResult{}, err
 	}
-
-	payloadJSON, err := json.Marshal(daggerheartpayload.CountdownCreatePayload{
-		CountdownID: dhids.CountdownID(countdownID),
-		Name:        name,
-		Kind:        kind,
-		Current:     current,
-		Max:         max,
-		Direction:   direction,
-		Looping:     in.GetLooping(),
+	startingValue, startingRoll, err := resolveStartingValue(in.GetFixedStartingValue(), in.GetRandomizedStart())
+	if err != nil {
+		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	payloadJSON, err := json.Marshal(daggerheartpayload.SceneCountdownCreatePayload{
+		SessionID:         ids.SessionID(sessionID),
+		SceneID:           ids.SceneID(sceneID),
+		CountdownID:       ids.CountdownID(countdownID),
+		Name:              name,
+		Tone:              tone,
+		AdvancementPolicy: policy,
+		StartingValue:     startingValue,
+		RemainingValue:    startingValue,
+		LoopBehavior:      loopBehavior,
+		Status:            rules.CountdownStatusActive,
+		LinkedCountdownID: ids.CountdownID(strings.TrimSpace(in.GetLinkedCountdownId())),
+		StartingRoll:      startingRoll,
 	})
 	if err != nil {
-		return CreateResult{}, grpcerror.Internal("encode countdown payload", err)
+		return CreateResult{}, grpcerror.Internal("encode scene countdown payload", err)
 	}
 	if err := h.deps.ExecuteDomainCommand(ctx, DomainCommandInput{
 		CampaignID:      campaignID,
-		CommandType:     commandids.DaggerheartCountdownCreate,
+		CommandType:     commandids.DaggerheartSceneCountdownCreate,
 		SessionID:       sessionID,
 		SceneID:         sceneID,
 		RequestID:       grpcmeta.RequestIDFromContext(ctx),
 		InvocationID:    grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:      "countdown",
+		EntityType:      "scene_countdown",
 		EntityID:        countdownID,
 		PayloadJSON:     payloadJSON,
-		MissingEventMsg: "countdown create did not emit an event",
-		ApplyErrMessage: "apply countdown created event",
+		MissingEventMsg: "scene countdown create did not emit an event",
+		ApplyErrMessage: "apply scene countdown created event",
 	}); err != nil {
 		return CreateResult{}, err
 	}
-
 	countdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return CreateResult{}, grpcerror.Internal("load countdown", err)
+		return CreateResult{}, grpcerror.Internal("load scene countdown", err)
 	}
 	return CreateResult{Countdown: countdown}, nil
+}
+
+func (h *Handler) CreateCampaignCountdown(ctx context.Context, in *pb.DaggerheartCreateCampaignCountdownRequest) (CreateResult, error) {
+	if in == nil {
+		return CreateResult{}, status.Error(codes.InvalidArgument, "create campaign countdown request is required")
+	}
+	if err := h.requireDependencies(); err != nil {
+		return CreateResult{}, err
+	}
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return CreateResult{}, err
+	}
+	name, err := validate.RequiredID(in.GetName(), "name")
+	if err != nil {
+		return CreateResult{}, err
+	}
+	tone, err := countdownToneFromProto(in.GetTone())
+	if err != nil {
+		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	policy, err := countdownPolicyFromProto(in.GetAdvancementPolicy())
+	if err != nil {
+		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	loopBehavior, err := countdownLoopBehaviorFromProto(in.GetLoopBehavior())
+	if err != nil {
+		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err := h.validateCampaignMutate(ctx, campaignID, "campaign system does not support daggerheart campaign countdowns"); err != nil {
+		return CreateResult{}, err
+	}
+	countdownID, err := h.resolveCountdownID(strings.TrimSpace(in.GetCountdownId()))
+	if err != nil {
+		return CreateResult{}, err
+	}
+	if err := h.ensureCountdownMissing(ctx, campaignID, countdownID); err != nil {
+		return CreateResult{}, err
+	}
+	startingValue, startingRoll, err := resolveStartingValue(in.GetFixedStartingValue(), in.GetRandomizedStart())
+	if err != nil {
+		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	payloadJSON, err := json.Marshal(daggerheartpayload.CampaignCountdownCreatePayload{
+		CountdownID:       ids.CountdownID(countdownID),
+		Name:              name,
+		Tone:              tone,
+		AdvancementPolicy: policy,
+		StartingValue:     startingValue,
+		RemainingValue:    startingValue,
+		LoopBehavior:      loopBehavior,
+		Status:            rules.CountdownStatusActive,
+		LinkedCountdownID: ids.CountdownID(strings.TrimSpace(in.GetLinkedCountdownId())),
+		StartingRoll:      startingRoll,
+	})
+	if err != nil {
+		return CreateResult{}, grpcerror.Internal("encode campaign countdown payload", err)
+	}
+	if err := h.deps.ExecuteDomainCommand(ctx, DomainCommandInput{
+		CampaignID:      campaignID,
+		CommandType:     commandids.DaggerheartCampaignCountdownCreate,
+		RequestID:       grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:    grpcmeta.InvocationIDFromContext(ctx),
+		EntityType:      "campaign_countdown",
+		EntityID:        countdownID,
+		PayloadJSON:     payloadJSON,
+		MissingEventMsg: "campaign countdown create did not emit an event",
+		ApplyErrMessage: "apply campaign countdown created event",
+	}); err != nil {
+		return CreateResult{}, err
+	}
+	countdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
+	if err != nil {
+		return CreateResult{}, grpcerror.Internal("load campaign countdown", err)
+	}
+	return CreateResult{Countdown: countdown}, nil
+}
+
+func (h *Handler) resolveCountdownID(countdownID string) (string, error) {
+	if countdownID != "" {
+		return countdownID, nil
+	}
+	value, err := h.deps.NewID()
+	if err != nil {
+		return "", grpcerror.Internal("generate countdown id", err)
+	}
+	return value, nil
+}
+
+func (h *Handler) ensureCountdownMissing(ctx context.Context, campaignID, countdownID string) error {
+	if _, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err == nil {
+		return status.Error(codes.FailedPrecondition, "countdown already exists")
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return grpcerror.HandleDomainError(err)
+	}
+	return nil
+}
+
+func resolveStartingValue(fixed int32, randomized *pb.DaggerheartCountdownRandomizedStart) (int, *daggerheartpayload.CountdownStartingRollPayload, error) {
+	if randomized == nil {
+		if fixed <= 0 {
+			return 0, nil, errors.New("fixed_starting_value must be positive")
+		}
+		return int(fixed), nil, nil
+	}
+	min := int(randomized.GetMin())
+	max := int(randomized.GetMax())
+	if min <= 0 || max < min {
+		return 0, nil, errors.New("randomized_start range is invalid")
+	}
+	seed := time.Now().UnixNano()
+	if randomized.Rng != nil && randomized.Rng.Seed != nil {
+		seed = int64(randomized.Rng.GetSeed())
+	}
+	r := rand.New(rand.NewSource(seed))
+	value := min + r.Intn(max-min+1)
+	return value, &daggerheartpayload.CountdownStartingRollPayload{Min: min, Max: max, Value: value}, nil
 }

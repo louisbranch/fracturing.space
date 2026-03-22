@@ -18,9 +18,9 @@ scn:start_session("Summoning")
 
 -- Example: countdown ticks down when PCs roll with Fear.
 -- Summon-on-trigger spawn behavior remains unresolved in this fixture.
-dh:countdown_create{ name = "Summon Demon", kind = "consequence", current = 0, max = 6, direction = "increase" }
+dh:scene_countdown_create{ name = "Summon Demon", kind = "consequence", current = 0, max = 6, direction = "increase" }
 dh:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 14, outcome = "fear" }
-dh:countdown_update{ name = "Summon Demon", delta = 1, reason = "fear_outcome" }
+dh:scene_countdown_update{ name = "Summon Demon", delta = 1, reason = "fear_outcome" }
 
 scn:end_session()
 

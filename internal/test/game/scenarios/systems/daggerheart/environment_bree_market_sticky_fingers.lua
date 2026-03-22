@@ -17,14 +17,14 @@ scn:start_session("Sticky Fingers")
 -- Example: Instinct roll to notice, otherwise trigger progress vs consequence countdowns.
 -- Missing DSL: model item loss and chase triggers.
 dh:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 10, outcome = "failure_fear" }
-dh:countdown_create{ name = "Market Chase", kind = "progress", current = 0, max = 6, direction = "increase" }
-dh:countdown_create{ name = "Thief Escape", kind = "consequence", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_create{ name = "Market Chase", kind = "progress", current = 0, max = 6, direction = "increase" }
+dh:scene_countdown_create{ name = "Thief Escape", kind = "consequence", current = 0, max = 4, direction = "increase" }
 dh:apply_roll_outcome{
   on_failure_fear = {
-    {kind = "countdown_update", name = "Thief Escape", delta = 1, reason = "pickpocket_escape"},
+    {kind = "scene_countdown_update", name = "Thief Escape", delta = 1, reason = "pickpocket_escape"},
   },
   on_success = {
-    {kind = "countdown_update", name = "Market Chase", delta = 1, reason = "spot_thief"},
+    {kind = "scene_countdown_update", name = "Market Chase", delta = 1, reason = "spot_thief"},
   },
 }
 

@@ -18,6 +18,10 @@ type interactionActivateSceneInput struct {
 	SceneID    string `json:"scene_id"`
 }
 
+type interactionStateReadInput struct {
+	CampaignID string `json:"campaign_id,omitempty"`
+}
+
 type interactionOpenScenePlayerPhaseInput struct {
 	CampaignID   string                         `json:"campaign_id,omitempty"`
 	SceneID      string                         `json:"scene_id,omitempty"`
@@ -202,6 +206,26 @@ type interactionOOCStateResult struct {
 }
 
 // --- Handlers ---
+
+func (s *DirectSession) interactionStateRead(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
+	var input interactionStateReadInput
+	if len(argsJSON) > 0 {
+		if err := json.Unmarshal(argsJSON, &input); err != nil {
+			return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
+		}
+	}
+	campaignID := s.resolveCampaignID(input.CampaignID)
+	if campaignID == "" {
+		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
+	}
+	callCtx, cancel := outgoingContext(ctx, s.sc)
+	defer cancel()
+	state, err := s.getInteractionState(callCtx, campaignID)
+	if err != nil {
+		return orchestration.ToolResult{}, err
+	}
+	return toolResultJSON(interactionStateFromProto(state))
+}
 
 func (s *DirectSession) interactionActivateScene(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
 	var input interactionActivateSceneInput

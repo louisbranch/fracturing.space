@@ -25,69 +25,69 @@ func (s testGateStore) GetOpenSessionGate(context.Context, string, string) (stor
 	return s.gate, nil
 }
 
-func TestCountdownKindFromProto(t *testing.T) {
-	got, err := countdownKindFromProto(pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS)
+func TestCountdownToneFromProto(t *testing.T) {
+	got, err := countdownToneFromProto(pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS)
 	if err != nil {
-		t.Fatalf("countdownKindFromProto returned error: %v", err)
+		t.Fatalf("countdownToneFromProto returned error: %v", err)
 	}
-	if got == "" {
-		t.Fatal("expected countdown kind")
+	if got != "progress" {
+		t.Fatalf("countdown tone = %q, want progress", got)
 	}
 }
 
-func TestCountdownKindFromProtoConsequence(t *testing.T) {
-	got, err := countdownKindFromProto(pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE)
+func TestCountdownPolicyFromProto(t *testing.T) {
+	got, err := countdownPolicyFromProto(pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_LONG_REST)
 	if err != nil {
-		t.Fatalf("countdownKindFromProto returned error: %v", err)
+		t.Fatalf("countdownPolicyFromProto returned error: %v", err)
 	}
-	if got == "" {
-		t.Fatal("expected countdown kind")
+	if got != "long_rest" {
+		t.Fatalf("countdown policy = %q, want long_rest", got)
 	}
 }
 
-func TestCountdownDirectionFromProto(t *testing.T) {
-	got, err := countdownDirectionFromProto(pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE)
+func TestCountdownLoopBehaviorFromProto(t *testing.T) {
+	got, err := countdownLoopBehaviorFromProto(pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET_DECREASE_START)
 	if err != nil {
-		t.Fatalf("countdownDirectionFromProto returned error: %v", err)
+		t.Fatalf("countdownLoopBehaviorFromProto returned error: %v", err)
 	}
-	if got == "" {
-		t.Fatal("expected countdown direction")
-	}
-}
-
-func TestCountdownKindFromProtoRejectsUnknown(t *testing.T) {
-	if _, err := countdownKindFromProto(pb.DaggerheartCountdownKind(99)); err == nil {
-		t.Fatal("expected error for invalid countdown kind")
+	if got != "reset_decrease_start" {
+		t.Fatalf("countdown loop behavior = %q, want reset_decrease_start", got)
 	}
 }
 
-func TestCountdownDirectionFromProtoRejectsUnknown(t *testing.T) {
-	if _, err := countdownDirectionFromProto(pb.DaggerheartCountdownDirection(99)); err == nil {
-		t.Fatal("expected error for invalid countdown direction")
+func TestCountdownStatusFromProtoRejectsUnknown(t *testing.T) {
+	if _, err := countdownStatusFromProto(pb.DaggerheartCountdownStatus(99)); err == nil {
+		t.Fatal("expected error for invalid countdown status")
 	}
 }
 
-func TestCountdownDirectionFromProtoRejectsUnspecified(t *testing.T) {
-	if _, err := countdownDirectionFromProto(pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED); err == nil {
-		t.Fatal("expected error for unspecified countdown direction")
+func TestCountdownToneFromProtoRejectsUnspecified(t *testing.T) {
+	if _, err := countdownToneFromProto(pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_UNSPECIFIED); err == nil {
+		t.Fatal("expected error for unspecified countdown tone")
 	}
 }
 
-func TestCountdownKindToProto(t *testing.T) {
-	if got := countdownKindToProto("unknown"); got != pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED {
-		t.Fatalf("countdownKindToProto(unknown) = %v, want unspecified", got)
-	}
-	if got := countdownKindToProto("consequence"); got != pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE {
-		t.Fatalf("countdownKindToProto(consequence) = %v, want consequence", got)
+func TestCountdownPolicyFromProtoRejectsUnspecified(t *testing.T) {
+	if _, err := countdownPolicyFromProto(pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_UNSPECIFIED); err == nil {
+		t.Fatal("expected error for unspecified countdown advancement policy")
 	}
 }
 
-func TestCountdownDirectionToProto(t *testing.T) {
-	if got := countdownDirectionToProto("unknown"); got != pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED {
-		t.Fatalf("countdownDirectionToProto(unknown) = %v, want unspecified", got)
+func TestCountdownToneToProto(t *testing.T) {
+	if got := countdownToneToProto("unknown"); got != pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_UNSPECIFIED {
+		t.Fatalf("countdownToneToProto(unknown) = %v, want unspecified", got)
 	}
-	if got := countdownDirectionToProto("increase"); got != pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE {
-		t.Fatalf("countdownDirectionToProto(increase) = %v, want increase", got)
+	if got := countdownToneToProto("consequence"); got != pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_CONSEQUENCE {
+		t.Fatalf("countdownToneToProto(consequence) = %v, want consequence", got)
+	}
+}
+
+func TestCountdownLoopBehaviorToProto(t *testing.T) {
+	if got := countdownLoopBehaviorToProto("unknown"); got != pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_UNSPECIFIED {
+		t.Fatalf("countdownLoopBehaviorToProto(unknown) = %v, want unspecified", got)
+	}
+	if got := countdownLoopBehaviorToProto("reset"); got != pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET {
+		t.Fatalf("countdownLoopBehaviorToProto(reset) = %v, want reset", got)
 	}
 }
 
@@ -115,43 +115,48 @@ func TestEnsureNoOpenSessionGateWrapsStoreErrors(t *testing.T) {
 
 func TestCountdownFromStorage(t *testing.T) {
 	countdown := countdownFromStorage(projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-1",
-		CountdownID: "cd-1",
-		Name:        "Clock",
-		Kind:        "progress",
-		Current:     2,
-		Max:         4,
-		Direction:   "increase",
-		Looping:     true,
+		CampaignID:        "camp-1",
+		CountdownID:       "cd-1",
+		Name:              "Clock",
+		Tone:              "progress",
+		AdvancementPolicy: "manual",
+		StartingValue:     4,
+		RemainingValue:    2,
+		LoopBehavior:      "reset",
+		Status:            "active",
 	})
-	if countdown.ID != "cd-1" || countdown.Current != 2 || !countdown.Looping {
+	if countdown.ID != "cd-1" || countdown.RemainingValue != 2 || countdown.LoopBehavior != "reset" {
 		t.Fatalf("countdown = %+v", countdown)
 	}
 }
 
-func TestCountdownToProto(t *testing.T) {
-	proto := CountdownToProto(projectionstore.DaggerheartCountdown{
-		CountdownID: "count-1",
-		Name:        "Threat",
-		Kind:        "progress",
-		Current:     2,
-		Max:         5,
-		Direction:   "increase",
-		Looping:     true,
+func TestSceneCountdownToProto(t *testing.T) {
+	proto := SceneCountdownToProto(projectionstore.DaggerheartCountdown{
+		CountdownID:       "count-1",
+		CampaignID:        "camp-1",
+		SessionID:         "sess-1",
+		SceneID:           "scene-1",
+		Name:              "Threat",
+		Tone:              "progress",
+		AdvancementPolicy: "action_standard",
+		StartingValue:     5,
+		RemainingValue:    2,
+		LoopBehavior:      "reset",
+		Status:            "active",
 	})
 	if proto.GetCountdownId() != "count-1" || proto.GetName() != "Threat" {
 		t.Fatal("expected countdown id and name to map")
 	}
-	if proto.GetKind() != pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS {
-		t.Fatal("expected progress kind")
+	if proto.GetTone() != pb.DaggerheartCountdownTone_DAGGERHEART_COUNTDOWN_TONE_PROGRESS {
+		t.Fatal("expected progress tone")
 	}
-	if proto.GetDirection() != pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE {
-		t.Fatal("expected increase direction")
+	if proto.GetAdvancementPolicy() != pb.DaggerheartCountdownAdvancementPolicy_DAGGERHEART_COUNTDOWN_ADVANCEMENT_POLICY_ACTION_STANDARD {
+		t.Fatal("expected action_standard policy")
 	}
-	if proto.GetCurrent() != 2 || proto.GetMax() != 5 {
-		t.Fatal("expected current/max to map")
+	if proto.GetRemainingValue() != 2 || proto.GetStartingValue() != 5 {
+		t.Fatal("expected remaining/starting values to map")
 	}
-	if !proto.GetLooping() {
-		t.Fatal("expected looping to map")
+	if proto.GetLoopBehavior() != pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET {
+		t.Fatal("expected loop behavior to map")
 	}
 }

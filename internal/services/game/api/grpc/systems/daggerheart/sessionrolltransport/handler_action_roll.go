@@ -307,7 +307,7 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 		Underwater:   workflowtransport.BoolPtr(in.GetUnderwater()),
 		Modifiers:    modifierList,
 	}
-	if countdownID := strings.TrimSpace(in.GetBreathCountdownId()); countdownID != "" {
+	if countdownID := strings.TrimSpace(in.GetBreathSceneCountdownId()); countdownID != "" {
 		systemMetadata.BreathCountdownID = countdownID
 	}
 
@@ -338,7 +338,7 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 	}
 
 	failed := result.Difficulty != nil && !result.MeetsDifficulty
-	if err := h.deps.AdvanceBreathCountdown(ctx, campaignID, sessionID, strings.TrimSpace(in.GetBreathCountdownId()), failed); err != nil {
+	if err := h.deps.AdvanceBreathCountdown(ctx, campaignID, sessionID, strings.TrimSpace(in.GetBreathSceneCountdownId()), failed); err != nil {
 		return nil, err
 	}
 

@@ -27,6 +27,7 @@ type SessionGateStore interface {
 // transport.
 type DaggerheartStore interface {
 	GetDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error)
+	ListDaggerheartCountdowns(ctx context.Context, campaignID string) ([]projectionstore.DaggerheartCountdown, error)
 }
 
 // DomainCommandInput describes one Daggerheart domain command emitted by the
@@ -50,13 +51,24 @@ type CreateResult struct {
 	Countdown projectionstore.DaggerheartCountdown
 }
 
-// UpdateResult is the countdown plus the canonical delta summary returned after
-// a successful update.
-type UpdateResult struct {
+// AdvanceResult is the countdown plus the canonical advance summary returned
+// after a successful advance.
+type AdvanceResult struct {
 	Countdown projectionstore.DaggerheartCountdown
-	Before    int
-	After     int
-	Delta     int
+	Summary   CountdownAdvanceSummary
+}
+
+type CountdownAdvanceSummary struct {
+	BeforeRemaining int
+	AfterRemaining  int
+	AdvancedBy      int
+	StatusBefore    string
+	StatusAfter     string
+	Triggered       bool
+}
+
+type TriggerResolveResult struct {
+	Countdown projectionstore.DaggerheartCountdown
 }
 
 // DeleteResult is the identity returned after a successful delete.

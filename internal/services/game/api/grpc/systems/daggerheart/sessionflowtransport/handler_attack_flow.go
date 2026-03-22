@@ -125,19 +125,19 @@ func (h *Handler) SessionAttackFlow(ctx context.Context, in *pb.SessionAttackFlo
 	}
 
 	rollResp, err := h.deps.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
-		CampaignId:           campaignID,
-		SessionId:            sessionID,
-		SceneId:              sceneID,
-		CharacterId:          attackerID,
-		Trait:                attackTrait,
-		RollKind:             pb.RollKind_ROLL_KIND_ACTION,
-		Difficulty:           in.GetDifficulty(),
-		Modifiers:            actionModifiers,
-		Advantage:            attackAdvantage,
-		Underwater:           in.GetUnderwater(),
-		BreathCountdownId:    in.GetBreathCountdownId(),
-		Rng:                  in.GetActionRng(),
-		ReplaceHopeWithArmor: in.GetReplaceHopeWithArmor(),
+		CampaignId:             campaignID,
+		SessionId:              sessionID,
+		SceneId:                sceneID,
+		CharacterId:            attackerID,
+		Trait:                  attackTrait,
+		RollKind:               pb.RollKind_ROLL_KIND_ACTION,
+		Difficulty:             in.GetDifficulty(),
+		Modifiers:              actionModifiers,
+		Advantage:              attackAdvantage,
+		Underwater:             in.GetUnderwater(),
+		BreathSceneCountdownId: in.GetBreathSceneCountdownId(),
+		Rng:                    in.GetActionRng(),
+		ReplaceHopeWithArmor:   in.GetReplaceHopeWithArmor(),
 	})
 	if err != nil {
 		return nil, err

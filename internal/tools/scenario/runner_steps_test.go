@@ -1077,16 +1077,42 @@ func TestRunCreationWorkflowStepMissingTarget(t *testing.T) {
 func TestRunCountdownCreateStep(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-	dhClient.createCountdown = func(_ context.Context, req *daggerheartv1.DaggerheartCreateCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCountdownResponse, error) {
-		return &daggerheartv1.DaggerheartCreateCountdownResponse{
-			Countdown: &daggerheartv1.DaggerheartCountdown{CountdownId: "cd-1"},
+	dhClient.createCountdown = func(_ context.Context, req *daggerheartv1.DaggerheartCreateSceneCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateSceneCountdownResponse, error) {
+		return &daggerheartv1.DaggerheartCreateSceneCountdownResponse{
+			Countdown: &daggerheartv1.DaggerheartSceneCountdown{
+				CountdownId:       "cd-1",
+				Name:              req.GetName(),
+				Tone:              req.GetTone(),
+				AdvancementPolicy: req.GetAdvancementPolicy(),
+				StartingValue:     4,
+				RemainingValue:    4,
+				LoopBehavior:      req.GetLoopBehavior(),
+				Status:            daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_ACTIVE,
+				LinkedCountdownId: req.GetLinkedCountdownId(),
+			},
 		}, nil
 	}
 	runner := quietRunner(env)
 	state := testState()
+	state.activeSceneID = "scene-1"
+	state.countdowns["Consequence Clock"] = "cd-linked"
 	err := runner.runCountdownCreateStep(context.Background(), state, Step{
-		Kind: "countdown_create",
-		Args: map[string]any{"name": "Ritual", "max": 4, "kind": "progress", "direction": "increase"},
+		Kind: "scene_countdown_create",
+		Args: map[string]any{
+			"name":                       "Ritual",
+			"tone":                       "progress",
+			"advancement_policy":         "manual",
+			"fixed_starting_value":       4,
+			"loop_behavior":              "none",
+			"linked_countdown_id":        "Consequence Clock",
+			"expect_tone":                "progress",
+			"expect_advancement_policy":  "manual",
+			"expect_starting_value":      4,
+			"expect_remaining_value":     4,
+			"expect_loop_behavior":       "none",
+			"expect_status":              "active",
+			"expect_linked_countdown_id": "Consequence Clock",
+		},
 	})
 	if err != nil {
 		t.Fatalf("runCountdownCreateStep: %v", err)
@@ -1099,32 +1125,84 @@ func TestRunCountdownCreateStep(t *testing.T) {
 func TestRunCountdownUpdateStep(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-	dhClient.updateCountdown = func(_ context.Context, _ *daggerheartv1.DaggerheartUpdateCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateCountdownResponse, error) {
-		return &daggerheartv1.DaggerheartUpdateCountdownResponse{}, nil
+	dhClient.advanceCountdown = func(_ context.Context, _ *daggerheartv1.DaggerheartAdvanceSceneCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartAdvanceSceneCountdownResponse, error) {
+		return &daggerheartv1.DaggerheartAdvanceSceneCountdownResponse{
+			Countdown: &daggerheartv1.DaggerheartSceneCountdown{
+				CountdownId:    "cd-1",
+				Name:           "Ritual",
+				StartingValue:  4,
+				RemainingValue: 3,
+				Status:         daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_ACTIVE,
+			},
+			Advance: &daggerheartv1.DaggerheartCountdownAdvance{
+				RemainingBefore: 4,
+				RemainingAfter:  3,
+				AdvancedBy:      1,
+				Triggered:       false,
+			},
+		}, nil
 	}
 	runner := quietRunner(env)
 	state := testState()
+	state.activeSceneID = "scene-1"
 	state.countdowns["Ritual"] = "cd-1"
 	err := runner.runCountdownUpdateStep(context.Background(), state, Step{
-		Kind: "countdown_update",
-		Args: map[string]any{"name": "Ritual", "delta": 1},
+		Kind: "scene_countdown_update",
+		Args: map[string]any{
+			"name":                    "Ritual",
+			"amount":                  1,
+			"expect_remaining_value":  3,
+			"expect_before_remaining": 4,
+			"expect_after_remaining":  3,
+			"expect_advanced_by":      1,
+			"expect_triggered":        false,
+		},
 	})
 	if err != nil {
 		t.Fatalf("runCountdownUpdateStep: %v", err)
 	}
 }
 
-func TestRunCountdownDeleteStep(t *testing.T) {
+func TestRunCountdownResolveTriggerStep(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-	dhClient.deleteCountdown = func(_ context.Context, _ *daggerheartv1.DaggerheartDeleteCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteCountdownResponse, error) {
-		return &daggerheartv1.DaggerheartDeleteCountdownResponse{}, nil
+	dhClient.resolveCountdownTrigger = func(_ context.Context, _ *daggerheartv1.DaggerheartResolveSceneCountdownTriggerRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveSceneCountdownTriggerResponse, error) {
+		return &daggerheartv1.DaggerheartResolveSceneCountdownTriggerResponse{
+			Countdown: &daggerheartv1.DaggerheartSceneCountdown{
+				CountdownId:    "cd-1",
+				Name:           "Ritual",
+				StartingValue:  4,
+				RemainingValue: 4,
+				LoopBehavior:   daggerheartv1.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_RESET,
+				Status:         daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_ACTIVE,
+			},
+		}, nil
 	}
 	runner := quietRunner(env)
 	state := testState()
+	state.activeSceneID = "scene-1"
+	state.countdowns["Ritual"] = "cd-1"
+	err := runner.runCountdownResolveTriggerStep(context.Background(), state, Step{
+		Kind: "scene_countdown_resolve_trigger",
+		Args: map[string]any{"name": "Ritual", "expect_remaining_value": 4, "expect_status": "active", "expect_loop_behavior": "reset"},
+	})
+	if err != nil {
+		t.Fatalf("runCountdownResolveTriggerStep: %v", err)
+	}
+}
+
+func TestRunCountdownDeleteStep(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	dhClient.deleteCountdown = func(_ context.Context, _ *daggerheartv1.DaggerheartDeleteSceneCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteSceneCountdownResponse, error) {
+		return &daggerheartv1.DaggerheartDeleteSceneCountdownResponse{}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.activeSceneID = "scene-1"
 	state.countdowns["Ritual"] = "cd-1"
 	err := runner.runCountdownDeleteStep(context.Background(), state, Step{
-		Kind: "countdown_delete",
+		Kind: "scene_countdown_delete",
 		Args: map[string]any{"name": "Ritual"},
 	})
 	if err != nil {
@@ -1132,6 +1210,72 @@ func TestRunCountdownDeleteStep(t *testing.T) {
 	}
 	if _, ok := state.countdowns["Ritual"]; ok {
 		t.Fatal("expected countdown to be removed from state")
+	}
+}
+
+func TestRunCampaignCountdownCreateStep(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	dhClient.createCampaignCountdown = func(_ context.Context, req *daggerheartv1.DaggerheartCreateCampaignCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCampaignCountdownResponse, error) {
+		return &daggerheartv1.DaggerheartCreateCampaignCountdownResponse{
+			Countdown: &daggerheartv1.DaggerheartCampaignCountdown{
+				CountdownId:       "camp-cd-1",
+				Name:              req.GetName(),
+				Tone:              req.GetTone(),
+				AdvancementPolicy: req.GetAdvancementPolicy(),
+				StartingValue:     6,
+				RemainingValue:    6,
+				LoopBehavior:      req.GetLoopBehavior(),
+				Status:            daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_ACTIVE,
+			},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	err := runner.runCampaignCountdownCreateStep(context.Background(), state, Step{
+		Kind: "campaign_countdown_create",
+		Args: map[string]any{
+			"name":                      "Long Project",
+			"tone":                      "progress",
+			"advancement_policy":        "long_rest",
+			"fixed_starting_value":      6,
+			"loop_behavior":             "none",
+			"expect_advancement_policy": "long_rest",
+			"expect_starting_value":     6,
+			"expect_remaining_value":    6,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runCampaignCountdownCreateStep: %v", err)
+	}
+	if state.countdowns["Long Project"] != "camp-cd-1" {
+		t.Fatalf("countdown = %v, want camp-cd-1", state.countdowns["Long Project"])
+	}
+}
+
+func TestRunCampaignCountdownResolveTriggerStep(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	dhClient.resolveCampaignCountdownTrigger = func(_ context.Context, _ *daggerheartv1.DaggerheartResolveCampaignCountdownTriggerRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveCampaignCountdownTriggerResponse, error) {
+		return &daggerheartv1.DaggerheartResolveCampaignCountdownTriggerResponse{
+			Countdown: &daggerheartv1.DaggerheartCampaignCountdown{
+				CountdownId:    "camp-cd-1",
+				Name:           "Long Project",
+				StartingValue:  3,
+				RemainingValue: 3,
+				Status:         daggerheartv1.DaggerheartCountdownStatus_DAGGERHEART_COUNTDOWN_STATUS_ACTIVE,
+			},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.countdowns["Long Project"] = "camp-cd-1"
+	err := runner.runCampaignCountdownResolveTriggerStep(context.Background(), state, Step{
+		Kind: "campaign_countdown_resolve_trigger",
+		Args: map[string]any{"name": "Long Project", "expect_remaining_value": 3, "expect_status": "active"},
+	})
+	if err != nil {
+		t.Fatalf("runCampaignCountdownResolveTriggerStep: %v", err)
 	}
 }
 

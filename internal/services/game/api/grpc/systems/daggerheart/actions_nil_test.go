@@ -79,23 +79,23 @@ func TestActionHandlersRejectNilRequests(t *testing.T) {
 			},
 		},
 		{
-			name: "CreateCountdown",
+			name: "CreateSceneCountdown",
 			call: func(s *DaggerheartService) error {
-				_, err := s.CreateCountdown(ctx, nil)
+				_, err := s.CreateSceneCountdown(ctx, nil)
 				return err
 			},
 		},
 		{
-			name: "UpdateCountdown",
+			name: "AdvanceSceneCountdown",
 			call: func(s *DaggerheartService) error {
-				_, err := s.UpdateCountdown(ctx, nil)
+				_, err := s.AdvanceSceneCountdown(ctx, nil)
 				return err
 			},
 		},
 		{
-			name: "DeleteCountdown",
+			name: "DeleteSceneCountdown",
 			call: func(s *DaggerheartService) error {
-				_, err := s.DeleteCountdown(ctx, nil)
+				_, err := s.DeleteSceneCountdown(ctx, nil)
 				return err
 			},
 		},

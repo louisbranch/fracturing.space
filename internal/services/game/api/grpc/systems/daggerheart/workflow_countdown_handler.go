@@ -41,35 +41,96 @@ func (s *DaggerheartService) countdownHandler() *countdowntransport.Handler {
 	})
 }
 
-func (s *DaggerheartService) CreateCountdown(ctx context.Context, in *pb.DaggerheartCreateCountdownRequest) (*pb.DaggerheartCreateCountdownResponse, error) {
-	result, err := s.countdownHandler().CreateCountdown(ctx, in)
+func (s *DaggerheartService) CreateSceneCountdown(ctx context.Context, in *pb.DaggerheartCreateSceneCountdownRequest) (*pb.DaggerheartCreateSceneCountdownResponse, error) {
+	result, err := s.countdownHandler().CreateSceneCountdown(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.DaggerheartCreateCountdownResponse{
-		Countdown: countdowntransport.CountdownToProto(result.Countdown),
+	return &pb.DaggerheartCreateSceneCountdownResponse{
+		Countdown: countdowntransport.SceneCountdownToProto(result.Countdown),
 	}, nil
 }
 
-func (s *DaggerheartService) UpdateCountdown(ctx context.Context, in *pb.DaggerheartUpdateCountdownRequest) (*pb.DaggerheartUpdateCountdownResponse, error) {
-	result, err := s.countdownHandler().UpdateCountdown(ctx, in)
+func (s *DaggerheartService) AdvanceSceneCountdown(ctx context.Context, in *pb.DaggerheartAdvanceSceneCountdownRequest) (*pb.DaggerheartAdvanceSceneCountdownResponse, error) {
+	result, err := s.countdownHandler().AdvanceSceneCountdown(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.DaggerheartUpdateCountdownResponse{
-		Countdown: countdowntransport.CountdownToProto(result.Countdown),
-		Before:    int32(result.Before),
-		After:     int32(result.After),
-		Delta:     int32(result.Delta),
+	return &pb.DaggerheartAdvanceSceneCountdownResponse{
+		Countdown: countdowntransport.SceneCountdownToProto(result.Countdown),
+		Advance:   countdowntransport.AdvanceSummaryToProto(result.Countdown, result.Summary, in.GetReason()),
 	}, nil
 }
 
-func (s *DaggerheartService) DeleteCountdown(ctx context.Context, in *pb.DaggerheartDeleteCountdownRequest) (*pb.DaggerheartDeleteCountdownResponse, error) {
-	result, err := s.countdownHandler().DeleteCountdown(ctx, in)
+func (s *DaggerheartService) ResolveSceneCountdownTrigger(ctx context.Context, in *pb.DaggerheartResolveSceneCountdownTriggerRequest) (*pb.DaggerheartResolveSceneCountdownTriggerResponse, error) {
+	result, err := s.countdownHandler().ResolveSceneCountdownTrigger(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.DaggerheartDeleteCountdownResponse{
+	return &pb.DaggerheartResolveSceneCountdownTriggerResponse{Countdown: countdowntransport.SceneCountdownToProto(result.Countdown)}, nil
+}
+
+func (s *DaggerheartService) DeleteSceneCountdown(ctx context.Context, in *pb.DaggerheartDeleteSceneCountdownRequest) (*pb.DaggerheartDeleteSceneCountdownResponse, error) {
+	result, err := s.countdownHandler().DeleteSceneCountdown(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DaggerheartDeleteSceneCountdownResponse{
 		CountdownId: result.CountdownID,
 	}, nil
+}
+
+func (s *DaggerheartService) GetSceneCountdown(ctx context.Context, in *pb.DaggerheartGetSceneCountdownRequest) (*pb.DaggerheartGetSceneCountdownResponse, error) {
+	return s.countdownHandler().GetSceneCountdown(ctx, in)
+}
+
+func (s *DaggerheartService) ListSceneCountdowns(ctx context.Context, in *pb.DaggerheartListSceneCountdownsRequest) (*pb.DaggerheartListSceneCountdownsResponse, error) {
+	return s.countdownHandler().ListSceneCountdowns(ctx, in)
+}
+
+func (s *DaggerheartService) CreateCampaignCountdown(ctx context.Context, in *pb.DaggerheartCreateCampaignCountdownRequest) (*pb.DaggerheartCreateCampaignCountdownResponse, error) {
+	result, err := s.countdownHandler().CreateCampaignCountdown(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DaggerheartCreateCampaignCountdownResponse{
+		Countdown: countdowntransport.CampaignCountdownToProto(result.Countdown),
+	}, nil
+}
+
+func (s *DaggerheartService) AdvanceCampaignCountdown(ctx context.Context, in *pb.DaggerheartAdvanceCampaignCountdownRequest) (*pb.DaggerheartAdvanceCampaignCountdownResponse, error) {
+	result, err := s.countdownHandler().AdvanceCampaignCountdown(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DaggerheartAdvanceCampaignCountdownResponse{
+		Countdown: countdowntransport.CampaignCountdownToProto(result.Countdown),
+		Advance:   countdowntransport.AdvanceSummaryToProto(result.Countdown, result.Summary, in.GetReason()),
+	}, nil
+}
+
+func (s *DaggerheartService) ResolveCampaignCountdownTrigger(ctx context.Context, in *pb.DaggerheartResolveCampaignCountdownTriggerRequest) (*pb.DaggerheartResolveCampaignCountdownTriggerResponse, error) {
+	result, err := s.countdownHandler().ResolveCampaignCountdownTrigger(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DaggerheartResolveCampaignCountdownTriggerResponse{Countdown: countdowntransport.CampaignCountdownToProto(result.Countdown)}, nil
+}
+
+func (s *DaggerheartService) DeleteCampaignCountdown(ctx context.Context, in *pb.DaggerheartDeleteCampaignCountdownRequest) (*pb.DaggerheartDeleteCampaignCountdownResponse, error) {
+	result, err := s.countdownHandler().DeleteCampaignCountdown(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DaggerheartDeleteCampaignCountdownResponse{
+		CountdownId: result.CountdownID,
+	}, nil
+}
+
+func (s *DaggerheartService) GetCampaignCountdown(ctx context.Context, in *pb.DaggerheartGetCampaignCountdownRequest) (*pb.DaggerheartGetCampaignCountdownResponse, error) {
+	return s.countdownHandler().GetCampaignCountdown(ctx, in)
+}
+
+func (s *DaggerheartService) ListCampaignCountdowns(ctx context.Context, in *pb.DaggerheartListCampaignCountdownsRequest) (*pb.DaggerheartListCampaignCountdownsResponse, error) {
+	return s.countdownHandler().ListCampaignCountdowns(ctx, in)
 }

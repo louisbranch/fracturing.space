@@ -15,8 +15,8 @@ scn:pc("Frodo")
 scn:start_session("Siege Weapons")
 dh:gm_fear(1)
 
-dh:countdown_create{ name = "Breach the Walls", kind = "consequence", current = 0, max = 6, direction = "increase" }
-dh:countdown_update{ name = "Breach the Walls", delta = 1, reason = "siege_weapon_strike" }
+dh:scene_countdown_create{ name = "Breach the Walls", kind = "consequence", current = 0, max = 6, direction = "increase" }
+dh:scene_countdown_update{ name = "Breach the Walls", delta = 1, reason = "siege_weapon_strike" }
 dh:gm_spend_fear(1):spotlight("Helms Deep Siege")
 
 scn:end_session()

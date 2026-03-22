@@ -20,63 +20,72 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DaggerheartService_ActionRoll_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/ActionRoll"
-	DaggerheartService_DualityOutcome_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/DualityOutcome"
-	DaggerheartService_DualityExplain_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/DualityExplain"
-	DaggerheartService_DualityProbability_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/DualityProbability"
-	DaggerheartService_RulesVersion_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/RulesVersion"
-	DaggerheartService_RollDice_FullMethodName                    = "/systems.daggerheart.v1.DaggerheartService/RollDice"
-	DaggerheartService_ApplyDamage_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyDamage"
-	DaggerheartService_ApplyAdversaryDamage_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryDamage"
-	DaggerheartService_ApplyRest_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/ApplyRest"
-	DaggerheartService_ApplyTemporaryArmor_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ApplyTemporaryArmor"
-	DaggerheartService_SwapLoadout_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/SwapLoadout"
-	DaggerheartService_ApplyDeathMove_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/ApplyDeathMove"
-	DaggerheartService_ApplyConditions_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ApplyConditions"
-	DaggerheartService_ApplyAdversaryConditions_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryConditions"
-	DaggerheartService_ApplyGmMove_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyGmMove"
-	DaggerheartService_ApplyAdversaryFeature_FullMethodName       = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryFeature"
-	DaggerheartService_CreateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/CreateCountdown"
-	DaggerheartService_UpdateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/UpdateCountdown"
-	DaggerheartService_DeleteCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/DeleteCountdown"
-	DaggerheartService_CreateAdversary_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/CreateAdversary"
-	DaggerheartService_UpdateAdversary_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/UpdateAdversary"
-	DaggerheartService_DeleteAdversary_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/DeleteAdversary"
-	DaggerheartService_GetAdversary_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/GetAdversary"
-	DaggerheartService_ListAdversaries_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ListAdversaries"
-	DaggerheartService_CreateEnvironmentEntity_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/CreateEnvironmentEntity"
-	DaggerheartService_UpdateEnvironmentEntity_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/UpdateEnvironmentEntity"
-	DaggerheartService_DeleteEnvironmentEntity_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/DeleteEnvironmentEntity"
-	DaggerheartService_GetEnvironmentEntity_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/GetEnvironmentEntity"
-	DaggerheartService_ListEnvironmentEntities_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/ListEnvironmentEntities"
-	DaggerheartService_ResolveBlazeOfGlory_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ResolveBlazeOfGlory"
-	DaggerheartService_SessionActionRoll_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionActionRoll"
-	DaggerheartService_SessionDamageRoll_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionDamageRoll"
-	DaggerheartService_SessionAttackFlow_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionAttackFlow"
-	DaggerheartService_SessionReactionFlow_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/SessionReactionFlow"
-	DaggerheartService_SessionAdversaryAttackRoll_FullMethodName  = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryAttackRoll"
-	DaggerheartService_SessionAdversaryActionCheck_FullMethodName = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryActionCheck"
-	DaggerheartService_SessionAdversaryAttackFlow_FullMethodName  = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryAttackFlow"
-	DaggerheartService_SessionGroupActionFlow_FullMethodName      = "/systems.daggerheart.v1.DaggerheartService/SessionGroupActionFlow"
-	DaggerheartService_SessionTagTeamFlow_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/SessionTagTeamFlow"
-	DaggerheartService_ApplyRollOutcome_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/ApplyRollOutcome"
-	DaggerheartService_ApplyAttackOutcome_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/ApplyAttackOutcome"
-	DaggerheartService_ApplyAdversaryAttackOutcome_FullMethodName = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryAttackOutcome"
-	DaggerheartService_ApplyReactionOutcome_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyReactionOutcome"
-	DaggerheartService_ApplyLevelUp_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/ApplyLevelUp"
-	DaggerheartService_ApplyClassFeature_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/ApplyClassFeature"
-	DaggerheartService_ApplySubclassFeature_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplySubclassFeature"
-	DaggerheartService_TransformBeastform_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/TransformBeastform"
-	DaggerheartService_DropBeastform_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/DropBeastform"
-	DaggerheartService_BeginCompanionExperience_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/BeginCompanionExperience"
-	DaggerheartService_ReturnCompanion_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ReturnCompanion"
-	DaggerheartService_UpdateGold_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/UpdateGold"
-	DaggerheartService_AcquireDomainCard_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/AcquireDomainCard"
-	DaggerheartService_SwapEquipment_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/SwapEquipment"
-	DaggerheartService_UseConsumable_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/UseConsumable"
-	DaggerheartService_AcquireConsumable_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/AcquireConsumable"
-	DaggerheartService_ApplyCharacterStatePatch_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/ApplyCharacterStatePatch"
-	DaggerheartService_ApplyStatModifiers_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/ApplyStatModifiers"
+	DaggerheartService_ActionRoll_FullMethodName                      = "/systems.daggerheart.v1.DaggerheartService/ActionRoll"
+	DaggerheartService_DualityOutcome_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/DualityOutcome"
+	DaggerheartService_DualityExplain_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/DualityExplain"
+	DaggerheartService_DualityProbability_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/DualityProbability"
+	DaggerheartService_RulesVersion_FullMethodName                    = "/systems.daggerheart.v1.DaggerheartService/RulesVersion"
+	DaggerheartService_RollDice_FullMethodName                        = "/systems.daggerheart.v1.DaggerheartService/RollDice"
+	DaggerheartService_ApplyDamage_FullMethodName                     = "/systems.daggerheart.v1.DaggerheartService/ApplyDamage"
+	DaggerheartService_ApplyAdversaryDamage_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryDamage"
+	DaggerheartService_ApplyRest_FullMethodName                       = "/systems.daggerheart.v1.DaggerheartService/ApplyRest"
+	DaggerheartService_ApplyTemporaryArmor_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ApplyTemporaryArmor"
+	DaggerheartService_SwapLoadout_FullMethodName                     = "/systems.daggerheart.v1.DaggerheartService/SwapLoadout"
+	DaggerheartService_ApplyDeathMove_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/ApplyDeathMove"
+	DaggerheartService_ApplyConditions_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyConditions"
+	DaggerheartService_ApplyAdversaryConditions_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryConditions"
+	DaggerheartService_ApplyGmMove_FullMethodName                     = "/systems.daggerheart.v1.DaggerheartService/ApplyGmMove"
+	DaggerheartService_ApplyAdversaryFeature_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryFeature"
+	DaggerheartService_CreateSceneCountdown_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/CreateSceneCountdown"
+	DaggerheartService_AdvanceSceneCountdown_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/AdvanceSceneCountdown"
+	DaggerheartService_ResolveSceneCountdownTrigger_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/ResolveSceneCountdownTrigger"
+	DaggerheartService_DeleteSceneCountdown_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/DeleteSceneCountdown"
+	DaggerheartService_GetSceneCountdown_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/GetSceneCountdown"
+	DaggerheartService_ListSceneCountdowns_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ListSceneCountdowns"
+	DaggerheartService_CreateCampaignCountdown_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/CreateCampaignCountdown"
+	DaggerheartService_AdvanceCampaignCountdown_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/AdvanceCampaignCountdown"
+	DaggerheartService_ResolveCampaignCountdownTrigger_FullMethodName = "/systems.daggerheart.v1.DaggerheartService/ResolveCampaignCountdownTrigger"
+	DaggerheartService_DeleteCampaignCountdown_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/DeleteCampaignCountdown"
+	DaggerheartService_GetCampaignCountdown_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/GetCampaignCountdown"
+	DaggerheartService_ListCampaignCountdowns_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/ListCampaignCountdowns"
+	DaggerheartService_CreateAdversary_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/CreateAdversary"
+	DaggerheartService_UpdateAdversary_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/UpdateAdversary"
+	DaggerheartService_DeleteAdversary_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/DeleteAdversary"
+	DaggerheartService_GetAdversary_FullMethodName                    = "/systems.daggerheart.v1.DaggerheartService/GetAdversary"
+	DaggerheartService_ListAdversaries_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ListAdversaries"
+	DaggerheartService_CreateEnvironmentEntity_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/CreateEnvironmentEntity"
+	DaggerheartService_UpdateEnvironmentEntity_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/UpdateEnvironmentEntity"
+	DaggerheartService_DeleteEnvironmentEntity_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/DeleteEnvironmentEntity"
+	DaggerheartService_GetEnvironmentEntity_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/GetEnvironmentEntity"
+	DaggerheartService_ListEnvironmentEntities_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ListEnvironmentEntities"
+	DaggerheartService_ResolveBlazeOfGlory_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ResolveBlazeOfGlory"
+	DaggerheartService_SessionActionRoll_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/SessionActionRoll"
+	DaggerheartService_SessionDamageRoll_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/SessionDamageRoll"
+	DaggerheartService_SessionAttackFlow_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/SessionAttackFlow"
+	DaggerheartService_SessionReactionFlow_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/SessionReactionFlow"
+	DaggerheartService_SessionAdversaryAttackRoll_FullMethodName      = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryAttackRoll"
+	DaggerheartService_SessionAdversaryActionCheck_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryActionCheck"
+	DaggerheartService_SessionAdversaryAttackFlow_FullMethodName      = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryAttackFlow"
+	DaggerheartService_SessionGroupActionFlow_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/SessionGroupActionFlow"
+	DaggerheartService_SessionTagTeamFlow_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/SessionTagTeamFlow"
+	DaggerheartService_ApplyRollOutcome_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/ApplyRollOutcome"
+	DaggerheartService_ApplyAttackOutcome_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/ApplyAttackOutcome"
+	DaggerheartService_ApplyAdversaryAttackOutcome_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryAttackOutcome"
+	DaggerheartService_ApplyReactionOutcome_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/ApplyReactionOutcome"
+	DaggerheartService_ApplyLevelUp_FullMethodName                    = "/systems.daggerheart.v1.DaggerheartService/ApplyLevelUp"
+	DaggerheartService_ApplyClassFeature_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/ApplyClassFeature"
+	DaggerheartService_ApplySubclassFeature_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/ApplySubclassFeature"
+	DaggerheartService_TransformBeastform_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/TransformBeastform"
+	DaggerheartService_DropBeastform_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/DropBeastform"
+	DaggerheartService_BeginCompanionExperience_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/BeginCompanionExperience"
+	DaggerheartService_ReturnCompanion_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ReturnCompanion"
+	DaggerheartService_UpdateGold_FullMethodName                      = "/systems.daggerheart.v1.DaggerheartService/UpdateGold"
+	DaggerheartService_AcquireDomainCard_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/AcquireDomainCard"
+	DaggerheartService_SwapEquipment_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/SwapEquipment"
+	DaggerheartService_UseConsumable_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/UseConsumable"
+	DaggerheartService_AcquireConsumable_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/AcquireConsumable"
+	DaggerheartService_ApplyCharacterStatePatch_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyCharacterStatePatch"
+	DaggerheartService_ApplyStatModifiers_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/ApplyStatModifiers"
 )
 
 // DaggerheartServiceClient is the client API for DaggerheartService service.
@@ -118,12 +127,30 @@ type DaggerheartServiceClient interface {
 	// Apply a GM move (system-specific).
 	ApplyGmMove(ctx context.Context, in *DaggerheartApplyGmMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyGmMoveResponse, error)
 	ApplyAdversaryFeature(ctx context.Context, in *DaggerheartApplyAdversaryFeatureRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryFeatureResponse, error)
-	// Create a countdown (system-specific).
-	CreateCountdown(ctx context.Context, in *DaggerheartCreateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateCountdownResponse, error)
-	// Update a countdown (system-specific).
-	UpdateCountdown(ctx context.Context, in *DaggerheartUpdateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartUpdateCountdownResponse, error)
-	// Delete a countdown (system-specific).
-	DeleteCountdown(ctx context.Context, in *DaggerheartDeleteCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteCountdownResponse, error)
+	// Create a scene countdown (system-specific).
+	CreateSceneCountdown(ctx context.Context, in *DaggerheartCreateSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateSceneCountdownResponse, error)
+	// Advance a scene countdown manually (system-specific).
+	AdvanceSceneCountdown(ctx context.Context, in *DaggerheartAdvanceSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartAdvanceSceneCountdownResponse, error)
+	// Resolve a pending scene countdown trigger (system-specific).
+	ResolveSceneCountdownTrigger(ctx context.Context, in *DaggerheartResolveSceneCountdownTriggerRequest, opts ...grpc.CallOption) (*DaggerheartResolveSceneCountdownTriggerResponse, error)
+	// Delete a scene countdown (system-specific).
+	DeleteSceneCountdown(ctx context.Context, in *DaggerheartDeleteSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteSceneCountdownResponse, error)
+	// Get a scene countdown (system-specific).
+	GetSceneCountdown(ctx context.Context, in *DaggerheartGetSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartGetSceneCountdownResponse, error)
+	// List scene countdowns (system-specific).
+	ListSceneCountdowns(ctx context.Context, in *DaggerheartListSceneCountdownsRequest, opts ...grpc.CallOption) (*DaggerheartListSceneCountdownsResponse, error)
+	// Create a campaign countdown (system-specific).
+	CreateCampaignCountdown(ctx context.Context, in *DaggerheartCreateCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateCampaignCountdownResponse, error)
+	// Advance a campaign countdown manually (system-specific).
+	AdvanceCampaignCountdown(ctx context.Context, in *DaggerheartAdvanceCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartAdvanceCampaignCountdownResponse, error)
+	// Resolve a pending campaign countdown trigger (system-specific).
+	ResolveCampaignCountdownTrigger(ctx context.Context, in *DaggerheartResolveCampaignCountdownTriggerRequest, opts ...grpc.CallOption) (*DaggerheartResolveCampaignCountdownTriggerResponse, error)
+	// Delete a campaign countdown (system-specific).
+	DeleteCampaignCountdown(ctx context.Context, in *DaggerheartDeleteCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteCampaignCountdownResponse, error)
+	// Get a campaign countdown (system-specific).
+	GetCampaignCountdown(ctx context.Context, in *DaggerheartGetCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartGetCampaignCountdownResponse, error)
+	// List campaign countdowns (system-specific).
+	ListCampaignCountdowns(ctx context.Context, in *DaggerheartListCampaignCountdownsRequest, opts ...grpc.CallOption) (*DaggerheartListCampaignCountdownsResponse, error)
 	// Create an adversary (system-specific).
 	CreateAdversary(ctx context.Context, in *DaggerheartCreateAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartCreateAdversaryResponse, error)
 	// Update an adversary (system-specific).
@@ -365,30 +392,120 @@ func (c *daggerheartServiceClient) ApplyAdversaryFeature(ctx context.Context, in
 	return out, nil
 }
 
-func (c *daggerheartServiceClient) CreateCountdown(ctx context.Context, in *DaggerheartCreateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateCountdownResponse, error) {
+func (c *daggerheartServiceClient) CreateSceneCountdown(ctx context.Context, in *DaggerheartCreateSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateSceneCountdownResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DaggerheartCreateCountdownResponse)
-	err := c.cc.Invoke(ctx, DaggerheartService_CreateCountdown_FullMethodName, in, out, cOpts...)
+	out := new(DaggerheartCreateSceneCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_CreateSceneCountdown_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *daggerheartServiceClient) UpdateCountdown(ctx context.Context, in *DaggerheartUpdateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartUpdateCountdownResponse, error) {
+func (c *daggerheartServiceClient) AdvanceSceneCountdown(ctx context.Context, in *DaggerheartAdvanceSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartAdvanceSceneCountdownResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DaggerheartUpdateCountdownResponse)
-	err := c.cc.Invoke(ctx, DaggerheartService_UpdateCountdown_FullMethodName, in, out, cOpts...)
+	out := new(DaggerheartAdvanceSceneCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_AdvanceSceneCountdown_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *daggerheartServiceClient) DeleteCountdown(ctx context.Context, in *DaggerheartDeleteCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteCountdownResponse, error) {
+func (c *daggerheartServiceClient) ResolveSceneCountdownTrigger(ctx context.Context, in *DaggerheartResolveSceneCountdownTriggerRequest, opts ...grpc.CallOption) (*DaggerheartResolveSceneCountdownTriggerResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DaggerheartDeleteCountdownResponse)
-	err := c.cc.Invoke(ctx, DaggerheartService_DeleteCountdown_FullMethodName, in, out, cOpts...)
+	out := new(DaggerheartResolveSceneCountdownTriggerResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ResolveSceneCountdownTrigger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) DeleteSceneCountdown(ctx context.Context, in *DaggerheartDeleteSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteSceneCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartDeleteSceneCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_DeleteSceneCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) GetSceneCountdown(ctx context.Context, in *DaggerheartGetSceneCountdownRequest, opts ...grpc.CallOption) (*DaggerheartGetSceneCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartGetSceneCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_GetSceneCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ListSceneCountdowns(ctx context.Context, in *DaggerheartListSceneCountdownsRequest, opts ...grpc.CallOption) (*DaggerheartListSceneCountdownsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartListSceneCountdownsResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ListSceneCountdowns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) CreateCampaignCountdown(ctx context.Context, in *DaggerheartCreateCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateCampaignCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartCreateCampaignCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_CreateCampaignCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) AdvanceCampaignCountdown(ctx context.Context, in *DaggerheartAdvanceCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartAdvanceCampaignCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartAdvanceCampaignCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_AdvanceCampaignCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ResolveCampaignCountdownTrigger(ctx context.Context, in *DaggerheartResolveCampaignCountdownTriggerRequest, opts ...grpc.CallOption) (*DaggerheartResolveCampaignCountdownTriggerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartResolveCampaignCountdownTriggerResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ResolveCampaignCountdownTrigger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) DeleteCampaignCountdown(ctx context.Context, in *DaggerheartDeleteCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteCampaignCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartDeleteCampaignCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_DeleteCampaignCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) GetCampaignCountdown(ctx context.Context, in *DaggerheartGetCampaignCountdownRequest, opts ...grpc.CallOption) (*DaggerheartGetCampaignCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartGetCampaignCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_GetCampaignCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ListCampaignCountdowns(ctx context.Context, in *DaggerheartListCampaignCountdownsRequest, opts ...grpc.CallOption) (*DaggerheartListCampaignCountdownsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartListCampaignCountdownsResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ListCampaignCountdowns_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -814,12 +931,30 @@ type DaggerheartServiceServer interface {
 	// Apply a GM move (system-specific).
 	ApplyGmMove(context.Context, *DaggerheartApplyGmMoveRequest) (*DaggerheartApplyGmMoveResponse, error)
 	ApplyAdversaryFeature(context.Context, *DaggerheartApplyAdversaryFeatureRequest) (*DaggerheartApplyAdversaryFeatureResponse, error)
-	// Create a countdown (system-specific).
-	CreateCountdown(context.Context, *DaggerheartCreateCountdownRequest) (*DaggerheartCreateCountdownResponse, error)
-	// Update a countdown (system-specific).
-	UpdateCountdown(context.Context, *DaggerheartUpdateCountdownRequest) (*DaggerheartUpdateCountdownResponse, error)
-	// Delete a countdown (system-specific).
-	DeleteCountdown(context.Context, *DaggerheartDeleteCountdownRequest) (*DaggerheartDeleteCountdownResponse, error)
+	// Create a scene countdown (system-specific).
+	CreateSceneCountdown(context.Context, *DaggerheartCreateSceneCountdownRequest) (*DaggerheartCreateSceneCountdownResponse, error)
+	// Advance a scene countdown manually (system-specific).
+	AdvanceSceneCountdown(context.Context, *DaggerheartAdvanceSceneCountdownRequest) (*DaggerheartAdvanceSceneCountdownResponse, error)
+	// Resolve a pending scene countdown trigger (system-specific).
+	ResolveSceneCountdownTrigger(context.Context, *DaggerheartResolveSceneCountdownTriggerRequest) (*DaggerheartResolveSceneCountdownTriggerResponse, error)
+	// Delete a scene countdown (system-specific).
+	DeleteSceneCountdown(context.Context, *DaggerheartDeleteSceneCountdownRequest) (*DaggerheartDeleteSceneCountdownResponse, error)
+	// Get a scene countdown (system-specific).
+	GetSceneCountdown(context.Context, *DaggerheartGetSceneCountdownRequest) (*DaggerheartGetSceneCountdownResponse, error)
+	// List scene countdowns (system-specific).
+	ListSceneCountdowns(context.Context, *DaggerheartListSceneCountdownsRequest) (*DaggerheartListSceneCountdownsResponse, error)
+	// Create a campaign countdown (system-specific).
+	CreateCampaignCountdown(context.Context, *DaggerheartCreateCampaignCountdownRequest) (*DaggerheartCreateCampaignCountdownResponse, error)
+	// Advance a campaign countdown manually (system-specific).
+	AdvanceCampaignCountdown(context.Context, *DaggerheartAdvanceCampaignCountdownRequest) (*DaggerheartAdvanceCampaignCountdownResponse, error)
+	// Resolve a pending campaign countdown trigger (system-specific).
+	ResolveCampaignCountdownTrigger(context.Context, *DaggerheartResolveCampaignCountdownTriggerRequest) (*DaggerheartResolveCampaignCountdownTriggerResponse, error)
+	// Delete a campaign countdown (system-specific).
+	DeleteCampaignCountdown(context.Context, *DaggerheartDeleteCampaignCountdownRequest) (*DaggerheartDeleteCampaignCountdownResponse, error)
+	// Get a campaign countdown (system-specific).
+	GetCampaignCountdown(context.Context, *DaggerheartGetCampaignCountdownRequest) (*DaggerheartGetCampaignCountdownResponse, error)
+	// List campaign countdowns (system-specific).
+	ListCampaignCountdowns(context.Context, *DaggerheartListCampaignCountdownsRequest) (*DaggerheartListCampaignCountdownsResponse, error)
 	// Create an adversary (system-specific).
 	CreateAdversary(context.Context, *DaggerheartCreateAdversaryRequest) (*DaggerheartCreateAdversaryResponse, error)
 	// Update an adversary (system-specific).
@@ -949,14 +1084,41 @@ func (UnimplementedDaggerheartServiceServer) ApplyGmMove(context.Context, *Dagge
 func (UnimplementedDaggerheartServiceServer) ApplyAdversaryFeature(context.Context, *DaggerheartApplyAdversaryFeatureRequest) (*DaggerheartApplyAdversaryFeatureResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyAdversaryFeature not implemented")
 }
-func (UnimplementedDaggerheartServiceServer) CreateCountdown(context.Context, *DaggerheartCreateCountdownRequest) (*DaggerheartCreateCountdownResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateCountdown not implemented")
+func (UnimplementedDaggerheartServiceServer) CreateSceneCountdown(context.Context, *DaggerheartCreateSceneCountdownRequest) (*DaggerheartCreateSceneCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSceneCountdown not implemented")
 }
-func (UnimplementedDaggerheartServiceServer) UpdateCountdown(context.Context, *DaggerheartUpdateCountdownRequest) (*DaggerheartUpdateCountdownResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateCountdown not implemented")
+func (UnimplementedDaggerheartServiceServer) AdvanceSceneCountdown(context.Context, *DaggerheartAdvanceSceneCountdownRequest) (*DaggerheartAdvanceSceneCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdvanceSceneCountdown not implemented")
 }
-func (UnimplementedDaggerheartServiceServer) DeleteCountdown(context.Context, *DaggerheartDeleteCountdownRequest) (*DaggerheartDeleteCountdownResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteCountdown not implemented")
+func (UnimplementedDaggerheartServiceServer) ResolveSceneCountdownTrigger(context.Context, *DaggerheartResolveSceneCountdownTriggerRequest) (*DaggerheartResolveSceneCountdownTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveSceneCountdownTrigger not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) DeleteSceneCountdown(context.Context, *DaggerheartDeleteSceneCountdownRequest) (*DaggerheartDeleteSceneCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSceneCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) GetSceneCountdown(context.Context, *DaggerheartGetSceneCountdownRequest) (*DaggerheartGetSceneCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSceneCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ListSceneCountdowns(context.Context, *DaggerheartListSceneCountdownsRequest) (*DaggerheartListSceneCountdownsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSceneCountdowns not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) CreateCampaignCountdown(context.Context, *DaggerheartCreateCampaignCountdownRequest) (*DaggerheartCreateCampaignCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateCampaignCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) AdvanceCampaignCountdown(context.Context, *DaggerheartAdvanceCampaignCountdownRequest) (*DaggerheartAdvanceCampaignCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdvanceCampaignCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ResolveCampaignCountdownTrigger(context.Context, *DaggerheartResolveCampaignCountdownTriggerRequest) (*DaggerheartResolveCampaignCountdownTriggerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveCampaignCountdownTrigger not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) DeleteCampaignCountdown(context.Context, *DaggerheartDeleteCampaignCountdownRequest) (*DaggerheartDeleteCampaignCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteCampaignCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) GetCampaignCountdown(context.Context, *DaggerheartGetCampaignCountdownRequest) (*DaggerheartGetCampaignCountdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCampaignCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ListCampaignCountdowns(context.Context, *DaggerheartListCampaignCountdownsRequest) (*DaggerheartListCampaignCountdownsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCampaignCountdowns not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) CreateAdversary(context.Context, *DaggerheartCreateAdversaryRequest) (*DaggerheartCreateAdversaryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateAdversary not implemented")
@@ -1381,56 +1543,218 @@ func _DaggerheartService_ApplyAdversaryFeature_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DaggerheartService_CreateCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DaggerheartCreateCountdownRequest)
+func _DaggerheartService_CreateSceneCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartCreateSceneCountdownRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DaggerheartServiceServer).CreateCountdown(ctx, in)
+		return srv.(DaggerheartServiceServer).CreateSceneCountdown(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DaggerheartService_CreateCountdown_FullMethodName,
+		FullMethod: DaggerheartService_CreateSceneCountdown_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DaggerheartServiceServer).CreateCountdown(ctx, req.(*DaggerheartCreateCountdownRequest))
+		return srv.(DaggerheartServiceServer).CreateSceneCountdown(ctx, req.(*DaggerheartCreateSceneCountdownRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DaggerheartService_UpdateCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DaggerheartUpdateCountdownRequest)
+func _DaggerheartService_AdvanceSceneCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartAdvanceSceneCountdownRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DaggerheartServiceServer).UpdateCountdown(ctx, in)
+		return srv.(DaggerheartServiceServer).AdvanceSceneCountdown(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DaggerheartService_UpdateCountdown_FullMethodName,
+		FullMethod: DaggerheartService_AdvanceSceneCountdown_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DaggerheartServiceServer).UpdateCountdown(ctx, req.(*DaggerheartUpdateCountdownRequest))
+		return srv.(DaggerheartServiceServer).AdvanceSceneCountdown(ctx, req.(*DaggerheartAdvanceSceneCountdownRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DaggerheartService_DeleteCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DaggerheartDeleteCountdownRequest)
+func _DaggerheartService_ResolveSceneCountdownTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartResolveSceneCountdownTriggerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DaggerheartServiceServer).DeleteCountdown(ctx, in)
+		return srv.(DaggerheartServiceServer).ResolveSceneCountdownTrigger(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DaggerheartService_DeleteCountdown_FullMethodName,
+		FullMethod: DaggerheartService_ResolveSceneCountdownTrigger_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DaggerheartServiceServer).DeleteCountdown(ctx, req.(*DaggerheartDeleteCountdownRequest))
+		return srv.(DaggerheartServiceServer).ResolveSceneCountdownTrigger(ctx, req.(*DaggerheartResolveSceneCountdownTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_DeleteSceneCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartDeleteSceneCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).DeleteSceneCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_DeleteSceneCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).DeleteSceneCountdown(ctx, req.(*DaggerheartDeleteSceneCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_GetSceneCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartGetSceneCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).GetSceneCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_GetSceneCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).GetSceneCountdown(ctx, req.(*DaggerheartGetSceneCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ListSceneCountdowns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartListSceneCountdownsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ListSceneCountdowns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ListSceneCountdowns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ListSceneCountdowns(ctx, req.(*DaggerheartListSceneCountdownsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_CreateCampaignCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartCreateCampaignCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).CreateCampaignCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_CreateCampaignCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).CreateCampaignCountdown(ctx, req.(*DaggerheartCreateCampaignCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_AdvanceCampaignCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartAdvanceCampaignCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).AdvanceCampaignCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_AdvanceCampaignCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).AdvanceCampaignCountdown(ctx, req.(*DaggerheartAdvanceCampaignCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ResolveCampaignCountdownTrigger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartResolveCampaignCountdownTriggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ResolveCampaignCountdownTrigger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ResolveCampaignCountdownTrigger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ResolveCampaignCountdownTrigger(ctx, req.(*DaggerheartResolveCampaignCountdownTriggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_DeleteCampaignCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartDeleteCampaignCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).DeleteCampaignCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_DeleteCampaignCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).DeleteCampaignCountdown(ctx, req.(*DaggerheartDeleteCampaignCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_GetCampaignCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartGetCampaignCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).GetCampaignCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_GetCampaignCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).GetCampaignCountdown(ctx, req.(*DaggerheartGetCampaignCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ListCampaignCountdowns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartListCampaignCountdownsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ListCampaignCountdowns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ListCampaignCountdowns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ListCampaignCountdowns(ctx, req.(*DaggerheartListCampaignCountdownsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2191,16 +2515,52 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaggerheartService_ApplyAdversaryFeature_Handler,
 		},
 		{
-			MethodName: "CreateCountdown",
-			Handler:    _DaggerheartService_CreateCountdown_Handler,
+			MethodName: "CreateSceneCountdown",
+			Handler:    _DaggerheartService_CreateSceneCountdown_Handler,
 		},
 		{
-			MethodName: "UpdateCountdown",
-			Handler:    _DaggerheartService_UpdateCountdown_Handler,
+			MethodName: "AdvanceSceneCountdown",
+			Handler:    _DaggerheartService_AdvanceSceneCountdown_Handler,
 		},
 		{
-			MethodName: "DeleteCountdown",
-			Handler:    _DaggerheartService_DeleteCountdown_Handler,
+			MethodName: "ResolveSceneCountdownTrigger",
+			Handler:    _DaggerheartService_ResolveSceneCountdownTrigger_Handler,
+		},
+		{
+			MethodName: "DeleteSceneCountdown",
+			Handler:    _DaggerheartService_DeleteSceneCountdown_Handler,
+		},
+		{
+			MethodName: "GetSceneCountdown",
+			Handler:    _DaggerheartService_GetSceneCountdown_Handler,
+		},
+		{
+			MethodName: "ListSceneCountdowns",
+			Handler:    _DaggerheartService_ListSceneCountdowns_Handler,
+		},
+		{
+			MethodName: "CreateCampaignCountdown",
+			Handler:    _DaggerheartService_CreateCampaignCountdown_Handler,
+		},
+		{
+			MethodName: "AdvanceCampaignCountdown",
+			Handler:    _DaggerheartService_AdvanceCampaignCountdown_Handler,
+		},
+		{
+			MethodName: "ResolveCampaignCountdownTrigger",
+			Handler:    _DaggerheartService_ResolveCampaignCountdownTrigger_Handler,
+		},
+		{
+			MethodName: "DeleteCampaignCountdown",
+			Handler:    _DaggerheartService_DeleteCampaignCountdown_Handler,
+		},
+		{
+			MethodName: "GetCampaignCountdown",
+			Handler:    _DaggerheartService_GetCampaignCountdown_Handler,
+		},
+		{
+			MethodName: "ListCampaignCountdowns",
+			Handler:    _DaggerheartService_ListCampaignCountdowns_Handler,
 		},
 		{
 			MethodName: "CreateAdversary",

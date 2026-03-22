@@ -20,8 +20,8 @@ dh:gm_fear(1)
 -- Partial mapping: fear spend, concrete consequence, and spotlight handoff are explicit.
 -- Missing DSL: adversary-focused spotlight state without routing through the GM spotlight.
 dh:gm_spend_fear(1):spotlight("Corrupt Steward", { description = "noble_escape_through_secret_passage" })
-dh:countdown_create{ name = "Seal the Escape Route", kind = "progress", current = 0, max = 4, direction = "increase" }
-dh:countdown_update{ name = "Seal the Escape Route", delta = 1, reason = "steward_breaks_contact" }
+dh:scene_countdown_create{ name = "Seal the Escape Route", kind = "progress", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_update{ name = "Seal the Escape Route", delta = 1, reason = "steward_breaks_contact" }
 dh:apply_condition{ target = "Sam", add = { "VULNERABLE" }, source = "noble_escape_distraction" }
 scn:set_spotlight{ target = "Sam" }
 

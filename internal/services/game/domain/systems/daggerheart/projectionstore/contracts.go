@@ -259,19 +259,34 @@ type DaggerheartSnapshot struct {
 	ConsecutiveShortRests int
 }
 
-// DaggerheartCountdown stores timed countdown state in session read models.
+// DaggerheartCountdown stores one SRD-native countdown with optional scene
+// ownership. Empty session_id/scene_id means the countdown is campaign-owned.
 type DaggerheartCountdown struct {
 	CampaignID        string
+	SessionID         string
+	SceneID           string
 	CountdownID       string
 	Name              string
-	Kind              string
-	Current           int
-	Max               int
-	Direction         string
-	Looping           bool
-	Variant           string
-	TriggerEventType  string
+	Tone              string
+	AdvancementPolicy string
+	StartingValue     int
+	RemainingValue    int
+	LoopBehavior      string
+	Status            string
 	LinkedCountdownID string
+	StartingRollMin   int
+	StartingRollMax   int
+	StartingRollValue int
+
+	// Deprecated compatibility fields retained temporarily while tests and
+	// fixtures finish moving to the SRD-native countdown model.
+	Kind             string
+	Current          int
+	Max              int
+	Direction        string
+	Looping          bool
+	Variant          string
+	TriggerEventType string
 }
 
 // DaggerheartAdversaryFeatureState stores mutable adversary feature runtime state.

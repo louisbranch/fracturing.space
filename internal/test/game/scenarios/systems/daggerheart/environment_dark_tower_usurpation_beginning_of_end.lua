@@ -16,9 +16,9 @@ dh:adversary("Saruman")
 scn:start_session("Beginning of the End")
 
 -- Major-damage tick branches remain unresolved in this fixture.
-dh:countdown_create{ name = "Divine Siege", kind = "consequence", current = 0, max = 10, direction = "increase" }
+dh:scene_countdown_create{ name = "Divine Siege", kind = "consequence", current = 0, max = 10, direction = "increase" }
 dh:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 14, outcome = "fear" }
-dh:countdown_update{ name = "Divine Siege", delta = 1, reason = "fear_outcome" }
+dh:scene_countdown_update{ name = "Divine Siege", delta = 1, reason = "fear_outcome" }
 
 scn:end_session()
 

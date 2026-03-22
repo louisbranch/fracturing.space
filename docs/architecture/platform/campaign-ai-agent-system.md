@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 15
 status: draft
 owner: engineering
-last_reviewed: "2026-03-21"
+last_reviewed: "2026-03-22"
 ---
 
 # Campaign AI Agent System
@@ -43,6 +43,24 @@ interaction may omit a `prompt` beat entirely. A beat is a coherent interaction 
 not a paragraph container: one beat may span multiple paragraphs, and a second beat of
 the same type is warranted only when the GM is making a distinct move or shifting the
 information context.
+
+## Mechanics-Heavy Turn Discipline
+
+Mechanics-heavy turns require stricter channel discipline than scene-framing
+turns.
+
+- The committed interaction should make the authoritative mechanical outcome
+  legible to the player whenever HP, Armor, Hope, Stress, Fear, spotlight, or
+  visible countdown pressure changed.
+- Player-facing beats should describe game-state changes in table language, not
+  engine language. Internal IDs, enum names, and storage-shaped labels belong
+  in memory or OOC notes, not in the committed beat text.
+- Reference lookup is staged, not automatic. The agent should use short
+  always-on guidance and current state first, then consult the reference corpus
+  only when exact procedure or wording is unclear.
+- Any future critique or coaching behavior must remain out-of-band from the GM
+  lane. The same turn should not mix authoritative adjudication with product
+  self-analysis.
 
 ## Instruction Composition
 Agent instructions are **markdown files on disk**, not Go string literals.
@@ -146,5 +164,6 @@ embedded default instruction set.
 
 ## Relationship to Other Docs
 - [Campaign AI Orchestration](campaign-ai-orchestration.md) — grant, tool policy, turn-loop mechanics
+- [Campaign AI Mechanics Quality](campaign-ai-mechanics-quality.md) — follow-on design guidance for mechanics-heavy AI GM turns
 - [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md) — session start readiness and bootstrap behavior
 - [AI service contributor map](../../reference/ai-service-contributor-map.md) — package routing for contributors

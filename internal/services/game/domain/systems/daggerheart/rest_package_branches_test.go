@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -21,7 +20,7 @@ func TestResolveRestPackage_InterruptedShortRestRejectsCountdownAdvance(t *testi
 			CharacterID: "char-1",
 			State:       testRestState("char-1", 5, 6, 1, 3, 0, 3, 0, 2),
 		}},
-		LongTermCountdown: &rules.Countdown{ID: "cd-1", Name: "Travel", Kind: rules.CountdownKindProgress, Current: 1, Max: 4, Direction: rules.CountdownDirectionIncrease},
+		LongTermCountdown: &rules.Countdown{ID: "cd-1", Name: "Travel", Tone: "progress", AdvancementPolicy: "long_rest", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "interrupted short rests cannot advance a countdown") {
 		t.Fatalf("ResolveRestPackage() error = %v, want interrupted countdown error", err)
@@ -127,14 +126,14 @@ func TestResolveDowntimeSelection_BranchesAndValidation(t *testing.T) {
 			DowntimeSelection{Move: DowntimeMoveWorkOnProject, CountdownID: "cd-1"},
 			states,
 			nil,
-			map[dhids.CountdownID]rules.Countdown{
-				"cd-1": {ID: "cd-1", Name: "Track", Kind: rules.CountdownKindProgress, Current: 1, Max: 4, Direction: rules.CountdownDirectionIncrease},
+			map[ids.CountdownID]rules.Countdown{
+				"cd-1": {ID: "cd-1", Name: "Track", Tone: "progress", AdvancementPolicy: "manual", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 			},
 		)
 		if err != nil {
 			t.Fatalf("resolveDowntimeSelection auto project error = %v", err)
 		}
-		if payload.CountdownID != "cd-1" || update == nil || update.Delta != 1 || update.Reason != "work_on_project" {
+		if payload.CountdownID != "cd-1" || update == nil || update.AdvancedBy != 1 || update.Reason != "work_on_project" {
 			t.Fatalf("auto project payload/update = %+v / %+v", payload, update)
 		}
 	})
@@ -143,17 +142,17 @@ func TestResolveDowntimeSelection_BranchesAndValidation(t *testing.T) {
 func TestNextCountdownMutationClampAndErrors(t *testing.T) {
 	t.Parallel()
 
-	if _, err := nextCountdownMutation(map[dhids.CountdownID]rules.Countdown{}, "missing", 1, nil, "tick"); err == nil || !strings.Contains(err.Error(), "is not available") {
+	if _, err := nextCountdownMutation(map[ids.CountdownID]rules.Countdown{}, "missing", 1, nil, "tick"); err == nil || !strings.Contains(err.Error(), "is not available") {
 		t.Fatalf("nextCountdownMutation missing countdown error = %v", err)
 	}
 
-	update, err := nextCountdownMutation(map[dhids.CountdownID]rules.Countdown{
-		"cd-1": {ID: "cd-1", Name: "Track", Kind: rules.CountdownKindProgress, Current: 1, Max: 4, Direction: rules.CountdownDirectionIncrease},
+	update, err := nextCountdownMutation(map[ids.CountdownID]rules.Countdown{
+		"cd-1": {ID: "cd-1", Name: "Track", Tone: "progress", AdvancementPolicy: "manual", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 	}, "cd-1", 1, nil, " tick ")
 	if err != nil {
 		t.Fatalf("nextCountdownMutation valid error = %v", err)
 	}
-	if update.After != 2 || update.Reason != "tick" {
+	if update.AfterRemaining != 2 || update.Reason != "tick" {
 		t.Fatalf("nextCountdownMutation update = %+v, want after=2 reason=tick", update)
 	}
 }

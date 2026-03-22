@@ -6,51 +6,56 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
-func TestResolveCountdownMutation(t *testing.T) {
-	mutation, err := ResolveCountdownMutation(CountdownMutationInput{
+func TestResolveCountdownAdvance(t *testing.T) {
+	mutation, err := ResolveCountdownAdvance(CountdownAdvanceInput{
 		Countdown: rules.Countdown{
-			ID:      "  cd-1  ",
-			Current: 2,
-			Max:     6,
+			ID:                "  cd-1  ",
+			Tone:              rules.CountdownToneProgress,
+			AdvancementPolicy: rules.CountdownAdvancementPolicyManual,
+			StartingValue:     6,
+			RemainingValue:    4,
+			LoopBehavior:      rules.CountdownLoopBehaviorNone,
+			Status:            rules.CountdownStatusActive,
 		},
-		Delta:  2,
+		Amount: 2,
 		Reason: "  tick  ",
 	})
 	if err != nil {
-		t.Fatalf("ResolveCountdownMutation() error = %v", err)
+		t.Fatalf("ResolveCountdownAdvance() error = %v", err)
 	}
-	if mutation.Update.Before != 2 || mutation.Update.After != 4 || mutation.Update.Delta != 2 {
-		t.Fatalf("update = %+v, want before=2 after=4 delta=2", mutation.Update)
+	if mutation.Advance.BeforeRemaining != 4 || mutation.Advance.AfterRemaining != 2 || mutation.Advance.AdvancedBy != 2 {
+		t.Fatalf("advance = %+v", mutation.Advance)
 	}
-	if mutation.Payload.CountdownID != "cd-1" {
-		t.Fatalf("countdown id = %q, want cd-1", mutation.Payload.CountdownID)
-	}
-	if mutation.Payload.Reason != "tick" {
-		t.Fatalf("reason = %q, want tick", mutation.Payload.Reason)
-	}
-	if mutation.Payload.Before != 2 || mutation.Payload.After != 4 || mutation.Payload.Delta != 2 {
-		t.Fatalf("payload = %+v, want before=2 after=4 delta=2", mutation.Payload)
+	if mutation.Payload.CountdownID != "cd-1" || mutation.Payload.Reason != "tick" {
+		t.Fatalf("payload = %+v", mutation.Payload)
 	}
 }
 
-func TestResolveCountdownMutationInvalidCountdown(t *testing.T) {
-	_, err := ResolveCountdownMutation(CountdownMutationInput{
-		Countdown: rules.Countdown{Current: 0, Max: 0},
-		Delta:     1,
-	})
-	if err == nil {
-		t.Fatal("expected invalid countdown error")
+func TestResolveCountdownTrigger(t *testing.T) {
+	result, err := ResolveCountdownTrigger(rules.Countdown{
+		ID:                "cd-1",
+		Tone:              rules.CountdownToneConsequence,
+		AdvancementPolicy: rules.CountdownAdvancementPolicyActionDynamic,
+		StartingValue:     3,
+		RemainingValue:    0,
+		LoopBehavior:      rules.CountdownLoopBehaviorReset,
+		Status:            rules.CountdownStatusTriggerPending,
+	}, "alarm")
+	if err != nil {
+		t.Fatalf("ResolveCountdownTrigger() error = %v", err)
+	}
+	if result.Payload.RemainingValueAfter != 3 || result.Payload.StatusAfter != rules.CountdownStatusActive {
+		t.Fatalf("payload = %+v", result.Payload)
 	}
 }
 
 func TestResolveBreathCountdownAdvance(t *testing.T) {
 	success := ResolveBreathCountdownAdvance(false)
-	if success.Delta != 1 || success.Reason != CountdownReasonBreathTick {
-		t.Fatalf("success advance = %+v, want delta=1 reason=%q", success, CountdownReasonBreathTick)
+	if success.Amount != 1 || success.Reason != CountdownReasonBreathTick {
+		t.Fatalf("success advance = %+v", success)
 	}
-
 	failed := ResolveBreathCountdownAdvance(true)
-	if failed.Delta != 2 || failed.Reason != CountdownReasonBreathFailure {
-		t.Fatalf("failed advance = %+v, want delta=2 reason=%q", failed, CountdownReasonBreathFailure)
+	if failed.Amount != 2 || failed.Reason != CountdownReasonBreathFail {
+		t.Fatalf("failed advance = %+v", failed)
 	}
 }

@@ -5,7 +5,7 @@ nav_order: 3
 has_children: true
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-22"
 ---
 
 # Platform surfaces
@@ -16,6 +16,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [AI service architecture](ai-service-architecture.md)
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Campaign AI agent system](campaign-ai-agent-system.md)
+- [Campaign AI mechanics quality](campaign-ai-mechanics-quality.md)
 - [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)
 - [GM interactions](gm-interactions.md)
 - [Interaction surfaces](interaction-surfaces.md)

@@ -32,14 +32,14 @@ func TestAdvanceBreathCountdown_CreatesAndUpdates(t *testing.T) {
 	updated := false
 	handler := NewHandler(Dependencies{
 		Daggerheart: countdownStoreStub{err: storage.ErrNotFound},
-		CreateCountdown: func(_ context.Context, in *pb.DaggerheartCreateCountdownRequest) error {
+		CreateSceneCountdown: func(_ context.Context, in *pb.DaggerheartCreateSceneCountdownRequest) error {
 			created = true
 			if in.GetCountdownId() != "countdown-1" {
 				t.Fatalf("countdown id = %q, want countdown-1", in.GetCountdownId())
 			}
 			return nil
 		},
-		UpdateCountdown: func(_ context.Context, in *pb.DaggerheartUpdateCountdownRequest) error {
+		AdvanceSceneCountdown: func(_ context.Context, in *pb.DaggerheartAdvanceSceneCountdownRequest) error {
 			updated = true
 			if in.GetCountdownId() != "countdown-1" {
 				t.Fatalf("countdown id = %q, want countdown-1", in.GetCountdownId())
@@ -60,10 +60,10 @@ func TestAdvanceBreathCountdown_IgnoresFailedPreconditionCreate(t *testing.T) {
 	updated := false
 	handler := NewHandler(Dependencies{
 		Daggerheart: countdownStoreStub{err: storage.ErrNotFound},
-		CreateCountdown: func(context.Context, *pb.DaggerheartCreateCountdownRequest) error {
+		CreateSceneCountdown: func(context.Context, *pb.DaggerheartCreateSceneCountdownRequest) error {
 			return status.Error(codes.FailedPrecondition, "already exists")
 		},
-		UpdateCountdown: func(context.Context, *pb.DaggerheartUpdateCountdownRequest) error {
+		AdvanceSceneCountdown: func(context.Context, *pb.DaggerheartAdvanceSceneCountdownRequest) error {
 			updated = true
 			return nil
 		},
@@ -79,9 +79,9 @@ func TestAdvanceBreathCountdown_IgnoresFailedPreconditionCreate(t *testing.T) {
 
 func TestAdvanceBreathCountdown_MapsStoreErrors(t *testing.T) {
 	handler := NewHandler(Dependencies{
-		Daggerheart:     countdownStoreStub{err: errors.New("boom")},
-		CreateCountdown: func(context.Context, *pb.DaggerheartCreateCountdownRequest) error { return nil },
-		UpdateCountdown: func(context.Context, *pb.DaggerheartUpdateCountdownRequest) error { return nil },
+		Daggerheart:           countdownStoreStub{err: errors.New("boom")},
+		CreateSceneCountdown:  func(context.Context, *pb.DaggerheartCreateSceneCountdownRequest) error { return nil },
+		AdvanceSceneCountdown: func(context.Context, *pb.DaggerheartAdvanceSceneCountdownRequest) error { return nil },
 	})
 
 	err := handler.AdvanceBreathCountdown(context.Background(), "camp-1", "sess-1", "countdown-1", false)

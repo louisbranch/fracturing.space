@@ -16,7 +16,7 @@ scn:start_session("Choking Ash")
 
 -- Loop countdown progression and direct-bypass choking damage remain unresolved
 -- in this fixture.
-dh:countdown_create{ name = "Choking Ash", kind = "loop", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_create{ name = "Choking Ash", kind = "loop", current = 0, max = 4, direction = "increase" }
 dh:group_reaction{
   targets = {"Gandalf"},
   trait = "strength",

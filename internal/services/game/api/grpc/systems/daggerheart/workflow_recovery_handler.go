@@ -110,12 +110,32 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 			ConsecutiveShortRests: int32(result.Snapshot.ConsecutiveShortRests),
 		},
 		CharacterStates: entries,
-		Countdowns: func() []*pb.DaggerheartCountdown {
-			countdowns := make([]*pb.DaggerheartCountdown, 0, len(result.Countdowns))
+		CampaignCountdowns: func() []*pb.DaggerheartCampaignCountdown {
+			countdowns := make([]*pb.DaggerheartCampaignCountdown, 0, len(result.Countdowns))
 			for _, countdown := range result.Countdowns {
-				countdowns = append(countdowns, countdowntransport.CountdownToProto(countdown))
+				countdowns = append(countdowns, countdowntransport.CampaignCountdownToProto(countdown))
 			}
 			return countdowns
+		}(),
+		CountdownAdvances: func() []*pb.DaggerheartCountdownAdvance {
+			advances := make([]*pb.DaggerheartCountdownAdvance, 0, len(result.CampaignCountdownAdvances))
+			for _, advance := range result.CampaignCountdownAdvances {
+				for _, countdown := range result.Countdowns {
+					if countdown.CountdownID != advance.CountdownID.String() {
+						continue
+					}
+					advances = append(advances, countdowntransport.AdvanceSummaryToProto(countdown, countdowntransport.CountdownAdvanceSummary{
+						BeforeRemaining: advance.BeforeRemaining,
+						AfterRemaining:  advance.AfterRemaining,
+						AdvancedBy:      advance.AdvancedBy,
+						StatusBefore:    advance.StatusBefore,
+						StatusAfter:     advance.StatusAfter,
+						Triggered:       advance.Triggered,
+					}, advance.Reason))
+					break
+				}
+			}
+			return advances
 		}(),
 	}, nil
 }

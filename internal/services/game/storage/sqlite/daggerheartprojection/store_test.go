@@ -334,14 +334,15 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 	seedCampaign(t, store, "camp-cd", now)
 
 	expected := projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-cd",
-		CountdownID: "cd-1",
-		Name:        "Dragon Approach",
-		Kind:        "threat",
-		Current:     3,
-		Max:         8,
-		Direction:   "up",
-		Looping:     true,
+		CampaignID:        "camp-cd",
+		CountdownID:       "cd-1",
+		Name:              "Dragon Approach",
+		Tone:              "consequence",
+		AdvancementPolicy: "manual",
+		StartingValue:     8,
+		RemainingValue:    3,
+		LoopBehavior:      "reset",
+		Status:            "active",
 	}
 
 	if err := store.PutDaggerheartCountdown(context.Background(), expected); err != nil {
@@ -352,29 +353,30 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get countdown: %v", err)
 	}
-	if got.Name != expected.Name || got.Kind != expected.Kind {
-		t.Fatalf("expected name/kind to match")
+	if got.Name != expected.Name || got.Tone != expected.Tone {
+		t.Fatalf("expected name/tone to match")
 	}
-	if got.Current != expected.Current || got.Max != expected.Max {
-		t.Fatalf("expected current/max to match")
+	if got.RemainingValue != expected.RemainingValue || got.StartingValue != expected.StartingValue {
+		t.Fatalf("expected remaining/starting values to match")
 	}
-	if got.Direction != expected.Direction {
-		t.Fatalf("expected direction %q, got %q", expected.Direction, got.Direction)
+	if got.AdvancementPolicy != expected.AdvancementPolicy {
+		t.Fatalf("expected advancement policy %q, got %q", expected.AdvancementPolicy, got.AdvancementPolicy)
 	}
-	if got.Looping != expected.Looping {
-		t.Fatalf("expected looping %v, got %v", expected.Looping, got.Looping)
+	if got.LoopBehavior != expected.LoopBehavior {
+		t.Fatalf("expected loop behavior %q, got %q", expected.LoopBehavior, got.LoopBehavior)
 	}
 
 	// Non-looping countdown
 	cd2 := projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-cd",
-		CountdownID: "cd-2",
-		Name:        "Ritual Timer",
-		Kind:        "progress",
-		Current:     0,
-		Max:         4,
-		Direction:   "up",
-		Looping:     false,
+		CampaignID:        "camp-cd",
+		CountdownID:       "cd-2",
+		Name:              "Ritual Timer",
+		Tone:              "progress",
+		AdvancementPolicy: "manual",
+		StartingValue:     4,
+		RemainingValue:    4,
+		LoopBehavior:      "none",
+		Status:            "active",
 	}
 	if err := store.PutDaggerheartCountdown(context.Background(), cd2); err != nil {
 		t.Fatalf("put countdown 2: %v", err)

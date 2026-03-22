@@ -2,6 +2,7 @@ package countdowntransport
 
 import (
 	"context"
+	"sort"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -38,19 +39,38 @@ func (s testSessionStore) GetSession(context.Context, string, string) (storage.S
 type testDaggerheartStore struct {
 	countdowns map[string]projectionstore.DaggerheartCountdown
 	getErr     error
+	listErr    error
 }
 
-func (s testDaggerheartStore) GetDaggerheartCountdown(context.Context, string, string) (projectionstore.DaggerheartCountdown, error) {
+func (s testDaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error) {
 	if s.getErr != nil {
 		return projectionstore.DaggerheartCountdown{}, s.getErr
 	}
-	if len(s.countdowns) == 0 {
+	key := campaignID + ":" + countdownID
+	countdown, ok := s.countdowns[key]
+	if !ok {
 		return projectionstore.DaggerheartCountdown{}, storage.ErrNotFound
 	}
-	for _, countdown := range s.countdowns {
-		return countdown, nil
+	return countdown, nil
+}
+
+func (s testDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]projectionstore.DaggerheartCountdown, error) {
+	if s.listErr != nil {
+		return nil, s.listErr
 	}
-	return projectionstore.DaggerheartCountdown{}, storage.ErrNotFound
+	result := make([]projectionstore.DaggerheartCountdown, 0, len(s.countdowns))
+	for _, countdown := range s.countdowns {
+		if countdown.CampaignID == campaignID {
+			result = append(result, countdown)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Name != result[j].Name {
+			return result[i].Name < result[j].Name
+		}
+		return result[i].CountdownID < result[j].CountdownID
+	})
+	return result, nil
 }
 
 func newTestHandler(deps Dependencies) *Handler {

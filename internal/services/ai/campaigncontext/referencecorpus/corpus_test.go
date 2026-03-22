@@ -29,7 +29,7 @@ func TestCorpusSearchAndRead(t *testing.T) {
 		t.Fatalf("metadata snippet = %q, want alias snippet", results[0].Snippet)
 	}
 
-	results, err = corpus.Search(context.Background(), supportedSystem, "spotlight", 1)
+	results, err = corpus.Search(context.Background(), supportedSystem, "action tracker", 1)
 	if err != nil {
 		t.Fatalf("Search(content fallback) error = %v", err)
 	}
@@ -77,6 +77,35 @@ func TestCorpusValidationAndPathSafety(t *testing.T) {
 	corpus = New(root)
 	if _, err := corpus.Read(context.Background(), supportedSystem, "escape"); err == nil || !strings.Contains(err.Error(), "escapes root") {
 		t.Fatalf("Read(escape) error = %v, want escape error", err)
+	}
+}
+
+func TestCorpusIncludesRepoPlaybooks(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, `[]`)
+
+	corpus := New(root)
+	results, err := corpus.Search(context.Background(), supportedSystem, "spotlight combat", 5)
+	if err != nil {
+		t.Fatalf("Search() error = %v", err)
+	}
+	found := false
+	for _, result := range results {
+		if result.DocumentID == "playbook-gm-fear-adversaries-and-spotlight" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("Search() results = %+v, want repo playbook hit", results)
+	}
+
+	document, err := corpus.Read(context.Background(), supportedSystem, "playbook-combat-procedures")
+	if err != nil {
+		t.Fatalf("Read() error = %v", err)
+	}
+	if !strings.Contains(document.Content, "daggerheart_reaction_flow_resolve") {
+		t.Fatalf("document content = %q, want reaction flow guidance", document.Content)
 	}
 }
 

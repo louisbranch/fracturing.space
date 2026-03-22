@@ -11,44 +11,49 @@ import (
 // ── Command type constants ─────────────────────────────────────────────
 
 const (
-	commandTypeGMMoveApply                  command.Type = commandids.DaggerheartGMMoveApply
-	commandTypeGMFearSet                    command.Type = commandids.DaggerheartGMFearSet
-	commandTypeCharacterProfileReplace      command.Type = commandids.DaggerheartCharacterProfileReplace
-	commandTypeCharacterProfileDelete       command.Type = commandids.DaggerheartCharacterProfileDelete
-	commandTypeCharacterStatePatch          command.Type = commandids.DaggerheartCharacterStatePatch
-	commandTypeConditionChange              command.Type = commandids.DaggerheartConditionChange
-	commandTypeHopeSpend                    command.Type = commandids.DaggerheartHopeSpend
-	commandTypeStressSpend                  command.Type = commandids.DaggerheartStressSpend
-	commandTypeLoadoutSwap                  command.Type = commandids.DaggerheartLoadoutSwap
-	commandTypeRestTake                     command.Type = commandids.DaggerheartRestTake
-	commandTypeCountdownCreate              command.Type = commandids.DaggerheartCountdownCreate
-	commandTypeCountdownUpdate              command.Type = commandids.DaggerheartCountdownUpdate
-	commandTypeCountdownDelete              command.Type = commandids.DaggerheartCountdownDelete
-	commandTypeDamageApply                  command.Type = commandids.DaggerheartDamageApply
-	commandTypeAdversaryDamageApply         command.Type = commandids.DaggerheartAdversaryDamageApply
-	commandTypeCharacterTemporaryArmorApply command.Type = commandids.DaggerheartCharacterTemporaryArmorApply
-	commandTypeAdversaryConditionChange     command.Type = commandids.DaggerheartAdversaryConditionChange
-	commandTypeAdversaryCreate              command.Type = commandids.DaggerheartAdversaryCreate
-	commandTypeAdversaryUpdate              command.Type = commandids.DaggerheartAdversaryUpdate
-	commandTypeAdversaryFeatureApply        command.Type = commandids.DaggerheartAdversaryFeatureApply
-	commandTypeAdversaryDelete              command.Type = commandids.DaggerheartAdversaryDelete
-	commandTypeEnvironmentEntityCreate      command.Type = commandids.DaggerheartEnvironmentEntityCreate
-	commandTypeEnvironmentEntityUpdate      command.Type = commandids.DaggerheartEnvironmentEntityUpdate
-	commandTypeEnvironmentEntityDelete      command.Type = commandids.DaggerheartEnvironmentEntityDelete
-	commandTypeMultiTargetDamageApply       command.Type = commandids.DaggerheartMultiTargetDamageApply
-	commandTypeLevelUpApply                 command.Type = commandids.DaggerheartLevelUpApply
-	commandTypeClassFeatureApply            command.Type = commandids.DaggerheartClassFeatureApply
-	commandTypeSubclassFeatureApply         command.Type = commandids.DaggerheartSubclassFeatureApply
-	commandTypeBeastformTransform           command.Type = commandids.DaggerheartBeastformTransform
-	commandTypeBeastformDrop                command.Type = commandids.DaggerheartBeastformDrop
-	commandTypeCompanionExperienceBegin     command.Type = commandids.DaggerheartCompanionExperienceBegin
-	commandTypeCompanionReturn              command.Type = commandids.DaggerheartCompanionReturn
-	commandTypeGoldUpdate                   command.Type = commandids.DaggerheartGoldUpdate
-	commandTypeDomainCardAcquire            command.Type = commandids.DaggerheartDomainCardAcquire
-	commandTypeEquipmentSwap                command.Type = commandids.DaggerheartEquipmentSwap
-	commandTypeConsumableUse                command.Type = commandids.DaggerheartConsumableUse
-	commandTypeConsumableAcquire            command.Type = commandids.DaggerheartConsumableAcquire
-	commandTypeStatModifierChange           command.Type = commandids.DaggerheartStatModifierChange
+	commandTypeGMMoveApply                     command.Type = commandids.DaggerheartGMMoveApply
+	commandTypeGMFearSet                       command.Type = commandids.DaggerheartGMFearSet
+	commandTypeCharacterProfileReplace         command.Type = commandids.DaggerheartCharacterProfileReplace
+	commandTypeCharacterProfileDelete          command.Type = commandids.DaggerheartCharacterProfileDelete
+	commandTypeCharacterStatePatch             command.Type = commandids.DaggerheartCharacterStatePatch
+	commandTypeConditionChange                 command.Type = commandids.DaggerheartConditionChange
+	commandTypeHopeSpend                       command.Type = commandids.DaggerheartHopeSpend
+	commandTypeStressSpend                     command.Type = commandids.DaggerheartStressSpend
+	commandTypeLoadoutSwap                     command.Type = commandids.DaggerheartLoadoutSwap
+	commandTypeRestTake                        command.Type = commandids.DaggerheartRestTake
+	commandTypeSceneCountdownCreate            command.Type = commandids.DaggerheartSceneCountdownCreate
+	commandTypeSceneCountdownAdvance           command.Type = commandids.DaggerheartSceneCountdownAdvance
+	commandTypeSceneCountdownTriggerResolve    command.Type = commandids.DaggerheartSceneCountdownTriggerResolve
+	commandTypeSceneCountdownDelete            command.Type = commandids.DaggerheartSceneCountdownDelete
+	commandTypeCampaignCountdownCreate         command.Type = commandids.DaggerheartCampaignCountdownCreate
+	commandTypeCampaignCountdownAdvance        command.Type = commandids.DaggerheartCampaignCountdownAdvance
+	commandTypeCampaignCountdownTriggerResolve command.Type = commandids.DaggerheartCampaignCountdownTriggerResolve
+	commandTypeCampaignCountdownDelete         command.Type = commandids.DaggerheartCampaignCountdownDelete
+	commandTypeDamageApply                     command.Type = commandids.DaggerheartDamageApply
+	commandTypeAdversaryDamageApply            command.Type = commandids.DaggerheartAdversaryDamageApply
+	commandTypeCharacterTemporaryArmorApply    command.Type = commandids.DaggerheartCharacterTemporaryArmorApply
+	commandTypeAdversaryConditionChange        command.Type = commandids.DaggerheartAdversaryConditionChange
+	commandTypeAdversaryCreate                 command.Type = commandids.DaggerheartAdversaryCreate
+	commandTypeAdversaryUpdate                 command.Type = commandids.DaggerheartAdversaryUpdate
+	commandTypeAdversaryFeatureApply           command.Type = commandids.DaggerheartAdversaryFeatureApply
+	commandTypeAdversaryDelete                 command.Type = commandids.DaggerheartAdversaryDelete
+	commandTypeEnvironmentEntityCreate         command.Type = commandids.DaggerheartEnvironmentEntityCreate
+	commandTypeEnvironmentEntityUpdate         command.Type = commandids.DaggerheartEnvironmentEntityUpdate
+	commandTypeEnvironmentEntityDelete         command.Type = commandids.DaggerheartEnvironmentEntityDelete
+	commandTypeMultiTargetDamageApply          command.Type = commandids.DaggerheartMultiTargetDamageApply
+	commandTypeLevelUpApply                    command.Type = commandids.DaggerheartLevelUpApply
+	commandTypeClassFeatureApply               command.Type = commandids.DaggerheartClassFeatureApply
+	commandTypeSubclassFeatureApply            command.Type = commandids.DaggerheartSubclassFeatureApply
+	commandTypeBeastformTransform              command.Type = commandids.DaggerheartBeastformTransform
+	commandTypeBeastformDrop                   command.Type = commandids.DaggerheartBeastformDrop
+	commandTypeCompanionExperienceBegin        command.Type = commandids.DaggerheartCompanionExperienceBegin
+	commandTypeCompanionReturn                 command.Type = commandids.DaggerheartCompanionReturn
+	commandTypeGoldUpdate                      command.Type = commandids.DaggerheartGoldUpdate
+	commandTypeDomainCardAcquire               command.Type = commandids.DaggerheartDomainCardAcquire
+	commandTypeEquipmentSwap                   command.Type = commandids.DaggerheartEquipmentSwap
+	commandTypeConsumableUse                   command.Type = commandids.DaggerheartConsumableUse
+	commandTypeConsumableAcquire               command.Type = commandids.DaggerheartConsumableAcquire
+	commandTypeStatModifierChange              command.Type = commandids.DaggerheartStatModifierChange
 )
 
 // ── Rejection code constants ───────────────────────────────────────────
@@ -65,7 +70,7 @@ const (
 	rejectionCodeCharacterStatePatchNoMutation     = "CHARACTER_STATE_PATCH_NO_MUTATION"
 	rejectionCodeConditionChangeNoMutation         = "CONDITION_CHANGE_NO_MUTATION"
 	rejectionCodeConditionChangeRemoveMissing      = "CONDITION_CHANGE_REMOVE_MISSING"
-	rejectionCodeCountdownUpdateNoMutation         = "COUNTDOWN_UPDATE_NO_MUTATION"
+	rejectionCodeCountdownAdvanceNoMutation        = "COUNTDOWN_ADVANCE_NO_MUTATION"
 	rejectionCodeCountdownBeforeMismatch           = "COUNTDOWN_BEFORE_MISMATCH"
 	rejectionCodeDamageBeforeMismatch              = "DAMAGE_BEFORE_MISMATCH"
 	rejectionCodeDamageArmorSpendLimit             = "DAMAGE_ARMOR_SPEND_LIMIT"
@@ -95,44 +100,49 @@ func NewDecider(handledCommands []command.Type) Decider {
 type decisionHandler func(daggerheartstate.SnapshotState, bool, command.Command, func() time.Time) command.Decision
 
 var decisionHandlers = map[command.Type]decisionHandler{
-	commandTypeGMMoveApply:                  decideGMMoveApply,
-	commandTypeGMFearSet:                    decideGMFearSet,
-	commandTypeCharacterProfileReplace:      wrapDecisionWithoutState(decideCharacterProfileReplace),
-	commandTypeCharacterProfileDelete:       wrapDecisionWithoutState(decideCharacterProfileDelete),
-	commandTypeCharacterStatePatch:          decideCharacterStatePatch,
-	commandTypeConditionChange:              decideConditionChange,
-	commandTypeHopeSpend:                    decideHopeSpend,
-	commandTypeStressSpend:                  decideStressSpend,
-	commandTypeLoadoutSwap:                  decideLoadoutSwap,
-	commandTypeRestTake:                     wrapDecisionWithStateNoSnapshotFlag(decideRestTake),
-	commandTypeCountdownCreate:              wrapDecisionWithoutState(decideCountdownCreate),
-	commandTypeCountdownUpdate:              decideCountdownUpdate,
-	commandTypeCountdownDelete:              wrapDecisionWithoutState(decideCountdownDelete),
-	commandTypeDamageApply:                  decideDamageApply,
-	commandTypeAdversaryDamageApply:         decideAdversaryDamageApply,
-	commandTypeCharacterTemporaryArmorApply: wrapDecisionWithoutState(decideCharacterTemporaryArmorApply),
-	commandTypeAdversaryConditionChange:     decideAdversaryConditionChange,
-	commandTypeAdversaryCreate:              decideAdversaryCreate,
-	commandTypeAdversaryUpdate:              wrapDecisionWithoutState(decideAdversaryUpdate),
-	commandTypeAdversaryFeatureApply:        decideAdversaryFeatureApply,
-	commandTypeAdversaryDelete:              wrapDecisionWithoutState(decideAdversaryDelete),
-	commandTypeEnvironmentEntityCreate:      decideEnvironmentEntityCreate,
-	commandTypeEnvironmentEntityUpdate:      wrapDecisionWithoutState(decideEnvironmentEntityUpdate),
-	commandTypeEnvironmentEntityDelete:      wrapDecisionWithoutState(decideEnvironmentEntityDelete),
-	commandTypeMultiTargetDamageApply:       decideMultiTargetDamageApply,
-	commandTypeLevelUpApply:                 decideLevelUpApply,
-	commandTypeClassFeatureApply:            decideClassFeatureApply,
-	commandTypeSubclassFeatureApply:         decideSubclassFeatureApply,
-	commandTypeBeastformTransform:           decideBeastformTransform,
-	commandTypeBeastformDrop:                decideBeastformDrop,
-	commandTypeCompanionExperienceBegin:     decideCompanionExperienceBegin,
-	commandTypeCompanionReturn:              decideCompanionReturn,
-	commandTypeGoldUpdate:                   decideGoldUpdate,
-	commandTypeDomainCardAcquire:            wrapDecisionWithoutState(decideDomainCardAcquire),
-	commandTypeEquipmentSwap:                wrapDecisionWithoutState(decideEquipmentSwap),
-	commandTypeConsumableUse:                decideConsumableUse,
-	commandTypeConsumableAcquire:            decideConsumableAcquire,
-	commandTypeStatModifierChange:           decideStatModifierChange,
+	commandTypeGMMoveApply:                     decideGMMoveApply,
+	commandTypeGMFearSet:                       decideGMFearSet,
+	commandTypeCharacterProfileReplace:         wrapDecisionWithoutState(decideCharacterProfileReplace),
+	commandTypeCharacterProfileDelete:          wrapDecisionWithoutState(decideCharacterProfileDelete),
+	commandTypeCharacterStatePatch:             decideCharacterStatePatch,
+	commandTypeConditionChange:                 decideConditionChange,
+	commandTypeHopeSpend:                       decideHopeSpend,
+	commandTypeStressSpend:                     decideStressSpend,
+	commandTypeLoadoutSwap:                     decideLoadoutSwap,
+	commandTypeRestTake:                        wrapDecisionWithStateNoSnapshotFlag(decideRestTake),
+	commandTypeSceneCountdownCreate:            wrapDecisionWithoutState(decideSceneCountdownCreate),
+	commandTypeSceneCountdownAdvance:           decideSceneCountdownAdvance,
+	commandTypeSceneCountdownTriggerResolve:    decideSceneCountdownTriggerResolve,
+	commandTypeSceneCountdownDelete:            wrapDecisionWithoutState(decideSceneCountdownDelete),
+	commandTypeCampaignCountdownCreate:         wrapDecisionWithoutState(decideCampaignCountdownCreate),
+	commandTypeCampaignCountdownAdvance:        decideCampaignCountdownAdvance,
+	commandTypeCampaignCountdownTriggerResolve: decideCampaignCountdownTriggerResolve,
+	commandTypeCampaignCountdownDelete:         wrapDecisionWithoutState(decideCampaignCountdownDelete),
+	commandTypeDamageApply:                     decideDamageApply,
+	commandTypeAdversaryDamageApply:            decideAdversaryDamageApply,
+	commandTypeCharacterTemporaryArmorApply:    wrapDecisionWithoutState(decideCharacterTemporaryArmorApply),
+	commandTypeAdversaryConditionChange:        decideAdversaryConditionChange,
+	commandTypeAdversaryCreate:                 decideAdversaryCreate,
+	commandTypeAdversaryUpdate:                 wrapDecisionWithoutState(decideAdversaryUpdate),
+	commandTypeAdversaryFeatureApply:           decideAdversaryFeatureApply,
+	commandTypeAdversaryDelete:                 wrapDecisionWithoutState(decideAdversaryDelete),
+	commandTypeEnvironmentEntityCreate:         decideEnvironmentEntityCreate,
+	commandTypeEnvironmentEntityUpdate:         wrapDecisionWithoutState(decideEnvironmentEntityUpdate),
+	commandTypeEnvironmentEntityDelete:         wrapDecisionWithoutState(decideEnvironmentEntityDelete),
+	commandTypeMultiTargetDamageApply:          decideMultiTargetDamageApply,
+	commandTypeLevelUpApply:                    decideLevelUpApply,
+	commandTypeClassFeatureApply:               decideClassFeatureApply,
+	commandTypeSubclassFeatureApply:            decideSubclassFeatureApply,
+	commandTypeBeastformTransform:              decideBeastformTransform,
+	commandTypeBeastformDrop:                   decideBeastformDrop,
+	commandTypeCompanionExperienceBegin:        decideCompanionExperienceBegin,
+	commandTypeCompanionReturn:                 decideCompanionReturn,
+	commandTypeGoldUpdate:                      decideGoldUpdate,
+	commandTypeDomainCardAcquire:               wrapDecisionWithoutState(decideDomainCardAcquire),
+	commandTypeEquipmentSwap:                   wrapDecisionWithoutState(decideEquipmentSwap),
+	commandTypeConsumableUse:                   decideConsumableUse,
+	commandTypeConsumableAcquire:               decideConsumableAcquire,
+	commandTypeStatModifierChange:              decideStatModifierChange,
 }
 
 // DeciderHandledCommands returns the command types this decider handles.

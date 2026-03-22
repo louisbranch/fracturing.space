@@ -54,3 +54,35 @@ func (h *Handler) validateCampaignSession(ctx context.Context, campaignID, sessi
 	}
 	return daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID)
 }
+
+func (h *Handler) validateCampaignMutate(ctx context.Context, campaignID, unsupportedMessage string) error {
+	record, err := h.deps.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return grpcerror.HandleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return grpcerror.HandleDomainError(err)
+	}
+	return daggerheartguard.RequireDaggerheartSystem(record, unsupportedMessage)
+}
+
+func (h *Handler) validateCampaignSessionRead(ctx context.Context, campaignID, sessionID, unsupportedMessage string) error {
+	record, err := h.deps.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return grpcerror.HandleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
+		return grpcerror.HandleDomainError(err)
+	}
+	if err := daggerheartguard.RequireDaggerheartSystem(record, unsupportedMessage); err != nil {
+		return err
+	}
+	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
+	if err != nil {
+		return grpcerror.HandleDomainError(err)
+	}
+	if sess.Status != session.StatusActive {
+		return status.Error(codes.FailedPrecondition, "session is not active")
+	}
+	return nil
+}

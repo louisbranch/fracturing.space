@@ -12,12 +12,13 @@ scn:pc("Frodo", { hope = 1, stress = 2 })
 
 scn:start_session("Campfire Project")
 
-dh:countdown_create{
+dh:campaign_countdown_create{
   name = "Map the Hidden Pass",
-  kind = "progress",
-  current = 0,
-  max = 4,
-  direction = "increase",
+  tone = "progress",
+  advancement_policy = "manual",
+  fixed_starting_value = 4,
+  loop_behavior = "none",
+  expect_remaining_value = 4,
 }
 
 dh:rest{

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
 	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
@@ -739,7 +738,7 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	}
 }
 
-func TestDecideRestTake_WithLongTermCountdown_EmitsCountdownUpdated(t *testing.T) {
+func TestDecideRestTake_WithCampaignCountdown_EmitsCountdownAdvanced(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
@@ -749,7 +748,7 @@ func TestDecideRestTake_WithLongTermCountdown_EmitsCountdownUpdated(t *testing.T
 		SystemVersion: SystemVersion,
 		EntityType:    "session",
 		EntityID:      "camp-1",
-		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"campaign_countdown_advances":[{"countdown_id":"cd-1","before_remaining":2,"after_remaining":1,"advanced_by":1,"status_before":"active","status_after":"active","reason":"long_rest"}]}`),
 	}
 
 	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -765,18 +764,18 @@ func TestDecideRestTake_WithLongTermCountdown_EmitsCountdownUpdated(t *testing.T
 		t.Fatalf("first event type = %s, want %s", restEvent.Type, "sys.daggerheart.rest_taken")
 	}
 	countdownEvent := decision.Events[1]
-	if countdownEvent.Type != event.Type("sys.daggerheart.countdown_updated") {
-		t.Fatalf("second event type = %s, want %s", countdownEvent.Type, "sys.daggerheart.countdown_updated")
+	if countdownEvent.Type != event.Type("sys.daggerheart.campaign_countdown_advanced") {
+		t.Fatalf("second event type = %s, want %s", countdownEvent.Type, "sys.daggerheart.campaign_countdown_advanced")
 	}
-	if countdownEvent.EntityType != "countdown" {
-		t.Fatalf("countdown event entity type = %s, want %s", countdownEvent.EntityType, "countdown")
+	if countdownEvent.EntityType != "campaign_countdown" {
+		t.Fatalf("countdown event entity type = %s, want %s", countdownEvent.EntityType, "campaign_countdown")
 	}
 	if countdownEvent.EntityID != "cd-1" {
 		t.Fatalf("countdown event entity id = %s, want %s", countdownEvent.EntityID, "cd-1")
 	}
 }
 
-func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.T) {
+func TestDecideRestTake_WithCampaignCountdown_BeforeMismatchRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
 		Type:          command.Type("sys.daggerheart.rest.take"),
@@ -785,13 +784,13 @@ func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.
 		SystemVersion: SystemVersion,
 		EntityType:    "session",
 		EntityID:      "camp-1",
-		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"campaign_countdown_advances":[{"countdown_id":"cd-1","before_remaining":2,"after_remaining":1,"advanced_by":1,"status_before":"active","status_after":"active","reason":"long_rest"}]}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
-			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
+		CampaignCountdownStates: map[ids.CountdownID]daggerheartstate.CampaignCountdownState{
+			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 		},
 	}
 
@@ -807,7 +806,7 @@ func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.
 	}
 }
 
-func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
+func TestDecideRestTake_WithCampaignCountdown_UnchangedRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
 		Type:          command.Type("sys.daggerheart.rest.take"),
@@ -816,13 +815,13 @@ func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "session",
 		EntityID:      "camp-1",
-		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"campaign_countdown_advances":[{"countdown_id":"cd-1","before_remaining":3,"after_remaining":3,"advanced_by":1,"status_before":"active","status_after":"active","reason":"long_rest"}]}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
-			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
+		CampaignCountdownStates: map[ids.CountdownID]daggerheartstate.CampaignCountdownState{
+			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "reset", Status: "active"},
 		},
 	}
 
@@ -1023,7 +1022,7 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1",
 				HP:          7,
@@ -1044,17 +1043,19 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 	}
 }
 
-func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
+func TestDecideSceneCountdownCreate_EmitsSceneCountdownCreated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.countdown.create"),
+		SessionID:     "sess-1",
+		SceneID:       "scene-1",
+		Type:          command.Type("sys.daggerheart.scene_countdown.create"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		EntityType:    "countdown",
+		EntityType:    "scene_countdown",
 		EntityID:      "cd-1",
-		PayloadJSON:   []byte(`{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`),
+		PayloadJSON:   []byte(`{"session_id":"sess-1","scene_id":"scene-1","countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`),
 	}
 
 	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -1066,8 +1067,8 @@ func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.countdown_created") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.countdown_created")
+	if evt.Type != event.Type("sys.daggerheart.scene_countdown_created") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.scene_countdown_created")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1075,8 +1076,8 @@ func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 	if evt.SystemVersion != SystemVersion {
 		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
 	}
-	if evt.EntityType != "countdown" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "countdown")
+	if evt.EntityType != "scene_countdown" {
+		t.Fatalf("entity type = %s, want %s", evt.EntityType, "scene_countdown")
 	}
 	if evt.EntityID != "cd-1" {
 		t.Fatalf("entity id = %s, want %s", evt.EntityID, "cd-1")
@@ -1086,17 +1087,19 @@ func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 	}
 }
 
-func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
+func TestDecideSceneCountdownAdvance_EmitsSceneCountdownAdvanced(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.countdown.update"),
+		SessionID:     "sess-1",
+		SceneID:       "scene-1",
+		Type:          command.Type("sys.daggerheart.scene_countdown.advance"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		EntityType:    "countdown",
+		EntityType:    "scene_countdown",
 		EntityID:      "cd-1",
-		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"advance"}`),
+		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before_remaining":2,"after_remaining":1,"advanced_by":1,"status_before":"active","status_after":"active","reason":"advance"}`),
 	}
 
 	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -1108,8 +1111,8 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.countdown_updated") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.countdown_updated")
+	if evt.Type != event.Type("sys.daggerheart.scene_countdown_advanced") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.scene_countdown_advanced")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1117,8 +1120,8 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 	if evt.SystemVersion != SystemVersion {
 		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
 	}
-	if evt.EntityType != "countdown" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "countdown")
+	if evt.EntityType != "scene_countdown" {
+		t.Fatalf("entity type = %s, want %s", evt.EntityType, "scene_countdown")
 	}
 	if evt.EntityID != "cd-1" {
 		t.Fatalf("entity id = %s, want %s", evt.EntityID, "cd-1")
@@ -1128,22 +1131,22 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 	}
 }
 
-func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
+func TestDecideSceneCountdownAdvance_UnchangedStateRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.countdown.update"),
+		Type:          command.Type("sys.daggerheart.scene_countdown.advance"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		EntityType:    "countdown",
+		EntityType:    "scene_countdown",
 		EntityID:      "cd-1",
-		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false}`),
+		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before_remaining":3,"after_remaining":3,"advanced_by":1,"status_before":"active","status_after":"active"}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
-			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
+		SceneCountdownStates: map[ids.CountdownID]daggerheartstate.SceneCountdownState{
+			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "reset", Status: "active"},
 		},
 	}
 
@@ -1159,22 +1162,22 @@ func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
 	}
 }
 
-func TestDecideCountdownUpdate_BeforeMismatchRejected(t *testing.T) {
+func TestDecideSceneCountdownAdvance_BeforeMismatchRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.countdown.update"),
+		Type:          command.Type("sys.daggerheart.scene_countdown.advance"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		EntityType:    "countdown",
+		EntityType:    "scene_countdown",
 		EntityID:      "cd-1",
-		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`),
+		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before_remaining":2,"after_remaining":1,"advanced_by":1,"status_before":"active","status_after":"active"}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
-			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
+		SceneCountdownStates: map[ids.CountdownID]daggerheartstate.SceneCountdownState{
+			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 		},
 	}
 
@@ -1190,15 +1193,17 @@ func TestDecideCountdownUpdate_BeforeMismatchRejected(t *testing.T) {
 	}
 }
 
-func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
+func TestDecideSceneCountdownDelete_EmitsSceneCountdownDeleted(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.countdown.delete"),
+		SessionID:     "sess-1",
+		SceneID:       "scene-1",
+		Type:          command.Type("sys.daggerheart.scene_countdown.delete"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		EntityType:    "countdown",
+		EntityType:    "scene_countdown",
 		EntityID:      "cd-1",
 		PayloadJSON:   []byte(`{"countdown_id":"cd-1","reason":"cleanup"}`),
 	}
@@ -1212,8 +1217,8 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.countdown_deleted") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.countdown_deleted")
+	if evt.Type != event.Type("sys.daggerheart.scene_countdown_deleted") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.scene_countdown_deleted")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1221,8 +1226,8 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	if evt.SystemVersion != SystemVersion {
 		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
 	}
-	if evt.EntityType != "countdown" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "countdown")
+	if evt.EntityType != "scene_countdown" {
+		t.Fatalf("entity type = %s, want %s", evt.EntityType, "scene_countdown")
 	}
 	if evt.EntityID != "cd-1" {
 		t.Fatalf("entity id = %s, want %s", evt.EntityID, "cd-1")
@@ -1299,7 +1304,7 @@ func TestDecideAdversaryConditionChange_UnchangedStateRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1330,7 +1335,7 @@ func TestDecideAdversaryConditionChange_RemoveMissingConditionRejected(t *testin
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1419,7 +1424,7 @@ func TestDecideAdversaryCreate_UnchangedStateRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1", Name: "Goblin", Kind: "bruiser", SessionID: "sess-1", Notes: "note",
 				HP: 6, HPMax: 6, Stress: 2, StressMax: 2, Evasion: 1, Major: 2, Severe: 3, Armor: 1,

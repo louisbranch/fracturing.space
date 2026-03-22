@@ -4,79 +4,140 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
-func ValidateCountdownCreatePayload(raw json.RawMessage) error {
-	return ValidatePayload(raw, func(p payload.CountdownCreatePayload) error {
-		if err := RequireTrimmedValue(p.CountdownID.String(), "countdown_id"); err != nil {
-			return err
+func validateCountdownCreatePayload(p payload.SceneCountdownCreatePayload) error {
+	if err := RequireTrimmedValue(p.CountdownID.String(), "countdown_id"); err != nil {
+		return err
+	}
+	if err := RequireTrimmedValue(p.Name, "name"); err != nil {
+		return err
+	}
+	if _, err := rules.NormalizeCountdownTone(p.Tone); err != nil {
+		return err
+	}
+	if _, err := rules.NormalizeCountdownAdvancementPolicy(p.AdvancementPolicy); err != nil {
+		return err
+	}
+	if _, err := rules.NormalizeCountdownLoopBehavior(p.LoopBehavior); err != nil {
+		return err
+	}
+	if _, err := rules.NormalizeCountdownStatus(p.Status); err != nil {
+		return err
+	}
+	if err := RequirePositive(p.StartingValue, "starting_value"); err != nil {
+		return err
+	}
+	if p.RemainingValue < 0 || p.RemainingValue > p.StartingValue {
+		return fmt.Errorf("remaining_value must be in range 0..%d", p.StartingValue)
+	}
+	if p.StartingRoll != nil {
+		if p.StartingRoll.Min <= 0 || p.StartingRoll.Max < p.StartingRoll.Min {
+			return errors.New("starting_roll range is invalid")
 		}
-		if err := RequireTrimmedValue(p.Name, "name"); err != nil {
-			return err
+		if p.StartingRoll.Value < p.StartingRoll.Min || p.StartingRoll.Value > p.StartingRoll.Max {
+			return errors.New("starting_roll value is out of range")
 		}
-		if err := RequireTrimmedValue(p.Kind, "kind"); err != nil {
-			return err
-		}
-		if err := RequireTrimmedValue(p.Direction, "direction"); err != nil {
-			return err
-		}
-		if err := RequirePositive(p.Max, "max"); err != nil {
-			return err
-		}
-		if p.Current < 0 || p.Current > p.Max {
-			return fmt.Errorf("current must be in range 0..%d", p.Max)
-		}
-		variant := strings.TrimSpace(p.Variant)
-		if variant == "" {
-			variant = "standard"
-		}
-		switch variant {
-		case "standard", "dynamic", "linked":
-			// valid
-		default:
-			return fmt.Errorf("unknown countdown variant %q; must be standard, dynamic, or linked", variant)
-		}
-		if variant == "dynamic" && strings.TrimSpace(p.TriggerEventType) == "" {
-			return errors.New("trigger_event_type is required for dynamic countdowns")
-		}
-		if variant == "linked" && strings.TrimSpace(p.LinkedCountdownID.String()) == "" {
-			return errors.New("linked_countdown_id is required for linked countdowns")
-		}
-		return nil
+	}
+	return nil
+}
+
+func ValidateSceneCountdownCreatePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, validateCountdownCreatePayload)
+}
+
+func ValidateSceneCountdownCreatedPayload(raw json.RawMessage) error {
+	return ValidateSceneCountdownCreatePayload(raw)
+}
+
+func ValidateCampaignCountdownCreatePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, func(p payload.CampaignCountdownCreatePayload) error {
+		return validateCountdownCreatePayload(payload.SceneCountdownCreatePayload(p))
 	})
 }
 
-func ValidateCountdownCreatedPayload(raw json.RawMessage) error {
-	return ValidateCountdownCreatePayload(raw)
+func ValidateCampaignCountdownCreatedPayload(raw json.RawMessage) error {
+	return ValidateCampaignCountdownCreatePayload(raw)
 }
 
-func ValidateCountdownUpdatePayload(raw json.RawMessage) error {
-	return ValidatePayload(raw, func(p payload.CountdownUpdatePayload) error {
-		if err := RequireTrimmedValue(p.CountdownID.String(), "countdown_id"); err != nil {
-			return err
-		}
-		if p.Before == p.After && p.Delta == 0 {
-			return errors.New("countdown update must change value")
-		}
-		return nil
+func validateCountdownAdvancePayload(p payload.SceneCountdownAdvancePayload) error {
+	if err := RequireTrimmedValue(p.CountdownID.String(), "countdown_id"); err != nil {
+		return err
+	}
+	if p.BeforeRemaining < 0 || p.AfterRemaining < 0 {
+		return errors.New("countdown remaining values must be non-negative")
+	}
+	if p.AdvancedBy <= 0 {
+		return errors.New("advanced_by must be positive")
+	}
+	if p.BeforeRemaining == p.AfterRemaining && p.StatusBefore == p.StatusAfter && !p.Triggered {
+		return errors.New("countdown advance must record a state change")
+	}
+	return nil
+}
+
+func ValidateSceneCountdownAdvancePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, validateCountdownAdvancePayload)
+}
+
+func ValidateSceneCountdownAdvancedPayload(raw json.RawMessage) error {
+	return ValidateSceneCountdownAdvancePayload(raw)
+}
+
+func ValidateCampaignCountdownAdvancePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, func(p payload.CampaignCountdownAdvancePayload) error {
+		return validateCountdownAdvancePayload(payload.SceneCountdownAdvancePayload(p))
 	})
 }
 
-func ValidateCountdownUpdatedPayload(raw json.RawMessage) error {
-	return ValidatePayload(raw, func(p payload.CountdownUpdatedPayload) error {
+func ValidateCampaignCountdownAdvancedPayload(raw json.RawMessage) error {
+	return ValidateCampaignCountdownAdvancePayload(raw)
+}
+
+func validateCountdownTriggerResolvePayload(p payload.SceneCountdownTriggerResolvePayload) error {
+	if err := RequireTrimmedValue(p.CountdownID.String(), "countdown_id"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateSceneCountdownTriggerResolvePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, validateCountdownTriggerResolvePayload)
+}
+
+func ValidateSceneCountdownTriggerResolvedPayload(raw json.RawMessage) error {
+	return ValidateSceneCountdownTriggerResolvePayload(raw)
+}
+
+func ValidateCampaignCountdownTriggerResolvePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, func(p payload.CampaignCountdownTriggerResolvePayload) error {
+		return validateCountdownTriggerResolvePayload(payload.SceneCountdownTriggerResolvePayload(p))
+	})
+}
+
+func ValidateCampaignCountdownTriggerResolvedPayload(raw json.RawMessage) error {
+	return ValidateCampaignCountdownTriggerResolvePayload(raw)
+}
+
+func ValidateSceneCountdownDeletePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, func(p payload.SceneCountdownDeletePayload) error {
 		return RequireTrimmedValue(p.CountdownID.String(), "countdown_id")
 	})
 }
 
-func ValidateCountdownDeletePayload(raw json.RawMessage) error {
-	return ValidatePayload(raw, func(p payload.CountdownDeletePayload) error {
+func ValidateSceneCountdownDeletedPayload(raw json.RawMessage) error {
+	return ValidateSceneCountdownDeletePayload(raw)
+}
+
+func ValidateCampaignCountdownDeletePayload(raw json.RawMessage) error {
+	return ValidatePayload(raw, func(p payload.CampaignCountdownDeletePayload) error {
 		return RequireTrimmedValue(p.CountdownID.String(), "countdown_id")
 	})
 }
 
-func ValidateCountdownDeletedPayload(raw json.RawMessage) error {
-	return ValidateCountdownDeletePayload(raw)
+func ValidateCampaignCountdownDeletedPayload(raw json.RawMessage) error {
+	return ValidateCampaignCountdownDeletePayload(raw)
 }

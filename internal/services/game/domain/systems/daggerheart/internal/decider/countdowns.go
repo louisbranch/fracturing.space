@@ -7,12 +7,22 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
+
+func snapshotSceneCountdownState(snapshot daggerheartstate.SnapshotState, countdownID ids.CountdownID) (daggerheartstate.SceneCountdownState, bool) {
+	value, ok := snapshot.SceneCountdownStates[normalize.ID(countdownID)]
+	return value, ok
+}
+
+func snapshotCampaignCountdownState(snapshot daggerheartstate.SnapshotState, countdownID ids.CountdownID) (daggerheartstate.CampaignCountdownState, bool) {
+	value, ok := snapshot.CampaignCountdownStates[normalize.ID(countdownID)]
+	return value, ok
+}
 
 func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Command, now func() time.Time) command.Decision {
 	var p payload.RestTakePayload
@@ -24,12 +34,12 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 	}
 	now = command.NowFunc(now)
 	p.RestType = normalize.String(p.RestType)
-	for i := range p.CountdownUpdates {
-		if rejection := countdownUpdateSnapshotRejection(snapshotState, p.CountdownUpdates[i]); rejection != nil {
+	for i := range p.CampaignCountdownAdvances {
+		if rejection := campaignCountdownAdvanceSnapshotRejection(snapshotState, p.CampaignCountdownAdvances[i]); rejection != nil {
 			return command.Reject(*rejection)
 		}
-		p.CountdownUpdates[i].CountdownID = normalize.ID(p.CountdownUpdates[i].CountdownID)
-		p.CountdownUpdates[i].Reason = normalize.String(p.CountdownUpdates[i].Reason)
+		p.CampaignCountdownAdvances[i].CountdownID = normalize.ID(p.CampaignCountdownAdvances[i].CountdownID)
+		p.CampaignCountdownAdvances[i].Reason = normalize.String(p.CampaignCountdownAdvances[i].Reason)
 	}
 
 	eventPayload := payload.RestTakenPayload{
@@ -52,7 +62,7 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 	for _, move := range p.DowntimeMoves {
 		move.ActorCharacterID = normalize.ID(move.ActorCharacterID)
 		move.TargetCharacterID = normalize.ID(move.TargetCharacterID)
-		move.CountdownID = normalize.ID(move.CountdownID)
+		move.CampaignCountdownID = normalize.ID(move.CampaignCountdownID)
 		move.GroupID = normalize.String(move.GroupID)
 		move.RestType = normalize.String(move.RestType)
 		move.Move = normalize.String(move.Move)
@@ -64,128 +74,279 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 		events = append(events, command.NewEvent(cmd, payload.EventTypeDowntimeMoveApplied, "character", entityID, movePayloadJSON, now().UTC()))
 	}
 
-	for _, src := range p.CountdownUpdates {
-		countdownEventPayload := payload.CountdownUpdatedPayload{
-			CountdownID: src.CountdownID,
-			Value:       src.After,
-			Delta:       src.Delta,
-			Looped:      src.Looped,
-			Reason:      src.Reason,
-		}
-		countdownPayloadJSON, _ := json.Marshal(countdownEventPayload)
-		events = append(events, command.NewEvent(cmd, payload.EventTypeCountdownUpdated, "countdown", countdownEventPayload.CountdownID.String(), countdownPayloadJSON, now().UTC()))
+	for _, src := range p.CampaignCountdownAdvances {
+		countdownPayloadJSON, _ := json.Marshal(payload.CampaignCountdownAdvancedPayload(src))
+		events = append(events, command.NewEvent(cmd, payload.EventTypeCampaignCountdownAdvanced, "campaign_countdown", src.CountdownID.String(), countdownPayloadJSON, now().UTC()))
 	}
 
 	return command.Accept(events...)
 }
 
-func decideCountdownCreate(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, payload.EventTypeCountdownCreated, "countdown",
-		func(p *payload.CountdownCreatePayload) string { return normalize.ID(p.CountdownID).String() },
-		func(p *payload.CountdownCreatePayload, _ func() time.Time) *command.Rejection {
-			p.CountdownID = normalize.ID(p.CountdownID)
-			p.Name = normalize.String(p.Name)
-			p.Kind = normalize.String(p.Kind)
-			p.Direction = normalize.String(p.Direction)
-			p.Variant = normalize.String(p.Variant)
-			p.TriggerEventType = normalize.String(p.TriggerEventType)
-			p.LinkedCountdownID = normalize.ID(p.LinkedCountdownID)
-			if p.Variant == "" {
-				p.Variant = "standard"
-			}
-			switch p.Variant {
-			case "standard", "dynamic", "linked":
-				// valid
-			default:
-				return &command.Rejection{Code: "COUNTDOWN_VARIANT_INVALID", Message: fmt.Sprintf("unknown countdown variant %q; must be standard, dynamic, or linked", p.Variant)}
-			}
-			if p.Variant == "dynamic" && p.TriggerEventType == "" {
-				return &command.Rejection{Code: "COUNTDOWN_VARIANT_INVALID", Message: "trigger_event_type is required for dynamic countdowns"}
-			}
-			if p.Variant == "linked" && p.LinkedCountdownID == "" {
-				return &command.Rejection{Code: "COUNTDOWN_VARIANT_INVALID", Message: "linked_countdown_id is required for linked countdowns"}
-			}
-			return nil
-		}, now)
+func decideSceneCountdownCreate(cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFunc(cmd, payload.EventTypeSceneCountdownCreated, "scene_countdown",
+		func(p *payload.SceneCountdownCreatePayload) string { return normalize.ID(p.CountdownID).String() },
+		func(p *payload.SceneCountdownCreatePayload, _ func() time.Time) *command.Rejection {
+			return normalizeCountdownCreatePayload(p)
+		},
+		now,
+	)
 }
 
-func decideCountdownUpdate(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, payload.EventTypeCountdownUpdated, "countdown",
-		func(p *payload.CountdownUpdatePayload) string { return normalize.ID(p.CountdownID).String() },
-		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.CountdownUpdatePayload, _ func() time.Time) *command.Rejection {
+func decideCampaignCountdownCreate(cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFunc(cmd, payload.EventTypeCampaignCountdownCreated, "campaign_countdown",
+		func(p *payload.CampaignCountdownCreatePayload) string { return normalize.ID(p.CountdownID).String() },
+		func(p *payload.CampaignCountdownCreatePayload, _ func() time.Time) *command.Rejection {
+			value := payload.SceneCountdownCreatePayload(*p)
+			rejection := normalizeCountdownCreatePayload(&value)
+			*p = payload.CampaignCountdownCreatePayload(value)
+			return rejection
+		},
+		now,
+	)
+}
+
+func decideSceneCountdownAdvance(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, payload.EventTypeSceneCountdownAdvanced, "scene_countdown",
+		func(p *payload.SceneCountdownAdvancePayload) string { return normalize.ID(p.CountdownID).String() },
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.SceneCountdownAdvancePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
-				if rejection := countdownUpdateSnapshotRejection(s, *p); rejection != nil {
+				if rejection := sceneCountdownAdvanceSnapshotRejection(s, *p); rejection != nil {
 					return rejection
 				}
 			}
-			p.CountdownID = normalize.ID(p.CountdownID)
-			p.Reason = normalize.String(p.Reason)
+			normalizeCountdownAdvancePayload(p)
 			return nil
 		},
-		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CountdownUpdatePayload) payload.CountdownUpdatedPayload {
-			return payload.CountdownUpdatedPayload{
-				CountdownID: p.CountdownID,
-				Value:       p.After,
-				Delta:       p.Delta,
-				Looped:      p.Looped,
-				Reason:      p.Reason,
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.SceneCountdownAdvancePayload) payload.SceneCountdownAdvancedPayload {
+			return payload.SceneCountdownAdvancedPayload(p)
+		},
+		now,
+	)
+}
+
+func decideCampaignCountdownAdvance(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, payload.EventTypeCampaignCountdownAdvanced, "campaign_countdown",
+		func(p *payload.CampaignCountdownAdvancePayload) string { return normalize.ID(p.CountdownID).String() },
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.CampaignCountdownAdvancePayload, _ func() time.Time) *command.Rejection {
+			if hasState {
+				if rejection := campaignCountdownAdvanceSnapshotRejection(s, *p); rejection != nil {
+					return rejection
+				}
 			}
-		},
-		now)
-}
-
-func decideCountdownDelete(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, payload.EventTypeCountdownDeleted, "countdown",
-		func(p *payload.CountdownDeletePayload) string { return normalize.ID(p.CountdownID).String() },
-		func(p *payload.CountdownDeletePayload, _ func() time.Time) *command.Rejection {
-			p.CountdownID = normalize.ID(p.CountdownID)
-			p.Reason = normalize.String(p.Reason)
+			value := payload.SceneCountdownAdvancePayload(*p)
+			normalizeCountdownAdvancePayload(&value)
+			*p = payload.CampaignCountdownAdvancePayload(value)
 			return nil
-		}, now)
+		},
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CampaignCountdownAdvancePayload) payload.CampaignCountdownAdvancedPayload {
+			return payload.CampaignCountdownAdvancedPayload(p)
+		},
+		now,
+	)
 }
 
-// ── File-local helpers ─────────────────────────────────────────────────
-
-func isCountdownUpdateNoMutation(snapshot daggerheartstate.SnapshotState, p payload.CountdownUpdatePayload) bool {
-	countdown, hasCountdown := snapshotCountdownState(snapshot, p.CountdownID)
-	if !hasCountdown {
-		return false
-	}
-	if countdown.Current != p.After {
-		return false
-	}
-	if p.Looped && !countdown.Looping {
-		return false
-	}
-	return true
+func decideSceneCountdownTriggerResolve(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, payload.EventTypeSceneCountdownTriggerResolved, "scene_countdown",
+		func(p *payload.SceneCountdownTriggerResolvePayload) string {
+			return normalize.ID(p.CountdownID).String()
+		},
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.SceneCountdownTriggerResolvePayload, _ func() time.Time) *command.Rejection {
+			if hasState {
+				if rejection := sceneCountdownTriggerResolveSnapshotRejection(s, *p); rejection != nil {
+					return rejection
+				}
+			}
+			normalizeCountdownTriggerResolvePayload(p)
+			return nil
+		},
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.SceneCountdownTriggerResolvePayload) payload.SceneCountdownTriggerResolvedPayload {
+			return payload.SceneCountdownTriggerResolvedPayload(p)
+		},
+		now,
+	)
 }
 
-func countdownUpdateSnapshotRejection(snapshot daggerheartstate.SnapshotState, p payload.CountdownUpdatePayload) *command.Rejection {
-	if countdown, hasCountdown := snapshotCountdownState(snapshot, p.CountdownID); hasCountdown && p.Before != countdown.Current {
-		return &command.Rejection{
-			Code:    rejectionCodeCountdownBeforeMismatch,
-			Message: "countdown before does not match current state",
+func decideCampaignCountdownTriggerResolve(snapshotState daggerheartstate.SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, payload.EventTypeCampaignCountdownTriggerResolved, "campaign_countdown",
+		func(p *payload.CampaignCountdownTriggerResolvePayload) string {
+			return normalize.ID(p.CountdownID).String()
+		},
+		func(s daggerheartstate.SnapshotState, hasState bool, p *payload.CampaignCountdownTriggerResolvePayload, _ func() time.Time) *command.Rejection {
+			if hasState {
+				if rejection := campaignCountdownTriggerResolveSnapshotRejection(s, *p); rejection != nil {
+					return rejection
+				}
+			}
+			value := payload.SceneCountdownTriggerResolvePayload(*p)
+			normalizeCountdownTriggerResolvePayload(&value)
+			*p = payload.CampaignCountdownTriggerResolvePayload(value)
+			return nil
+		},
+		func(_ daggerheartstate.SnapshotState, _ bool, p payload.CampaignCountdownTriggerResolvePayload) payload.CampaignCountdownTriggerResolvedPayload {
+			return payload.CampaignCountdownTriggerResolvedPayload(p)
+		},
+		now,
+	)
+}
+
+func decideSceneCountdownDelete(cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFunc(cmd, payload.EventTypeSceneCountdownDeleted, "scene_countdown",
+		func(p *payload.SceneCountdownDeletePayload) string { return normalize.ID(p.CountdownID).String() },
+		func(p *payload.SceneCountdownDeletePayload, _ func() time.Time) *command.Rejection {
+			normalizeCountdownDeletePayload(p)
+			return nil
+		},
+		now,
+	)
+}
+
+func decideCampaignCountdownDelete(cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFunc(cmd, payload.EventTypeCampaignCountdownDeleted, "campaign_countdown",
+		func(p *payload.CampaignCountdownDeletePayload) string { return normalize.ID(p.CountdownID).String() },
+		func(p *payload.CampaignCountdownDeletePayload, _ func() time.Time) *command.Rejection {
+			value := payload.SceneCountdownDeletePayload(*p)
+			normalizeCountdownDeletePayload(&value)
+			*p = payload.CampaignCountdownDeletePayload(value)
+			return nil
+		},
+		now,
+	)
+}
+
+func normalizeCountdownCreatePayload(p *payload.SceneCountdownCreatePayload) *command.Rejection {
+	p.SessionID = normalize.ID(p.SessionID)
+	p.SceneID = normalize.ID(p.SceneID)
+	p.CountdownID = normalize.ID(p.CountdownID)
+	p.Name = normalize.String(p.Name)
+	p.Tone = normalize.String(p.Tone)
+	p.AdvancementPolicy = normalize.String(p.AdvancementPolicy)
+	p.LoopBehavior = normalize.String(p.LoopBehavior)
+	p.Status = normalize.String(p.Status)
+	p.LinkedCountdownID = normalize.ID(p.LinkedCountdownID)
+	if p.Tone == "" && p.Kind != "" {
+		p.Tone = normalize.String(p.Kind)
+	}
+	if p.StartingValue <= 0 && p.Max > 0 {
+		p.StartingValue = p.Max
+	}
+	if p.RemainingValue <= 0 {
+		if p.Current > 0 || p.Max > 0 {
+			p.RemainingValue = p.Current
+		} else {
+			p.RemainingValue = p.StartingValue
 		}
 	}
-	if isCountdownUpdateNoMutation(snapshot, p) {
-		return &command.Rejection{
-			Code:    rejectionCodeCountdownUpdateNoMutation,
-			Message: "countdown update is unchanged",
+	if p.LoopBehavior == "" {
+		if p.Looping {
+			p.LoopBehavior = "reset"
+		} else {
+			p.LoopBehavior = "none"
 		}
+	}
+	if p.RemainingValue <= 0 {
+		p.RemainingValue = p.StartingValue
 	}
 	return nil
 }
 
-func snapshotCountdownState(snapshot daggerheartstate.SnapshotState, countdownID dhids.CountdownID) (daggerheartstate.CountdownState, bool) {
-	trimmed := normalize.ID(countdownID)
-	if trimmed == "" {
-		return daggerheartstate.CountdownState{}, false
+func normalizeCountdownAdvancePayload(p *payload.SceneCountdownAdvancePayload) {
+	p.CountdownID = normalize.ID(p.CountdownID)
+	p.StatusBefore = normalize.String(p.StatusBefore)
+	p.StatusAfter = normalize.String(p.StatusAfter)
+	p.Reason = normalize.String(p.Reason)
+	if p.BeforeRemaining == 0 && (p.Before != 0 || p.After != 0 || p.Value != 0) {
+		p.BeforeRemaining = p.Before
 	}
-	countdown, ok := snapshot.CountdownStates[trimmed]
+	if p.AfterRemaining == 0 && (p.After != 0 || p.Value != 0) {
+		if p.After != 0 {
+			p.AfterRemaining = p.After
+		} else {
+			p.AfterRemaining = p.Value
+		}
+	}
+	if p.AdvancedBy == 0 && p.Delta != 0 {
+		if p.Delta < 0 {
+			p.AdvancedBy = -p.Delta
+		} else {
+			p.AdvancedBy = p.Delta
+		}
+	}
+}
+
+func normalizeCountdownTriggerResolvePayload(p *payload.SceneCountdownTriggerResolvePayload) {
+	p.CountdownID = normalize.ID(p.CountdownID)
+	p.StatusBefore = normalize.String(p.StatusBefore)
+	p.StatusAfter = normalize.String(p.StatusAfter)
+	p.Reason = normalize.String(p.Reason)
+}
+
+func normalizeCountdownDeletePayload(p *payload.SceneCountdownDeletePayload) {
+	p.CountdownID = normalize.ID(p.CountdownID)
+	p.Reason = normalize.String(p.Reason)
+}
+
+func isSceneCountdownAdvanceNoMutation(snapshot daggerheartstate.SnapshotState, p payload.SceneCountdownAdvancePayload) bool {
+	countdown, hasCountdown := snapshotSceneCountdownState(snapshot, p.CountdownID)
+	if !hasCountdown {
+		return false
+	}
+	return countdown.RemainingValue == p.AfterRemaining && countdown.Status == p.StatusAfter
+}
+
+func isCampaignCountdownAdvanceNoMutation(snapshot daggerheartstate.SnapshotState, p payload.CampaignCountdownAdvancePayload) bool {
+	countdown, hasCountdown := snapshotCampaignCountdownState(snapshot, p.CountdownID)
+	if !hasCountdown {
+		return false
+	}
+	return countdown.RemainingValue == p.AfterRemaining && countdown.Status == p.StatusAfter
+}
+
+func sceneCountdownAdvanceSnapshotRejection(snapshot daggerheartstate.SnapshotState, p payload.SceneCountdownAdvancePayload) *command.Rejection {
+	countdown, ok := snapshotSceneCountdownState(snapshot, p.CountdownID)
 	if !ok {
-		return daggerheartstate.CountdownState{}, false
+		return nil
 	}
-	countdown.CountdownID = trimmed
-	countdown.CampaignID = snapshot.CampaignID
-	return countdown, true
+	if countdown.RemainingValue != p.BeforeRemaining {
+		return &command.Rejection{Code: rejectionCodeCountdownBeforeMismatch, Message: "scene countdown before_remaining does not match snapshot"}
+	}
+	if isSceneCountdownAdvanceNoMutation(snapshot, p) {
+		return &command.Rejection{Code: rejectionCodeCountdownAdvanceNoMutation, Message: "scene countdown advance does not change state"}
+	}
+	return nil
+}
+
+func campaignCountdownAdvanceSnapshotRejection(snapshot daggerheartstate.SnapshotState, p payload.CampaignCountdownAdvancePayload) *command.Rejection {
+	countdown, ok := snapshotCampaignCountdownState(snapshot, p.CountdownID)
+	if !ok {
+		return nil
+	}
+	if countdown.RemainingValue != p.BeforeRemaining {
+		return &command.Rejection{Code: rejectionCodeCountdownBeforeMismatch, Message: "campaign countdown before_remaining does not match snapshot"}
+	}
+	if isCampaignCountdownAdvanceNoMutation(snapshot, p) {
+		return &command.Rejection{Code: rejectionCodeCountdownAdvanceNoMutation, Message: "campaign countdown advance does not change state"}
+	}
+	return nil
+}
+
+func sceneCountdownTriggerResolveSnapshotRejection(snapshot daggerheartstate.SnapshotState, p payload.SceneCountdownTriggerResolvePayload) *command.Rejection {
+	countdown, ok := snapshotSceneCountdownState(snapshot, p.CountdownID)
+	if !ok {
+		return nil
+	}
+	if countdown.Status != p.StatusBefore {
+		return &command.Rejection{Code: rejectionCodeCountdownBeforeMismatch, Message: "scene countdown status_before does not match snapshot"}
+	}
+	return nil
+}
+
+func campaignCountdownTriggerResolveSnapshotRejection(snapshot daggerheartstate.SnapshotState, p payload.CampaignCountdownTriggerResolvePayload) *command.Rejection {
+	countdown, ok := snapshotCampaignCountdownState(snapshot, p.CountdownID)
+	if !ok {
+		return nil
+	}
+	if countdown.Status != p.StatusBefore {
+		return &command.Rejection{Code: rejectionCodeCountdownBeforeMismatch, Message: "campaign countdown status_before does not match snapshot"}
+	}
+	return nil
 }

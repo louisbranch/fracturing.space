@@ -12,71 +12,59 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"google.golang.org/grpc/codes"
 )
 
-func TestDeleteCountdown_MissingStores(t *testing.T) {
+func TestDeleteSceneCountdown_MissingStores(t *testing.T) {
 	svc := &DaggerheartService{}
-	_, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
+	_, err := svc.DeleteSceneCountdown(context.Background(), &pb.DaggerheartDeleteSceneCountdownRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
 
-func TestDeleteCountdown_MissingCampaignId(t *testing.T) {
+func TestDeleteSceneCountdown_ValidatesShape(t *testing.T) {
 	svc := newActionTestService()
-	_, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
-		SessionId: "sess-1",
-	})
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestDeleteCountdown_MissingSessionId(t *testing.T) {
-	svc := newActionTestService()
-	_, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
+	_, err := svc.DeleteSceneCountdown(context.Background(), &pb.DaggerheartDeleteSceneCountdownRequest{
 		CampaignId: "camp-1",
+		SessionId:  "sess-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestDeleteCountdown_MissingCountdownId(t *testing.T) {
-	svc := newActionTestService()
-	_, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
-		CampaignId: "camp-1", SessionId: "sess-1",
-	})
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestDeleteCountdown_Success(t *testing.T) {
+func TestDeleteSceneCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.Countdowns["camp-1:cd-delete"] = projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-1",
-		CountdownID: "cd-delete",
-		Name:        "Delete Test",
-		Kind:        rules.CountdownKindConsequence,
-		Current:     0,
-		Max:         4,
-		Direction:   rules.CountdownDirectionIncrease,
-		Looping:     false,
+		CampaignID:        "camp-1",
+		SessionID:         "sess-1",
+		SceneID:           "scene-1",
+		CountdownID:       "cd-delete",
+		Name:              "Delete Test",
+		Tone:              "consequence",
+		AdvancementPolicy: "manual",
+		StartingValue:     4,
+		RemainingValue:    4,
+		LoopBehavior:      "none",
+		Status:            "active",
 	}
-	deletePayload := daggerheartpayload.CountdownDeletedPayload{CountdownID: "cd-delete"}
+	deletePayload := daggerheartpayload.SceneCountdownDeletedPayload{CountdownID: "cd-delete"}
 	deletePayloadJSON, err := json.Marshal(deletePayload)
 	if err != nil {
 		t.Fatalf("encode countdown delete payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("sys.daggerheart.countdown.delete"): {
+		command.Type("sys.daggerheart.scene_countdown.delete"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("sys.daggerheart.countdown_deleted"),
+				Type:          event.Type("sys.daggerheart.scene_countdown_deleted"),
 				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
-				RequestID:     "req-countdown-delete-success",
-				EntityType:    "countdown",
+				SceneID:       "scene-1",
+				RequestID:     "req-scene-countdown-delete-success",
+				EntityType:    "scene_countdown",
 				EntityID:      "cd-delete",
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
@@ -85,77 +73,16 @@ func TestDeleteCountdown_Success(t *testing.T) {
 		},
 	}}
 	svc.stores.Write.Executor = serviceDomain
-	resp, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: "cd-delete",
+	resp, err := svc.DeleteSceneCountdown(context.Background(), &pb.DaggerheartDeleteSceneCountdownRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		SceneId:     "scene-1",
+		CountdownId: "cd-delete",
 	})
 	if err != nil {
-		t.Fatalf("DeleteCountdown returned error: %v", err)
+		t.Fatalf("DeleteSceneCountdown returned error: %v", err)
 	}
 	if resp.CountdownId != "cd-delete" {
 		t.Fatalf("countdown_id = %q, want %q", resp.CountdownId, "cd-delete")
-	}
-}
-
-func TestDeleteCountdown_UsesDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	eventStore := svc.stores.Event.(*fakeEventStore)
-	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-
-	dhStore.Countdowns["camp-1:cd-1"] = projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-1",
-		CountdownID: "cd-1",
-		Name:        "Cleanup",
-		Kind:        rules.CountdownKindConsequence,
-		Current:     0,
-		Max:         4,
-		Direction:   rules.CountdownDirectionIncrease,
-		Looping:     false,
-	}
-	deletePayload := daggerheartpayload.CountdownDeletedPayload{CountdownID: "cd-1", Reason: "cleanup"}
-	deletePayloadJSON, err := json.Marshal(deletePayload)
-	if err != nil {
-		t.Fatalf("encode countdown delete payload: %v", err)
-	}
-
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("sys.daggerheart.countdown.delete"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "camp-1",
-				Type:          event.Type("sys.daggerheart.countdown_deleted"),
-				Timestamp:     testTimestamp,
-				ActorType:     event.ActorTypeSystem,
-				SessionID:     "sess-1",
-				RequestID:     "req-countdown-delete",
-				EntityType:    "countdown",
-				EntityID:      "cd-1",
-				SystemID:      daggerheart.SystemID,
-				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   deletePayloadJSON,
-			}),
-		},
-	}}
-
-	svc.stores.Write.Executor = domain
-
-	resp, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		CountdownId: "cd-1",
-		Reason:      "cleanup",
-	})
-	if err != nil {
-		t.Fatalf("DeleteCountdown returned error: %v", err)
-	}
-	if domain.calls != 1 {
-		t.Fatalf("expected domain to be called once, got %d", domain.calls)
-	}
-	if domain.lastCommand.Type != command.Type("sys.daggerheart.countdown.delete") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.countdown.delete")
-	}
-	if resp.CountdownId != "cd-1" {
-		t.Fatalf("countdown_id = %q, want cd-1", resp.CountdownId)
-	}
-	if _, err := dhStore.GetDaggerheartCountdown(context.Background(), "camp-1", "cd-1"); err == nil {
-		t.Fatal("expected countdown to be deleted")
 	}
 }

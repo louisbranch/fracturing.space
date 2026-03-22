@@ -15,7 +15,7 @@ scn:pc("Frodo")
 scn:start_session("Everything You Are")
 
 -- Missing DSL: loop countdown and reduce highest trait or mark stress.
-dh:countdown_create{ name = "Chaos Drain", kind = "loop", current = 0, max = 4, direction = "increase" }
+dh:scene_countdown_create{ name = "Chaos Drain", kind = "loop", current = 0, max = 4, direction = "increase" }
 dh:reaction_roll{ actor = "Frodo", trait = "presence", difficulty = 20, outcome = "fear" }
 dh:apply_reaction_outcome{}
 

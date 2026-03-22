@@ -124,9 +124,9 @@ func TestHasRestTakeMutation_AllBranches(t *testing.T) {
 	if !daggerheartvalidator.HasRestTakeMutation(daggerheartpayload.RestTakePayload{Interrupted: true}) {
 		t.Fatal("interrupted should be mutation")
 	}
-	// CountdownUpdates.
-	if !daggerheartvalidator.HasRestTakeMutation(daggerheartpayload.RestTakePayload{CountdownUpdates: []daggerheartpayload.CountdownUpdatePayload{{}}}) {
-		t.Fatal("countdown updates should be mutation")
+	// CampaignCountdownAdvances.
+	if !daggerheartvalidator.HasRestTakeMutation(daggerheartpayload.RestTakePayload{CampaignCountdownAdvances: []daggerheartpayload.CampaignCountdownAdvancePayload{{}}}) {
+		t.Fatal("campaign countdown advances should be mutation")
 	}
 	// DowntimeMoves.
 	if !daggerheartvalidator.HasRestTakeMutation(daggerheartpayload.RestTakePayload{DowntimeMoves: []daggerheartpayload.DowntimeMoveAppliedPayload{{}}}) {

@@ -15,22 +15,28 @@ scn:pc("Sam")
 -- The GM sets a shorter progress countdown due to helpful guidance.
 scn:start_session("Whitecrest Ascent")
 
--- Example: progress countdown starts at 3 instead of 5.
-dh:countdown_create{ name = "Whitecrest Ascent", kind = "progress", current = 3, max = 3, direction = "decrease" }
+-- Example: the ascent has three beats remaining instead of five.
+dh:scene_countdown_create{
+  name = "Whitecrest Ascent",
+  tone = "progress",
+  advancement_policy = "manual",
+  fixed_starting_value = 3,
+  loop_behavior = "none",
+  expect_remaining_value = 3,
+}
 
 -- Sam succeeds with Fear, advancing the climb despite consequences.
--- Partial mapping: dynamic tier-based countdown updates are explicit.
--- Missing DSL: branch-level no-op steps for failure tiers with no advancement.
+-- Partial mapping: dynamic tier-based countdown advances are expressed explicitly.
 dh:action_roll{ actor = "Sam", trait = "agility", difficulty = 12, outcome = "success_fear" }
 dh:apply_roll_outcome{
   on_critical = {
-    {kind = "countdown_update", name = "Whitecrest Ascent", delta = -3, reason = "critical_ascent"},
+    {kind = "scene_countdown_update", name = "Whitecrest Ascent", amount = 3, reason = "critical_ascent", expect_after_remaining = 0, expect_triggered = true},
   },
   on_success_hope = {
-    {kind = "countdown_update", name = "Whitecrest Ascent", delta = -2, reason = "strong_ascent"},
+    {kind = "scene_countdown_update", name = "Whitecrest Ascent", amount = 2, reason = "strong_ascent", expect_after_remaining = 1},
   },
   on_success_fear = {
-    {kind = "countdown_update", name = "Whitecrest Ascent", delta = -1, reason = "steady_ascent"},
+    {kind = "scene_countdown_update", name = "Whitecrest Ascent", amount = 1, reason = "steady_ascent", expect_after_remaining = 2},
   },
 }
 

@@ -1,0 +1,70 @@
+[
+  {
+    "lesson_id": "action-roll-and-outcomes",
+    "title": "Action Rolls and Outcome Consequences",
+    "playbook_id": "playbook-action-roll-and-outcomes",
+    "playbook_path": "docs/reference/daggerheart-playbooks/playbook-action-roll-and-outcomes.md",
+    "required_tools": [
+      "character_sheet_read",
+      "daggerheart_action_roll_resolve",
+      "system_reference_search",
+      "system_reference_read"
+    ],
+    "scenarios": [
+      "internal/test/game/scenarios/systems/daggerheart/action_roll_outcomes.lua",
+      "internal/test/game/scenarios/systems/daggerheart/action_roll_critical_success.lua",
+      "internal/test/game/scenarios/systems/daggerheart/action_roll_failure_with_hope.lua"
+    ]
+  },
+  {
+    "lesson_id": "gm-fear-adversaries-and-spotlight",
+    "title": "GM Fear, Adversaries, and Spotlight",
+    "playbook_id": "playbook-gm-fear-adversaries-and-spotlight",
+    "playbook_path": "docs/reference/daggerheart-playbooks/playbook-gm-fear-adversaries-and-spotlight.md",
+    "required_tools": [
+      "daggerheart_combat_board_read",
+      "daggerheart_gm_move_apply",
+      "daggerheart_adversary_create",
+      "daggerheart_adversary_update",
+      "daggerheart_scene_countdown_create",
+      "daggerheart_scene_countdown_advance",
+      "system_reference_search",
+      "system_reference_read"
+    ],
+    "scenarios": [
+      "internal/test/game/scenarios/systems/daggerheart/gm_fear_adversary_feature.lua",
+      "internal/test/game/scenarios/systems/daggerheart/adversary_spotlight.lua",
+      "internal/test/game/scenarios/systems/daggerheart/full_example_spotlight_sequence.lua",
+      "internal/test/game/scenarios/systems/daggerheart/gm_fear_spend_chain.lua",
+      "internal/test/game/scenarios/systems/daggerheart/countdown_lifecycle.lua",
+      "internal/test/game/scenarios/systems/daggerheart/countdown_variants.lua",
+      "internal/test/game/scenarios/systems/daggerheart/countdown_linked_pair.lua",
+      "internal/test/game/scenarios/systems/daggerheart/gm_move_artifact_chase.lua",
+      "internal/test/game/scenarios/systems/daggerheart/chase_countdown_ring.lua",
+      "internal/test/game/scenarios/systems/daggerheart/progress_countdown_climb.lua"
+    ]
+  },
+  {
+    "lesson_id": "combat-procedures",
+    "title": "Combat Procedures",
+    "playbook_id": "playbook-combat-procedures",
+    "playbook_path": "docs/reference/daggerheart-playbooks/playbook-combat-procedures.md",
+    "required_tools": [
+      "character_sheet_read",
+      "daggerheart_combat_board_read",
+      "daggerheart_attack_flow_resolve",
+      "daggerheart_adversary_attack_flow_resolve",
+      "daggerheart_reaction_flow_resolve",
+      "daggerheart_group_action_flow_resolve",
+      "daggerheart_tag_team_flow_resolve",
+      "system_reference_search",
+      "system_reference_read"
+    ],
+    "scenarios": [
+      "internal/test/game/scenarios/systems/daggerheart/reaction_flow.lua",
+      "internal/test/game/scenarios/systems/daggerheart/group_action.lua",
+      "internal/test/game/scenarios/systems/daggerheart/tag_team.lua",
+      "internal/test/game/scenarios/systems/daggerheart/full_example_spotlight_sequence.lua"
+    ]
+  }
+]

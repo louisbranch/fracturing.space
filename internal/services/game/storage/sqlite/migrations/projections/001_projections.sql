@@ -196,12 +196,19 @@ CREATE TABLE IF NOT EXISTS daggerheart_snapshots (
 CREATE TABLE IF NOT EXISTS daggerheart_countdowns (
     campaign_id TEXT NOT NULL,
     countdown_id TEXT NOT NULL,
+    session_id TEXT NOT NULL DEFAULT '',
+    scene_id TEXT NOT NULL DEFAULT '',
     name TEXT NOT NULL,
-    kind TEXT NOT NULL,
-    current INTEGER NOT NULL,
-    max INTEGER NOT NULL,
-    direction TEXT NOT NULL,
-    looping INTEGER NOT NULL DEFAULT 0,
+    tone TEXT NOT NULL,
+    advancement_policy TEXT NOT NULL,
+    starting_value INTEGER NOT NULL,
+    remaining_value INTEGER NOT NULL,
+    loop_behavior TEXT NOT NULL,
+    status TEXT NOT NULL,
+    linked_countdown_id TEXT NOT NULL DEFAULT '',
+    starting_roll_min INTEGER NOT NULL DEFAULT 0,
+    starting_roll_max INTEGER NOT NULL DEFAULT 0,
+    starting_roll_value INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (campaign_id, countdown_id)
 );
 
