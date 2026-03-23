@@ -24,6 +24,10 @@ Canonical onboarding path for developers adding features, fixing bugs, or improv
 6. Use `make cover` or `make cover-critical-domain` only when you need focused standalone coverage output separate from `make check`.
 7. Run docs checks for docs-heavy changes:
    - `make docs-check`
+8. Complete PRs with squash only:
+   - default to `gh pr merge <pr> --auto --squash`
+   - if auto-merge is unavailable and the PR is mergeable now, use `gh pr merge <pr> --squash`
+   - do not use `--merge`, `--rebase`, or `--delete-branch`
 
 ## Good to know
 
