@@ -101,6 +101,11 @@ Use the canonical docs paths: [System extension onboarding](docs/guides/adding-c
 - Commit messages use prefixes: `feat:`, `fix:`, `chore:`, `docs:`.
 - Keep PRs small and focused; split unrelated changes.
 - Do not open PRs from branches used by closed or merged PRs.
+- Merge PRs with squash only.
+- Default merge command: `gh pr merge <pr> --auto --squash`.
+- If auto-merge is unavailable but the PR is ready to merge now, use `gh pr merge <pr> --squash`.
+- Do not use `--merge`, `--rebase`, or `--delete-branch`.
+- The repository may auto-delete merged branches remotely, but manual branch deletion is not required workflow.
 
 ## PR Checklist
 

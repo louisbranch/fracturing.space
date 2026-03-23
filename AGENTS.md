@@ -116,6 +116,15 @@ Agent progress workflow:
 - Keep plan task lists current as work progresses.
 - Include explicit out-of-scope notes to prevent accidental scope creep.
 
+## PR Merge Policy
+
+- This repository uses squash merges for PR completion.
+- Default PR merge command: `gh pr merge <pr> --auto --squash`.
+- If auto-merge is unavailable but the PR is mergeable immediately, use `gh pr merge <pr> --squash`.
+- Do not use `--merge` or `--rebase` for this repository.
+- Do not pass `--delete-branch`; branch deletion is not part of the required workflow.
+- If squash merge fails, stop and report the blocker instead of switching merge modes or bypassing `gh pr merge` with ad hoc API calls.
+
 ## Skills
 
 Load the relevant skill when work enters one of these areas:

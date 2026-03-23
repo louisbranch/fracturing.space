@@ -54,7 +54,10 @@ Use this skill when the user asks to:
    - Do not post PR comments or review replies by default.
    - Post a PR/review comment only when explicitly requested by the user, or when a reviewer explicitly asked for a follow-up response.
    - Keep any required comment concise (max 3 bullets). Never paste line-by-line command output, full test logs, or long mechanical package lists.
-   - Enable auto-merge squash when checks pass.
+   - Default merge command: `gh pr merge <pr> --auto --squash`.
+   - If auto-merge is unavailable but the PR is mergeable immediately, use `gh pr merge <pr> --squash`.
+   - Do not use `--merge`, `--rebase`, or `--delete-branch`.
+   - If squash merge fails, report the blocker instead of switching merge strategies or bypassing `gh pr merge` with ad hoc API calls.
 
 ## GitHub CLI Commands
 
@@ -66,6 +69,7 @@ gh api repos/<owner>/<repo>/pulls/<pr>/comments
 gh api repos/<owner>/<repo>/pulls/<pr>/reviews
 gh pr comment <pr> --body "<summary>"
 gh pr merge <pr> --auto --squash
+gh pr merge <pr> --squash
 ```
 
 Inline comments (file/line) come from `pulls/<pr>/comments`. Always use that endpoint for line-level feedback.
