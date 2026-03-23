@@ -1444,7 +1444,6 @@ type PatchCharacterProfileRequest struct {
 	//	*PatchCharacterProfileRequest_Daggerheart
 	SystemProfilePatch isPatchCharacterProfileRequest_SystemProfilePatch `protobuf_oneof:"system_profile_patch"`
 	// Optional source attribution explaining why the mutation happened.
-	// Backward-compatible: existing callers that omit this field continue to work.
 	MutationSource *v11.DaggerheartMutationSource `protobuf:"bytes,4,opt,name=mutation_source,json=mutationSource,proto3" json:"mutation_source,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

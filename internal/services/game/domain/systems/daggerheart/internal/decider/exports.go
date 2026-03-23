@@ -23,9 +23,8 @@ var (
 var (
 	IsCharacterStatePatchNoMutation      = isCharacterStatePatchNoMutation
 	IsConditionChangeNoMutation          = isConditionChangeNoMutation
-	IsSceneCountdownUpdateNoMutation     = isSceneCountdownAdvanceNoMutation
-	IsCampaignCountdownUpdateNoMutation  = isCampaignCountdownAdvanceNoMutation
-	IsCountdownUpdateNoMutation          = isSceneCountdownAdvanceNoMutation
+	IsSceneCountdownAdvanceNoMutation    = isSceneCountdownAdvanceNoMutation
+	IsCampaignCountdownAdvanceNoMutation = isCampaignCountdownAdvanceNoMutation
 	IsEnvironmentEntityCreateNoMutation  = isEnvironmentEntityCreateNoMutation
 	IsAdversaryFeatureApplyNoMutation    = isAdversaryFeatureApplyNoMutation
 	IsAdversaryCreateNoMutation          = isAdversaryCreateNoMutation
@@ -35,7 +34,6 @@ var (
 	SnapshotCharacterState               = snapshotCharacterState
 	SnapshotSceneCountdownState          = snapshotSceneCountdownState
 	SnapshotCampaignCountdownState       = snapshotCampaignCountdownState
-	SnapshotCountdownState               = snapshotCampaignCountdownState
 	SnapshotAdversaryState               = snapshotAdversaryState
 	DerefInt                             = derefInt
 	HasMissingConditionRemovals          = hasMissingConditionRemovals
@@ -60,16 +58,11 @@ const (
 	CommandTypeSceneCountdownCreate            = commandTypeSceneCountdownCreate
 	CommandTypeSceneCountdownAdvance           = commandTypeSceneCountdownAdvance
 	CommandTypeSceneCountdownTriggerResolve    = commandTypeSceneCountdownTriggerResolve
-	CommandTypeSceneCountdownUpdate            = commandTypeSceneCountdownAdvance
 	CommandTypeSceneCountdownDelete            = commandTypeSceneCountdownDelete
 	CommandTypeCampaignCountdownCreate         = commandTypeCampaignCountdownCreate
 	CommandTypeCampaignCountdownAdvance        = commandTypeCampaignCountdownAdvance
 	CommandTypeCampaignCountdownTriggerResolve = commandTypeCampaignCountdownTriggerResolve
-	CommandTypeCampaignCountdownUpdate         = commandTypeCampaignCountdownAdvance
 	CommandTypeCampaignCountdownDelete         = commandTypeCampaignCountdownDelete
-	CommandTypeCountdownCreate                 = commandTypeSceneCountdownCreate
-	CommandTypeCountdownUpdate                 = commandTypeSceneCountdownAdvance
-	CommandTypeCountdownDelete                 = commandTypeSceneCountdownDelete
 	CommandTypeDamageApply                     = commandTypeDamageApply
 	CommandTypeAdversaryDamageApply            = commandTypeAdversaryDamageApply
 	CommandTypeCharacterTemporaryArmorApply    = commandTypeCharacterTemporaryArmorApply

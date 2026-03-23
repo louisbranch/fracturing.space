@@ -304,29 +304,38 @@ func TestProgressionAndCharacterHandlerBranches(t *testing.T) {
 	}
 
 	store.getCountdownErr = errors.New("countdown read failed")
-	if err := a.HandleCountdownUpdated(ctx, event.Event{
+	if err := a.HandleSceneCountdownAdvanced(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
-	}, payload.CountdownUpdatedPayload{
-		CountdownID: dhids.CountdownID("count-1"),
-		Value:       2,
+	}, payload.SceneCountdownAdvancedPayload{
+		CountdownID:     dhids.CountdownID("count-1"),
+		BeforeRemaining: 3,
+		AfterRemaining:  2,
+		AdvancedBy:      1,
+		StatusBefore:    "active",
+		StatusAfter:     "active",
 	}); err == nil || !strings.Contains(err.Error(), "countdown read failed") {
-		t.Fatalf("HandleCountdownUpdated() get error = %v, want get error", err)
+		t.Fatalf("HandleSceneCountdownAdvanced() get error = %v, want get error", err)
 	}
 	store.getCountdownErr = nil
 	store.countdowns[profileKey("camp-1", "count-1")] = projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-1",
-		CountdownID: "count-1",
-		Current:     1,
-		Max:         4,
-		Direction:   "up",
+		CampaignID:     "camp-1",
+		CountdownID:    "count-1",
+		StartingValue:  4,
+		RemainingValue: 1,
+		LoopBehavior:   "none",
+		Status:         "active",
 	}
-	if err := a.HandleCountdownUpdated(ctx, event.Event{
+	if err := a.HandleSceneCountdownAdvanced(ctx, event.Event{
 		CampaignID: ids.CampaignID("camp-1"),
-	}, payload.CountdownUpdatedPayload{
-		CountdownID: dhids.CountdownID("count-1"),
-		Value:       5,
+	}, payload.SceneCountdownAdvancedPayload{
+		CountdownID:     dhids.CountdownID("count-1"),
+		BeforeRemaining: 1,
+		AfterRemaining:  5,
+		AdvancedBy:      4,
+		StatusBefore:    "active",
+		StatusAfter:     "active",
 	}); err == nil {
-		t.Fatal("HandleCountdownUpdated() error = nil, want validation error")
+		t.Fatal("HandleSceneCountdownAdvanced() error = nil, want validation error")
 	}
 
 	if err := a.HandleDowntimeMoveApplied(ctx, event.Event{

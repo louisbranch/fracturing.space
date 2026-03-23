@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
@@ -332,7 +333,7 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "character",
 		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["vulnerable"],"conditions_after":["hidden"],"added":["hidden"],"removed":["vulnerable"]}`),
+		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":` + standardConditionJSONArray("vulnerable") + `,"conditions_after":` + standardConditionJSONArray("hidden") + `,"added":` + standardConditionJSONArray("hidden") + `,"removed":` + standardConditionJSONArray("vulnerable") + `}`),
 	}
 
 	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -384,7 +385,7 @@ func TestDecideConditionChange_UnchangedStateRejected(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "character",
 		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["vulnerable"],"conditions_after":["vulnerable"],"added":[],"removed":[]}`),
+		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":` + standardConditionJSONArray("vulnerable") + `,"conditions_after":` + standardConditionJSONArray("vulnerable") + `,"added":[],"removed":[]}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
@@ -415,7 +416,7 @@ func TestDecideConditionChange_RemoveMissingConditionRejected(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "character",
 		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden","vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`),
+		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":` + standardConditionJSONArray("hidden") + `,"conditions_after":` + standardConditionJSONArray("hidden", "vulnerable") + `,"added":` + standardConditionJSONArray("vulnerable") + `,"removed":` + standardConditionJSONArray("restrained") + `}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
@@ -789,7 +790,7 @@ func TestDecideRestTake_WithCampaignCountdown_BeforeMismatchRejected(t *testing.
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CampaignCountdownStates: map[ids.CountdownID]daggerheartstate.CampaignCountdownState{
+		CampaignCountdownStates: map[dhids.CountdownID]daggerheartstate.CampaignCountdownState{
 			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 		},
 	}
@@ -820,7 +821,7 @@ func TestDecideRestTake_WithCampaignCountdown_UnchangedRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		CampaignCountdownStates: map[ids.CountdownID]daggerheartstate.CampaignCountdownState{
+		CampaignCountdownStates: map[dhids.CountdownID]daggerheartstate.CampaignCountdownState{
 			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "reset", Status: "active"},
 		},
 	}
@@ -1022,7 +1023,7 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1",
 				HP:          7,
@@ -1055,7 +1056,7 @@ func TestDecideSceneCountdownCreate_EmitsSceneCountdownCreated(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "scene_countdown",
 		EntityID:      "cd-1",
-		PayloadJSON:   []byte(`{"session_id":"sess-1","scene_id":"scene-1","countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`),
+		PayloadJSON:   []byte(`{"session_id":"sess-1","scene_id":"scene-1","countdown_id":"cd-1","name":"Doom","tone":"progress","advancement_policy":"manual","starting_value":4,"remaining_value":4,"loop_behavior":"reset","status":"active"}`),
 	}
 
 	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -1145,7 +1146,7 @@ func TestDecideSceneCountdownAdvance_UnchangedStateRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		SceneCountdownStates: map[ids.CountdownID]daggerheartstate.SceneCountdownState{
+		SceneCountdownStates: map[dhids.CountdownID]daggerheartstate.SceneCountdownState{
 			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "reset", Status: "active"},
 		},
 	}
@@ -1176,7 +1177,7 @@ func TestDecideSceneCountdownAdvance_BeforeMismatchRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		SceneCountdownStates: map[ids.CountdownID]daggerheartstate.SceneCountdownState{
+		SceneCountdownStates: map[dhids.CountdownID]daggerheartstate.SceneCountdownState{
 			"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 		},
 	}
@@ -1247,7 +1248,7 @@ func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testin
 		SystemVersion: SystemVersion,
 		EntityType:    "adversary",
 		EntityID:      "adv-1",
-		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":["vulnerable"],"conditions_after":["hidden"],"added":["hidden"],"removed":["vulnerable"]}`),
+		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":` + standardConditionJSONArray("vulnerable") + `,"conditions_after":` + standardConditionJSONArray("hidden") + `,"added":` + standardConditionJSONArray("hidden") + `,"removed":` + standardConditionJSONArray("vulnerable") + `}`),
 	}
 
 	decision := daggerheartdecider.Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -1299,12 +1300,12 @@ func TestDecideAdversaryConditionChange_UnchangedStateRejected(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "adversary",
 		EntityID:      "adv-1",
-		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"],"added":[],"removed":[]}`),
+		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":` + standardConditionJSONArray("hidden") + `,"conditions_after":` + standardConditionJSONArray("hidden") + `,"added":[],"removed":[]}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1330,12 +1331,12 @@ func TestDecideAdversaryConditionChange_RemoveMissingConditionRejected(t *testin
 		SystemVersion: SystemVersion,
 		EntityType:    "adversary",
 		EntityID:      "adv-1",
-		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden","vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`),
+		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":` + standardConditionJSONArray("hidden") + `,"conditions_after":` + standardConditionJSONArray("hidden", "vulnerable") + `,"added":` + standardConditionJSONArray("vulnerable") + `,"removed":` + standardConditionJSONArray("restrained") + `}`),
 	}
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1424,7 +1425,7 @@ func TestDecideAdversaryCreate_UnchangedStateRejected(t *testing.T) {
 
 	state := daggerheartstate.SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[ids.AdversaryID]daggerheartstate.AdversaryState{
+		AdversaryStates: map[dhids.AdversaryID]daggerheartstate.AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1", Name: "Goblin", Kind: "bruiser", SessionID: "sess-1", Notes: "note",
 				HP: 6, HPMax: 6, Stress: 2, StressMax: 2, Evasion: 1, Major: 2, Severe: 3, Armor: 1,

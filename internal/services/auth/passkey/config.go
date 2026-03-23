@@ -37,7 +37,7 @@ func LoadConfigFromEnv() Config {
 	}
 	cfg.RPOrigins = normalizeOrigins(cfg.RPOrigins)
 	if len(cfg.RPOrigins) == 0 {
-		cfg.RPOrigins = []string{"http://localhost:8086"}
+		cfg.RPOrigins = []string{"http://localhost:8080"}
 	}
 	if cfg.SessionTTL == 0 {
 		cfg.SessionTTL = 5 * time.Minute

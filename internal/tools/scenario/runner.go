@@ -29,7 +29,7 @@ type Config struct {
 // DefaultConfig returns default runner configuration.
 func DefaultConfig() Config {
 	return Config{
-		GRPCAddr:         "localhost:8080",
+		GRPCAddr:         "localhost:8082",
 		Timeout:          10 * time.Second,
 		Assertions:       AssertionStrict,
 		Verbose:          false,

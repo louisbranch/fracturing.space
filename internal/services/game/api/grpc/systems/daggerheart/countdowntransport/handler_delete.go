@@ -11,7 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,7 +55,7 @@ func (h *Handler) DeleteSceneCountdown(ctx context.Context, in *pb.DaggerheartDe
 		return DeleteResult{}, status.Error(codes.NotFound, "scene countdown was not found")
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.SceneCountdownDeletePayload{
-		CountdownID: ids.CountdownID(countdownID),
+		CountdownID: dhids.CountdownID(countdownID),
 		Reason:      strings.TrimSpace(in.GetReason()),
 	})
 	if err != nil {
@@ -109,7 +109,7 @@ func (h *Handler) DeleteCampaignCountdown(ctx context.Context, in *pb.Daggerhear
 		return DeleteResult{}, status.Error(codes.NotFound, "campaign countdown was not found")
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.CampaignCountdownDeletePayload{
-		CountdownID: ids.CountdownID(countdownID),
+		CountdownID: dhids.CountdownID(countdownID),
 		Reason:      strings.TrimSpace(in.GetReason()),
 	})
 	if err != nil {

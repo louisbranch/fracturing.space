@@ -13,6 +13,7 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
@@ -246,11 +247,11 @@ func TestFoldGMFearChangedAndCountdownUpdate_Branches(t *testing.T) {
 
 	t.Run("countdown advance updates remaining value and status", func(t *testing.T) {
 		state := &daggerheartstate.SnapshotState{
-			SceneCountdownStates: map[ids.CountdownID]daggerheartstate.SceneCountdownState{
+			SceneCountdownStates: map[dhids.CountdownID]daggerheartstate.SceneCountdownState{
 				"cd-1": {CountdownID: "cd-1", StartingValue: 4, RemainingValue: 1, LoopBehavior: "reset", Status: "active"},
 			},
 		}
-		if err := daggerheartfolder.FoldCountdownUpdated(state, daggerheartpayload.CountdownUpdatedPayload{
+		if err := daggerheartfolder.FoldSceneCountdownAdvanced(state, daggerheartpayload.SceneCountdownAdvancedPayload{
 			CountdownID:     "cd-1",
 			BeforeRemaining: 1,
 			AfterRemaining:  0,

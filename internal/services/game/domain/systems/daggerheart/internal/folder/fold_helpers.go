@@ -3,6 +3,7 @@ package folder
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/reducer"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -156,7 +157,7 @@ func clearRestStatModifiers(state *daggerheartstate.SnapshotState, rawID ids.Cha
 	state.CharacterStatModifiers[characterID] = modifiers
 }
 
-func applySceneCountdownUpsert(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID, mutate func(*daggerheartstate.SceneCountdownState)) {
+func applySceneCountdownUpsert(state *daggerheartstate.SnapshotState, countdownID dhids.CountdownID, mutate func(*daggerheartstate.SceneCountdownState)) {
 	state.EnsureMaps()
 	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
@@ -171,7 +172,7 @@ func applySceneCountdownUpsert(state *daggerheartstate.SnapshotState, countdownI
 	state.SceneCountdownStates[trimmed] = countdownState
 }
 
-func deleteSceneCountdownState(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID) {
+func deleteSceneCountdownState(state *daggerheartstate.SnapshotState, countdownID dhids.CountdownID) {
 	state.EnsureMaps()
 	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
@@ -180,7 +181,7 @@ func deleteSceneCountdownState(state *daggerheartstate.SnapshotState, countdownI
 	delete(state.SceneCountdownStates, trimmed)
 }
 
-func applyCampaignCountdownUpsert(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID, mutate func(*daggerheartstate.CampaignCountdownState)) {
+func applyCampaignCountdownUpsert(state *daggerheartstate.SnapshotState, countdownID dhids.CountdownID, mutate func(*daggerheartstate.CampaignCountdownState)) {
 	state.EnsureMaps()
 	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
@@ -195,7 +196,7 @@ func applyCampaignCountdownUpsert(state *daggerheartstate.SnapshotState, countdo
 	state.CampaignCountdownStates[trimmed] = countdownState
 }
 
-func deleteCampaignCountdownState(state *daggerheartstate.SnapshotState, countdownID ids.CountdownID) {
+func deleteCampaignCountdownState(state *daggerheartstate.SnapshotState, countdownID dhids.CountdownID) {
 	state.EnsureMaps()
 	trimmed := normalize.ID(countdownID)
 	if trimmed == "" {
@@ -219,7 +220,7 @@ func applyDamageApplied(state *daggerheartstate.SnapshotState, rawID ids.Charact
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyAdversaryDamage(state *daggerheartstate.SnapshotState, rawID ids.AdversaryID, hpAfter, armorAfter *int) {
+func applyAdversaryDamage(state *daggerheartstate.SnapshotState, rawID dhids.AdversaryID, hpAfter, armorAfter *int) {
 	adversaryID := normalize.ID(rawID)
 	if adversaryID == "" {
 		return
@@ -294,7 +295,7 @@ func applyAdversaryUpdated(state *daggerheartstate.SnapshotState, p payload.Adve
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
-func applyAdversaryConditionsChanged(state *daggerheartstate.SnapshotState, rawID ids.AdversaryID, after []rules.ConditionState) {
+func applyAdversaryConditionsChanged(state *daggerheartstate.SnapshotState, rawID dhids.AdversaryID, after []rules.ConditionState) {
 	adversaryID := normalize.ID(rawID)
 	if adversaryID == "" {
 		return

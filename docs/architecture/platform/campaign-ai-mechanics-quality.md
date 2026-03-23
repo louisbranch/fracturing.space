@@ -1,24 +1,19 @@
 ---
 title: "Campaign AI Mechanics Quality"
 parent: "Platform surfaces"
-nav_order: 17
+nav_order: 18
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-22"
 ---
-
 # Campaign AI Mechanics Quality
-
 Durable follow-on design guidance for mechanics-heavy AI GM turns. This note is
 grounded in the March 22, 2026 Daggerheart live-mechanics acceptance run, but
 the recommendations are framed as AI-service behavior patterns rather than
 system-specific one-offs.
-
 Use the live evidence in [Daggerheart Live Mechanics Matrix](../../reference/daggerheart-live-mechanics-matrix.md)
 as the factual baseline. Use this note for the next design moves.
-
 ## What The Live Run Proved
-
 - The current mechanics tool surface is broad enough for real AI GM play. The
   agent completed accepted live runs for sheet reads, board reads, action
   resolution, combat flows, Fear moves, adversary placement, and scene
@@ -49,12 +44,9 @@ as the factual baseline. Use this note for the next design moves.
   relevant on the current turn.
 
 ## Recommended Next Workstreams
-
 ### 1. Mechanics Communication Contract
-
 For mechanics-heavy turns, committed GM interactions should follow one stable
 shape:
-
 - `fiction`: what just happened in-world
 - `consequence`: the authoritative mechanical result
 - `guidance`: what changed in the decision space

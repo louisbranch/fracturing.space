@@ -2,6 +2,7 @@ package daggerheart
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,6 +27,32 @@ type commandValidationCase struct {
 	actorID        string
 }
 
+func standardConditionJSON(code string) string {
+	label := code
+	switch code {
+	case "hidden":
+		label = "Hidden"
+	case "restrained":
+		label = "Restrained"
+	case "vulnerable":
+		label = "Vulnerable"
+	case "cloaked":
+		label = "Cloaked"
+	}
+	return `{"id":"` + code + `","class":"standard","standard":"` + code + `","code":"` + code + `","label":"` + label + `"}`
+}
+
+func standardConditionJSONArray(codes ...string) string {
+	if len(codes) == 0 {
+		return "[]"
+	}
+	parts := make([]string, 0, len(codes))
+	for _, code := range codes {
+		parts = append(parts, standardConditionJSON(code))
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+
 func commandValidationCases() []commandValidationCase {
 	return []commandValidationCase{
 		{typ: daggerheartdecider.CommandTypeGMMoveApply, validPayload: `{"target":{"type":"direct_move","kind":"interrupt_and_move","shape":"reveal_danger"},"fear_spent":1}`, invalidPayload: `{"target":{"type":"","kind":"interrupt_and_move","shape":"reveal_danger"},"fear_spent":1}`},
@@ -35,7 +62,7 @@ func commandValidationCases() []commandValidationCase {
 		{typ: daggerheartdecider.CommandTypeHopeSpend, validPayload: `{"character_id":"char-1","amount":1,"before":2,"after":1}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartdecider.CommandTypeStressSpend, validPayload: `{"character_id":"char-1","amount":1,"before":3,"after":2}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartdecider.CommandTypeCharacterStatePatch, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
-		{typ: daggerheartdecider.CommandTypeConditionChange, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
+		{typ: daggerheartdecider.CommandTypeConditionChange, validPayload: `{"character_id":"char-1","conditions_after":` + standardConditionJSONArray("vulnerable") + `}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartdecider.CommandTypeLoadoutSwap, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartdecider.CommandTypeRestTake, validPayload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":2,"short_rests_before":0,"short_rests_after":1,"refresh_rest":true,"participants":["char-1"]}`, invalidPayload: `{"rest_type":1}`},
 		{typ: daggerheartdecider.CommandTypeSceneCountdownCreate, validPayload: `{"session_id":"sess-1","scene_id":"scene-1","countdown_id":"cd-1","name":"Doom","tone":"progress","advancement_policy":"action_dynamic","starting_value":4,"remaining_value":4,"loop_behavior":"reset","status":"active"}`, invalidPayload: `{"countdown_id":1}`},
@@ -49,7 +76,7 @@ func commandValidationCases() []commandValidationCase {
 		{typ: daggerheartdecider.CommandTypeDamageApply, validPayload: `{"character_id":"char-1","hp_before":6,"hp_after":3}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartdecider.CommandTypeAdversaryDamageApply, validPayload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":3}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: daggerheartdecider.CommandTypeCharacterTemporaryArmorApply, validPayload: `{"character_id":"char-1","source":"ritual","duration":"short_rest","amount":2,"source_id":"temp-1"}`, invalidPayload: `{"duration":"short_rest","amount":2}`},
-		{typ: daggerheartdecider.CommandTypeAdversaryConditionChange, validPayload: `{"adversary_id":"adv-1","conditions_after":["hidden"]}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: daggerheartdecider.CommandTypeAdversaryConditionChange, validPayload: `{"adversary_id":"adv-1","conditions_after":` + standardConditionJSONArray("hidden") + `}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: daggerheartdecider.CommandTypeAdversaryCreate, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: daggerheartdecider.CommandTypeAdversaryUpdate, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: daggerheartdecider.CommandTypeAdversaryFeatureApply, validPayload: `{"actor_adversary_id":"adv-1","adversary_id":"adv-1","feature_id":"feature.cloaked","feature_states_after":[{"feature_id":"feature.cloaked","status":"active"}]}`, invalidPayload: `{"actor_adversary_id":"adv-1","adversary_id":"adv-1","feature_id":"feature.cloaked"}`},
@@ -89,7 +116,7 @@ func eventValidationCases() []eventValidationCase {
 		{typ: daggerheartpayload.EventTypeCharacterProfileReplaced, validPayload: `{"character_id":"char-1","profile":{"class_id":"class.guardian","level":1,"hp_max":6,"stress_max":6,"evasion":10,"major_threshold":1,"severe_threshold":2,"proficiency":1,"armor_score":0,"armor_max":0}}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartpayload.EventTypeCharacterProfileDeleted, validPayload: `{"character_id":"char-1"}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartpayload.EventTypeCharacterStatePatched, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
-		{typ: daggerheartpayload.EventTypeConditionChanged, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
+		{typ: daggerheartpayload.EventTypeConditionChanged, validPayload: `{"character_id":"char-1","conditions_after":` + standardConditionJSONArray("vulnerable") + `}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartpayload.EventTypeLoadoutSwapped, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
 		{typ: daggerheartpayload.EventTypeRestTaken, validPayload: `{"rest_type":"short","gm_fear_after":2,"short_rests_after":1,"refresh_rest":true,"participants":["char-1"]}`, invalidPayload: `{"rest_type":1}`},
 		{typ: daggerheartpayload.EventTypeSceneCountdownCreated, validPayload: `{"session_id":"sess-1","scene_id":"scene-1","countdown_id":"cd-1","name":"Doom","tone":"progress","advancement_policy":"action_dynamic","starting_value":4,"remaining_value":4,"loop_behavior":"reset","status":"active"}`, invalidPayload: `{"countdown_id":1}`},
@@ -108,7 +135,7 @@ func eventValidationCases() []eventValidationCase {
 		{typ: daggerheartpayload.EventTypeBeastformDropped, validPayload: `{"character_id":"char-1","beastform_id":"beastform.wolf","source":"beastform.drop"}`, invalidPayload: `{"character_id":"char-1","beastform_id":""}`},
 		{typ: daggerheartpayload.EventTypeCompanionExperienceBegun, validPayload: `{"character_id":"char-1","experience_id":"companion-experience.scout","companion_state":{"status":"away","active_experience_id":"companion-experience.scout"},"source":"companion.experience.begin"}`, invalidPayload: `{"character_id":"char-1","experience_id":"","companion_state":{"status":"away","active_experience_id":"companion-experience.scout"}}`},
 		{typ: daggerheartpayload.EventTypeCompanionReturned, validPayload: `{"character_id":"char-1","resolution":"experience_completed","stress_after":0,"companion_state":{"status":"present"},"source":"companion.return"}`, invalidPayload: `{"character_id":"char-1","resolution":"","companion_state":{"status":"present"}}`},
-		{typ: daggerheartpayload.EventTypeAdversaryConditionChanged, validPayload: `{"adversary_id":"adv-1","conditions_after":["hidden"]}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: daggerheartpayload.EventTypeAdversaryConditionChanged, validPayload: `{"adversary_id":"adv-1","conditions_after":` + standardConditionJSONArray("hidden") + `}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: daggerheartpayload.EventTypeAdversaryCreated, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: daggerheartpayload.EventTypeAdversaryUpdated, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: daggerheartpayload.EventTypeAdversaryDeleted, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
@@ -582,17 +609,17 @@ func TestModuleRegisterCommands_RejectsNoOpMutatingPayloads(t *testing.T) {
 		{
 			name:    "condition.change requires a change",
 			typ:     daggerheartdecider.CommandTypeConditionChange,
-			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+			payload: `{"character_id":"char-1","conditions_before":` + standardConditionJSONArray("hidden") + `,"conditions_after":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "condition.change requires conditions_after",
 			typ:     daggerheartdecider.CommandTypeConditionChange,
-			payload: `{"character_id":"char-1","conditions_before":["hidden"]}`,
+			payload: `{"character_id":"char-1","conditions_before":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "condition.change rejects added removed diff mismatch",
 			typ:     daggerheartdecider.CommandTypeConditionChange,
-			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["restrained"],"removed":["hidden"]}`,
+			payload: `{"character_id":"char-1","conditions_before":` + standardConditionJSONArray("hidden") + `,"conditions_after":` + standardConditionJSONArray("vulnerable") + `,"added":` + standardConditionJSONArray("restrained") + `,"removed":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "countdown.advance with no value change is rejected",
@@ -617,12 +644,12 @@ func TestModuleRegisterCommands_RejectsNoOpMutatingPayloads(t *testing.T) {
 		{
 			name:    "adversary_condition.change requires a change",
 			typ:     daggerheartdecider.CommandTypeAdversaryConditionChange,
-			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+			payload: `{"adversary_id":"adv-1","conditions_before":` + standardConditionJSONArray("hidden") + `,"conditions_after":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "adversary_condition.change rejects added removed diff mismatch",
 			typ:     daggerheartdecider.CommandTypeAdversaryConditionChange,
-			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`,
+			payload: `{"adversary_id":"adv-1","conditions_before":` + standardConditionJSONArray("hidden") + `,"conditions_after":` + standardConditionJSONArray("vulnerable") + `,"added":` + standardConditionJSONArray("vulnerable") + `,"removed":` + standardConditionJSONArray("restrained") + `}`,
 		},
 	}
 
@@ -747,12 +774,12 @@ func TestModuleRegisterEvents_RejectsNoOpMutatingPayloads(t *testing.T) {
 		{
 			name:    "condition_changed rejects empty character_id",
 			typ:     daggerheartpayload.EventTypeConditionChanged,
-			payload: `{"character_id":"","conditions_after":["hidden"]}`,
+			payload: `{"character_id":"","conditions_after":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "adversary_condition_changed rejects empty adversary_id",
 			typ:     daggerheartpayload.EventTypeAdversaryConditionChanged,
-			payload: `{"adversary_id":"","conditions_after":["hidden"]}`,
+			payload: `{"adversary_id":"","conditions_after":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "rest_taken rejects empty rest_type",
@@ -805,12 +832,12 @@ func TestModuleRegisterCommands_AllowsConditionAddedWithoutBefore(t *testing.T) 
 		{
 			name:    "character condition change add from empty",
 			typ:     daggerheartdecider.CommandTypeConditionChange,
-			payload: `{"character_id":"char-1","conditions_after":["hidden"],"added":["hidden"]}`,
+			payload: `{"character_id":"char-1","conditions_after":` + standardConditionJSONArray("hidden") + `,"added":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "adversary condition change add from empty",
 			typ:     daggerheartdecider.CommandTypeAdversaryConditionChange,
-			payload: `{"adversary_id":"adv-1","conditions_after":["hidden"],"added":["hidden"]}`,
+			payload: `{"adversary_id":"adv-1","conditions_after":` + standardConditionJSONArray("hidden") + `,"added":` + standardConditionJSONArray("hidden") + `}`,
 		},
 	}
 
@@ -847,12 +874,12 @@ func TestModuleRegisterEvents_AllowsConditionAddedWithoutBefore(t *testing.T) {
 		{
 			name:    "condition changed add from empty",
 			typ:     daggerheartpayload.EventTypeConditionChanged,
-			payload: `{"character_id":"char-1","conditions_after":["hidden"],"added":["hidden"]}`,
+			payload: `{"character_id":"char-1","conditions_after":` + standardConditionJSONArray("hidden") + `,"added":` + standardConditionJSONArray("hidden") + `}`,
 		},
 		{
 			name:    "adversary condition changed add from empty",
 			typ:     daggerheartpayload.EventTypeAdversaryConditionChanged,
-			payload: `{"adversary_id":"adv-1","conditions_after":["hidden"],"added":["hidden"]}`,
+			payload: `{"adversary_id":"adv-1","conditions_after":` + standardConditionJSONArray("hidden") + `,"added":` + standardConditionJSONArray("hidden") + `}`,
 		},
 	}
 

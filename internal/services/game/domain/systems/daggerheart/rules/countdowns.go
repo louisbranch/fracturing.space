@@ -48,14 +48,6 @@ type Countdown struct {
 	Status            string
 	LinkedCountdownID string
 	StartingRoll      *CountdownStartingRoll
-
-	// Deprecated compatibility fields retained temporarily while the repo
-	// finishes moving off the generic counter model.
-	Kind      string
-	Current   int
-	Max       int
-	Direction string
-	Looping   bool
 }
 
 type CountdownAdvance struct {
@@ -131,7 +123,6 @@ func NormalizeCountdownStatus(value string) (string, error) {
 }
 
 func ValidateCountdown(countdown Countdown) error {
-	countdown = normalizeLegacyCountdownFields(countdown)
 	if _, err := NormalizeCountdownTone(countdown.Tone); err != nil {
 		return err
 	}
@@ -166,7 +157,6 @@ func ValidateCountdown(countdown Countdown) error {
 }
 
 func ApplyCountdownAdvance(countdown Countdown, amount int) (CountdownAdvance, error) {
-	countdown = normalizeLegacyCountdownFields(countdown)
 	if err := ValidateCountdown(countdown); err != nil {
 		return CountdownAdvance{}, err
 	}
@@ -206,7 +196,6 @@ func ApplyCountdownAdvance(countdown Countdown, amount int) (CountdownAdvance, e
 }
 
 func ResolveCountdownTrigger(countdown Countdown) (CountdownTriggerResolution, error) {
-	countdown = normalizeLegacyCountdownFields(countdown)
 	if err := ValidateCountdown(countdown); err != nil {
 		return CountdownTriggerResolution{}, err
 	}
@@ -296,34 +285,4 @@ func DynamicCountdownAdvanceAmount(tone, outcome string) (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("dynamic countdown advance is undefined for tone %q and outcome %q", tone, outcome)
-}
-
-func normalizeLegacyCountdownFields(countdown Countdown) Countdown {
-	if strings.TrimSpace(countdown.Tone) == "" && strings.TrimSpace(countdown.Kind) != "" {
-		countdown.Tone = countdown.Kind
-	}
-	if strings.TrimSpace(countdown.LoopBehavior) == "" {
-		if countdown.Looping {
-			countdown.LoopBehavior = CountdownLoopBehaviorReset
-		} else {
-			countdown.LoopBehavior = CountdownLoopBehaviorNone
-		}
-	}
-	if countdown.StartingValue <= 0 && countdown.Max > 0 {
-		countdown.StartingValue = countdown.Max
-	}
-	if countdown.RemainingValue == 0 && (countdown.Current > 0 || countdown.Max > 0) {
-		countdown.RemainingValue = countdown.Current
-	}
-	if strings.TrimSpace(countdown.Status) == "" {
-		if countdown.RemainingValue == 0 {
-			countdown.Status = CountdownStatusTriggerPending
-		} else {
-			countdown.Status = CountdownStatusActive
-		}
-	}
-	if strings.TrimSpace(countdown.AdvancementPolicy) == "" {
-		countdown.AdvancementPolicy = CountdownAdvancementPolicyManual
-	}
-	return countdown
 }

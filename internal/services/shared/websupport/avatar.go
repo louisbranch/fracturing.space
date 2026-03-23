@@ -71,7 +71,7 @@ func defaultWebAvatarSetID(role, avatarSetID, avatarAssetID string) string {
 	if strings.EqualFold(strings.TrimSpace(role), catalog.AvatarRoleUser) {
 		return catalog.AvatarSetPeopleV1
 	}
-	return avatarSetID
+	return catalog.AvatarSetBlankV1
 }
 
 func defaultWebAvatarAssetID() string {
@@ -107,7 +107,7 @@ func ResolveWebAvatarPortrait(role, entityID, setID string) catalog.AvatarPortra
 
 	sheet, ok := catalog.AvatarSheetBySetID(setID)
 	if !ok {
-		fallbackSheet, fallbackOK := catalog.AvatarSheetBySetID(catalog.AvatarSetV1)
+		fallbackSheet, fallbackOK := catalog.AvatarSheetBySetID(catalog.AvatarSetPeopleV1)
 		if !fallbackOK {
 			return catalog.AvatarPortrait{Slot: slot}
 		}

@@ -83,17 +83,21 @@ func TestDowntimeSelectionFromProto(t *testing.T) {
 
 func TestCountdownFromStorage(t *testing.T) {
 	countdown := countdownFromStorage(projectionstore.DaggerheartCountdown{
-		CampaignID:  "camp-1",
-		CountdownID: "count-1",
-		Name:        "Impending Doom",
-		Kind:        "long_term",
-		Current:     2,
-		Max:         6,
-		Direction:   "up",
-		Looping:     true,
+		CampaignID:        "camp-1",
+		CountdownID:       "count-1",
+		Name:              "Impending Doom",
+		Tone:              "consequence",
+		AdvancementPolicy: "long_rest",
+		StartingValue:     6,
+		RemainingValue:    2,
+		LoopBehavior:      "reset",
+		Status:            "active",
 	})
 	if countdown.ID != "count-1" {
 		t.Fatalf("countdown id = %q, want count-1", countdown.ID)
+	}
+	if countdown.RemainingValue != 2 || countdown.StartingValue != 6 || countdown.Tone != "consequence" {
+		t.Fatalf("countdown = %+v", countdown)
 	}
 }
 

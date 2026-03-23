@@ -4,7 +4,7 @@ sql:
     queries: "internal/services/game/storage/sqlite/queries"
     schema:
       - "internal/services/game/storage/sqlite/migrations/events"
-      - "internal/services/game/storage/sqlite/schema/projections_sqlc.sql"
+      - "internal/services/game/storage/sqlite/migrations/projections"
       - "internal/services/game/storage/sqlite/migrations/content"
     gen:
       go:

@@ -1,4 +1,4 @@
--- +migrate Up
+-- Baseline schema for fresh alpha databases.
 
 CREATE TABLE notifications (
     id TEXT PRIMARY KEY,
@@ -11,14 +11,11 @@ CREATE TABLE notifications (
     updated_at INTEGER NOT NULL,
     read_at INTEGER
 );
-
 CREATE UNIQUE INDEX notifications_recipient_dedupe_unique_idx
     ON notifications(recipient_user_id, dedupe_key)
     WHERE dedupe_key <> '';
-
 CREATE INDEX notifications_recipient_created_idx
     ON notifications(recipient_user_id, created_at DESC, id DESC);
-
 CREATE TABLE notification_deliveries (
     notification_id TEXT NOT NULL,
     channel TEXT NOT NULL,
@@ -32,17 +29,7 @@ CREATE TABLE notification_deliveries (
     PRIMARY KEY (notification_id, channel),
     FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE
 );
-
 CREATE INDEX notification_deliveries_channel_status_next_attempt_idx
     ON notification_deliveries(channel, status, next_attempt_at, notification_id);
-
 CREATE INDEX notification_deliveries_notification_channel_status_idx
     ON notification_deliveries(notification_id, channel, status);
-
--- +migrate Down
-DROP INDEX IF EXISTS notification_deliveries_notification_channel_status_idx;
-DROP INDEX IF EXISTS notification_deliveries_channel_status_next_attempt_idx;
-DROP TABLE IF EXISTS notification_deliveries;
-DROP INDEX IF EXISTS notifications_recipient_created_idx;
-DROP INDEX IF EXISTS notifications_recipient_dedupe_unique_idx;
-DROP TABLE IF EXISTS notifications;

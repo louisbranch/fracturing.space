@@ -59,7 +59,7 @@ func TestResolveSelection_RejectsUnknownAssetForSet(t *testing.T) {
 	_, _, err := manifest.ResolveSelection(SelectionInput{
 		EntityType: "user",
 		EntityID:   "user-1",
-		SetID:      AvatarSetV1,
+		SetID:      AvatarSetPeopleV1,
 		AssetID:    "missing",
 	})
 	if !errors.Is(err, ErrAssetInvalid) {
@@ -95,7 +95,7 @@ func TestAvatarManifest_ContainsBlankAvatarAssetInBlankSet(t *testing.T) {
 
 func TestAvatarManifest_PeopleSetExcludesBlankAsset(t *testing.T) {
 	manifest := AvatarManifest()
-	if manifest.ValidateAssetInSet(AvatarSetV1, AvatarAssetBlank) {
-		t.Fatalf("expected %q asset %q to be invalid", AvatarSetV1, AvatarAssetBlank)
+	if manifest.ValidateAssetInSet(AvatarSetPeopleV1, AvatarAssetBlank) {
+		t.Fatalf("expected %q asset %q to be invalid", AvatarSetPeopleV1, AvatarAssetBlank)
 	}
 }

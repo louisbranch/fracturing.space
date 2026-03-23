@@ -136,27 +136,6 @@ func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) rules.
 		LoopBehavior:      countdown.LoopBehavior,
 		Status:            countdown.Status,
 		LinkedCountdownID: countdown.LinkedCountdownID,
-		Kind:              countdown.Kind,
-		Current:           countdown.Current,
-		Max:               countdown.Max,
-		Direction:         countdown.Direction,
-		Looping:           countdown.Looping,
-	}
-	if value.Tone == "" && countdown.Kind != "" {
-		value.Tone = countdown.Kind
-	}
-	if value.StartingValue == 0 && countdown.Max > 0 {
-		value.StartingValue = countdown.Max
-	}
-	if value.RemainingValue == 0 && (countdown.Current > 0 || countdown.Max > 0) {
-		value.RemainingValue = countdown.Current
-	}
-	if value.LoopBehavior == "" {
-		if countdown.Looping {
-			value.LoopBehavior = rules.CountdownLoopBehaviorReset
-		} else {
-			value.LoopBehavior = rules.CountdownLoopBehaviorNone
-		}
 	}
 	if value.AdvancementPolicy == "" {
 		value.AdvancementPolicy = rules.CountdownAdvancementPolicyManual
@@ -175,22 +154,6 @@ func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) rules.
 }
 
 func SceneCountdownToProto(countdown projectionstore.DaggerheartCountdown) *pb.DaggerheartSceneCountdown {
-	if countdown.Tone == "" && countdown.Kind != "" {
-		countdown.Tone = countdown.Kind
-	}
-	if countdown.StartingValue == 0 && countdown.Max > 0 {
-		countdown.StartingValue = countdown.Max
-	}
-	if countdown.RemainingValue == 0 && (countdown.Current > 0 || countdown.Max > 0) {
-		countdown.RemainingValue = countdown.Current
-	}
-	if countdown.LoopBehavior == "" {
-		if countdown.Looping {
-			countdown.LoopBehavior = rules.CountdownLoopBehaviorReset
-		} else {
-			countdown.LoopBehavior = rules.CountdownLoopBehaviorNone
-		}
-	}
 	if countdown.AdvancementPolicy == "" {
 		countdown.AdvancementPolicy = rules.CountdownAdvancementPolicyManual
 	}
@@ -222,22 +185,6 @@ func SceneCountdownToProto(countdown projectionstore.DaggerheartCountdown) *pb.D
 }
 
 func CampaignCountdownToProto(countdown projectionstore.DaggerheartCountdown) *pb.DaggerheartCampaignCountdown {
-	if countdown.Tone == "" && countdown.Kind != "" {
-		countdown.Tone = countdown.Kind
-	}
-	if countdown.StartingValue == 0 && countdown.Max > 0 {
-		countdown.StartingValue = countdown.Max
-	}
-	if countdown.RemainingValue == 0 && (countdown.Current > 0 || countdown.Max > 0) {
-		countdown.RemainingValue = countdown.Current
-	}
-	if countdown.LoopBehavior == "" {
-		if countdown.Looping {
-			countdown.LoopBehavior = rules.CountdownLoopBehaviorReset
-		} else {
-			countdown.LoopBehavior = rules.CountdownLoopBehaviorNone
-		}
-	}
 	if countdown.AdvancementPolicy == "" {
 		countdown.AdvancementPolicy = rules.CountdownAdvancementPolicyManual
 	}

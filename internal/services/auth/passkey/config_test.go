@@ -15,8 +15,8 @@ func TestLoadConfigFromEnvDefaults(t *testing.T) {
 	if cfg.RPDisplayName != branding.AppName {
 		t.Fatalf("RPDisplayName = %q, want %q", cfg.RPDisplayName, branding.AppName)
 	}
-	if len(cfg.RPOrigins) != 1 || cfg.RPOrigins[0] != "http://localhost:8086" {
-		t.Fatalf("RPOrigins = %v, want [%q]", cfg.RPOrigins, "http://localhost:8086")
+	if len(cfg.RPOrigins) != 1 || cfg.RPOrigins[0] != "http://localhost:8080" {
+		t.Fatalf("RPOrigins = %v, want [%q]", cfg.RPOrigins, "http://localhost:8080")
 	}
 	if cfg.SessionTTL != 5*time.Minute {
 		t.Fatalf("SessionTTL = %v, want %v", cfg.SessionTTL, 5*time.Minute)

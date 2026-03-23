@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/countdowns"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
@@ -52,7 +53,7 @@ type DowntimeSelection struct {
 	TargetCharacterID   ids.CharacterID
 	GroupID             string
 	RollSeed            *int64
-	CountdownID         ids.CountdownID
+	CountdownID         dhids.CountdownID
 	ProjectAdvanceMode  string
 	ProjectAdvanceDelta int
 	ProjectReason       string
@@ -67,7 +68,7 @@ type RestPackageInput struct {
 	CurrentGMFear         int
 	ConsecutiveShortRests int
 	Participants          []RestParticipantInput
-	AvailableCountdowns   map[ids.CountdownID]rules.Countdown
+	AvailableCountdowns   map[dhids.CountdownID]rules.Countdown
 	LongTermCountdown     *rules.Countdown
 }
 
@@ -76,7 +77,7 @@ type RestPackageInput struct {
 type RestPackageResult struct {
 	Payload             daggerheartpayload.RestTakePayload
 	ParticipantIDs      []ids.CharacterID
-	UpdatedCountdownIDs []ids.CountdownID
+	UpdatedCountdownIDs []dhids.CountdownID
 }
 
 // ResolveRestPackage builds the canonical atomic rest payload, including
@@ -128,17 +129,17 @@ func ResolveRestPackage(input RestPackageInput) (RestPackageResult, error) {
 		return RestPackageResult{Payload: payload, ParticipantIDs: participants}, nil
 	}
 
-	countdownStates := make(map[ids.CountdownID]rules.Countdown, len(input.AvailableCountdowns)+1)
+	countdownStates := make(map[dhids.CountdownID]rules.Countdown, len(input.AvailableCountdowns)+1)
 	for countdownID, countdown := range input.AvailableCountdowns {
 		countdownStates[countdownID] = countdown
 	}
-	updatedCountdownIDs := make([]ids.CountdownID, 0, 1)
+	updatedCountdownIDs := make([]dhids.CountdownID, 0, 1)
 	if outcome.AdvanceCountdown && input.LongTermCountdown != nil {
-		countdownStates[ids.CountdownID(strings.TrimSpace(input.LongTermCountdown.ID))] = *input.LongTermCountdown
+		countdownStates[dhids.CountdownID(strings.TrimSpace(input.LongTermCountdown.ID))] = *input.LongTermCountdown
 	}
 
 	if outcome.AdvanceCountdown && input.LongTermCountdown != nil {
-		mutation, err := nextCountdownMutation(countdownStates, ids.CountdownID(input.LongTermCountdown.ID), 1, nil, countdowns.CountdownReasonLongRest)
+		mutation, err := nextCountdownMutation(countdownStates, dhids.CountdownID(input.LongTermCountdown.ID), 1, nil, countdowns.CountdownReasonLongRest)
 		if err != nil {
 			return RestPackageResult{}, err
 		}
@@ -238,7 +239,7 @@ func resolveDowntimeSelection(
 	selection DowntimeSelection,
 	participantStates map[ids.CharacterID]*daggerheartstate.CharacterState,
 	groupParticipantCounts map[string]int,
-	countdownStates map[ids.CountdownID]rules.Countdown,
+	countdownStates map[dhids.CountdownID]rules.Countdown,
 ) (daggerheartpayload.DowntimeMoveAppliedPayload, *daggerheartpayload.CampaignCountdownAdvancePayload, error) {
 	move := strings.TrimSpace(strings.ToLower(selection.Move))
 	if move == "" {
@@ -345,7 +346,7 @@ func resolveDowntimeSelection(
 		payload.TargetCharacterID = targetID
 		payload.Armor = &targetState.Armor
 	case DowntimeMoveWorkOnProject:
-		countdownID := ids.CountdownID(strings.TrimSpace(selection.CountdownID.String()))
+		countdownID := dhids.CountdownID(strings.TrimSpace(selection.CountdownID.String()))
 		if countdownID == "" {
 			return daggerheartpayload.DowntimeMoveAppliedPayload{}, nil, fmt.Errorf("work_on_project requires countdown_id")
 		}
@@ -432,8 +433,8 @@ func restTypeAllowsMove(restType RestType, move string) bool {
 }
 
 func nextCountdownMutation(
-	countdownStates map[ids.CountdownID]rules.Countdown,
-	countdownID ids.CountdownID,
+	countdownStates map[dhids.CountdownID]rules.Countdown,
+	countdownID dhids.CountdownID,
 	delta int,
 	override *int,
 	reason string,

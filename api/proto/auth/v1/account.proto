@@ -14,7 +14,6 @@ message AccountProfile {
   common.v1.Locale locale = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
-  reserved 6, 7;
 }
 
 message GetProfileRequest {
@@ -28,7 +27,6 @@ message GetProfileResponse {
 message UpdateProfileRequest {
   string user_id = 1;
   common.v1.Locale locale = 2;
-  reserved 3, 4, 5;
 }
 
 message UpdateProfileResponse {

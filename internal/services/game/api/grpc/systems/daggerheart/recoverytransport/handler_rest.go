@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -77,8 +78,8 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 		return RestResult{}, status.Error(codes.InvalidArgument, "rest participants are required")
 	}
 
-	countdownsByID := make(map[ids.CountdownID]rules.Countdown)
-	longTermCountdownID := ids.CountdownID(strings.TrimSpace(in.Rest.GetLongRestCampaignCountdownId()))
+	countdownsByID := make(map[dhids.CountdownID]rules.Countdown)
+	longTermCountdownID := dhids.CountdownID(strings.TrimSpace(in.Rest.GetLongRestCampaignCountdownId()))
 	if longTermCountdownID != "" {
 		storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID.String())
 		if err != nil {

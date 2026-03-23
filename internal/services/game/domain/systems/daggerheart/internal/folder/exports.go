@@ -12,19 +12,20 @@ func FoldGMFearChanged(state *daggerheartstate.SnapshotState, p payload.GMFearCh
 	return f.foldGMFearChanged(state, p)
 }
 
-// FoldCampaignCountdownUpdated is the exported standalone form of the campaign
+// FoldSceneCountdownAdvanced is the exported standalone form of the scene
 // countdown advanced fold handler, used by root-package tests that exercise
 // fold seams directly.
-func FoldCampaignCountdownUpdated(state *daggerheartstate.SnapshotState, p payload.CampaignCountdownAdvancedPayload) error {
+func FoldSceneCountdownAdvanced(state *daggerheartstate.SnapshotState, p payload.SceneCountdownAdvancedPayload) error {
 	f := &Folder{}
-	return f.foldCampaignCountdownAdvanced(state, p)
+	return f.foldSceneCountdownAdvanced(state, p)
 }
 
-// FoldCountdownUpdated is the legacy generic wrapper retained temporarily for
-// older tests. It maps to the scene-countdown fold path.
-func FoldCountdownUpdated(state *daggerheartstate.SnapshotState, p payload.CampaignCountdownAdvancedPayload) error {
+// FoldCampaignCountdownAdvanced is the exported standalone form of the
+// campaign countdown advanced fold handler, used by root-package tests that
+// exercise fold seams directly.
+func FoldCampaignCountdownAdvanced(state *daggerheartstate.SnapshotState, p payload.CampaignCountdownAdvancedPayload) error {
 	f := &Folder{}
-	return f.foldSceneCountdownAdvanced(state, payload.SceneCountdownAdvancedPayload(p))
+	return f.foldCampaignCountdownAdvanced(state, p)
 }
 
 // FoldEquipmentSwapped is the exported standalone form of the equipment

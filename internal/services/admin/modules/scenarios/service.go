@@ -340,7 +340,7 @@ func (s *handlers) runScenarioScript(ctx context.Context, script string) (string
 
 func (s *handlers) scenarioGRPCAddr() string {
 	if s == nil {
-		return "localhost:8080"
+		return "localhost:8082"
 	}
 	if strings.TrimSpace(s.grpcAddr) != "" {
 		return s.grpcAddr
@@ -348,7 +348,7 @@ func (s *handlers) scenarioGRPCAddr() string {
 	if env := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_ADDR")); env != "" {
 		return env
 	}
-	return "localhost:8080"
+	return "localhost:8082"
 }
 
 func (s *handlers) getCampaignName(r *http.Request, campaignID string, loc *message.Printer) string {

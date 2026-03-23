@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -74,7 +75,7 @@ func (h *Handler) CreateSceneCountdown(ctx context.Context, in *pb.DaggerheartCr
 	payloadJSON, err := json.Marshal(daggerheartpayload.SceneCountdownCreatePayload{
 		SessionID:         ids.SessionID(sessionID),
 		SceneID:           ids.SceneID(sceneID),
-		CountdownID:       ids.CountdownID(countdownID),
+		CountdownID:       dhids.CountdownID(countdownID),
 		Name:              name,
 		Tone:              tone,
 		AdvancementPolicy: policy,
@@ -82,7 +83,7 @@ func (h *Handler) CreateSceneCountdown(ctx context.Context, in *pb.DaggerheartCr
 		RemainingValue:    startingValue,
 		LoopBehavior:      loopBehavior,
 		Status:            rules.CountdownStatusActive,
-		LinkedCountdownID: ids.CountdownID(strings.TrimSpace(in.GetLinkedCountdownId())),
+		LinkedCountdownID: dhids.CountdownID(strings.TrimSpace(in.GetLinkedCountdownId())),
 		StartingRoll:      startingRoll,
 	})
 	if err != nil {
@@ -152,7 +153,7 @@ func (h *Handler) CreateCampaignCountdown(ctx context.Context, in *pb.Daggerhear
 		return CreateResult{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.CampaignCountdownCreatePayload{
-		CountdownID:       ids.CountdownID(countdownID),
+		CountdownID:       dhids.CountdownID(countdownID),
 		Name:              name,
 		Tone:              tone,
 		AdvancementPolicy: policy,
@@ -160,7 +161,7 @@ func (h *Handler) CreateCampaignCountdown(ctx context.Context, in *pb.Daggerhear
 		RemainingValue:    startingValue,
 		LoopBehavior:      loopBehavior,
 		Status:            rules.CountdownStatusActive,
-		LinkedCountdownID: ids.CountdownID(strings.TrimSpace(in.GetLinkedCountdownId())),
+		LinkedCountdownID: dhids.CountdownID(strings.TrimSpace(in.GetLinkedCountdownId())),
 		StartingRoll:      startingRoll,
 	})
 	if err != nil {

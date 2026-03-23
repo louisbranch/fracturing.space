@@ -292,7 +292,6 @@ message PatchCharacterProfileRequest {
   }
 
   // Optional source attribution explaining why the mutation happened.
-  // Backward-compatible: existing callers that omit this field continue to work.
   systems.daggerheart.v1.DaggerheartMutationSource mutation_source = 4;
 }
 

@@ -12,8 +12,6 @@ const (
 	AvatarSetBlankV1 = "avatar_set_blank_v1"
 	// AvatarSetPeopleV1 is the canonical people-avatar set.
 	AvatarSetPeopleV1 = "avatar_set_v1"
-	// AvatarSetV1 remains as a compatibility alias for the people set.
-	AvatarSetV1 = AvatarSetPeopleV1
 	// AvatarAssetBlank is the canonical blank avatar image used when identity
 	// linkage is intentionally absent.
 	AvatarAssetBlank = "blank_faceless_silhouette"

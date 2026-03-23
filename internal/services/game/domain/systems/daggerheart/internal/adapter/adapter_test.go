@@ -689,38 +689,44 @@ func TestGMAndCountdownHandlers(t *testing.T) {
 		t.Fatalf("snapshot after HandleGMFearChanged() = %+v, want updated fear and preserved short rests", store.snapshot)
 	}
 
-	create := payload.CountdownCreatedPayload{
-		CountdownID: dhids.CountdownID("count-1"),
-		Name:        "Doom",
-		Kind:        "threat",
-		Current:     1,
-		Max:         4,
-		Direction:   "up",
+	create := payload.SceneCountdownCreatedPayload{
+		CountdownID:       dhids.CountdownID("count-1"),
+		Name:              "Doom",
+		Tone:              "danger",
+		AdvancementPolicy: "manual",
+		StartingValue:     4,
+		RemainingValue:    1,
+		LoopBehavior:      "none",
+		Status:            "active",
 	}
-	if err := a.HandleCountdownCreated(ctx, event.Event{CampaignID: ids.CampaignID("camp-1")}, create); err != nil {
-		t.Fatalf("HandleCountdownCreated() returned error: %v", err)
+	if err := a.HandleSceneCountdownCreated(ctx, event.Event{CampaignID: ids.CampaignID("camp-1")}, create); err != nil {
+		t.Fatalf("HandleSceneCountdownCreated() returned error: %v", err)
 	}
-	if got := store.countdowns[profileKey("camp-1", "count-1")]; got.Name != "Doom" || got.Current != 1 {
-		t.Fatalf("countdown after HandleCountdownCreated() = %+v, want stored countdown", got)
-	}
-
-	if err := a.HandleCountdownUpdated(ctx, event.Event{CampaignID: ids.CampaignID("camp-1")}, payload.CountdownUpdatedPayload{
-		CountdownID: dhids.CountdownID("count-1"),
-		Value:       3,
-	}); err != nil {
-		t.Fatalf("HandleCountdownUpdated() returned error: %v", err)
-	}
-	if got := store.countdowns[profileKey("camp-1", "count-1")]; got.Current != 3 {
-		t.Fatalf("countdown after HandleCountdownUpdated() = %+v, want current=3", got)
+	if got := store.countdowns[profileKey("camp-1", "count-1")]; got.Name != "Doom" || got.RemainingValue != 1 {
+		t.Fatalf("countdown after HandleSceneCountdownCreated() = %+v, want stored countdown", got)
 	}
 
-	if err := a.HandleCountdownDeleted(ctx, event.Event{CampaignID: ids.CampaignID("camp-1")}, payload.CountdownDeletedPayload{
+	if err := a.HandleSceneCountdownAdvanced(ctx, event.Event{CampaignID: ids.CampaignID("camp-1")}, payload.SceneCountdownAdvancedPayload{
+		CountdownID:     dhids.CountdownID("count-1"),
+		BeforeRemaining: 1,
+		AfterRemaining:  3,
+		AdvancedBy:      2,
+		StatusBefore:    "active",
+		StatusAfter:     "active",
+	}); err != nil {
+		t.Fatalf("HandleSceneCountdownAdvanced() returned error: %v", err)
+	}
+	if got := store.countdowns[profileKey("camp-1", "count-1")]; got.RemainingValue != 3 {
+		t.Fatalf("countdown after HandleSceneCountdownAdvanced() = %+v, want remaining_value=3", got)
+	}
+
+	if err := a.HandleSceneCountdownDeleted(ctx, event.Event{CampaignID: ids.CampaignID("camp-1")}, payload.SceneCountdownDeletedPayload{
 		CountdownID: dhids.CountdownID("count-1"),
 	}); err != nil {
-		t.Fatalf("HandleCountdownDeleted() returned error: %v", err)
+		t.Fatalf("HandleSceneCountdownDeleted() returned error: %v", err)
 	}
 	if _, ok := store.countdowns[profileKey("camp-1", "count-1")]; ok {
-		t.Fatal("countdown still present after HandleCountdownDeleted()")
+		t.Fatal("countdown still present after HandleSceneCountdownDeleted()")
 	}
 }
 

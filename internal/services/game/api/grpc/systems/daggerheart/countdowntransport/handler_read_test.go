@@ -9,9 +9,9 @@ import (
 
 func TestHandlerReadOperations(t *testing.T) {
 	store := testDaggerheartStore{countdowns: map[string]projectionstore.DaggerheartCountdown{
-		"camp-1:cd-3": {CampaignID: "camp-1", CountdownID: "cd-3", Name: "Long Project", Current: 2, Max: 6, Kind: "consequence", Direction: "increase"},
-		"camp-1:cd-2": {CampaignID: "camp-1", SessionID: "sess-1", SceneID: "scene-1", CountdownID: "cd-2", Name: "Storm Front", Current: 2, Max: 6, Kind: "consequence", Direction: "increase"},
-		"camp-1:cd-1": {CampaignID: "camp-1", SessionID: "sess-1", SceneID: "scene-1", CountdownID: "cd-1", Name: "Breach", Current: 1, Max: 4, Kind: "progress", Direction: "increase"},
+		"camp-1:cd-3": {CampaignID: "camp-1", CountdownID: "cd-3", Name: "Long Project", Tone: "consequence", AdvancementPolicy: "long_rest", StartingValue: 6, RemainingValue: 2, LoopBehavior: "none", Status: "active"},
+		"camp-1:cd-2": {CampaignID: "camp-1", SessionID: "sess-1", SceneID: "scene-1", CountdownID: "cd-2", Name: "Storm Front", Tone: "consequence", AdvancementPolicy: "manual", StartingValue: 6, RemainingValue: 2, LoopBehavior: "none", Status: "active"},
+		"camp-1:cd-1": {CampaignID: "camp-1", SessionID: "sess-1", SceneID: "scene-1", CountdownID: "cd-1", Name: "Breach", Tone: "progress", AdvancementPolicy: "manual", StartingValue: 4, RemainingValue: 1, LoopBehavior: "none", Status: "active"},
 	}}
 	handler := newTestHandler(Dependencies{Daggerheart: store})
 

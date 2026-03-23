@@ -141,18 +141,22 @@ func TestHandleGMFearChanged_ReturnsPutError(t *testing.T) {
 	}
 }
 
-func TestHandleCountdownUpdated_Branches(t *testing.T) {
+func TestHandleSceneCountdownAdvanced_Branches(t *testing.T) {
 	t.Run("get error", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		store.getCountdownErr = errors.New("countdown read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.HandleCountdownUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CountdownUpdatedPayload{
-			CountdownID: "cd-1",
-			Value:       2,
+		err := adapter.HandleSceneCountdownAdvanced(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.SceneCountdownAdvancedPayload{
+			CountdownID:     "cd-1",
+			BeforeRemaining: 3,
+			AfterRemaining:  2,
+			AdvancedBy:      1,
+			StatusBefore:    "active",
+			StatusAfter:     "active",
 		})
 		if err == nil || err.Error() != "countdown read failed" {
-			t.Fatalf("handleCountdownUpdated() error = %v, want countdown read failed", err)
+			t.Fatalf("HandleSceneCountdownAdvanced() error = %v, want countdown read failed", err)
 		}
 	})
 
@@ -160,20 +164,24 @@ func TestHandleCountdownUpdated_Branches(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
 		if err := store.PutDaggerheartCountdown(context.Background(), projectionstore.DaggerheartCountdown{
-			CampaignID:  "camp-1",
-			CountdownID: "cd-1",
-			Name:        "Doom",
-			Kind:        "progress",
-			Current:     1,
-			Max:         4,
-			Direction:   "increase",
+			CampaignID:     "camp-1",
+			CountdownID:    "cd-1",
+			Name:           "Doom",
+			StartingValue:  4,
+			RemainingValue: 1,
+			LoopBehavior:   "none",
+			Status:         "active",
 		}); err != nil {
 			t.Fatalf("seed countdown: %v", err)
 		}
 
-		err := adapter.HandleCountdownUpdated(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.CountdownUpdatedPayload{
-			CountdownID: "cd-1",
-			Value:       5,
+		err := adapter.HandleSceneCountdownAdvanced(context.Background(), event.Event{CampaignID: "camp-1"}, daggerheartpayload.SceneCountdownAdvancedPayload{
+			CountdownID:     "cd-1",
+			BeforeRemaining: 1,
+			AfterRemaining:  5,
+			AdvancedBy:      4,
+			StatusBefore:    "active",
+			StatusAfter:     "active",
 		})
 		if err == nil {
 			t.Fatal("expected out-of-range error")

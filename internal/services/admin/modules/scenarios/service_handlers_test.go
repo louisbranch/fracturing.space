@@ -29,7 +29,7 @@ func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, 
 
 func TestScenarioServiceHandlersWithUnavailableClients(t *testing.T) {
 	var conn testUnavailableConn
-	svcIface := NewHandlers(modulehandler.NewBase(), "localhost:8080", statev1.NewEventServiceClient(conn), statev1.NewCampaignServiceClient(conn))
+	svcIface := NewHandlers(modulehandler.NewBase(), "localhost:8082", statev1.NewEventServiceClient(conn), statev1.NewCampaignServiceClient(conn))
 	svc, ok := svcIface.(*handlers)
 	if !ok {
 		t.Fatalf("NewHandlers() type = %T, want *handlers", svcIface)
