@@ -1,4 +1,4 @@
--- +migrate Up
+-- Baseline schema for fresh alpha databases.
 
 CREATE TABLE contacts (
     owner_user_id TEXT NOT NULL,
@@ -8,10 +8,8 @@ CREATE TABLE contacts (
     PRIMARY KEY (owner_user_id, contact_user_id),
     CHECK (owner_user_id <> contact_user_id)
 );
-
-CREATE INDEX IF NOT EXISTS contacts_contact_user_idx
+CREATE INDEX contacts_contact_user_idx
 ON contacts(contact_user_id);
-
 CREATE TABLE user_profiles (
     user_id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL DEFAULT '',
@@ -22,9 +20,11 @@ CREATE TABLE user_profiles (
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
-
--- +migrate Down
-
-DROP TABLE IF EXISTS user_profiles;
-DROP INDEX IF EXISTS contacts_contact_user_idx;
-DROP TABLE IF EXISTS contacts;
+CREATE TABLE user_directory (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE INDEX user_directory_username_idx
+ON user_directory(username);

@@ -1,6 +1,6 @@
--- +migrate Up
+-- Baseline schema for fresh alpha databases.
 
-CREATE TABLE IF NOT EXISTS events (
+CREATE TABLE events (
     campaign_id TEXT NOT NULL,
     seq INTEGER NOT NULL,
     event_hash TEXT NOT NULL,
@@ -19,30 +19,26 @@ CREATE TABLE IF NOT EXISTS events (
     actor_id TEXT NOT NULL DEFAULT '',
     entity_type TEXT NOT NULL DEFAULT '',
     entity_id TEXT NOT NULL DEFAULT '',
-    payload_json BLOB NOT NULL,
+    payload_json BLOB NOT NULL, scene_id TEXT NOT NULL DEFAULT '', correlation_id TEXT NOT NULL DEFAULT '', causation_id TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (campaign_id, seq)
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_events_hash ON events(event_hash);
-CREATE INDEX IF NOT EXISTS idx_events_session ON events(campaign_id, session_id)
+CREATE UNIQUE INDEX idx_events_hash ON events(event_hash);
+CREATE INDEX idx_events_session ON events(campaign_id, session_id)
     WHERE session_id != '';
-CREATE INDEX IF NOT EXISTS idx_events_type ON events(campaign_id, event_type);
-CREATE INDEX IF NOT EXISTS idx_events_system ON events(campaign_id, system_id, system_version)
+CREATE INDEX idx_events_type ON events(campaign_id, event_type);
+CREATE INDEX idx_events_system ON events(campaign_id, system_id, system_version)
     WHERE system_id != '';
-
-CREATE TABLE IF NOT EXISTS event_seq (
+CREATE TABLE event_seq (
     campaign_id TEXT PRIMARY KEY,
     next_seq INTEGER NOT NULL DEFAULT 1
 );
-
-CREATE TABLE IF NOT EXISTS outcome_applied (
+CREATE TABLE outcome_applied (
     campaign_id TEXT NOT NULL,
     session_id TEXT NOT NULL,
     request_id TEXT NOT NULL,
     PRIMARY KEY (campaign_id, session_id, request_id)
 );
-
-CREATE TABLE IF NOT EXISTS audit_events (
+CREATE TABLE audit_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   timestamp INTEGER NOT NULL,
   event_name TEXT NOT NULL,
@@ -57,32 +53,52 @@ CREATE TABLE IF NOT EXISTS audit_events (
   span_id TEXT,
   attributes_json BLOB
 );
-
-CREATE INDEX IF NOT EXISTS idx_audit_events_campaign_id ON audit_events (campaign_id);
-CREATE INDEX IF NOT EXISTS idx_audit_events_timestamp ON audit_events (timestamp);
-
-CREATE TRIGGER IF NOT EXISTS events_no_update
+CREATE INDEX idx_audit_events_campaign_id ON audit_events (campaign_id);
+CREATE INDEX idx_audit_events_timestamp ON audit_events (timestamp);
+CREATE TRIGGER events_no_update
 BEFORE UPDATE ON events
 BEGIN
     SELECT RAISE(FAIL, 'events are append-only');
 END;
-
-CREATE TRIGGER IF NOT EXISTS events_no_delete
+CREATE TRIGGER events_no_delete
 BEFORE DELETE ON events
 BEGIN
     SELECT RAISE(FAIL, 'events are append-only');
 END;
-
--- +migrate Down
-DROP TRIGGER IF EXISTS events_no_delete;
-DROP TRIGGER IF EXISTS events_no_update;
-DROP INDEX IF EXISTS idx_audit_events_timestamp;
-DROP INDEX IF EXISTS idx_audit_events_campaign_id;
-DROP TABLE IF EXISTS audit_events;
-DROP TABLE IF EXISTS outcome_applied;
-DROP TABLE IF EXISTS event_seq;
-DROP INDEX IF EXISTS idx_events_system;
-DROP INDEX IF EXISTS idx_events_type;
-DROP INDEX IF EXISTS idx_events_session;
-DROP INDEX IF EXISTS idx_events_hash;
-DROP TABLE IF EXISTS events;
+CREATE INDEX idx_events_scene ON events(campaign_id, scene_id)
+    WHERE scene_id != '';
+CREATE TABLE projection_apply_outbox (
+    campaign_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    event_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER NOT NULL,
+    last_error TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, seq),
+    FOREIGN KEY (campaign_id, seq) REFERENCES events(campaign_id, seq) ON DELETE CASCADE
+);
+CREATE INDEX idx_projection_apply_outbox_status_next_attempt
+    ON projection_apply_outbox (status, next_attempt_at, seq);
+CREATE INDEX idx_projection_apply_outbox_campaign
+    ON projection_apply_outbox (campaign_id, seq);
+CREATE TABLE game_integration_outbox (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    dedupe_key TEXT NOT NULL,
+    status TEXT NOT NULL,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER NOT NULL,
+    lease_owner TEXT NOT NULL DEFAULT '',
+    lease_expires_at INTEGER,
+    last_error TEXT NOT NULL DEFAULT '',
+    processed_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX idx_game_integration_outbox_dedupe
+    ON game_integration_outbox (dedupe_key);
+CREATE INDEX idx_game_integration_outbox_lease
+    ON game_integration_outbox (status, next_attempt_at, lease_expires_at, id);

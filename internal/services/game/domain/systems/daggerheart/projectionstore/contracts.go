@@ -277,16 +277,6 @@ type DaggerheartCountdown struct {
 	StartingRollMin   int
 	StartingRollMax   int
 	StartingRollValue int
-
-	// Deprecated compatibility fields retained temporarily while tests and
-	// fixtures finish moving to the SRD-native countdown model.
-	Kind             string
-	Current          int
-	Max              int
-	Direction        string
-	Looping          bool
-	Variant          string
-	TriggerEventType string
 }
 
 // DaggerheartAdversaryFeatureState stores mutable adversary feature runtime state.

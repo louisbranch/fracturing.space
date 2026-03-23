@@ -1080,7 +1080,7 @@ func (r *Runner) runRestStep(ctx context.Context, state *scenarioState, step Ste
 		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeDowntimeMoveApplied)
 	}
 	if restContainsProjectWork(participants) {
-		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeCampaignCountdownUpdated)
+		expectedEvents = append(expectedEvents, daggerheartpayload.EventTypeCampaignCountdownAdvanced)
 	}
 	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, expectedEvents...); err != nil {
 		return err
@@ -2603,7 +2603,7 @@ func (r *Runner) runCountdownUpdateStep(ctx context.Context, state *scenarioStat
 	if err := r.assertScenarioCountdownAdvance(step, response.GetAdvance()); err != nil {
 		return err
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeSceneCountdownUpdated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeSceneCountdownAdvanced)
 }
 
 func (r *Runner) runCountdownResolveTriggerStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2827,7 +2827,7 @@ func (r *Runner) runCampaignCountdownUpdateStep(ctx context.Context, state *scen
 	if err := r.assertScenarioCountdownAdvance(step, response.GetAdvance()); err != nil {
 		return err
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCampaignCountdownUpdated)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheartpayload.EventTypeCampaignCountdownAdvanced)
 }
 
 func (r *Runner) runCampaignCountdownResolveTriggerStep(ctx context.Context, state *scenarioState, step Step) error {

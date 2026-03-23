@@ -9,8 +9,8 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
-	if cfg.GRPCAddr != "localhost:8080" {
-		t.Fatalf("grpc addr = %q, want %q", cfg.GRPCAddr, "localhost:8080")
+	if cfg.GRPCAddr != "localhost:8082" {
+		t.Fatalf("grpc addr = %q, want %q", cfg.GRPCAddr, "localhost:8082")
 	}
 	if cfg.Timeout != 10*time.Second {
 		t.Fatalf("timeout = %v, want %v", cfg.Timeout, 10*time.Second)

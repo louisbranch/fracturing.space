@@ -138,23 +138,27 @@ func TestSnapshotCharacterState_DefaultsLifeStateAndCampaignID(t *testing.T) {
 	}
 }
 
-func TestIsCountdownUpdateNoMutation_LoopedBranch(t *testing.T) {
+func TestIsSceneCountdownAdvanceNoMutation_LoopBehaviorBranch(t *testing.T) {
 	snapshot := daggerheartstate.SnapshotState{
 		CountdownStates: map[dhids.CountdownID]daggerheartstate.CountdownState{
-			"cd-1": {CountdownID: "cd-1", Current: 3, Looping: false},
+			"cd-1": {CountdownID: "cd-1", RemainingValue: 3, LoopBehavior: "none"},
 		},
 	}
-	if got := daggerheartdecider.IsCountdownUpdateNoMutation(snapshot, daggerheartpayload.CountdownUpdatePayload{
-		CountdownID: "cd-1",
-		After:       3,
-		Looped:      true,
+	if got := daggerheartdecider.IsSceneCountdownAdvanceNoMutation(snapshot, daggerheartpayload.SceneCountdownAdvancePayload{
+		CountdownID:     "cd-1",
+		BeforeRemaining: 3,
+		AfterRemaining:  3,
+		AdvancedBy:      1,
+		StatusBefore:    "active",
+		StatusAfter:     "active",
+		Triggered:       true,
 	}); got {
 		t.Fatal("expected looped=true with non-looping countdown to be mutation")
 	}
 }
 
 func TestSnapshotCountdownState_BlankIDReturnsFalse(t *testing.T) {
-	if _, ok := daggerheartdecider.SnapshotCountdownState(daggerheartstate.SnapshotState{}, dhids.CountdownID("  ")); ok {
+	if _, ok := daggerheartdecider.SnapshotCampaignCountdownState(daggerheartstate.SnapshotState{}, dhids.CountdownID("  ")); ok {
 		t.Fatal("expected blank countdown id to return false")
 	}
 }

@@ -307,7 +307,7 @@ func TestScenarioHelpersEventTypeFormatting(t *testing.T) {
 
 func TestScenarioServiceGRPCAddr(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "")
-	if got := (&handlers{}).scenarioGRPCAddr(); got != "localhost:8080" {
+	if got := (&handlers{}).scenarioGRPCAddr(); got != "localhost:8082" {
 		t.Fatalf("scenarioGRPCAddr(default) = %q", got)
 	}
 
@@ -321,7 +321,7 @@ func TestScenarioServiceGRPCAddr(t *testing.T) {
 	}
 
 	var nilService *handlers
-	if got := nilService.scenarioGRPCAddr(); got != "localhost:8080" {
+	if got := nilService.scenarioGRPCAddr(); got != "localhost:8082" {
 		t.Fatalf("scenarioGRPCAddr(nil service) = %q", got)
 	}
 }

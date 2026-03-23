@@ -44,11 +44,3 @@ const (
 	EventTypeConsumableAcquired        event.Type = "sys.daggerheart.consumable_acquired"
 	EventTypeStatModifierChanged       event.Type = "sys.daggerheart.stat_modifier_changed"
 )
-
-const (
-	EventTypeCountdownCreated         = EventTypeSceneCountdownCreated
-	EventTypeCountdownUpdated         = EventTypeSceneCountdownAdvanced
-	EventTypeCountdownDeleted         = EventTypeSceneCountdownDeleted
-	EventTypeSceneCountdownUpdated    = EventTypeSceneCountdownAdvanced
-	EventTypeCampaignCountdownUpdated = EventTypeCampaignCountdownAdvanced
-)

@@ -3,9 +3,9 @@ package catalog
 import "testing"
 
 func TestAvatarSheetBySetID_V1IncludesPortraitSlices(t *testing.T) {
-	sheet, ok := AvatarSheetBySetID(AvatarSetV1)
+	sheet, ok := AvatarSheetBySetID(AvatarSetPeopleV1)
 	if !ok {
-		t.Fatalf("expected avatar sheet for %q", AvatarSetV1)
+		t.Fatalf("expected avatar sheet for %q", AvatarSetPeopleV1)
 	}
 	if sheet.WidthPX != 1024 {
 		t.Fatalf("sheet width = %d, want %d", sheet.WidthPX, 1024)

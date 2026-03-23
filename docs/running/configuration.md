@@ -15,6 +15,14 @@ operator workflows. Other docs should link here instead of restating defaults.
 For setup steps, see [quickstart](quickstart.md) or
 [local development](local-dev.md).
 
+Alpha runtime defaults use this service-port map:
+web `8080`, admin `8081`, game `8082`, auth gRPC `8083`, auth HTTP `8084`, AI
+`8087`, notifications `8088`, worker `8089`, social `8090`, discovery `8091`,
+userhub `8092`, status `8093`, play `8094`, invite `8095`.
+
+Alpha storage is also clean-slate. SQLite services create fresh databases from
+their baseline schemas and do not upgrade historical local DB files.
+
 ## Environment variables
 
 ### Game
@@ -102,12 +110,13 @@ User-configurable per-message-type delivery preferences are planned but not yet 
 
 - `FRACTURING_SPACE_WEBAUTHN_RP_ID`: WebAuthn relying party ID (the domain the user sees). Default: `localhost`.
 - `FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME`: display name shown during passkey prompts. Defaults to the app name.
-- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Runtime default: `http://localhost:8086`.
+- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Runtime default: `http://localhost:8080`.
 - `FRACTURING_SPACE_WEBAUTHN_SESSION_TTL`: passkey session TTL for login, recovery, and authenticated passkey enrollment. Default: `5m`.
 - `FRACTURING_SPACE_WEBAUTHN_SIGNUP_SESSION_TTL`: initial signup reservation and ceremony TTL before the first passkey is successfully created. Default: `2m`.
 
-For web-login-first local flows, many contributors set
-`FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS=http://localhost:8080` in `.env`.
+For local web-login-first flows, the default already matches
+`http://localhost:8080`; override the value only when you are serving the web
+login surface from a different origin.
 
 ### Join grants
 

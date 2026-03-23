@@ -1,10 +1,5 @@
-// Compatibility conditions re-exported for gRPC transport and snapshot
+// Structured Daggerheart conditions are shared across transport and snapshot
 // packages.
-//
-// Removal criteria: legacy string-array JSON decode can be removed once all
-// persisted projections and historical condition events have been rewritten in
-// structured form. The condition entry model itself is the authoritative
-// runtime representation.
 package rules
 
 import (
@@ -67,15 +62,6 @@ var (
 func (c *ConditionState) UnmarshalJSON(data []byte) error {
 	if c == nil {
 		return fmt.Errorf("condition state is required")
-	}
-	var legacy string
-	if err := json.Unmarshal(data, &legacy); err == nil {
-		state, err := StandardConditionState(legacy)
-		if err != nil {
-			return err
-		}
-		*c = state
-		return nil
 	}
 	type rawConditionState ConditionState
 	var raw rawConditionState

@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -69,33 +70,22 @@ func countdownFromStorage(countdown projectionstore.DaggerheartCountdown) rules.
 		LoopBehavior:      countdown.LoopBehavior,
 		Status:            countdown.Status,
 		LinkedCountdownID: countdown.LinkedCountdownID,
-		Kind:              countdown.Kind,
-		Current:           countdown.Current,
-		Max:               countdown.Max,
-		Direction:         countdown.Direction,
-		Looping:           countdown.Looping,
-	}
-	if value.Tone == "" && countdown.Kind != "" {
-		value.Tone = countdown.Kind
-	}
-	if value.StartingValue == 0 && countdown.Max > 0 {
-		value.StartingValue = countdown.Max
-	}
-	if value.RemainingValue == 0 && (countdown.Current > 0 || countdown.Max > 0) {
-		value.RemainingValue = countdown.Current
-	}
-	if value.LoopBehavior == "" {
-		if countdown.Looping {
-			value.LoopBehavior = rules.CountdownLoopBehaviorReset
-		} else {
-			value.LoopBehavior = rules.CountdownLoopBehaviorNone
-		}
 	}
 	if value.AdvancementPolicy == "" {
 		value.AdvancementPolicy = rules.CountdownAdvancementPolicyManual
 	}
+	if value.LoopBehavior == "" {
+		value.LoopBehavior = rules.CountdownLoopBehaviorNone
+	}
 	if value.Status == "" {
 		value.Status = rules.CountdownStatusActive
+	}
+	if countdown.StartingRollMin > 0 && countdown.StartingRollMax > 0 {
+		value.StartingRoll = &rules.CountdownStartingRoll{
+			Min:   countdown.StartingRollMin,
+			Max:   countdown.StartingRollMax,
+			Value: countdown.StartingRollValue,
+		}
 	}
 	return value
 }
@@ -168,7 +158,7 @@ func downtimeSelectionFromProto(
 	case *pb.DaggerheartDowntimeSelection_WorkOnProject:
 		return daggerheart.DowntimeSelection{
 			Move:                daggerheart.DowntimeMoveWorkOnProject,
-			CountdownID:         ids.CountdownID(strings.TrimSpace(move.WorkOnProject.GetProjectCampaignCountdownId())),
+			CountdownID:         dhids.CountdownID(strings.TrimSpace(move.WorkOnProject.GetProjectCampaignCountdownId())),
 			ProjectAdvanceMode:  projectAdvanceModeFromProto(move.WorkOnProject.GetAdvanceMode()),
 			ProjectAdvanceDelta: int(move.WorkOnProject.GetAdvanceDelta()),
 			ProjectReason:       strings.TrimSpace(move.WorkOnProject.GetReason()),

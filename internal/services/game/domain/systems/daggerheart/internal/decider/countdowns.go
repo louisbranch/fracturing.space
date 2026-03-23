@@ -7,19 +7,19 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/normalize"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 )
 
-func snapshotSceneCountdownState(snapshot daggerheartstate.SnapshotState, countdownID ids.CountdownID) (daggerheartstate.SceneCountdownState, bool) {
+func snapshotSceneCountdownState(snapshot daggerheartstate.SnapshotState, countdownID dhids.CountdownID) (daggerheartstate.SceneCountdownState, bool) {
 	value, ok := snapshot.SceneCountdownStates[normalize.ID(countdownID)]
 	return value, ok
 }
 
-func snapshotCampaignCountdownState(snapshot daggerheartstate.SnapshotState, countdownID ids.CountdownID) (daggerheartstate.CampaignCountdownState, bool) {
+func snapshotCampaignCountdownState(snapshot daggerheartstate.SnapshotState, countdownID dhids.CountdownID) (daggerheartstate.CampaignCountdownState, bool) {
 	value, ok := snapshot.CampaignCountdownStates[normalize.ID(countdownID)]
 	return value, ok
 }
@@ -223,25 +223,11 @@ func normalizeCountdownCreatePayload(p *payload.SceneCountdownCreatePayload) *co
 	p.LoopBehavior = normalize.String(p.LoopBehavior)
 	p.Status = normalize.String(p.Status)
 	p.LinkedCountdownID = normalize.ID(p.LinkedCountdownID)
-	if p.Tone == "" && p.Kind != "" {
-		p.Tone = normalize.String(p.Kind)
-	}
-	if p.StartingValue <= 0 && p.Max > 0 {
-		p.StartingValue = p.Max
-	}
 	if p.RemainingValue <= 0 {
-		if p.Current > 0 || p.Max > 0 {
-			p.RemainingValue = p.Current
-		} else {
-			p.RemainingValue = p.StartingValue
-		}
+		p.RemainingValue = p.StartingValue
 	}
 	if p.LoopBehavior == "" {
-		if p.Looping {
-			p.LoopBehavior = "reset"
-		} else {
-			p.LoopBehavior = "none"
-		}
+		p.LoopBehavior = "none"
 	}
 	if p.RemainingValue <= 0 {
 		p.RemainingValue = p.StartingValue
@@ -254,23 +240,6 @@ func normalizeCountdownAdvancePayload(p *payload.SceneCountdownAdvancePayload) {
 	p.StatusBefore = normalize.String(p.StatusBefore)
 	p.StatusAfter = normalize.String(p.StatusAfter)
 	p.Reason = normalize.String(p.Reason)
-	if p.BeforeRemaining == 0 && (p.Before != 0 || p.After != 0 || p.Value != 0) {
-		p.BeforeRemaining = p.Before
-	}
-	if p.AfterRemaining == 0 && (p.After != 0 || p.Value != 0) {
-		if p.After != 0 {
-			p.AfterRemaining = p.After
-		} else {
-			p.AfterRemaining = p.Value
-		}
-	}
-	if p.AdvancedBy == 0 && p.Delta != 0 {
-		if p.Delta < 0 {
-			p.AdvancedBy = -p.Delta
-		} else {
-			p.AdvancedBy = p.Delta
-		}
-	}
 }
 
 func normalizeCountdownTriggerResolvePayload(p *payload.SceneCountdownTriggerResolvePayload) {

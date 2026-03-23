@@ -5,15 +5,12 @@ import (
 	"testing"
 )
 
-func TestConditionStateUnmarshalJSONSupportsLegacyAndStructuredPayloads(t *testing.T) {
+func TestConditionStateUnmarshalJSONRequiresStructuredPayloads(t *testing.T) {
 	t.Parallel()
 
-	var legacy ConditionState
-	if err := json.Unmarshal([]byte(`"hidden"`), &legacy); err != nil {
-		t.Fatalf("legacy unmarshal: %v", err)
-	}
-	if legacy.ID != ConditionHidden || legacy.Class != ConditionClassStandard {
-		t.Fatalf("legacy condition = %#v, want hidden standard condition", legacy)
+	var legacyRejected ConditionState
+	if err := json.Unmarshal([]byte(`"hidden"`), &legacyRejected); err == nil {
+		t.Fatal("expected legacy string payload to be rejected")
 	}
 
 	var structured ConditionState

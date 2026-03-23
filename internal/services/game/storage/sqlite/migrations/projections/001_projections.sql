@@ -1,3 +1,5 @@
+-- Baseline schema for fresh alpha databases.
+
 -- +migrate Up
 
 -- Campaign layer
@@ -181,6 +183,7 @@ CREATE TABLE IF NOT EXISTS daggerheart_character_states (
     subclass_state_json TEXT NOT NULL DEFAULT '{}',
     companion_state_json TEXT NOT NULL DEFAULT '{}',
     impenetrable_used_this_short_rest INTEGER NOT NULL DEFAULT 0,
+    stat_modifiers_json TEXT NOT NULL DEFAULT '[]',
     PRIMARY KEY (campaign_id, character_id),
     FOREIGN KEY (campaign_id, character_id)
         REFERENCES characters(campaign_id, id) ON DELETE CASCADE
@@ -335,37 +338,315 @@ CREATE TABLE IF NOT EXISTS session_spotlight (
 
 CREATE INDEX IF NOT EXISTS idx_session_spotlight_session ON session_spotlight(campaign_id, session_id);
 
--- +migrate Down
-DROP INDEX IF EXISTS idx_session_spotlight_session;
-DROP TABLE IF EXISTS session_spotlight;
-DROP INDEX IF EXISTS idx_session_gate_responses_gate;
-DROP TABLE IF EXISTS session_gate_responses;
-DROP INDEX IF EXISTS idx_session_gate_options_gate;
-DROP TABLE IF EXISTS session_gate_options;
-DROP INDEX IF EXISTS idx_session_gate_eligible_participants_gate;
-DROP TABLE IF EXISTS session_gate_eligible_participants;
-DROP INDEX IF EXISTS idx_session_gates_open;
-DROP TABLE IF EXISTS session_gates;
-DROP TABLE IF EXISTS daggerheart_adversaries;
-DROP TABLE IF EXISTS daggerheart_environment_entities;
-DROP TABLE IF EXISTS daggerheart_countdowns;
-DROP TABLE IF EXISTS daggerheart_snapshots;
-DROP TABLE IF EXISTS daggerheart_character_states;
+
+ALTER TABLE campaigns ADD COLUMN cover_asset_id TEXT NOT NULL DEFAULT '';
+
+-- +migrate Up
+
+CREATE TABLE IF NOT EXISTS projection_apply_checkpoints (
+    campaign_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    event_type TEXT NOT NULL,
+    applied_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, seq)
+);
+
+CREATE INDEX IF NOT EXISTS idx_projection_apply_checkpoints_campaign
+    ON projection_apply_checkpoints (campaign_id, seq);
+
+
+ALTER TABLE campaigns ADD COLUMN cover_set_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE participants ADD COLUMN avatar_set_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE participants ADD COLUMN avatar_asset_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE characters ADD COLUMN avatar_set_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE characters ADD COLUMN avatar_asset_id TEXT NOT NULL DEFAULT '';
+
+-- +migrate Up
+
+CREATE TABLE IF NOT EXISTS projection_watermarks (
+    campaign_id TEXT PRIMARY KEY,
+    applied_seq INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+);
+
+
+-- +migrate Up
+
+ALTER TABLE projection_watermarks
+ADD COLUMN expected_next_seq INTEGER NOT NULL DEFAULT 0;
+
+
+ALTER TABLE characters ADD COLUMN owner_participant_id TEXT NOT NULL DEFAULT '';
+
+UPDATE characters
+SET owner_participant_id = COALESCE(controller_participant_id, '')
+WHERE owner_participant_id = '';
+
+ALTER TABLE campaigns ADD COLUMN ai_agent_id TEXT NOT NULL DEFAULT '';
+
+CREATE INDEX IF NOT EXISTS idx_campaigns_ai_agent_id ON campaigns(ai_agent_id);
+
+ALTER TABLE campaigns ADD COLUMN ai_auth_epoch INTEGER NOT NULL DEFAULT 0;
+
+CREATE INDEX IF NOT EXISTS idx_campaigns_ai_auth_epoch ON campaigns(ai_auth_epoch);
+
+-- +migrate Up
+ALTER TABLE daggerheart_character_profiles ADD COLUMN description TEXT NOT NULL DEFAULT '';
+
+-- +migrate Up
+
 DROP TABLE IF EXISTS daggerheart_character_profiles;
-DROP INDEX IF EXISTS idx_snapshots_seq;
-DROP TABLE IF EXISTS snapshots;
-DROP INDEX IF EXISTS idx_invites_campaign_recipient;
-DROP INDEX IF EXISTS idx_invites_recipient_user;
-DROP INDEX IF EXISTS idx_invites_participant;
-DROP INDEX IF EXISTS idx_invites_campaign;
-DROP TABLE IF EXISTS invites;
-DROP TABLE IF EXISTS campaign_active_session;
-DROP INDEX IF EXISTS idx_sessions_active;
-DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS characters;
-DROP INDEX IF EXISTS idx_participant_claims_participant;
-DROP TABLE IF EXISTS participant_claims;
-DROP INDEX IF EXISTS idx_participants_campaign_user;
-DROP INDEX IF EXISTS idx_participants_user_id;
-DROP TABLE IF EXISTS participants;
-DROP TABLE IF EXISTS campaigns;
+
+CREATE TABLE IF NOT EXISTS daggerheart_character_profiles (
+    campaign_id TEXT NOT NULL,
+    character_id TEXT NOT NULL,
+    level INTEGER NOT NULL DEFAULT 1,
+    hp_max INTEGER NOT NULL DEFAULT 6,
+    stress_max INTEGER NOT NULL DEFAULT 6,
+    evasion INTEGER NOT NULL DEFAULT 10,
+    major_threshold INTEGER NOT NULL DEFAULT 8,
+    severe_threshold INTEGER NOT NULL DEFAULT 12,
+    agility INTEGER NOT NULL DEFAULT 0,
+    strength INTEGER NOT NULL DEFAULT 0,
+    finesse INTEGER NOT NULL DEFAULT 0,
+    instinct INTEGER NOT NULL DEFAULT 0,
+    presence INTEGER NOT NULL DEFAULT 0,
+    knowledge INTEGER NOT NULL DEFAULT 0,
+    proficiency INTEGER NOT NULL DEFAULT 0,
+    armor_score INTEGER NOT NULL DEFAULT 0,
+    armor_max INTEGER NOT NULL DEFAULT 0,
+    experiences_json TEXT NOT NULL DEFAULT '[]',
+    class_id TEXT NOT NULL DEFAULT '',
+    subclass_id TEXT NOT NULL DEFAULT '',
+    subclass_tracks_json TEXT NOT NULL DEFAULT '[]',
+    subclass_creation_requirements_json TEXT NOT NULL DEFAULT '[]',
+    heritage_json TEXT NOT NULL DEFAULT '{}',
+    companion_sheet_json TEXT NOT NULL DEFAULT '',
+    equipped_armor_id TEXT NOT NULL DEFAULT '',
+    spellcast_roll_bonus INTEGER NOT NULL DEFAULT 0,
+    traits_assigned INTEGER NOT NULL DEFAULT 0,
+    details_recorded INTEGER NOT NULL DEFAULT 0,
+    starting_weapon_ids_json TEXT NOT NULL DEFAULT '[]',
+    starting_armor_id TEXT NOT NULL DEFAULT '',
+    starting_potion_item_id TEXT NOT NULL DEFAULT '',
+    background TEXT NOT NULL DEFAULT '',
+    domain_card_ids_json TEXT NOT NULL DEFAULT '[]',
+    connections TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (campaign_id, character_id),
+    FOREIGN KEY (campaign_id, character_id)
+        REFERENCES characters(campaign_id, id) ON DELETE CASCADE
+);
+
+
+-- +migrate Up
+CREATE TABLE scenes (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    ended_at INTEGER,
+    PRIMARY KEY (campaign_id, scene_id)
+);
+
+CREATE INDEX idx_scenes_session ON scenes(campaign_id, session_id);
+CREATE INDEX idx_scenes_active ON scenes(campaign_id, active);
+
+CREATE TABLE scene_characters (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    character_id TEXT NOT NULL,
+    added_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, scene_id, character_id)
+);
+
+CREATE TABLE scene_gates (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    gate_id TEXT NOT NULL,
+    gate_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    created_by_actor_type TEXT NOT NULL,
+    created_by_actor_id TEXT NOT NULL DEFAULT '',
+    resolved_at INTEGER,
+    resolved_by_actor_type TEXT,
+    resolved_by_actor_id TEXT,
+    metadata_json BLOB,
+    resolution_json BLOB,
+    PRIMARY KEY (campaign_id, scene_id, gate_id)
+);
+
+CREATE INDEX idx_scene_gates_open ON scene_gates(campaign_id, scene_id, status);
+
+CREATE TABLE scene_spotlight (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    spotlight_type TEXT NOT NULL,
+    character_id TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL,
+    updated_by_actor_type TEXT NOT NULL,
+    updated_by_actor_id TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (campaign_id, scene_id)
+);
+
+
+-- +migrate Up
+
+CREATE TABLE scenes_v2 (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    ended_at INTEGER,
+    PRIMARY KEY (campaign_id, scene_id),
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+);
+
+INSERT INTO scenes_v2 (campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at)
+SELECT campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at
+FROM scenes;
+
+CREATE TABLE scene_characters_v2 (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    character_id TEXT NOT NULL,
+    added_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, scene_id, character_id),
+    FOREIGN KEY (campaign_id, scene_id) REFERENCES scenes_v2(campaign_id, scene_id) ON DELETE CASCADE
+);
+
+INSERT INTO scene_characters_v2 (campaign_id, scene_id, character_id, added_at)
+SELECT campaign_id, scene_id, character_id, added_at
+FROM scene_characters;
+
+CREATE TABLE scene_gates_v2 (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    gate_id TEXT NOT NULL,
+    gate_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    created_by_actor_type TEXT NOT NULL,
+    created_by_actor_id TEXT NOT NULL DEFAULT '',
+    resolved_at INTEGER,
+    resolved_by_actor_type TEXT,
+    resolved_by_actor_id TEXT,
+    metadata_json BLOB,
+    resolution_json BLOB,
+    PRIMARY KEY (campaign_id, scene_id, gate_id),
+    FOREIGN KEY (campaign_id, scene_id) REFERENCES scenes_v2(campaign_id, scene_id) ON DELETE CASCADE
+);
+
+INSERT INTO scene_gates_v2 (campaign_id, scene_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, resolution_json)
+SELECT campaign_id, scene_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, resolution_json
+FROM scene_gates;
+
+CREATE TABLE scene_spotlight_v2 (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    spotlight_type TEXT NOT NULL,
+    character_id TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL,
+    updated_by_actor_type TEXT NOT NULL,
+    updated_by_actor_id TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (campaign_id, scene_id),
+    FOREIGN KEY (campaign_id, scene_id) REFERENCES scenes_v2(campaign_id, scene_id) ON DELETE CASCADE
+);
+
+INSERT INTO scene_spotlight_v2 (campaign_id, scene_id, spotlight_type, character_id, updated_at, updated_by_actor_type, updated_by_actor_id)
+SELECT campaign_id, scene_id, spotlight_type, character_id, updated_at, updated_by_actor_type, updated_by_actor_id
+FROM scene_spotlight;
+
+DROP INDEX IF EXISTS idx_scene_gates_open;
+DROP INDEX IF EXISTS idx_scenes_active;
+DROP INDEX IF EXISTS idx_scenes_session;
+
+DROP TABLE scene_spotlight;
+DROP TABLE scene_gates;
+DROP TABLE scene_characters;
+DROP TABLE scenes;
+
+ALTER TABLE scenes_v2 RENAME TO scenes;
+ALTER TABLE scene_characters_v2 RENAME TO scene_characters;
+ALTER TABLE scene_gates_v2 RENAME TO scene_gates;
+ALTER TABLE scene_spotlight_v2 RENAME TO scene_spotlight;
+
+CREATE INDEX idx_scenes_session ON scenes(campaign_id, session_id);
+CREATE INDEX idx_scenes_active ON scenes(campaign_id, active);
+CREATE INDEX idx_scene_gates_open ON scene_gates(campaign_id, scene_id, status);
+
+
+-- +migrate Up
+
+CREATE TABLE session_interactions (
+    campaign_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    active_scene_id TEXT NOT NULL DEFAULT '',
+    gm_authority_participant_id TEXT NOT NULL DEFAULT '',
+    ooc_opened INTEGER NOT NULL DEFAULT 0,
+    ooc_requested_by_participant_id TEXT NOT NULL DEFAULT '',
+    ooc_reason TEXT NOT NULL DEFAULT '',
+    ooc_interrupted_scene_id TEXT NOT NULL DEFAULT '',
+    ooc_interrupted_phase_id TEXT NOT NULL DEFAULT '',
+    ooc_interrupted_phase_status TEXT NOT NULL DEFAULT '',
+    ooc_resolution_pending INTEGER NOT NULL DEFAULT 0,
+    ooc_posts_json BLOB,
+    ready_to_resume_json BLOB,
+    ai_turn_status TEXT NOT NULL DEFAULT 'idle',
+    ai_turn_token TEXT NOT NULL DEFAULT '',
+    ai_turn_owner_participant_id TEXT NOT NULL DEFAULT '',
+    ai_turn_source_event_type TEXT NOT NULL DEFAULT '',
+    ai_turn_source_scene_id TEXT NOT NULL DEFAULT '',
+    ai_turn_source_phase_id TEXT NOT NULL DEFAULT '',
+    ai_turn_last_error TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, session_id),
+    FOREIGN KEY (campaign_id, session_id) REFERENCES sessions(campaign_id, id) ON DELETE CASCADE
+);
+
+CREATE TABLE scene_interactions (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    session_id TEXT NOT NULL DEFAULT '',
+    phase_open INTEGER NOT NULL DEFAULT 0,
+    phase_id TEXT NOT NULL DEFAULT '',
+    phase_status TEXT NOT NULL DEFAULT '',
+    acting_character_ids_json BLOB,
+    acting_participant_ids_json BLOB,
+    slots_json BLOB,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, scene_id),
+    FOREIGN KEY (campaign_id, scene_id) REFERENCES scenes(campaign_id, scene_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_session_interactions_active_scene ON session_interactions(campaign_id, active_scene_id);
+CREATE INDEX idx_scene_interactions_session ON scene_interactions(campaign_id, session_id);
+
+CREATE TABLE scene_gm_interactions (
+    campaign_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL,
+    session_id TEXT NOT NULL DEFAULT '',
+    interaction_id TEXT NOT NULL,
+    phase_id TEXT NOT NULL DEFAULT '',
+    participant_id TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    character_ids_json BLOB,
+    illustration_json BLOB,
+    beats_json BLOB,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, interaction_id),
+    FOREIGN KEY (campaign_id, scene_id) REFERENCES scenes(campaign_id, scene_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_scene_gm_interactions_scene_created ON scene_gm_interactions(campaign_id, scene_id, created_at DESC);

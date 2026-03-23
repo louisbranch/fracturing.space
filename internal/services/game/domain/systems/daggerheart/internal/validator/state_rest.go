@@ -83,10 +83,6 @@ func ValidateRestCampaignCountdownPayload(p payload.CampaignCountdownAdvancePayl
 	return nil
 }
 
-func ValidateRestLongTermCountdownPayload(p payload.CampaignCountdownAdvancePayload) error {
-	return ValidateRestCampaignCountdownPayload(p)
-}
-
 func HasRestTakeMutation(p payload.RestTakePayload) bool {
 	if p.GMFearBefore != p.GMFearAfter ||
 		p.ShortRestsBefore != p.ShortRestsAfter ||

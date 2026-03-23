@@ -125,7 +125,7 @@ jobs:
           ./bin/userhub -port=8092 -game-addr=127.0.0.1:8082 -social-addr=127.0.0.1:8090 -notifications-addr=127.0.0.1:8088 >.tmp/userhub.log 2>&1 &
           wait_for_port 127.0.0.1 8092 "userhub gRPC service"
 
-          FRACTURING_SPACE_WEB_HTTP_ADDR=127.0.0.1:8086 \
+          FRACTURING_SPACE_WEB_HTTP_ADDR=127.0.0.1:8080 \
             FRACTURING_SPACE_WEB_AUTH_BASE_URL=http://127.0.0.1:8084 \
             FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID=fracturing-space \
             FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 \
@@ -135,10 +135,10 @@ jobs:
             FRACTURING_SPACE_NOTIFICATIONS_ADDR=127.0.0.1:8088 \
             FRACTURING_SPACE_USERHUB_ADDR=127.0.0.1:8092 \
             ./bin/web >.tmp/web.log 2>&1 &
-          wait_for_http "http://127.0.0.1:8086/up" "web HTTP service"
+          wait_for_http "http://127.0.0.1:8080/up" "web HTTP service"
       - name: Run web critical smoke flow
         env:
-          BASE_URL: "http://127.0.0.1:8086"
+          BASE_URL: "http://127.0.0.1:8080"
           WEB_SMOKE_AUTH_ADDR: "127.0.0.1:8083"
           WEB_SMOKE_REQUIRE_AUTH: "1"
         run: scripts/playwright-web-smoke.sh

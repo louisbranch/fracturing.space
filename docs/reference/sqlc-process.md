@@ -6,6 +6,10 @@ database queries or schema.
 
 ## Directory Layout
 
+Alpha uses clean-slate SQLite schemas. Migration roots are baseline-only: each
+storage root keeps one canonical `001_*.sql` file, and fresh databases are
+created from that baseline instead of replaying historical upgrade chains.
+
 ```
 sqlc.yaml                                          # Config (repo root)
 internal/services/game/storage/sqlite/
@@ -67,18 +71,19 @@ internal/services/game/storage/sqlite/
    lives in `db/` and is consumed by store implementations in sibling packages
    (`coreprojection/`, `eventjournal/`, `daggerheartprojection/`, etc.).
 
-## Adding Schema Migrations
+## Updating Baseline Schemas
 
-1. **Create a new `.sql` file** in the appropriate `migrations/` subdirectory.
-   Use a numeric prefix for ordering (e.g., `004_add_column.sql`).
+1. **Edit the baseline `.sql` file** in the appropriate `migrations/`
+   subdirectory.
+   Keep one `001_*.sql` file per root (`events/`, `projections/`, `content/`,
+   and service-local single-root stores).
 
 2. **Update queries** that reference new columns or tables.
 
 3. **Run `sqlc generate`** to pick up the schema changes.
 
-4. Migration files are applied at startup by the storage layer. The event store,
-   projection store, and content store each manage their own migration set
-   independently.
+4. Baseline files are applied at startup by the storage layer when a fresh DB is
+   created. Alpha does not preserve historical upgrade paths for old local DBs.
 
 ## Configuration
 

@@ -7,6 +7,7 @@ import (
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
@@ -126,7 +127,7 @@ func TestResolveDowntimeSelection_BranchesAndValidation(t *testing.T) {
 			DowntimeSelection{Move: DowntimeMoveWorkOnProject, CountdownID: "cd-1"},
 			states,
 			nil,
-			map[ids.CountdownID]rules.Countdown{
+			map[dhids.CountdownID]rules.Countdown{
 				"cd-1": {ID: "cd-1", Name: "Track", Tone: "progress", AdvancementPolicy: "manual", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 			},
 		)
@@ -142,11 +143,11 @@ func TestResolveDowntimeSelection_BranchesAndValidation(t *testing.T) {
 func TestNextCountdownMutationClampAndErrors(t *testing.T) {
 	t.Parallel()
 
-	if _, err := nextCountdownMutation(map[ids.CountdownID]rules.Countdown{}, "missing", 1, nil, "tick"); err == nil || !strings.Contains(err.Error(), "is not available") {
+	if _, err := nextCountdownMutation(map[dhids.CountdownID]rules.Countdown{}, "missing", 1, nil, "tick"); err == nil || !strings.Contains(err.Error(), "is not available") {
 		t.Fatalf("nextCountdownMutation missing countdown error = %v", err)
 	}
 
-	update, err := nextCountdownMutation(map[ids.CountdownID]rules.Countdown{
+	update, err := nextCountdownMutation(map[dhids.CountdownID]rules.Countdown{
 		"cd-1": {ID: "cd-1", Name: "Track", Tone: "progress", AdvancementPolicy: "manual", StartingValue: 4, RemainingValue: 3, LoopBehavior: "none", Status: "active"},
 	}, "cd-1", 1, nil, " tick ")
 	if err != nil {

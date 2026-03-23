@@ -70,14 +70,14 @@ func TestHasRestTakeMutation(t *testing.T) {
 	}
 }
 
-func TestValidateRestLongTermCountdownPayload(t *testing.T) {
-	if err := daggerheartvalidator.ValidateRestLongTermCountdownPayload(daggerheartpayload.CountdownUpdatePayload{}); err == nil {
+func TestValidateRestCampaignCountdownPayload(t *testing.T) {
+	if err := daggerheartvalidator.ValidateRestCampaignCountdownPayload(daggerheartpayload.CampaignCountdownAdvancePayload{}); err == nil {
 		t.Fatal("expected missing countdown_id error")
 	}
-	if err := daggerheartvalidator.ValidateRestLongTermCountdownPayload(daggerheartpayload.CountdownUpdatePayload{CountdownID: "c1"}); err == nil {
+	if err := daggerheartvalidator.ValidateRestCampaignCountdownPayload(daggerheartpayload.CampaignCountdownAdvancePayload{CountdownID: "c1"}); err == nil {
 		t.Fatal("expected change-required error")
 	}
-	if err := daggerheartvalidator.ValidateRestLongTermCountdownPayload(daggerheartpayload.CountdownUpdatePayload{CountdownID: "c1", BeforeRemaining: 1, AfterRemaining: 2, AdvancedBy: 1}); err != nil {
+	if err := daggerheartvalidator.ValidateRestCampaignCountdownPayload(daggerheartpayload.CampaignCountdownAdvancePayload{CountdownID: "c1", BeforeRemaining: 1, AfterRemaining: 2, AdvancedBy: 1}); err != nil {
 		t.Fatalf("expected valid countdown payload, got %v", err)
 	}
 }

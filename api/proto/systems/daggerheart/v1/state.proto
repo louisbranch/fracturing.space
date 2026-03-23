@@ -128,12 +128,11 @@ message DaggerheartClassState {
   int32 difficulty_penalty_until_rest = 3;
   string focus_target_id = 4;
   DaggerheartActiveBeastformState active_beastform = 5;
-  reserved 6;
-  int32 strange_patterns_number = 7;
-  repeated int32 rally_dice = 8;
-  repeated int32 prayer_dice = 9;
-  DaggerheartUnstoppableState unstoppable = 10;
-  bool channel_raw_power_used_this_long_rest = 11;
+  int32 strange_patterns_number = 6;
+  repeated int32 rally_dice = 7;
+  repeated int32 prayer_dice = 8;
+  DaggerheartUnstoppableState unstoppable = 9;
+  bool channel_raw_power_used_this_long_rest = 10;
 }
 
 // DaggerheartCreationCompanionInput applies companion-specific creation data
