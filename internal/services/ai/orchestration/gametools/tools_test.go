@@ -67,6 +67,12 @@ func TestProductionToolDescriptionsUseBeatBasedInteractionGuidance(t *testing.T)
 	if !strings.Contains(beatDescription(phaseStart.InputSchema), "keep related prose in one beat even across paragraphs") {
 		t.Fatalf("phase-start schema missing beat granularity guidance: %#v", phaseStart.InputSchema)
 	}
+	if !strings.Contains(promptBeatDescription(phaseStart.InputSchema), "never outsource NPC dialogue") {
+		t.Fatalf("phase-start schema missing narrator-authority guidance: %#v", phaseStart.InputSchema)
+	}
+	if !strings.Contains(beatDescription(phaseStart.InputSchema), "use resolution and consequence only for adjudicated results") {
+		t.Fatalf("phase-start schema missing adjudication beat guidance: %#v", phaseStart.InputSchema)
+	}
 	if !strings.Contains(beatTextDescription(phaseStart.InputSchema), "may span multiple paragraphs") {
 		t.Fatalf("phase-start schema missing beat text paragraph guidance: %#v", phaseStart.InputSchema)
 	}

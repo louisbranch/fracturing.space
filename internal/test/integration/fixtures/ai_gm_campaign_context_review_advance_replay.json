@@ -70,22 +70,17 @@
                 "beats": [
                   {
                     "beat_id": "beat-1",
-                    "text": "Resolution: Aria’s hooked pole cuts through the cold, brackish water and finds a steady inward tug. The pole snags a corner of a floating bundle and, when she eases it, a few loose folios slither free and begin drifting toward the vault’s sump. The ledger you came for sits on the lower shelf; its bottom edge is damp but the spine holds and the pages are largely legible for now.",
-                    "type": "resolution"
+                    "text": "Aria’s hooked pole cuts through the cold, brackish water and finds a steady inward tug. The pole snags a corner of a floating bundle and, when she eases it, a few loose folios slither free and begin drifting toward the vault’s sump. The ledger you came for sits on the lower shelf; its bottom edge is damp but the spine holds and the pages are largely legible for now.",
+                    "type": "fiction"
                   },
                   {
                     "beat_id": "beat-2",
-                    "text": "Consequence: Water has reached the vault threshold and is soaking the lowest shelves. If the ledger is not moved or elevated soon, the damp will creep deeper into the binding; the drifting folios could be lost down the sump. The current isn’t overpowering yet, but it will carry away unsecured material and make reaching deeper racks trickier.",
-                    "type": "consequence"
-                  },
-                  {
-                    "beat_id": "beat-3",
-                    "text": "Guidance: You can try to retrieve the ledger now—use the pole to hook and slide it free, wade deeper to lift it higher on the shelf, secure it in a waterproof case if you have one, or chase the drifting folios. Each choice trades time and exposure to the current. Describe which action Aria takes and how she attempts it.",
+                    "text": "Water has reached the vault threshold and is soaking the lowest shelves. If the ledger is not moved or elevated soon, the damp will creep deeper into the binding; the drifting folios could be lost down the sump. The current is manageable, but it will carry away unsecured material and make reaching deeper racks trickier. You can hook the ledger free now, wade deeper to lift it, secure it in a waterproof case if you have one, or chase the drifting folios before they vanish into the sump.",
                     "type": "guidance"
                   },
                   {
-                    "beat_id": "beat-4",
-                    "text": "Prompt: Aria, what do you do next in the flooded vault?",
+                    "beat_id": "beat-3",
+                    "text": "Aria, what do you do next in the flooded vault?",
                     "type": "prompt"
                   }
                 ],
@@ -136,7 +131,7 @@
     },
     {
       "id": "resp_032c304c6a299c1f0069bed67fd88881909b941107b6efc6ae",
-      "output_text": "Beats (authoritative GM resolution, then open player phase)\n\n1) Resolution\nAria’s hooked pole cuts through the cold, brackish water and finds a steady inward tug. The pole snags a corner of a floating bundle and, when she eases it, a few loose folios slither free and begin drifting toward the vault’s sump. The ledger you came for sits on the lower shelf; its bottom edge is damp but the spine holds and the pages are largely legible for now.\n\n2) Consequence\nWater has reached the vault threshold and is soaking the lowest shelves. If the ledger is not moved or elevated soon, the damp will creep deeper into the binding; the drifting folios could be lost down the sump. The current isn’t overpowering yet, but it will carry away unsecured material and make reaching deeper racks trickier.\n\n3) Guidance\nYou can try to retrieve the ledger now—use the pole to hook and slide it free, wade deeper to lift it higher on the shelf, secure it in a waterproof case if you have one, or chase the drifting folios. Each choice trades time and exposure to the current. Describe which action Aria takes and how she attempts it.\n\n4) Prompt\nAria, what do you do next in the flooded vault?\n\nMemory.md updated with the archive changes (water level, Aria’s probe findings, ledger condition, drifting folios and time pressure). Players may act next."
+      "output_text": "Beats (fiction, guidance, then open player phase)\n\n1) Fiction\nAria’s hooked pole cuts through the cold, brackish water and finds a steady inward tug. The pole snags a corner of a floating bundle and, when she eases it, a few loose folios slither free and begin drifting toward the vault’s sump. The ledger you came for sits on the lower shelf; its bottom edge is damp but the spine holds and the pages are largely legible for now.\n\n2) Guidance\nWater has reached the vault threshold and is soaking the lowest shelves. If the ledger is not moved or elevated soon, the damp will creep deeper into the binding; the drifting folios could be lost down the sump. The current is manageable, but it will carry away unsecured material and make reaching deeper racks trickier. You can hook the ledger free now, wade deeper to lift it, secure it in a waterproof case if you have one, or chase the drifting folios before they vanish into the sump.\n\n3) Prompt\nAria, what do you do next in the flooded vault?\n\nMemory.md updated with the archive changes (water level, Aria’s probe findings, ledger condition, drifting folios, and the immediate choices in front of Aria). Players may act next."
     }
   ]
 }

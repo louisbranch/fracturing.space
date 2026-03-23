@@ -212,8 +212,14 @@ func TestPromptBuilderActiveSceneMode(t *testing.T) {
 	if !strings.Contains(prompt, "resolution and consequence beats before any new player-facing prompt beat") {
 		t.Fatalf("prompt missing active-scene beat ordering guidance: %q", prompt)
 	}
+	if !strings.Contains(prompt, "When no mechanic was resolved, keep the interaction in fiction and guidance rather than inventing resolution or consequence beats.") {
+		t.Fatalf("prompt missing fiction-only beat guidance: %q", prompt)
+	}
 	if !strings.Contains(prompt, "Keep related prose in one beat even across multiple paragraphs") {
 		t.Fatalf("prompt missing active-scene beat granularity guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "Prompt beats must ask for player-character action or commitment, not NPC dialogue or world-outcome authorship.") {
+		t.Fatalf("prompt missing narrator-authority guidance: %q", prompt)
 	}
 }
 
@@ -265,6 +271,9 @@ func TestBriefPromptRendererFallbackInteractionContractIncludesBeatModel(t *test
 	}
 	if !strings.Contains(prompt, "A beat is a coherent GM move or information unit, not a paragraph container.") {
 		t.Fatalf("prompt missing beat granularity fallback guidance: %q", prompt)
+	}
+	if !strings.Contains(prompt, "The GM authors NPC dialogue and world responses; prompt beats ask only what the player character does, says, chooses, or commits to next.") {
+		t.Fatalf("prompt missing narrator-authority fallback guidance: %q", prompt)
 	}
 	if !strings.Contains(prompt, "Do not split narration and player handoff into separate frame artifacts.") {
 		t.Fatalf("prompt missing frame-artifact fallback guidance: %q", prompt)

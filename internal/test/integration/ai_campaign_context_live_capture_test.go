@@ -173,8 +173,16 @@ func TestAIGMCampaignContextLiveCaptureCapabilityLookup(t *testing.T) {
 	runAIGMCampaignContextLiveCaptureScenario(t, aiGMCapabilityLookupScenario)
 }
 
+func TestAIGMCampaignContextLiveCaptureHopeExperience(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMHopeExperienceScenario)
+}
+
 func TestAIGMCampaignContextLiveCaptureMechanicsReview(t *testing.T) {
 	runAIGMCampaignContextLiveCaptureScenario(t, aiGMMechanicsReviewScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureSubdueIntent(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMSubdueIntentLiveScenario)
 }
 
 func TestAIGMCampaignContextLiveCaptureAttackReview(t *testing.T) {
@@ -334,7 +342,39 @@ var aiGMMechanicsReviewScenario = aiGMCampaignScenarioSpec{
 		"interaction_resolve_scene_player_review",
 	},
 	Prepare: prepareReviewAdvanceScenario,
-	Assert:  aiGMReviewAdvanceScenario.Assert,
+	Assert:  assertReviewTurnReopenedWithPrompt,
+}
+
+var aiGMSubdueIntentLiveScenario = aiGMCampaignScenarioSpec{
+	Name:        "ai_gm_campaign_context_subdue_intent_live",
+	FixtureFile: "ai_gm_campaign_context_subdue_intent_live_replay.json",
+	Prompt:      "The scene is waiting on GM review. Resolve the player's submitted action naturally from the current scene. This submission is already specific enough to adjudicate as a consequential move if you ground it in the acting character's real sheet. Read that sheet before any other move, use an authoritative state-changing resolution rather than a preview roll or narrated approximation, do not bounce the turn back just to ask which trait to use, and do not research first unless the sheet reveals a genuine ambiguity. Reopen the next player-facing beat and update memory.md with the outcome you committed.",
+	StorySeed:   aiGMStanceCapabilityStorySeed,
+	MemorySeed:  aiGMStanceCapabilityMemorySeed,
+	RequiredToolSet: []string{
+		"character_sheet_read",
+		"daggerheart_action_roll_resolve",
+		"interaction_resolve_scene_player_review",
+	},
+	Prepare: prepareSubdueIntentReviewScenario,
+	Assert: func(t *testing.T, result aiGMCampaignScenarioResult) {
+		t.Helper()
+		assertReviewTurnReopenedWithPrompt(t, result)
+		assertCurrentInteractionHasAnyBeatType(t, result.InteractionState,
+			gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION,
+			gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE,
+		)
+		assertPromptDoesNotContain(t, currentPromptBeat(result.InteractionState), "what does the stranger say", "how does the story unfold")
+	},
+	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
+		t.Helper()
+		calls := flattenReplayToolCalls(fixture)
+		assertReplayToolOrder(t, calls,
+			"character_sheet_read",
+			"daggerheart_action_roll_resolve",
+			"interaction_resolve_scene_player_review",
+		)
+	},
 }
 
 var aiGMAttackReviewScenario = aiGMCampaignScenarioSpec{
@@ -351,7 +391,7 @@ var aiGMAttackReviewScenario = aiGMCampaignScenarioSpec{
 		"interaction_resolve_scene_player_review",
 	},
 	Prepare: prepareAttackReviewScenario,
-	Assert:  aiGMReviewAdvanceScenario.Assert,
+	Assert:  assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		calls := flattenReplayToolCalls(fixture)
@@ -380,7 +420,7 @@ var aiGMReactionReviewScenario = aiGMCampaignScenarioSpec{
 		"interaction_resolve_scene_player_review",
 	},
 	Prepare: prepareReactionReviewScenario,
-	Assert:  aiGMReviewAdvanceScenario.Assert,
+	Assert:  assertReviewTurnReopenedWithPrompt,
 }
 
 var aiGMPlaybookAttackReviewScenario = aiGMCampaignScenarioSpec{
@@ -406,7 +446,7 @@ var aiGMPlaybookAttackReviewScenario = aiGMCampaignScenarioSpec{
 	MaxToolErrors:   maxToolErrors(0),
 	ReferenceLimits: &aiGMReferenceLimits{MaxSearches: 1, MaxReads: 1},
 	Prepare:         prepareAttackReviewScenario,
-	Assert:          aiGMReviewAdvanceScenario.Assert,
+	Assert:          assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		calls := flattenReplayToolCalls(fixture)
@@ -442,7 +482,7 @@ var aiGMSpotlightBoardReviewScenario = aiGMCampaignScenarioSpec{
 	MaxToolErrors:   maxToolErrors(0),
 	ReferenceLimits: &aiGMReferenceLimits{MaxSearches: 0, MaxReads: 0},
 	Prepare:         prepareAttackReviewScenario,
-	Assert:          aiGMReviewAdvanceScenario.Assert,
+	Assert:          assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		calls := flattenReplayToolCalls(fixture)
@@ -478,7 +518,7 @@ var aiGMCountdownTriggerReviewScenario = aiGMCampaignScenarioSpec{
 		"interaction_resolve_scene_player_review",
 	},
 	Prepare: prepareAttackReviewScenario,
-	Assert:  aiGMReviewAdvanceScenario.Assert,
+	Assert:  assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		order := []string{
@@ -523,7 +563,7 @@ var aiGMGMMovePlacementReviewScenario = aiGMCampaignScenarioSpec{
 	MaxToolErrors:   maxToolErrors(0),
 	ReferenceLimits: &aiGMReferenceLimits{MaxSearches: 0, MaxReads: 0},
 	Prepare:         prepareGMMovePlacementReviewScenario,
-	Assert:          aiGMReviewAdvanceScenario.Assert,
+	Assert:          assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		calls := flattenReplayToolCalls(fixture)
@@ -564,7 +604,7 @@ var aiGMAdversaryAttackReviewScenario = aiGMCampaignScenarioSpec{
 		"interaction_resolve_scene_player_review",
 	},
 	Prepare: prepareAttackReviewScenario,
-	Assert:  aiGMReviewAdvanceScenario.Assert,
+	Assert:  assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		assertReplayToolOrder(t, flattenReplayToolCalls(fixture),
@@ -589,7 +629,7 @@ var aiGMGroupActionReviewScenario = aiGMCampaignScenarioSpec{
 	},
 	ExtraCharacters: []string{"Bram"},
 	Prepare:         prepareGroupActionReviewScenario,
-	Assert:          aiGMReviewAdvanceScenario.Assert,
+	Assert:          assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		calls := flattenReplayToolCalls(fixture)
@@ -619,7 +659,7 @@ var aiGMTagTeamReviewScenario = aiGMCampaignScenarioSpec{
 	},
 	ExtraCharacters: []string{"Bram"},
 	Prepare:         prepareTagTeamReviewScenario,
-	Assert:          aiGMReviewAdvanceScenario.Assert,
+	Assert:          assertReviewTurnReopenedWithPrompt,
 	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
 		t.Helper()
 		calls := flattenReplayToolCalls(fixture)
@@ -676,6 +716,18 @@ func prepareReactionReviewScenario(t *testing.T, setup *aiGMCampaignScenarioSetu
 		aiGMInteractionBeat{Type: gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT, Text: "Aria, the door is coming down fast. How do you keep your footing and avoid getting pinned?"},
 	)
 	submitScenarioPlayerAction(t, setup, sceneID, "Aria twists aside and braces off the wall to slip clear of the falling door before it can pin her.", true, setup.CharacterID)
+}
+
+func prepareSubdueIntentReviewScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {
+	t.Helper()
+	setScenarioGMAuthority(t, setup, setup.AIGMParticipantID)
+	sceneID := createScenarioScene(t, setup, "Lantern Spill", "A hooded stranger hesitates near the oil stores while the harbor road lies open behind them.", nil, setup.CharacterID)
+	setup.ReplayTokens["scene_id"] = sceneID
+	openScenarioPlayerPhase(t, setup, sceneID, "Cornered Runner", []string{setup.CharacterID},
+		aiGMInteractionBeat{Type: gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT, Text: "Aria, the stranger shifts to bolt down the cliff road. What do you do?"},
+	)
+	submitScenarioPlayerAction(t, setup, sceneID, "I rush with the sword and try to incapacitate them before they can run or shout.", true, setup.CharacterID)
+	waitForGMReviewReady(t, setup, sceneID)
 }
 
 func prepareGMMovePlacementReviewScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {
@@ -997,6 +1049,7 @@ func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *o
 
 	// Extract narrative fields from recorded steps.
 	var sceneName, sceneDesc, gmNarration, playerPromptBeat, memoryContent string
+	var committedBeatTypes []string
 	toolSequence, referenceSearches, referenceReads := liveToolCounts(recorder.steps)
 	var toolErrors []string
 	for _, step := range recorder.steps {
@@ -1007,11 +1060,13 @@ func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *o
 				sceneDesc = asString(call.Arguments["description"])
 			case "interaction_record_scene_gm_interaction":
 				gmNarration = interactionBeatText(call.Arguments["interaction"], "fiction")
+				committedBeatTypes = interactionBeatTypes(call.Arguments["interaction"])
 			case "interaction_open_scene_player_phase":
 				if strings.TrimSpace(gmNarration) == "" {
 					gmNarration = interactionBeatText(call.Arguments["interaction"], "fiction")
 				}
 				playerPromptBeat = interactionBeatText(call.Arguments["interaction"], "prompt")
+				committedBeatTypes = interactionBeatTypes(call.Arguments["interaction"])
 			case "campaign_memory_section_update":
 				memoryContent = asString(call.Arguments["content"])
 			case "campaign_artifact_upsert":
@@ -1059,6 +1114,9 @@ func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *o
 
 	fmt.Fprintf(&b, "\n## Narrative Quality\n\n")
 	fmt.Fprintf(&b, "### Scene: %q\n\n%s\n\n", sceneName, sceneDesc)
+	if len(committedBeatTypes) > 0 {
+		fmt.Fprintf(&b, "### Committed Beat Types\n\n%s\n\n", strings.Join(committedBeatTypes, ", "))
+	}
 	fmt.Fprintf(&b, "### GM Narration\n\n%s\n\n", gmNarration)
 	fmt.Fprintf(&b, "### Player-Facing Prompt Beat\n\n%s\n\n", playerPromptBeat)
 	fmt.Fprintf(&b, "### Memory Update\n\n%s\n\n", memoryContent)
@@ -1151,6 +1209,30 @@ func interactionBeatText(raw any, beatType string) string {
 		}
 	}
 	return lastNonEmpty
+}
+
+func interactionBeatTypes(raw any) []string {
+	interaction, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+	beats, ok := interaction["beats"].([]any)
+	if !ok {
+		return nil
+	}
+	types := make([]string, 0, len(beats))
+	for _, entry := range beats {
+		beat, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		beatType := strings.TrimSpace(asString(beat["type"]))
+		if beatType == "" {
+			continue
+		}
+		types = append(types, beatType)
+	}
+	return types
 }
 
 func flattenReplayToolCalls(fixture openAIReplayFixture) []openAIReplayToolCall {

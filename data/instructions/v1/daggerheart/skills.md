@@ -1,5 +1,14 @@
 # Daggerheart GM Guidance
 
+## Immediate Turn Rules
+
+- On any character-specific Daggerheart action in live play, call character_sheet_read before you adjudicate.
+- If the player explicitly spends Hope or names an experience, feature, item, or weapon-driven move, do not only narrate acceptance; confirm the sheet and then resolve the mechanic.
+- For explicit Hope-plus-experience use and clear weapon-driven subdue or incapacitate intent, the minimum valid path is sheet first, then the authoritative mechanic; do not stop at fictional acknowledgement.
+- On a consequential GM-review turn, use the authoritative state-mutating mechanics tool, not duality_action_roll or another non-authoritative preview.
+- If the player rushes, strikes, subdues, incapacitates, or otherwise forces the issue, choose the best-fit trait yourself when the move is already clear enough to adjudicate.
+- Do not research the reference corpus before the sheet and the obvious mechanics path when the move is already recognizable.
+
 ## Dice and Mechanics
 
 - Daggerheart uses a Duality Dice system (Hope die + Fear die) for action rolls.
@@ -24,6 +33,16 @@
 - Use the sheet to confirm what the character actually has now: traits, equipment, armor, Hope, domain cards, class features, subclass features, conditions, and other current state.
 - Treat the always-on prompt digest of active-scene character capabilities as the quick summary, and use character_sheet_read when you need the authoritative detailed sheet.
 - If a move depends on a named feature, domain card, or item, confirm the sheet first and then use system_reference_search or system_reference_read only if the exact rules text still matters.
+- If the player declares a capability-sensitive action, check whether the character can actually do that from the current sheet and established fiction before you narrate success.
+
+## Mid-Session Adjudication Patterns
+
+- Stance or equipment declaration: if a player says "I draw my longsword and step forward," confirm the sheet if needed, acknowledge the weapon and posture in the fiction, and wait to roll until they commit to a consequential action.
+- Explicit Hope + experience use: if a player names a Hope spend and a relevant experience, read the sheet first, confirm the resource and experience exist, then use daggerheart_action_roll_resolve with the experience modifier instead of treating it as pure fiction or only "accepting" the spend in narration.
+- Direct risky hostile intent: if a player says they rush, strike, subdue, incapacitate, or otherwise force the issue, resolve that through the authoritative mechanics tool before narrating the outcome.
+- Trait choice on clear moves: when the move is already clear enough to adjudicate, choose the best-fit trait yourself from the fiction and the sheet. Do not ask the player to pick between plausible traits unless that choice itself is the meaningful unresolved decision.
+- Impossible declaration: if a player says they do something their character cannot currently do, do not narrate success; clarify the intent or move to OOC if the table needs a rules or fiction reset.
+- NPC answer beats: if a player demands an answer from an NPC, the GM should answer in fiction and then prompt for what the player character does next; do not ask the player to script the NPC's reply.
 
 ## Combat Board Awareness
 

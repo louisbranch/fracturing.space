@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "captured_at_utc": "2026-03-22T00:00:00Z",
+    "scenario": "ai_gm_campaign_context_stance_capability",
+    "source": "manual_fixture"
+  },
+  "initial_prompt_contains": [
+    "story.md:",
+    "Starter seed: The oil stores rattle in the wind while a hooded figure waits beyond the lantern spill.",
+    "memory.md:",
+    "Remember: The stranger has not attacked yet, but the standoff could turn quickly.",
+    "Review-resolution mode",
+    "The GM authors NPC dialogue and world responses; prompt beats ask only what the player character does, says, chooses, or commits to next."
+  ],
+  "initial_tool_names": [
+    "campaign_artifact_upsert",
+    "interaction_resolve_scene_player_review",
+    "character_sheet_read"
+  ],
+  "steps": [
+    {
+      "id": "resp_stance_1",
+      "tool_calls": [
+        {
+          "call_id": "call_stance_1",
+          "name": "character_sheet_read",
+          "arguments": {
+            "character_id": "{{character_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_stance_2",
+      "tool_calls": [
+        {
+          "call_id": "call_stance_2",
+          "name": "campaign_artifact_upsert",
+          "arguments": {
+            "path": "memory.md",
+            "content": "Remember: The stranger has not attacked yet, but the standoff could turn quickly.\n\nLantern Spill update:\n- Aria stepped into the open with her longsword drawn and forced the stranger to reckon with her presence.\n- No blow was struck yet; the scene is still a live standoff rather than a resolved clash.\n- The next beat should hinge on whether Aria presses, warns, or waits for the stranger's move.\n"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_stance_3",
+      "tool_calls": [
+        {
+          "call_id": "call_stance_3",
+          "name": "interaction_resolve_scene_player_review",
+          "arguments": {
+            "scene_id": "{{scene_id}}",
+            "open_next_player_phase": {
+              "interaction": {
+                "title": "Steel In The Lantern Spill",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "fiction",
+                    "text": "Aria steps into the lantern spill with her longsword already in hand, the blade throwing a thin line of light across the oil casks. The hooded stranger sees at once that the bluffing part of the night is over."
+                  },
+                  {
+                    "beat_id": "beat-2",
+                    "type": "guidance",
+                    "text": "The standoff is still live. Aria has seized space and made the threat plain, but neither side has committed to a strike yet."
+                  },
+                  {
+                    "beat_id": "beat-3",
+                    "type": "prompt",
+                    "text": "Aria, what do you do next: call out a warning, demand answers at swordpoint, or rush them before they can react?"
+                  }
+                ]
+              },
+              "next_character_ids": [
+                "{{character_id}}"
+              ]
+            },
+            "request_revisions": {
+              "interaction": {
+                "title": "placeholder",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "guidance",
+                    "text": ""
+                  }
+                ]
+              },
+              "revisions": []
+            },
+            "return_to_gm": {
+              "interaction": {
+                "title": "placeholder",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "guidance",
+                    "text": ""
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_stance_4",
+      "output_text": "Resolved the Lantern Spill review by checking Aria's sheet, grounding the stance in the longsword she actually carries, updating memory.md, and reopening the player phase without forcing a roll.\n\nCommitted beats:\n1. Fiction: Aria steps into the open with steel drawn and makes the standoff explicit.\n2. Guidance: the moment is tense but unresolved; no strike has landed yet.\n3. Prompt: Aria must now decide whether to warn, interrogate, or rush the stranger.\n\nPlayers may act next."
+    }
+  ]
+}

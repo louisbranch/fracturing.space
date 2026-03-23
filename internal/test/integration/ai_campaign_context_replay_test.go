@@ -41,6 +41,18 @@ func TestAIGMCampaignContextReplaySceneSwitch(t *testing.T) {
 	runAIGMCampaignContextReplayScenario(t, aiGMSceneSwitchScenario)
 }
 
+func TestAIGMCampaignContextReplayHopeExperience(t *testing.T) {
+	runAIGMCampaignContextReplayScenario(t, aiGMHopeExperienceScenario)
+}
+
+func TestAIGMCampaignContextReplayStanceCapability(t *testing.T) {
+	runAIGMCampaignContextReplayScenario(t, aiGMStanceCapabilityScenario)
+}
+
+func TestAIGMCampaignContextReplayNarratorAuthority(t *testing.T) {
+	runAIGMCampaignContextReplayScenario(t, aiGMNarratorAuthorityScenario)
+}
+
 func runAIGMCampaignContextReplayScenario(t *testing.T, spec aiGMCampaignScenarioSpec) aiGMCampaignScenarioResult {
 	t.Helper()
 	replay := loadOpenAIReplayFixture(t, spec.FixtureFile)
@@ -83,6 +95,14 @@ func runAIGMCampaignContextReplayScenario(t *testing.T, spec aiGMCampaignScenari
 		if err := requiredToolSetPresent(fixtureToolNames, "campaign_memory_section_update"); err != nil {
 			t.Fatal("fixture tool coverage: missing memory write tool (campaign_artifact_upsert or campaign_memory_section_update)")
 		}
+	}
+	for _, name := range spec.ForbiddenTools {
+		if slices.Contains(fixtureToolNames, strings.TrimSpace(name)) {
+			t.Fatalf("fixture should not call %q, got %v", name, fixtureToolNames)
+		}
+	}
+	if spec.AssertFixture != nil {
+		spec.AssertFixture(t, replay)
 	}
 	spec.Assert(t, result)
 	if err := replayServer.Err(); err != nil {
