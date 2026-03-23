@@ -118,7 +118,9 @@ func interactionContractText(instructions PromptInstructions) string {
 		"Keep related prose in one beat even when it spans multiple paragraphs.",
 		"Start a new beat only when the GM function changes or the information context materially shifts; repeated beat types are for distinct units, not extra paragraphs.",
 		"Keep in-character narration and out-of-character coordination separate.",
-		"Use fiction beats to establish the situation, consequence beats to return resolved results to the fiction, guidance beats to clarify what is actionable next, and prompt beats as the player-facing handoff when players should act next.",
+		"Before narrating a claimed capability or permissive fiction, verify that it fits the established scene and the acting character's real capabilities; if it does not, clarify or move to OOC instead of narrating a false permission.",
+		"The GM authors NPC dialogue and world responses; prompt beats ask only what the player character does, says, chooses, or commits to next.",
+		"Use fiction beats to establish the situation, resolution beats only after real adjudication, consequence beats to return adjudicated results to the fiction, guidance beats to clarify what is actionable next, and prompt beats as the player-facing handoff when players should act next.",
 		"Do not split narration and player handoff into separate frame artifacts.",
 		"Use interaction_record_scene_gm_interaction for standalone in-character narration when framing a fresh beat outside GM review.",
 		"Use interaction_resolve_scene_player_review when the scene is waiting on GM review.",
@@ -149,6 +151,11 @@ func buildAuthorityText(mode InteractionTurnMode, input PromptInput) string {
 	case InteractionTurnModeReviewResolution:
 		b.WriteString("\n\nReview-resolution mode: players have yielded and the scene is waiting on GM review.\n")
 		b.WriteString("Use interaction_resolve_scene_player_review to commit one interaction that reflects the adjudicated outcome.\n")
+		b.WriteString("If the submitted move is character-specific or capability-sensitive, read the acting character sheet before you adjudicate.\n")
+		b.WriteString("When the submission already declares a Hope spend, named experience, or clear weapon-driven attempt to subdue, incapacitate, or otherwise force the issue, treat that as enough commitment to adjudicate rather than merely accepting it in fiction.\n")
+		b.WriteString("When a consequential move needs adjudication, use the authoritative state-mutating mechanics tool rather than a preview roll or explanation-only tool.\n")
+		b.WriteString("Adjudicate the submitted player action when it already contains enough intent; do not bounce a clear move back just to ask for a trait choice or restate a mechanic you can assign yourself.\n")
+		b.WriteString("Do not research before the sheet and the obvious mechanics path when the move is already recognizable.\n")
 		b.WriteString("If players should act next, end that interaction with a prompt beat and open the next player phase in the same call.\n")
 		b.WriteString("If open_next_player_phase or request_revisions succeeds, return final text instead of making another GM interaction call.\n")
 		b.WriteString("If you are sending slots back for revision, use guidance beats for what must change and keep participant-specific revision reasons in the tool payload.\n")
@@ -168,7 +175,10 @@ func buildAuthorityText(mode InteractionTurnMode, input PromptInput) string {
 	default:
 		b.WriteString("\n\nActive scene mode: continue the session from the current interaction state and use tools for authoritative changes.")
 		b.WriteString("\nWhen mechanics were resolved this turn, place resolution and consequence beats before any new player-facing prompt beat.")
+		b.WriteString("\nWhen no mechanic was resolved, keep the interaction in fiction and guidance rather than inventing resolution or consequence beats.")
 		b.WriteString("\nKeep related prose in one beat even across multiple paragraphs; split into another beat only when the interaction function or information context materially changes.")
+		b.WriteString("\nCheck character capability before accepting equipment- or feature-sensitive declarations; stance or gear alone may justify a sheet read even before a roll.")
+		b.WriteString("\nPrompt beats must ask for player-character action or commitment, not NPC dialogue or world-outcome authorship.")
 		b.WriteString("\nWhen handing control back to players, commit one interaction built from ordered beats first and end it with a prompt beat, then call interaction_open_scene_player_phase with explicit acting character_ids.")
 		b.WriteString("\nAfter the next player phase is open for players, return final text instead of making another GM interaction call.")
 		b.WriteString("\nDo not author separate frame text for the player handoff.")

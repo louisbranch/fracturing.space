@@ -265,6 +265,33 @@ func openAIReplayFixtureToolNames(fixture openAIReplayFixture) []string {
 	return names
 }
 
+func replayFixtureToolCalls(fixture openAIReplayFixture) []openAIReplayToolCall {
+	calls := make([]openAIReplayToolCall, 0)
+	for _, step := range fixture.Steps {
+		calls = append(calls, step.ToolCalls...)
+	}
+	return calls
+}
+
+func mustReplayFixtureToolCall(t *testing.T, fixture openAIReplayFixture, name string, ordinal int) openAIReplayToolCall {
+	t.Helper()
+	if ordinal < 1 {
+		t.Fatalf("ordinal must be >= 1, got %d", ordinal)
+	}
+	count := 0
+	for _, call := range replayFixtureToolCalls(fixture) {
+		if strings.TrimSpace(call.Name) != strings.TrimSpace(name) {
+			continue
+		}
+		count++
+		if count == ordinal {
+			return call
+		}
+	}
+	t.Fatalf("tool %q occurrence %d not found in fixture sequence %v", name, ordinal, openAIReplayFixtureToolNames(fixture))
+	return openAIReplayToolCall{}
+}
+
 // replayFixtureFinalOutputText returns the final narrated output captured in the replay fixture.
 func replayFixtureFinalOutputText(t *testing.T, fixture openAIReplayFixture) string {
 	t.Helper()

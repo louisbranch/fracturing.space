@@ -25,26 +25,41 @@ import (
 )
 
 const (
-	aiGMBootstrapScenarioName     = "ai_gm_campaign_context_bootstrap"
-	aiGMBootstrapFixtureFile      = "ai_gm_campaign_context_bootstrap_replay.json"
-	aiGMBootstrapPrompt           = "Open the session, consult the Fear reference first, and update memory.md with session notes about the harbor debt."
-	aiGMBootstrapStorySeed        = "Starter seed: The Black Lantern warns of a debt collected at dawn."
-	aiGMBootstrapMemorySeed       = "Remember: the harbor master owes the party a favor."
-	aiGMReviewAdvanceScenarioName = "ai_gm_campaign_context_review_advance"
-	aiGMReviewAdvanceFixtureFile  = "ai_gm_campaign_context_review_advance_replay.json"
-	aiGMReviewAdvancePrompt       = "Resolve the flooded archive review, open the next player-facing beat, and update memory.md with what changed in the archive."
-	aiGMReviewAdvanceStorySeed    = "Starter seed: The archive flood is rising around a ledger vault."
-	aiGMReviewAdvanceMemorySeed   = "Remember: Aria is trying to secure the ledger before the room collapses."
-	aiGMOOCReplaceScenarioName    = "ai_gm_campaign_context_ooc_replace"
-	aiGMOOCReplaceFixtureFile     = "ai_gm_campaign_context_ooc_replace_replay.json"
-	aiGMOOCReplacePrompt          = "The OOC pause has closed and players are blocked waiting on you. Replace the interrupted beat with a new player-facing interaction and update memory.md with the new approach."
-	aiGMOOCReplaceStorySeed       = "Starter seed: The vault ward can be bypassed from the roof vent after the group regroups."
-	aiGMOOCReplaceMemorySeed      = "Remember: the seam is no longer the plan; the group is pivoting to the roof vent."
-	aiGMSceneSwitchScenarioName   = "ai_gm_campaign_context_scene_switch"
-	aiGMSceneSwitchFixtureFile    = "ai_gm_campaign_context_scene_switch_replay.json"
-	aiGMSceneSwitchPrompt         = "Shift focus from the North Gate to the South Tunnel, make the tunnel the active scene, open the next player-facing beat there, and update memory.md with the split-party status."
-	aiGMSceneSwitchStorySeed      = "Starter seed: A split party presses on from the gatehouse to the drainage tunnel."
-	aiGMSceneSwitchMemorySeed     = "Remember: Aria holds the gate while the next beat should move to the tunnel."
+	aiGMBootstrapScenarioName         = "ai_gm_campaign_context_bootstrap"
+	aiGMBootstrapFixtureFile          = "ai_gm_campaign_context_bootstrap_replay.json"
+	aiGMBootstrapPrompt               = "Open the session, consult the Fear reference first, and update memory.md with session notes about the harbor debt."
+	aiGMBootstrapStorySeed            = "Starter seed: The Black Lantern warns of a debt collected at dawn."
+	aiGMBootstrapMemorySeed           = "Remember: the harbor master owes the party a favor."
+	aiGMReviewAdvanceScenarioName     = "ai_gm_campaign_context_review_advance"
+	aiGMReviewAdvanceFixtureFile      = "ai_gm_campaign_context_review_advance_replay.json"
+	aiGMReviewAdvancePrompt           = "Resolve the flooded archive review, open the next player-facing beat, and update memory.md with what changed in the archive."
+	aiGMReviewAdvanceStorySeed        = "Starter seed: The archive flood is rising around a ledger vault."
+	aiGMReviewAdvanceMemorySeed       = "Remember: Aria is trying to secure the ledger before the room collapses."
+	aiGMOOCReplaceScenarioName        = "ai_gm_campaign_context_ooc_replace"
+	aiGMOOCReplaceFixtureFile         = "ai_gm_campaign_context_ooc_replace_replay.json"
+	aiGMOOCReplacePrompt              = "The OOC pause has closed and players are blocked waiting on you. Replace the interrupted beat with a new player-facing interaction and update memory.md with the new approach."
+	aiGMOOCReplaceStorySeed           = "Starter seed: The vault ward can be bypassed from the roof vent after the group regroups."
+	aiGMOOCReplaceMemorySeed          = "Remember: the seam is no longer the plan; the group is pivoting to the roof vent."
+	aiGMSceneSwitchScenarioName       = "ai_gm_campaign_context_scene_switch"
+	aiGMSceneSwitchFixtureFile        = "ai_gm_campaign_context_scene_switch_replay.json"
+	aiGMSceneSwitchPrompt             = "Shift focus from the North Gate to the South Tunnel, make the tunnel the active scene, open the next player-facing beat there, and update memory.md with the split-party status."
+	aiGMSceneSwitchStorySeed          = "Starter seed: A split party presses on from the gatehouse to the drainage tunnel."
+	aiGMSceneSwitchMemorySeed         = "Remember: Aria holds the gate while the next beat should move to the tunnel."
+	aiGMHopeExperienceScenarioName    = "ai_gm_campaign_context_hope_experience"
+	aiGMHopeExperienceFixtureFile     = "ai_gm_campaign_context_hope_experience_replay.json"
+	aiGMHopeExperiencePrompt          = "The scene is waiting on GM review. Resolve the player's submitted action naturally from the current scene. The player already declared a Hope spend and a named experience, so this is enough to adjudicate rather than merely narrate acceptance. Ground the ruling in the acting character's real sheet, reopen the next player-facing beat, and update memory.md with what the character learned."
+	aiGMHopeExperienceStorySeed       = "Starter seed: Cliffside smugglers marked their route in the mud below the Beacon."
+	aiGMHopeExperienceMemorySeed      = "Remember: The cove tracks may reveal who sabotaged the Beacon."
+	aiGMStanceCapabilityScenarioName  = "ai_gm_campaign_context_stance_capability"
+	aiGMStanceCapabilityFixtureFile   = "ai_gm_campaign_context_stance_capability_replay.json"
+	aiGMStanceCapabilityPrompt        = "The scene is waiting on GM review. Resolve the player's submitted stance naturally from the current scene. Confirm what the acting character is actually capable of before you narrate it, do not roll unless the player has committed to a consequential action, reopen the player phase, and update memory.md with the grounded stance."
+	aiGMStanceCapabilityStorySeed     = "Starter seed: The oil stores rattle in the wind while a hooded figure waits beyond the lantern spill."
+	aiGMStanceCapabilityMemorySeed    = "Remember: The stranger has not attacked yet, but the standoff could turn quickly."
+	aiGMNarratorAuthorityScenarioName = "ai_gm_campaign_context_narrator_authority"
+	aiGMNarratorAuthorityFixtureFile  = "ai_gm_campaign_context_narrator_authority_replay.json"
+	aiGMNarratorAuthorityPrompt       = "The scene is waiting on GM review. Narrate the NPC's answer yourself, then reopen the next player-facing beat with a prompt that asks what the acting character does next. Update memory.md with what the stranger revealed."
+	aiGMNarratorAuthorityStorySeed    = "Starter seed: A stranger lurks beside the oil stores under the dark Beacon."
+	aiGMNarratorAuthorityMemorySeed   = "Remember: Mira has cornered a stranger and forced them to answer."
 )
 
 type aiGMCampaignScenarioSpec struct {
@@ -176,12 +191,11 @@ var (
 		Prepare: prepareReviewAdvanceScenario,
 		Assert: func(t *testing.T, result aiGMCampaignScenarioResult) {
 			t.Helper()
-			if !playerPhaseOpen(result.InteractionState) {
-				t.Fatal("expected review advance to reopen a player phase")
-			}
-			if got := currentPromptBeat(result.InteractionState); strings.TrimSpace(got) == "" {
-				t.Fatal("expected current interaction to end with a prompt beat")
-			}
+			assertReviewTurnReopenedWithPrompt(t, result)
+			assertCurrentInteractionLacksBeatTypes(t, result.InteractionState,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE,
+			)
 		},
 	}
 	aiGMOOCReplaceScenario = aiGMCampaignScenarioSpec{
@@ -243,6 +257,109 @@ var (
 			if !playerPhaseOpen(result.InteractionState) {
 				t.Fatal("expected switched scene to leave a player phase open")
 			}
+		},
+	}
+	aiGMHopeExperienceScenario = aiGMCampaignScenarioSpec{
+		Name:        aiGMHopeExperienceScenarioName,
+		FixtureFile: aiGMHopeExperienceFixtureFile,
+		Prompt:      aiGMHopeExperiencePrompt,
+		StorySeed:   aiGMHopeExperienceStorySeed,
+		MemorySeed:  aiGMHopeExperienceMemorySeed,
+		PromptContains: []string{
+			"Review-resolution mode",
+			"Prompt beats must ask for player-character action or commitment, not NPC dialogue or world-outcome authorship.",
+		},
+		RequiredToolSet: []string{
+			"character_sheet_read",
+			"daggerheart_action_roll_resolve",
+			"interaction_resolve_scene_player_review",
+		},
+		Prepare: prepareHopeExperienceScenario,
+		Assert: func(t *testing.T, result aiGMCampaignScenarioResult) {
+			t.Helper()
+			assertReviewTurnReopenedWithPrompt(t, result)
+			assertCurrentInteractionHasAnyBeatType(t, result.InteractionState,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE,
+			)
+			assertPromptDoesNotContain(t, currentPromptBeat(result.InteractionState), "what does the stranger say", "how does the story unfold")
+		},
+		AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
+			t.Helper()
+			call := mustReplayFixtureToolCall(t, fixture, "daggerheart_action_roll_resolve", 1)
+			modifiers, ok := call.Arguments["modifiers"].([]any)
+			if !ok || len(modifiers) == 0 {
+				t.Fatalf("action roll modifiers = %#v, want experience modifier", call.Arguments["modifiers"])
+			}
+			modifier, ok := modifiers[0].(map[string]any)
+			if !ok {
+				t.Fatalf("first modifier = %#v, want object", modifiers[0])
+			}
+			if got := strings.ToLower(strings.TrimSpace(asString(modifier["source"]))); !strings.Contains(got, "experience") {
+				t.Fatalf("modifier source = %q, want an experience-backed modifier", got)
+			}
+		},
+	}
+	aiGMStanceCapabilityScenario = aiGMCampaignScenarioSpec{
+		Name:        aiGMStanceCapabilityScenarioName,
+		FixtureFile: aiGMStanceCapabilityFixtureFile,
+		Prompt:      aiGMStanceCapabilityPrompt,
+		StorySeed:   aiGMStanceCapabilityStorySeed,
+		MemorySeed:  aiGMStanceCapabilityMemorySeed,
+		PromptContains: []string{
+			"Review-resolution mode",
+			"Before narrating a claimed capability or permissive fiction, verify that it fits the established scene and the acting character's real capabilities;",
+		},
+		RequiredToolSet: []string{
+			"character_sheet_read",
+			"interaction_resolve_scene_player_review",
+		},
+		ForbiddenTools: []string{
+			"daggerheart_action_roll_resolve",
+		},
+		Prepare: prepareStanceCapabilityScenario,
+		Assert: func(t *testing.T, result aiGMCampaignScenarioResult) {
+			t.Helper()
+			if !playerPhaseOpen(result.InteractionState) {
+				t.Fatal("expected stance review to reopen a player phase")
+			}
+			assertCurrentInteractionLacksBeatTypes(t, result.InteractionState,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE,
+			)
+			assertCurrentInteractionMentionsOneOf(t, result.InteractionState, "longsword", "sword", "blade")
+			assertPromptDoesNotContain(t, currentPromptBeat(result.InteractionState), "what does the stranger say", "how does the story unfold")
+		},
+	}
+	aiGMNarratorAuthorityScenario = aiGMCampaignScenarioSpec{
+		Name:        aiGMNarratorAuthorityScenarioName,
+		FixtureFile: aiGMNarratorAuthorityFixtureFile,
+		Prompt:      aiGMNarratorAuthorityPrompt,
+		StorySeed:   aiGMNarratorAuthorityStorySeed,
+		MemorySeed:  aiGMNarratorAuthorityMemorySeed,
+		PromptContains: []string{
+			"Review-resolution mode",
+			"Prompt beats must ask for player-character action or commitment, not NPC dialogue or world-outcome authorship.",
+		},
+		RequiredToolSet: []string{
+			"interaction_resolve_scene_player_review",
+		},
+		Prepare: prepareNarratorAuthorityScenario,
+		Assert: func(t *testing.T, result aiGMCampaignScenarioResult) {
+			t.Helper()
+			if !playerPhaseOpen(result.InteractionState) {
+				t.Fatal("expected narrator-authority review to reopen a player phase")
+			}
+			assertCurrentInteractionLacksBeatTypes(t, result.InteractionState,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION,
+				gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE,
+			)
+			assertPromptDoesNotContain(t, currentPromptBeat(result.InteractionState),
+				"what does the stranger say",
+				"what do they say",
+				"what happens next",
+				"how does the story unfold",
+			)
 		},
 	}
 )
@@ -544,6 +661,42 @@ func prepareSceneSwitchScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) 
 	setup.ReplayTokens["target_scene_id"] = targetSceneID
 }
 
+func prepareHopeExperienceScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {
+	t.Helper()
+	setScenarioGMAuthority(t, setup, setup.AIGMParticipantID)
+	sceneID := createScenarioScene(t, setup, "Beacon Footpath", "Muddy tracks twist beneath the dark lighthouse while lantern light skims the cliff path.", nil, setup.CharacterID)
+	setup.ReplayTokens["scene_id"] = sceneID
+	openScenarioPlayerPhase(t, setup, sceneID, "Marked Trail", []string{setup.CharacterID},
+		aiGMInteractionBeat{Type: gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT, Text: "Aria, the track runs cold beneath the Beacon. What do you do?"},
+	)
+	submitScenarioPlayerAction(t, setup, sceneID, "I pause and inspect the track. I spend 1 Hope to use my experience with integration experience to get a better read on where the smugglers went.", true, setup.CharacterID)
+	waitForGMReviewReady(t, setup, sceneID)
+}
+
+func prepareStanceCapabilityScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {
+	t.Helper()
+	setScenarioGMAuthority(t, setup, setup.AIGMParticipantID)
+	sceneID := createScenarioScene(t, setup, "Lantern Spill", "A hooded stranger waits near the oil stores just beyond the Beacon's failing lantern spill.", nil, setup.CharacterID)
+	setup.ReplayTokens["scene_id"] = sceneID
+	openScenarioPlayerPhase(t, setup, sceneID, "Lantern Standoff", []string{setup.CharacterID},
+		aiGMInteractionBeat{Type: gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT, Text: "Aria, the stranger has seen you but has not moved yet. What do you do?"},
+	)
+	submitScenarioPlayerAction(t, setup, sceneID, "With my longsword in hand, I step into the open and prepare to confront them.", true, setup.CharacterID)
+	waitForGMReviewReady(t, setup, sceneID)
+}
+
+func prepareNarratorAuthorityScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {
+	t.Helper()
+	setScenarioGMAuthority(t, setup, setup.AIGMParticipantID)
+	sceneID := createScenarioScene(t, setup, "Oil Stores", "Salt wind rattles the oil casks while a cornered stranger watches the dark harbor road.", nil, setup.CharacterID)
+	setup.ReplayTokens["scene_id"] = sceneID
+	openScenarioPlayerPhase(t, setup, sceneID, "Cornered Stranger", []string{setup.CharacterID},
+		aiGMInteractionBeat{Type: gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT, Text: "Aria, the stranger flinches as you hold them at swordpoint. What do you do?"},
+	)
+	submitScenarioPlayerAction(t, setup, sceneID, "I hold the steel steady and ask them to name themselves.", true, setup.CharacterID)
+	waitForGMReviewReady(t, setup, sceneID)
+}
+
 type aiGMInteractionBeat struct {
 	Type gamev1.GMInteractionBeatType
 	Text string
@@ -777,4 +930,86 @@ func currentPromptBeat(state *gamev1.InteractionState) string {
 		}
 	}
 	return ""
+}
+
+func assertReviewTurnReopenedWithPrompt(t *testing.T, result aiGMCampaignScenarioResult) {
+	t.Helper()
+	if !playerPhaseOpen(result.InteractionState) {
+		t.Fatal("expected review turn to reopen a player phase")
+	}
+	if got := currentPromptBeat(result.InteractionState); strings.TrimSpace(got) == "" {
+		t.Fatal("expected current interaction to end with a prompt beat")
+	}
+}
+
+func currentInteractionBeats(state *gamev1.InteractionState) []*gamev1.GMInteractionBeat {
+	if state == nil {
+		return nil
+	}
+	return state.GetActiveScene().GetCurrentInteraction().GetBeats()
+}
+
+func assertCurrentInteractionLacksBeatTypes(t *testing.T, state *gamev1.InteractionState, forbidden ...gamev1.GMInteractionBeatType) {
+	t.Helper()
+	for _, beat := range currentInteractionBeats(state) {
+		for _, kind := range forbidden {
+			if beat.GetType() == kind {
+				t.Fatalf("current interaction unexpectedly includes beat type %q with text %q", kind.String(), strings.TrimSpace(beat.GetText()))
+			}
+		}
+	}
+}
+
+func assertCurrentInteractionHasBeatType(t *testing.T, state *gamev1.InteractionState, want gamev1.GMInteractionBeatType) {
+	t.Helper()
+	for _, beat := range currentInteractionBeats(state) {
+		if beat.GetType() == want {
+			return
+		}
+	}
+	t.Fatalf("current interaction is missing beat type %q", want.String())
+}
+
+func assertCurrentInteractionHasAnyBeatType(t *testing.T, state *gamev1.InteractionState, want ...gamev1.GMInteractionBeatType) {
+	t.Helper()
+	for _, beat := range currentInteractionBeats(state) {
+		for _, kind := range want {
+			if beat.GetType() == kind {
+				return
+			}
+		}
+	}
+	names := make([]string, 0, len(want))
+	for _, kind := range want {
+		names = append(names, kind.String())
+	}
+	t.Fatalf("current interaction is missing all beat types %v", names)
+}
+
+func assertCurrentInteractionMentionsOneOf(t *testing.T, state *gamev1.InteractionState, snippets ...string) {
+	t.Helper()
+	var joined strings.Builder
+	for _, beat := range currentInteractionBeats(state) {
+		if joined.Len() > 0 {
+			joined.WriteString("\n")
+		}
+		joined.WriteString(strings.ToLower(strings.TrimSpace(beat.GetText())))
+	}
+	text := joined.String()
+	for _, snippet := range snippets {
+		if strings.Contains(text, strings.ToLower(strings.TrimSpace(snippet))) {
+			return
+		}
+	}
+	t.Fatalf("current interaction %q does not mention any of %v", text, snippets)
+}
+
+func assertPromptDoesNotContain(t *testing.T, prompt string, forbidden ...string) {
+	t.Helper()
+	promptLower := strings.ToLower(strings.TrimSpace(prompt))
+	for _, snippet := range forbidden {
+		if strings.Contains(promptLower, strings.ToLower(strings.TrimSpace(snippet))) {
+			t.Fatalf("prompt %q unexpectedly contains forbidden phrase %q", prompt, snippet)
+		}
+	}
 }

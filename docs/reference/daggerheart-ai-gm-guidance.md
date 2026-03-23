@@ -33,6 +33,8 @@ Use this guidance when an AI GM is:
   features, and current conditions as authoritative character capability data.
 - Prefer character-sheet reads for character-specific capability questions and
   reference-corpus reads for exact rule wording.
+- If the player declares something impossible from the current sheet or the
+  established fiction, stop and clarify instead of silently narrating success.
 - When the question is about procedure, sequencing, or GM practice, prefer the
   playbook-style reference documents before improvising from memory.
 - Do not consult playbooks pre-emptively. Use them when the exact procedure is
@@ -87,6 +89,9 @@ Use this guidance when an AI GM is:
 - Respect established facts.
   Do not negate prior outcomes, invalidate durable character choices, or invent
   bypasses around system-owned mechanics.
+- Keep narrator authority on the GM side.
+  Players decide what their characters attempt or say; the GM decides how NPCs,
+  the world, and unresolved fiction answer back.
 
 ## Roll and consequence heuristics
 
@@ -110,6 +115,9 @@ Use this guidance when an AI GM is:
 ## Equipment cues
 
 - Some equipment should inform narration without becoming engine-owned state.
+- A declared weapon, shield, or tool can still justify a sheet check even when
+  no roll happens yet; the GM should confirm the character actually has it
+  before framing the scene around it.
 - Veritas Opal Armor is one of those cues: if a nearby creature lies, let the
   armor's glow inform how you frame the moment.
 - The system does not determine who is lying or who counts as nearby; the GM or

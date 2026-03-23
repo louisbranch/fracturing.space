@@ -1,0 +1,158 @@
+{
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "captured_at_utc": "2026-03-22T00:00:00Z",
+    "scenario": "ai_gm_campaign_context_hope_experience",
+    "source": "manual_fixture"
+  },
+  "initial_prompt_contains": [
+    "story.md:",
+    "Starter seed: Cliffside smugglers marked their route in the mud below the Beacon.",
+    "memory.md:",
+    "Remember: The cove tracks may reveal who sabotaged the Beacon.",
+    "Review-resolution mode",
+    "The GM authors NPC dialogue and world responses; prompt beats ask only what the player character does, says, chooses, or commits to next."
+  ],
+  "initial_tool_names": [
+    "campaign_artifact_upsert",
+    "interaction_resolve_scene_player_review",
+    "character_sheet_read",
+    "daggerheart_action_roll_resolve"
+  ],
+  "steps": [
+    {
+      "id": "resp_hope_1",
+      "tool_calls": [
+        {
+          "call_id": "call_hope_1",
+          "name": "character_sheet_read",
+          "arguments": {
+            "character_id": "{{character_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_hope_2",
+      "tool_calls": [
+        {
+          "call_id": "call_hope_2",
+          "name": "daggerheart_action_roll_resolve",
+          "arguments": {
+            "character_id": "{{character_id}}",
+            "trait": "instinct",
+            "difficulty": 12,
+            "modifiers": [
+              {
+                "source": "experience",
+                "value": 2
+              }
+            ],
+            "advantage": 0,
+            "disadvantage": 0,
+            "underwater": false,
+            "breath_scene_countdown_id": "",
+            "scene_id": "{{scene_id}}",
+            "replace_hope_with_armor": false,
+            "context": "read_tracks",
+            "targets": [],
+            "swap_hope_fear": false,
+            "rng": {
+              "seed": 17,
+              "roll_mode": "REPLAY"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_hope_3",
+      "tool_calls": [
+        {
+          "call_id": "call_hope_3",
+          "name": "campaign_artifact_upsert",
+          "arguments": {
+            "path": "memory.md",
+            "content": "Remember: The cove tracks may reveal who sabotaged the Beacon.\n\nBeacon Footpath update:\n- Aria spent Hope and leaned on her integration experience to read the mud below the lighthouse.\n- The track resolves into a smuggler's route that favors the cliff path and a hidden cove approach.\n- The reading costs momentum in the moment, but it gives the group a clearer lead toward whoever used the darkened Beacon.\n"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_hope_4",
+      "tool_calls": [
+        {
+          "call_id": "call_hope_4",
+          "name": "interaction_resolve_scene_player_review",
+          "arguments": {
+            "scene_id": "{{scene_id}}",
+            "open_next_player_phase": {
+              "interaction": {
+                "title": "Tracks In The Dark",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "fiction",
+                    "text": "Aria crouches in the wet grit below the Beacon and follows the marks where boot heels bit too hard into the mud. With the lantern held low, the scattered scuffs begin to resolve into a deliberate route instead of random harbor traffic."
+                  },
+                  {
+                    "beat_id": "beat-2",
+                    "type": "consequence",
+                    "text": "The reading costs Aria a point of Hope, but it pays off: the trail points toward the cliff path and a hidden cove approach the saboteurs could use without crossing the main docks."
+                  },
+                  {
+                    "beat_id": "beat-3",
+                    "type": "prompt",
+                    "text": "Aria, now that you have the route, what do you do next: follow the cliff path at once, circle toward the cove, or call the others in before you move?"
+                  }
+                ]
+              },
+              "next_character_ids": [
+                "{{character_id}}"
+              ]
+            },
+            "request_revisions": {
+              "interaction": {
+                "title": "placeholder",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "guidance",
+                    "text": ""
+                  }
+                ]
+              },
+              "revisions": []
+            },
+            "return_to_gm": {
+              "interaction": {
+                "title": "placeholder",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "guidance",
+                    "text": ""
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_hope_5",
+      "output_text": "Resolved the Beacon Footpath review by grounding the read in Aria's sheet, spending Hope through an experience-backed action roll, updating memory.md, and reopening the player phase.\n\nCommitted beats:\n1. Fiction: Aria turns the muddied scuffs into a readable route below the dark Beacon.\n2. Consequence: the read costs Hope but reveals a smuggler path toward the cliff and hidden cove.\n3. Prompt: Aria must now choose whether to press on alone, circle toward the cove, or call the others in.\n\nPlayers may act next."
+    }
+  ]
+}

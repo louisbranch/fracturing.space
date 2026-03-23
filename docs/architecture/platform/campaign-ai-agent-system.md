@@ -25,6 +25,9 @@ The agent speaks through three output channels. Each maps to a distinct role:
 nor embed state-mutating decisions in free-form prose. Tool calls are the sole
 authority for state changes; committed text is the sole authority for in-character
 narration.
+Committed prompt beats are still narrator-owned content: they may ask for
+player-character action, dialogue, or commitment, but they must not outsource
+NPC dialogue, NPC choices, or world-outcome authorship to the player.
 ## Beat-Oriented Interaction Authoring
 The committed interaction channel is beat-oriented: the agent authors one structured
 `gm_interaction` at a time using ordered beats such as `fiction`, `resolution`,
@@ -39,9 +42,15 @@ information context.
 ## Mechanics-Heavy Turn Discipline
 Mechanics-heavy turns require stricter channel discipline than scene-framing
 turns.
+- Before the agent narrates a claimed capability or permissive fiction, it
+  should verify that the claim fits established scene facts and the acting
+  character's actual sheet.
 - The committed interaction should make the authoritative mechanical outcome
   legible to the player whenever HP, Armor, Hope, Stress, Fear, spotlight, or
   visible countdown pressure changed.
+- `resolution` and `consequence` beats are reserved for actual adjudication.
+  Fiction-only turns should stay in `fiction` plus optional `guidance` and
+  `prompt` beats.
 - Player-facing beats should describe game-state changes in table language, not
   engine language. Internal IDs, enum names, and storage-shaped labels belong
   in memory or OOC notes, not in the committed beat text.

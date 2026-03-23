@@ -721,19 +721,19 @@ func newProductionToolRegistry() productionToolRegistry {
 func interactionSchemaProperty(description string) schemaProperty {
 	return schemaProperty{
 		Type:        "object",
-		Description: description,
+		Description: description + "; prompt beats ask only for the acting player character's next action, choice, dialogue, or commitment and never outsource NPC dialogue or story outcomes to the player",
 		Properties: map[string]schemaProperty{
 			"title":         {Type: "string", Description: "short interaction title"},
 			"character_ids": {Type: "array", Description: "characters addressed by the interaction", Items: &schemaProperty{Type: "string"}},
 			"beats": {
 				Type:        "array",
-				Description: "ordered beats that make up the GM interaction; keep related prose in one beat even across paragraphs, and start a new beat only when the function or information context materially changes; end with a prompt beat when players should act next",
+				Description: "ordered beats that make up the GM interaction; keep related prose in one beat even across paragraphs, start a new beat only when the function or information context materially changes, use resolution and consequence only for adjudicated results, and end with a prompt beat when players should act next",
 				Items: &schemaProperty{
 					Type: "object",
 					Properties: map[string]schemaProperty{
 						"beat_id": {Type: "string", Description: "optional stable beat identifier"},
-						"type":    {Type: "string", Description: "beat type: fiction, prompt, resolution, consequence, or guidance"},
-						"text":    {Type: "string", Description: "beat body text; may span multiple paragraphs when it serves one coherent beat"},
+						"type":    {Type: "string", Description: "beat type: fiction, prompt, resolution, consequence, or guidance; use resolution only after adjudication and prompt only for player-character handoff"},
+						"text":    {Type: "string", Description: "beat body text; may span multiple paragraphs when it serves one coherent beat; prompt text must not ask the player to script NPC dialogue or story outcomes"},
 					},
 				},
 			},

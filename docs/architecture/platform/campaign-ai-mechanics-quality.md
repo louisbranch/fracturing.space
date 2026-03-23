@@ -29,7 +29,6 @@ as the factual baseline. Use this note for the next design moves.
   variance than missing mechanics tools.
 
 ## Observed Gaps
-
 - Board-control turns still leak raw engine vocabulary too easily. Countdown
   IDs, adversary IDs, and internal state labels are useful for QA and memory,
   but they should not bleed into player-facing beats.
@@ -67,7 +66,6 @@ Keep internal IDs, enum names, and engine state labels in memory or OOC notes
 only. The player should hear the game state change, not storage vocabulary.
 
 ### 2. Intent-To-Mechanics Eval Ladder
-
 Add a dedicated evaluation track where the player's natural-language intent is
 the main mechanic cue. These lanes should not name the required tool family in
 the player prompt.
@@ -78,14 +76,21 @@ The first ladder should cover:
 - named feature use that may or may not be legal from the current sheet
 - domain-card use
 - equipment-driven action
+- impossible declared capability that should trigger clarification instead of
+  permissive narration
 - ambiguous intent that should trigger clarification instead of a bad tool call
 - multi-actor intent that should become group action or tag-team resolution
+
+Add a parallel narrator-authority check to the same ladder:
+
+- prompt beats should ask what the player character does next
+- prompt beats should not ask the player to author NPC dialogue or story-world
+  answers
 
 Use deterministic integration coverage first, then live-agent lanes for the
 same cases.
 
 ### 3. Diagnostic / Coach Mode
-
 Add a separate, non-authoritative critique path that runs after a live or
 replay capture. It should inspect the transcript, tool trace, and summary
 artifacts and return:
@@ -100,7 +105,6 @@ This critique mode should not share the authoritative GM channel. It is a
 product and tooling analysis surface, not part of the live scene turn.
 
 ### 4. Bounded Reference Strategy
-
 Preserve the current two-layer model and make it explicit:
 
 - short always-on operational primer for common mechanics turns
@@ -115,7 +119,6 @@ Reference budgets should become part of evaluation policy:
   are active in the current turn
 
 ### 5. Runtime Robustness
-
 Treat session-gate and precondition failures as the primary live reliability
 problem now that the mechanics surface is broader.
 

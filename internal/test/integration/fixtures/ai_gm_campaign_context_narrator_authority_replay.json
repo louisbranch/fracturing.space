@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "captured_at_utc": "2026-03-22T00:00:00Z",
+    "scenario": "ai_gm_campaign_context_narrator_authority",
+    "source": "manual_fixture"
+  },
+  "initial_prompt_contains": [
+    "story.md:",
+    "Starter seed: A stranger lurks beside the oil stores under the dark Beacon.",
+    "memory.md:",
+    "Remember: Mira has cornered a stranger and forced them to answer.",
+    "Review-resolution mode",
+    "The GM authors NPC dialogue and world responses; prompt beats ask only what the player character does, says, chooses, or commits to next."
+  ],
+  "initial_tool_names": [
+    "campaign_artifact_upsert",
+    "interaction_resolve_scene_player_review"
+  ],
+  "steps": [
+    {
+      "id": "resp_authority_1",
+      "tool_calls": [
+        {
+          "call_id": "call_authority_1",
+          "name": "campaign_artifact_upsert",
+          "arguments": {
+            "path": "memory.md",
+            "content": "Remember: Mira has cornered a stranger and forced them to answer.\n\nOil Stores update:\n- The stranger finally gave a name under pressure: Rellan Voss, a dock runner tied to the cove.\n- He claims he was paid to keep watch on the oil stores and warn the cave crew if anyone came looking.\n- Mira still has control of the exchange and must decide whether to press for more, bind him, or follow the lead immediately.\n"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_authority_2",
+      "tool_calls": [
+        {
+          "call_id": "call_authority_2",
+          "name": "interaction_resolve_scene_player_review",
+          "arguments": {
+            "scene_id": "{{scene_id}}",
+            "open_next_player_phase": {
+              "interaction": {
+                "title": "A Name In The Dark",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "fiction",
+                    "text": "The stranger swallows hard and finally blurts, \"Rellan Voss. Dock runner. I was paid to watch the oil stores and warn the cave crew if anyone came snooping.\" His eyes keep flicking toward the cliff road, but the answer is out now and he knows it."
+                  },
+                  {
+                    "beat_id": "beat-2",
+                    "type": "prompt",
+                    "text": "Aria, now that Rellan has named himself and admitted the cove connection, what do you do next?"
+                  }
+                ]
+              },
+              "next_character_ids": [
+                "{{character_id}}"
+              ]
+            },
+            "request_revisions": {
+              "interaction": {
+                "title": "placeholder",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "guidance",
+                    "text": ""
+                  }
+                ]
+              },
+              "revisions": []
+            },
+            "return_to_gm": {
+              "interaction": {
+                "title": "placeholder",
+                "character_ids": [
+                  "{{character_id}}"
+                ],
+                "beats": [
+                  {
+                    "beat_id": "beat-1",
+                    "type": "guidance",
+                    "text": ""
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_authority_3",
+      "output_text": "Resolved the Oil Stores review by narrating the stranger's answer directly, updating memory.md with the new lead, and reopening the player phase with a prompt that stays on Aria's next move.\n\nCommitted beats:\n1. Fiction: the stranger identifies himself as Rellan Voss and admits he was watching for the cave crew.\n2. Prompt: Aria must now decide how to press the advantage.\n\nPlayers may act next."
+    }
+  ]
+}
