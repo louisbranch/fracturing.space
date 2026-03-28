@@ -1,7 +1,7 @@
 ---
 title: "Event replay"
 parent: "Foundations"
-nav_order: 6
+nav_order: 7
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-07"

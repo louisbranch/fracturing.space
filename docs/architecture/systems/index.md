@@ -13,6 +13,7 @@ last_reviewed: "2026-03-02"
 Mechanics and game-system extension documentation.
 
 - [Game systems architecture](game-systems.md)
+- [Core choice primitive](core-choice-primitive.md)
 - [Adding a game system](adding-a-game-system.md)
 - [Module interface reference](module-interface-reference.md)
 - Daggerheart reference contracts:

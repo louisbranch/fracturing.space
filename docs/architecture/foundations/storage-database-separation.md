@@ -1,3 +1,9 @@
+---
+title: "Storage database separation"
+parent: "Foundations"
+nav_order: 8
+---
+
 # Storage Database Separation
 
 The game service uses three separate SQLite databases, each managing a distinct

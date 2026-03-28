@@ -1,10 +1,11 @@
-package referencecorpus_test
+package referencecorpus
 
 import (
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -61,6 +62,55 @@ func TestRepoPlaybookManifestMatchesFilesScenariosAndTools(t *testing.T) {
 	}
 }
 
+func TestLoadRepoPlaybookEntriesFromDirIgnoresIndexGuide(t *testing.T) {
+	dir := t.TempDir()
+	writeRepoPlaybookFile(t, dir, "index.md", `---
+title: "Daggerheart playbooks"
+parent: "Reference"
+nav_order: 19
+has_children: true
+---
+
+# Daggerheart playbooks
+`)
+	writeRepoPlaybookFile(t, dir, "playbook-example.md", `---
+id: "playbook-example"
+title: "Example Playbook"
+kind: "playbook"
+aliases: ["example"]
+---
+
+# Example Playbook
+`)
+
+	entries, err := loadRepoPlaybookEntriesFromDir(dir)
+	if err != nil {
+		t.Fatalf("loadRepoPlaybookEntriesFromDir() error = %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("loadRepoPlaybookEntriesFromDir() len = %d, want 1", len(entries))
+	}
+	if entries[0].ID != "playbook-example" {
+		t.Fatalf("loadRepoPlaybookEntriesFromDir() id = %q, want %q", entries[0].ID, "playbook-example")
+	}
+}
+
+func TestLoadRepoPlaybookEntriesFromDirRejectsBrokenPlaybookFrontMatter(t *testing.T) {
+	dir := t.TempDir()
+	writeRepoPlaybookFile(t, dir, "playbook-broken.md", `---
+title: "Broken Playbook"
+kind: "playbook"
+---
+
+# Broken Playbook
+`)
+
+	_, err := loadRepoPlaybookEntriesFromDir(dir)
+	if err == nil || !strings.Contains(err.Error(), "missing id, title, or kind front matter") {
+		t.Fatalf("loadRepoPlaybookEntriesFromDir() error = %v, want invalid front matter error", err)
+	}
+}
+
 func repoRootPath(t *testing.T, relative string) string {
 	t.Helper()
 	_, currentFile, _, ok := runtime.Caller(0)
@@ -88,5 +138,14 @@ func declaredToolNames() map[string]struct{} {
 		"daggerheart_tag_team_flow_resolve":           {},
 		"system_reference_search":                     {},
 		"system_reference_read":                       {},
+	}
+}
+
+func writeRepoPlaybookFile(t *testing.T, dir, name, contents string) {
+	t.Helper()
+
+	fullPath := filepath.Join(dir, name)
+	if err := os.WriteFile(fullPath, []byte(contents), 0o600); err != nil {
+		t.Fatalf("write repo playbook %q: %v", fullPath, err)
 	}
 }

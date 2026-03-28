@@ -1,3 +1,9 @@
+---
+title: "Game gRPC package split"
+parent: "Platform surfaces"
+nav_order: 25
+---
+
 # Game gRPC Package Split
 
 Status: **complete** — all milestones (M0–M7) done.

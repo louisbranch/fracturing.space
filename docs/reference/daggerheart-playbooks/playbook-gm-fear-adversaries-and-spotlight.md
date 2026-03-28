@@ -1,6 +1,8 @@
 ---
 id: "playbook-gm-fear-adversaries-and-spotlight"
 title: "GM Fear, Adversaries, and Spotlight"
+parent: "Daggerheart playbooks"
+nav_order: 3
 kind: "playbook"
 aliases: ["gm fear", "adversary spotlight", "fear spend", "spotlight combat"]
 ---

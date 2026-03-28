@@ -1,7 +1,7 @@
 ---
 title: "Validation boundaries"
 parent: "Foundations"
-nav_order: 9
+nav_order: 10
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-19"
