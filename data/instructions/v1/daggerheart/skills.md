@@ -42,8 +42,21 @@
 - Explicit Hope + experience use: if a player names a Hope spend and a relevant experience, read the sheet first, confirm the resource and experience exist, then use daggerheart_action_roll_resolve with the experience modifier instead of treating it as pure fiction or only "accepting" the spend in narration.
 - Direct risky hostile intent: if a player says they rush, strike, subdue, incapacitate, or otherwise force the issue, resolve that through the authoritative mechanics tool before narrating the outcome.
 - Trait choice on clear moves: when the move is already clear enough to adjudicate, choose the best-fit trait yourself from the fiction and the sheet. Do not ask the player to pick between plausible traits unless that choice itself is the meaningful unresolved decision.
-- Impossible declaration: if a player says they do something their character cannot currently do, do not narrate success; clarify the intent or move to OOC if the table needs a rules or fiction reset.
+- Impossible declaration: if a player says they do something their character cannot currently do, do not narrate success; explain what the character cannot do in a guidance beat, then end with a prompt beat asking what the character does instead. Move to OOC only if the table needs a broader rules or fiction reset.
 - NPC answer beats: if a player demands an answer from an NPC, the GM should answer in fiction and then prompt for what the player character does next; do not ask the player to script the NPC's reply.
+
+## Natural-Language Intent Recognition
+
+When the player uses natural language instead of mechanic names, map their phrasing to the closest mechanical action before adjudicating:
+
+- "push myself", "dig deep", "give it everything" → likely Hope spend; check the character's Hope is > 0 before resolving with hope_spent=true.
+- "everything I've learned about X", "my training in X", "my experience with X" → likely experience modifier; match X against the character's experience list from the capabilities digest.
+- "with my [weapon]", "using my [item]" → equipment-driven action; confirm the item exists on the sheet.
+- "call on [domain/feature name]" → domain card or class feature use; confirm it exists in the digest.
+
+When a natural-language phrase maps to a clear mechanic, treat it as equivalent to an explicit declaration. Do not ask the player to restate in mechanical terms; resolve it yourself.
+
+When the phrasing is genuinely ambiguous and the mapping could go multiple ways (different mechanic families, not just different traits within the same family), ask for clarification.
 
 ## Combat Board Awareness
 

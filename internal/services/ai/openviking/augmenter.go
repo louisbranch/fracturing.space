@@ -2,11 +2,14 @@ package openviking
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
@@ -31,25 +34,36 @@ type resourceSearchClient interface {
 // PromptAugmenterConfig declares the OpenViking-backed prompt augmentation
 // policy.
 type PromptAugmenterConfig struct {
-	Client            resourceSearchClient
-	Mode              IntegrationMode
-	MirrorRoot        string
-	VisibleMirrorRoot string
-	MaxResults        int
-	MaxSections       int
-	ResourceTimeout   time.Duration
+	Client                     resourceSearchClient
+	Mode                       IntegrationMode
+	MirrorRoot                 string
+	VisibleMirrorRoot          string
+	ReferenceCorpusRoot        string
+	ReferenceCorpusVisibleRoot string
+	MaxResults                 int
+	MaxSections                int
+	MinRelevanceScore          float64
+	ResourceTimeout            time.Duration
 }
 
 // PromptAugmenter mirrors campaign artifacts into OpenViking and retrieves a
 // compact supplemental context slice for the current turn.
 type PromptAugmenter struct {
-	client            resourceSearchClient
-	mode              IntegrationMode
-	mirrorRoot        string
-	visibleMirrorRoot string
-	maxResults        int
-	maxSections       int
-	resourceTimeout   time.Duration
+	client                     resourceSearchClient
+	mode                       IntegrationMode
+	mirrorRoot                 string
+	visibleMirrorRoot          string
+	referenceCorpusRoot        string
+	referenceCorpusVisibleRoot string
+	maxResults                 int
+	maxSections                int
+	minRelevanceScore          float64
+	resourceTimeout            time.Duration
+
+	// Content-hash cache: avoids re-mirroring unchanged artifacts.
+	cacheMu       sync.Mutex
+	contentHashes map[string]string           // logicalPath → hex SHA-256
+	cachedRoots   map[string]mirroredArtifact // logicalPath → last successful mirror result
 }
 
 // NewPromptAugmenter builds one prompt augmenter from explicit dependencies.
@@ -81,14 +95,24 @@ func NewPromptAugmenter(cfg PromptAugmenterConfig) (*PromptAugmenter, error) {
 	if resourceTimeout <= 0 {
 		resourceTimeout = defaultResourceTimeout
 	}
+	refRoot := strings.TrimSpace(cfg.ReferenceCorpusRoot)
+	refVisibleRoot := strings.TrimSpace(cfg.ReferenceCorpusVisibleRoot)
+	if refVisibleRoot == "" {
+		refVisibleRoot = refRoot
+	}
 	return &PromptAugmenter{
-		client:            cfg.Client,
-		mode:              mode,
-		mirrorRoot:        absMirrorRoot,
-		visibleMirrorRoot: strings.TrimSpace(cfg.VisibleMirrorRoot),
-		maxResults:        maxResults,
-		maxSections:       maxSections,
-		resourceTimeout:   resourceTimeout,
+		client:                     cfg.Client,
+		mode:                       mode,
+		mirrorRoot:                 absMirrorRoot,
+		visibleMirrorRoot:          strings.TrimSpace(cfg.VisibleMirrorRoot),
+		referenceCorpusRoot:        refRoot,
+		referenceCorpusVisibleRoot: refVisibleRoot,
+		maxResults:                 maxResults,
+		maxSections:                maxSections,
+		minRelevanceScore:          cfg.MinRelevanceScore,
+		resourceTimeout:            resourceTimeout,
+		contentHashes:              make(map[string]string),
+		cachedRoots:                make(map[string]mirroredArtifact),
 	}, nil
 }
 
@@ -136,7 +160,8 @@ func (a *PromptAugmenter) Augment(ctx context.Context, sess orchestration.Sessio
 		MemoryHits:      len(result.Memories),
 	})
 
-	sections, traces := a.buildRetrievedSections(ctx, result, a.maxSections)
+	effective := effectiveMaxSections(brief.TurnMode(), a.maxSections)
+	sections, traces := a.buildRetrievedSections(ctx, result, effective)
 	orchestration.RecordRetrievedContexts(ctx, traces)
 	if len(sections) == 0 {
 		return orchestration.BriefContribution{}, nil
@@ -217,6 +242,17 @@ func (a *PromptAugmenter) syncArtifacts(ctx context.Context, sess orchestration.
 	}
 	targets := make([]mirroredArtifact, 0, len(specs))
 	for _, spec := range specs {
+		newHash := sha256Hex(spec.content)
+		a.cacheMu.Lock()
+		if a.contentHashes[spec.logicalPath] == newHash {
+			if cached, ok := a.cachedRoots[spec.logicalPath]; ok {
+				targets = append(targets, cached)
+				a.cacheMu.Unlock()
+				continue
+			}
+		}
+		a.cacheMu.Unlock()
+
 		localPath := filepath.Join(root, filepath.FromSlash(spec.logicalPath))
 		if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
 			return targets, fmt.Errorf("create mirrored artifact parent %s: %w", spec.logicalPath, err)
@@ -242,11 +278,49 @@ func (a *PromptAugmenter) syncArtifacts(ctx context.Context, sess orchestration.
 		if rootURI == "" {
 			rootURI = spec.to
 		}
-		targets = append(targets, mirroredArtifact{
+		mirrored := mirroredArtifact{
 			LogicalPath: spec.logicalPath,
 			RootURI:     rootURI,
-		})
+		}
+		targets = append(targets, mirrored)
+
+		a.cacheMu.Lock()
+		a.contentHashes[spec.logicalPath] = newHash
+		a.cachedRoots[spec.logicalPath] = mirrored
+		a.cacheMu.Unlock()
 	}
+
+	// Mirror the reference corpus into OpenViking once (static content, never changes).
+	if a.referenceCorpusRoot != "" {
+		const refKey = "reference-corpus"
+		a.cacheMu.Lock()
+		_, synced := a.cachedRoots[refKey]
+		a.cacheMu.Unlock()
+		if !synced {
+			result, err := a.client.AddResource(ctx, AddResourceInput{
+				Path:    a.referenceCorpusVisibleRoot,
+				To:      "viking://resources/daggerheart",
+				Reason:  "daggerheart reference corpus (ov1)",
+				Wait:    true,
+				Timeout: 30 * time.Second,
+			})
+			if err != nil {
+				// Non-fatal: reference corpus is supplemental. Log via diagnostics.
+				return targets, nil
+			}
+			rootURI := strings.TrimSpace(result.RootURI)
+			if rootURI == "" {
+				rootURI = "viking://resources/daggerheart"
+			}
+			a.cacheMu.Lock()
+			a.cachedRoots[refKey] = mirroredArtifact{
+				LogicalPath: refKey,
+				RootURI:     rootURI,
+			}
+			a.cacheMu.Unlock()
+		}
+	}
+
 	return targets, nil
 }
 
@@ -273,11 +347,25 @@ func buildSearchQuery(brief orchestration.SessionBrief, input orchestration.Prom
 	var b strings.Builder
 	b.WriteString("Campaign GM turn context")
 	if mode := strings.TrimSpace(string(brief.TurnMode())); mode != "" {
-		b.WriteString("\nMode: ")
+		b.WriteString("\nPhase: ")
 		b.WriteString(mode)
 	}
+	switch brief.TurnMode() {
+	case orchestration.InteractionTurnModeBootstrap:
+		b.WriteString("\nGoal: create opening scene and first player interaction")
+	case orchestration.InteractionTurnModeReviewResolution:
+		b.WriteString("\nGoal: adjudicate submitted player action using mechanics")
+	default:
+		b.WriteString("\nGoal: continue active scene and return play to players")
+	}
+	if state := brief.InteractionState; state != nil {
+		if sceneID := strings.TrimSpace(state.ActiveSceneID); sceneID != "" {
+			b.WriteString("\nActive scene: ")
+			b.WriteString(sceneID)
+		}
+	}
 	if turnInput := strings.TrimSpace(input.TurnInput); turnInput != "" {
-		b.WriteString("\nTurn input: ")
+		b.WriteString("\nPlayer input: ")
 		b.WriteString(turnInput)
 	}
 	return b.String()
@@ -364,6 +452,9 @@ func (a *PromptAugmenter) buildRetrievedSections(ctx context.Context, result Sea
 	for _, match := range candidates {
 		if maxSections > 0 && len(sections) >= maxSections {
 			break
+		}
+		if a.minRelevanceScore > 0 && match.Score < a.minRelevanceScore {
+			continue
 		}
 		uri := strings.TrimSpace(match.URI)
 		if uri == "" {
@@ -711,4 +802,29 @@ func joinRenderErrors(parts ...string) string {
 		items = append(items, part)
 	}
 	return strings.Join(items, " | ")
+}
+
+func sha256Hex(content string) string {
+	h := sha256.Sum256([]byte(content))
+	return hex.EncodeToString(h[:])
+}
+
+// effectiveMaxSections adjusts the base section budget for the current turn
+// phase. Bootstrap needs broader context; review-resolution needs focused
+// mechanics context.
+func effectiveMaxSections(mode orchestration.InteractionTurnMode, base int) int {
+	switch mode {
+	case orchestration.InteractionTurnModeBootstrap:
+		if base+1 > 3 {
+			return base + 1
+		}
+		return 3
+	case orchestration.InteractionTurnModeReviewResolution:
+		if base-1 >= 1 {
+			return base - 1
+		}
+		return 1
+	default:
+		return base
+	}
 }

@@ -127,6 +127,8 @@ This work is materially improved when:
 
 - [Campaign AI Orchestration](campaign-ai-orchestration.md) defines the runtime turn boundary and tool policy.
 - [Campaign AI Agent System](campaign-ai-agent-system.md) defines instruction composition, channel discipline, and beat-oriented authoring.
+- [Campaign AI GM Guardrails](campaign-ai-gm-guardrails.md) codifies the enforceable guardrail contract for each recommendation in this doc.
+- [Campaign AI Evaluation Strategy](campaign-ai-evaluation-strategy.md) defines how guardrails are tested through promptfoo scenarios and assertions.
 - Promptfoo should remain an evaluation/reporting layer over the live Go harness, not a replacement for that execution path.
 - Runtime-invalid Promptfoo rows should remain visible, but they should be tracked separately from model-quality failures so pass-rate decisions are not polluted by harness or provider instability.
 - [Daggerheart Live Mechanics Matrix](../../reference/daggerheart-live-mechanics-matrix.md) is the evidence table, not the roadmap.

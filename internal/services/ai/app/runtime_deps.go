@@ -116,13 +116,16 @@ func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logge
 			return runtimeDeps{}, fmt.Errorf("build openviking client: %w", err)
 		}
 		openVikingAugmenter, err = openviking.NewPromptAugmenter(openviking.PromptAugmenterConfig{
-			Client:            client,
-			Mode:              openviking.IntegrationMode(cfg.OpenVikingMode),
-			MirrorRoot:        cfg.OpenVikingMirrorRoot,
-			VisibleMirrorRoot: cfg.OpenVikingVisibleMirrorRoot,
-			MaxResults:        cfg.OpenVikingMaxResults,
-			MaxSections:       cfg.OpenVikingMaxSections,
-			ResourceTimeout:   cfg.OpenVikingResourceSync,
+			Client:                     client,
+			Mode:                       openviking.IntegrationMode(cfg.OpenVikingMode),
+			MirrorRoot:                 cfg.OpenVikingMirrorRoot,
+			VisibleMirrorRoot:          cfg.OpenVikingVisibleMirrorRoot,
+			ReferenceCorpusRoot:        cfg.OpenVikingReferenceCorpusRoot,
+			ReferenceCorpusVisibleRoot: cfg.OpenVikingReferenceCorpusVisibleRoot,
+			MaxResults:                 cfg.OpenVikingMaxResults,
+			MaxSections:                cfg.OpenVikingMaxSections,
+			MinRelevanceScore:          cfg.OpenVikingMinRelevanceScore,
+			ResourceTimeout:            cfg.OpenVikingResourceSync,
 		})
 		if err != nil {
 			_ = store.Close()

@@ -18,6 +18,8 @@ Service-boundary and transport-boundary architecture documentation.
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Campaign AI agent system](campaign-ai-agent-system.md)
 - [Campaign AI mechanics quality](campaign-ai-mechanics-quality.md)
+- [Campaign AI GM guardrails](campaign-ai-gm-guardrails.md)
+- [Campaign AI evaluation strategy](campaign-ai-evaluation-strategy.md)
 - [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)
 - [GM interactions](gm-interactions.md)
 - [Interaction surfaces](interaction-surfaces.md)

@@ -37,6 +37,7 @@ type Output struct {
 	OutputText                 string             `json:"output_text,omitempty"`
 	MemoryContent              string             `json:"memory_content,omitempty"`
 	SkillsReadOnly             bool               `json:"skills_read_only"`
+	TurnCount                  int                `json:"turn_count,omitempty"`
 	Interaction                InteractionSummary `json:"interaction"`
 	CharacterState             CharacterState     `json:"character_state"`
 	Artifacts                  ArtifactPaths      `json:"artifacts"`

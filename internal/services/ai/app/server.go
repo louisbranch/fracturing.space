@@ -130,6 +130,17 @@ func (s *Server) Addr() string {
 	return s.listener.Addr().String()
 }
 
+// WaitGameReady blocks until the AI service's game connection passes a health
+// check or the context ends. Returns nil immediately if no game connection is
+// configured. This is primarily useful for integration tests that need the
+// full orchestration path to be ready before issuing campaign turn RPCs.
+func (s *Server) WaitGameReady(ctx context.Context) error {
+	if s == nil || s.gameMc == nil {
+		return nil
+	}
+	return s.gameMc.WaitReady(ctx)
+}
+
 // Run creates and serves an AI server until the context ends.
 func Run(ctx context.Context, addr string) error {
 	server, err := New(ctx, addr)

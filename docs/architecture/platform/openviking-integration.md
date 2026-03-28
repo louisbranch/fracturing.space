@@ -71,23 +71,23 @@ intended four decision lanes on `gpt-5.4-mini` against the pinned OpenViking
 | `Bootstrap` | 85,954 | 67,475 | `clean_pass` -> `clean_pass` | Clear win with valid retrieval and raw `story.md` suppression |
 | `MechanicsReview` | 55,822 | 55,736 | `clean_pass` -> `clean_pass` | Effective parity after backing-file story rendering |
 | `ReactionReview` | 69,096 | 56,388 | `clean_pass` -> `clean_pass` | Positive after repair; candidate still issued a duplicate memory update |
-| `CapabilityLookup` | 64,799 | 65,128 | `clean_pass` -> `clean_pass` | Clean but not a win; candidate shifted to artifact get/upsert behavior |
+| `CapabilityLookup` | 64,799 | 65,128 | `clean_pass` -> `clean_pass` | Previously showed artifact get/upsert drift; re-evaluated March 27 with enriched queries and phase-aware sections — tool path now matches baseline cleanly |
 
-Current recommendation: `Hold / limited-adoption leaning positive`. OpenViking
-is now validated as a promising retrieval-before-prompt sidecar, but the
-evidence does not yet justify default-on enablement or any broader runtime
-shift. `Bootstrap` is the clearest positive signal. The mechanics-sensitive
-lanes are acceptable. `CapabilityLookup` is the remaining unresolved lane.
+Current recommendation: `Limited adoption`. All four decision lanes now pass
+cleanly with `docs_aligned_supplement` mode. The CapabilityLookup drift
+previously observed no longer reproduces after the enriched search query and
+phase-aware section budget changes. Bootstrap remains the clearest positive
+signal. The remaining adoption gate is the session-memory track.
 
 Immediate next steps:
 
-- investigate the `CapabilityLookup` artifact/tool-path drift
 - continue the separate runtime session-memory track
-- only after those are resolved, revisit default enablement or broader lane
-  expansion
+- monitor CapabilityLookup stability across model version changes
+- revisit default enablement after session-memory is decision-grade
 
-The operational reproduction workflow lives in
-[Integration tests](../../running/integration-tests.md).
+## Reference Corpus (OV1)
+
+An OV1 variant exists with L0/L1/L2 content layers (`FRACTURING_SPACE_AI_OPENVIKING_REFERENCE_CORPUS_ROOT`, opt-in, default off). Evaluated March 27: loading OV1 additively regressed over-research. Continue with V1 until phase-scoped or replacing V1 entirely.
 
 ## Session Memory Track
 
@@ -144,4 +144,6 @@ contract."
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Campaign AI agent system](campaign-ai-agent-system.md)
 - [Campaign AI mechanics quality](campaign-ai-mechanics-quality.md)
+- [Campaign AI GM guardrails](campaign-ai-gm-guardrails.md) — context/memory guardrails covering OpenViking boundary rules
+- [Campaign AI evaluation strategy](campaign-ai-evaluation-strategy.md) — retrieval quality evaluation gaps and diagnostics coverage
 - [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)

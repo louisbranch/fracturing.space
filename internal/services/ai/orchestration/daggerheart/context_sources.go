@@ -145,6 +145,7 @@ type activeCharacterCapabilityEntry struct {
 	Level                  int                      `json:"level,omitempty"`
 	Traits                 *sheetTraitsSummary      `json:"traits,omitempty"`
 	Resources              *sheetResourcesSummary   `json:"resources,omitempty"`
+	Experiences            []sheetExperienceSummary `json:"experiences,omitempty"`
 	Weapons                []sheetWeaponSummary     `json:"weapons,omitempty"`
 	Armor                  *sheetArmorSummary       `json:"armor,omitempty"`
 	DomainCards            []sheetDomainCardSummary `json:"domain_cards,omitempty"`
@@ -179,6 +180,7 @@ type characterSheetSummary struct {
 			SecondaryWeapon *sheetWeaponSummary `json:"secondary_weapon"`
 			ActiveArmor     *sheetArmorSummary  `json:"active_armor"`
 		} `json:"equipment"`
+		Experiences         []sheetExperienceSummary `json:"experiences"`
 		DomainCards         []sheetDomainCardSummary `json:"domain_cards"`
 		ActiveClassFeatures []struct {
 			Name string `json:"name"`
@@ -228,6 +230,11 @@ type sheetArmorSummary struct {
 	Name      string `json:"name,omitempty"`
 	BaseScore *int   `json:"base_score,omitempty"`
 	Feature   string `json:"feature,omitempty"`
+}
+
+type sheetExperienceSummary struct {
+	Name     string `json:"name,omitempty"`
+	Modifier int    `json:"modifier,omitempty"`
 }
 
 type sheetDomainCardSummary struct {
@@ -305,6 +312,14 @@ func digestCharacterSheet(sheet characterSheetSummary) activeCharacterCapability
 		Companion:   sheet.Daggerheart.Companion,
 	}
 	entry.Heritage = heritageLabel(sheet.Daggerheart.Heritage.Ancestry, sheet.Daggerheart.Heritage.Community)
+	for _, exp := range sheet.Daggerheart.Experiences {
+		if name := strings.TrimSpace(exp.Name); name != "" {
+			entry.Experiences = append(entry.Experiences, sheetExperienceSummary{
+				Name:     name,
+				Modifier: exp.Modifier,
+			})
+		}
+	}
 	if weapon := sheet.Daggerheart.Equipment.PrimaryWeapon; weapon != nil {
 		entry.Weapons = append(entry.Weapons, *weapon)
 	}

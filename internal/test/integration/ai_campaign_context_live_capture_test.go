@@ -358,6 +358,188 @@ func TestAIGMCampaignContextLiveCaptureTagTeamReview(t *testing.T) {
 	runAIGMCampaignContextLiveCaptureScenario(t, aiGMTagTeamReviewScenario)
 }
 
+// --- Intent-to-mechanics eval ladder scenarios ---
+
+func TestAIGMCampaignContextLiveCaptureIntentHopeSpend(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMIntentHopeSpendScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureIntentEquipmentAction(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMIntentEquipmentActionScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureIntentImpossibleAction(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMIntentImpossibleActionScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureIntentAmbiguousAction(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMIntentAmbiguousActionScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureIntentDomainCard(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMIntentDomainCardScenario)
+}
+
+// --- Red-team adversarial scenarios ---
+
+func TestAIGMCampaignContextLiveCaptureRedTeamPromptInjection(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMRedTeamPromptInjectionScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureRedTeamJailbreak(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMRedTeamJailbreakScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureRedTeamHallucination(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMRedTeamHallucinationScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureRedTeamHijacking(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMRedTeamHijackingScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureRedTeamOverreliance(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMRedTeamOverrelianceScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureRedTeamExcessiveAgency(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMRedTeamExcessiveAgencyScenario)
+}
+
+// --- Multi-turn eval scenarios ---
+
+func TestAIGMCampaignContextLiveCaptureMultiTurnNarrativeContinuity(t *testing.T) {
+	runMultiTurnLiveCaptureScenario(t, aiGMMultiTurnNarrativeContinuityScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureMultiTurnMemoryRecall(t *testing.T) {
+	runMultiTurnLiveCaptureScenario(t, aiGMMultiTurnMemoryRecallScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureMultiTurnSessionPacing(t *testing.T) {
+	runMultiTurnLiveCaptureScenario(t, aiGMMultiTurnSessionPacingScenario)
+}
+
+// --- Starter campaign lifecycle scenarios ---
+
+func TestAIGMCampaignContextLiveCaptureStarterActProgression(t *testing.T) {
+	runMultiTurnLiveCaptureScenario(t, aiGMStarterActProgressionScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureStarterConclusion(t *testing.T) {
+	runMultiTurnLiveCaptureScenario(t, aiGMStarterConclusionScenario)
+}
+
+// runMultiTurnLiveCaptureScenario wraps runMultiTurnScenario with the live
+// capture recorder and promptfoo eval output.
+func runMultiTurnLiveCaptureScenario(t *testing.T, spec multiTurnScenarioSpec) {
+	t.Helper()
+	apiKey := strings.TrimSpace(os.Getenv(integrationOpenAIAPIKeyEnv))
+	if apiKey == "" {
+		t.Skipf("%s is required", integrationOpenAIAPIKeyEnv)
+	}
+	applyOpenVikingLiveEvalDefaults(t)
+	model := liveAIModel()
+	reasoningEffort := liveAIReasoningEffort()
+	recorder := &openAILiveRecorder{
+		targetURL: liveOpenAIResponsesTargetURL(),
+		client:    newHTTPClient(t),
+		model:     model,
+		scenario: aiGMCampaignScenarioSpec{
+			Name:       spec.Name,
+			StorySeed:  spec.StorySeed,
+			MemorySeed: spec.MemorySeed,
+		},
+		rawCapture: openAILiveCapture{
+			Metadata: openAIReplayMetadata{
+				Provider:        "openai",
+				Model:           model,
+				ReasoningEffort: reasoningEffort,
+				Scenario:        spec.Name,
+				Source:          "live_capture",
+			},
+		},
+	}
+	server := httptest.NewServer(recorder)
+	t.Cleanup(server.Close)
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("recorder debug (on failure):\n%s", recorder.DebugString())
+		}
+	})
+
+	result := runMultiTurnScenario(t, spec, aiGMCampaignScenarioOptions{
+		ResponsesURL:     server.URL,
+		Model:            model,
+		ReasoningEffort:  reasoningEffort,
+		CredentialSecret: apiKey,
+		AgentLabel:       "live-capture-gm",
+	})
+
+	artifactStem := liveCaptureArtifactStem(spec.Name, model)
+	capturedAt := time.Now().UTC().Format("20060102T150405Z")
+	rawPath := writeOpenAILiveCapture(t, artifactStem, capturedAt, recorder.rawCapture)
+	t.Logf("live capture written to %s", rawPath)
+
+	if evalPath := writeMultiTurnPromptfooEvalOutput(t, spec, result, recorder); evalPath != "" {
+		t.Logf("promptfoo eval output written to %s", evalPath)
+	}
+
+	if err := recorder.Err(); err != nil {
+		t.Fatalf("live recorder: %v\nrequests:\n%s", err, recorder.DebugString())
+	}
+	if result.RunStatus != evalsupport.RunStatusPassed {
+		t.Fatalf("%s: %s", result.FailureSummary, result.FailureReason)
+	}
+}
+
+func writeMultiTurnPromptfooEvalOutput(t *testing.T, spec multiTurnScenarioSpec, result aiGMCampaignScenarioResult, recorder *openAILiveRecorder) string {
+	t.Helper()
+	outputPath := strings.TrimSpace(os.Getenv("INTEGRATION_AI_EVAL_OUTPUT_PATH"))
+	if outputPath == "" {
+		return ""
+	}
+	toolNames, referenceSearches, referenceReads := liveToolCounts(recorder.steps)
+	label := spec.Name
+	if len(spec.Turns) > 0 {
+		label = spec.Turns[len(spec.Turns)-1].Label
+	}
+	output := evalsupport.Output{
+		CaseID:               strings.TrimSpace(os.Getenv("INTEGRATION_AI_EVAL_CASE_ID")),
+		Scenario:             spec.Name,
+		Label:                label,
+		RunStatus:            result.RunStatus,
+		MetricStatus:         result.MetricStatus,
+		FailureKind:          result.FailureKind,
+		FailureSummary:       result.FailureSummary,
+		FailureReason:        result.FailureReason,
+		ToolNames:            toolNames,
+		ReferenceSearchCount: referenceSearches,
+		ReferenceReadCount:   referenceReads,
+		OutputText:           result.OutputText,
+		MemoryContent:        result.MemoryContent,
+		SkillsReadOnly:       result.SkillsReadOnly,
+		TurnCount:            len(spec.Turns),
+	}
+	if result.InteractionState != nil {
+		output.Interaction = evalsupport.InteractionSummary{
+			PlayerPhaseOpen:  playerPhaseOpen(result.InteractionState),
+			CurrentBeatTypes: currentInteractionBeatTypes(result.InteractionState),
+			PromptText:       currentPromptBeat(result.InteractionState),
+		}
+	}
+	data, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		t.Logf("marshal multi-turn eval output: %v", err)
+		return ""
+	}
+	if err := os.WriteFile(outputPath, append(data, '\n'), 0o644); err != nil {
+		t.Logf("write multi-turn eval output: %v", err)
+		return ""
+	}
+	return outputPath
+}
+
 func maxToolErrors(v int) *int {
 	return &v
 }
@@ -395,13 +577,19 @@ func runAIGMCampaignContextLiveCaptureScenario(t *testing.T, spec aiGMCampaignSc
 		}
 	})
 
-	result := runAIGMCampaignContextScenario(t, spec, aiGMCampaignScenarioOptions{
+	scenarioOpts := aiGMCampaignScenarioOptions{
 		ResponsesURL:     server.URL,
 		Model:            model,
 		ReasoningEffort:  reasoningEffort,
 		CredentialSecret: apiKey,
 		AgentLabel:       "live-capture-gm",
-	})
+	}
+	result := runAIGMCampaignContextScenario(t, spec, scenarioOpts)
+	if result.RunStatus == evalsupport.RunStatusFailed && result.FailureKind == "harness_error" {
+		t.Logf("retrying after harness error: %s", result.FailureSummary)
+		recorder.Reset()
+		result = runAIGMCampaignContextScenario(t, spec, scenarioOpts)
+	}
 
 	artifactStem := liveCaptureArtifactStem(spec.Name, model)
 	capturedAt := time.Now().UTC().Format("20060102T150405Z")
@@ -1142,6 +1330,28 @@ func (r *openAILiveRecorder) setErr(err error) {
 	if r.firstErr == nil {
 		r.firstErr = err
 	}
+}
+
+// Reset clears the recorder's accumulated state so it can be reused for a
+// retry attempt. The target URL, HTTP client, model, and scenario spec are
+// preserved.
+func (r *openAILiveRecorder) Reset() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.firstErr = nil
+	r.initialPrompt = ""
+	r.initialTools = nil
+	r.steps = nil
+	r.rawCapture = openAILiveCapture{
+		Metadata: openAIReplayMetadata{
+			Provider:        "openai",
+			Model:           r.model,
+			ReasoningEffort: r.rawCapture.Metadata.ReasoningEffort,
+			Scenario:        r.scenario.Name,
+			Source:          "live_capture",
+		},
+	}
+	r.requestDebug = nil
 }
 
 // Err returns the first recorder failure observed during proxying.

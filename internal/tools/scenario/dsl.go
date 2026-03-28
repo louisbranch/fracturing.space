@@ -171,6 +171,7 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "interaction_clear_ooc_ready_to_resume", Function: scenarioInteractionClearReadyOOC},
 	{Name: "interaction_resolve_session_ooc", Function: scenarioInteractionResolveSessionOOC},
 	{Name: "interaction_expect", Function: scenarioInteractionExpect},
+	{Name: "interaction_conclude_session", Function: scenarioInteractionConcludeSession},
 }
 
 var (

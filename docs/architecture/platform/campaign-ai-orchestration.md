@@ -130,8 +130,7 @@ For `gm_mode` `ai` or `hybrid`, campaign session start readiness requires:
 - a bound `ai_agent_id`
 - at least one active `GM` participant seat controlled by `AI`
 
-If either invariant is missing, readiness returns stable blocker codes and
-session start remains blocked.
+If either invariant is missing, readiness returns stable blocker codes.
 
 ## Extensibility
 
@@ -143,3 +142,7 @@ session start remains blocked.
 - Additional game systems are future architecture work. The current production
   prompt and tool surfaces are intentionally optimized for the Daggerheart-first
   runtime that exists today.
+
+## Related Architecture
+
+- [Campaign AI Agent System](campaign-ai-agent-system.md) | [GM Guardrails](campaign-ai-gm-guardrails.md) | [Evaluation Strategy](campaign-ai-evaluation-strategy.md) | [OpenViking](openviking-integration.md)

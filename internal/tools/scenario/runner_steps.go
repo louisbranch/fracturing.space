@@ -51,6 +51,7 @@ var coreStepKinds = map[string]struct{}{
 	"interaction_mark_ooc_ready_to_resume":     {},
 	"interaction_clear_ooc_ready_to_resume":    {},
 	"interaction_resolve_session_ooc":          {},
+	"interaction_conclude_session":             {},
 	"interaction_expect":                       {},
 }
 
@@ -232,6 +233,8 @@ func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Ste
 		return r.runInteractionClearReadyOOCStep(ctx, state)
 	case "interaction_resolve_session_ooc":
 		return r.runInteractionResolveSessionOOCStep(ctx, state, step)
+	case "interaction_conclude_session":
+		return r.runInteractionConcludeSessionStep(ctx, state, step)
 	case "interaction_expect":
 		return r.runInteractionExpectStep(ctx, state, step)
 	default:

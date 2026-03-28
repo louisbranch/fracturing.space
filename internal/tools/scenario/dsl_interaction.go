@@ -69,3 +69,7 @@ func scenarioInteractionResolveSessionOOC(state *lua.State) int {
 func scenarioInteractionExpect(state *lua.State) int {
 	return interactionStep(state, "interaction_expect")
 }
+
+func scenarioInteractionConcludeSession(state *lua.State) int {
+	return interactionStep(state, "interaction_conclude_session")
+}

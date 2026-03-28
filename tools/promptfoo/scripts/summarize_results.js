@@ -10,6 +10,8 @@ const FAILURE_CLASSES = new Set([
   'narrator_authority',
   'phase_reopen',
   'forbidden_tool_path',
+  'tool_argument_error',
+  'adversarial_compliance',
   'tool_execution_error',
   'turn_control_error',
   'provider_error',
@@ -79,6 +81,12 @@ function failureClassFor(result, output) {
   if (reason.includes('forbidden tools present') || reason.includes('forbidden_tool_path')) {
     return 'forbidden_tool_path';
   }
+  if (reason.includes('missing required arg') || reason.includes('forbidden arg') || reason.includes('tool_argument')) {
+    return 'tool_argument_error';
+  }
+  if (reason.includes('output contains forbidden phrase') || reason.includes('adversarial')) {
+    return 'adversarial_compliance';
+  }
   return 'harness_error';
 }
 
@@ -99,6 +107,7 @@ function rowFor(result) {
     model: (result.provider && result.provider.label) || 'unknown',
     promptProfile: (result.prompt && result.prompt.label) || output.prompt_profile || 'baseline',
     success: Boolean(result.success),
+    score: Number(result.score || 0),
     metricStatus: String(output.metric_status || (result.success ? 'pass' : 'fail')).trim() || 'fail',
     failureClass: failureClassFor(result, output),
     failureReason: failureReasonFor(result, output),
@@ -134,6 +143,7 @@ function groupRows(rows) {
     const invalidRows = group.filter((row) => row.metricStatus === 'invalid').length;
     const passed = validRows.filter((row) => row.success).length;
     const representative = group.find((row) => !row.success) || group[0];
+    const avgScore = validRows.length === 0 ? 0 : validRows.reduce((sum, row) => sum + row.score, 0) / validRows.length;
     return {
       scenario,
       model,
@@ -143,6 +153,7 @@ function groupRows(rows) {
       validRuns: validRows.length,
       invalidRuns: invalidRows,
       qualityPassRate: validRows.length === 0 ? 'n/a' : `${passed}/${validRows.length}`,
+      avgScore: validRows.length === 0 ? 'n/a' : `${Math.round(avgScore * 100)}%`,
       dominantFailure: dominantFailure(group),
       representativeReason: representative.success ? 'gm contract satisfied' : representative.failureReason,
       artifacts: representative.artifacts || {},
@@ -154,11 +165,11 @@ function renderMarkdown(groups, inputPath) {
   const lines = [];
   lines.push('# Promptfoo GM Eval Scorecard', '');
   lines.push(`Generated from \`${inputPath}\`.`, '');
-  lines.push('| Scenario | Model | Prompt Profile | Quality Pass Rate | Invalid Runs | Dominant Failure | Representative Reason |');
-  lines.push('| --- | --- | --- | --- | --- | --- | --- |');
+  lines.push('| Scenario | Model | Prompt Profile | Quality Pass Rate | Avg Score | Invalid Runs | Dominant Failure | Representative Reason |');
+  lines.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
   for (const group of groups.sort((a, b) => a.scenario.localeCompare(b.scenario) || a.model.localeCompare(b.model) || a.promptProfile.localeCompare(b.promptProfile))) {
     lines.push(
-      `| ${group.scenario} | ${group.model} | ${group.promptProfile} | ${group.qualityPassRate} | ${group.invalidRuns}/${group.total} | ${group.dominantFailure} | ${group.representativeReason.replace(/\|/g, '\\|')} |`,
+      `| ${group.scenario} | ${group.model} | ${group.promptProfile} | ${group.qualityPassRate} | ${group.avgScore} | ${group.invalidRuns}/${group.total} | ${group.dominantFailure} | ${group.representativeReason.replace(/\|/g, '\\|')} |`,
     );
   }
   lines.push('', '## Representative Artifacts', '');

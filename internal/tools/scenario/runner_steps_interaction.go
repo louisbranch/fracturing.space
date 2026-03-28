@@ -1072,3 +1072,34 @@ func actualOOCPosts(posts []*gamev1.OOCPost) []expectedOOCPost {
 func equalExpectedOOCPost(left, right expectedOOCPost) bool {
 	return left.participantID == right.participantID && left.body == right.body
 }
+
+func (r *Runner) runInteractionConcludeSessionStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	if r.env.aiOrchestrationClient == nil {
+		return r.failf("ai orchestration client is required for interaction_conclude_session")
+	}
+	conclusion := strings.TrimSpace(requiredString(step.Args, "conclusion"))
+	if conclusion == "" {
+		return r.failf("interaction_conclude_session conclusion is required")
+	}
+	summary := strings.TrimSpace(requiredString(step.Args, "summary"))
+	if summary == "" {
+		return r.failf("interaction_conclude_session summary is required")
+	}
+	endCampaign := optionalBool(step.Args, "end_campaign", false)
+	epilogue := strings.TrimSpace(optionalString(step.Args, "epilogue", ""))
+	_, err := r.env.aiOrchestrationClient.ConcludeSession(ctx, &gamev1.ConcludeSessionRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		Conclusion:  conclusion,
+		Summary:     summary,
+		EndCampaign: endCampaign,
+		Epilogue:    epilogue,
+	})
+	if err != nil {
+		return fmt.Errorf("interaction_conclude_session: %w", err)
+	}
+	return nil
+}
