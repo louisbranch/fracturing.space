@@ -165,9 +165,9 @@ func TestPublicAuthUsesSharedRedirectAndPrincipalSeams(t *testing.T) {
 func TestModuleDependenciesStayNestedByOwnedArea(t *testing.T) {
 	t.Parallel()
 
-	assertStructFieldType(t, "module.go", "Dependencies", "Campaigns", "CampaignDependencies")
-	assertStructFieldType(t, "module.go", "Dependencies", "Profile", "ProfileDependencies")
-	assertStructFieldType(t, "module.go", "Dependencies", "Settings", "SettingsDependencies")
+	assertStructFieldType(t, "module.go", "Dependencies", "Campaigns", "campaigns.Dependencies")
+	assertStructFieldType(t, "module.go", "Dependencies", "Profile", "profile.Dependencies")
+	assertStructFieldType(t, "module.go", "Dependencies", "Settings", "settings.Dependencies")
 	assertStructLacksField(t, "module.go", "Dependencies", "SocialClient")
 	assertStructLacksField(t, "module.go", "Dependencies", "ProfileSocialClient")
 	assertStructLacksField(t, "module.go", "Dependencies", "SettingsSocialClient")

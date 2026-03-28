@@ -11,6 +11,8 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
@@ -264,7 +266,7 @@ func TestNewHandlerCanonicalizesDiscoveryRoot(t *testing.T) {
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{
-				Discovery: modules.DiscoveryDependencies{DiscoveryClient: defaultDiscoveryClient()},
+				Discovery: discovery.Dependencies{DiscoveryClient: defaultDiscoveryClient()},
 			},
 		),
 	})
@@ -297,7 +299,7 @@ func TestNewServerBuildsHTTPServer(t *testing.T) {
 		HTTPAddr: "127.0.0.1:0",
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{},
-			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
+			modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})
 	if err != nil {

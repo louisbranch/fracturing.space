@@ -38,19 +38,19 @@ func buildProtectedModules(
 	}
 
 	protected := []module.Module{
-		dashboard.Compose(
-			deps.Dashboard.UserHubClient,
-			deps.Dashboard.StatusClient,
-			base,
-			opts.Logger,
-		),
+		dashboard.Compose(dashboard.CompositionConfig{
+			UserHubClient: deps.Dashboard.UserHubClient,
+			StatusClient:  deps.Dashboard.StatusClient,
+			Base:          base,
+			Logger:        opts.Logger,
+		}),
 		settings.ComposeProtected(settingsOptions, deps.Settings),
 	}
 	if deps.Notifications.NotificationClient != nil {
-		protected = append(protected, notifications.Compose(
-			deps.Notifications.NotificationClient,
-			base,
-		))
+		protected = append(protected, notifications.Compose(notifications.CompositionConfig{
+			Client: deps.Notifications.NotificationClient,
+			Base:   base,
+		}))
 	}
 	if campaignsModule, ok := campaigns.ComposeProtected(campaignsOptions, deps.Campaigns); ok {
 		protected = append(protected, campaignsModule)

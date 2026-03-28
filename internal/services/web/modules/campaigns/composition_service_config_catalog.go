@@ -2,13 +2,14 @@ package campaigns
 
 import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 )
 
 // newPageServiceConfig keeps shared detail-page wiring close to the catalog and
 // workspace ownership it depends on.
-func newPageServiceConfig(config CompositionConfig) pageServiceConfig {
-	return pageServiceConfig{
+func newPageServiceConfig(config CompositionConfig) campaigndetail.PageServiceConfig {
+	return campaigndetail.PageServiceConfig{
 		Workspace:     newWorkspaceServiceConfig(config),
 		SessionRead:   newSessionReadServiceConfig(config),
 		Authorization: newPageAuthorizationGateway(config),

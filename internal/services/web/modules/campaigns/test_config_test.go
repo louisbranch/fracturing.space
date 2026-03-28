@@ -17,14 +17,14 @@ import (
 )
 
 type serviceConfigs struct {
-	Page         pageServiceConfig
+	Page         campaigndetail.PageServiceConfig
 	Catalog      catalogServiceConfig
 	Starter      starterServiceConfig
-	Overview     overviewServiceConfig
-	Participants participantServiceConfig
-	Characters   characterServiceConfig
-	Sessions     sessionServiceConfig
-	Invites      inviteServiceConfig
+	Overview     campaignoverview.ServiceConfig
+	Participants campaignparticipants.ServiceConfig
+	Characters   campaigncharacters.ServiceConfig
+	Sessions     campaignsessions.ServiceConfig
+	Invites      campaigninvites.ServiceConfig
 }
 
 func newTestCampaignSystems(workflows ...campaignworkflow.Registry) campaignSystemRegistry {
@@ -126,7 +126,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 	}
 	authorization := campaignapp.AuthorizationGateway(gateway)
 	return serviceConfigs{
-		Page: pageServiceConfig{
+		Page: campaigndetail.PageServiceConfig{
 			Workspace: campaignapp.WorkspaceServiceConfig{
 				Read: gateway,
 			},
@@ -146,7 +146,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 				Gateway: gateway,
 			},
 		},
-		Overview: overviewServiceConfig{
+		Overview: campaignoverview.ServiceConfig{
 			AutomationRead: campaignapp.AutomationReadServiceConfig{
 				Participants: gateway,
 				Read:         gateway,
@@ -161,7 +161,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 			},
 			Authorization: authorization,
 		},
-		Participants: participantServiceConfig{
+		Participants: campaignparticipants.ServiceConfig{
 			Read: participantRead,
 			Mutation: campaignapp.ParticipantMutationServiceConfig{
 				Read:      gateway,
@@ -170,7 +170,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 			},
 			Authorization: authorization,
 		},
-		Characters: characterServiceConfig{
+		Characters: campaigncharacters.ServiceConfig{
 			Read: campaignapp.CharacterReadServiceConfig{
 				Read:               gateway,
 				BatchAuthorization: gateway,
@@ -191,7 +191,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 			},
 			Authorization: authorization,
 		},
-		Sessions: sessionServiceConfig{
+		Sessions: campaignsessions.ServiceConfig{
 			Characters: campaignapp.CharacterReadServiceConfig{
 				Read:               gateway,
 				BatchAuthorization: gateway,
@@ -202,7 +202,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 			Participants:  participantRead,
 			Authorization: authorization,
 		},
-		Invites: inviteServiceConfig{
+		Invites: campaigninvites.ServiceConfig{
 			Read: campaignapp.InviteReadServiceConfig{
 				Read: gateway,
 			},
@@ -233,7 +233,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 		BatchAuthorization: campaigngateway.NewBatchAuthorizationGateway(deps.Participants.Authorization),
 	}
 	return serviceConfigs{
-		Page: pageServiceConfig{
+		Page: campaigndetail.PageServiceConfig{
 			Workspace: campaignapp.WorkspaceServiceConfig{
 				Read: campaigngateway.NewWorkspaceReadGateway(deps.Page.Workspace, assetBaseURL),
 			},
@@ -253,7 +253,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 				Gateway: campaigngateway.NewStarterGateway(deps.Starter.Starter),
 			},
 		},
-		Overview: overviewServiceConfig{
+		Overview: campaignoverview.ServiceConfig{
 			AutomationRead: campaignapp.AutomationReadServiceConfig{
 				Participants: campaigngateway.NewParticipantReadGateway(deps.Overview.Participants, assetBaseURL),
 				Read:         campaigngateway.NewAutomationReadGateway(deps.Overview.AutomationRead),
@@ -268,7 +268,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 			},
 			Authorization: campaigngateway.NewAuthorizationGateway(deps.Overview.Authorization),
 		},
-		Participants: participantServiceConfig{
+		Participants: campaignparticipants.ServiceConfig{
 			Read: participantRead,
 			Mutation: campaignapp.ParticipantMutationServiceConfig{
 				Read:      campaigngateway.NewParticipantReadGateway(deps.Participants.Read, assetBaseURL),
@@ -277,7 +277,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 			},
 			Authorization: campaigngateway.NewAuthorizationGateway(deps.Participants.Authorization),
 		},
-		Characters: characterServiceConfig{
+		Characters: campaigncharacters.ServiceConfig{
 			Read: campaignapp.CharacterReadServiceConfig{
 				Read:               campaigngateway.NewCharacterReadGateway(deps.Characters.Read, assetBaseURL),
 				BatchAuthorization: campaigngateway.NewBatchAuthorizationGateway(deps.Characters.Authorization),
@@ -298,7 +298,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 			},
 			Authorization: campaigngateway.NewAuthorizationGateway(deps.Characters.Authorization),
 		},
-		Sessions: sessionServiceConfig{
+		Sessions: campaignsessions.ServiceConfig{
 			Characters: campaignapp.CharacterReadServiceConfig{
 				Read:               campaigngateway.NewCharacterReadGateway(deps.Characters.Read, assetBaseURL),
 				BatchAuthorization: campaigngateway.NewBatchAuthorizationGateway(deps.Characters.Authorization),
@@ -309,7 +309,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 			Participants:  participantRead,
 			Authorization: authorization,
 		},
-		Invites: inviteServiceConfig{
+		Invites: campaigninvites.ServiceConfig{
 			Read: campaignapp.InviteReadServiceConfig{
 				Read: campaigngateway.NewInviteReadGateway(deps.Invites.Read),
 			},

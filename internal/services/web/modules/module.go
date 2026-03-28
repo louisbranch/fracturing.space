@@ -23,79 +23,35 @@ type Dependencies struct {
 	AssetBaseURL string
 
 	// Campaigns owns all campaign/session/character/invite/authz clients.
-	Campaigns CampaignDependencies
+	Campaigns campaigns.Dependencies
 
 	// Invite owns public invite reads/mutations and invite-driven dashboard sync.
-	Invite InviteDependencies
+	Invite invite.Dependencies
 
 	// Dashboard owns userhub and status health dependencies.
-	Dashboard DashboardDependencies
+	Dashboard dashboard.Dependencies
 
 	// Profile owns public profile lookup dependencies.
-	Profile ProfileDependencies
+	Profile profile.Dependencies
 
 	// Settings owns profile/account/credential dependencies.
-	Settings SettingsDependencies
+	Settings settings.Dependencies
 
 	// DashboardSync owns cross-module dashboard freshness dependencies.
 	DashboardSync DashboardSyncDependencies
 
 	// PublicAuth owns authentication/session dependencies.
-	PublicAuth PublicAuthDependencies
+	PublicAuth publicauth.Dependencies
 
 	// Notifications owns inbox notification dependencies.
-	Notifications NotificationDependencies
+	Notifications notifications.Dependencies
 
 	// Discovery owns starter/discovery list dependencies.
-	Discovery DiscoveryDependencies
+	Discovery discovery.Dependencies
 }
-
-// CampaignDependencies contains campaign feature clients.
-type CampaignDependencies = campaigns.Dependencies
-
-// CampaignClient keeps composition ownership on the generated campaigns client
-// while the gateway consumes narrower read/mutation bundles internally.
-type CampaignClient = campaigns.CampaignClient
-
-// ParticipantClient keeps one composition-owned participant client while the
-// gateway consumes separate read and mutation seams internally.
-type ParticipantClient = campaigns.ParticipantClient
-
-// CharacterClient keeps one composition-owned character client while the
-// gateway consumes separate read and mutation seams internally.
-type CharacterClient = campaigns.CharacterClient
-
-// SessionClient keeps one composition-owned session client while the gateway
-// consumes separate read and mutation seams internally.
-type SessionClient = campaigns.SessionClient
-
-// InviteClient keeps one composition-owned invite client while the gateway
-// consumes separate read and mutation seams internally.
-type InviteClient = campaigns.InviteClient
-
-// InviteDependencies contains public-invite feature clients.
-type InviteDependencies = invite.Dependencies
-
-// DashboardDependencies contains dashboard feature clients.
-type DashboardDependencies = dashboard.Dependencies
-
-// ProfileDependencies contains profile feature clients.
-type ProfileDependencies = profile.Dependencies
-
-// SettingsDependencies contains settings feature clients.
-type SettingsDependencies = settings.Dependencies
 
 // DashboardSyncDependencies contains shared mutation-sync clients.
 type DashboardSyncDependencies struct {
 	UserHubControlClient dashboardsync.UserHubControlClient
 	GameEventClient      dashboardsync.GameEventClient
 }
-
-// PublicAuthDependencies contains public-auth feature clients.
-type PublicAuthDependencies = publicauth.Dependencies
-
-// NotificationDependencies contains notification feature clients.
-type NotificationDependencies = notifications.Dependencies
-
-// DiscoveryDependencies contains discovery feature clients.
-type DiscoveryDependencies = discovery.Dependencies

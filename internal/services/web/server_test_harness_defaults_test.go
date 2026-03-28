@@ -15,6 +15,12 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/invite"
+	notificationsmod "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"google.golang.org/grpc"
 )
@@ -26,7 +32,7 @@ func TestNewDependencyBundleKeepsPartialModuleDependenciesExplicit(t *testing.T)
 	bundle := newDependencyBundle(
 		principal.Dependencies{SessionClient: auth},
 		modules.Dependencies{
-			Campaigns: modules.CampaignDependencies{
+			Campaigns: campaigns.Dependencies{
 				CampaignClient: defaultCampaignClient(),
 			},
 		},
@@ -58,10 +64,10 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				NotificationClient: notifications,
 			},
 			modules.Dependencies{
-				PublicAuth: modules.PublicAuthDependencies{
+				PublicAuth: publicauth.Dependencies{
 					AuthClient: auth,
 				},
-				Campaigns: modules.CampaignDependencies{
+				Campaigns: campaigns.Dependencies{
 					CampaignClient:           defaultCampaignClient(),
 					DiscoveryClient:          defaultDiscoveryClient(),
 					AgentClient:              defaultAgentClient(),
@@ -77,21 +83,21 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 					AuthorizationClient:      defaultAuthorizationClient(),
 					ForkClient:               defaultForkClient(),
 				},
-				Invite: modules.InviteDependencies{
+				Invite: invite.Dependencies{
 					InviteClient: defaultInviteClient(),
 					AuthClient:   auth,
 				},
-				Settings: modules.SettingsDependencies{
+				Settings: settings.Dependencies{
 					SocialClient:     social,
 					AccountClient:    account,
 					PasskeyClient:    auth,
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Notifications: modules.NotificationDependencies{
+				Notifications: notificationsmod.Dependencies{
 					NotificationClient: notifications,
 				},
-				Profile: modules.ProfileDependencies{
+				Profile: profile.Dependencies{
 					AuthClient:   auth,
 					SocialClient: social,
 				},

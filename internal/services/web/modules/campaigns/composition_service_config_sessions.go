@@ -3,12 +3,14 @@ package campaigns
 import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
+	campaigninvites "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/invites"
+	campaignsessions "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/sessions"
 )
 
 // newSessionSurfaceConfig keeps session composition local to the session and
 // game-launch surface.
-func newSessionSurfaceConfig(config CompositionConfig) sessionServiceConfig {
-	return sessionServiceConfig{
+func newSessionSurfaceConfig(config CompositionConfig) campaignsessions.ServiceConfig {
+	return campaignsessions.ServiceConfig{
 		Characters:    newCharacterReadServiceConfig(config),
 		Mutation:      newSessionMutationServiceConfig(config),
 		Participants:  newParticipantReadServiceConfig(config),
@@ -18,8 +20,8 @@ func newSessionSurfaceConfig(config CompositionConfig) sessionServiceConfig {
 
 // newInviteSurfaceConfig keeps invite composition local to the invite route
 // surface.
-func newInviteSurfaceConfig(config CompositionConfig) inviteServiceConfig {
-	return inviteServiceConfig{
+func newInviteSurfaceConfig(config CompositionConfig) campaigninvites.ServiceConfig {
+	return campaigninvites.ServiceConfig{
 		Read:            newInviteReadServiceConfig(config),
 		Mutation:        newInviteMutationServiceConfig(config),
 		ParticipantRead: newParticipantReadServiceConfig(config),

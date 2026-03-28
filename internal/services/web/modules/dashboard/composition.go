@@ -14,22 +14,26 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
 
+// CompositionConfig owns the startup wiring required to construct the
+// production dashboard module.
+type CompositionConfig struct {
+	UserHubClient dashboardgateway.UserHubClient
+	StatusClient  statusv1.StatusServiceClient
+	Base          modulehandler.Base
+	Logger        *slog.Logger
+}
+
 // Compose builds the dashboard module from the exact startup dependencies the
 // area owns.
-func Compose(
-	userHubClient dashboardgateway.UserHubClient,
-	statusClient statusv1.StatusServiceClient,
-	base modulehandler.Base,
-	logger *slog.Logger,
-) module.Module {
-	gateway := dashboardgateway.NewGRPCGateway(userHubClient)
+func Compose(config CompositionConfig) module.Module {
+	gateway := dashboardgateway.NewGRPCGateway(config.UserHubClient)
 	return New(Config{
 		Service: dashboardapp.NewService(
 			gateway,
-			logger,
-			StatusHealthProvider(statusClient, logger),
+			config.Logger,
+			StatusHealthProvider(config.StatusClient, config.Logger),
 		),
-		Base: base,
+		Base: config.Base,
 	})
 }
 

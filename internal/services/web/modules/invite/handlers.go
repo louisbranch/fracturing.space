@@ -10,6 +10,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
@@ -109,15 +110,13 @@ func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 // renderInvitePage applies the public shell layout around the invite landing view.
 func (h handlers) renderInvitePage(w http.ResponseWriter, r *http.Request, page inviteapp.InvitePage) {
 	loc, lang := h.PageLocalizer(w, r)
-	h.WritePublicPage(
-		w,
-		r,
-		page.Invite.CampaignName,
-		webtemplates.T(loc, "layout.meta_description"),
-		lang,
-		http.StatusOK,
-		PublicInvitePage(mapPublicInviteView(page, loc), loc),
-	)
+	h.WritePublicPage(w, r, pagerender.PublicPage{
+		Title:      page.Invite.CampaignName,
+		MetaDesc:   webtemplates.T(loc, "layout.meta_description"),
+		Language:   lang,
+		StatusCode: http.StatusOK,
+		Body:       PublicInvitePage(mapPublicInviteView(page, loc), loc),
+	})
 }
 
 // userID resolves the signed-in viewer when the invite transport is mounted in web.

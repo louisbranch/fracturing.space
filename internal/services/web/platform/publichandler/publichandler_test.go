@@ -8,6 +8,7 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
@@ -104,7 +105,7 @@ func TestWritePublicPageRendersAuthShell(t *testing.T) {
 	base := NewBase()
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
 	rr := httptest.NewRecorder()
-	base.WritePublicPage(rr, req, "Discover", "desc", "en", http.StatusAccepted, nil)
+	base.WritePublicPage(rr, req, pagerender.PublicPage{Title: "Discover", MetaDesc: "desc", Language: "en", StatusCode: http.StatusAccepted})
 	if rr.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusAccepted)
 	}

@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -55,26 +53,6 @@ func (h Support) Sync() DashboardSync {
 // need to build absolute same-origin links.
 func (h Support) RequestMeta() requestmeta.SchemePolicy {
 	return h.requestMeta
-}
-
-// WriteMutationError writes a flash error notice and redirects back to the
-// originating page so the user stays in context and can retry.
-func (h Support) WriteMutationError(w http.ResponseWriter, r *http.Request, err error, fallbackKey, redirectURL string) {
-	notice := flash.Notice{Kind: flash.KindError}
-	if key := apperrors.LocalizationKey(err); key != "" {
-		notice.Key = key
-	} else {
-		notice.Key = fallbackKey
-	}
-	flash.Write(w, r, notice)
-	httpx.WriteRedirect(w, r, redirectURL)
-}
-
-// WriteMutationSuccess writes a success flash notice and redirects to the
-// target page so the user sees confirmation feedback.
-func (h Support) WriteMutationSuccess(w http.ResponseWriter, r *http.Request, key, redirectURL string) {
-	flash.Write(w, r, flash.NoticeSuccess(key))
-	httpx.WriteRedirect(w, r, redirectURL)
 }
 
 // RouteCampaignID extracts the canonical campaign route parameter.

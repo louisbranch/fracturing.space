@@ -1,5 +1,37 @@
 // Package testast provides shared AST assertion helpers for guardrail tests
 // across the web service. Import this package only in test files.
+//
+// # Why AST-based guardrails
+//
+// This project uses Go AST parsing (go/ast + go/parser) instead of external
+// linters like depguard or go-cleanarch for architectural boundary enforcement.
+// The advantages:
+//
+//   - Finer-grained assertions: beyond import boundaries, guardrails can verify
+//     function calls (AssertFuncCallsSelector), struct field types
+//     (boundary_guardrails_test.go assertStructFieldType), and type existence —
+//     linters typically only enforce import rules.
+//   - Runs with go test: no external tool installation, CI linter config, or
+//     golangci-lint pipeline. Every developer gets boundary enforcement from
+//     `make test`.
+//   - Localized to the owning package: each module's guardrail tests live next
+//     to the code they protect, not in a distant config file.
+//
+// # Adding new guardrails
+//
+// Use the helpers in this package inside *_test.go files (typically
+// architecture_test.go or boundary_guardrails_test.go in the modules package):
+//
+//	testast.AssertImportsDoNotContainPrefix(t, "handlers.go", "proto/package/prefix")
+//	testast.AssertFuncCallsSelector(t, "composition.go", "Compose", "app", "NewService")
+//	testast.AssertTypeMissing(t, "module.go", "LegacyType")
+//
+// # When to consider linter rules
+//
+// If the project grows to where AST tests become hard to maintain (e.g., many
+// modules with similar boundary rules), consider migrating common import rules
+// to depguard linter configuration while keeping the finer-grained AST
+// assertions for structural contracts.
 package testast
 
 import (

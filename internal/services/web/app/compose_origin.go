@@ -23,7 +23,7 @@ func requireCookieSessionSameOrigin(policy requestmeta.SchemePolicy) func(http.H
 				return
 			}
 			if !hasSameOriginProof(r, policy) {
-				weberror.WriteAppError(w, r, http.StatusForbidden, nil)
+				weberror.WriteAppStatusError(w, r, http.StatusForbidden, nil)
 				return
 			}
 			next.ServeHTTP(w, r)

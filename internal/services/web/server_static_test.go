@@ -8,13 +8,14 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
 )
 
 func TestStaticThemeServedByWeb(t *testing.T) {
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -44,7 +45,7 @@ func TestStaticPasskeyAuthScriptIncludesBusyStateGuard(t *testing.T) {
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -81,7 +82,7 @@ func TestStaticUsernameInputScriptPreservesSignupAvailabilityDuringBusyState(t *
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -123,7 +124,7 @@ func TestStaticAppShellScriptIncludesHTMXErrorSwapContract(t *testing.T) {
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -150,7 +151,7 @@ func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -180,7 +181,7 @@ func TestStaticAppShellScriptOmitsImageFallbackContract(t *testing.T) {
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)

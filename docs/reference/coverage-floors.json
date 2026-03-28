@@ -334,11 +334,6 @@
       "description": "Web app composition and auth/csrf wrapper routing behavior."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/composition",
-      "floor": 100,
-      "description": "Web startup composition contract from resolvers/dependencies to module sets."
-    },
-    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules",
       "floor": 100,
       "description": "Web registry boundary guardrails and module-set composition invariants."

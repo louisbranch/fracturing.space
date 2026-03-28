@@ -7,6 +7,6 @@
 //   - it enforces root mux rules,
 //   - it does not own request-state resolution or feature-local routes.
 //
-// Module startup wiring belongs above this package in composition/, while
+// Module startup wiring belongs above this package in server.go, while
 // feature-specific behavior belongs below it in modules/<area>/.
 package app

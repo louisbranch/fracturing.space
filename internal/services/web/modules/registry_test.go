@@ -14,8 +14,13 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"google.golang.org/grpc"
@@ -65,14 +70,14 @@ func TestDefaultPublicModulesExposeDiscoveryProfileInviteWhenDependenciesAreConf
 	built := reg.Build(RegistryInput{
 		Dependencies: Dependencies{
 			AssetBaseURL: "https://cdn.example.com/assets",
-			Discovery: DiscoveryDependencies{
+			Discovery: discovery.Dependencies{
 				DiscoveryClient: discoveryv1.NewDiscoveryServiceClient(conn),
 			},
-			Profile: ProfileDependencies{
+			Profile: profile.Dependencies{
 				AuthClient:   authv1.NewAuthServiceClient(conn),
 				SocialClient: socialv1.NewSocialServiceClient(conn),
 			},
-			Invite: InviteDependencies{
+			Invite: invite.Dependencies{
 				AuthClient:   authv1.NewAuthServiceClient(conn),
 				InviteClient: invitev1.NewInviteServiceClient(conn),
 			},
@@ -103,7 +108,7 @@ func TestPublicProfileModuleCanRenderWithOnlyAuthDependency(t *testing.T) {
 	built := reg.Build(RegistryInput{
 		Dependencies: Dependencies{
 			AssetBaseURL: "https://cdn.example.com/assets",
-			Profile: ProfileDependencies{
+			Profile: profile.Dependencies{
 				AuthClient: authv1.NewAuthServiceClient(conn),
 			},
 		},
@@ -126,7 +131,7 @@ func TestDefaultPublicModulesIncludeOnlyConfiguredOptionalSurfaces(t *testing.T)
 	reg := NewRegistryBuilder()
 	built := reg.Build(RegistryInput{
 		Dependencies: Dependencies{
-			Discovery: DiscoveryDependencies{
+			Discovery: discovery.Dependencies{
 				DiscoveryClient: discoveryv1.NewDiscoveryServiceClient(conn),
 			},
 		},
@@ -211,7 +216,7 @@ func TestRegistryBuildIncludesNotificationsWhenClientConfigured(t *testing.T) {
 	reg := NewRegistryBuilder()
 	built := reg.Build(RegistryInput{
 		Dependencies: Dependencies{
-			Notifications: NotificationDependencies{
+			Notifications: notifications.Dependencies{
 				NotificationClient: stubNotificationClient{},
 			},
 		},
@@ -232,12 +237,12 @@ func TestRegistryBuildIncludesCampaignsWhenDependencySetIsComplete(t *testing.T)
 
 	conn := &grpc.ClientConn{}
 	deps := NewDependencies("https://cdn.example.com/assets")
-	BindAuthDependency(&deps, conn)
-	BindSocialDependency(&deps, conn)
-	BindGameDependency(&deps, conn)
-	BindInviteDependency(&deps, conn)
-	BindAIDependency(&deps, conn)
-	BindDiscoveryDependency(&deps, conn)
+	campaigns.BindAuthDependency(&deps.Campaigns, conn)
+	campaigns.BindSocialDependency(&deps.Campaigns, conn)
+	campaigns.BindGameDependency(&deps.Campaigns, conn)
+	campaigns.BindInviteDependency(&deps.Campaigns, conn)
+	campaigns.BindAIDependency(&deps.Campaigns, conn)
+	campaigns.BindDiscoveryDependency(&deps.Campaigns, conn)
 
 	reg := NewRegistryBuilder()
 	built := reg.Build(RegistryInput{

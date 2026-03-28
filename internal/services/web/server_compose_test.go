@@ -1,4 +1,4 @@
-package composition
+package web
 
 import (
 	"io"
@@ -44,22 +44,21 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 		},
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	resolver := principal.NewPrincipal(
+		func(*http.Request) bool { return true },
+		func(*http.Request) bool { return true },
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en" },
+		func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Ada"} },
+	)
 
-	h, err := ComposeAppHandler(ComposeInput{
-		Principal: principal.NewPrincipal(
-			func(*http.Request) bool { return true },
-			func(*http.Request) bool { return true },
-			func(*http.Request) string { return "user-1" },
-			func(*http.Request) string { return "en" },
-			func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Ada"} },
-		),
-		Logger:              logger,
+	h, err := composeAppHandler(resolver, logger, Config{
 		PlayHTTPAddr:        "127.0.0.1:9004",
 		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: true},
 		RegistryBuilder:     reg,
-	})
+	}, DependencyBundle{})
 	if err != nil {
-		t.Fatalf("ComposeAppHandler() error = %v", err)
+		t.Fatalf("composeAppHandler() error = %v", err)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -118,11 +117,11 @@ func TestComposeAppHandlerDefaultsAuthToFalseWhenNil(t *testing.T) {
 		},
 	}
 
-	h, err := ComposeAppHandler(ComposeInput{
+	h, err := composeAppHandler(nil, nil, Config{
 		RegistryBuilder: reg,
-	})
+	}, DependencyBundle{})
 	if err != nil {
-		t.Fatalf("ComposeAppHandler() error = %v", err)
+		t.Fatalf("composeAppHandler() error = %v", err)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/1", nil)
@@ -139,19 +138,19 @@ func TestComposeAppHandlerDefaultsAuthToFalseWhenNil(t *testing.T) {
 func TestComposeAppHandlerUsesDefaultRegistryBuilderWhenNil(t *testing.T) {
 	t.Parallel()
 
-	h, err := ComposeAppHandler(ComposeInput{})
+	h, err := composeAppHandler(nil, nil, Config{}, DependencyBundle{})
 	if err != nil {
-		t.Fatalf("ComposeAppHandler() error = %v", err)
+		t.Fatalf("composeAppHandler() error = %v", err)
 	}
 	if h == nil {
-		t.Fatal("ComposeAppHandler() handler = nil, want non-nil")
+		t.Fatal("composeAppHandler() handler = nil, want non-nil")
 	}
 }
 
 func TestComposeAppHandlerReturnsComposeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := ComposeAppHandler(ComposeInput{
+	_, err := composeAppHandler(nil, nil, Config{
 		RegistryBuilder: &stubRegistry{
 			output: modules.RegistryOutput{
 				Public: []module.Module{
@@ -165,9 +164,9 @@ func TestComposeAppHandlerReturnsComposeError(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, DependencyBundle{})
 	if err == nil {
-		t.Fatal("ComposeAppHandler() error = nil, want non-nil")
+		t.Fatal("composeAppHandler() error = nil, want non-nil")
 	}
 }
 

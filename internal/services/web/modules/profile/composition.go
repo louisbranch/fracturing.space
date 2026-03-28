@@ -7,18 +7,22 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
+// CompositionConfig owns the startup wiring required to construct the
+// production profile module.
+type CompositionConfig struct {
+	AuthClient   profilegateway.AuthClient
+	SocialClient profilegateway.SocialClient
+	AssetBaseURL string
+	Principal    principal.PrincipalResolver
+}
+
 // Compose builds the profile module from the exact startup dependencies the
 // area owns.
-func Compose(
-	authClient profilegateway.AuthClient,
-	socialClient profilegateway.SocialClient,
-	assetBaseURL string,
-	principal principal.PrincipalResolver,
-) module.Module {
-	gateway := profilegateway.NewGRPCGateway(authClient, socialClient)
+func Compose(config CompositionConfig) module.Module {
+	gateway := profilegateway.NewGRPCGateway(config.AuthClient, config.SocialClient)
 	return New(Config{
 		Service:      profileapp.NewService(gateway),
-		AssetBaseURL: assetBaseURL,
-		Principal:    principal,
+		AssetBaseURL: config.AssetBaseURL,
+		Principal:    config.Principal,
 	})
 }
