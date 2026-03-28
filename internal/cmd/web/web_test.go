@@ -227,8 +227,36 @@ func testDependencyConfig() Config {
 	}
 }
 
-func copyDependencyAddressResolvers() map[string]dependencyAddressResolver {
-	return dependencyAddressResolverDefaults()
+func copyStartupDependencyDescriptors() []web.StartupDependencyDescriptor {
+	return web.StartupDependencyDescriptors()
+}
+
+func setStartupDependencyAddressField(
+	descriptors []web.StartupDependencyDescriptor,
+	name string,
+	field string,
+) []web.StartupDependencyDescriptor {
+	for i := range descriptors {
+		if descriptors[i].Name == name {
+			descriptors[i].AddressField = field
+			return descriptors
+		}
+	}
+	return descriptors
+}
+
+func withoutStartupDependency(
+	descriptors []web.StartupDependencyDescriptor,
+	name string,
+) []web.StartupDependencyDescriptor {
+	filtered := make([]web.StartupDependencyDescriptor, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		if descriptor.Name == name {
+			continue
+		}
+		filtered = append(filtered, descriptor)
+	}
+	return filtered
 }
 
 func TestBootstrapRuntimeDependenciesReturnsMissingAddressError(t *testing.T) {
@@ -258,26 +286,25 @@ func TestBootstrapRuntimeDependenciesReturnsMissingAddressError(t *testing.T) {
 	}
 }
 
-func TestBootstrapRuntimeDependenciesReturnsResolverContractErrorOnCoverageDrift(t *testing.T) {
-	drifted := copyDependencyAddressResolvers()
-	delete(drifted, web.DependencyNameSocial)
+func TestBootstrapRuntimeDependenciesReturnsBindingContractErrorOnCoverageDrift(t *testing.T) {
+	drifted := setStartupDependencyAddressField(copyStartupDependencyDescriptors(), web.DependencyNameSocial, "")
 
 	_, err := bootstrapRuntimeDependencies(
 		context.Background(),
 		testDependencyConfig(),
 		platformstatus.NewReporter("web", nil),
-		&bootstrapOptions{NewConn: testManagedConnFactory(t), Resolvers: drifted},
+		&bootstrapOptions{NewConn: testManagedConnFactory(t), Descriptors: drifted},
 	)
 	if err == nil {
-		t.Fatal("expected dependency resolver contract mismatch error")
+		t.Fatal("expected dependency address binding contract mismatch error")
 	}
 
-	var contractErr DependencyAddressResolverContractError
+	var contractErr DependencyAddressBindingContractError
 	if !errors.As(err, &contractErr) {
-		t.Fatalf("bootstrapRuntimeDependencies() error type = %T, want DependencyAddressResolverContractError", err)
+		t.Fatalf("bootstrapRuntimeDependencies() error type = %T, want DependencyAddressBindingContractError", err)
 	}
 	if !slices.Equal(contractErr.Missing, []string{web.DependencyNameSocial}) {
-		t.Fatalf("resolver contract mismatch = %#v, want missing [%q]", contractErr, web.DependencyNameSocial)
+		t.Fatalf("binding contract mismatch = %#v, want missing [%q]", contractErr, web.DependencyNameSocial)
 	}
 }
 
@@ -319,35 +346,8 @@ func TestDependencyRequirementsRejectMissingRequiredAddress(t *testing.T) {
 func TestDependencyAddressBindingsCoverStartupDescriptors(t *testing.T) {
 	t.Parallel()
 
-	descriptors := web.StartupDependencyDescriptors()
-	descriptorNames := make(map[string]struct{}, len(descriptors))
-	missing := make([]string, 0)
-	for _, descriptor := range descriptors {
-		name := strings.TrimSpace(descriptor.Name)
-		if name == "" {
-			continue
-		}
-		descriptorNames[name] = struct{}{}
-		if _, ok := dependencyAddressBindingForName(name); !ok {
-			missing = append(missing, name)
-		}
-	}
-	if len(missing) > 0 {
-		t.Fatalf("dependency address bindings missing for %v", missing)
-	}
-
-	extras := make([]string, 0)
-	for _, name := range dependencyAddressBindingNames() {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
-		}
-		if _, ok := descriptorNames[name]; !ok {
-			extras = append(extras, name)
-		}
-	}
-	if len(extras) > 0 {
-		t.Fatalf("dependency address bindings include unknown dependencies %v", extras)
+	if err := validateDependencyAddressBindingsCoverage(); err != nil {
+		t.Fatalf("validateDependencyAddressBindingsCoverage() error = %v", err)
 	}
 }
 
@@ -374,24 +374,29 @@ func TestDependencyRequirementsCollectsAllMissingRequiredAddresses(t *testing.T)
 	}
 }
 
-func TestDependencyAddressResolverForNameRejectsUnknownDependency(t *testing.T) {
+func TestDependencyAddressBindingForNameRejectsUnknownDependency(t *testing.T) {
 	t.Parallel()
 
-	if got := dependencyAddressResolverForName("ghost-dependency"); got != nil {
-		t.Fatalf("dependencyAddressResolverForName(ghost) = %#v, want nil", got)
+	if _, ok := dependencyAddressBindingForName("ghost-dependency"); ok {
+		t.Fatal("dependencyAddressBindingForName(ghost) = true, want false")
 	}
 }
 
-func TestDependencyRequirementsWithResolversRejectsCoverageDrift(t *testing.T) {
+func TestDependencyRequirementsWithDescriptorsRejectsCoverageDrift(t *testing.T) {
 	t.Parallel()
 
-	_, err := dependencyRequirementsWithResolvers(testDependencyConfig(), nil, nil)
-	if err == nil {
-		t.Fatal("expected resolver contract mismatch for nil resolver map")
+	drifted := copyStartupDependencyDescriptors()
+	for i := range drifted {
+		drifted[i].AddressField = ""
 	}
-	var contractErr DependencyAddressResolverContractError
+
+	_, err := dependencyRequirementsWithDescriptors(testDependencyConfig(), nil, drifted)
+	if err == nil {
+		t.Fatal("expected binding contract mismatch for missing descriptor address fields")
+	}
+	var contractErr DependencyAddressBindingContractError
 	if !errors.As(err, &contractErr) {
-		t.Fatalf("dependencyRequirementsWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+		t.Fatalf("dependencyRequirementsWithDescriptors() error type = %T, want DependencyAddressBindingContractError", err)
 	}
 	want := []string{
 		web.DependencyNameAI,
@@ -405,26 +410,25 @@ func TestDependencyRequirementsWithResolversRejectsCoverageDrift(t *testing.T) {
 		web.DependencyNameUserHub,
 	}
 	if !slices.Equal(contractErr.Missing, want) {
-		t.Fatalf("dependency resolver contract mismatch missing = %#v, want %#v", contractErr.Missing, want)
+		t.Fatalf("dependency binding contract mismatch missing = %#v, want %#v", contractErr.Missing, want)
 	}
 }
 
-func TestDependencyAddressResolverDefaultsAreSnapshotSafe(t *testing.T) {
+func TestStartupDependencyDescriptorSnapshotsAreSafe(t *testing.T) {
 	t.Parallel()
 
-	mutatedDefaults := copyDependencyAddressResolvers()
-	delete(mutatedDefaults, web.DependencyNameGame)
+	mutatedDefaults := setStartupDependencyAddressField(copyStartupDependencyDescriptors(), web.DependencyNameGame, "")
 
-	_, err := dependencyRequirementsWithResolvers(testDependencyConfig(), nil, mutatedDefaults)
+	_, err := dependencyRequirementsWithDescriptors(testDependencyConfig(), nil, mutatedDefaults)
 	if err == nil {
-		t.Fatal("expected resolver contract mismatch from mutated snapshot")
+		t.Fatal("expected binding contract mismatch from mutated descriptor snapshot")
 	}
-	var contractErr DependencyAddressResolverContractError
+	var contractErr DependencyAddressBindingContractError
 	if !errors.As(err, &contractErr) {
-		t.Fatalf("dependencyRequirementsWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+		t.Fatalf("dependencyRequirementsWithDescriptors() error type = %T, want DependencyAddressBindingContractError", err)
 	}
 	if !slices.Equal(contractErr.Missing, []string{web.DependencyNameGame}) {
-		t.Fatalf("mutated resolver contract mismatch missing = %#v, want missing [%q]", contractErr, web.DependencyNameGame)
+		t.Fatalf("mutated binding contract mismatch missing = %#v, want missing [%q]", contractErr, web.DependencyNameGame)
 	}
 
 	_, err = dependencyRequirements(testDependencyConfig(), nil)
@@ -487,54 +491,44 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 func TestDependencyRequirementsAddressCoverageHasNoCoverageDrift(t *testing.T) {
 	t.Parallel()
 
-	if err := validateDependencyAddressResolversCoverage(); err != nil {
-		t.Fatalf("validateDependencyAddressResolversCoverage() error = %v", err)
+	if err := validateDependencyAddressBindingsCoverage(); err != nil {
+		t.Fatalf("validateDependencyAddressBindingsCoverage() error = %v", err)
 	}
 }
 
-func TestValidateDependencyAddressResolversCoverageReportsMissingResolver(t *testing.T) {
+func TestValidateDependencyAddressBindingsCoverageReportsMissingField(t *testing.T) {
 	t.Parallel()
 
-	resolvers := make(map[string]dependencyAddressResolver, len(copyDependencyAddressResolvers()))
-	for name, resolve := range dependencyAddressResolverDefaults() {
-		resolvers[name] = resolve
-	}
-	delete(resolvers, web.DependencyNameSocial)
+	descriptors := setStartupDependencyAddressField(copyStartupDependencyDescriptors(), web.DependencyNameSocial, "")
 
-	err := validateDependencyAddressResolversCoverageWithResolvers(resolvers)
+	err := validateDependencyAddressBindingsCoverageWithDescriptors(descriptors)
 	if err == nil {
-		t.Fatal("expected contract mismatch for missing social resolver")
+		t.Fatal("expected contract mismatch for missing social address field")
 	}
-	var contractErr DependencyAddressResolverContractError
+	var contractErr DependencyAddressBindingContractError
 	if !errors.As(err, &contractErr) {
-		t.Fatalf("validateDependencyAddressResolversCoverageWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+		t.Fatalf("validateDependencyAddressBindingsCoverageWithDescriptors() error type = %T, want DependencyAddressBindingContractError", err)
 	}
 	if len(contractErr.Missing) != 1 || contractErr.Missing[0] != web.DependencyNameSocial {
-		t.Fatalf("dependency resolver contract mismatch = %#v, want missing=[%q]", contractErr, web.DependencyNameSocial)
+		t.Fatalf("dependency binding contract mismatch = %#v, want missing=[%q]", contractErr, web.DependencyNameSocial)
 	}
 }
 
-func TestValidateDependencyAddressResolversCoverageReportsExtraResolver(t *testing.T) {
+func TestValidateDependencyAddressBindingsCoverageReportsExtraConfigField(t *testing.T) {
 	t.Parallel()
 
-	resolvers := make(map[string]dependencyAddressResolver, len(copyDependencyAddressResolvers())+1)
-	for name, resolve := range dependencyAddressResolverDefaults() {
-		resolvers[name] = resolve
-	}
-	resolvers["ghost-service"] = func(cfg Config) string {
-		return cfg.HTTPAddr
-	}
+	descriptors := withoutStartupDependency(copyStartupDependencyDescriptors(), web.DependencyNameSocial)
 
-	err := validateDependencyAddressResolversCoverageWithResolvers(resolvers)
+	err := validateDependencyAddressBindingsCoverageWithDescriptors(descriptors)
 	if err == nil {
-		t.Fatal("expected contract mismatch for extra resolver")
+		t.Fatal("expected contract mismatch for extra config field")
 	}
-	var contractErr DependencyAddressResolverContractError
+	var contractErr DependencyAddressBindingContractError
 	if !errors.As(err, &contractErr) {
-		t.Fatalf("validateDependencyAddressResolversCoverageWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+		t.Fatalf("validateDependencyAddressBindingsCoverageWithDescriptors() error type = %T, want DependencyAddressBindingContractError", err)
 	}
-	if len(contractErr.Extra) != 1 || contractErr.Extra[0] != "ghost-service" {
-		t.Fatalf("dependency resolver contract mismatch = %#v, want extras=[%q]", contractErr, "ghost-service")
+	if len(contractErr.Extra) != 1 || contractErr.Extra[0] != "SocialAddr" {
+		t.Fatalf("dependency binding contract mismatch = %#v, want extras=[%q]", contractErr, "SocialAddr")
 	}
 }
 

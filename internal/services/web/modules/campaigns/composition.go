@@ -3,6 +3,7 @@ package campaigns
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -68,7 +69,7 @@ type ProtectedSurfaceOptions struct {
 	PlayFallbackPort string
 	PlayLaunchGrant  playlaunchgrant.Config
 	RequestMeta      requestmeta.SchemePolicy
-	DashboardSync    DashboardSync
+	DashboardSync    campaigndetail.DashboardSync
 	AssetBaseURL     string
 }
 

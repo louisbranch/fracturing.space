@@ -1,6 +1,9 @@
 package render
 
-import "github.com/a-h/templ"
+import (
+	"github.com/a-h/templ"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 // CharactersPageView carries character-list page state only.
 type CharactersPageView struct {
@@ -34,22 +37,22 @@ type CharacterDetailPageView struct {
 }
 
 // CharactersFragment renders the character-list page.
-func CharactersFragment(view CharactersPageView, loc Localizer) templ.Component {
+func CharactersFragment(view CharactersPageView, loc webtemplates.Localizer) templ.Component {
 	return charactersFragment(view, loc)
 }
 
 // CharacterCreateFragment renders the character-create page.
-func CharacterCreateFragment(view CharacterCreatePageView, loc Localizer) templ.Component {
+func CharacterCreateFragment(view CharacterCreatePageView, loc webtemplates.Localizer) templ.Component {
 	return characterCreateFragment(view, loc)
 }
 
 // CharacterEditFragment renders the character-edit page.
-func CharacterEditFragment(view CharacterEditPageView, loc Localizer) templ.Component {
+func CharacterEditFragment(view CharacterEditPageView, loc webtemplates.Localizer) templ.Component {
 	return characterEditFragment(view, loc)
 }
 
 // CharacterDetailFragment renders the character-detail page.
-func CharacterDetailFragment(view CharacterDetailPageView, loc Localizer) templ.Component {
+func CharacterDetailFragment(view CharacterDetailPageView, loc webtemplates.Localizer) templ.Component {
 	return characterDetailFragment(view, loc)
 }
 

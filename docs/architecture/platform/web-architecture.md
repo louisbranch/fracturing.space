@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-23"
 ---
 
 # Web Architecture
@@ -28,7 +28,7 @@ Concise architecture contract for the browser-facing web service.
 - `templates/`: shared shell/layout primitives only; area-owned page sets should move out once ownership gets blurry.
 - Area-local `render/` and `workflow/` packages keep reader-first `doc.go` files plus focused seam tests so contributors can start from handwritten entrypoints instead of generated output.
 
-For module internals, areas may be transport-only or `transport + app + gateway`. Prefer the layered shape once orchestration or backend mapping stops being trivial.
+For module internals, areas may be transport-only or `transport + app + gateway`. Prefer the layered shape once orchestration or backend mapping stops being trivial. For one-surface layered modules, prefer one direct `Compose(...)` entrypoint that accepts the exact clients and shared helpers the area needs. Reserve module-local composition config structs for larger areas with multiple surfaces or area-owned availability policy.
 
 ## Module contract
 
@@ -43,9 +43,10 @@ Required properties:
 5. Composition dependencies are module-owned bundles (`modules.Dependencies.Campaigns`, `Settings`, `PublicAuth`, etc.), not one flat cross-area field bag.
 6. Production gateway wiring belongs to the owning area package. The registry may assemble shared runtime inputs and module order, but not feature-local graphs.
 7. Shared runtime helpers such as dashboard-sync policy are built once in the registry and passed into area-owned composition entrypoints.
-8. Layered module roots depend on ready app services, not raw gateways. `composition.go` builds the production graph so `Mount` stays transport-only.
-9. Keep capability and route-surface splits end to end. Do not re-bundle split services at the module root, do not route every request through one catch-all handler receiver, and do not regrow contract sink files after `app` or `gateway` packages are already split.
-10. Optional protected modules are omitted until fully configured. Once selected, construction must fail fast on missing route-owned services instead of fabricating unavailable placeholders.
+8. Small one-surface modules should keep composition direct: the registry performs optional surface gating, while `composition.go` accepts the exact area-owned deps instead of rewrapping them in local option structs.
+9. Layered module roots depend on ready app services, not raw gateways. `composition.go` builds the production graph so `Mount` stays transport-only.
+10. Keep capability and route-surface splits end to end. Do not re-bundle split services at the module root, do not route every request through one catch-all handler receiver, and do not regrow contract sink files after `app` or `gateway` packages are already split.
+11. Optional protected modules are omitted until fully configured. Once selected, construction must fail fast on missing route-owned services instead of fabricating unavailable placeholders.
 
 ## Routing strategy
 
@@ -80,7 +81,7 @@ Required properties:
 
 ## Principal identity seam
 
-- User-id normalization is centralized in `internal/services/web/platform/userid` and reused by principal, session, viewer, dashboard, and webctx seams.
+- User-id normalization is centralized in `internal/services/web/platform/userid` and reused by principal, session, viewer, and dashboard seams.
 - Shared viewer/language request plumbing is centralized in `internal/services/web/principal` so handler bases, page rendering, error rendering, and direct public-page localization all follow one request-scoped contract.
 - Root server, composition, and module assembly pass one grouped `principal.PrincipalResolver` contract instead of duplicating flat callback bags at each layer.
 - Public modules (`publicauth`, `profile`, `invite`) consume that same grouped principal contract instead of separate signed-in and user-id callbacks.
@@ -94,7 +95,8 @@ Fail closed when authz, session, or required dependency checks are unavailable. 
 ## Startup dependency policy
 
 - Startup policy is service-owned in `internal/services/web/startup_dependencies.go`.
-- Command-layer startup code in `internal/cmd/web/dependency_graph.go` consumes that descriptor table, supplies concrete addresses, and fails fast if descriptor coverage drifts.
+- Startup descriptors also own the command config address field for each backend dependency.
+- Command-layer startup code in `internal/cmd/web/dependency_graph.go` consumes that descriptor table, reads concrete addresses from the declared config fields, and fails fast if descriptor/config coverage drifts.
 - Required integrations are limited to `auth`, `social`, and `game`.
 - Optional integrations degrade only the surfaces they own: `ai`, `discovery`, `userhub`, `notifications`, and `status`.
 - Runtime dependency assembly starts in `internal/cmd/web/runtime_dependencies.go`.

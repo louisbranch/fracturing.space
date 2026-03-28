@@ -2,22 +2,23 @@ package render
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-templ participantsFragment(view ParticipantsPageView, loc Localizer) {
+templ participantsFragment(view ParticipantsPageView, loc webtemplates.Localizer) {
 	<section id="campaign-participants" class="space-y-4">
 		<div class="space-y-4">
 			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participants-header="true">
 				<div class="card-body">
 					<div class="flex items-center justify-between gap-3">
-						<h2 class="card-title">{ T(loc, "game.participants.title") }</h2>
+						<h2 class="card-title">{ webtemplates.T(loc, "game.participants.title") }</h2>
 						if view.CanManageParticipants {
 							if campaignActionsLocked(view.ActionsLocked) {
-								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-									<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+								<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ webtemplates.T(loc, "game.participants.action_add") }</button>
 								</div>
 							} else {
-								<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignParticipantCreate(view.CampaignID) } data-campaign-participants-add-link="true">{ T(loc, "game.participants.action_add") }</a>
+								<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignParticipantCreate(view.CampaignID) } data-campaign-participants-add-link="true">{ webtemplates.T(loc, "game.participants.action_add") }</a>
 							}
 						}
 					</div>
@@ -25,12 +26,12 @@ templ participantsFragment(view ParticipantsPageView, loc Localizer) {
 			</div>
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				if len(view.Participants) == 0 {
-					<p>{ T(loc, "game.participants.empty") }</p>
+					<p>{ webtemplates.T(loc, "game.participants.empty") }</p>
 				}
 				for _, participant := range view.Participants {
 					<div class={ campaignParticipantCardClass(participant) } data-campaign-participant-card-id={ participant.ID } data-campaign-participant-current-user={ campaignParticipantViewerAttr(participant) }>
 						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0 overflow-hidden">
-							@AppImage(AppImageView{
+							@webtemplates.AppImage(webtemplates.AppImageView{
 								Src:        participant.AvatarURL,
 								Alt:        participant.Name + " avatar",
 								WidthPX:    2,
@@ -43,30 +44,30 @@ templ participantsFragment(view ParticipantsPageView, loc Localizer) {
 							<h2 class="card-title" data-campaign-participant-name={ participant.Name }>{ participant.Name }</h2>
 							<dl class="space-y-1 text-sm">
 								<div class="flex gap-2">
-									<dt class="opacity-70">{ T(loc, "game.participants.field_role") }:</dt>
+									<dt class="opacity-70">{ webtemplates.T(loc, "game.participants.field_role") }:</dt>
 									<dd data-campaign-participant-role={ campaignParticipantRoleLabel(loc, participant.Role) }>{ campaignParticipantRoleLabel(loc, participant.Role) }</dd>
 								</div>
 								<div class="flex gap-2">
-									<dt class="opacity-70">{ T(loc, "game.participants.field_access") }:</dt>
+									<dt class="opacity-70">{ webtemplates.T(loc, "game.participants.field_access") }:</dt>
 									<dd data-campaign-participant-access={ campaignParticipantAccessLabel(loc, participant.CampaignAccess) }>{ campaignParticipantAccessLabel(loc, participant.CampaignAccess) }</dd>
 								</div>
 								<div class="flex gap-2">
-									<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }:</dt>
+									<dt class="opacity-70">{ webtemplates.T(loc, "game.participants.field_controller") }:</dt>
 									<dd data-campaign-participant-controller={ campaignParticipantControllerLabel(loc, participant.Controller) }>{ campaignParticipantControllerLabel(loc, participant.Controller) }</dd>
 								</div>
 								<div class="flex gap-2">
-									<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }:</dt>
+									<dt class="opacity-70">{ webtemplates.T(loc, "web.settings.user_profile.field_pronouns") }:</dt>
 									<dd>{ participantPronounsLabel(loc, participant.Pronouns) }</dd>
 								</div>
 							</dl>
 							if participant.CanEdit && campaignParticipantEditURL(view.CampaignID, participant) != "" {
 								<div class="card-actions justify-end">
 									if campaignActionsLocked(view.ActionsLocked) {
-										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-											<button class="btn btn-outline btn-sm" type="button" disabled>{ T(loc, "game.participants.action_edit") }</button>
+										<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+											<button class="btn btn-outline btn-sm" type="button" disabled>{ webtemplates.T(loc, "game.participants.action_edit") }</button>
 										</div>
 									} else {
-										<a class="btn btn-outline btn-sm" href={ campaignParticipantEditURL(view.CampaignID, participant) } data-campaign-participant-edit-link="true">{ T(loc, "game.participants.action_edit") }</a>
+										<a class="btn btn-outline btn-sm" href={ campaignParticipantEditURL(view.CampaignID, participant) } data-campaign-participant-edit-link="true">{ webtemplates.T(loc, "game.participants.action_edit") }</a>
 									}
 								</div>
 							}
@@ -78,21 +79,21 @@ templ participantsFragment(view ParticipantsPageView, loc Localizer) {
 	</section>
 }
 
-templ participantCreateFragment(view ParticipantCreatePageView, loc Localizer) {
+templ participantCreateFragment(view ParticipantCreatePageView, loc webtemplates.Localizer) {
 	<section id="campaign-participant-create" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-create-page="true">
 			<div class="card-body gap-4 p-4">
-				<h2 class="card-title">{ T(loc, "game.participants.action_add") }</h2>
+				<h2 class="card-title">{ webtemplates.T(loc, "game.participants.action_add") }</h2>
 				<form method="post" action={ routepath.AppCampaignParticipantCreate(view.CampaignID) } class="space-y-4" data-campaign-participant-create-form="true">
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.participants.field_name") }</span>
 						</label>
 						<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantCreator.Name }/>
 					</div>
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.participants.field_role") }</span>
 						</label>
 						<select class="select select-bordered w-full" name="role">
 							if view.ParticipantCreator.AllowGMRole {
@@ -103,7 +104,7 @@ templ participantCreateFragment(view ParticipantCreatePageView, loc Localizer) {
 					</div>
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.participants.field_access") }</span>
 						</label>
 						<select class="select select-bordered w-full" name="campaign_access">
 							for _, option := range view.ParticipantCreator.AccessOptions {
@@ -112,7 +113,7 @@ templ participantCreateFragment(view ParticipantCreatePageView, loc Localizer) {
 						</select>
 					</div>
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit" disabled?={ campaignActionsLocked(view.ActionsLocked) } data-campaign-participant-create-submit-disabled={ campaignActionsLocked(view.ActionsLocked) }>{ T(loc, "game.participants.action_add") }</button>
+						<button class="btn btn-primary" type="submit" disabled?={ campaignActionsLocked(view.ActionsLocked) } data-campaign-participant-create-submit-disabled={ campaignActionsLocked(view.ActionsLocked) }>{ webtemplates.T(loc, "game.participants.action_add") }</button>
 					</div>
 				</form>
 			</div>
@@ -120,21 +121,21 @@ templ participantCreateFragment(view ParticipantCreatePageView, loc Localizer) {
 	</section>
 }
 
-templ participantEditFragment(view ParticipantEditPageView, loc Localizer) {
+templ participantEditFragment(view ParticipantEditPageView, loc webtemplates.Localizer) {
 	<section id="campaign-participant-edit" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-edit-page="true">
 			<div class="card-body gap-4 p-4">
-				<h2 class="card-title">{ T(loc, "game.participants.action_edit") }</h2>
+				<h2 class="card-title">{ webtemplates.T(loc, "game.participants.action_edit") }</h2>
 				<form method="post" action={ routepath.AppCampaignParticipantEdit(view.CampaignID, view.ParticipantID) } class="space-y-4" data-campaign-participant-edit-submit="true">
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.participants.field_name") }</span>
 						</label>
 						<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantEditor.Name }/>
 					</div>
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.participants.field_role") }</span>
 						</label>
 						if view.ParticipantEditor.RoleReadOnly {
 							<input type="hidden" name="role" value={ campaignParticipantRoleFormValue(view.ParticipantEditor) }/>
@@ -152,7 +153,7 @@ templ participantEditFragment(view ParticipantEditPageView, loc Localizer) {
 					</div>
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "web.settings.user_profile.field_pronouns") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "web.settings.user_profile.field_pronouns") }</span>
 						</label>
 						<input class="input input-bordered w-full" type="text" name="pronouns" value={ view.ParticipantEditor.Pronouns } list="campaign-participant-pronouns-presets"/>
 						<datalist id="campaign-participant-pronouns-presets">
@@ -163,7 +164,7 @@ templ participantEditFragment(view ParticipantEditPageView, loc Localizer) {
 					</div>
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.participants.field_access") }</span>
 						</label>
 						if view.ParticipantEditor.AccessReadOnly {
 							<input type="hidden" name="campaign_access" value={ campaignParticipantAccessFormValue(view.ParticipantEditor) }/>
@@ -181,7 +182,7 @@ templ participantEditFragment(view ParticipantEditPageView, loc Localizer) {
 						}
 					</div>
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit">{ T(loc, "game.participants.submit_save") }</button>
+						<button class="btn btn-primary" type="submit">{ webtemplates.T(loc, "game.participants.submit_save") }</button>
 					</div>
 				</form>
 			</div>

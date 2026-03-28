@@ -3,6 +3,8 @@ package notifications
 import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"strings"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 type NotificationListItemView struct {
@@ -48,26 +50,26 @@ type NotificationsPageView struct {
 	Selected *NotificationDetailView
 }
 
-func notificationListAriaLabel(loc Localizer) string {
-	return T(loc, "game.notifications.list.aria_label")
+func notificationListAriaLabel(loc webtemplates.Localizer) string {
+	return webtemplates.T(loc, "game.notifications.list.aria_label")
 }
 
 func notificationHasItems(view NotificationsPageView) bool {
 	return len(view.Items) > 0
 }
 
-func notificationItemTitle(item NotificationListItemView, loc Localizer) string {
+func notificationItemTitle(item NotificationListItemView, loc webtemplates.Localizer) string {
 	title := strings.TrimSpace(item.Title)
 	if title == "" {
-		return T(loc, "game.notifications.topic_unknown")
+		return webtemplates.T(loc, "game.notifications.topic_unknown")
 	}
 	return title
 }
 
-func notificationItemBody(item NotificationListItemView, loc Localizer) string {
+func notificationItemBody(item NotificationListItemView, loc webtemplates.Localizer) string {
 	body := strings.TrimSpace(item.Body)
 	if body == "" {
-		return T(loc, "game.notifications.detail_empty")
+		return webtemplates.T(loc, "game.notifications.detail_empty")
 	}
 	return body
 }
@@ -99,12 +101,12 @@ func notificationActionUsesPost(action NotificationActionView) bool {
 	return strings.EqualFold(strings.TrimSpace(action.Method), "POST")
 }
 
-templ NotificationsFragment(view NotificationsPageView, loc Localizer) {
+templ NotificationsFragment(view NotificationsPageView, loc webtemplates.Localizer) {
 	<section id="notifications-root" class="space-y-4" aria-label={ notificationListAriaLabel(loc) }>
 		if !notificationHasItems(view) {
 			<div id="notifications-empty" class="card bg-base-200">
 				<div class="card-body p-4">
-					<p class="text-sm opacity-80">{ T(loc, "game.notifications.empty") }</p>
+					<p class="text-sm opacity-80">{ webtemplates.T(loc, "game.notifications.empty") }</p>
 				</div>
 			</div>
 		} else if notificationDetailAvailable(view) {
@@ -145,7 +147,7 @@ templ NotificationsFragment(view NotificationsPageView, loc Localizer) {
 		} else {
 			<div class="card bg-base-200">
 				<div class="card-body p-4">
-					<p class="text-sm opacity-80">{ T(loc, "game.notifications.no_selection") }</p>
+					<p class="text-sm opacity-80">{ webtemplates.T(loc, "game.notifications.no_selection") }</p>
 				</div>
 			</div>
 		}

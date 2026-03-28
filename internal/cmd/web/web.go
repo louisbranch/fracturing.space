@@ -37,6 +37,9 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
+	if err := validateDependencyAddressBindingsCoverage(); err != nil {
+		return Config{}, err
+	}
 	applyDependencyAddressDefaults(&cfg)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")

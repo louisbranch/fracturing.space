@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/jsoninput"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 )
 
 // maxJSONBodyBytes caps auth JSON payload size for passkey endpoint inputs.
@@ -111,5 +111,5 @@ func parseRecoveryFinishInput(r *http.Request) (recoveryFinishInput, error) {
 
 // decodeJSONBodyStrict decodes one JSON object with strict field/size constraints.
 func decodeJSONBodyStrict(r *http.Request, target any) error {
-	return jsoninput.DecodeStrictInvalidInput(r, target, maxJSONBodyBytes)
+	return httpx.DecodeJSONStrictInvalidInput(r, target, maxJSONBodyBytes)
 }

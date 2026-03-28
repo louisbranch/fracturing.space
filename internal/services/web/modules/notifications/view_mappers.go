@@ -22,7 +22,7 @@ func (h handlers) now() time.Time {
 }
 
 // notificationListView centralizes this web behavior in one helper seam.
-func (h handlers) notificationListView(items []notificationsapp.NotificationSummary, loc Localizer) []NotificationListItemView {
+func (h handlers) notificationListView(items []notificationsapp.NotificationSummary, loc webtemplates.Localizer) []NotificationListItemView {
 	if len(items) == 0 {
 		return nil
 	}
@@ -49,7 +49,7 @@ func (h handlers) notificationListView(items []notificationsapp.NotificationSumm
 }
 
 // notificationDetailView centralizes this web behavior in one helper seam.
-func (h handlers) notificationDetailView(item notificationsapp.NotificationSummary, loc Localizer) *NotificationDetailView {
+func (h handlers) notificationDetailView(item notificationsapp.NotificationSummary, loc webtemplates.Localizer) *NotificationDetailView {
 	itemID := strings.TrimSpace(item.ID)
 	if itemID == "" {
 		return nil
@@ -71,63 +71,63 @@ func (h handlers) notificationDetailView(item notificationsapp.NotificationSumma
 }
 
 // notificationTitle centralizes this web behavior in one helper seam.
-func notificationTitle(value platformi18n.CopyRef, loc Localizer) string {
+func notificationTitle(value platformi18n.CopyRef, loc webtemplates.Localizer) string {
 	resolved := strings.TrimSpace(platformi18n.ResolveCopy(loc, value))
 	if resolved == "" {
-		return T(loc, "game.notifications.topic_unknown")
+		return webtemplates.T(loc, "game.notifications.topic_unknown")
 	}
 	return resolved
 }
 
 // notificationBody centralizes this web behavior in one helper seam.
-func notificationBody(value platformi18n.CopyRef, loc Localizer) string {
+func notificationBody(value platformi18n.CopyRef, loc webtemplates.Localizer) string {
 	resolved := strings.TrimSpace(platformi18n.ResolveCopy(loc, value))
 	if resolved == "" {
-		return T(loc, "game.notifications.detail_empty")
+		return webtemplates.T(loc, "game.notifications.detail_empty")
 	}
 	return resolved
 }
 
 // notificationSourceLabel centralizes this web behavior in one helper seam.
-func notificationSourceLabel(source string, loc Localizer) string {
+func notificationSourceLabel(source string, loc webtemplates.Localizer) string {
 	source = strings.ToLower(strings.TrimSpace(source))
 	if source == notificationsgateway.NotificationSourceSystem {
-		return T(loc, "game.notifications.source_system")
+		return webtemplates.T(loc, "game.notifications.source_system")
 	}
-	return T(loc, "game.notifications.source_unknown")
+	return webtemplates.T(loc, "game.notifications.source_unknown")
 }
 
 // notificationCreatedLabel centralizes this web behavior in one helper seam.
-func notificationCreatedLabel(createdAt time.Time, now time.Time, loc Localizer) string {
+func notificationCreatedLabel(createdAt time.Time, now time.Time, loc webtemplates.Localizer) string {
 	if createdAt.IsZero() {
-		return T(loc, "game.notifications.time.just_now")
+		return webtemplates.T(loc, "game.notifications.time.just_now")
 	}
 	delta := now.Sub(createdAt.UTC())
 	if delta < 0 {
 		delta = 0
 	}
 	if delta < time.Minute {
-		return T(loc, "game.notifications.time.just_now")
+		return webtemplates.T(loc, "game.notifications.time.just_now")
 	}
 	if delta < time.Hour {
 		minutes := int(delta / time.Minute)
 		if minutes <= 1 {
-			return T(loc, "game.notifications.time.minute_ago")
+			return webtemplates.T(loc, "game.notifications.time.minute_ago")
 		}
-		return T(loc, "game.notifications.time.minutes_ago", minutes)
+		return webtemplates.T(loc, "game.notifications.time.minutes_ago", minutes)
 	}
 	if delta < 24*time.Hour {
 		hours := int(delta / time.Hour)
 		if hours <= 1 {
-			return T(loc, "game.notifications.time.hour_ago")
+			return webtemplates.T(loc, "game.notifications.time.hour_ago")
 		}
-		return T(loc, "game.notifications.time.hours_ago", hours)
+		return webtemplates.T(loc, "game.notifications.time.hours_ago", hours)
 	}
 	days := int(delta / (24 * time.Hour))
 	if days <= 1 {
-		return T(loc, "game.notifications.time.day_ago")
+		return webtemplates.T(loc, "game.notifications.time.day_ago")
 	}
-	return T(loc, "game.notifications.time.days_ago", days)
+	return webtemplates.T(loc, "game.notifications.time.days_ago", days)
 }
 
 // notificationMessageIconID maps notification message types to shared content icons.

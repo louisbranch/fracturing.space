@@ -35,7 +35,6 @@ func stableRouteSurfaces() []routeSurface {
 		stableCampaignStarterRoutes(),
 		stableCampaignParticipantRoutes(),
 		stableCampaignCharacterRoutes(),
-		stableCampaignCharacterCreationRoutes(),
 		stableCampaignSessionGameRoutes(),
 		stableCampaignInviteRoutes(),
 	}

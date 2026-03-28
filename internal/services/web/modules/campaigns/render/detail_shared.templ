@@ -1,21 +1,23 @@
 package render
 
-templ campaignCharacterEditorForm(editor CharacterEditorView, actionsLocked bool, loc Localizer, title string, action string, submitLabel string, isCreate bool) {
+import webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+
+templ campaignCharacterEditorForm(editor CharacterEditorView, actionsLocked bool, loc webtemplates.Localizer, title string, action string, submitLabel string, isCreate bool) {
 	<div class="card bg-base-100 border border-base-300 shadow-sm">
 		<div class="card-body gap-4 p-4">
 			<h2 class="card-title">{ title }</h2>
 			<form method="post" action={ action } class="space-y-4" data-campaign-character-editor-submit="true">
 				<div class="form-control w-full">
 					<label class="label">
-						<span class="label-text">{ T(loc, "game.characters.field_name") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "game.characters.field_name") }</span>
 					</label>
-					<input class="input input-bordered w-full" type="text" name="name" required value={ editor.Name } placeholder={ T(loc, "game.characters.placeholder_name") }/>
+					<input class="input input-bordered w-full" type="text" name="name" required value={ editor.Name } placeholder={ webtemplates.T(loc, "game.characters.placeholder_name") }/>
 				</div>
 				<div class="form-control w-full">
 					<label class="label">
-						<span class="label-text">{ T(loc, "game.characters.field_pronouns") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "game.characters.field_pronouns") }</span>
 					</label>
-					<input class="input input-bordered w-full" type="text" name="pronouns" value={ editor.Pronouns } placeholder={ T(loc, "game.characters.placeholder_pronouns") } list="campaign-character-pronouns-presets"/>
+					<input class="input input-bordered w-full" type="text" name="pronouns" value={ editor.Pronouns } placeholder={ webtemplates.T(loc, "game.characters.placeholder_pronouns") } list="campaign-character-pronouns-presets"/>
 					<datalist id="campaign-character-pronouns-presets">
 						for _, preset := range campaignCharacterPronounPresets(loc) {
 							<option value={ preset }></option>
@@ -27,7 +29,7 @@ templ campaignCharacterEditorForm(editor CharacterEditorView, actionsLocked bool
 				}
 				<dl class="grid gap-3 text-sm">
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.characters.field_kind") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.characters.field_kind") }</dt>
 						<dd>{ campaignCharacterKindLabel(loc, editor.Kind) }</dd>
 					</div>
 				</dl>

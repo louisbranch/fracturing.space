@@ -11,6 +11,8 @@ import (
 	"github.com/a-h/templ"
 	templruntime "github.com/a-h/templ/runtime"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 type SettingsProfileForm struct {
@@ -107,7 +109,7 @@ func settingsAIAgentsModelSelected(form SettingsAIAgentsForm, modelID string) bo
 	return strings.TrimSpace(form.Model) == strings.TrimSpace(modelID)
 }
 
-func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Component {
+func SettingsProfileFragment(form SettingsProfileForm, loc webtemplates.Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -133,9 +135,9 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.title"))
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 105, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 107, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -153,7 +155,7 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(form.ErrorMessage)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 107, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 109, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -171,7 +173,7 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsProfile)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 109, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 111, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -182,9 +184,9 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_username"))
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_username"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 112, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 114, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -197,7 +199,7 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(form.Username)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 114, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 116, Col: 81}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -208,9 +210,9 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_name"))
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_name"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 118, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 120, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -223,7 +225,7 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(form.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 120, Col: 89}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 122, Col: 89}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -234,9 +236,9 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_pronouns"))
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_pronouns"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 124, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 126, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -249,7 +251,7 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(form.Pronouns)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 126, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 128, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -260,9 +262,9 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_bio"))
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_bio"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 135, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 137, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -275,7 +277,7 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(form.Bio)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 137, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 139, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -286,9 +288,9 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.submit_save"))
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.submit_save"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 140, Col: 100}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 142, Col: 113}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -302,7 +304,7 @@ func SettingsProfileFragment(form SettingsProfileForm, loc Localizer) templ.Comp
 	})
 }
 
-func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Component {
+func SettingsLocaleFragment(form SettingsLocaleForm, loc webtemplates.Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -328,9 +330,9 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var15 string
-		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.locale.title"))
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.locale.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 150, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 152, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -348,7 +350,7 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(form.ErrorMessage)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 152, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 154, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -366,7 +368,7 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var17 templ.SafeURL
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsLocale)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 154, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 156, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -377,9 +379,9 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var18 string
-		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.profile.field_locale"))
+		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.profile.field_locale"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 157, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 159, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
@@ -395,9 +397,9 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var19 string
-			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.locale.option_en_us"))
+			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.locale.option_en_us"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 161, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 163, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -413,9 +415,9 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var20 string
-			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.locale.option_en_us"))
+			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.locale.option_en_us"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 163, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 165, Col: 86}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -432,9 +434,9 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var21 string
-			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.locale.option_pt_br"))
+			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.locale.option_pt_br"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 166, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 168, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -450,9 +452,9 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var22 string
-			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.locale.option_pt_br"))
+			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.locale.option_pt_br"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 168, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 170, Col: 86}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -468,9 +470,9 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var23 string
-		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.locale.submit_save"))
+		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.locale.submit_save"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 173, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 175, Col: 107}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -484,7 +486,7 @@ func SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) templ.Compon
 	})
 }
 
-func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) templ.Component {
+func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc webtemplates.Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -510,9 +512,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var25 string
-		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.title"))
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 184, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 186, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -523,9 +525,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var26 string
-		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.description"))
+		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 185, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 187, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -536,9 +538,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var27 string
-		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.add_passkey"))
+		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.add_passkey"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 188, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 190, Col: 135}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -549,9 +551,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var28 string
-		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.list_title"))
+		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.list_title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 194, Col: 71}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 196, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -567,9 +569,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var29 string
-			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.empty"))
+			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.empty"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 196, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 198, Col: 89}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -585,9 +587,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var30 string
-			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.table.passkey"))
+			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.table.passkey"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 202, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 204, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -598,9 +600,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var31 string
-			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.table.created"))
+			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.table.created"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 203, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 205, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -611,9 +613,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var32 string
-			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.table.last_used"))
+			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.table.last_used"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 204, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 206, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -629,9 +631,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var33 string
-				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.passkey_label", passkey.Number))
+				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.passkey_label", passkey.Number))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 210, Col: 77}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 212, Col: 90}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 				if templ_7745c5c3_Err != nil {
@@ -644,7 +646,7 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 				var templ_7745c5c3_Var34 string
 				templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(passkey.CreatedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 211, Col: 33}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 213, Col: 33}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 				if templ_7745c5c3_Err != nil {
@@ -657,7 +659,7 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 				var templ_7745c5c3_Var35 string
 				templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(passkey.LastUsedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 212, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 214, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 				if templ_7745c5c3_Err != nil {
@@ -680,7 +682,7 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 		var templ_7745c5c3_Var36 string
 		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppSettingsSecurityPasskeysStart)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 225, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 227, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 		if templ_7745c5c3_Err != nil {
@@ -693,7 +695,7 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppSettingsSecurityPasskeysFinish)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 226, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 228, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -704,9 +706,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var38 string
-		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.js.start_error"))
+		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.js.start_error"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 227, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 229, Col: 88}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -717,9 +719,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var39 string
-		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.js.finish_error"))
+		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.js.finish_error"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 228, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 230, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -730,9 +732,9 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var40 string
-		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.security.js.failed"))
+		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.security.js.failed"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 229, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 231, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -746,7 +748,7 @@ func SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) temp
 	})
 }
 
-func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, loc Localizer) templ.Component {
+func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, loc webtemplates.Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -772,9 +774,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var42 string
-		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.title"))
+		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 238, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 240, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -790,9 +792,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var43 string
-			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.empty"))
+			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.empty"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 240, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 242, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 			if templ_7745c5c3_Err != nil {
@@ -808,9 +810,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var44 string
-			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.table.label"))
+			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.table.label"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 246, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 248, Col: 70}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -821,9 +823,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var45 string
-			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.table.provider"))
+			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.table.provider"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 247, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 249, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
@@ -834,9 +836,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var46 string
-			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.table.status"))
+			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.table.status"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 248, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 250, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 			if templ_7745c5c3_Err != nil {
@@ -847,9 +849,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var47 string
-			templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.table.created"))
+			templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.table.created"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 249, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 251, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 			if templ_7745c5c3_Err != nil {
@@ -860,9 +862,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var48 string
-			templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.table.revoked"))
+			templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.table.revoked"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 250, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 252, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 			if templ_7745c5c3_Err != nil {
@@ -873,9 +875,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var49 string
-			templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.table.actions"))
+			templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.table.actions"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 251, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 253, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 			if templ_7745c5c3_Err != nil {
@@ -893,7 +895,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				var templ_7745c5c3_Var50 string
 				templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(key.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 257, Col: 25}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 259, Col: 25}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 				if templ_7745c5c3_Err != nil {
@@ -906,7 +908,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				var templ_7745c5c3_Var51 string
 				templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(key.Provider)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 258, Col: 28}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 260, Col: 28}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 				if templ_7745c5c3_Err != nil {
@@ -919,7 +921,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				var templ_7745c5c3_Var52 string
 				templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(key.Status)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 259, Col: 26}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 261, Col: 26}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 				if templ_7745c5c3_Err != nil {
@@ -932,7 +934,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				var templ_7745c5c3_Var53 string
 				templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(key.CreatedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 260, Col: 29}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 262, Col: 29}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 				if templ_7745c5c3_Err != nil {
@@ -945,7 +947,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 				var templ_7745c5c3_Var54 string
 				templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(key.RevokedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 261, Col: 29}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 263, Col: 29}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 				if templ_7745c5c3_Err != nil {
@@ -963,7 +965,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 					var templ_7745c5c3_Var55 templ.SafeURL
 					templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsAIKeyRevoke(key.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 264, Col: 81}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 266, Col: 81}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 					if templ_7745c5c3_Err != nil {
@@ -974,9 +976,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var56 string
-					templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.revoke"))
+					templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.revoke"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 265, Col: 103}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 267, Col: 116}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 					if templ_7745c5c3_Err != nil {
@@ -1007,9 +1009,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var57 string
-		templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.add_title"))
+		templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.add_title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 281, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 283, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 		if templ_7745c5c3_Err != nil {
@@ -1027,7 +1029,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 			var templ_7745c5c3_Var58 string
 			templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(form.ErrorMessage)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 283, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 285, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 			if templ_7745c5c3_Err != nil {
@@ -1045,7 +1047,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 		var templ_7745c5c3_Var59 templ.SafeURL
 		templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsAIKeys)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 285, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 287, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 		if templ_7745c5c3_Err != nil {
@@ -1056,9 +1058,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var60 string
-		templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.field_provider"))
+		templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.field_provider"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 288, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 290, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 		if templ_7745c5c3_Err != nil {
@@ -1071,7 +1073,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(settingsAIKeyProviderLabel(form))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 290, Col: 101}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 292, Col: 101}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 		if templ_7745c5c3_Err != nil {
@@ -1082,9 +1084,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var62 string
-		templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.field_label"))
+		templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.field_label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 294, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 296, Col: 89}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 		if templ_7745c5c3_Err != nil {
@@ -1097,7 +1099,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(form.Label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 296, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 298, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 		if templ_7745c5c3_Err != nil {
@@ -1108,9 +1110,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var64 string
-		templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.field_secret"))
+		templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.field_secret"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 300, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 302, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 		if templ_7745c5c3_Err != nil {
@@ -1121,9 +1123,9 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var65 string
-		templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_keys.submit_add"))
+		templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_keys.submit_add"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 305, Col: 95}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 307, Col: 108}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 		if templ_7745c5c3_Err != nil {
@@ -1137,7 +1139,7 @@ func SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, lo
 	})
 }
 
-func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgentRow, loc Localizer) templ.Component {
+func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgentRow, loc webtemplates.Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -1163,9 +1165,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var67 string
-		templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.title"))
+		templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 317, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 319, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 		if templ_7745c5c3_Err != nil {
@@ -1181,9 +1183,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var68 string
-			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.empty"))
+			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.empty"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 319, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 321, Col: 90}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 			if templ_7745c5c3_Err != nil {
@@ -1199,9 +1201,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var69 string
-			templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.label"))
+			templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.label"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 325, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 327, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 			if templ_7745c5c3_Err != nil {
@@ -1212,9 +1214,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var70 string
-			templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.provider"))
+			templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.provider"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 326, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 328, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 			if templ_7745c5c3_Err != nil {
@@ -1225,9 +1227,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var71 string
-			templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.model"))
+			templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.model"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 327, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 329, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 			if templ_7745c5c3_Err != nil {
@@ -1238,9 +1240,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var72 string
-			templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.status"))
+			templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.status"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 328, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 330, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 			if templ_7745c5c3_Err != nil {
@@ -1251,9 +1253,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var73 string
-			templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.active_campaigns"))
+			templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.active_campaigns"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 329, Col: 70}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 331, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 			if templ_7745c5c3_Err != nil {
@@ -1264,9 +1266,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var74 string
-			templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.created"))
+			templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.created"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 330, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 332, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 			if templ_7745c5c3_Err != nil {
@@ -1277,9 +1279,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var75 string
-			templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.instructions"))
+			templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.instructions"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 331, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 333, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 			if templ_7745c5c3_Err != nil {
@@ -1290,9 +1292,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var76 string
-			templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.table.actions"))
+			templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.table.actions"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 332, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 334, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 			if templ_7745c5c3_Err != nil {
@@ -1310,7 +1312,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				var templ_7745c5c3_Var77 string
 				templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(agent.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 338, Col: 27}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 340, Col: 27}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 				if templ_7745c5c3_Err != nil {
@@ -1323,7 +1325,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				var templ_7745c5c3_Var78 string
 				templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(agent.Provider)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 339, Col: 30}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 341, Col: 30}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
 				if templ_7745c5c3_Err != nil {
@@ -1336,7 +1338,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				var templ_7745c5c3_Var79 string
 				templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(agent.Model)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 340, Col: 27}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 342, Col: 27}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 				if templ_7745c5c3_Err != nil {
@@ -1349,7 +1351,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				var templ_7745c5c3_Var80 string
 				templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(agent.AuthState)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 341, Col: 31}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 343, Col: 31}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 				if templ_7745c5c3_Err != nil {
@@ -1362,7 +1364,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				var templ_7745c5c3_Var81 string
 				templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(agent.ActiveCampaignCount)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 342, Col: 41}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 344, Col: 41}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
 				if templ_7745c5c3_Err != nil {
@@ -1375,7 +1377,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				var templ_7745c5c3_Var82 string
 				templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(agent.CreatedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 343, Col: 31}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 345, Col: 31}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
 				if templ_7745c5c3_Err != nil {
@@ -1388,7 +1390,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				var templ_7745c5c3_Var83 string
 				templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(agent.Instructions)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 344, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 346, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var83))
 				if templ_7745c5c3_Err != nil {
@@ -1406,7 +1408,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var84 templ.SafeURL
 					templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsAIAgentDelete(agent.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 347, Col: 85}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 349, Col: 85}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 					if templ_7745c5c3_Err != nil {
@@ -1417,9 +1419,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var85 string
-					templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.delete"))
+					templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.delete"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 348, Col: 105}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 350, Col: 118}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
 					if templ_7745c5c3_Err != nil {
@@ -1435,9 +1437,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var86 string
-					templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.tooltip_delete_disabled_in_use"))
+					templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.tooltip_delete_disabled_in_use"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 351, Col: 120}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 353, Col: 133}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var86))
 					if templ_7745c5c3_Err != nil {
@@ -1448,9 +1450,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var87 string
-					templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.delete"))
+					templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.delete"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 352, Col: 160}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 354, Col: 173}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var87))
 					if templ_7745c5c3_Err != nil {
@@ -1466,9 +1468,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var88 string
-					templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.delete"))
+					templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.delete"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 355, Col: 159}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 357, Col: 172}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var88))
 					if templ_7745c5c3_Err != nil {
@@ -1494,9 +1496,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var89 string
-		templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.add_title"))
+		templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.add_title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 368, Col: 71}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 370, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
 		if templ_7745c5c3_Err != nil {
@@ -1507,9 +1509,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var90 string
-		templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.description"))
+		templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 369, Col: 80}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 371, Col: 93}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var90))
 		if templ_7745c5c3_Err != nil {
@@ -1527,7 +1529,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			var templ_7745c5c3_Var91 string
 			templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.JoinStringErrs(form.ErrorMessage)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 371, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 373, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var91))
 			if templ_7745c5c3_Err != nil {
@@ -1544,9 +1546,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var92 string
-			templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.empty_credentials"))
+			templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.empty_credentials"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 375, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 377, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var92))
 			if templ_7745c5c3_Err != nil {
@@ -1564,7 +1566,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			var templ_7745c5c3_Var93 templ.SafeURL
 			templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsAIAgents)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 378, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 380, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var93))
 			if templ_7745c5c3_Err != nil {
@@ -1575,9 +1577,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var94 string
-			templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.field_credential"))
+			templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.field_credential"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 381, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 383, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var94))
 			if templ_7745c5c3_Err != nil {
@@ -1588,9 +1590,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var95 string
-			templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.option_select_credential"))
+			templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.option_select_credential"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 384, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 386, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 			if templ_7745c5c3_Err != nil {
@@ -1609,7 +1611,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var96 string
 					templ_7745c5c3_Var96, templ_7745c5c3_Err = templ.JoinStringErrs(option.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 387, Col: 35}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 389, Col: 35}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var96))
 					if templ_7745c5c3_Err != nil {
@@ -1622,7 +1624,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var97 string
 					templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 387, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 389, Col: 61}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var97))
 					if templ_7745c5c3_Err != nil {
@@ -1635,7 +1637,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var98 string
 					templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.JoinStringErrs(option.Provider)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 387, Col: 82}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 389, Col: 82}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var98))
 					if templ_7745c5c3_Err != nil {
@@ -1653,7 +1655,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var99 string
 					templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(option.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 389, Col: 35}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 391, Col: 35}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 					if templ_7745c5c3_Err != nil {
@@ -1666,7 +1668,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var100 string
 					templ_7745c5c3_Var100, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 389, Col: 52}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 391, Col: 52}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var100))
 					if templ_7745c5c3_Err != nil {
@@ -1679,7 +1681,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var101 string
 					templ_7745c5c3_Var101, templ_7745c5c3_Err = templ.JoinStringErrs(option.Provider)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 389, Col: 73}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 391, Col: 73}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var101))
 					if templ_7745c5c3_Err != nil {
@@ -1696,9 +1698,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var102 string
-			templ_7745c5c3_Var102, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.submit_load_models"))
+			templ_7745c5c3_Var102, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.submit_load_models"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 395, Col: 106}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 397, Col: 119}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var102))
 			if templ_7745c5c3_Err != nil {
@@ -1711,7 +1713,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			var templ_7745c5c3_Var103 templ.SafeURL
 			templ_7745c5c3_Var103, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsAIAgents)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 398, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 400, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var103))
 			if templ_7745c5c3_Err != nil {
@@ -1724,7 +1726,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			var templ_7745c5c3_Var104 string
 			templ_7745c5c3_Var104, templ_7745c5c3_Err = templ.JoinStringErrs(form.CredentialID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 399, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 401, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var104))
 			if templ_7745c5c3_Err != nil {
@@ -1735,9 +1737,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var105 string
-			templ_7745c5c3_Var105, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.field_model"))
+			templ_7745c5c3_Var105, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.field_model"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 402, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 404, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var105))
 			if templ_7745c5c3_Err != nil {
@@ -1748,9 +1750,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var106 string
-			templ_7745c5c3_Var106, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.option_select_model"))
+			templ_7745c5c3_Var106, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.option_select_model"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 405, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 407, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var106))
 			if templ_7745c5c3_Err != nil {
@@ -1769,7 +1771,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var107 string
 					templ_7745c5c3_Var107, templ_7745c5c3_Err = templ.JoinStringErrs(option.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 408, Col: 35}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 410, Col: 35}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var107))
 					if templ_7745c5c3_Err != nil {
@@ -1782,7 +1784,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var108 string
 					templ_7745c5c3_Var108, templ_7745c5c3_Err = templ.JoinStringErrs(option.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 408, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 410, Col: 58}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var108))
 					if templ_7745c5c3_Err != nil {
@@ -1800,7 +1802,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var109 string
 					templ_7745c5c3_Var109, templ_7745c5c3_Err = templ.JoinStringErrs(option.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 410, Col: 35}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 412, Col: 35}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var109))
 					if templ_7745c5c3_Err != nil {
@@ -1813,7 +1815,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					var templ_7745c5c3_Var110 string
 					templ_7745c5c3_Var110, templ_7745c5c3_Err = templ.JoinStringErrs(option.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 410, Col: 49}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 412, Col: 49}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var110))
 					if templ_7745c5c3_Err != nil {
@@ -1835,9 +1837,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var111 string
-				templ_7745c5c3_Var111, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.helper_load_models"))
+				templ_7745c5c3_Var111, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.helper_load_models"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 416, Col: 91}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 418, Col: 104}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var111))
 				if templ_7745c5c3_Err != nil {
@@ -1853,9 +1855,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var112 string
-			templ_7745c5c3_Var112, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.field_label"))
+			templ_7745c5c3_Var112, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.field_label"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 422, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 424, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var112))
 			if templ_7745c5c3_Err != nil {
@@ -1868,7 +1870,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			var templ_7745c5c3_Var113 string
 			templ_7745c5c3_Var113, templ_7745c5c3_Err = templ.JoinStringErrs(form.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 424, Col: 93}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 426, Col: 93}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var113))
 			if templ_7745c5c3_Err != nil {
@@ -1879,9 +1881,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var114 string
-			templ_7745c5c3_Var114, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.helper_label"))
+			templ_7745c5c3_Var114, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.helper_label"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 426, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 428, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var114))
 			if templ_7745c5c3_Err != nil {
@@ -1892,9 +1894,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var115 string
-			templ_7745c5c3_Var115, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.field_instructions"))
+			templ_7745c5c3_Var115, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.field_instructions"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 431, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 433, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var115))
 			if templ_7745c5c3_Err != nil {
@@ -1907,7 +1909,7 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 			var templ_7745c5c3_Var116 string
 			templ_7745c5c3_Var116, templ_7745c5c3_Err = templ.JoinStringErrs(form.Instructions)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 433, Col: 107}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 435, Col: 107}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var116))
 			if templ_7745c5c3_Err != nil {
@@ -1918,9 +1920,9 @@ func SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var117 string
-			templ_7745c5c3_Var117, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.ai_agents.submit_create"))
+			templ_7745c5c3_Var117, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.ai_agents.submit_create"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/settings/page.templ`, Line: 436, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings/page.templ`, Line: 438, Col: 114}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var117))
 			if templ_7745c5c3_Err != nil {

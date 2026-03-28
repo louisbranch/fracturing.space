@@ -1,6 +1,9 @@
 package render
 
-import "github.com/a-h/templ"
+import (
+	"github.com/a-h/templ"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 // SessionsPageView carries session-list page state only.
 type SessionsPageView struct {
@@ -22,17 +25,17 @@ type SessionDetailPageView struct {
 }
 
 // SessionsFragment renders the session-list page.
-func SessionsFragment(view SessionsPageView, loc Localizer) templ.Component {
+func SessionsFragment(view SessionsPageView, loc webtemplates.Localizer) templ.Component {
 	return sessionsFragment(view, loc)
 }
 
 // SessionCreateFragment renders the session-create page.
-func SessionCreateFragment(view SessionCreatePageView, loc Localizer) templ.Component {
+func SessionCreateFragment(view SessionCreatePageView, loc webtemplates.Localizer) templ.Component {
 	return sessionCreateFragment(view, loc)
 }
 
 // SessionDetailFragment renders the selected session page.
-func SessionDetailFragment(view SessionDetailPageView, loc Localizer) templ.Component {
+func SessionDetailFragment(view SessionDetailPageView, loc webtemplates.Localizer) templ.Component {
 	return sessionDetailFragment(view, loc)
 }
 

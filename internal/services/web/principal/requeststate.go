@@ -1,10 +1,13 @@
 package principal
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 )
 
 // ViewerResolver resolves request-scoped app-chrome viewer state.
@@ -111,6 +114,23 @@ func ResolveLocalizedPage(w http.ResponseWriter, r *http.Request, resolver PageR
 		Localizer: loc,
 		Language:  lang,
 	}
+}
+
+// WithResolvedUserID returns request context enriched with normalized user
+// metadata for downstream service calls.
+func WithResolvedUserID(r *http.Request, resolve UserIDFunc) context.Context {
+	if r == nil {
+		return context.Background()
+	}
+	ctx := r.Context()
+	if resolve == nil {
+		return ctx
+	}
+	userID := userid.Normalize(resolve(r))
+	if userID == "" {
+		return ctx
+	}
+	return grpcauthctx.WithUserID(ctx, userID)
 }
 
 // ResolveViewer nil-safely resolves viewer chrome state for full-page renders.

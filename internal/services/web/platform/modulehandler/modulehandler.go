@@ -8,7 +8,6 @@ import (
 	"github.com/a-h/templ"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -72,7 +71,7 @@ func (b Base) RequestUserID(r *http.Request) string {
 // RequestContextAndUserID returns a context enriched with the user ID (for gRPC
 // downstream calls) and the raw user ID string.
 func (b Base) RequestContextAndUserID(r *http.Request) (context.Context, string) {
-	ctx := webctx.WithResolvedUserID(r, b.resolveUserID)
+	ctx := principal.WithResolvedUserID(r, b.resolveUserID)
 	return ctx, b.RequestUserID(r)
 }
 

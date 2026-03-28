@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -50,10 +51,6 @@ type dependencyRequirement struct {
 // dependencyConnHook performs optional post-connect setup for one dependency.
 type dependencyConnHook func(context.Context, *platformgrpc.ManagedConn)
 
-// dependencyAddressResolver maps one command config to the backend address for
-// a service-owned startup dependency descriptor.
-type dependencyAddressResolver func(Config) string
-
 // dependencyAddressBinding binds a startup dependency name to the command config
 // field and service default.
 type dependencyAddressBinding struct {
@@ -71,10 +68,10 @@ func (b dependencyAddressBinding) resolve(cfg Config) string {
 }
 
 // applyDependencyAddressDefaults fills unset dependency addresses from stable
-// service defaults where a resolver is known.
+// service defaults where a descriptor owns a valid config field.
 func applyDependencyAddressDefaults(cfg *Config) {
 	for _, descriptor := range web.StartupDependencyDescriptors() {
-		binding, ok := dependencyAddressBindingForName(descriptor.Name)
+		binding, ok := dependencyAddressBindingForDescriptor(descriptor)
 		if !ok {
 			continue
 		}
@@ -93,7 +90,7 @@ func dependencyAddressBindingNames() []string {
 		if descriptor.Name == "" {
 			continue
 		}
-		if _, ok := dependencyAddressBindingForName(descriptor.Name); !ok {
+		if _, ok := dependencyAddressBindingForDescriptor(descriptor); !ok {
 			continue
 		}
 		if _, duplicate := seen[descriptor.Name]; duplicate {
@@ -105,8 +102,8 @@ func dependencyAddressBindingNames() []string {
 	return names
 }
 
-// applyDependencyAddressFlags wires startup dependency flags from the same canonical
-// binding map used by resolver/default generation.
+// applyDependencyAddressFlags wires startup dependency flags from the same
+// canonical descriptor-driven binding model used by default generation.
 func applyDependencyAddressFlags(fs *flag.FlagSet, cfg *Config) {
 	if fs == nil || cfg == nil {
 		return
@@ -148,53 +145,65 @@ func dependencyAddressBindingForName(name string) (dependencyAddressBinding, boo
 // dependencyAddressBindingForDescriptor resolves command-layer config-field
 // ownership for one service-owned startup dependency descriptor.
 func dependencyAddressBindingForDescriptor(descriptor web.StartupDependencyDescriptor) (dependencyAddressBinding, bool) {
+	if !hasDependencyAddressField(descriptor) {
+		return dependencyAddressBinding{}, false
+	}
 	binding := dependencyAddressBinding{
 		descriptor: descriptor,
-		address:    dependencyAddressField(descriptor.Name),
+		address: func(cfg *Config) *string {
+			field, ok := dependencyAddressField(cfg, descriptor)
+			if !ok {
+				return nil
+			}
+			return field
+		},
 	}
 	return binding, binding.address != nil && binding.descriptor.DefaultGRPCService != ""
 }
 
-// dependencyAddressField maps a service-owned startup dependency name to the
-// command config field that stores its gRPC address.
-func dependencyAddressField(name string) func(*Config) *string {
-	switch name {
-	case web.DependencyNameAuth:
-		return func(cfg *Config) *string { return &cfg.AuthAddr }
-	case web.DependencyNameSocial:
-		return func(cfg *Config) *string { return &cfg.SocialAddr }
-	case web.DependencyNameGame:
-		return func(cfg *Config) *string { return &cfg.GameAddr }
-	case web.DependencyNameInvite:
-		return func(cfg *Config) *string { return &cfg.InviteAddr }
-	case web.DependencyNameAI:
-		return func(cfg *Config) *string { return &cfg.AIAddr }
-	case web.DependencyNameDiscovery:
-		return func(cfg *Config) *string { return &cfg.DiscoveryAddr }
-	case web.DependencyNameUserHub:
-		return func(cfg *Config) *string { return &cfg.UserHubAddr }
-	case web.DependencyNameNotifications:
-		return func(cfg *Config) *string { return &cfg.NotificationsAddr }
-	case web.DependencyNameStatus:
-		return func(cfg *Config) *string { return &cfg.StatusAddr }
-	default:
-		return nil
+// dependencyAddressField resolves the command config field that stores one
+// service-owned startup dependency address.
+func dependencyAddressField(cfg *Config, descriptor web.StartupDependencyDescriptor) (*string, bool) {
+	if cfg == nil {
+		return nil, false
 	}
+	fieldName := strings.TrimSpace(descriptor.AddressField)
+	if fieldName == "" {
+		return nil, false
+	}
+	value := reflect.ValueOf(cfg).Elem()
+	field := value.FieldByName(fieldName)
+	if !field.IsValid() || field.Kind() != reflect.String || !field.CanAddr() {
+		return nil, false
+	}
+	ptr, ok := field.Addr().Interface().(*string)
+	return ptr, ok
 }
 
-// DependencyAddressResolverContractError reports mismatches between service-owned
-// dependency descriptors and command-layer address resolver configuration.
-type DependencyAddressResolverContractError struct {
+// hasDependencyAddressField reports whether one startup descriptor references a
+// valid string field on the command config.
+func hasDependencyAddressField(descriptor web.StartupDependencyDescriptor) bool {
+	fieldName := strings.TrimSpace(descriptor.AddressField)
+	if fieldName == "" {
+		return false
+	}
+	field, ok := reflect.TypeOf(Config{}).FieldByName(fieldName)
+	return ok && field.Type.Kind() == reflect.String
+}
+
+// DependencyAddressBindingContractError reports mismatches between service-owned
+// dependency descriptors and command-layer config address fields.
+type DependencyAddressBindingContractError struct {
 	Missing []string
 	Extra   []string
 }
 
-// Error returns a stable summary of descriptor resolver mismatch state.
-func (e DependencyAddressResolverContractError) Error() string {
+// Error returns a stable summary of descriptor/config coverage mismatch state.
+func (e DependencyAddressBindingContractError) Error() string {
 	if len(e.Missing) == 0 && len(e.Extra) == 0 {
-		return "startup dependency address resolver contract is complete"
+		return "startup dependency address binding contract is complete"
 	}
-	return fmt.Sprintf("startup dependency address resolver contract mismatch: missing=%v extras=%v", e.Missing, e.Extra)
+	return fmt.Sprintf("startup dependency address binding contract mismatch: missing=%v extras=%v", e.Missing, e.Extra)
 }
 
 // MissingRequiredStartupDependencyAddressesError reports required startup
@@ -208,57 +217,28 @@ func (e MissingRequiredStartupDependencyAddressesError) Error() string {
 	return fmt.Sprintf("required startup dependency addresses are missing: %v", e.Missing)
 }
 
-// dependencyAddressResolverDefaults returns a stable snapshot of resolver wiring so
-// callers cannot mutate global state through shared map references.
-func dependencyAddressResolverDefaults() map[string]dependencyAddressResolver {
-	descriptors := web.StartupDependencyDescriptors()
-	resolvers := make(map[string]dependencyAddressResolver, len(descriptors))
-	for _, descriptor := range descriptors {
-		if descriptor.Name == "" {
-			continue
-		}
-		resolve := dependencyAddressResolverForName(descriptor.Name)
-		if resolve == nil {
-			continue
-		}
-		resolvers[descriptor.Name] = resolve
-	}
-	return resolvers
-}
-
-// dependencyAddressResolverForName maps service-owned dependency names to command config
-// address resolvers so resolver wiring stays explicit and centralized.
-func dependencyAddressResolverForName(name string) dependencyAddressResolver {
-	binding, ok := dependencyAddressBindingForName(name)
-	if !ok {
-		return nil
-	}
-	return binding.resolve
-}
-
 // dependencyRequirements returns startup requirements in stable dependency
 // order and fails fast when command-layer address wiring drifts from the
 // service-owned descriptor table.
 func dependencyRequirements(cfg Config, reporter *platformstatus.Reporter) ([]dependencyRequirement, error) {
-	return dependencyRequirementsWithResolvers(cfg, reporter, dependencyAddressResolverDefaults())
+	return dependencyRequirementsWithDescriptors(cfg, reporter, web.StartupDependencyDescriptors())
 }
 
-// dependencyRequirementsWithResolvers builds startup requirements from the active
-// dependency descriptors and resolver map.
-func dependencyRequirementsWithResolvers(
+// dependencyRequirementsWithDescriptors builds startup requirements from the
+// active dependency descriptors.
+func dependencyRequirementsWithDescriptors(
 	cfg Config,
 	reporter *platformstatus.Reporter,
-	resolvers map[string]dependencyAddressResolver,
+	descriptors []web.StartupDependencyDescriptor,
 ) ([]dependencyRequirement, error) {
-	if err := validateDependencyAddressResolversCoverageWithResolvers(resolvers); err != nil {
+	if err := validateDependencyAddressBindingsCoverageWithDescriptors(descriptors); err != nil {
 		return nil, err
 	}
 
-	descriptors := web.StartupDependencyDescriptors()
 	requirements := make([]dependencyRequirement, 0, len(descriptors))
 	missingRequiredAddresses := make([]string, 0, len(descriptors))
 	for _, descriptor := range descriptors {
-		address, err := dependencyAddress(cfg, descriptor.Name, resolvers)
+		address, err := dependencyAddress(cfg, descriptor)
 		if err != nil {
 			return nil, err
 		}
@@ -288,30 +268,33 @@ func dependencyRequirementsWithResolvers(
 
 // dependencyAddress resolves the configured backend address for one
 // service-owned startup dependency descriptor.
-func dependencyAddress(cfg Config, name string, resolvers map[string]dependencyAddressResolver) (string, error) {
-	resolve, ok := resolvers[name]
+func dependencyAddress(cfg Config, descriptor web.StartupDependencyDescriptor) (string, error) {
+	binding, ok := dependencyAddressBindingForDescriptor(descriptor)
 	if !ok {
-		return "", fmt.Errorf("web startup dependency %q is missing a command-layer address resolver", name)
+		return "", fmt.Errorf("web startup dependency %q is missing a command config address field", descriptor.Name)
 	}
-	return resolve(cfg), nil
+	return binding.resolve(cfg), nil
 }
 
-// validateDependencyAddressResolversCoverage checks resolver coverage against the
+// validateDependencyAddressBindingsCoverage checks address-field coverage against the
 // startup descriptor table in the active process.
-func validateDependencyAddressResolversCoverage() error {
-	return validateDependencyAddressResolversCoverageWithResolvers(dependencyAddressResolverDefaults())
+func validateDependencyAddressBindingsCoverage() error {
+	return validateDependencyAddressBindingsCoverageWithDescriptors(web.StartupDependencyDescriptors())
 }
 
-// validateDependencyAddressResolversCoverageWithResolvers asserts that resolver
-// coverage mirrors service-owned startup descriptors.
-func validateDependencyAddressResolversCoverageWithResolvers(resolvers map[string]dependencyAddressResolver) error {
-	descriptors := web.StartupDependencyDescriptors()
+// validateDependencyAddressBindingsCoverageWithDescriptors asserts that command
+// config address fields mirror service-owned startup descriptors.
+func validateDependencyAddressBindingsCoverageWithDescriptors(descriptors []web.StartupDependencyDescriptor) error {
 	descriptorByName := make(map[string]struct{}, len(descriptors))
+	descriptorFields := make(map[string]struct{}, len(descriptors))
 	for _, descriptor := range descriptors {
 		if descriptor.Name == "" {
 			continue
 		}
 		descriptorByName[descriptor.Name] = struct{}{}
+		if strings.TrimSpace(descriptor.AddressField) != "" {
+			descriptorFields[descriptor.AddressField] = struct{}{}
+		}
 	}
 
 	missing := make([]string, 0, len(descriptorByName))
@@ -319,18 +302,18 @@ func validateDependencyAddressResolversCoverageWithResolvers(resolvers map[strin
 		if descriptor.Name == "" {
 			continue
 		}
-		if _, ok := resolvers[descriptor.Name]; !ok {
+		if !hasDependencyAddressField(descriptor) {
 			missing = append(missing, descriptor.Name)
 		}
 	}
 
-	extra := make([]string, 0, len(resolvers))
-	for name := range resolvers {
-		if name == "" {
+	extra := make([]string, 0)
+	for _, fieldName := range dependencyAddressConfigFields() {
+		if fieldName == "" {
 			continue
 		}
-		if _, ok := descriptorByName[name]; !ok {
-			extra = append(extra, name)
+		if _, ok := descriptorFields[fieldName]; !ok {
+			extra = append(extra, fieldName)
 		}
 	}
 
@@ -339,10 +322,32 @@ func validateDependencyAddressResolversCoverageWithResolvers(resolvers map[strin
 	}
 	sort.Strings(missing)
 	sort.Strings(extra)
-	return DependencyAddressResolverContractError{
+	return DependencyAddressBindingContractError{
 		Missing: missing,
 		Extra:   extra,
 	}
+}
+
+// dependencyAddressConfigFields returns the Config fields reserved for backend
+// dependency addresses.
+func dependencyAddressConfigFields() []string {
+	cfgType := reflect.TypeOf(Config{})
+	fields := make([]string, 0, cfgType.NumField())
+	for i := 0; i < cfgType.NumField(); i++ {
+		field := cfgType.Field(i)
+		if field.Type.Kind() != reflect.String {
+			continue
+		}
+		if !strings.HasSuffix(field.Name, "Addr") {
+			continue
+		}
+		if field.Name == "HTTPAddr" || field.Name == "PlayHTTPAddr" {
+			continue
+		}
+		fields = append(fields, field.Name)
+	}
+	sort.Strings(fields)
+	return fields
 }
 
 // dependencyOnConnect returns any late-binding hook that should run after one

@@ -1,2 +1,3 @@
-// Package httpx provides HTTP middleware helpers used by web modules.
+// Package httpx provides shared HTTP request, response, and input helpers used
+// by web modules.
 package httpx

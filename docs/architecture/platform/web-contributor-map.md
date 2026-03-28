@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 11
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-23"
 ---
 
 # Web Contributor Map
@@ -20,7 +20,7 @@ Canonical implementation path: `internal/services/web/`.
 - Public flow is usually `routes.go` -> `handlers.go` -> `app/` -> `gateway/`, with `publichandler.Base` for shared rendering behavior.
 - Top-level startup and composition live outside feature areas: `cmd/web`, `internal/cmd/web`, and `internal/services/web/{server.go,principal/,composition/,app/,modules/}`.
 - Start orientation with `doc.go` in `internal/services/web/`, `internal/services/web/module/`, and `internal/services/web/modules/` before dropping into implementation files.
-- Startup dependency policy is defined in `internal/services/web/startup_dependencies.go`. Command-layer address mapping and connection lifecycle live in `internal/cmd/web/dependency_graph.go` and `internal/cmd/web/runtime_dependencies.go`.
+- Startup dependency policy and dependency-to-config address ownership are defined in `internal/services/web/startup_dependencies.go`. Command-layer connection lifecycle lives in `internal/cmd/web/dependency_graph.go` and `internal/cmd/web/runtime_dependencies.go`.
 - Service-owned dependency bundle construction lives in `internal/services/web/dependencies.go`; do not patch partially-built bundles later in `Run`.
 
 ## Package roles
@@ -53,7 +53,7 @@ For protected surfaces, prefer `ComposeProtected` constructors that centralize s
 
 ## Current hotspots
 
-- `campaigns`: still the largest area, but the root sink files are gone. Route registration, routepath ownership, app and gateway contracts, workflow registration, render entrypoints, and startup gateway deps are now split by owned surface. Start with `module.go`, the relevant `routes_*.go`, then `render/doc.go` or `workflow/doc.go` when those seams are involved.
+- `campaigns`: still the largest area, but the root sink files are gone. Campaign workspace surfaces now live under `campaigns/{overview,participants,characters,sessions,invites}` with shared workspace-shell support in `campaigns/detail`; the root package mainly owns module composition, starter/catalog transport, stable route-surface assembly, and system/workflow installation policy. Start with `module.go`, then the owned surface package or `routes_*.go`, then `render/doc.go` or `workflow/doc.go` when those seams are involved.
 - `settings`: route/files and production composition now keep account and AI ownership split end to end. Start with `composition.go`, then the matching account-vs-AI handler, app, and gateway files.
 - `discovery`, `profile`, `invite`, `dashboard`, and `notifications`: all use the same small-module archetype where `composition.go` builds the production gateway plus app service and `module.go` only wires transport concerns.
 - `publicauth`: continuation-path validation, signed-in detection, and page/session/passkey/recovery composition are all area-owned now. Start with `composition.go` and the specific capability files instead of looking for one transport-wide bundle.
@@ -68,7 +68,7 @@ For protected surfaces, prefer `ComposeProtected` constructors that centralize s
 - `internal/services/web/templates/routes_guardrails_test.go`
 - Per-module `routes_test.go` files
 
-The boundary guardrails prefer AST/package invariants and constructor contracts over brittle source-fragment policing, so harmless file reshapes should not force churn.
+These guardrails should protect package boundaries, constructor ownership, and route contracts. They should not require placeholder files or contributor-owned split names just to preserve a preferred filesystem shape.
 
 ## High-signal coverage entrypoints
 
@@ -77,7 +77,7 @@ The boundary guardrails prefer AST/package invariants and constructor contracts 
   `internal/services/web/server_locale_test.go`
   `internal/services/web/server_viewer_test.go`
   `internal/services/web/server_static_test.go`
-- Root test harness ownership and explicit dependency completion:
+- Root test harness ownership and shared web test fixtures:
   `internal/services/web/server_test_harness_defaults_test.go`
   `internal/services/web/server_test_harness_helpers_test.go`
 - Startup dependency policy and runtime wiring:

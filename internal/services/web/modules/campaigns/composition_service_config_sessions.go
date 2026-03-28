@@ -9,7 +9,8 @@ import (
 // game-launch surface.
 func newSessionSurfaceConfig(config CompositionConfig) sessionServiceConfig {
 	return sessionServiceConfig{
-		Mutation: newSessionMutationServiceConfig(config),
+		Mutation:      newSessionMutationServiceConfig(config),
+		Authorization: newPageAuthorizationGateway(config),
 	}
 }
 

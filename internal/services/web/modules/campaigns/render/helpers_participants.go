@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // campaignParticipantEditURL keeps participant edit links consistent with routepath.
@@ -17,14 +18,14 @@ func campaignParticipantEditURL(campaignID string, participant ParticipantView) 
 }
 
 // campaignParticipantPronounPresets keeps participant-edit suggestions in the render seam.
-func campaignParticipantPronounPresets(loc Localizer, editor ParticipantEditorView) []string {
+func campaignParticipantPronounPresets(loc webtemplates.Localizer, editor ParticipantEditorView) []string {
 	presets := []string{
-		T(loc, "game.participants.value_she_her"),
-		T(loc, "game.participants.value_he_him"),
-		T(loc, "game.participants.value_they_them"),
+		webtemplates.T(loc, "game.participants.value_she_her"),
+		webtemplates.T(loc, "game.participants.value_he_him"),
+		webtemplates.T(loc, "game.participants.value_they_them"),
 	}
 	if campaignParticipantControllerCanonical(editor.Controller) == "ai" {
-		return append(presets, T(loc, "game.participants.value_it_its"))
+		return append(presets, webtemplates.T(loc, "game.participants.value_it_its"))
 	}
 	return presets
 }

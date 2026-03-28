@@ -42,8 +42,8 @@ func (defaultNotificationCopyRenderer) RenderInApp(loc webtemplates.Localizer, i
 	payload, ok := notificationpayload.ParseInAppPayload(item.PayloadJSON)
 	if !ok {
 		return notificationCopy{
-			Title: T(loc, "notification.generic.title"),
-			Body:  T(loc, "notification.generic.body"),
+			Title: webtemplates.T(loc, "notification.generic.title"),
+			Body:  webtemplates.T(loc, "notification.generic.body"),
 		}
 	}
 	facts := make([]NotificationFactView, 0, len(payload.Facts))

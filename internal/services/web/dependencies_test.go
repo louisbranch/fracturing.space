@@ -139,6 +139,9 @@ func TestStartupDependencyDescriptorsExposeStableBindings(t *testing.T) {
 		if descriptor.Bind == nil {
 			t.Fatalf("descriptor %q has nil binder", name)
 		}
+		if descriptor.AddressField == "" {
+			t.Fatalf("descriptor %q has empty address field", name)
+		}
 		if descriptor.DefaultGRPCService == "" {
 			t.Fatalf("descriptor %q has empty default gRPC service", name)
 		}

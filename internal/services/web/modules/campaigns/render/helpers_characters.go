@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // campaignCharacterDetailURL centralizes character detail links for render-owned cards.
@@ -28,12 +29,12 @@ func campaignCharacterEditURL(campaignID string, characterID string) string {
 }
 
 // campaignCharacterSheetTitle derives the character-creation panel title from the campaign system.
-func campaignCharacterSheetTitle(loc Localizer, system string) string {
+func campaignCharacterSheetTitle(loc webtemplates.Localizer, system string) string {
 	system = strings.TrimSpace(campaignOverviewSystem(loc, system))
 	if system == "" {
-		system = T(loc, "game.campaign.system_unspecified")
+		system = webtemplates.T(loc, "game.campaign.system_unspecified")
 	}
-	return system + " " + T(loc, "game.character_detail.character_sheet_suffix")
+	return system + " " + webtemplates.T(loc, "game.character_detail.character_sheet_suffix")
 }
 
 // campaignCharacterHasDaggerheartSummary guards Daggerheart-only metadata sections.
@@ -57,9 +58,9 @@ func campaignCharacterDaggerheartLevelAttr(character CharacterView) string {
 }
 
 // campaignCharacterControlOptionLabel keeps controller reassignment labels stable.
-func campaignCharacterControlOptionLabel(loc Localizer, option CharacterControlOptionView) string {
+func campaignCharacterControlOptionLabel(loc webtemplates.Localizer, option CharacterControlOptionView) string {
 	if strings.TrimSpace(option.ParticipantID) == "" {
-		return T(loc, "game.participants.value_unassigned")
+		return webtemplates.T(loc, "game.participants.value_unassigned")
 	}
 	label := strings.TrimSpace(option.Label)
 	if label == "" {
@@ -69,20 +70,20 @@ func campaignCharacterControlOptionLabel(loc Localizer, option CharacterControlO
 }
 
 // campaignCharacterPronounPresets keeps character-edit suggestions in the render seam.
-func campaignCharacterPronounPresets(loc Localizer) []string {
+func campaignCharacterPronounPresets(loc webtemplates.Localizer) []string {
 	return []string{
-		T(loc, "game.participants.value_they_them"),
-		T(loc, "game.participants.value_he_him"),
-		T(loc, "game.participants.value_she_her"),
-		T(loc, "game.participants.value_it_its"),
+		webtemplates.T(loc, "game.participants.value_they_them"),
+		webtemplates.T(loc, "game.participants.value_he_him"),
+		webtemplates.T(loc, "game.participants.value_she_her"),
+		webtemplates.T(loc, "game.participants.value_it_its"),
 	}
 }
 
 // campaignCharacterDisplayName preserves the detail-page fallback title for unnamed characters.
-func campaignCharacterDisplayName(loc Localizer, character CharacterView) string {
+func campaignCharacterDisplayName(loc webtemplates.Localizer, character CharacterView) string {
 	name := strings.TrimSpace(character.Name)
 	if name != "" {
 		return name
 	}
-	return T(loc, "game.character_detail.title")
+	return webtemplates.T(loc, "game.character_detail.title")
 }

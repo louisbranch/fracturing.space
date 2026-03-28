@@ -5,6 +5,8 @@ import (
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"strings"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 type CampaignListItem struct {
@@ -46,26 +48,26 @@ func campaignCreateGMModeValue(form CampaignCreateFormValues) string {
 	return "ai"
 }
 
-templ CampaignStartFragment(loc Localizer) {
+templ CampaignStartFragment(loc webtemplates.Localizer) {
 	<section class="mx-auto flex min-h-[62vh] w-full max-w-6xl items-center justify-center">
 		<div class="w-full max-w-5xl rounded-box border border-base-300 bg-base-200/70 p-4 shadow-xl md:p-8">
 			<div class="mx-auto flex w-full max-w-4xl flex-col items-stretch justify-center lg:flex-row lg:items-center">
 				<article class="card flex-1 border border-base-300 bg-base-100 shadow-sm" data-campaign-start-option="browse">
 					<div class="card-body gap-3">
-						<h2 class="card-title">{ T(loc, "game.campaigns.new.browse.title") }</h2>
-						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.browse.description") }</p>
+						<h2 class="card-title">{ webtemplates.T(loc, "game.campaigns.new.browse.title") }</h2>
+						<p class="text-sm opacity-80">{ webtemplates.T(loc, "game.campaigns.new.browse.description") }</p>
 						<div class="card-actions mt-2 justify-start">
-							<a class="btn btn-outline w-full sm:w-auto" href={ routepath.Discover }>{ T(loc, "game.campaigns.new.browse.action") }</a>
+							<a class="btn btn-outline w-full sm:w-auto" href={ routepath.Discover }>{ webtemplates.T(loc, "game.campaigns.new.browse.action") }</a>
 						</div>
 					</div>
 				</article>
-				<div class="divider lg:divider-horizontal mx-4 text-xs font-semibold uppercase tracking-[0.28em] opacity-70" data-campaign-start-divider="or">{ T(loc, "game.campaigns.new.divider_or") }</div>
+				<div class="divider lg:divider-horizontal mx-4 text-xs font-semibold uppercase tracking-[0.28em] opacity-70" data-campaign-start-divider="or">{ webtemplates.T(loc, "game.campaigns.new.divider_or") }</div>
 				<article class="card flex-1 border border-primary/30 bg-base-100 shadow-sm" data-campaign-start-option="scratch">
 					<div class="card-body gap-3">
-						<h2 class="card-title">{ T(loc, "game.campaigns.new.scratch.title") }</h2>
-						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.scratch.description") }</p>
+						<h2 class="card-title">{ webtemplates.T(loc, "game.campaigns.new.scratch.title") }</h2>
+						<p class="text-sm opacity-80">{ webtemplates.T(loc, "game.campaigns.new.scratch.description") }</p>
 						<div class="card-actions mt-2 justify-start">
-							<a class="btn btn-primary w-full sm:w-auto" href={ routepath.AppCampaignsCreate }>{ T(loc, "game.campaigns.new.scratch.action") }</a>
+							<a class="btn btn-primary w-full sm:w-auto" href={ routepath.AppCampaignsCreate }>{ webtemplates.T(loc, "game.campaigns.new.scratch.action") }</a>
 						</div>
 					</div>
 				</article>
@@ -74,77 +76,77 @@ templ CampaignStartFragment(loc Localizer) {
 	</section>
 }
 
-templ CampaignCreateFragment(form CampaignCreateFormValues, systems []CampaignCreateSystemOption, defaultSystem string, loc Localizer) {
+templ CampaignCreateFragment(form CampaignCreateFormValues, systems []CampaignCreateSystemOption, defaultSystem string, loc webtemplates.Localizer) {
 	<section class="card bg-base-200">
 		<div class="card-body">
 			<form method="post" action={ routepath.AppCampaignsCreate } class="space-y-4">
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "game.create.field_name") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "game.create.field_name") }</span>
 					</label>
-					<input type="text" name="name" value={ form.Name } placeholder={ T(loc, "game.create.placeholder_name") } required class="input input-bordered w-full"/>
+					<input type="text" name="name" value={ form.Name } placeholder={ webtemplates.T(loc, "game.create.placeholder_name") } required class="input input-bordered w-full"/>
 				</div>
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "game.create.field_system") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "game.create.field_system") }</span>
 					</label>
 					<select name="system" required class="select select-bordered w-full">
 						for _, system := range systems {
 							if campaignCreateSystemValue(form, defaultSystem) == system.Value {
-								<option value={ system.Value } selected>{ T(loc, system.LabelKey) }</option>
+								<option value={ system.Value } selected>{ webtemplates.T(loc, system.LabelKey) }</option>
 							} else {
-								<option value={ system.Value }>{ T(loc, system.LabelKey) }</option>
+								<option value={ system.Value }>{ webtemplates.T(loc, system.LabelKey) }</option>
 							}
 						}
 					</select>
 				</div>
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "game.create.field_gm_mode") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "game.create.field_gm_mode") }</span>
 					</label>
 					<select name="gm_mode" required class="select select-bordered w-full">
 						if campaignCreateGMModeValue(form) == "ai" {
-							<option value="ai" selected>{ T(loc, "game.create.field_gm_mode_ai") }</option>
+							<option value="ai" selected>{ webtemplates.T(loc, "game.create.field_gm_mode_ai") }</option>
 						} else {
-							<option value="ai">{ T(loc, "game.create.field_gm_mode_ai") }</option>
+							<option value="ai">{ webtemplates.T(loc, "game.create.field_gm_mode_ai") }</option>
 						}
 						if campaignCreateGMModeValue(form) == "human" {
-							<option value="human" selected>{ T(loc, "game.create.field_gm_mode_human") }</option>
+							<option value="human" selected>{ webtemplates.T(loc, "game.create.field_gm_mode_human") }</option>
 						} else {
-							<option value="human">{ T(loc, "game.create.field_gm_mode_human") }</option>
+							<option value="human">{ webtemplates.T(loc, "game.create.field_gm_mode_human") }</option>
 						}
 						if campaignCreateGMModeValue(form) == "hybrid" {
-							<option value="hybrid" selected>{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+							<option value="hybrid" selected>{ webtemplates.T(loc, "game.create.field_gm_mode_hybrid") }</option>
 						} else {
-							<option value="hybrid">{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+							<option value="hybrid">{ webtemplates.T(loc, "game.create.field_gm_mode_hybrid") }</option>
 						}
 					</select>
 				</div>
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "game.create.field_theme_prompt") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "game.create.field_theme_prompt") }</span>
 					</label>
-					<textarea name="theme_prompt" rows="4" placeholder={ T(loc, "game.create.placeholder_theme_prompt") } class="textarea textarea-bordered w-full">{ form.ThemePrompt }</textarea>
+					<textarea name="theme_prompt" rows="4" placeholder={ webtemplates.T(loc, "game.create.placeholder_theme_prompt") } class="textarea textarea-bordered w-full">{ form.ThemePrompt }</textarea>
 				</div>
 				<div class="card-actions justify-end">
-					<button class="btn btn-primary" type="submit">{ T(loc, "game.create.submit") }</button>
+					<button class="btn btn-primary" type="submit">{ webtemplates.T(loc, "game.create.submit") }</button>
 				</div>
 			</form>
 		</div>
 	</section>
 }
 
-templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
+templ CampaignListFragment(items []CampaignListItem, loc webtemplates.Localizer) {
 	<div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
 		if len(items) == 0 {
-			<p>{ T(loc, "game.campaigns.empty") }</p>
+			<p>{ webtemplates.T(loc, "game.campaigns.empty") }</p>
 		}
 		for _, item := range items {
 			<div class="card border border-base-300 bg-base-100 shadow-sm" data-campaign-id={ item.ID }>
 				<figure class="w-full">
 					if campaignListItemURL(item) != "" {
 						<a href={ campaignListItemURL(item) } class="group block w-full">
-							@AppImage(AppImageView{
+							@webtemplates.AppImage(webtemplates.AppImageView{
 								Src:        item.CoverImageURL,
 								Alt:        item.Name + " cover",
 								WidthPX:    16,
@@ -154,7 +156,7 @@ templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
 							})
 						</a>
 					} else {
-						@AppImage(AppImageView{
+						@webtemplates.AppImage(webtemplates.AppImageView{
 							Src:        item.CoverImageURL,
 							Alt:        item.Name + " cover",
 							WidthPX:    16,
@@ -178,11 +180,11 @@ templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
 					<div class="card-actions justify-start">
 						<div class="badge badge-outline">
 							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_PARTICIPANT, "size-4 me-1")
-							{ T(loc, "game.campaigns.table.participants") }: { item.ParticipantCount }
+							{ webtemplates.T(loc, "game.campaigns.table.participants") }: { item.ParticipantCount }
 						</div>
 						<div class="badge badge-outline">
 							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CHARACTER, "size-4 me-1")
-							{ T(loc, "game.campaigns.table.characters") }: { item.CharacterCount }
+							{ webtemplates.T(loc, "game.campaigns.table.characters") }: { item.CharacterCount }
 						</div>
 					</div>
 					if strings.TrimSpace(item.UpdatedAt) != "" {

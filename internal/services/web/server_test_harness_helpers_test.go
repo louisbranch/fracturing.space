@@ -8,7 +8,6 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
-	invitegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
@@ -67,102 +66,4 @@ func newTestServer(cfg Config) (*Server, error) {
 
 func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBundle {
 	return newDependencyBundle(principal.Dependencies{}, moduleDeps)
-}
-
-// newCompletedDependencyBundle opt-in completes partial module dependency sets
-// for tests that intentionally exercise a mounted surface without restating its
-// full dependency graph inline.
-func newCompletedDependencyBundle(principalDeps principal.Dependencies, moduleDeps modules.Dependencies) *DependencyBundle {
-	return &DependencyBundle{
-		Principal: principalDeps,
-		Modules:   completeTestModuleDependencies(moduleDeps),
-	}
-}
-
-func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dependencies {
-	hasCampaignDependency := moduleDeps.Campaigns.CampaignClient != nil ||
-		moduleDeps.Campaigns.DiscoveryClient != nil ||
-		moduleDeps.Campaigns.AgentClient != nil ||
-		moduleDeps.Campaigns.CampaignArtifactClient != nil ||
-		moduleDeps.Campaigns.ParticipantClient != nil ||
-		moduleDeps.Campaigns.CharacterClient != nil ||
-		moduleDeps.Campaigns.DaggerheartContentClient != nil ||
-		moduleDeps.Campaigns.DaggerheartAssetClient != nil ||
-		moduleDeps.Campaigns.SessionClient != nil ||
-		moduleDeps.Campaigns.InviteClient != nil ||
-		moduleDeps.Campaigns.SocialClient != nil ||
-		moduleDeps.Campaigns.AuthClient != nil ||
-		moduleDeps.Campaigns.AuthorizationClient != nil ||
-		moduleDeps.Campaigns.ForkClient != nil
-	if hasCampaignDependency {
-		if moduleDeps.Campaigns.CampaignClient == nil {
-			moduleDeps.Campaigns.CampaignClient = defaultCampaignClient()
-		}
-		if moduleDeps.Campaigns.DiscoveryClient == nil {
-			moduleDeps.Campaigns.DiscoveryClient = defaultDiscoveryClient()
-		}
-		if moduleDeps.Campaigns.ParticipantClient == nil {
-			moduleDeps.Campaigns.ParticipantClient = defaultParticipantClient()
-		}
-		if moduleDeps.Campaigns.CharacterClient == nil {
-			moduleDeps.Campaigns.CharacterClient = defaultCharacterClient()
-		}
-		if moduleDeps.Campaigns.DaggerheartContentClient == nil {
-			moduleDeps.Campaigns.DaggerheartContentClient = defaultDaggerheartContentClient()
-		}
-		if moduleDeps.Campaigns.DaggerheartAssetClient == nil {
-			moduleDeps.Campaigns.DaggerheartAssetClient = defaultDaggerheartAssetClient()
-		}
-		if moduleDeps.Campaigns.SessionClient == nil {
-			moduleDeps.Campaigns.SessionClient = defaultSessionClient()
-		}
-		if moduleDeps.Campaigns.InviteClient == nil {
-			moduleDeps.Campaigns.InviteClient = defaultInviteClient()
-		}
-		if moduleDeps.Campaigns.SocialClient == nil {
-			moduleDeps.Campaigns.SocialClient = defaultSocialClient()
-		}
-		if moduleDeps.Campaigns.AuthClient == nil {
-			moduleDeps.Campaigns.AuthClient = newFakeWebAuthClient()
-		}
-		if moduleDeps.Campaigns.AuthorizationClient == nil {
-			moduleDeps.Campaigns.AuthorizationClient = defaultAuthorizationClient()
-		}
-		if moduleDeps.Campaigns.AgentClient == nil {
-			moduleDeps.Campaigns.AgentClient = defaultAgentClient()
-		}
-		if moduleDeps.Campaigns.CampaignArtifactClient == nil {
-			moduleDeps.Campaigns.CampaignArtifactClient = defaultCampaignArtifactClient()
-		}
-		if moduleDeps.Campaigns.ForkClient == nil {
-			moduleDeps.Campaigns.ForkClient = defaultForkClient()
-		}
-	}
-	if moduleDeps.Invite.InviteClient == nil && moduleDeps.Campaigns.InviteClient != nil {
-		// campaigns.InviteClient and invite.InviteClient are disjoint interfaces
-		// (different invite service RPC subsets). Fall through to the default below.
-		moduleDeps.Invite.InviteClient = defaultInviteClient()
-	}
-	if moduleDeps.Invite.AuthClient == nil {
-		switch {
-		case moduleDeps.Campaigns.AuthClient != nil:
-			moduleDeps.Invite.AuthClient = moduleDeps.Campaigns.AuthClient
-		case moduleDeps.PublicAuth.AuthClient != nil:
-			authClient, ok := moduleDeps.PublicAuth.AuthClient.(invitegateway.AuthClient)
-			if ok {
-				moduleDeps.Invite.AuthClient = authClient
-			}
-		}
-	}
-	hasInviteDependency := moduleDeps.Invite.InviteClient != nil ||
-		moduleDeps.Invite.AuthClient != nil
-	if hasInviteDependency {
-		if moduleDeps.Invite.InviteClient == nil {
-			moduleDeps.Invite.InviteClient = defaultInviteClient()
-		}
-		if moduleDeps.Invite.AuthClient == nil {
-			moduleDeps.Invite.AuthClient = newFakeWebAuthClient()
-		}
-	}
-	return moduleDeps
 }

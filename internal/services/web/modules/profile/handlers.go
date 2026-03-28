@@ -7,7 +7,6 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -26,7 +25,7 @@ func newHandlers(s profileapp.Service, assetBaseURL string, base publichandler.B
 // withUsername extracts the username path param and delegates to fn, returning
 // the module not-found flow when the param is missing.
 func (h handlers) withUsername(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return routeparam.WithRequired("username", h.handleNotFound, fn)
+	return httpx.WithRequiredRouteParam("username", h.handleNotFound, fn)
 }
 
 // handleProfile handles this route in the module transport layer.

@@ -9,9 +9,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -46,7 +46,7 @@ func newHandlers(
 
 // withInviteID extracts the invite route parameter before delegating to handlers.
 func (h handlers) withInviteID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return routeparam.WithRequired("inviteID", h.handleNotFound, fn)
+	return httpx.WithRequiredRouteParam("inviteID", h.handleNotFound, fn)
 }
 
 // handleInvite renders the invite landing page for anonymous or signed-in viewers.

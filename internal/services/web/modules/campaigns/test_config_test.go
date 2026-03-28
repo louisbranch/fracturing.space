@@ -5,7 +5,13 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigncharacters "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/characters"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
+	campaigninvites "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/invites"
+	campaignoverview "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/overview"
+	campaignparticipants "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/participants"
+	campaignsessions "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/sessions"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
@@ -25,8 +31,9 @@ func newTestCampaignSystems(workflows ...campaignworkflow.Registry) campaignSyst
 	return newCampaignSystemsFromWorkflows(workflows...)
 }
 
-func newHandlerServices(config serviceConfigs) handlerServices {
-	page, err := newCampaignPageHandlerServices(config.Page)
+func newHandlerServices(config serviceConfigs, workflows ...campaignworkflow.Registry) handlerServices {
+	systems := newCampaignSystemsFromWorkflows(workflows...)
+	page, err := campaigndetail.NewPageServices(config.Page)
 	if err != nil {
 		panic(err)
 	}
@@ -38,27 +45,23 @@ func newHandlerServices(config serviceConfigs) handlerServices {
 	if err != nil {
 		panic(err)
 	}
-	overview, err := newOverviewHandlerServices(config.Overview)
+	overview, err := campaignoverview.NewHandlerServices(config.Overview)
 	if err != nil {
 		panic(err)
 	}
-	participants, err := newParticipantHandlerServices(config.Participants)
+	participants, err := campaignparticipants.NewHandlerServices(config.Participants)
 	if err != nil {
 		panic(err)
 	}
-	characters, err := newCharacterHandlerServices(config.Characters)
+	characters, err := campaigncharacters.NewHandlerServices(config.Characters, systems.workflowRegistry())
 	if err != nil {
 		panic(err)
 	}
-	creation, err := newCampaignCreationAppServices(config.Characters)
+	sessions, err := campaignsessions.NewHandlerServices(config.Sessions)
 	if err != nil {
 		panic(err)
 	}
-	sessions, err := newSessionHandlerServices(config.Sessions, config.Page.Authorization)
-	if err != nil {
-		panic(err)
-	}
-	invites, err := newInviteHandlerServices(config.Invites)
+	invites, err := campaigninvites.NewHandlerServices(config.Invites)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +72,6 @@ func newHandlerServices(config serviceConfigs) handlerServices {
 		Overview:     overview,
 		Participants: participants,
 		Characters:   characters,
-		Creation:     creation,
 		Sessions:     sessions,
 		Invites:      invites,
 	}
@@ -78,11 +80,11 @@ func newHandlerServices(config serviceConfigs) handlerServices {
 func newHandlersFromConfig(
 	config serviceConfigs,
 	base modulehandler.Base,
-	sync DashboardSync,
+	sync campaigndetail.DashboardSync,
 	workflows ...campaignworkflow.Registry,
 ) handlers {
 	handlerSet, err := newHandlers(handlersConfig{
-		Services: newHandlerServices(config),
+		Services: newHandlerServices(config, workflows...),
 		Base:     base,
 		Sync:     sync,
 		Systems:  newCampaignSystemsFromWorkflows(workflows...),
@@ -193,6 +195,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 			Mutation: campaignapp.SessionMutationServiceConfig{
 				Mutation: gateway,
 			},
+			Authorization: authorization,
 		},
 		Invites: inviteServiceConfig{
 			Read: campaignapp.InviteReadServiceConfig{
@@ -209,7 +212,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 
 func configWithGateway(gateway testGatewayBundle, base modulehandler.Base, workflows campaignworkflow.Registry) Config {
 	return Config{
-		Services:         newHandlerServices(serviceConfigsWithGateway(gateway)),
+		Services:         newHandlerServices(serviceConfigsWithGateway(gateway), workflows),
 		Base:             base,
 		PlayFallbackPort: "",
 		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),
@@ -294,6 +297,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 			Mutation: campaignapp.SessionMutationServiceConfig{
 				Mutation: campaigngateway.NewSessionMutationGateway(deps.Sessions.Mutation),
 			},
+			Authorization: authorization,
 		},
 		Invites: inviteServiceConfig{
 			Read: campaignapp.InviteReadServiceConfig{
@@ -310,7 +314,7 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 
 func configWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, base modulehandler.Base, workflows campaignworkflow.Registry) Config {
 	return Config{
-		Services:         newHandlerServices(serviceConfigsWithGRPCDeps(deps, "")),
+		Services:         newHandlerServices(serviceConfigsWithGRPCDeps(deps, ""), workflows),
 		Base:             base,
 		PlayFallbackPort: "",
 		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),
@@ -322,7 +326,7 @@ func configWithGatewayAndSync(
 	gateway testGatewayBundle,
 	base modulehandler.Base,
 	workflows campaignworkflow.Registry,
-	sync DashboardSync,
+	sync campaigndetail.DashboardSync,
 ) Config {
 	cfg := configWithGateway(gateway, base, workflows)
 	cfg.DashboardSync = sync

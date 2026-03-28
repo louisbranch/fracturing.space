@@ -2,74 +2,75 @@ package render
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-templ overviewFragment(view OverviewPageView, loc Localizer) {
+templ overviewFragment(view OverviewPageView, loc webtemplates.Localizer) {
 	<section id="campaign-overview" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm">
 			<div class="card-body gap-4">
 				<div class="flex items-center justify-between gap-3">
-					<h2 class="card-title">{ T(loc, "game.campaign.menu.overview") }</h2>
+					<h2 class="card-title">{ webtemplates.T(loc, "game.campaign.menu.overview") }</h2>
 					<div class="flex items-center gap-2">
 						if view.CanManageAIBinding {
 							if campaignActionsLocked(view.ActionsLocked) {
-								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-ai-binding-disabled="true">{ T(loc, "game.campaign.ai_binding.action_manage") }</button>
+								<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-ai-binding-disabled="true">{ webtemplates.T(loc, "game.campaign.ai_binding.action_manage") }</button>
 								</div>
 							} else {
-								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignAIBinding(view.CampaignID) } data-campaign-overview-ai-binding-link="true">{ T(loc, "game.campaign.ai_binding.action_manage") }</a>
+								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignAIBinding(view.CampaignID) } data-campaign-overview-ai-binding-link="true">{ webtemplates.T(loc, "game.campaign.ai_binding.action_manage") }</a>
 							}
 						}
 						if view.CanEditCampaign {
 							if campaignActionsLocked(view.ActionsLocked) {
-								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ T(loc, "game.campaign.action_edit") }</button>
+								<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ webtemplates.T(loc, "game.campaign.action_edit") }</button>
 								</div>
 							} else {
-								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ T(loc, "game.campaign.action_edit") }</a>
+								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ webtemplates.T(loc, "game.campaign.action_edit") }</a>
 							}
 						}
 					</div>
 				</div>
 				<dl class="grid gap-3 md:grid-cols-2 text-sm">
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_campaign_name") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.overview.label_campaign_name") }</dt>
 						<dd data-campaign-overview-name={ view.Name }>{ view.Name }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_campaign_id") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.overview.label_campaign_id") }</dt>
 						<dd data-campaign-overview-campaign-id={ view.CampaignID }>{ view.CampaignID }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaigns.table.system") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaigns.table.system") }</dt>
 						<dd data-campaign-overview-system={ campaignOverviewSystem(loc, view.System) }>{ campaignOverviewSystem(loc, view.System) }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaigns.table.gm_mode") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaigns.table.gm_mode") }</dt>
 						<dd data-campaign-overview-gm-mode={ campaignOverviewGMMode(loc, view.GMMode) }>{ campaignOverviewGMMode(loc, view.GMMode) }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaign.ai_binding.title") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.ai_binding.title") }</dt>
 						<dd data-campaign-overview-ai-binding-status={ campaignOverviewAIBindingStatus(loc, view.AIBindingStatus) }>{ campaignOverviewAIBindingStatus(loc, view.AIBindingStatus) }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_status") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.overview.label_status") }</dt>
 						<dd data-campaign-overview-status={ campaignOverviewStatus(loc, view.Status) }>{ campaignOverviewStatus(loc, view.Status) }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_locale") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.overview.label_locale") }</dt>
 						<dd data-campaign-overview-locale={ campaignOverviewLocale(loc, view.Locale) }>{ campaignOverviewLocale(loc, view.Locale) }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_intent") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.overview.label_intent") }</dt>
 						<dd data-campaign-overview-intent={ campaignOverviewIntent(loc, view.Intent) }>{ campaignOverviewIntent(loc, view.Intent) }</dd>
 					</div>
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_access_policy") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.overview.label_access_policy") }</dt>
 						<dd data-campaign-overview-access-policy={ campaignOverviewAccessPolicy(loc, view.AccessPolicy) }>{ campaignOverviewAccessPolicy(loc, view.AccessPolicy) }</dd>
 					</div>
 					<div class="md:col-span-2">
-						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_theme_prompt") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.campaign.overview.label_theme_prompt") }</dt>
 						<dd data-campaign-overview-theme={ campaignOverviewTheme(loc, view.Theme) }>{ campaignOverviewTheme(loc, view.Theme) }</dd>
 					</div>
 				</dl>
@@ -78,35 +79,35 @@ templ overviewFragment(view OverviewPageView, loc Localizer) {
 	</section>
 }
 
-templ campaignEditFragment(view CampaignEditPageView, loc Localizer) {
+templ campaignEditFragment(view CampaignEditPageView, loc webtemplates.Localizer) {
 	<section id="campaign-edit" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-edit-form="true">
 			<div class="card-body gap-4 p-4">
-				<h2 class="card-title">{ T(loc, "game.campaign.action_edit") }</h2>
+				<h2 class="card-title">{ webtemplates.T(loc, "game.campaign.action_edit") }</h2>
 				<form method="post" action={ routepath.AppCampaignEdit(view.CampaignID) } class="space-y-4" data-campaign-edit-submit="true">
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.campaign.overview.label_campaign_name") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.campaign.overview.label_campaign_name") }</span>
 						</label>
 						<input class="input input-bordered w-full" type="text" name="name" required value={ view.Name }/>
 					</div>
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.campaign.overview.label_theme_prompt") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.campaign.overview.label_theme_prompt") }</span>
 						</label>
 						<textarea class="textarea textarea-bordered w-full" name="theme_prompt" rows="4">{ view.Theme }</textarea>
 					</div>
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.campaign.overview.label_locale") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.campaign.overview.label_locale") }</span>
 						</label>
 						<select class="select select-bordered w-full" name="locale">
-							<option value="en-US" selected?={ view.LocaleValue == "en-US" }>{ T(loc, "game.campaign.overview.value_locale_en_us") }</option>
-							<option value="pt-BR" selected?={ view.LocaleValue == "pt-BR" }>{ T(loc, "game.campaign.overview.value_locale_pt_br") }</option>
+							<option value="en-US" selected?={ view.LocaleValue == "en-US" }>{ webtemplates.T(loc, "game.campaign.overview.value_locale_en_us") }</option>
+							<option value="pt-BR" selected?={ view.LocaleValue == "pt-BR" }>{ webtemplates.T(loc, "game.campaign.overview.value_locale_pt_br") }</option>
 						</select>
 					</div>
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit">{ T(loc, "game.campaign.edit.submit_save") }</button>
+						<button class="btn btn-primary" type="submit">{ webtemplates.T(loc, "game.campaign.edit.submit_save") }</button>
 					</div>
 				</form>
 			</div>
@@ -114,28 +115,28 @@ templ campaignEditFragment(view CampaignEditPageView, loc Localizer) {
 	</section>
 }
 
-templ campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) {
+templ campaignAIBindingFragment(view CampaignAIBindingPageView, loc webtemplates.Localizer) {
 	<section id="campaign-ai-binding" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-ai-binding-page="true">
 			<div class="card-body gap-4 p-4">
-				<h2 class="card-title">{ T(loc, "game.campaign.ai_binding.title") }</h2>
+				<h2 class="card-title">{ webtemplates.T(loc, "game.campaign.ai_binding.title") }</h2>
 				<form method="post" action={ routepath.AppCampaignAIBinding(view.CampaignID) } class="space-y-4" data-campaign-ai-binding-submit="true">
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.campaign.ai_binding.field_agent") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.campaign.ai_binding.field_agent") }</span>
 						</label>
 						<select class="select select-bordered w-full" name="ai_agent_id" disabled?={ view.AIBindingSettings.Unavailable }>
-							<option value="" selected?={ campaignAIBindingCurrentUnbound(view.AIBindingSettings) }>{ T(loc, "game.campaign.ai_binding.placeholder_unbound") }</option>
+							<option value="" selected?={ campaignAIBindingCurrentUnbound(view.AIBindingSettings) }>{ webtemplates.T(loc, "game.campaign.ai_binding.placeholder_unbound") }</option>
 							for _, option := range view.AIBindingSettings.Options {
 								<option value={ option.ID } selected?={ option.Selected } disabled?={ !option.Enabled }>{ option.Name }</option>
 							}
 						</select>
 					</div>
 					if view.AIBindingSettings.Unavailable {
-						<p class="text-sm opacity-70" data-campaign-ai-binding-unavailable="true">{ T(loc, "game.campaign.ai_binding.unavailable") }</p>
+						<p class="text-sm opacity-70" data-campaign-ai-binding-unavailable="true">{ webtemplates.T(loc, "game.campaign.ai_binding.unavailable") }</p>
 					}
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit" disabled?={ view.AIBindingSettings.Unavailable }>{ T(loc, "game.campaign.ai_binding.submit_save") }</button>
+						<button class="btn btn-primary" type="submit" disabled?={ view.AIBindingSettings.Unavailable }>{ webtemplates.T(loc, "game.campaign.ai_binding.submit_save") }</button>
 					</div>
 				</form>
 			</div>
