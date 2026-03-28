@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 12
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-10"
+last_reviewed: "2026-03-24"
 ---
 
 # Verification commands
@@ -35,11 +35,25 @@ matrix:
 - `make game-architecture-check`
 - `make admin-architecture-check`
 - `make play-architecture-check`
+- `make ai-eval-promptfoo`
+- `make ai-eval-promptfoo-core`
+- `make ai-eval-promptfoo-decision`
+- `make ai-eval-promptfoo-view`
 - `make cover`
 - `make cover-critical-domain`
 
 Use them when you are debugging a specific surface or when you need focused
 coverage output separate from `make check`.
+
+For the Promptfoo commands above:
+
+- Promptfoo phase 2 is complete as a non-gating focused diagnostics surface; use
+  the existing `core`, `decision`, and `view` targets rather than adding more
+  adoption plumbing during normal implementation
+- runtime-invalid rows remain visible, but the generated scorecard computes
+  quality pass rate from valid runs only
+- per-case live diagnostics now land in `.tmp/ai-live-captures/*.diagnostics.json`
+  and are the canonical deep-dive artifact when a live eval fails
 
 `make check` already runs the coverage lane. Do not start `make cover` or
 `make cover-critical-domain` in parallel with `make check`; the coverage

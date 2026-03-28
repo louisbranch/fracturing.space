@@ -1,0 +1,108 @@
+[
+  {
+    "scenario": "ai_gm_campaign_context_hope_experience",
+    "label": "HopeExperience",
+    "required_tools": [
+      "character_sheet_read",
+      "daggerheart_action_roll_resolve",
+      "interaction_resolve_scene_player_review"
+    ],
+    "required_tool_order_prefix": [
+      "character_sheet_read",
+      "daggerheart_action_roll_resolve",
+      "interaction_resolve_scene_player_review"
+    ],
+    "required_beat_types": [
+      "resolution",
+      "consequence",
+      "prompt"
+    ],
+    "forbidden_prompt_phrases": [
+      "what does the stranger say",
+      "how does the story unfold"
+    ],
+    "expect_player_phase_open": true,
+    "expect_skills_read_only": true,
+    "max_reference_searches": 0,
+    "max_reference_reads": 0,
+    "expected_hope": 1,
+    "expect_action_roll_modifier_source": "experience"
+  },
+  {
+    "scenario": "ai_gm_campaign_context_stance_capability",
+    "label": "StanceCapability",
+    "required_tools": [
+      "character_sheet_read",
+      "interaction_resolve_scene_player_review"
+    ],
+    "forbidden_tools": [
+      "daggerheart_action_roll_resolve"
+    ],
+    "required_beat_types": [
+      "prompt"
+    ],
+    "forbidden_beat_types": [
+      "resolution",
+      "consequence"
+    ],
+    "forbidden_prompt_phrases": [
+      "what does the stranger say",
+      "how does the story unfold"
+    ],
+    "expect_player_phase_open": true,
+    "expect_skills_read_only": true
+  },
+  {
+    "scenario": "ai_gm_campaign_context_narrator_authority",
+    "label": "NarratorAuthority",
+    "required_tools": [
+      "interaction_resolve_scene_player_review"
+    ],
+    "required_beat_types": [
+      "prompt"
+    ],
+    "forbidden_beat_types": [
+      "resolution",
+      "consequence"
+    ],
+    "forbidden_prompt_phrases": [
+      "what does the stranger say",
+      "what do they say",
+      "what happens next",
+      "how does the story unfold"
+    ],
+    "expect_player_phase_open": true,
+    "expect_skills_read_only": true
+  },
+  {
+    "scenario": "ai_gm_campaign_context_subdue_intent_live",
+    "label": "SubdueIntent",
+    "required_tools": [
+      "character_sheet_read",
+      "daggerheart_action_roll_resolve",
+      "interaction_resolve_scene_player_review"
+    ],
+    "required_tool_order_prefix": [
+      "character_sheet_read",
+      "daggerheart_action_roll_resolve",
+      "interaction_resolve_scene_player_review"
+    ],
+    "required_beat_types": [
+      "resolution",
+      "consequence",
+      "prompt"
+    ],
+    "forbidden_tools": [
+      "system_reference_search",
+      "system_reference_read"
+    ],
+    "forbidden_prompt_phrases": [
+      "what does the stranger say",
+      "how does the story unfold"
+    ],
+    "expect_player_phase_open": true,
+    "expect_skills_read_only": true,
+    "max_reference_searches": 0,
+    "max_reference_reads": 0
+  }
+]

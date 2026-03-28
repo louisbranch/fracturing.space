@@ -21,6 +21,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	evalsupport "github.com/louisbranch/fracturing.space/internal/test/aieval"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -123,12 +124,19 @@ type aiGMCampaignScenarioResult struct {
 	CharacterID        string
 	OwnerParticipantID string
 	AIGMParticipantID  string
+	RunStatus          string
+	MetricStatus       string
+	FailureKind        string
+	FailureSummary     string
+	FailureReason      string
 	OutputText         string
 	MemoryContent      string
 	SkillsReadOnly     bool
 	InteractionState   *gamev1.InteractionState
+	CharacterState     *pb.DaggerheartCharacterState
 	Scenes             []*gamev1.Scene
 	ReplayTokens       map[string]string
+	Diagnostics        *aiGMScenarioDiagnostics
 }
 
 var (
@@ -565,7 +573,8 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		TurnPolicy: orchestration.NewInteractionTurnPolicy(),
 		MaxSteps:   16,
 	})
-	runResp, err := runner.Run(context.Background(), orchestration.Input{
+	traceRecorder := &aiGMTraceRecorder{}
+	runResp, runErr := runner.Run(context.Background(), orchestration.Input{
 		CampaignID:      campaignID,
 		SessionID:       sessionID,
 		ParticipantID:   aiGMParticipantID,
@@ -574,56 +583,65 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		ReasoningEffort: strings.TrimSpace(opts.ReasoningEffort),
 		AuthToken:       strings.TrimSpace(opts.CredentialSecret),
 		Provider:        provider,
+		TraceRecorder:   traceRecorder,
 	})
-	if err != nil {
-		t.Fatalf("run campaign turn: %v", err)
-	}
 
-	skillsResp, err := artifactClient.GetCampaignArtifact(ctxWithUser, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       "skills.md",
-	})
+	collectionErrors := make([]string, 0)
+	_, skillsReadOnly, err := maybeArtifactContent(ctxWithUser, artifactClient, campaignID, "skills.md")
 	if err != nil {
-		t.Fatalf("get skills artifact: %v", err)
+		collectionErrors = append(collectionErrors, "get skills artifact: "+err.Error())
 	}
-	memoryResp, err := artifactClient.GetCampaignArtifact(ctxWithUser, &aiv1.GetCampaignArtifactRequest{
-		CampaignId: campaignID,
-		Path:       "memory.md",
-	})
+	memoryContent, _, err := maybeArtifactContent(ctxWithUser, artifactClient, campaignID, "memory.md")
 	if err != nil {
-		t.Fatalf("get memory artifact: %v", err)
+		collectionErrors = append(collectionErrors, "get memory artifact: "+err.Error())
 	}
-	scenesResp, err := sceneClient.ListScenes(ctxWithUser, &gamev1.ListScenesRequest{
-		CampaignId: campaignID,
-		SessionId:  sessionID,
-		PageSize:   10,
-	})
+	scenes, err := maybeScenes(ctxWithUser, sceneClient, campaignID, sessionID)
 	if err != nil {
-		t.Fatalf("list scenes: %v", err)
+		collectionErrors = append(collectionErrors, "list scenes: "+err.Error())
 	}
-	interactionResp, err := interactionClient.GetInteractionState(ctxWithUser, &gamev1.GetInteractionStateRequest{
-		CampaignId: campaignID,
-	})
+	interactionState, err := maybeInteractionState(ctxWithUser, interactionClient, campaignID)
 	if err != nil {
-		t.Fatalf("get interaction state: %v", err)
+		collectionErrors = append(collectionErrors, "get interaction state: "+err.Error())
 	}
-	if active := activeSceneID(interactionResp.GetState()); active != "" && strings.TrimSpace(setup.ReplayTokens["scene_id"]) == "" {
+	characterState, err := maybeCharacterState(ctxWithUser, setup.SnapshotClient, campaignID, characterID)
+	if err != nil {
+		collectionErrors = append(collectionErrors, "get character state: "+err.Error())
+	}
+	if active := activeSceneID(interactionState); active != "" && strings.TrimSpace(setup.ReplayTokens["scene_id"]) == "" {
 		setup.ReplayTokens["scene_id"] = active
 	}
 
-	return aiGMCampaignScenarioResult{
+	result := aiGMCampaignScenarioResult{
 		CampaignID:         campaignID,
 		SessionID:          sessionID,
 		CharacterID:        characterID,
 		OwnerParticipantID: ownerParticipantID,
 		AIGMParticipantID:  aiGMParticipantID,
 		OutputText:         strings.TrimSpace(runResp.OutputText),
-		MemoryContent:      strings.TrimSpace(memoryResp.GetArtifact().GetContent()),
-		SkillsReadOnly:     skillsResp.GetArtifact().GetReadOnly(),
-		InteractionState:   interactionResp.GetState(),
-		Scenes:             scenesResp.GetScenes(),
+		MemoryContent:      memoryContent,
+		SkillsReadOnly:     skillsReadOnly,
+		InteractionState:   interactionState,
+		CharacterState:     characterState,
+		Scenes:             scenes,
 		ReplayTokens:       mapsClone(setup.ReplayTokens),
 	}
+
+	switch {
+	case runErr != nil:
+		result.RunStatus = evalsupport.RunStatusFailed
+		result.FailureKind, result.FailureSummary, result.FailureReason, result.MetricStatus = classifyScenarioFailure(runErr, traceRecorder)
+	case len(collectionErrors) > 0:
+		result.RunStatus = evalsupport.RunStatusFailed
+		result.MetricStatus = evalsupport.MetricStatusInvalid
+		result.FailureKind = "artifact_capture_error"
+		result.FailureSummary = compactDiagnosticText(collectionErrors[0])
+		result.FailureReason = strings.Join(collectionErrors, "; ")
+	default:
+		result.RunStatus = evalsupport.RunStatusPassed
+		result.MetricStatus = evalsupport.MetricStatusPass
+	}
+	result.Diagnostics = buildScenarioDiagnostics(runErr, traceRecorder, collectionErrors)
+	return result
 }
 
 func prepareReviewAdvanceScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {
@@ -661,6 +679,20 @@ func prepareSceneSwitchScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) 
 func prepareHopeExperienceScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {
 	t.Helper()
 	setScenarioGMAuthority(t, setup, setup.AIGMParticipantID)
+	if _, err := setup.SnapshotClient.PatchCharacterState(setup.UserCtx, &gamev1.PatchCharacterStateRequest{
+		CampaignId:  setup.CampaignID,
+		CharacterId: setup.CharacterID,
+		SystemStatePatch: &gamev1.PatchCharacterStateRequest_Daggerheart{
+			Daggerheart: &pb.DaggerheartCharacterState{
+				Hp:     6,
+				Hope:   2,
+				Stress: 1,
+				Armor:  0,
+			},
+		},
+	}); err != nil {
+		t.Fatalf("patch hope experience character state: %v", err)
+	}
 	sceneID := createScenarioScene(t, setup, "Beacon Footpath", "Muddy tracks twist beneath the dark lighthouse while lantern light skims the cliff path.", nil, setup.CharacterID)
 	setup.ReplayTokens["scene_id"] = sceneID
 	openScenarioPlayerPhase(t, setup, sceneID, "Marked Trail", []string{setup.CharacterID},

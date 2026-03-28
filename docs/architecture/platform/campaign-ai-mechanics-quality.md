@@ -4,29 +4,16 @@ parent: "Platform surfaces"
 nav_order: 18
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-22"
+last_reviewed: "2026-03-24"
 ---
 # Campaign AI Mechanics Quality
-Durable follow-on design guidance for mechanics-heavy AI GM turns. This note is
-grounded in the March 22, 2026 Daggerheart live-mechanics acceptance run, but
-the recommendations are framed as AI-service behavior patterns rather than
-system-specific one-offs.
-Use the live evidence in [Daggerheart Live Mechanics Matrix](../../reference/daggerheart-live-mechanics-matrix.md)
-as the factual baseline. Use this note for the next design moves.
+Durable follow-on design guidance for mechanics-heavy AI GM turns. This note is grounded in the March 22, 2026 Daggerheart live-mechanics acceptance run, but the recommendations are framed as AI-service behavior patterns rather than system-specific one-offs.
+Use the live evidence in [Daggerheart Live Mechanics Matrix](../../reference/daggerheart-live-mechanics-matrix.md) as the factual baseline. Use this note for the next design moves.
 ## What The Live Run Proved
-- The current mechanics tool surface is broad enough for real AI GM play. The
-  agent completed accepted live runs for sheet reads, board reads, action
-  resolution, combat flows, Fear moves, adversary placement, and scene
-  countdown lifecycle.
-- Player-facing mechanical outcomes are usually legible in direct resolution
-  lanes. The model can state roll outcome, damage, HP, Armor, Hope, and next
-  action options in a way players can follow.
-- Bounded reference usage is healthier than eager lookup. Board-control lanes
-  were clean without consulting the reference corpus, while the explicit
-  playbook lane could still succeed with one intentional search/read pair.
-- The remaining instability is primarily runtime and recovery behavior. Session
-  gates, precondition mismatches, and extra recovery calls now cause more live
-  variance than missing mechanics tools.
+- The current mechanics tool surface is broad enough for real AI GM play. The agent completed accepted live runs for sheet reads, board reads, action resolution, combat flows, Fear moves, adversary placement, and scene countdown lifecycle.
+- Player-facing mechanical outcomes are usually legible in direct resolution lanes. The model can state roll outcome, damage, HP, Armor, Hope, and next action options in a way players can follow.
+- Bounded reference usage is healthier than eager lookup. Board-control lanes were clean without consulting the reference corpus, while the explicit playbook lane could still succeed with one intentional search/read pair.
+- The remaining instability is primarily runtime and recovery behavior. Session gates, precondition mismatches, and extra recovery calls now cause more live variance than missing mechanics tools.
 
 ## Observed Gaps
 - Board-control turns still leak raw engine vocabulary too easily. Countdown
@@ -119,14 +106,10 @@ Reference budgets should become part of evaluation policy:
   are active in the current turn
 
 ### 5. Runtime Robustness
-Treat session-gate and precondition failures as the primary live reliability
-problem now that the mechanics surface is broader.
-
+Treat session-gate and precondition failures as the primary live reliability problem now that the mechanics surface is broader.
 Recommended direction:
-
 - improve precondition diagnosis before board-sensitive mechanics calls
-- prefer stopping cleanly after a failed authoritative mechanic over trying an
-  adjacent mechanic family
+- prefer stopping cleanly after a failed authoritative mechanic over trying an adjacent mechanic family
 - keep recovery guidance corrective and narrow when a retry is actually valid
 
 ## Acceptance Markers
@@ -142,9 +125,8 @@ This work is materially improved when:
 
 ## Relationship To Existing Docs
 
-- [Campaign AI Orchestration](campaign-ai-orchestration.md) defines the runtime
-  turn boundary and tool policy.
-- [Campaign AI Agent System](campaign-ai-agent-system.md) defines instruction
-  composition, channel discipline, and beat-oriented authoring.
-- [Daggerheart Live Mechanics Matrix](../../reference/daggerheart-live-mechanics-matrix.md)
-  is the evidence table, not the roadmap.
+- [Campaign AI Orchestration](campaign-ai-orchestration.md) defines the runtime turn boundary and tool policy.
+- [Campaign AI Agent System](campaign-ai-agent-system.md) defines instruction composition, channel discipline, and beat-oriented authoring.
+- Promptfoo should remain an evaluation/reporting layer over the live Go harness, not a replacement for that execution path.
+- Runtime-invalid Promptfoo rows should remain visible, but they should be tracked separately from model-quality failures so pass-rate decisions are not polluted by harness or provider instability.
+- [Daggerheart Live Mechanics Matrix](../../reference/daggerheart-live-mechanics-matrix.md) is the evidence table, not the roadmap.

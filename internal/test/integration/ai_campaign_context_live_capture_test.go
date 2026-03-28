@@ -20,6 +20,7 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	evalsupport "github.com/louisbranch/fracturing.space/internal/test/aieval"
 )
 
 type openAILiveCapture struct {
@@ -43,9 +44,15 @@ const (
 )
 
 type openAILiveCaptureSummary struct {
+	CaseID                     string                 `json:"case_id,omitempty"`
 	Scenario                   string                 `json:"scenario"`
 	Model                      string                 `json:"model"`
 	ReasoningEffort            string                 `json:"reasoning_effort,omitempty"`
+	RunStatus                  string                 `json:"run_status,omitempty"`
+	MetricStatus               string                 `json:"metric_status,omitempty"`
+	FailureKind                string                 `json:"failure_kind,omitempty"`
+	FailureSummary             string                 `json:"failure_summary,omitempty"`
+	FailureReason              string                 `json:"failure_reason,omitempty"`
 	ResultClass                liveCaptureResultClass `json:"result_class"`
 	ToolNames                  []string               `json:"tool_names,omitempty"`
 	ToolErrorCount             int                    `json:"tool_error_count"`
@@ -58,6 +65,7 @@ type openAILiveCaptureSummary struct {
 	TotalTokens                int32                  `json:"total_tokens"`
 	RawCaptureFile             string                 `json:"raw_capture_file,omitempty"`
 	MarkdownReport             string                 `json:"markdown_report,omitempty"`
+	DiagnosticsFile            string                 `json:"diagnostics_file,omitempty"`
 	GeneratedAtUTC             string                 `json:"generated_at_utc,omitempty"`
 	ActiveSceneID              string                 `json:"active_scene_id,omitempty"`
 }
@@ -177,6 +185,14 @@ func TestAIGMCampaignContextLiveCaptureHopeExperience(t *testing.T) {
 	runAIGMCampaignContextLiveCaptureScenario(t, aiGMHopeExperienceScenario)
 }
 
+func TestAIGMCampaignContextLiveCaptureStanceCapability(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMStanceCapabilityScenario)
+}
+
+func TestAIGMCampaignContextLiveCaptureNarratorAuthority(t *testing.T) {
+	runAIGMCampaignContextLiveCaptureScenario(t, aiGMNarratorAuthorityScenario)
+}
+
 func TestAIGMCampaignContextLiveCaptureMechanicsReview(t *testing.T) {
 	runAIGMCampaignContextLiveCaptureScenario(t, aiGMMechanicsReviewScenario)
 }
@@ -265,19 +281,31 @@ func runAIGMCampaignContextLiveCaptureScenario(t *testing.T, spec aiGMCampaignSc
 		AgentLabel:       "live-capture-gm",
 	})
 
-	rawPath := writeOpenAILiveCapture(t, spec.Name, recorder.rawCapture)
+	artifactStem := liveCaptureArtifactStem(spec.Name, model)
+	capturedAt := time.Now().UTC().Format("20060102T150405Z")
+	rawPath := writeOpenAILiveCapture(t, artifactStem, capturedAt, recorder.rawCapture)
 	t.Logf("live capture written to %s", rawPath)
-	reportPath := writeOpenAILiveCaptureReport(t, spec.Name, recorder, result)
+	diagnosticsPath := writeOpenAILiveCaptureDiagnostics(t, artifactStem, capturedAt, result.Diagnostics)
+	if diagnosticsPath != "" {
+		t.Logf("diagnostics written to %s", diagnosticsPath)
+	}
+	reportPath := writeOpenAILiveCaptureReport(t, artifactStem, capturedAt, spec.Name, recorder, result, diagnosticsPath)
 	t.Logf("quality report written to %s", reportPath)
-	summaryPath := writeOpenAILiveCaptureSummary(t, spec.Name, recorder, result, rawPath, reportPath)
+	fixture := recorder.ReplayFixture(result.ReplayTokens)
+	summaryPath := writeOpenAILiveCaptureSummary(t, artifactStem, capturedAt, spec.Name, recorder, result, rawPath, reportPath, diagnosticsPath)
 	t.Logf("capture summary written to %s", summaryPath)
+	if evalPath := writePromptfooEvalOutputIfRequested(t, spec, recorder, result, fixture, rawPath, reportPath, summaryPath, diagnosticsPath); evalPath != "" {
+		t.Logf("promptfoo eval output written to %s", evalPath)
+	}
 
 	if err := recorder.Err(); err != nil {
 		t.Fatalf("live recorder: %v\nrequests:\n%s", err, recorder.DebugString())
 	}
+	if result.RunStatus != evalsupport.RunStatusPassed {
+		t.Fatalf("%s: %s", result.FailureSummary, result.FailureReason)
+	}
 	spec.Assert(t, result)
 
-	fixture := recorder.ReplayFixture(result.ReplayTokens)
 	fixtureToolNames := openAIReplayFixtureToolNames(fixture)
 	toolErrors := liveToolErrorCount(recorder.requestDebug)
 	_, referenceSearches, referenceReads := liveToolCounts(recorder.steps)
@@ -1016,14 +1044,47 @@ func replayStepFromLiveResponse(payload openAIResponsesPayload) openAIReplayStep
 	return step
 }
 
+func liveCaptureArtifactStem(scenarioName, model string) string {
+	if caseID := strings.TrimSpace(os.Getenv(integrationAIEvalCaseIDEnv)); caseID != "" {
+		return sanitizeLiveCaptureToken(caseID)
+	}
+	parts := []string{scenarioName, model}
+	if promptProfile := strings.TrimSpace(os.Getenv(integrationAIPromptProfileEnv)); promptProfile != "" {
+		parts = append(parts, promptProfile)
+	}
+	return sanitizeLiveCaptureToken(strings.Join(parts, "-"))
+}
+
+func sanitizeLiveCaptureToken(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		return "live-capture"
+	}
+	var b strings.Builder
+	lastDash := false
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if lastDash {
+			continue
+		}
+		b.WriteByte('-')
+		lastDash = true
+	}
+	return strings.Trim(b.String(), "-")
+}
+
 // writeOpenAILiveCapture persists the raw live capture outside the repo fixtures for local debugging and review.
-func writeOpenAILiveCapture(t *testing.T, scenarioName string, capture openAILiveCapture) string {
+func writeOpenAILiveCapture(t *testing.T, artifactStem string, capturedAt string, capture openAILiveCapture) string {
 	t.Helper()
 	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("create capture dir: %v", err)
 	}
-	filename := fmt.Sprintf("%s-%s.json", scenarioName, time.Now().UTC().Format("20060102T150405Z"))
+	filename := fmt.Sprintf("%s-%s.json", artifactStem, capturedAt)
 	path := filepath.Join(dir, filename)
 	data, err := json.MarshalIndent(capture, "", "  ")
 	if err != nil {
@@ -1039,7 +1100,7 @@ func writeOpenAILiveCapture(t *testing.T, scenarioName string, capture openAILiv
 // writeOpenAILiveCaptureReport writes a human-readable markdown report alongside
 // the raw capture with token usage, tool sequence, narrative excerpts, and error
 // summary for cross-model quality comparison.
-func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult) string {
+func writeOpenAILiveCaptureReport(t *testing.T, artifactStem string, capturedAt string, scenarioName string, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult, diagnosticsPath string) string {
 	t.Helper()
 	recorder.mu.Lock()
 	defer recorder.mu.Unlock()
@@ -1087,7 +1148,19 @@ func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *o
 	fmt.Fprintf(&b, "- **Model:** %s\n", model)
 	fmt.Fprintf(&b, "- **Captured:** %s\n", recorder.rawCapture.Metadata.CapturedAtUTC)
 	fmt.Fprintf(&b, "- **Scenario:** %s\n", scenarioName)
+	fmt.Fprintf(&b, "- **Run Status:** %s\n", result.RunStatus)
+	fmt.Fprintf(&b, "- **Metric Status:** %s\n", result.MetricStatus)
 	fmt.Fprintf(&b, "- **Active Scene ID:** %s\n\n", activeSceneID(result.InteractionState))
+	if strings.TrimSpace(result.FailureSummary) != "" {
+		fmt.Fprintf(&b, "## Failure Diagnostics\n\n")
+		fmt.Fprintf(&b, "- **Kind:** %s\n", result.FailureKind)
+		fmt.Fprintf(&b, "- **Summary:** %s\n", result.FailureSummary)
+		fmt.Fprintf(&b, "- **Reason:** %s\n", result.FailureReason)
+		if strings.TrimSpace(diagnosticsPath) != "" {
+			fmt.Fprintf(&b, "- **Diagnostics Artifact:** %s\n", diagnosticsPath)
+		}
+		fmt.Fprintf(&b, "\n")
+	}
 
 	fmt.Fprintf(&b, "## Token Usage\n\n")
 	fmt.Fprintf(&b, "| Metric | Tokens |\n")
@@ -1123,11 +1196,7 @@ func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *o
 	fmt.Fprintf(&b, "### Final Output\n\n%s\n", strings.TrimSpace(result.OutputText))
 
 	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
-	filename := fmt.Sprintf("%s-%s-%s.md",
-		scenarioName,
-		model,
-		time.Now().UTC().Format("20060102T150405Z"),
-	)
+	filename := fmt.Sprintf("%s-%s.md", artifactStem, capturedAt)
 	path := filepath.Join(dir, filename)
 	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
 		t.Fatalf("write quality report: %v", err)
@@ -1135,7 +1204,7 @@ func writeOpenAILiveCaptureReport(t *testing.T, scenarioName string, recorder *o
 	return path
 }
 
-func writeOpenAILiveCaptureSummary(t *testing.T, scenarioName string, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult, rawPath, reportPath string) string {
+func writeOpenAILiveCaptureSummary(t *testing.T, artifactStem string, capturedAt string, scenarioName string, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult, rawPath, reportPath, diagnosticsPath string) string {
 	t.Helper()
 	recorder.mu.Lock()
 	defer recorder.mu.Unlock()
@@ -1148,9 +1217,15 @@ func writeOpenAILiveCaptureSummary(t *testing.T, scenarioName string, recorder *
 		resultClass = liveCaptureResultPassWithToolError
 	}
 	summary := openAILiveCaptureSummary{
+		CaseID:                     strings.TrimSpace(os.Getenv(integrationAIEvalCaseIDEnv)),
 		Scenario:                   scenarioName,
 		Model:                      recorder.model,
 		ReasoningEffort:            recorder.rawCapture.Metadata.ReasoningEffort,
+		RunStatus:                  result.RunStatus,
+		MetricStatus:               result.MetricStatus,
+		FailureKind:                result.FailureKind,
+		FailureSummary:             result.FailureSummary,
+		FailureReason:              result.FailureReason,
 		ResultClass:                resultClass,
 		ToolNames:                  append([]string(nil), toolNames...),
 		ToolErrorCount:             toolErrors,
@@ -1163,16 +1238,13 @@ func writeOpenAILiveCaptureSummary(t *testing.T, scenarioName string, recorder *
 		TotalTokens:                usage.TotalTokens,
 		RawCaptureFile:             filepath.Base(rawPath),
 		MarkdownReport:             filepath.Base(reportPath),
+		DiagnosticsFile:            liveCaptureArtifactBaseName(diagnosticsPath),
 		GeneratedAtUTC:             time.Now().UTC().Format(time.RFC3339),
 		ActiveSceneID:              activeSceneID(result.InteractionState),
 	}
 
 	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
-	filename := fmt.Sprintf("%s-%s-%s.summary.json",
-		scenarioName,
-		recorder.model,
-		time.Now().UTC().Format("20060102T150405Z"),
-	)
+	filename := fmt.Sprintf("%s-%s.summary.json", artifactStem, capturedAt)
 	path := filepath.Join(dir, filename)
 	data, err := json.MarshalIndent(summary, "", "  ")
 	if err != nil {
@@ -1183,6 +1255,163 @@ func writeOpenAILiveCaptureSummary(t *testing.T, scenarioName string, recorder *
 		t.Fatalf("write live capture summary: %v", err)
 	}
 	return path
+}
+
+func writeOpenAILiveCaptureDiagnostics(t *testing.T, artifactStem string, capturedAt string, diagnostics *aiGMScenarioDiagnostics) string {
+	t.Helper()
+	if diagnostics == nil {
+		return ""
+	}
+	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create diagnostics dir: %v", err)
+	}
+	filename := fmt.Sprintf("%s-%s.diagnostics.json", artifactStem, capturedAt)
+	path := filepath.Join(dir, filename)
+	data, err := json.MarshalIndent(diagnostics, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal live capture diagnostics: %v", err)
+	}
+	data = append(data, '\n')
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write live capture diagnostics: %v", err)
+	}
+	return path
+}
+
+func liveCaptureArtifactBaseName(path string) string {
+	if strings.TrimSpace(path) == "" {
+		return ""
+	}
+	return filepath.Base(path)
+}
+
+func writePromptfooEvalOutputIfRequested(t *testing.T, spec aiGMCampaignScenarioSpec, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult, fixture openAIReplayFixture, rawPath, reportPath, summaryPath, diagnosticsPath string) string {
+	t.Helper()
+	path := strings.TrimSpace(os.Getenv(integrationAIEvalOutputPathEnv))
+	if path == "" {
+		return ""
+	}
+	output := buildPromptfooEvalOutput(spec, recorder, result, fixture, rawPath, reportPath, summaryPath, diagnosticsPath)
+	data, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal promptfoo eval output: %v", err)
+	}
+	data = append(data, '\n')
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write promptfoo eval output: %v", err)
+	}
+	return path
+}
+
+func buildPromptfooEvalOutput(spec aiGMCampaignScenarioSpec, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult, fixture openAIReplayFixture, rawPath, reportPath, summaryPath, diagnosticsPath string) evalsupport.Output {
+	recorder.mu.Lock()
+	defer recorder.mu.Unlock()
+
+	toolNames, referenceSearches, referenceReads := liveToolCounts(recorder.steps)
+	toolErrors := liveToolErrorCount(recorder.requestDebug)
+	resultClass := string(liveCaptureResultCleanPass)
+	if toolErrors > 0 {
+		resultClass = string(liveCaptureResultPassWithToolError)
+	}
+	label := spec.Name
+	if scenario, ok := evalsupport.ScenarioByID(spec.Name); ok {
+		label = scenario.Label
+	}
+
+	toolCalls := flattenReplayToolCalls(fixture)
+	outCalls := make([]evalsupport.ToolCall, 0, len(toolCalls))
+	for _, call := range toolCalls {
+		outCalls = append(outCalls, evalsupport.ToolCall{
+			Name:      call.Name,
+			Arguments: call.Arguments,
+		})
+	}
+
+	characterState := evalsupport.CharacterState{}
+	if state := result.CharacterState; state != nil {
+		characterState = evalsupport.CharacterState{
+			HP:     int(state.GetHp()),
+			Hope:   int(state.GetHope()),
+			Stress: int(state.GetStress()),
+			Armor:  int(state.GetArmor()),
+		}
+	}
+
+	return evalsupport.Output{
+		CaseID:                     strings.TrimSpace(os.Getenv(integrationAIEvalCaseIDEnv)),
+		Scenario:                   spec.Name,
+		Label:                      label,
+		Model:                      recorder.model,
+		ReasoningEffort:            recorder.rawCapture.Metadata.ReasoningEffort,
+		PromptProfile:              strings.TrimSpace(os.Getenv(integrationAIPromptProfileEnv)),
+		PromptContext:              evalsupport.BuildPromptContext(strings.TrimSpace(os.Getenv(integrationAIPromptProfileEnv)), strings.TrimSpace(os.Getenv(integrationAIInstructionsRootEnv))),
+		RunStatus:                  result.RunStatus,
+		MetricStatus:               result.MetricStatus,
+		FailureKind:                result.FailureKind,
+		FailureSummary:             result.FailureSummary,
+		FailureReason:              result.FailureReason,
+		ResultClass:                resultClass,
+		ToolNames:                  append([]string(nil), toolNames...),
+		ToolCalls:                  outCalls,
+		ToolErrorCount:             toolErrors,
+		ReferenceSearchCount:       referenceSearches,
+		ReferenceReadCount:         referenceReads,
+		UnexpectedReferenceLookups: unexpectedReferenceLookupCount(recorder.scenario, referenceSearches, referenceReads),
+		OutputText:                 result.OutputText,
+		MemoryContent:              result.MemoryContent,
+		SkillsReadOnly:             result.SkillsReadOnly,
+		Interaction: evalsupport.InteractionSummary{
+			ActiveSceneID:    activeSceneID(result.InteractionState),
+			PlayerPhaseOpen:  playerPhaseOpen(result.InteractionState),
+			CurrentTitle:     currentInteractionTitle(result.InteractionState),
+			CurrentBeatTypes: currentInteractionBeatTypes(result.InteractionState),
+			PromptText:       currentPromptBeat(result.InteractionState),
+		},
+		CharacterState: characterState,
+		Artifacts: evalsupport.ArtifactPaths{
+			RawCapture:     rawPath,
+			MarkdownReport: reportPath,
+			Summary:        summaryPath,
+			Diagnostics:    diagnosticsPath,
+		},
+	}
+}
+
+func currentInteractionBeatTypes(state *gamev1.InteractionState) []string {
+	if state == nil {
+		return nil
+	}
+	beats := state.GetActiveScene().GetCurrentInteraction().GetBeats()
+	out := make([]string, 0, len(beats))
+	for _, beat := range beats {
+		out = append(out, normalizeBeatType(beat.GetType()))
+	}
+	return out
+}
+
+func currentInteractionTitle(state *gamev1.InteractionState) string {
+	if state == nil {
+		return ""
+	}
+	return strings.TrimSpace(state.GetActiveScene().GetCurrentInteraction().GetTitle())
+}
+
+func normalizeBeatType(beatType gamev1.GMInteractionBeatType) string {
+	switch beatType {
+	case gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_FICTION:
+		return "fiction"
+	case gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_RESOLUTION:
+		return "resolution"
+	case gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_CONSEQUENCE:
+		return "consequence"
+	case gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_GUIDANCE:
+		return "guidance"
+	case gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_PROMPT:
+		return "prompt"
+	default:
+		return strings.ToLower(strings.TrimSpace(beatType.String()))
+	}
 }
 
 func interactionBeatText(raw any, beatType string) string {

@@ -27,6 +27,11 @@ const (
 	integrationAIModelEnv               = "INTEGRATION_AI_MODEL"
 	integrationAIReasoningEffortEnv     = "INTEGRATION_AI_REASONING_EFFORT"
 	integrationAIWriteFixtureEnv        = "INTEGRATION_AI_WRITE_FIXTURE"
+	integrationAIEvalOutputPathEnv      = "INTEGRATION_AI_EVAL_OUTPUT_PATH"
+	integrationAIEvalCaseIDEnv          = "INTEGRATION_AI_EVAL_CASE_ID"
+	integrationAIEvalRunIDEnv           = "INTEGRATION_AI_EVAL_RUN_ID"
+	integrationAIPromptProfileEnv       = "INTEGRATION_AI_PROMPT_PROFILE"
+	integrationAIInstructionsRootEnv    = "FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT"
 	integrationOpenAIResponsesTargetEnv = "INTEGRATION_OPENAI_RESPONSES_URL"
 	defaultOpenAIResponsesTargetURL     = "https://api.openai.com/v1/responses"
 )
@@ -177,6 +182,9 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 			}
 		},
 	})
+	if result.RunStatus != "passed" {
+		t.Fatalf("bootstrap scenario failed: %s (%s)", result.FailureSummary, result.FailureReason)
+	}
 
 	return aiGMBootstrapResult{
 		CampaignID:      result.CampaignID,

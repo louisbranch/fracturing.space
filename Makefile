@@ -30,7 +30,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down play-ui-dist play-ui-check play-ui-check-live cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down play-ui-dist play-ui-check play-ui-check-live ai-eval-promptfoo ai-eval-promptfoo-core ai-eval-promptfoo-decision ai-eval-promptfoo-view cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -94,6 +94,22 @@ play-ui-check: ## Install and verify the play UI workspace from a clean checkout
 play-ui-check-live: ## Verify the play UI workspace without reinstalling dependencies
 	mkdir -p .tmp/play-ui-dist-check .tmp/play-ui-storybook-check
 	cd internal/services/play/ui && npm test && npm run build -- --outDir ../../../../.tmp/play-ui-dist-check && npm run build-storybook -- --output-dir ../../../../.tmp/play-ui-storybook-check
+
+ai-eval-promptfoo: ## Run a non-gating Promptfoo AI GM eval over the live AI capture lanes
+	@test -n "$$INTEGRATION_OPENAI_API_KEY" || (echo "INTEGRATION_OPENAI_API_KEY is required" && exit 1)
+	@AI_EVAL_PRESET="$${AI_EVAL_PRESET:-manual}" \
+	PROMPTFOO_SCENARIO_SET="$${PROMPTFOO_SCENARIO_SET:-core}" \
+	PROMPTFOO_REPEAT="$${PROMPTFOO_REPEAT:-1}" \
+	bash tools/promptfoo/run_eval.sh $(PROMPTFOO_ARGS)
+
+ai-eval-promptfoo-core: ## Run the core Promptfoo AI GM eval matrix once per case
+	@$(MAKE) ai-eval-promptfoo AI_EVAL_PRESET=core PROMPTFOO_SCENARIO_SET=core PROMPTFOO_REPEAT=1 PROMPTFOO_ARGS="$(PROMPTFOO_ARGS)"
+
+ai-eval-promptfoo-decision: ## Run the core Promptfoo AI GM eval matrix with 3 repeats per case
+	@$(MAKE) ai-eval-promptfoo AI_EVAL_PRESET=decision PROMPTFOO_SCENARIO_SET=core PROMPTFOO_REPEAT=3 PROMPTFOO_ARGS="$(PROMPTFOO_ARGS)"
+
+ai-eval-promptfoo-view: ## Open the Promptfoo web viewer for recent eval results
+	PROMPTFOO_CONFIG_DIR="$${PROMPTFOO_CONFIG_DIR:-.tmp/promptfoo-home}" NPM_CONFIG_CACHE="$${NPM_CONFIG_CACHE:-$(PWD)/.tmp/npm-cache}" npx --yes promptfoo@latest view --port "$${PROMPTFOO_VIEW_PORT:-15500}" $(PROMPTFOO_VIEW_ARGS)
 
 cover:
 	@COVERAGE_LOCK_LABEL='make cover' \

@@ -1,0 +1,67 @@
+[
+  {
+    "scenario": "ai_gm_campaign_context_playbook_attack_review_live",
+    "label": "PlaybookAttackReview",
+    "required_tools": [
+      "system_reference_search",
+      "system_reference_read",
+      "interaction_state_read",
+      "character_sheet_read",
+      "daggerheart_combat_board_read",
+      "daggerheart_attack_flow_resolve",
+      "interaction_resolve_scene_player_review"
+    ],
+    "required_tool_order_prefix": [
+      "system_reference_search",
+      "system_reference_read",
+      "interaction_state_read",
+      "character_sheet_read",
+      "daggerheart_combat_board_read",
+      "daggerheart_attack_flow_resolve",
+      "interaction_resolve_scene_player_review"
+    ],
+    "forbidden_tools": [
+      "interaction_activate_scene",
+      "roll_dice",
+      "daggerheart_adversary_create"
+    ],
+    "required_beat_types": [
+      "prompt"
+    ],
+    "expect_player_phase_open": true,
+    "expect_skills_read_only": true,
+    "max_reference_searches": 1,
+    "max_reference_reads": 1
+  },
+  {
+    "scenario": "ai_gm_campaign_context_spotlight_board_review_live",
+    "label": "SpotlightBoardReview",
+    "required_tools": [
+      "daggerheart_combat_board_read",
+      "daggerheart_adversary_update",
+      "daggerheart_scene_countdown_create",
+      "daggerheart_scene_countdown_advance",
+      "interaction_resolve_scene_player_review"
+    ],
+    "required_tool_order_prefix": [
+      "daggerheart_combat_board_read",
+      "daggerheart_adversary_update",
+      "daggerheart_scene_countdown_create",
+      "daggerheart_scene_countdown_advance",
+      "daggerheart_combat_board_read",
+      "interaction_resolve_scene_player_review"
+    ],
+    "forbidden_tools": [
+      "system_reference_search",
+      "system_reference_read",
+      "daggerheart_scene_countdown_resolve_trigger"
+    ],
+    "required_beat_types": [
+      "prompt"
+    ],
+    "expect_player_phase_open": true,
+    "expect_skills_read_only": true,
+    "max_reference_searches": 0,
+    "max_reference_reads": 0
+  }
+]
