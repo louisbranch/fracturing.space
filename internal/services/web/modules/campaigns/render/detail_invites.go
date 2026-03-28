@@ -1,6 +1,9 @@
 package render
 
-import "github.com/a-h/templ"
+import (
+	"github.com/a-h/templ"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 // InvitesPageView carries invite-management page state only.
 type InvitesPageView struct {
@@ -10,7 +13,7 @@ type InvitesPageView struct {
 }
 
 // InvitesFragment renders the invite-management page.
-func InvitesFragment(view InvitesPageView, loc Localizer) templ.Component {
+func InvitesFragment(view InvitesPageView, loc webtemplates.Localizer) templ.Component {
 	return invitesFragment(view, loc)
 }
 

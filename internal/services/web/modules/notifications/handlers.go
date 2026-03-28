@@ -9,7 +9,6 @@ import (
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -34,13 +33,13 @@ func newHandlers(s notificationsapp.Service, base modulehandler.Base) handlers {
 
 // routeNotificationID extracts the canonical notification route parameter.
 func (h handlers) routeNotificationID(r *http.Request) (string, bool) {
-	return routeparam.Read(r, "notificationID")
+	return httpx.ReadRouteParam(r, "notificationID")
 }
 
 // withNotificationID extracts the notification ID path param and delegates to
 // fn, returning 404 when the param is missing.
 func (h handlers) withNotificationID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return routeparam.WithRequired("notificationID", h.WriteNotFound, fn)
+	return httpx.WithRequiredRouteParam("notificationID", h.WriteNotFound, fn)
 }
 
 // handleIndex handles this route in the module transport layer.
@@ -95,7 +94,7 @@ func (h handlers) handleOpen(w http.ResponseWriter, r *http.Request, notificatio
 }
 
 // loadNotificationListView loads and maps notification list items for rendering.
-func (h handlers) loadNotificationListView(ctx context.Context, userID string, loc Localizer) ([]NotificationListItemView, error) {
+func (h handlers) loadNotificationListView(ctx context.Context, userID string, loc webtemplates.Localizer) ([]NotificationListItemView, error) {
 	items, err := h.service.ListNotifications(ctx, userID)
 	if err != nil {
 		return nil, err

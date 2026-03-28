@@ -1,17 +1,21 @@
 package render
 
-import "strings"
+import (
+	"strings"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 // campaignSessionStatusLabel keeps session tables and detail pages on the same status copy.
-func campaignSessionStatusLabel(loc Localizer, value string) string {
+func campaignSessionStatusLabel(loc webtemplates.Localizer, value string) string {
 	raw := strings.TrimSpace(value)
 	switch strings.ToLower(raw) {
 	case "", "unspecified":
-		return T(loc, "game.campaign.session_status_unspecified")
+		return webtemplates.T(loc, "game.campaign.session_status_unspecified")
 	case "active":
-		return T(loc, "game.campaign.session_status_active")
+		return webtemplates.T(loc, "game.campaign.session_status_active")
 	case "ended":
-		return T(loc, "game.campaign.session_status_ended")
+		return webtemplates.T(loc, "game.campaign.session_status_ended")
 	default:
 		return raw
 	}
@@ -28,7 +32,7 @@ func campaignSessionStartReady(readiness SessionReadinessView) bool {
 }
 
 // campaignSessionByID resolves the selected session without forcing handlers to pre-split the view.
-func campaignSessionByID(_ Localizer, sessionID string, sessions []SessionView) SessionView {
+func campaignSessionByID(_ webtemplates.Localizer, sessionID string, sessions []SessionView) SessionView {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
 		return SessionView{}

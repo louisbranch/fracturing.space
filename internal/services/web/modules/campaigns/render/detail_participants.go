@@ -1,6 +1,9 @@
 package render
 
-import "github.com/a-h/templ"
+import (
+	"github.com/a-h/templ"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 // ParticipantsPageView carries participant-list page state only.
 type ParticipantsPageView struct {
@@ -22,17 +25,17 @@ type ParticipantEditPageView struct {
 }
 
 // ParticipantsFragment renders the participant-list page.
-func ParticipantsFragment(view ParticipantsPageView, loc Localizer) templ.Component {
+func ParticipantsFragment(view ParticipantsPageView, loc webtemplates.Localizer) templ.Component {
 	return participantsFragment(view, loc)
 }
 
 // ParticipantCreateFragment renders the participant-create page.
-func ParticipantCreateFragment(view ParticipantCreatePageView, loc Localizer) templ.Component {
+func ParticipantCreateFragment(view ParticipantCreatePageView, loc webtemplates.Localizer) templ.Component {
 	return participantCreateFragment(view, loc)
 }
 
 // ParticipantEditFragment renders the participant-edit page.
-func ParticipantEditFragment(view ParticipantEditPageView, loc Localizer) templ.Component {
+func ParticipantEditFragment(view ParticipantEditPageView, loc webtemplates.Localizer) templ.Component {
 	return participantEditFragment(view, loc)
 }
 

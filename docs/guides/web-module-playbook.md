@@ -4,7 +4,7 @@ parent: "Guides"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-23"
 ---
 
 # Web Module Playbook
@@ -34,6 +34,19 @@ Supported module archetypes:
   and has no meaningful orchestration policy.
 - `transport + app + gateway`: root package is transport-thin while
   orchestration and transport-adapter mapping live in subpackages.
+
+Default composition guidance:
+
+- For one-surface modules with one app service, keep `composition.go` on one
+  direct `Compose(...) module.Module` entrypoint that accepts the exact
+  gateway clients and shared runtime helpers the area needs.
+- Keep optional mounting checks in the central registry. Small modules should
+  not wrap that direct constructor in area-local `*SurfaceOptions`,
+  `CompositionConfig`, or `configured()` boilerplate just to restate the same
+  nil checks.
+- Reserve heavier composition shapes for modules that genuinely need them:
+  multiple route surfaces, per-surface availability policy, or route-owned
+  service graphs that benefit from an area-local config struct.
 
 When a module needs explicit orchestration/adapter boundaries (campaigns/
 settings/notifications/dashboard/profile/publicauth are references), split
@@ -197,6 +210,9 @@ app/gateway seam stops being cohesive:
   `composition.go` entrypoint that the registry calls. The registry should
   select modules and pass dependency policy, not build feature-local gateways
   inline or move gateway construction into `Mount`.
+- For small one-surface modules, let that entrypoint take exact positional
+  dependencies instead of repeating an area-local `CompositionConfig` wrapper
+  around one or two clients and shared helpers.
 - For layered modules, keep `Module` config on ready transport-facing app
   services plus shared handler dependencies. `composition.go` should build the
   gateway and service graph; `Mount` should stay focused on local mux and
@@ -207,6 +223,9 @@ app/gateway seam stops being cohesive:
 - If multiple areas share one runtime helper policy, build it once in the
   registry (for example dashboard-sync freshness) and pass the ready helper to
   module composition. Do not reconstruct the same helper inside each area.
+- Optional module selection belongs in the registry. Small modules may rely on
+  explicit nil checks there instead of repeating module-local `ComposePublic`
+  or `ComposeProtected` wrappers when the constructor only forwards exact deps.
 - Runtime module selection is composition-owned: `composition.ComposeAppHandler`
   calls a `modules.RegistryBuilder` with `modules.RegistryInput` to assemble module sets.
   Keep module packages unaware of startup mode flags.
@@ -219,7 +238,7 @@ app/gateway seam stops being cohesive:
   flat cross-area dependency fields.
 - For modules with segmented route ownership, assemble route registration
   through explicit owned slices (for example campaigns:
-  overview + participants + characters + character-creation +
+  overview + participants + characters +
   sessions/game + invites) so ownership stays diffable in one place.
   When those slices need different transport helpers, bind owned handler
   values per slice instead of routing all methods through one root handler
@@ -235,10 +254,10 @@ app/gateway seam stops being cohesive:
 - Keep root module packages transport-thin: handlers/routes own request/response
   flow while orchestration and gateway mapping live in area-local `app` and
   `gateway` subpackages when present.
-- For JSON endpoints, use `platform/jsoninput.DecodeStrictInvalidInput` instead
-  of module-local malformed-body wrappers so size limits, unknown-field
-  rejection, trailing-token handling, and stable invalid-input mapping stay
-  shared.
+- For JSON endpoints, use `platform/httpx.DecodeJSONStrictInvalidInput`
+  instead of module-local malformed-body wrappers so size limits,
+  unknown-field rejection, trailing-token handling, and stable
+  invalid-input mapping stay shared.
 - When a system-specific workflow includes form parsing or template/view
   mapping, keep workflow registration in the root transport area. `app`
   services may accept a workflow as input for orchestration, but they should
@@ -295,11 +314,15 @@ app/gateway seam stops being cohesive:
 - When a guardrail only needs to protect constructor/package ownership, prefer
   AST-backed invariants on imports, struct fields, and constructor calls over
   raw source-fragment string checks.
+- Do not add placeholder files or filename-specific guardrails just to pin a
+  layering story in place. Protect the package contract so contributors can
+  refactor file splits without first updating ceremonial scaffolding.
 - Prefer route-param guard helpers for multi-param routes (for example
   `withCampaignAndCharacterID`) so 404 behavior is centralized and testable.
-- Prefer `internal/services/web/platform/routeparam` for single-parameter
-  extraction/guard flow instead of repeating trimmed `PathValue` helpers in
-  individual modules.
+- Reuse `internal/services/web/platform/httpx.ReadRouteParam` or
+  `WithRequiredRouteParam` for simple single-parameter extraction when it
+  already matches the route contract. Do not add another shared helper package
+  for one-off `PathValue` wrapping that only one area needs.
 - Prefer route-level contracts that naturally support `HEAD` for `GET`
   surfaces.
 - Source browser endpoint URLs from `routepath` constants/builders (including
@@ -319,9 +342,9 @@ app/gateway seam stops being cohesive:
   `Allow` behavior instead of duplicating module-local helpers.
 - Keep handlers thin; call service methods for behavior.
 - For form-based mutations and posted settings forms, use shared
-  `platform/forminput` helpers instead of repeating inline `ParseForm`
-  branches or module-local wrapper functions. Keep the call site explicit
-  about which policy it wants: invalid-input error mapping vs flash+redirect.
+  `platform/httpx` form helpers when multiple areas need the same parsing and
+  error-mapping policy. Keep one-off parsing local instead of introducing a new
+  shared wrapper package.
 - For public JSON endpoints, decode through strict parser helpers:
   body-size caps, unknown-field rejection, and single-payload enforcement.
 - Return typed errors and map them once at transport boundaries.
@@ -371,7 +394,7 @@ app/gateway seam stops being cohesive:
 - Use `internal/services/web/platform/userid.Require` at required-auth app
   boundaries and `internal/services/web/platform/userid.Normalize` for optional
   propagation seams.
-- Use `internal/services/web/platform/webctx.WithResolvedUserID` for
+- Use `internal/services/web/principal.WithResolvedUserID` for
   downstream service calls that require user identity metadata.
 - Do not pass raw request context to mutation service calls when resolved user
   identity is available.

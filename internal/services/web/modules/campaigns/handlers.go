@@ -5,6 +5,12 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
+	campaigncharacters "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/characters"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
+	campaigninvites "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/invites"
+	campaignoverview "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/overview"
+	campaignparticipants "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/participants"
+	campaignsessions "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/sessions"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
@@ -13,25 +19,23 @@ import (
 type handlers struct {
 	catalog      catalogHandlers
 	starters     starterHandlers
-	overview     overviewHandlers
-	participants participantHandlers
-	characters   characterHandlers
-	creation     creationHandlers
-	sessions     sessionHandlers
-	invites      inviteHandlers
+	overview     campaignoverview.Handler
+	participants campaignparticipants.Handler
+	characters   campaigncharacters.Handler
+	sessions     campaignsessions.Handler
+	invites      campaigninvites.Handler
 }
 
 // handlerServices groups the app-facing seams consumed by the transport layer.
 type handlerServices struct {
-	Page         campaignPageHandlerServices
+	Page         campaigndetail.PageServices
 	Catalog      catalogHandlerServices
 	Starter      starterHandlerServices
-	Overview     overviewHandlerServices
-	Participants participantHandlerServices
-	Characters   characterHandlerServices
-	Creation     campaignCreationAppServices
-	Sessions     sessionHandlerServices
-	Invites      inviteHandlerServices
+	Overview     campaignoverview.HandlerServices
+	Participants campaignparticipants.HandlerServices
+	Characters   campaigncharacters.HandlerServices
+	Sessions     campaignsessions.HandlerServices
+	Invites      campaigninvites.HandlerServices
 }
 
 // handlersConfig keeps the root transport constructor explicit by owned seam.
@@ -41,7 +45,7 @@ type handlersConfig struct {
 	PlayFallbackPort string
 	PlayLaunchGrant  playlaunchgrant.Config
 	RequestMeta      requestmeta.SchemePolicy
-	Sync             DashboardSync
+	Sync             campaigndetail.DashboardSync
 	Systems          campaignSystemRegistry
 }
 
@@ -51,7 +55,7 @@ type handlersConfig struct {
 func newProductionHandlerServices(config CompositionConfig) (handlerServices, error) {
 	var errs []error
 
-	page, err := newCampaignPageHandlerServices(newPageServiceConfig(config))
+	page, err := campaigndetail.NewPageServices(newPageServiceConfig(config))
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -63,28 +67,24 @@ func newProductionHandlerServices(config CompositionConfig) (handlerServices, er
 	if err != nil {
 		errs = append(errs, err)
 	}
-	overview, err := newOverviewHandlerServices(newOverviewSurfaceConfig(config))
+	overview, err := campaignoverview.NewHandlerServices(newOverviewSurfaceConfig(config))
 	if err != nil {
 		errs = append(errs, err)
 	}
-	participants, err := newParticipantHandlerServices(newParticipantSurfaceConfig(config))
+	participants, err := campaignparticipants.NewHandlerServices(newParticipantSurfaceConfig(config))
 	if err != nil {
 		errs = append(errs, err)
 	}
 	characterSurface := newCharacterSurfaceConfig(config)
-	characters, err := newCharacterHandlerServices(characterSurface)
+	characters, err := campaigncharacters.NewHandlerServices(characterSurface, buildCampaignSystems(config).workflowRegistry())
 	if err != nil {
 		errs = append(errs, err)
 	}
-	creation, err := newCampaignCreationAppServices(characterSurface)
+	sessions, err := campaignsessions.NewHandlerServices(newSessionSurfaceConfig(config))
 	if err != nil {
 		errs = append(errs, err)
 	}
-	sessions, err := newSessionHandlerServices(newSessionSurfaceConfig(config), newPageAuthorizationGateway(config))
-	if err != nil {
-		errs = append(errs, err)
-	}
-	invites, err := newInviteHandlerServices(newInviteSurfaceConfig(config))
+	invites, err := campaigninvites.NewHandlerServices(newInviteSurfaceConfig(config))
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -99,7 +99,6 @@ func newProductionHandlerServices(config CompositionConfig) (handlerServices, er
 		Overview:     overview,
 		Participants: participants,
 		Characters:   characters,
-		Creation:     creation,
 		Sessions:     sessions,
 		Invites:      invites,
 	}, nil
@@ -110,22 +109,20 @@ func newProductionHandlerServices(config CompositionConfig) (handlerServices, er
 // callers that skip the builder-level validation in newProductionHandlerServices.
 func newHandlers(config handlersConfig) (handlers, error) {
 	services := config.Services
-	if services.Page.workspace == nil || services.Catalog.campaigns == nil {
+	if services.Page.Workspace == nil || services.Catalog.campaigns == nil {
 		return handlers{}, fmt.Errorf("campaigns module missing required services")
 	}
 
-	support := newCampaignRouteSupport(config.Base, config.RequestMeta, config.Sync)
-	detail := newCampaignDetailHandlers(support, services.Page)
-	creation := newCreationHandlerServices(services.Creation, config.Systems.workflowRegistry())
+	support := campaigndetail.NewSupport(config.Base, config.RequestMeta, config.Sync)
+	detail := campaigndetail.NewHandler(support, services.Page)
 
 	return handlers{
 		catalog:      newCatalogHandlers(support, services.Catalog, config.Systems),
 		starters:     newStarterHandlers(support, services.Starter),
-		overview:     newOverviewHandlers(detail, services.Overview),
-		participants: newParticipantHandlers(detail, services.Participants),
-		characters:   newCharacterHandlers(detail, services.Characters, creation),
-		creation:     newStandaloneCreationHandlers(detail, creation),
-		sessions:     newSessionHandlers(detail, services.Sessions, config.PlayFallbackPort, config.PlayLaunchGrant),
-		invites:      newInviteHandlers(detail, services.Invites),
+		overview:     campaignoverview.NewHandler(detail, services.Overview),
+		participants: campaignparticipants.NewHandler(detail, services.Participants),
+		characters:   campaigncharacters.NewHandler(detail, services.Characters),
+		sessions:     campaignsessions.NewHandler(detail, services.Sessions, config.PlayFallbackPort, config.PlayLaunchGrant),
+		invites:      campaigninvites.NewHandler(detail, services.Invites),
 	}, nil
 }

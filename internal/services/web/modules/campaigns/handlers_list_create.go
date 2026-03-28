@@ -7,8 +7,8 @@ import (
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -21,7 +21,7 @@ type catalogHandlerServices struct {
 
 // catalogHandlers owns the campaign catalog and creation transport surface.
 type catalogHandlers struct {
-	campaignRouteSupport
+	campaigndetail.Support
 	catalog catalogHandlerServices
 	systems campaignSystemRegistry
 }
@@ -38,11 +38,11 @@ func newCatalogHandlerServices(config catalogServiceConfig) (catalogHandlerServi
 
 // newCatalogHandlers assembles the catalog route-owner handler from support,
 // services, and installed systems.
-func newCatalogHandlers(support campaignRouteSupport, services catalogHandlerServices, systems campaignSystemRegistry) catalogHandlers {
+func newCatalogHandlers(support campaigndetail.Support, services catalogHandlerServices, systems campaignSystemRegistry) catalogHandlers {
 	return catalogHandlers{
-		campaignRouteSupport: support,
-		catalog:              services,
-		systems:              systems,
+		Support: support,
+		catalog: services,
+		systems: systems,
 	}
 }
 
@@ -100,7 +100,7 @@ func (h catalogHandlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteRedirect(w, r, routepath.AppCampaignsNew)
 		return
 	}
-	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, CampaignListFragment(mapCampaignListItems(items, h.now(), loc), loc))
+	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, CampaignListFragment(mapCampaignListItems(items, h.Now(), loc), loc))
 }
 
 // handleStartNewCampaign handles this route in the module transport layer.
@@ -127,24 +127,24 @@ func (h catalogHandlers) handleCreateCampaign(w http.ResponseWriter, r *http.Req
 
 // handleCreateCampaignSubmit handles this route in the module transport layer.
 func (h catalogHandlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Request) {
-	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_create_form", routepath.AppCampaignsCreate) {
+	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_create_form", routepath.AppCampaignsCreate) {
 		return
 	}
 	input, err := parseCreateCampaignInput(r.Form, h.systems)
 	if err != nil {
-		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
+		h.WriteMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
 	input.Locale = h.RequestLocaleTag(r)
 	created, err := h.catalog.campaigns.CreateCampaign(ctx, input)
 	if err != nil {
-		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
+		h.WriteMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return
 	}
-	h.sync.CampaignCreated(ctx, userID, created.CampaignID)
+	h.Sync().CampaignCreated(ctx, userID, created.CampaignID)
 
-	h.writeMutationSuccess(w, r, "web.campaigns.notice_campaign_created", routepath.AppCampaign(created.CampaignID))
+	h.WriteMutationSuccess(w, r, "web.campaigns.notice_campaign_created", routepath.AppCampaign(created.CampaignID))
 }
 
 // parseAppGmMode parses inbound values into package-safe forms.

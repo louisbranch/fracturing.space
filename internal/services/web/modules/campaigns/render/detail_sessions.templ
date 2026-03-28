@@ -2,21 +2,22 @@ package render
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-templ sessionsFragment(view SessionsPageView, loc Localizer) {
+templ sessionsFragment(view SessionsPageView, loc webtemplates.Localizer) {
 	<section id="campaign-sessions" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-sessions-header="true">
 			<div class="card-body">
 				<div class="flex items-center justify-between gap-3">
-					<h2 class="card-title">{ T(loc, "game.sessions.title") }</h2>
+					<h2 class="card-title">{ webtemplates.T(loc, "game.sessions.title") }</h2>
 					if view.CanManageSession {
 						if campaignActionsLocked(view.ActionsLocked) {
-							<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-								<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-session-create-disabled="true">{ T(loc, "game.sessions.action_new") }</button>
+							<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+								<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-session-create-disabled="true">{ webtemplates.T(loc, "game.sessions.action_new") }</button>
 							</div>
 						} else {
-							<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignSessionCreate(view.CampaignID) } data-campaign-session-create-link="true">{ T(loc, "game.sessions.action_new") }</a>
+							<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignSessionCreate(view.CampaignID) } data-campaign-session-create-link="true">{ webtemplates.T(loc, "game.sessions.action_new") }</a>
 						}
 					}
 				</div>
@@ -24,7 +25,7 @@ templ sessionsFragment(view SessionsPageView, loc Localizer) {
 		</div>
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			if len(view.Sessions) == 0 {
-				<p data-campaign-sessions-empty="true">{ T(loc, "game.sessions.empty") }</p>
+				<p data-campaign-sessions-empty="true">{ webtemplates.T(loc, "game.sessions.empty") }</p>
 			}
 			for _, session := range view.Sessions {
 				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-session-card-id={ session.ID }>
@@ -36,23 +37,23 @@ templ sessionsFragment(view SessionsPageView, loc Localizer) {
 						<div class="text-sm space-y-1">
 							if session.StartedAt != "" {
 								<div class="flex gap-2 items-center" data-campaign-session-started-at={ session.StartedAt }>
-									<span class="opacity-70">{ T(loc, "game.sessions.label_started_at") }:</span>
-									@DateTimeTooltip(FormatDateTimeNow(session.StartedAt, loc))
+									<span class="opacity-70">{ webtemplates.T(loc, "game.sessions.label_started_at") }:</span>
+									@webtemplates.DateTimeTooltip(webtemplates.FormatDateTimeNow(session.StartedAt, loc))
 								</div>
 							}
 							if session.EndedAt != "" {
 								<div class="flex gap-2 items-center" data-campaign-session-ended-at={ session.EndedAt }>
-									<span class="opacity-70">{ T(loc, "game.sessions.label_ended_at") }:</span>
-									@DateTimeTooltip(FormatDateTimeNow(session.EndedAt, loc))
+									<span class="opacity-70">{ webtemplates.T(loc, "game.sessions.label_ended_at") }:</span>
+									@webtemplates.DateTimeTooltip(webtemplates.FormatDateTimeNow(session.EndedAt, loc))
 								</div>
 							}
 						</div>
 						if campaignSessionCanEnd(session.Status) {
 							<div class="card-actions justify-end gap-2">
-								<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignGame(view.CampaignID) } data-campaign-session-join-link="true">{ T(loc, "game.sessions.action_join_game") }</a>
-								<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-end-form="true" onsubmit="return confirm(this.dataset.confirmText);" data-confirm-text={ T(loc, "game.sessions.confirm_end") }>
+								<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignGame(view.CampaignID) } data-campaign-session-join-link="true">{ webtemplates.T(loc, "game.sessions.action_join_game") }</a>
+								<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-end-form="true" onsubmit="return confirm(this.dataset.confirmText);" data-confirm-text={ webtemplates.T(loc, "game.sessions.confirm_end") }>
 									<input type="hidden" name="session_id" value={ session.ID }/>
-									<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.sessions.end") }</button>
+									<button class="btn btn-outline btn-error btn-sm" type="submit">{ webtemplates.T(loc, "game.sessions.end") }</button>
 								</form>
 							</div>
 						}
@@ -63,15 +64,15 @@ templ sessionsFragment(view SessionsPageView, loc Localizer) {
 	</section>
 }
 
-templ sessionCreateFragment(view SessionCreatePageView, loc Localizer) {
+templ sessionCreateFragment(view SessionCreatePageView, loc webtemplates.Localizer) {
 	<section id="campaign-session-create" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-session-create-page="true">
 			<div class="card-body gap-4 p-4">
-				<h2 class="card-title">{ T(loc, "game.sessions.action_new") }</h2>
+				<h2 class="card-title">{ webtemplates.T(loc, "game.sessions.action_new") }</h2>
 				if !campaignSessionStartReady(view.SessionReadiness) {
 					<div class="alert alert-warning alert-soft" data-campaign-session-readiness-blocked="true">
 						<div class="space-y-2">
-							<p class="font-semibold">{ T(loc, "game.sessions.readiness_heading") }</p>
+							<p class="font-semibold">{ webtemplates.T(loc, "game.sessions.readiness_heading") }</p>
 							<ul class="list-disc list-inside text-sm space-y-1" data-campaign-session-readiness-blockers="true">
 								for _, blocker := range view.SessionReadiness.Blockers {
 									<li data-campaign-session-readiness-blocker-code={ blocker.Code }>{ blocker.Message }</li>
@@ -83,12 +84,12 @@ templ sessionCreateFragment(view SessionCreatePageView, loc Localizer) {
 				<form method="post" action={ routepath.AppCampaignSessionCreate(view.CampaignID) } class="space-y-4" data-campaign-session-create-form="true">
 					<div class="form-control w-full">
 						<label class="label">
-							<span class="label-text">{ T(loc, "game.sessions.field_name") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "game.sessions.field_name") }</span>
 						</label>
-						<input type="text" name="name" placeholder={ T(loc, "game.sessions.placeholder_name") } class="input input-bordered w-full"/>
+						<input type="text" name="name" placeholder={ webtemplates.T(loc, "game.sessions.placeholder_name") } class="input input-bordered w-full"/>
 					</div>
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit" disabled?={ !campaignSessionStartReady(view.SessionReadiness) } data-campaign-session-create-submit-disabled={ !campaignSessionStartReady(view.SessionReadiness) }>{ T(loc, "game.sessions.start") }</button>
+						<button class="btn btn-primary" type="submit" disabled?={ !campaignSessionStartReady(view.SessionReadiness) } data-campaign-session-create-submit-disabled={ !campaignSessionStartReady(view.SessionReadiness) }>{ webtemplates.T(loc, "game.sessions.start") }</button>
 					</div>
 				</form>
 			</div>
@@ -96,19 +97,19 @@ templ sessionCreateFragment(view SessionCreatePageView, loc Localizer) {
 	</section>
 }
 
-templ sessionDetailFragment(view SessionDetailPageView, loc Localizer) {
+templ sessionDetailFragment(view SessionDetailPageView, loc webtemplates.Localizer) {
 	<section id="campaign-session-detail" class="space-y-4">
 		<div class="card bg-base-100 border border-base-300 shadow-sm">
 			<div class="card-body gap-4">
 				<div class="flex items-center justify-between gap-3">
 					<h2 class="card-title" data-campaign-session-detail-id={ campaignSessionByID(loc, view.SessionID, view.Sessions).ID }>{ campaignSessionByID(loc, view.SessionID, view.Sessions).Name }</h2>
 					if campaignSessionCanEnd(campaignSessionByID(loc, view.SessionID, view.Sessions).Status) {
-						<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignGame(view.CampaignID) }>{ T(loc, "game.sessions.action_join_game") }</a>
+						<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignGame(view.CampaignID) }>{ webtemplates.T(loc, "game.sessions.action_join_game") }</a>
 					}
 				</div>
 				<dl class="grid gap-3 text-sm md:grid-cols-2">
 					<div>
-						<dt class="opacity-70">{ T(loc, "game.sessions.field_name") }</dt>
+						<dt class="opacity-70">{ webtemplates.T(loc, "game.sessions.field_name") }</dt>
 						<dd data-campaign-session-detail-name={ campaignSessionByID(loc, view.SessionID, view.Sessions).Name }>{ campaignSessionByID(loc, view.SessionID, view.Sessions).Name }</dd>
 					</div>
 					<div>
@@ -117,34 +118,34 @@ templ sessionDetailFragment(view SessionDetailPageView, loc Localizer) {
 					</div>
 					if campaignSessionByID(loc, view.SessionID, view.Sessions).StartedAt != "" {
 						<div data-campaign-session-detail-started-at={ campaignSessionByID(loc, view.SessionID, view.Sessions).StartedAt }>
-							<dt class="opacity-70">{ T(loc, "game.sessions.label_started_at") }</dt>
+							<dt class="opacity-70">{ webtemplates.T(loc, "game.sessions.label_started_at") }</dt>
 							<dd>
-								@DateTimeTooltip(FormatDateTimeNow(campaignSessionByID(loc, view.SessionID, view.Sessions).StartedAt, loc))
+								@webtemplates.DateTimeTooltip(webtemplates.FormatDateTimeNow(campaignSessionByID(loc, view.SessionID, view.Sessions).StartedAt, loc))
 							</dd>
 						</div>
 					}
 					if campaignSessionByID(loc, view.SessionID, view.Sessions).EndedAt != "" {
 						<div data-campaign-session-detail-ended-at={ campaignSessionByID(loc, view.SessionID, view.Sessions).EndedAt }>
-							<dt class="opacity-70">{ T(loc, "game.sessions.label_ended_at") }</dt>
+							<dt class="opacity-70">{ webtemplates.T(loc, "game.sessions.label_ended_at") }</dt>
 							<dd>
-								@DateTimeTooltip(FormatDateTimeNow(campaignSessionByID(loc, view.SessionID, view.Sessions).EndedAt, loc))
+								@webtemplates.DateTimeTooltip(webtemplates.FormatDateTimeNow(campaignSessionByID(loc, view.SessionID, view.Sessions).EndedAt, loc))
 							</dd>
 						</div>
 					}
 					if campaignSessionCanEnd(campaignSessionByID(loc, view.SessionID, view.Sessions).Status) && campaignSessionByID(loc, view.SessionID, view.Sessions).UpdatedAt != "" {
 						<div data-campaign-session-detail-updated-at={ campaignSessionByID(loc, view.SessionID, view.Sessions).UpdatedAt }>
-							<dt class="opacity-70">{ T(loc, "game.sessions.label_updated_at") }</dt>
+							<dt class="opacity-70">{ webtemplates.T(loc, "game.sessions.label_updated_at") }</dt>
 							<dd>
-								@DateTimeTooltip(FormatDateTimeNow(campaignSessionByID(loc, view.SessionID, view.Sessions).UpdatedAt, loc))
+								@webtemplates.DateTimeTooltip(webtemplates.FormatDateTimeNow(campaignSessionByID(loc, view.SessionID, view.Sessions).UpdatedAt, loc))
 							</dd>
 						</div>
 					}
 				</dl>
 				if campaignSessionCanEnd(campaignSessionByID(loc, view.SessionID, view.Sessions).Status) {
 					<div class="card-actions justify-end">
-						<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-detail-end-form="true" onsubmit="return confirm(this.dataset.confirmText);" data-confirm-text={ T(loc, "game.sessions.confirm_end") }>
+						<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-detail-end-form="true" onsubmit="return confirm(this.dataset.confirmText);" data-confirm-text={ webtemplates.T(loc, "game.sessions.confirm_end") }>
 							<input type="hidden" name="session_id" value={ campaignSessionByID(loc, view.SessionID, view.Sessions).ID }/>
-							<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.sessions.end") }</button>
+							<button class="btn btn-outline btn-error btn-sm" type="submit">{ webtemplates.T(loc, "game.sessions.end") }</button>
 						</form>
 					</div>
 				}

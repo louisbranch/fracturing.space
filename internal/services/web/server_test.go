@@ -235,27 +235,11 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := newTestHandler(Config{
-		Dependencies: newCompletedDependencyBundle(
-			principal.Dependencies{SessionClient: auth},
-			modules.Dependencies{
-				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
-				Campaigns: modules.CampaignDependencies{
-					CampaignClient:           fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
-					AgentClient:              fakeAgentClient{},
-					ParticipantClient:        defaultParticipantClient(),
-					CharacterClient:          defaultCharacterClient(),
-					DaggerheartContentClient: defaultDaggerheartContentClient(),
-					DaggerheartAssetClient:   defaultDaggerheartAssetClient(),
-					SessionClient:            defaultSessionClient(),
-					InviteClient:             defaultInviteClient(),
-					SocialClient:             defaultSocialClient(),
-					AuthClient:               auth,
-					AuthorizationClient:      defaultAuthorizationClient(),
-				},
-			},
-		),
-	})
+	cfg := defaultProtectedConfig(auth)
+	cfg.Dependencies.Modules.Campaigns.CampaignClient = fakeCampaignClient{
+		response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}},
+	}
+	h, err := newTestHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}

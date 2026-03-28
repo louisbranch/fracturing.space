@@ -75,6 +75,7 @@ type StartupDependencyDescriptor struct {
 	Policy             StartupDependencyPolicy
 	Capability         string
 	Surfaces           []string
+	AddressField       string
 	DefaultGRPCService string
 	Bind               DependencyBinder
 	Validate           DependencyValidator
@@ -108,7 +109,7 @@ const (
 //
 //  1. Add a DependencyName constant and a new StartupDependencyDescriptor entry
 //     to this table with the correct Policy, Capability, Surfaces, and
-//     DefaultGRPCService.
+//     AddressField and DefaultGRPCService.
 //  2. Add client fields to the relevant DependencyBundle sub-struct in
 //     dependencies.go (e.g. bundle.Modules.YourModule.NewClient).
 //  3. Implement a Bind function (Bind<Name>Dependency) in dependencies.go that
@@ -124,6 +125,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyRequired,
 		Capability:         "web.auth.integration",
 		Surfaces:           []string{"principal", "publicauth", "profile", "settings"},
+		AddressField:       "AuthAddr",
 		DefaultGRPCService: serviceaddr.ServiceAuth,
 		Bind:               BindAuthDependency,
 		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
@@ -149,6 +151,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyRequired,
 		Capability:         "web.social.integration",
 		Surfaces:           []string{"principal", "profile", "settings", "campaigns"},
+		AddressField:       "SocialAddr",
 		DefaultGRPCService: serviceaddr.ServiceSocial,
 		Bind:               BindSocialDependency,
 		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
@@ -170,6 +173,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyRequired,
 		Capability:         "web.game.integration",
 		Surfaces:           []string{"campaigns", "dashboard-sync"},
+		AddressField:       "GameAddr",
 		DefaultGRPCService: serviceaddr.ServiceGame,
 		Bind:               BindGameDependency,
 		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
@@ -196,6 +200,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyRequired,
 		Capability:         "web.invite.integration",
 		Surfaces:           []string{"campaigns", "invite"},
+		AddressField:       "InviteAddr",
 		DefaultGRPCService: serviceaddr.ServiceInvite,
 		Bind:               BindInviteDependency,
 		Validate: func(bundle DependencyBundle) *StartupDependencyIssue {
@@ -215,6 +220,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyOptional,
 		Capability:         "web.ai.integration",
 		Surfaces:           []string{"settings.ai", "campaigns.ai"},
+		AddressField:       "AIAddr",
 		DefaultGRPCService: serviceaddr.ServiceAI,
 		Bind:               BindAIDependency,
 	},
@@ -223,6 +229,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyOptional,
 		Capability:         "web.discovery.integration",
 		Surfaces:           []string{"discovery"},
+		AddressField:       "DiscoveryAddr",
 		DefaultGRPCService: serviceaddr.ServiceDiscovery,
 		Bind:               BindDiscoveryDependency,
 	},
@@ -231,6 +238,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyOptional,
 		Capability:         "web.userhub.integration",
 		Surfaces:           []string{"dashboard", "dashboard-sync"},
+		AddressField:       "UserHubAddr",
 		DefaultGRPCService: serviceaddr.ServiceUserHub,
 		Bind:               BindUserHubDependency,
 	},
@@ -239,6 +247,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyOptional,
 		Capability:         "web.notifications.integration",
 		Surfaces:           []string{"principal", "notifications"},
+		AddressField:       "NotificationsAddr",
 		DefaultGRPCService: serviceaddr.ServiceNotifications,
 		Bind:               BindNotificationsDependency,
 	},
@@ -247,6 +256,7 @@ var startupDependencyDescriptors = []StartupDependencyDescriptor{
 		Policy:             StartupDependencyOptional,
 		Capability:         "web.status.integration",
 		Surfaces:           []string{"dashboard.health"},
+		AddressField:       "StatusAddr",
 		DefaultGRPCService: serviceaddr.ServiceStatus,
 		Bind:               BindStatusDependency,
 	},

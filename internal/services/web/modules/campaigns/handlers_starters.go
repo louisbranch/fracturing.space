@@ -7,7 +7,7 @@ import (
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -20,7 +20,7 @@ type starterHandlerServices struct {
 
 // starterHandlers owns the protected starter preview and launch surface.
 type starterHandlers struct {
-	campaignRouteSupport
+	campaigndetail.Support
 	starters starterHandlerServices
 }
 
@@ -35,10 +35,10 @@ func newStarterHandlerServices(config starterServiceConfig) (starterHandlerServi
 }
 
 // newStarterHandlers assembles the starter route-owner handler.
-func newStarterHandlers(support campaignRouteSupport, services starterHandlerServices) starterHandlers {
+func newStarterHandlers(support campaigndetail.Support, services starterHandlerServices) starterHandlers {
 	return starterHandlers{
-		campaignRouteSupport: support,
-		starters:             services,
+		Support:  support,
+		starters: services,
 	}
 }
 
@@ -58,7 +58,7 @@ func starterPreviewHeader(loc webtemplates.Localizer, title string) *webtemplate
 
 // handleStarterPreview renders the protected starter preview page from discovery-owned entry data.
 func (h starterHandlers) handleStarterPreview(w http.ResponseWriter, r *http.Request) {
-	starterKey, ok := h.routeStarterKey(r)
+	starterKey, ok := h.RouteStarterKey(r)
 	if !ok {
 		h.WriteNotFound(w, r)
 		return
@@ -83,13 +83,13 @@ func (h starterHandlers) handleStarterPreview(w http.ResponseWriter, r *http.Req
 
 // handleStarterLaunch validates the AI selection and redirects into the new forked campaign.
 func (h starterHandlers) handleStarterLaunch(w http.ResponseWriter, r *http.Request) {
-	starterKey, ok := h.routeStarterKey(r)
+	starterKey, ok := h.RouteStarterKey(r)
 	if !ok {
 		h.WriteNotFound(w, r)
 		return
 	}
 	redirectURL := routepath.AppCampaignStarter(starterKey)
-	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_launch_starter", redirectURL) {
+	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_launch_starter", redirectURL) {
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h starterHandlers) handleStarterLaunch(w http.ResponseWriter, r *http.Requ
 		AIAgentID: strings.TrimSpace(r.FormValue("ai_agent_id")),
 	})
 	if err != nil {
-		h.writeMutationError(w, r, err, "error.web.message.failed_to_launch_starter", redirectURL)
+		h.WriteMutationError(w, r, err, "error.web.message.failed_to_launch_starter", redirectURL)
 		return
 	}
 	httpx.WriteRedirect(w, r, routepath.AppCampaign(result.CampaignID))

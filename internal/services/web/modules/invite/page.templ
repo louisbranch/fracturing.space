@@ -1,5 +1,7 @@
 package invite
 
+import webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+
 type PublicInvitePageView struct {
 	Heading           string
 	Body              string
@@ -18,31 +20,31 @@ type PublicInvitePageView struct {
 	DashboardURL      string
 }
 
-templ PublicInvitePage(view PublicInvitePageView, loc Localizer) {
+templ PublicInvitePage(view PublicInvitePageView, loc webtemplates.Localizer) {
 	<section id="public-invite-page" class="mx-auto grid w-full max-w-3xl gap-8">
 		<header class="grid gap-2">
-			<p class="text-sm uppercase tracking-[0.18em] opacity-60">{ T(loc, "web.invite.eyebrow") }</p>
+			<p class="text-sm uppercase tracking-[0.18em] opacity-60">{ webtemplates.T(loc, "web.invite.eyebrow") }</p>
 			<h1 class="text-3xl font-bold">{ view.Heading }</h1>
 			<p class="opacity-80">{ view.Body }</p>
 		</header>
 		<div class="card border border-base-300 bg-base-200 shadow-xl">
 			<div class="card-body gap-4">
 				<div class="grid gap-1">
-					<p class="text-sm opacity-60">{ T(loc, "web.invite.field_campaign") }</p>
+					<p class="text-sm opacity-60">{ webtemplates.T(loc, "web.invite.field_campaign") }</p>
 					<p class="text-lg font-medium">{ view.CampaignName }</p>
 				</div>
 				<div class="grid gap-1">
-					<p class="text-sm opacity-60">{ T(loc, "web.invite.field_seat") }</p>
+					<p class="text-sm opacity-60">{ webtemplates.T(loc, "web.invite.field_seat") }</p>
 					<p class="text-lg font-medium">{ view.ParticipantName }</p>
 				</div>
 				if view.InviterUsername != "" && view.InviterProfileURL != "" {
 					<div class="grid gap-1">
-						<p class="text-sm opacity-60">{ T(loc, "web.invite.field_invited_by") }</p>
+						<p class="text-sm opacity-60">{ webtemplates.T(loc, "web.invite.field_invited_by") }</p>
 						<p class="text-lg font-medium"><a class="link link-hover" href={ view.InviterProfileURL }>{ "@" + view.InviterUsername }</a></p>
 					</div>
 				}
 				<div class="grid gap-1">
-					<p class="text-sm opacity-60">{ T(loc, "web.invite.field_status") }</p>
+					<p class="text-sm opacity-60">{ webtemplates.T(loc, "web.invite.field_status") }</p>
 					<p class="text-lg font-medium">{ view.StatusLabel }</p>
 				</div>
 				<div class="card-actions justify-end gap-3">

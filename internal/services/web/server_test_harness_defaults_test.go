@@ -42,30 +42,6 @@ func TestNewDependencyBundleKeepsPartialModuleDependenciesExplicit(t *testing.T)
 	}
 }
 
-func TestNewCompletedDependencyBundleOptsIntoTestDefaults(t *testing.T) {
-	t.Parallel()
-
-	auth := newFakeWebAuthClient()
-	bundle := newCompletedDependencyBundle(
-		principal.Dependencies{SessionClient: auth},
-		modules.Dependencies{
-			Campaigns: modules.CampaignDependencies{
-				CampaignClient: defaultCampaignClient(),
-				AuthClient:     auth,
-			},
-		},
-	)
-	if bundle == nil {
-		t.Fatalf("expected non-nil dependency bundle")
-	}
-	if bundle.Modules.Campaigns.DiscoveryClient == nil {
-		t.Fatalf("expected completed discovery dependency")
-	}
-	if bundle.Modules.Campaigns.InviteClient == nil {
-		t.Fatalf("expected completed invite dependency")
-	}
-}
-
 func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
 		Profile: &authv1.AccountProfile{Username: "adventurer", Locale: commonv1.Locale_LOCALE_EN_US},

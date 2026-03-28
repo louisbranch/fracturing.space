@@ -3,6 +3,8 @@ package settings
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"strings"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 type SettingsProfileForm struct {
@@ -99,29 +101,29 @@ func settingsAIAgentsModelSelected(form SettingsAIAgentsForm, modelID string) bo
 	return strings.TrimSpace(form.Model) == strings.TrimSpace(modelID)
 }
 
-templ SettingsProfileFragment(form SettingsProfileForm, loc Localizer) {
+templ SettingsProfileFragment(form SettingsProfileForm, loc webtemplates.Localizer) {
 	<section id="settings-profile" class="card bg-base-200">
 		<div class="card-body">
-			<h2 class="card-title">{ T(loc, "web.settings.user_profile.title") }</h2>
+			<h2 class="card-title">{ webtemplates.T(loc, "web.settings.user_profile.title") }</h2>
 			if form.ErrorMessage != "" {
 				<div class="alert alert-error">{ form.ErrorMessage }</div>
 			}
 			<form method="post" action={ routepath.AppSettingsProfile } class="space-y-4">
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "web.settings.user_profile.field_username") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "web.settings.user_profile.field_username") }</span>
 					</label>
 					<input class="input input-bordered w-full" type="text" value={ form.Username } readonly disabled/>
 				</div>
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "web.settings.user_profile.field_name") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "web.settings.user_profile.field_name") }</span>
 					</label>
 					<input class="input input-bordered w-full" type="text" name="name" value={ form.Name }/>
 				</div>
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "web.settings.user_profile.field_pronouns") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "web.settings.user_profile.field_pronouns") }</span>
 					</label>
 					<input class="input input-bordered w-full" type="text" name="pronouns" value={ form.Pronouns } list="settings-pronouns-presets"/>
 					<datalist id="settings-pronouns-presets">
@@ -132,82 +134,82 @@ templ SettingsProfileFragment(form SettingsProfileForm, loc Localizer) {
 				</div>
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "web.settings.user_profile.field_bio") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "web.settings.user_profile.field_bio") }</span>
 					</label>
 					<textarea class="textarea textarea-bordered w-full" name="bio">{ form.Bio }</textarea>
 				</div>
 				<div class="card-actions justify-end">
-					<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.user_profile.submit_save") }</button>
+					<button class="btn btn-primary" type="submit">{ webtemplates.T(loc, "web.settings.user_profile.submit_save") }</button>
 				</div>
 			</form>
 		</div>
 	</section>
 }
 
-templ SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) {
+templ SettingsLocaleFragment(form SettingsLocaleForm, loc webtemplates.Localizer) {
 	<section id="settings-locale" class="card bg-base-200">
 		<div class="card-body">
-			<h2 class="card-title">{ T(loc, "web.settings.locale.title") }</h2>
+			<h2 class="card-title">{ webtemplates.T(loc, "web.settings.locale.title") }</h2>
 			if form.ErrorMessage != "" {
 				<div class="alert alert-error">{ form.ErrorMessage }</div>
 			}
 			<form method="post" action={ routepath.AppSettingsLocale } class="space-y-4">
 				<div class="form-control">
 					<label class="label">
-						<span class="label-text">{ T(loc, "web.profile.field_locale") }</span>
+						<span class="label-text">{ webtemplates.T(loc, "web.profile.field_locale") }</span>
 					</label>
 					<select class="select select-bordered w-full" name="locale">
 						if settingsLocaleValue(form) == "en-US" {
-							<option value="en-US" selected>{ T(loc, "web.settings.locale.option_en_us") }</option>
+							<option value="en-US" selected>{ webtemplates.T(loc, "web.settings.locale.option_en_us") }</option>
 						} else {
-							<option value="en-US">{ T(loc, "web.settings.locale.option_en_us") }</option>
+							<option value="en-US">{ webtemplates.T(loc, "web.settings.locale.option_en_us") }</option>
 						}
 						if settingsLocaleValue(form) == "pt-BR" {
-							<option value="pt-BR" selected>{ T(loc, "web.settings.locale.option_pt_br") }</option>
+							<option value="pt-BR" selected>{ webtemplates.T(loc, "web.settings.locale.option_pt_br") }</option>
 						} else {
-							<option value="pt-BR">{ T(loc, "web.settings.locale.option_pt_br") }</option>
+							<option value="pt-BR">{ webtemplates.T(loc, "web.settings.locale.option_pt_br") }</option>
 						}
 					</select>
 				</div>
 				<div class="card-actions justify-end">
-					<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.locale.submit_save") }</button>
+					<button class="btn btn-primary" type="submit">{ webtemplates.T(loc, "web.settings.locale.submit_save") }</button>
 				</div>
 			</form>
 		</div>
 	</section>
 }
 
-templ SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) {
+templ SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc webtemplates.Localizer) {
 	<section id="settings-security" class="space-y-6">
 		<div class="card bg-base-200">
 			<div class="card-body">
-				<h2 class="card-title">{ T(loc, "web.settings.security.title") }</h2>
-				<p class="text-sm opacity-80">{ T(loc, "web.settings.security.description") }</p>
+				<h2 class="card-title">{ webtemplates.T(loc, "web.settings.security.title") }</h2>
+				<p class="text-sm opacity-80">{ webtemplates.T(loc, "web.settings.security.description") }</p>
 				<div id="settings-security-error" class="alert alert-error" hidden></div>
 				<div class="card-actions justify-end">
-					<button id="settings-passkey-add" type="button" class="btn btn-primary">{ T(loc, "web.settings.security.add_passkey") }</button>
+					<button id="settings-passkey-add" type="button" class="btn btn-primary">{ webtemplates.T(loc, "web.settings.security.add_passkey") }</button>
 				</div>
 			</div>
 		</div>
 		<div class="card bg-base-200">
 			<div class="card-body">
-				<h3 class="card-title">{ T(loc, "web.settings.security.list_title") }</h3>
+				<h3 class="card-title">{ webtemplates.T(loc, "web.settings.security.list_title") }</h3>
 				if len(passkeys) == 0 {
-					<div class="text-sm opacity-80">{ T(loc, "web.settings.security.empty") }</div>
+					<div class="text-sm opacity-80">{ webtemplates.T(loc, "web.settings.security.empty") }</div>
 				} else {
 					<div class="overflow-x-auto">
 						<table class="table table-zebra">
 							<thead>
 								<tr>
-									<th>{ T(loc, "web.settings.security.table.passkey") }</th>
-									<th>{ T(loc, "web.settings.security.table.created") }</th>
-									<th>{ T(loc, "web.settings.security.table.last_used") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.security.table.passkey") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.security.table.created") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.security.table.last_used") }</th>
 								</tr>
 							</thead>
 							<tbody>
 								for _, passkey := range passkeys {
 									<tr>
-										<td>{ T(loc, "web.settings.security.passkey_label", passkey.Number) }</td>
+										<td>{ webtemplates.T(loc, "web.settings.security.passkey_label", passkey.Number) }</td>
 										<td>{ passkey.CreatedAt }</td>
 										<td>{ passkey.LastUsedAt }</td>
 									</tr>
@@ -224,31 +226,31 @@ templ SettingsSecurityFragment(passkeys []SettingsPasskeyRow, loc Localizer) {
 		hidden
 		data-passkey-start-path={ routepath.AppSettingsSecurityPasskeysStart }
 		data-passkey-finish-path={ routepath.AppSettingsSecurityPasskeysFinish }
-		data-passkey-start-error={ T(loc, "web.settings.security.js.start_error") }
-		data-passkey-finish-error={ T(loc, "web.settings.security.js.finish_error") }
-		data-passkey-failed={ T(loc, "web.settings.security.js.failed") }
+		data-passkey-start-error={ webtemplates.T(loc, "web.settings.security.js.start_error") }
+		data-passkey-finish-error={ webtemplates.T(loc, "web.settings.security.js.finish_error") }
+		data-passkey-failed={ webtemplates.T(loc, "web.settings.security.js.failed") }
 	></div>
 	<script defer src="/static/settings-passkeys.js"></script>
 }
 
-templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, loc Localizer) {
+templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, loc webtemplates.Localizer) {
 	<section id="settings-ai-keys" class="space-y-6">
 		<div class="card bg-base-200">
 			<div class="card-body">
-				<h2 class="card-title">{ T(loc, "web.settings.ai_keys.title") }</h2>
+				<h2 class="card-title">{ webtemplates.T(loc, "web.settings.ai_keys.title") }</h2>
 				if len(keys) == 0 {
-					<div class="text-sm opacity-80">{ T(loc, "web.settings.ai_keys.empty") }</div>
+					<div class="text-sm opacity-80">{ webtemplates.T(loc, "web.settings.ai_keys.empty") }</div>
 				} else {
 					<div class="overflow-x-auto">
 						<table class="table table-zebra">
 							<thead>
 								<tr>
-									<th>{ T(loc, "web.settings.ai_keys.table.label") }</th>
-									<th>{ T(loc, "web.settings.ai_keys.table.provider") }</th>
-									<th>{ T(loc, "web.settings.ai_keys.table.status") }</th>
-									<th>{ T(loc, "web.settings.ai_keys.table.created") }</th>
-									<th>{ T(loc, "web.settings.ai_keys.table.revoked") }</th>
-									<th>{ T(loc, "web.settings.ai_keys.table.actions") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_keys.table.label") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_keys.table.provider") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_keys.table.status") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_keys.table.created") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_keys.table.revoked") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_keys.table.actions") }</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -262,7 +264,7 @@ templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, l
 										<td>
 											if key.CanRevoke {
 												<form method="post" action={ routepath.AppSettingsAIKeyRevoke(key.ID) }>
-													<button class="btn btn-error btn-xs" type="submit">{ T(loc, "web.settings.ai_keys.revoke") }</button>
+													<button class="btn btn-error btn-xs" type="submit">{ webtemplates.T(loc, "web.settings.ai_keys.revoke") }</button>
 												</form>
 											} else {
 												<span class="opacity-60">-</span>
@@ -278,31 +280,31 @@ templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, l
 		</div>
 		<div class="card bg-base-200">
 			<div class="card-body">
-				<h3 class="card-title">{ T(loc, "web.settings.ai_keys.add_title") }</h3>
+				<h3 class="card-title">{ webtemplates.T(loc, "web.settings.ai_keys.add_title") }</h3>
 				if form.ErrorMessage != "" {
 					<div class="alert alert-error">{ form.ErrorMessage }</div>
 				}
 				<form method="post" action={ routepath.AppSettingsAIKeys } class="space-y-4">
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_provider") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_keys.field_provider") }</span>
 						</label>
 						<input class="input input-bordered w-full" type="text" value={ settingsAIKeyProviderLabel(form) } disabled/>
 					</div>
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_label") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_keys.field_label") }</span>
 						</label>
 						<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
 					</div>
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_secret") }</span>
+							<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_keys.field_secret") }</span>
 						</label>
 						<input class="input input-bordered w-full" type="password" name="secret" required/>
 					</div>
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.ai_keys.submit_add") }</button>
+						<button class="btn btn-primary" type="submit">{ webtemplates.T(loc, "web.settings.ai_keys.submit_add") }</button>
 					</div>
 				</form>
 			</div>
@@ -310,26 +312,26 @@ templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, l
 	</section>
 }
 
-templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgentRow, loc Localizer) {
+templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgentRow, loc webtemplates.Localizer) {
 	<section id="settings-ai-agents" class="space-y-6">
 		<div class="card bg-base-200">
 			<div class="card-body">
-				<h2 class="card-title">{ T(loc, "web.settings.ai_agents.title") }</h2>
+				<h2 class="card-title">{ webtemplates.T(loc, "web.settings.ai_agents.title") }</h2>
 				if len(agents) == 0 {
-					<div class="text-sm opacity-80">{ T(loc, "web.settings.ai_agents.empty") }</div>
+					<div class="text-sm opacity-80">{ webtemplates.T(loc, "web.settings.ai_agents.empty") }</div>
 				} else {
 					<div class="overflow-x-auto">
 						<table class="table table-zebra">
 							<thead>
 								<tr>
-									<th>{ T(loc, "web.settings.ai_agents.table.label") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.provider") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.model") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.status") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.active_campaigns") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.created") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.instructions") }</th>
-									<th>{ T(loc, "web.settings.ai_agents.table.actions") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.label") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.provider") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.model") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.status") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.active_campaigns") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.created") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.instructions") }</th>
+									<th>{ webtemplates.T(loc, "web.settings.ai_agents.table.actions") }</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -345,14 +347,14 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 										<td>
 											if agent.CanDelete {
 												<form method="post" action={ routepath.AppSettingsAIAgentDelete(agent.ID) }>
-													<button class="btn btn-error btn-xs" type="submit">{ T(loc, "web.settings.ai_agents.delete") }</button>
+													<button class="btn btn-error btn-xs" type="submit">{ webtemplates.T(loc, "web.settings.ai_agents.delete") }</button>
 												</form>
 											} else if agent.ActiveCampaignCount > 0 {
-												<div class="tooltip tooltip-left" data-tip={ T(loc, "web.settings.ai_agents.tooltip_delete_disabled_in_use") }>
-													<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ T(loc, "web.settings.ai_agents.delete") }</button>
+												<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "web.settings.ai_agents.tooltip_delete_disabled_in_use") }>
+													<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ webtemplates.T(loc, "web.settings.ai_agents.delete") }</button>
 												</div>
 											} else {
-												<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ T(loc, "web.settings.ai_agents.delete") }</button>
+												<button class="btn btn-error btn-xs" type="button" disabled data-settings-ai-agent-delete-disabled="true">{ webtemplates.T(loc, "web.settings.ai_agents.delete") }</button>
 											}
 										</td>
 									</tr>
@@ -365,23 +367,23 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 		</div>
 		<div class="card bg-base-200">
 			<div class="card-body">
-				<h3 class="card-title">{ T(loc, "web.settings.ai_agents.add_title") }</h3>
-				<p class="text-sm opacity-80">{ T(loc, "web.settings.ai_agents.description") }</p>
+				<h3 class="card-title">{ webtemplates.T(loc, "web.settings.ai_agents.add_title") }</h3>
+				<p class="text-sm opacity-80">{ webtemplates.T(loc, "web.settings.ai_agents.description") }</p>
 				if form.ErrorMessage != "" {
 					<div class="alert alert-error">{ form.ErrorMessage }</div>
 				}
 				if len(form.CredentialOptions) == 0 {
 					<div class="alert">
-						<span>{ T(loc, "web.settings.ai_agents.empty_credentials") }</span>
+						<span>{ webtemplates.T(loc, "web.settings.ai_agents.empty_credentials") }</span>
 					</div>
 				} else {
 					<form method="get" action={ routepath.AppSettingsAIAgents } class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_credential") }</span>
+								<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_agents.field_credential") }</span>
 							</label>
 							<select class="select select-bordered w-full" name="credential_id" required>
-								<option value="">{ T(loc, "web.settings.ai_agents.option_select_credential") }</option>
+								<option value="">{ webtemplates.T(loc, "web.settings.ai_agents.option_select_credential") }</option>
 								for _, option := range form.CredentialOptions {
 									if settingsAIAgentsCredentialSelected(form, option.ID) {
 										<option value={ option.ID } selected>{ option.Label } ({ option.Provider })</option>
@@ -392,17 +394,17 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 							</select>
 						</div>
 						<div class="form-control">
-							<button class="btn btn-outline" type="submit">{ T(loc, "web.settings.ai_agents.submit_load_models") }</button>
+							<button class="btn btn-outline" type="submit">{ webtemplates.T(loc, "web.settings.ai_agents.submit_load_models") }</button>
 						</div>
 					</form>
 					<form method="post" action={ routepath.AppSettingsAIAgents } class="space-y-4">
 						<input type="hidden" name="credential_id" value={ form.CredentialID }/>
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_model") }</span>
+								<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_agents.field_model") }</span>
 							</label>
 							<select class="select select-bordered w-full" name="model" required>
-								<option value="">{ T(loc, "web.settings.ai_agents.option_select_model") }</option>
+								<option value="">{ webtemplates.T(loc, "web.settings.ai_agents.option_select_model") }</option>
 								for _, option := range form.ModelOptions {
 									if settingsAIAgentsModelSelected(form, option.ID) {
 										<option value={ option.ID } selected>{ option.ID }</option>
@@ -413,27 +415,27 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 							</select>
 							if len(form.ModelOptions) == 0 {
 								<label class="label">
-									<span class="label-text-alt">{ T(loc, "web.settings.ai_agents.helper_load_models") }</span>
+									<span class="label-text-alt">{ webtemplates.T(loc, "web.settings.ai_agents.helper_load_models") }</span>
 								</label>
 							}
 						</div>
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_label") }</span>
+								<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_agents.field_label") }</span>
 							</label>
 							<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
 							<label class="label">
-								<span class="label-text-alt">{ T(loc, "web.settings.ai_agents.helper_label") }</span>
+								<span class="label-text-alt">{ webtemplates.T(loc, "web.settings.ai_agents.helper_label") }</span>
 							</label>
 						</div>
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_instructions") }</span>
+								<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_agents.field_instructions") }</span>
 							</label>
 							<textarea class="textarea textarea-bordered min-h-32 w-full" name="instructions">{ form.Instructions }</textarea>
 						</div>
 						<div class="card-actions justify-end">
-							<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.ai_agents.submit_create") }</button>
+							<button class="btn btn-primary" type="submit">{ webtemplates.T(loc, "web.settings.ai_agents.submit_create") }</button>
 						</div>
 					</form>
 				}

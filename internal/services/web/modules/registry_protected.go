@@ -23,17 +23,10 @@ func buildProtectedModules(
 	opts ProtectedModuleOptions,
 ) []module.Module {
 	base := modulehandler.NewBaseFromPrincipal(requestPrincipal)
-	dashboardOptions := dashboard.ProtectedSurfaceOptions{
-		Base:   base,
-		Logger: opts.Logger,
-	}
 	settingsOptions := settings.ProtectedSurfaceOptions{
 		Base:          base,
 		FlashMeta:     opts.RequestSchemePolicy,
 		DashboardSync: opts.DashboardSync,
-	}
-	notificationsOptions := notifications.ProtectedSurfaceOptions{
-		Base: base,
 	}
 	campaignsOptions := campaigns.ProtectedSurfaceOptions{
 		Base:             base,
@@ -45,11 +38,19 @@ func buildProtectedModules(
 	}
 
 	protected := []module.Module{
-		dashboard.ComposeProtected(dashboardOptions, deps.Dashboard),
+		dashboard.Compose(
+			deps.Dashboard.UserHubClient,
+			deps.Dashboard.StatusClient,
+			base,
+			opts.Logger,
+		),
 		settings.ComposeProtected(settingsOptions, deps.Settings),
 	}
-	if notificationsModule, ok := notifications.ComposeProtected(notificationsOptions, deps.Notifications); ok {
-		protected = append(protected, notificationsModule)
+	if deps.Notifications.NotificationClient != nil {
+		protected = append(protected, notifications.Compose(
+			deps.Notifications.NotificationClient,
+			base,
+		))
 	}
 	if campaignsModule, ok := campaigns.ComposeProtected(campaignsOptions, deps.Campaigns); ok {
 		protected = append(protected, campaignsModule)

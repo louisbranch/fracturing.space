@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"strings"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // CharacterCreationPageView holds the data for the dedicated creation page.
@@ -341,25 +342,25 @@ func creationConditionalHidden(show bool) string {
 }
 
 // creationWeaponHandednessLabel resolves the display label for weapon hand use.
-func creationWeaponHandednessLabel(loc Localizer, burden int32) string {
+func creationWeaponHandednessLabel(loc webtemplates.Localizer, burden int32) string {
 	switch burden {
 	case 1:
-		return T(loc, "game.character_creation.weapon_handedness.one_handed")
+		return webtemplates.T(loc, "game.character_creation.weapon_handedness.one_handed")
 	case 2:
-		return T(loc, "game.character_creation.weapon_handedness.two_handed")
+		return webtemplates.T(loc, "game.character_creation.weapon_handedness.two_handed")
 	default:
 		return ""
 	}
 }
 
-func creationWeaponGroupLabel(loc Localizer, key string) string {
+func creationWeaponGroupLabel(loc webtemplates.Localizer, key string) string {
 	switch strings.TrimSpace(key) {
 	case "magic":
-		return T(loc, "game.character_creation.weapon_group.magic")
+		return webtemplates.T(loc, "game.character_creation.weapon_group.magic")
 	case "combat_wheelchair":
-		return T(loc, "game.character_creation.weapon_group.combat_wheelchair")
+		return webtemplates.T(loc, "game.character_creation.weapon_group.combat_wheelchair")
 	default:
-		return T(loc, "game.character_creation.weapon_group.physical")
+		return webtemplates.T(loc, "game.character_creation.weapon_group.physical")
 	}
 }
 
@@ -396,7 +397,7 @@ func creationWeaponGroups(groups []CampaignCreationWeaponGroupView, fallback []C
 	return result
 }
 
-templ creationPrimaryWeaponGroups(view CharacterCreationPageView, loc Localizer) {
+templ creationPrimaryWeaponGroups(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	for _, group := range creationWeaponGroups(view.Creation.PrimaryWeaponGroups, view.Creation.PrimaryWeapons) {
 		<div class="mt-4">
 			<div class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] opacity-60">{ creationWeaponGroupLabel(loc, group.Key) }</div>
@@ -441,7 +442,7 @@ templ creationPrimaryWeaponGroups(view CharacterCreationPageView, loc Localizer)
 	}
 }
 
-templ creationSecondaryWeaponGroups(view CharacterCreationPageView, loc Localizer) {
+templ creationSecondaryWeaponGroups(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	for _, group := range creationWeaponGroups(view.Creation.SecondaryWeaponGroups, view.Creation.SecondaryWeapons) {
 		<div class="mt-4">
 			<div class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] opacity-60">{ creationWeaponGroupLabel(loc, group.Key) }</div>
@@ -571,7 +572,7 @@ templ creationSelectableOptionCard(
 		}
 		if showImageFrame {
 			<figure class="h-48 md:h-[16.5rem] md:w-44 md:self-start bg-base-300 shrink-0">
-				@AppImage(AppImageView{
+				@webtemplates.AppImage(webtemplates.AppImageView{
 					Src:        imageURL,
 					Alt:        name,
 					WidthPX:    2,
@@ -653,7 +654,7 @@ templ creationCheckboxOptionCard(id string, name string, imageURL string, checkb
 	}
 }
 
-templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
+templ CharacterCreationPage(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<div class="grid gap-6 lg:grid-cols-[14rem_1fr]" data-character-creation-page="true">
 		if len(view.Creation.NextStepPrefetchURLs) > 0 {
 			<div class="sr-only" aria-hidden="true" data-image-prefetch-root="character-creation">
@@ -703,7 +704,7 @@ templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
 			if len(view.Creation.UnmetReasons) > 0 {
 				<details class="collapse collapse-arrow border border-base-300 bg-base-100" data-character-creation-unmet="true">
 					<summary class="collapse-title text-sm font-medium">
-						{ T(loc, "game.character_creation.unmet_requirements") }
+						{ webtemplates.T(loc, "game.character_creation.unmet_requirements") }
 					</summary>
 					<div class="collapse-content">
 						<ul class="list-disc ps-5 text-sm opacity-80">
@@ -718,7 +719,7 @@ templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
 	</div>
 }
 
-templ creationResetForm(view CharacterCreationPageView, loc Localizer) {
+templ creationResetForm(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<button
 		class="btn btn-outline btn-error btn-sm"
 		type="submit"
@@ -727,13 +728,13 @@ templ creationResetForm(view CharacterCreationPageView, loc Localizer) {
 		formnovalidate
 		data-character-creation-reset="true"
 		onclick="return confirm(this.dataset.confirmText);"
-		data-confirm-text={ T(loc, "game.character_creation.confirm_start_again") }
+		data-confirm-text={ webtemplates.T(loc, "game.character_creation.confirm_start_again") }
 	>
-		{ T(loc, "game.character_creation.action_start_again") }
+		{ webtemplates.T(loc, "game.character_creation.action_start_again") }
 	</button>
 }
 
-templ creationFooter(view CharacterCreationPageView, loc Localizer) {
+templ creationFooter(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<div class="grid items-center gap-3 pt-2 md:grid-cols-[1fr_auto_1fr]">
 		<div class="justify-self-start">
 			@creationResetForm(view, loc)
@@ -745,22 +746,22 @@ templ creationFooter(view CharacterCreationPageView, loc Localizer) {
 	</div>
 }
 
-templ creationNextButton(loc Localizer, disabled bool) {
+templ creationNextButton(loc webtemplates.Localizer, disabled bool) {
 	<button
 		class="btn btn-primary btn-wide"
 		type="submit"
 		disabled?={ disabled }
 		data-character-creation-next="true"
-	>{ T(loc, "game.character_creation.action_next") }</button>
+	>{ webtemplates.T(loc, "game.character_creation.action_next") }</button>
 }
 
 // --- Summary Card (when creation is complete) ---
 
-templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer) {
+templ creationSummaryBody(creation CampaignCharacterCreationView, loc webtemplates.Localizer) {
 	<div class="grid gap-4 lg:grid-cols-2">
 		<div class="space-y-4">
 			<div>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.class_subclass") }</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.class_subclass") }</span>
 				<p class="text-sm">
 					{ creationNameByID(creation.Classes, creation.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name }) }
 					if creationNameByID(creation.Subclasses, creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) != "" {
@@ -771,7 +772,7 @@ templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer)
 				</p>
 			</div>
 			<div>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.heritage") }</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.heritage") }</span>
 				<p class="text-sm">
 					{ campaignCreationHeritageDisplayName(creation) }
 					if creationNameByID(creation.Communities, creation.Heritage.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) != "" {
@@ -813,7 +814,7 @@ templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer)
 				</div>
 			}
 			<div>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.traits") }</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.traits") }</span>
 				<div class="mt-1 flex flex-wrap gap-2">
 					<span class="badge badge-outline badge-sm">AGI { creation.Agility }</span>
 					<span class="badge badge-outline badge-sm">STR { creation.Strength }</span>
@@ -824,7 +825,7 @@ templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer)
 				</div>
 			</div>
 			<div>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.equipment") }</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.equipment") }</span>
 				<div class="mt-1 flex flex-wrap gap-2">
 					<span class="badge badge-outline badge-sm">
 						{ creationNameByID(creation.PrimaryWeapons, creation.PrimaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
@@ -844,7 +845,7 @@ templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer)
 			</div>
 			if len(creation.Experiences) > 0 {
 				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.experiences") }</span>
+					<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.experiences") }</span>
 					<div class="mt-1 flex flex-wrap gap-2">
 						for _, exp := range creation.Experiences {
 							<span class="badge badge-outline badge-sm">{ exp.Name } { creationFormatModifier(exp.Modifier) }</span>
@@ -854,7 +855,7 @@ templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer)
 			}
 			if len(creation.DomainCardIDs) > 0 {
 				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.domain_cards") }</span>
+					<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.domain_cards") }</span>
 					<div class="mt-1 flex flex-wrap gap-2">
 						for _, cardID := range creation.DomainCardIDs {
 							<span class="badge badge-outline badge-sm">
@@ -867,31 +868,31 @@ templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer)
 		</div>
 		<div class="space-y-4">
 			<div>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.details") }</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.details") }</span>
 				<p class="text-sm">{ creationTruncate(creation.Description, 200) }</p>
 			</div>
 			<div>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.background") }</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.background") }</span>
 				<p class="text-sm">{ creationTruncate(creation.Background, 200) }</p>
 			</div>
 			<div>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.connections") }</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.step.connections") }</span>
 				<p class="text-sm">{ creationTruncate(creation.Connections, 200) }</p>
 			</div>
 		</div>
 	</div>
 }
 
-templ creationSummaryCard(view CharacterCreationPageView, loc Localizer) {
+templ creationSummaryCard(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<div class="alert alert-success mb-4" data-character-creation-ready="true">
-		<span>{ T(loc, "game.character_creation.ready") }</span>
+		<span>{ webtemplates.T(loc, "game.character_creation.ready") }</span>
 	</div>
 	<div class="card bg-base-100 border border-base-300 shadow-sm" data-character-creation-summary="true">
 		<div class="card-body gap-4">
-			<h3 class="card-title text-lg">{ T(loc, "game.character_creation.summary_title") }</h3>
+			<h3 class="card-title text-lg">{ webtemplates.T(loc, "game.character_creation.summary_title") }</h3>
 			@creationSummaryBody(view.Creation, loc)
 			@creationFooter(view, loc) {
-				<a class="btn btn-primary btn-wide" href={ routepath.AppCampaignCharacters(view.CampaignID) } data-character-creation-back-to-campaign="true">{ T(loc, "game.character_creation.action_back_to_campaign") }</a>
+				<a class="btn btn-primary btn-wide" href={ routepath.AppCampaignCharacters(view.CampaignID) } data-character-creation-back-to-campaign="true">{ webtemplates.T(loc, "game.character_creation.action_back_to_campaign") }</a>
 			}
 		</div>
 	</div>
@@ -899,18 +900,18 @@ templ creationSummaryCard(view CharacterCreationPageView, loc Localizer) {
 
 // --- Step 1: Class & Subclass ---
 
-templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
+templ creationStepClassSubclass(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="1">
-		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.class_subclass") }</h3>
+		<h3 class="text-lg font-semibold">{ webtemplates.T(loc, "game.character_creation.step.class_subclass") }</h3>
 		<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.ClassID) } data-class-selected>
 			<span class="font-medium" data-class-selected-name>
 				{ creationNameByID(view.Creation.Classes, view.Creation.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name }) }
 			</span>
-			<button type="button" class="btn btn-ghost btn-xs" data-class-change>{ T(loc, "game.character_creation.action_change") }</button>
+			<button type="button" class="btn btn-ghost btn-xs" data-class-change>{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 		</div>
 		<div class={ creationClassGridHidden(view.Creation.ClassID) } data-class-grid>
 			<div class="form-control">
-				<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.class") }</span></label>
+				<label class="label"><span class="label-text font-medium">{ webtemplates.T(loc, "game.character_creation.field.class") }</span></label>
 				<div class="grid grid-cols-1 gap-4">
 					for _, class := range view.Creation.Classes {
 						<div data-class-card={ class.ID } data-class-name={ class.Name }>
@@ -921,13 +922,13 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 								</div>
 								if len(class.DomainNames) > 0 {
 									<p class="text-sm opacity-70">
-										<span class="font-medium">{ T(loc, "game.character_creation.label.domains") }:</span>
+										<span class="font-medium">{ webtemplates.T(loc, "game.character_creation.label.domains") }:</span>
 										{ " " + strings.Join(class.DomainNames, ", ") }
 									</p>
 								}
 								if class.HopeFeature.Name != "" {
 									<div class="mt-1">
-										<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.label.hope") }:</span>
+										<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.label.hope") }:</span>
 										<span class="text-sm font-semibold">{ " " + class.HopeFeature.Name }</span>
 										if class.HopeFeature.Description != "" {
 											<p class="text-sm opacity-60 mt-0.5">@creationCatalogInlineMarkdown(class.HopeFeature.Description)</p>
@@ -936,7 +937,7 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 								}
 								if len(class.Features) > 0 {
 									<div class="mt-1">
-										<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.label.features") }:</span>
+										<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.label.features") }:</span>
 										@creationFeatureList(class.Features)
 									</div>
 								}
@@ -952,10 +953,10 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 					<span class="font-medium" data-subclass-selected-name>
 						{ creationNameByID(view.Creation.Subclasses, view.Creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) }
 					</span>
-					<button type="button" class="btn btn-ghost btn-xs" data-subclass-change>{ T(loc, "game.character_creation.action_change") }</button>
+					<button type="button" class="btn btn-ghost btn-xs" data-subclass-change>{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 				</div>
 				<div class={ creationClassGridHidden(view.Creation.SubclassID) } data-subclass-grid>
-					<div class="divider">{ T(loc, "game.character_creation.field.subclass") }</div>
+					<div class="divider">{ webtemplates.T(loc, "game.character_creation.field.subclass") }</div>
 					for _, classID := range creationSubclassClassIDs(view.Creation.Subclasses) {
 						<div class={ "form-control " + creationSubclassGroupHidden(classID, view.Creation.ClassID) } data-subclass-group={ classID }>
 							<div class="grid grid-cols-1 gap-4">
@@ -1164,9 +1165,9 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 
 // --- Step 2: Heritage ---
 
-templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
+templ creationStepHeritage(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="2">
-		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.heritage") }</h3>
+		<h3 class="text-lg font-semibold">{ webtemplates.T(loc, "game.character_creation.step.heritage") }</h3>
 		<div class="space-y-2 text-sm opacity-80">
 			<p>Single heritage keeps both ancestry features from one ancestry.</p>
 			<p>Mixed heritage takes the first feature from one ancestry and the second feature from another.</p>
@@ -1209,7 +1210,7 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 				if campaignCreationSelectedAncestryFeatureNames(view.Creation, 0) != "" {
 					<span class="badge badge-outline badge-sm" data-heritage-selected-feature>{ campaignCreationSelectedAncestryFeatureNames(view.Creation, 0) }</span>
 				}
-				<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="first">{ T(loc, "game.character_creation.action_change") }</button>
+				<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="first">{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 			</div>
 			<div class={ creationClassGridHidden(view.Creation.Heritage.FirstFeatureAncestryID) } data-heritage-grid="first">
 				<div class="form-control">
@@ -1258,7 +1259,7 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 						<span class="badge badge-outline badge-sm" data-heritage-selected-feature>{ campaignCreationSelectedAncestryFeatureNames(view.Creation, 1) }</span>
 					}
 					<span class={ "badge badge-ghost badge-sm " + creationConditionalHidden(campaignCreationHeritageAutoLabel(view.Creation) != "") } data-heritage-selected-label>{ campaignCreationHeritageAutoLabel(view.Creation) }</span>
-					<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="mixed">{ T(loc, "game.character_creation.action_change") }</button>
+					<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="mixed">{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 				</div>
 				<div class={ creationConditionalHidden(campaignCreationHeritageMode(view.Creation) == "mixed" && strings.TrimSpace(view.Creation.Heritage.SecondFeatureAncestryID) == "") } data-heritage-grid="mixed">
 					<div class="form-control mt-4">
@@ -1291,15 +1292,15 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 		</div>
 		<div data-heritage-section="community">
 			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.Heritage.CommunityID) } data-heritage-selected="community">
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.community") }:</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.field.community") }:</span>
 				<span class="font-medium" data-heritage-selected-name>{ campaignCreationSelectedCommunityName(view.Creation) }</span>
 				if campaignCreationFeatureNames(campaignCreationSelectedCommunityFeatures(view.Creation)) != "" {
 					<span class="badge badge-outline badge-sm" data-heritage-selected-feature>{ campaignCreationFeatureNames(campaignCreationSelectedCommunityFeatures(view.Creation)) }</span>
 				}
-				<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="community">{ T(loc, "game.character_creation.action_change") }</button>
+				<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="community">{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 			</div>
 			<div class={ creationClassGridHidden(view.Creation.Heritage.CommunityID) } data-heritage-grid="community">
-				<div class="divider">{ T(loc, "game.character_creation.field.community") }</div>
+				<div class="divider">{ webtemplates.T(loc, "game.character_creation.field.community") }</div>
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						for _, community := range view.Creation.Communities {
@@ -1578,19 +1579,19 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 
 // --- Step 3: Traits ---
 
-templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
+templ creationStepTraits(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="3">
-		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.traits") }</h3>
-		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.traits_guidance") }</p>
+		<h3 class="text-lg font-semibold">{ webtemplates.T(loc, "game.character_creation.step.traits") }</h3>
+		<p class="text-sm opacity-70">{ webtemplates.T(loc, "game.character_creation.traits_guidance") }</p>
 		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
 			for _, trait := range view.Creation.TraitOptions {
 				@creationTraitCard(loc, trait)
 			}
 		</div>
 		<div class="alert alert-error hidden text-sm" data-traits-error>
-			<span>{ T(loc, "game.character_creation.traits_distribution_error") }</span>
+			<span>{ webtemplates.T(loc, "game.character_creation.traits_distribution_error") }</span>
 		</div>
-		<p class="text-sm opacity-50" data-traits-remaining data-label={ T(loc, "game.character_creation.traits_remaining_label") }></p>
+		<p class="text-sm opacity-50" data-traits-remaining data-label={ webtemplates.T(loc, "game.character_creation.traits_remaining_label") }></p>
 		@creationFooter(view, loc) {
 			@creationNextButton(loc, !creationStepTraitsReady(view.Creation))
 		}
@@ -1658,13 +1659,13 @@ templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
 	</script>
 }
 
-templ creationTraitCard(loc Localizer, trait CampaignCreationTraitOptionView) {
+templ creationTraitCard(loc webtemplates.Localizer, trait CampaignCreationTraitOptionView) {
 	<div class="rounded-lg border border-base-300/50 bg-base-200/25 px-2 py-3 text-center">
 		<p class="text-[0.65rem] font-bold uppercase tracking-wider text-base-content/50">
 			{ trait.Abbreviation }
 		</p>
 		<p class="mt-1 text-sm font-medium">
-			{ T(loc, trait.LabelKey) }
+			{ webtemplates.T(loc, trait.LabelKey) }
 		</p>
 		<div class="mt-2 flex justify-center">
 			<select name={ trait.FieldName } required class="select select-bordered select-sm w-full max-w-[5rem] text-center font-bold">
@@ -1675,28 +1676,28 @@ templ creationTraitCard(loc Localizer, trait CampaignCreationTraitOptionView) {
 			</select>
 		</div>
 		<p class="mt-2 text-xs leading-tight text-base-content/40">
-			{ T(loc, trait.SkillsKey) }
+			{ webtemplates.T(loc, trait.SkillsKey) }
 		</p>
 	</div>
 }
 
 // --- Step 4: Equipment ---
 
-templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
+templ creationStepEquipment(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="4">
-		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.equipment") }</h3>
+		<h3 class="text-lg font-semibold">{ webtemplates.T(loc, "game.character_creation.step.equipment") }</h3>
 		<!-- Primary Weapon -->
 		<div data-equip-section="weapon_primary_id">
 			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.PrimaryWeaponID) } data-equip-selected>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.primary_weapon") }:</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.field.primary_weapon") }:</span>
 				<span class="font-medium" data-equip-selected-name>
 					{ creationNameByID(view.Creation.PrimaryWeapons, view.Creation.PrimaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
 				</span>
-				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 			</div>
 			<div class={ creationClassGridHidden(view.Creation.PrimaryWeaponID) } data-equip-grid>
 				<div class="form-control">
-					<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.primary_weapon") }</span></label>
+					<label class="label"><span class="label-text font-medium">{ webtemplates.T(loc, "game.character_creation.field.primary_weapon") }</span></label>
 					@creationPrimaryWeaponGroups(view, loc)
 				</div>
 			</div>
@@ -1704,18 +1705,18 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 		<!-- Secondary Weapon -->
 		<div data-equip-section="weapon_secondary_id">
 			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 hidden" } data-equip-selected>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.secondary_weapon") }:</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.field.secondary_weapon") }:</span>
 				<span class="font-medium" data-equip-selected-name></span>
-				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 			</div>
 			<div data-equip-grid>
-				<div class="divider">{ T(loc, "game.character_creation.field.secondary_weapon") }</div>
+				<div class="divider">{ webtemplates.T(loc, "game.character_creation.field.secondary_weapon") }</div>
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
-						<div data-equip-card data-equip-card-name={ T(loc, "game.character_creation.value.none") }>
+						<div data-equip-card data-equip-card-name={ webtemplates.T(loc, "game.character_creation.value.none") }>
 							@creationSelectableOptionCard(
 								"",
-								T(loc, "game.character_creation.value.none"),
+								webtemplates.T(loc, "game.character_creation.value.none"),
 								view.Creation.SecondaryWeaponNoneImageURL,
 								"weapon_secondary_id",
 								"radio",
@@ -1726,7 +1727,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 								"equipment-secondary-weapon",
 								nil,
 							) {
-								<p class={ "text-xs opacity-60 mt-1 " + creationConditionalHidden(creationTwoHandedPrimarySelected(view.Creation)) } data-secondary-none-locked-copy>{ T(loc, "game.character_creation.secondary_weapon_disabled_two_handed") }</p>
+								<p class={ "text-xs opacity-60 mt-1 " + creationConditionalHidden(creationTwoHandedPrimarySelected(view.Creation)) } data-secondary-none-locked-copy>{ webtemplates.T(loc, "game.character_creation.secondary_weapon_disabled_two_handed") }</p>
 							}
 						</div>
 					</div>
@@ -1737,12 +1738,12 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 		<!-- Armor -->
 		<div data-equip-section="armor_id">
 			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 hidden" } data-equip-selected>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.armor") }:</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.field.armor") }:</span>
 				<span class="font-medium" data-equip-selected-name></span>
-				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 			</div>
 			<div data-equip-grid>
-				<div class="divider">{ T(loc, "game.character_creation.field.armor") }</div>
+				<div class="divider">{ webtemplates.T(loc, "game.character_creation.field.armor") }</div>
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 						for _, armor := range view.Creation.Armor {
@@ -1779,12 +1780,12 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 		<!-- Potion -->
 		<div data-equip-section="potion_item_id">
 			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 hidden" } data-equip-selected>
-				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.potion") }:</span>
+				<span class="text-sm font-medium opacity-70">{ webtemplates.T(loc, "game.character_creation.field.potion") }:</span>
 				<span class="font-medium" data-equip-selected-name></span>
-				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ webtemplates.T(loc, "game.character_creation.action_change") }</button>
 			</div>
 			<div data-equip-grid>
-				<div class="divider">{ T(loc, "game.character_creation.field.potion") }</div>
+				<div class="divider">{ webtemplates.T(loc, "game.character_creation.field.potion") }</div>
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 						for _, item := range view.Creation.PotionItems {
@@ -2032,29 +2033,29 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 
 // --- Step 5: Experiences ---
 
-templ creationStepExperiences(view CharacterCreationPageView, loc Localizer) {
+templ creationStepExperiences(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="5">
-		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.experiences") }</h3>
-		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.experiences_guidance") }</p>
+		<h3 class="text-lg font-semibold">{ webtemplates.T(loc, "game.character_creation.step.experiences") }</h3>
+		<p class="text-sm opacity-70">{ webtemplates.T(loc, "game.character_creation.experiences_guidance") }</p>
 		<!-- Experience 1 -->
 		<div class="card bg-base-100 border border-base-300 p-4 space-y-3">
 			<div class="flex items-center gap-2">
-				<h4 class="text-sm font-medium">{ T(loc, "game.character_creation.experience_label_1") }</h4>
+				<h4 class="text-sm font-medium">{ webtemplates.T(loc, "game.character_creation.experience_label_1") }</h4>
 				<span class="badge badge-outline">+2</span>
 			</div>
 			<label class="form-control">
-				<span class="label-text">{ T(loc, "game.character_creation.field.experience_name") }</span>
+				<span class="label-text">{ webtemplates.T(loc, "game.character_creation.field.experience_name") }</span>
 				<input type="text" name="experience_0_name" required class="input input-bordered" value={ creationExperienceValue(view.Creation.Experiences, 0, "name") }/>
 			</label>
 		</div>
 		<!-- Experience 2 -->
 		<div class="card bg-base-100 border border-base-300 p-4 space-y-3">
 			<div class="flex items-center gap-2">
-				<h4 class="text-sm font-medium">{ T(loc, "game.character_creation.experience_label_2") }</h4>
+				<h4 class="text-sm font-medium">{ webtemplates.T(loc, "game.character_creation.experience_label_2") }</h4>
 				<span class="badge badge-outline">+2</span>
 			</div>
 			<label class="form-control">
-				<span class="label-text">{ T(loc, "game.character_creation.field.experience_name") }</span>
+				<span class="label-text">{ webtemplates.T(loc, "game.character_creation.field.experience_name") }</span>
 				<input type="text" name="experience_1_name" required class="input input-bordered" value={ creationExperienceValue(view.Creation.Experiences, 1, "name") }/>
 			</label>
 		</div>
@@ -2083,10 +2084,10 @@ templ creationStepExperiences(view CharacterCreationPageView, loc Localizer) {
 
 // --- Step 6: Domain Cards ---
 
-templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
+templ creationStepDomainCards(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="6">
-		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.domain_cards") }</h3>
-		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.domain_cards_hint") }</p>
+		<h3 class="text-lg font-semibold">{ webtemplates.T(loc, "game.character_creation.step.domain_cards") }</h3>
+		<p class="text-sm opacity-70">{ webtemplates.T(loc, "game.character_creation.domain_cards_hint") }</p>
 		<div class="grid gap-3 md:grid-cols-2">
 			for _, card := range view.Creation.DomainCards {
 				@creationCheckboxOptionCard(
@@ -2106,7 +2107,7 @@ templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
 						if card.Type != "" {
 							<span class="badge badge-ghost badge-sm">{ card.Type }</span>
 						}
-						<span class="badge badge-outline badge-sm">{ T(loc, "game.character_creation.label_level") }{ card.Level }</span>
+						<span class="badge badge-outline badge-sm">{ webtemplates.T(loc, "game.character_creation.label_level") }{ card.Level }</span>
 						if creationFormatRecallCost(card.RecallCost) != "" {
 							<span class="badge badge-outline badge-sm">{ creationFormatRecallCost(card.RecallCost) }</span>
 						}
@@ -2166,7 +2167,7 @@ type creationTextareaConfig struct {
 
 // --- Steps 7-9: Details, Background, Connections ---
 
-templ creationStepDetails(view CharacterCreationPageView, loc Localizer) {
+templ creationStepDetails(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	@creationStepTextarea(view, loc, creationTextareaConfig{
 		FieldName: "description", StepNumber: "7", Value: view.Creation.Description,
 		HeadingKey: "game.character_creation.step.details",
@@ -2176,7 +2177,7 @@ templ creationStepDetails(view CharacterCreationPageView, loc Localizer) {
 	})
 }
 
-templ creationStepBackground(view CharacterCreationPageView, loc Localizer) {
+templ creationStepBackground(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	@creationStepTextarea(view, loc, creationTextareaConfig{
 		FieldName: "background", StepNumber: "8", Value: view.Creation.Background,
 		HeadingKey: "game.character_creation.step.background",
@@ -2186,7 +2187,7 @@ templ creationStepBackground(view CharacterCreationPageView, loc Localizer) {
 	})
 }
 
-templ creationStepConnections(view CharacterCreationPageView, loc Localizer) {
+templ creationStepConnections(view CharacterCreationPageView, loc webtemplates.Localizer) {
 	@creationStepTextarea(view, loc, creationTextareaConfig{
 		FieldName: "connections", StepNumber: "9", Value: view.Creation.Connections,
 		HeadingKey: "game.character_creation.step.connections",
@@ -2196,15 +2197,15 @@ templ creationStepConnections(view CharacterCreationPageView, loc Localizer) {
 	})
 }
 
-templ creationStepTextarea(view CharacterCreationPageView, loc Localizer, cfg creationTextareaConfig) {
+templ creationStepTextarea(view CharacterCreationPageView, loc webtemplates.Localizer, cfg creationTextareaConfig) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step={ cfg.StepNumber }>
-		<h3 class="text-lg font-semibold">{ T(loc, cfg.HeadingKey) }</h3>
+		<h3 class="text-lg font-semibold">{ webtemplates.T(loc, cfg.HeadingKey) }</h3>
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<textarea name={ cfg.FieldName } rows="6" required class="textarea textarea-bordered w-full">{ cfg.Value }</textarea>
 			<ul class="text-sm opacity-70 space-y-2 list-disc list-inside">
-				<li>{ T(loc, cfg.GuidanceKey1) }</li>
-				<li>{ T(loc, cfg.GuidanceKey2) }</li>
-				<li>{ T(loc, cfg.GuidanceKey3) }</li>
+				<li>{ webtemplates.T(loc, cfg.GuidanceKey1) }</li>
+				<li>{ webtemplates.T(loc, cfg.GuidanceKey2) }</li>
+				<li>{ webtemplates.T(loc, cfg.GuidanceKey3) }</li>
 			</ul>
 		</div>
 		@creationFooter(view, loc) {

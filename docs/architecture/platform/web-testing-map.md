@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 13
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-23"
 ---
 
 # Web Testing Map
@@ -68,6 +68,10 @@ Canonical implementation path: `internal/services/web/`.
 - `internal/services/web/modules/<area>/handlers*_test.go`
   Area-owned transport behavior when a route has meaningful branching or page
   assembly.
+- `internal/services/web/modules/<area>/*/`
+  For hotspot areas such as `campaigns`, prefer the owned surface package
+  tests once transport is split under subpackages like `overview`,
+  `participants`, `characters`, `sessions`, or `invites`.
 - `internal/services/web/modules/architecture_test.go`
   Cross-module AST-based architecture rules and module-template invariants.
 - `internal/services/web/modules/boundary_guardrails_test.go`

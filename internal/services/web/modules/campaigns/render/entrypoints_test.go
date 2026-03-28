@@ -73,6 +73,22 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 			marker: `data-campaign-session-card-id="s-1"`,
 		},
 		{
+			name: "session detail",
+			component: func() templ.Component {
+				return SessionDetailFragment(SessionDetailPageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					SessionID:              "s-1",
+					Sessions: []SessionView{{
+						ID:        "s-1",
+						Name:      "First Session",
+						Status:    "active",
+						StartedAt: "2026-03-21 10:00 UTC",
+					}},
+				}, nil)
+			},
+			marker: `data-campaign-session-detail-id="s-1"`,
+		},
+		{
 			name: "session create",
 			component: func() templ.Component {
 				return SessionCreateFragment(SessionCreatePageView{
@@ -81,6 +97,38 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 				}, nil)
 			},
 			marker: `data-campaign-session-create-page="true"`,
+		},
+		{
+			name: "campaign edit",
+			component: func() templ.Component {
+				return CampaignEditFragment(CampaignEditPageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{
+						CampaignID:      "camp-1",
+						Name:            "Skyline",
+						System:          "daggerheart",
+						GMMode:          "human",
+						Status:          "active",
+						LocaleValue:     "en-US",
+						Intent:          "standard",
+						AccessPolicy:    "private",
+						Theme:           "Storm over the city",
+						CanEditCampaign: true,
+					},
+				}, nil)
+			},
+			marker: `action="/app/campaigns/camp-1/edit"`,
+		},
+		{
+			name: "campaign ai binding",
+			component: func() templ.Component {
+				return CampaignAIBindingFragment(CampaignAIBindingPageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					AIBindingSettings: AIBindingSettingsView{
+						Options: []AIAgentOptionView{{ID: "agent-1", Name: "Narrator", Selected: true}},
+					},
+				}, nil)
+			},
+			marker: `data-campaign-ai-binding-page="true"`,
 		},
 		{
 			name: "invites",
@@ -100,6 +148,71 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 				}, nil)
 			},
 			marker: `data-campaign-invite-card-id="invite-1"`,
+		},
+		{
+			name: "participant create",
+			component: func() templ.Component {
+				return ParticipantCreateFragment(ParticipantCreatePageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					ParticipantCreator: ParticipantCreatorView{
+						Name: "Rook",
+					},
+				}, nil)
+			},
+			marker: `data-campaign-participant-create-page="true"`,
+		},
+		{
+			name: "participant edit",
+			component: func() templ.Component {
+				return ParticipantEditFragment(ParticipantEditPageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					ParticipantID:          "p-1",
+					ParticipantEditor: ParticipantEditorView{
+						ID:   "p-1",
+						Name: "Rook",
+					},
+				}, nil)
+			},
+			marker: `data-campaign-participant-edit-page="true"`,
+		},
+		{
+			name: "character list",
+			component: func() templ.Component {
+				return CharactersFragment(CharactersPageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{
+						CampaignID:         "camp-1",
+						CanCreateCharacter: true,
+					},
+					Characters: []CharacterView{{
+						ID:   "char-1",
+						Name: "Mira",
+						Kind: "pc",
+					}},
+				}, nil)
+			},
+			marker: `data-campaign-character-card-id="char-1"`,
+		},
+		{
+			name: "character create",
+			component: func() templ.Component {
+				return CharacterCreateFragment(CharacterCreatePageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					CharacterEditor:        CharacterEditorView{Kind: "PC"},
+				}, nil)
+			},
+			marker: `data-campaign-character-create-page="true"`,
+		},
+		{
+			name: "character edit",
+			component: func() templ.Component {
+				return CharacterEditFragment(CharacterEditPageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					CharacterID:            "char-1",
+					Character:              CharacterView{ID: "char-1", Name: "Mira"},
+					CharacterEditor:        CharacterEditorView{ID: "char-1", Name: "Mira", Kind: "PC"},
+				}, nil)
+			},
+			marker: `data-campaign-character-edit-page="true"`,
 		},
 	}
 

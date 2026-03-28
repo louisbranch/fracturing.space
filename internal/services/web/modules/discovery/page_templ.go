@@ -9,6 +9,8 @@ import (
 	"github.com/a-h/templ"
 	templruntime "github.com/a-h/templ/runtime"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // StarterEntryView holds template data for a single starter discovery-entry card.
@@ -25,7 +27,7 @@ type StarterEntryView struct {
 	Players     string
 }
 
-func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
+func DiscoveryFragment(view DiscoveryPageView, loc webtemplates.Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -53,7 +55,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(view.Status)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 21, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 24, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -64,9 +66,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.title"))
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 22, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 25, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -77,9 +79,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.subtitle"))
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.subtitle"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 23, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 26, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -95,9 +97,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.status.unavailable.title"))
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.status.unavailable.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 27, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 30, Col: 100}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -108,9 +110,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.status.unavailable.body"))
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.status.unavailable.body"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 28, Col: 85}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 31, Col: 98}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -133,7 +135,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(item.EntryID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 34, Col: 101}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 37, Col: 101}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -146,7 +148,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(item.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 36, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 39, Col: 51}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -164,7 +166,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(item.Description)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 38, Col: 57}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 41, Col: 57}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -187,7 +189,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var10 string
 					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 42, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 45, Col: 58}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
@@ -208,9 +210,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var11 string
-					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.label.system"))
+					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.label.system"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 47, Col: 54}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 50, Col: 67}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 					if templ_7745c5c3_Err != nil {
@@ -223,7 +225,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var12 string
 					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(item.System)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 47, Col: 71}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 50, Col: 84}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 					if templ_7745c5c3_Err != nil {
@@ -240,9 +242,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var13 string
-					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.label.difficulty"))
+					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.label.difficulty"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 50, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 53, Col: 71}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 					if templ_7745c5c3_Err != nil {
@@ -255,7 +257,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var14 string
 					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(item.Difficulty)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 50, Col: 79}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 53, Col: 92}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
@@ -272,9 +274,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var15 string
-					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.label.duration"))
+					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.label.duration"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 53, Col: 56}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 56, Col: 69}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 					if templ_7745c5c3_Err != nil {
@@ -287,7 +289,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var16 string
 					templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(item.Duration)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 53, Col: 75}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 56, Col: 88}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 					if templ_7745c5c3_Err != nil {
@@ -304,9 +306,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var17 string
-					templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.label.gm_mode"))
+					templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.label.gm_mode"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 56, Col: 55}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 59, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 					if templ_7745c5c3_Err != nil {
@@ -319,7 +321,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var18 string
 					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(item.GmMode)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 56, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 59, Col: 85}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 					if templ_7745c5c3_Err != nil {
@@ -336,9 +338,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var19 string
-					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.label.players"))
+					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.label.players"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 59, Col: 55}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 62, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 					if templ_7745c5c3_Err != nil {
@@ -351,7 +353,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var20 string
 					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(item.Players)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 59, Col: 73}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 62, Col: 86}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 					if templ_7745c5c3_Err != nil {
@@ -369,7 +371,7 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var21 templ.SafeURL
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignStarter(item.EntryID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 63, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 66, Col: 92}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -380,9 +382,9 @@ func DiscoveryFragment(view DiscoveryPageView, loc Localizer) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var22 string
-				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.discovery.cta.open"))
+				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.discovery.cta.open"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/discovery/page.templ`, Line: 63, Col: 129}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `discovery/page.templ`, Line: 66, Col: 142}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 				if templ_7745c5c3_Err != nil {

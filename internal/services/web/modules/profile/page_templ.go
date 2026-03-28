@@ -11,6 +11,8 @@ import (
 	"github.com/a-h/templ"
 	templruntime "github.com/a-h/templ/runtime"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 type PublicProfileView struct {
@@ -37,7 +39,7 @@ func publicProfileAvatarAlt(view PublicProfileView) string {
 	return displayName + " avatar"
 }
 
-func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
+func PublicProfilePage(view PublicProfileView, loc webtemplates.Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -65,7 +67,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(publicProfileValue(view.Username))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 36, Col: 71}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 37, Col: 71}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -78,7 +80,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(publicProfileValue(view.Username))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 36, Col: 109}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 37, Col: 109}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -96,7 +98,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var4 templ.SafeURL
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppDashboard)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 38, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 39, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -107,9 +109,9 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.error.action_back_to_dashboard"))
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.error.action_back_to_dashboard"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 38, Col: 116}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 39, Col: 129}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -127,7 +129,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var6 templ.SafeURL
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.Root)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 40, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 41, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -138,9 +140,9 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "error.back_to_home"))
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "error.back_to_home"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 40, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 41, Col: 105}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -156,9 +158,9 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_username"))
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_username"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 48, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 49, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -171,7 +173,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(publicProfileValue(view.Username))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 49, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 50, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -187,9 +189,9 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_name"))
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_name"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 53, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 54, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -202,7 +204,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(publicProfileValue(view.Name))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 54, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 55, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -219,9 +221,9 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var12 string
-			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_pronouns"))
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_pronouns"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 59, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 60, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -234,7 +236,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(participantPronounsLabel(loc, view.Pronouns))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 60, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 61, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -251,9 +253,9 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var14 string
-			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.settings.user_profile.field_bio"))
+			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "web.settings.user_profile.field_bio"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 65, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 66, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -266,7 +268,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(publicProfileValue(view.Bio))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/profile/page.templ`, Line: 66, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `profile/page.templ`, Line: 67, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -281,7 +283,7 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = AppImage(AppImageView{
+		templ_7745c5c3_Err = webtemplates.AppImage(webtemplates.AppImageView{
 			Src:        publicProfileValue(view.AvatarURL),
 			Alt:        publicProfileAvatarAlt(view),
 			WidthPX:    2,

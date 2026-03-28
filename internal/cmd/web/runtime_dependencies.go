@@ -26,10 +26,10 @@ func (r runtimeDependencies) close() {
 
 // bootstrapOptions holds injectable overrides for runtime dependency assembly.
 // Production callers leave all fields nil to use defaults; tests override
-// NewConn and/or Resolvers for deterministic wiring.
+// NewConn and/or Descriptors for deterministic wiring.
 type bootstrapOptions struct {
-	NewConn   managedConnFactory
-	Resolvers map[string]dependencyAddressResolver
+	NewConn     managedConnFactory
+	Descriptors []web.StartupDependencyDescriptor
 }
 
 // bootstrapRuntimeDependencies assembles the runtime dependency graph used by
@@ -42,17 +42,17 @@ func bootstrapRuntimeDependencies(
 	opts *bootstrapOptions,
 ) (runtimeDependencies, error) {
 	newConn := platformgrpc.NewManagedConn
-	resolvers := dependencyAddressResolverDefaults()
+	descriptors := web.StartupDependencyDescriptors()
 	if opts != nil {
 		if opts.NewConn != nil {
 			newConn = opts.NewConn
 		}
-		if opts.Resolvers != nil {
-			resolvers = opts.Resolvers
+		if opts.Descriptors != nil {
+			descriptors = append([]web.StartupDependencyDescriptor(nil), opts.Descriptors...)
 		}
 	}
 
-	requirements, err := dependencyRequirementsWithResolvers(cfg, reporter, resolvers)
+	requirements, err := dependencyRequirementsWithDescriptors(cfg, reporter, descriptors)
 	if err != nil {
 		return runtimeDependencies{}, fmt.Errorf("resolve web dependency requirements: %w", err)
 	}

@@ -289,7 +289,7 @@ func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newCompletedDependencyBundle(
+		Dependencies: newDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
@@ -322,7 +322,7 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	t.Parallel()
 
 	h, err := newTestHandler(Config{
-		Dependencies: newCompletedDependencyBundle(
+		Dependencies: newDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
@@ -468,28 +468,15 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "avatar_set_v1", "apothecary_journeyman", 40)
 	auth := newFakeWebAuthClient()
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	h, err := newTestHandler(Config{
-		Dependencies: newCompletedDependencyBundle(
-			principal.Dependencies{
-				SessionClient: auth,
-				AccountClient: account,
-				SocialClient:  social,
-				AssetBaseURL:  assetBaseURL,
-			},
-			modules.Dependencies{
-				AssetBaseURL: assetBaseURL,
-				PublicAuth:   modules.PublicAuthDependencies{AuthClient: auth},
-				Profile:      modules.ProfileDependencies{SocialClient: social},
-				Settings: modules.SettingsDependencies{
-					SocialClient:     social,
-					AccountClient:    account,
-					CredentialClient: fakeCredentialClient{},
-					AgentClient:      fakeAgentClient{},
-				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
-			},
-		),
-	})
+	cfg := defaultProtectedConfig(auth)
+	cfg.Dependencies.Principal.AccountClient = account
+	cfg.Dependencies.Principal.SocialClient = social
+	cfg.Dependencies.Principal.AssetBaseURL = assetBaseURL
+	cfg.Dependencies.Modules.AssetBaseURL = assetBaseURL
+	cfg.Dependencies.Modules.Profile.SocialClient = social
+	cfg.Dependencies.Modules.Settings.SocialClient = social
+	cfg.Dependencies.Modules.Settings.AccountClient = account
+	h, err := newTestHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}

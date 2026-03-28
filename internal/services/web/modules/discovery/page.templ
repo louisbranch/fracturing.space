@@ -1,6 +1,9 @@
 package discovery
 
-import "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 // StarterEntryView holds template data for a single starter discovery-entry card.
 type StarterEntryView struct {
@@ -16,16 +19,16 @@ type StarterEntryView struct {
 	Players     string
 }
 
-templ DiscoveryFragment(view DiscoveryPageView, loc Localizer) {
+templ DiscoveryFragment(view DiscoveryPageView, loc webtemplates.Localizer) {
 	<div id="discover-root">
 		<section class="container py-8" data-discovery-status={ view.Status }>
-			<h1 class="text-2xl font-bold">{ T(loc, "web.discovery.title") }</h1>
-			<p class="mt-1 opacity-70">{ T(loc, "web.discovery.subtitle") }</p>
+			<h1 class="text-2xl font-bold">{ webtemplates.T(loc, "web.discovery.title") }</h1>
+			<p class="mt-1 opacity-70">{ webtemplates.T(loc, "web.discovery.subtitle") }</p>
 			if view.Unavailable {
 				<div class="mt-6 card border border-base-300 bg-base-100 shadow-sm" data-discovery-unavailable="true">
 					<div class="card-body gap-2">
-						<h2 class="card-title text-lg">{ T(loc, "web.discovery.status.unavailable.title") }</h2>
-						<p class="text-sm opacity-80">{ T(loc, "web.discovery.status.unavailable.body") }</p>
+						<h2 class="card-title text-lg">{ webtemplates.T(loc, "web.discovery.status.unavailable.title") }</h2>
+						<p class="text-sm opacity-80">{ webtemplates.T(loc, "web.discovery.status.unavailable.body") }</p>
 					</div>
 				</div>
 			} else {
@@ -44,23 +47,23 @@ templ DiscoveryFragment(view DiscoveryPageView, loc Localizer) {
 								</div>
 								<div class="flex flex-wrap gap-2 mt-2 text-xs opacity-70">
 									if item.System != "" {
-										<span>{ T(loc, "web.discovery.label.system") }: { item.System }</span>
+										<span>{ webtemplates.T(loc, "web.discovery.label.system") }: { item.System }</span>
 									}
 									if item.Difficulty != "" {
-										<span>{ T(loc, "web.discovery.label.difficulty") }: { item.Difficulty }</span>
+										<span>{ webtemplates.T(loc, "web.discovery.label.difficulty") }: { item.Difficulty }</span>
 									}
 									if item.Duration != "" {
-										<span>{ T(loc, "web.discovery.label.duration") }: { item.Duration }</span>
+										<span>{ webtemplates.T(loc, "web.discovery.label.duration") }: { item.Duration }</span>
 									}
 									if item.GmMode != "" {
-										<span>{ T(loc, "web.discovery.label.gm_mode") }: { item.GmMode }</span>
+										<span>{ webtemplates.T(loc, "web.discovery.label.gm_mode") }: { item.GmMode }</span>
 									}
 									if item.Players != "" {
-										<span>{ T(loc, "web.discovery.label.players") }: { item.Players }</span>
+										<span>{ webtemplates.T(loc, "web.discovery.label.players") }: { item.Players }</span>
 									}
 								</div>
 								<div class="card-actions mt-3">
-									<a class="btn btn-sm btn-primary" href={ routepath.AppCampaignStarter(item.EntryID) }>{ T(loc, "web.discovery.cta.open") }</a>
+									<a class="btn btn-sm btn-primary" href={ routepath.AppCampaignStarter(item.EntryID) }>{ webtemplates.T(loc, "web.discovery.cta.open") }</a>
 								</div>
 							</div>
 						</article>

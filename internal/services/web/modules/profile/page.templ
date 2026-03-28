@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 type PublicProfileView struct {
@@ -30,14 +31,14 @@ func publicProfileAvatarAlt(view PublicProfileView) string {
 	return displayName + " avatar"
 }
 
-templ PublicProfilePage(view PublicProfileView, loc Localizer) {
+templ PublicProfilePage(view PublicProfileView, loc webtemplates.Localizer) {
 	<section id="public-profile-page" class="w-full grid gap-6">
 		<header class="flex items-center justify-between gap-4">
 			<h1 data-public-profile-username={ publicProfileValue(view.Username) }>{ publicProfileValue(view.Username) }</h1>
 			if view.ViewerSignedIn {
-				<a href={ routepath.AppDashboard } class="btn btn-primary btn-sm">{ T(loc, "web.error.action_back_to_dashboard") }</a>
+				<a href={ routepath.AppDashboard } class="btn btn-primary btn-sm">{ webtemplates.T(loc, "web.error.action_back_to_dashboard") }</a>
 			} else {
-				<a href={ routepath.Root } class="btn btn-primary btn-sm">{ T(loc, "error.back_to_home") }</a>
+				<a href={ routepath.Root } class="btn btn-primary btn-sm">{ webtemplates.T(loc, "error.back_to_home") }</a>
 			}
 		</header>
 		<div class="card bg-base-200 border border-base-300 shadow-xl overflow-hidden" data-public-profile-card="true">
@@ -45,31 +46,31 @@ templ PublicProfilePage(view PublicProfileView, loc Localizer) {
 				<div class="card-body order-2 lg:order-1 gap-4">
 					<dl class="space-y-3 text-sm">
 						<div>
-							<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_username") }</dt>
+							<dt class="opacity-70">{ webtemplates.T(loc, "web.settings.user_profile.field_username") }</dt>
 							<dd data-public-profile-field="username">{ publicProfileValue(view.Username) }</dd>
 						</div>
 						if publicProfileValue(view.Name) != "" {
 							<div>
-								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_name") }</dt>
+								<dt class="opacity-70">{ webtemplates.T(loc, "web.settings.user_profile.field_name") }</dt>
 								<dd data-public-profile-field="name">{ publicProfileValue(view.Name) }</dd>
 							</div>
 						}
 						if publicProfileValue(view.Pronouns) != "" {
 							<div>
-								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }</dt>
+								<dt class="opacity-70">{ webtemplates.T(loc, "web.settings.user_profile.field_pronouns") }</dt>
 								<dd data-public-profile-field="pronouns">{ participantPronounsLabel(loc, view.Pronouns) }</dd>
 							</div>
 						}
 						if publicProfileValue(view.Bio) != "" {
 							<div>
-								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_bio") }</dt>
+								<dt class="opacity-70">{ webtemplates.T(loc, "web.settings.user_profile.field_bio") }</dt>
 								<dd data-public-profile-field="bio" class="whitespace-pre-wrap">{ publicProfileValue(view.Bio) }</dd>
 							</div>
 						}
 					</dl>
 				</div>
 				<figure class="order-1 lg:order-2 w-full bg-base-300 self-start">
-					@AppImage(AppImageView{
+					@webtemplates.AppImage(webtemplates.AppImageView{
 						Src:        publicProfileValue(view.AvatarURL),
 						Alt:        publicProfileAvatarAlt(view),
 						WidthPX:    2,

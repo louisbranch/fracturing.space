@@ -5,7 +5,6 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -26,7 +25,7 @@ func (h handlers) handleLocaleGet(w http.ResponseWriter, r *http.Request) {
 // handleLocalePost handles this route in the module transport layer.
 func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := forminput.ParseInvalidInput(r, "error.web.message.failed_to_parse_locale_form", "failed to parse locale form"); err != nil {
+	if err := httpx.ParseFormInvalidInput(r, "error.web.message.failed_to_parse_locale_form", "failed to parse locale form"); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}

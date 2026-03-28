@@ -17,6 +17,7 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
@@ -435,7 +436,7 @@ func TestMountCampaignsGetWithEmptyListUsesHXRedirect(t *testing.T) {
 func TestCampaignBreadcrumbsFallbackToCampaignID(t *testing.T) {
 	t.Parallel()
 
-	breadcrumbs := campaignBreadcrumbs("camp-1", "   ", nil)
+	breadcrumbs := campaigndetail.CampaignBreadcrumbs("camp-1", "   ", nil)
 	if len(breadcrumbs) != 2 {
 		t.Fatalf("len(breadcrumbs) = %d, want 2", len(breadcrumbs))
 	}

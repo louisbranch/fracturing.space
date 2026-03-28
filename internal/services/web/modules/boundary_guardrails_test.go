@@ -103,14 +103,14 @@ func TestSettingsCapabilitySplitStaysConstructorVisible(t *testing.T) {
 	testast.AssertFuncCallsSelector(t, "settings/composition.go", "Compose", "settingsapp", "NewAccountService")
 	testast.AssertFuncCallsSelector(t, "settings/composition.go", "Compose", "settingsapp", "NewAIService")
 
-	testast.AssertTypeExists(t, "settings/app/service.go", "AccountServiceConfig")
-	testast.AssertTypeExists(t, "settings/app/service.go", "AIServiceConfig")
-	testast.AssertTypeExists(t, "settings/app/service.go", "accountService")
-	testast.AssertTypeExists(t, "settings/app/service.go", "aiService")
-	testast.AssertTypeMissing(t, "settings/app/service.go", "ServiceConfig")
-	testast.AssertFuncExists(t, "settings/app/service.go", "NewAccountService")
-	testast.AssertFuncExists(t, "settings/app/service.go", "NewAIService")
-	testast.AssertFuncMissing(t, "settings/app/service.go", "NewService")
+	assertPackageHasType(t, "settings/app", "AccountServiceConfig")
+	assertPackageHasType(t, "settings/app", "AIServiceConfig")
+	assertPackageHasType(t, "settings/app", "accountService")
+	assertPackageHasType(t, "settings/app", "aiService")
+	assertPackageLacksType(t, "settings/app", "ServiceConfig")
+	assertPackageHasFunc(t, "settings/app", "NewAccountService")
+	assertPackageHasFunc(t, "settings/app", "NewAIService")
+	assertPackageLacksFunc(t, "settings/app", "NewService")
 }
 
 func TestPublicAuthSurfaceServicesStaySplitEndToEnd(t *testing.T) {
@@ -139,20 +139,17 @@ func TestPublicAuthSurfaceServicesStaySplitEndToEnd(t *testing.T) {
 	testast.AssertFuncCallsSelector(t, "publicauth/composition.go", "compose", "publicauthapp", "NewRecoveryService")
 	testast.AssertFuncExists(t, "publicauth/composition.go", "ComposeSurfaceSet")
 
-	testast.AssertTypeExists(t, "publicauth/app/service_page.go", "pageService")
-	testast.AssertTypeExists(t, "publicauth/app/service_session.go", "sessionService")
-	testast.AssertTypeExists(t, "publicauth/app/service_passkey.go", "passkeyService")
-	testast.AssertTypeExists(t, "publicauth/app/service_recovery.go", "recoveryService")
-	testast.AssertFuncExists(t, "publicauth/app/service_page.go", "NewPageService")
-	testast.AssertFuncExists(t, "publicauth/app/service_session.go", "NewSessionService")
-	testast.AssertFuncExists(t, "publicauth/app/service_passkey.go", "NewPasskeyService")
-	testast.AssertFuncExists(t, "publicauth/app/service_recovery.go", "NewRecoveryService")
-	testast.AssertFuncMissing(t, "publicauth/app/service_page.go", "NewService")
-	testast.AssertFuncMissing(t, "publicauth/app/service_session.go", "NewService")
-	testast.AssertFuncMissing(t, "publicauth/app/service_passkey.go", "NewService")
-	testast.AssertFuncMissing(t, "publicauth/app/service_recovery.go", "NewService")
-	testast.AssertTypeMissing(t, "publicauth/app/types.go", "Service")
-	testast.AssertTypeMissing(t, "publicauth/app/types.go", "Gateway")
+	assertPackageHasType(t, "publicauth/app", "pageService")
+	assertPackageHasType(t, "publicauth/app", "sessionService")
+	assertPackageHasType(t, "publicauth/app", "passkeyService")
+	assertPackageHasType(t, "publicauth/app", "recoveryService")
+	assertPackageHasFunc(t, "publicauth/app", "NewPageService")
+	assertPackageHasFunc(t, "publicauth/app", "NewSessionService")
+	assertPackageHasFunc(t, "publicauth/app", "NewPasskeyService")
+	assertPackageHasFunc(t, "publicauth/app", "NewRecoveryService")
+	assertPackageLacksFunc(t, "publicauth/app", "NewService")
+	assertPackageLacksType(t, "publicauth/app", "Service")
+	assertPackageLacksType(t, "publicauth/app", "Gateway")
 }
 
 func TestPublicAuthUsesSharedRedirectAndPrincipalSeams(t *testing.T) {
@@ -180,19 +177,19 @@ func TestRegistryUsesAreaOwnedCompositionEntrypoints(t *testing.T) {
 	t.Parallel()
 
 	testast.AssertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "publicauth", "ComposeSurfaceSet")
-	testast.AssertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "discovery", "ComposePublic")
-	testast.AssertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "profile", "ComposePublic")
-	testast.AssertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "invite", "ComposePublic")
+	testast.AssertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "discovery", "Compose")
+	testast.AssertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "profile", "Compose")
+	testast.AssertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "invite", "Compose")
 	testast.AssertFuncDoesNotCallSelector(t, "registry_public.go", "defaultPublicModules", "publicauthgateway", "NewGRPCGateway")
 	testast.AssertFuncDoesNotCallSelector(t, "registry_public.go", "defaultPublicModules", "profilegateway", "NewGRPCGateway")
 	testast.AssertFuncDoesNotCallSelector(t, "registry_public.go", "defaultPublicModules", "invitegateway", "NewGRPCGateway")
 	testast.AssertFuncDoesNotCallSelector(t, "registry_public.go", "defaultPublicModules", "dashboardsync", "New")
 
 	testast.AssertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "modulehandler", "NewBaseFromPrincipal")
-	testast.AssertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "dashboard", "ComposeProtected")
+	testast.AssertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "dashboard", "Compose")
 	testast.AssertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "settings", "ComposeProtected")
 	testast.AssertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "campaigns", "ComposeProtected")
-	testast.AssertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "notifications", "ComposeProtected")
+	testast.AssertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "notifications", "Compose")
 	testast.AssertFuncDoesNotCallSelector(t, "registry_protected.go", "buildProtectedModules", "dashboardgateway", "NewGRPCGateway")
 	testast.AssertFuncDoesNotCallSelector(t, "registry_protected.go", "buildProtectedModules", "settingsgateway", "NewGRPCGateway")
 	testast.AssertFuncDoesNotCallSelector(t, "registry_protected.go", "buildProtectedModules", "campaigngateway", "NewGRPCGateway")
@@ -289,6 +286,76 @@ func structFieldTypes(t *testing.T, path, structName string) map[string]string {
 
 	t.Fatalf("%s missing struct type %s", path, structName)
 	return nil
+}
+
+func assertPackageHasType(t *testing.T, dir, typeName string) {
+	t.Helper()
+
+	if packageHasType(t, dir, typeName) {
+		return
+	}
+	t.Fatalf("%s missing type %s", dir, typeName)
+}
+
+func assertPackageLacksType(t *testing.T, dir, typeName string) {
+	t.Helper()
+
+	if packageHasType(t, dir, typeName) {
+		t.Fatalf("%s unexpectedly defines type %s", dir, typeName)
+	}
+}
+
+func assertPackageHasFunc(t *testing.T, dir, funcName string) {
+	t.Helper()
+
+	if packageHasFunc(t, dir, funcName) {
+		return
+	}
+	t.Fatalf("%s missing func %s", dir, funcName)
+}
+
+func assertPackageLacksFunc(t *testing.T, dir, funcName string) {
+	t.Helper()
+
+	if packageHasFunc(t, dir, funcName) {
+		t.Fatalf("%s unexpectedly defines func %s", dir, funcName)
+	}
+}
+
+func packageHasType(t *testing.T, dir, typeName string) bool {
+	t.Helper()
+
+	for _, path := range goFilesUnder(t, dir, false) {
+		parsed := testast.ParseFile(t, path)
+		for _, decl := range parsed.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if ok && typeSpec.Name != nil && typeSpec.Name.Name == typeName {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func packageHasFunc(t *testing.T, dir, funcName string) bool {
+	t.Helper()
+
+	for _, path := range goFilesUnder(t, dir, false) {
+		parsed := testast.ParseFile(t, path)
+		for _, decl := range parsed.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if ok && fn.Name != nil && fn.Name.Name == funcName {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func TestWebModulePlaybookMatchesCurrentPublicModuleContract(t *testing.T) {

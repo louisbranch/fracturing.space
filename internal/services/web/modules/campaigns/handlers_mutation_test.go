@@ -691,20 +691,6 @@ func TestRequestContextWithUserIDBehavior(t *testing.T) {
 	}
 }
 
-func TestParseAppCharacterKind(t *testing.T) {
-	t.Parallel()
-
-	if kind, ok := parseAppCharacterKind("pc"); !ok || kind != campaignapp.CharacterKindPC {
-		t.Fatalf("parseAppCharacterKind pc = (%v, %v)", kind, ok)
-	}
-	if kind, ok := parseAppCharacterKind("npc"); !ok || kind != campaignapp.CharacterKindNPC {
-		t.Fatalf("parseAppCharacterKind npc = (%v, %v)", kind, ok)
-	}
-	if _, ok := parseAppCharacterKind("invalid"); ok {
-		t.Fatalf("expected invalid character kind to fail parse")
-	}
-}
-
 func managerMutationGateway() fakeGateway {
 	return fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},

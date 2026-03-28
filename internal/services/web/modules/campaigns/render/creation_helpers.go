@@ -1,31 +1,35 @@
 package render
 
-import "strings"
+import (
+	"strings"
+
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 const campaignCreationRequirementCompanionSheet = "companion_sheet_required"
 const campaignCreationSubclassBeastboundID = "subclass.beastbound"
 
 // campaignCreationStepLabel maps workflow step keys to localized reader-facing copy.
-func campaignCreationStepLabel(loc Localizer, stepKey string) string {
+func campaignCreationStepLabel(loc webtemplates.Localizer, stepKey string) string {
 	switch strings.TrimSpace(stepKey) {
 	case "class_subclass":
-		return T(loc, "game.character_creation.step.class_subclass")
+		return webtemplates.T(loc, "game.character_creation.step.class_subclass")
 	case "heritage":
-		return T(loc, "game.character_creation.step.heritage")
+		return webtemplates.T(loc, "game.character_creation.step.heritage")
 	case "traits":
-		return T(loc, "game.character_creation.step.traits")
+		return webtemplates.T(loc, "game.character_creation.step.traits")
 	case "details":
-		return T(loc, "game.character_creation.step.details")
+		return webtemplates.T(loc, "game.character_creation.step.details")
 	case "equipment":
-		return T(loc, "game.character_creation.step.equipment")
+		return webtemplates.T(loc, "game.character_creation.step.equipment")
 	case "background":
-		return T(loc, "game.character_creation.step.background")
+		return webtemplates.T(loc, "game.character_creation.step.background")
 	case "experiences":
-		return T(loc, "game.character_creation.step.experiences")
+		return webtemplates.T(loc, "game.character_creation.step.experiences")
 	case "domain_cards":
-		return T(loc, "game.character_creation.step.domain_cards")
+		return webtemplates.T(loc, "game.character_creation.step.domain_cards")
 	case "connections":
-		return T(loc, "game.character_creation.step.connections")
+		return webtemplates.T(loc, "game.character_creation.step.connections")
 	default:
 		return strings.TrimSpace(stepKey)
 	}
@@ -65,13 +69,13 @@ func campaignCreationIsStep(view CampaignCharacterCreationView, step int32) bool
 }
 
 // campaignCreationUnmetReason localizes workflow unmet reasons when they are message keys.
-func campaignCreationUnmetReason(loc Localizer, reason string) string {
+func campaignCreationUnmetReason(loc webtemplates.Localizer, reason string) string {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return ""
 	}
 	if strings.HasPrefix(reason, "game.") || strings.HasPrefix(reason, "error.") {
-		return T(loc, reason)
+		return webtemplates.T(loc, reason)
 	}
 	return reason
 }

@@ -1,8 +1,11 @@
 package campaigns
 
-import "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
-templ StarterPreviewFragment(preview starterPreviewView, loc Localizer) {
+templ StarterPreviewFragment(preview starterPreviewView, loc webtemplates.Localizer) {
 	<section class="max-w-5xl mx-auto px-4 space-y-6">
 		<div class="space-y-3">
 			<div class="flex flex-wrap gap-2 text-xs opacity-70">

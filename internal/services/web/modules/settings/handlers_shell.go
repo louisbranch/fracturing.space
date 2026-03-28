@@ -10,7 +10,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -48,13 +47,13 @@ func (h handlers) hasSameOriginProof(r *http.Request) bool {
 // withCredentialID extracts the credential ID path param and delegates to fn,
 // returning 404 when the param is missing.
 func (h handlers) withCredentialID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return routeparam.WithRequired("credentialID", h.WriteNotFound, fn)
+	return httpx.WithRequiredRouteParam("credentialID", h.WriteNotFound, fn)
 }
 
 // withAgentID extracts the agent ID path param and delegates to fn, returning
 // 404 when the param is missing.
 func (h handlers) withAgentID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return routeparam.WithRequired("agentID", h.WriteNotFound, fn)
+	return httpx.WithRequiredRouteParam("agentID", h.WriteNotFound, fn)
 }
 
 // writeSettingsPage centralizes common settings page shell rendering.

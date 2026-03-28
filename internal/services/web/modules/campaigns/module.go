@@ -5,6 +5,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
+	campaigndetail "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/detail"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -24,7 +25,7 @@ type Config struct {
 	PlayLaunchGrant  playlaunchgrant.Config
 	RequestMeta      requestmeta.SchemePolicy
 	Systems          campaignSystemRegistry
-	DashboardSync    DashboardSync
+	DashboardSync    campaigndetail.DashboardSync
 }
 
 // New returns a campaigns module with explicit dependencies.

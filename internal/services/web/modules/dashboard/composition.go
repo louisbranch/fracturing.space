@@ -14,51 +14,23 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
 
-// CompositionConfig owns the startup wiring required to construct the
-// production dashboard module without leaking gateway internals into the
-// registry package.
-type CompositionConfig struct {
-	Base          modulehandler.Base
-	Logger        *slog.Logger
-	UserHubClient dashboardgateway.UserHubClient
-	StatusClient  statusv1.StatusServiceClient
-}
-
-// ProtectedSurfaceOptions carries the cross-cutting inputs the protected registry is
-// allowed to pass into dashboard composition.
-type ProtectedSurfaceOptions struct {
-	Base   modulehandler.Base
-	Logger *slog.Logger
-}
-
-// Compose builds the production dashboard module from area-owned startup
-// dependencies.
-func Compose(config CompositionConfig) module.Module {
-	gateway := dashboardgateway.NewGRPCGateway(config.UserHubClient)
+// Compose builds the dashboard module from the exact startup dependencies the
+// area owns.
+func Compose(
+	userHubClient dashboardgateway.UserHubClient,
+	statusClient statusv1.StatusServiceClient,
+	base modulehandler.Base,
+	logger *slog.Logger,
+) module.Module {
+	gateway := dashboardgateway.NewGRPCGateway(userHubClient)
 	return New(Config{
 		Service: dashboardapp.NewService(
 			gateway,
-			config.Logger,
-			StatusHealthProvider(config.StatusClient, config.Logger),
+			logger,
+			StatusHealthProvider(statusClient, logger),
 		),
-		Base: config.Base,
+		Base: base,
 	})
-}
-
-// ComposeProtected composes the protected dashboard surface from module-owned
-// startup dependencies and shared cross-cutting inputs.
-func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) module.Module {
-	return Compose(newCompositionConfig(options, deps))
-}
-
-// newCompositionConfig projects startup dependencies into dashboard composition input.
-func newCompositionConfig(options ProtectedSurfaceOptions, deps Dependencies) CompositionConfig {
-	return CompositionConfig{
-		Base:          options.Base,
-		Logger:        options.Logger,
-		UserHubClient: deps.UserHubClient,
-		StatusClient:  deps.StatusClient,
-	}
 }
 
 // statusHealthTimeout caps a per-request status service query.

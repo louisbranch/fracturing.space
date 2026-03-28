@@ -78,16 +78,6 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 		"notifications": filepath.Join("app", "unavailable_gateway.go"),
 		"settings":      filepath.Join("app", "unavailable_gateway.go"),
 	}
-	moduleAppBoundaryFiles := map[string][]string{
-		"publicauth": {
-			filepath.Join("app", "doc.go"),
-			filepath.Join("app", "service_page.go"),
-			filepath.Join("app", "service_session.go"),
-			filepath.Join("app", "service_passkey.go"),
-			filepath.Join("app", "service_recovery.go"),
-			filepath.Join("gateway", "doc.go"),
-		},
-	}
 	for _, mod := range discoverModules(t) {
 		archetype, ok := moduleArchetypes[mod]
 		if !ok {
@@ -107,21 +97,19 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 			// transport-only modules intentionally keep orchestration minimal and
 			// do not require root/service or app/gateway subpackages.
 		case archetypeTransportLayered:
-			requiredFiles := []string{
+			for _, file := range []string{
 				filepath.Join("app", "doc.go"),
-				filepath.Join("app", "service.go"),
 				filepath.Join("gateway", "doc.go"),
-			}
-			if customFiles, ok := moduleAppBoundaryFiles[mod]; ok {
-				requiredFiles = customFiles
-			}
-			for _, file := range requiredFiles {
+			} {
 				path := filepath.Join(mod, file)
 				if _, err := os.Stat(path); err != nil {
 					t.Fatalf("module %q missing layered boundary file %q: %v", mod, file, err)
 				}
 			}
-			if len(goFilesUnder(t, filepath.Join(mod, "gateway"), false)) == 0 {
+			if !hasNonDocGoFilesUnder(t, filepath.Join(mod, "app")) {
+				t.Fatalf("module %q has no app implementation files", mod)
+			}
+			if !hasNonDocGoFilesUnder(t, filepath.Join(mod, "gateway")) {
 				t.Fatalf("module %q has no gateway implementation files", mod)
 			}
 		default:
@@ -131,75 +119,6 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 			path := filepath.Join(mod, unavailFile)
 			if _, err := os.Stat(path); err != nil {
 				t.Fatalf("protected module %q missing required file %q: %v", mod, unavailFile, err)
-			}
-		}
-	}
-}
-
-func TestSelectedModulesKeepContributorOwnedTransportSplits(t *testing.T) {
-	t.Parallel()
-
-	requiredFilesByModule := map[string][]string{
-		"settings": {
-			"handlers_profile.go",
-			"handlers_locale.go",
-			"handlers_ai_keys.go",
-			"handlers_ai_agents.go",
-			"handlers_shell.go",
-			"routes_account.go",
-			"routes_ai.go",
-		},
-	}
-
-	for mod, files := range requiredFilesByModule {
-		for _, file := range files {
-			path := filepath.Join(mod, file)
-			if _, err := os.Stat(path); err != nil {
-				t.Fatalf("module %q missing contributor-owned transport file %q: %v", mod, file, err)
-			}
-		}
-	}
-}
-
-func TestSelectedModulesKeepAreaOwnedCompositionEntrypoints(t *testing.T) {
-	t.Parallel()
-
-	for _, mod := range []string{
-		"campaigns",
-		"dashboard",
-		"discovery",
-		"invite",
-		"notifications",
-		"profile",
-		"publicauth",
-		"settings",
-	} {
-		path := filepath.Join(mod, "composition.go")
-		if _, err := os.Stat(path); err != nil {
-			t.Fatalf("module %q missing area-owned composition entrypoint %q: %v", mod, path, err)
-		}
-	}
-}
-
-func TestSelectedModulesKeepContributorOwnedAppAndGatewaySplits(t *testing.T) {
-	t.Parallel()
-
-	requiredFilesByModule := map[string][]string{
-		"settings": {
-			filepath.Join("app", "service_account.go"),
-			filepath.Join("app", "service_ai.go"),
-			filepath.Join("app", "unavailable_account.go"),
-			filepath.Join("app", "unavailable_ai.go"),
-			filepath.Join("gateway", "grpc_account.go"),
-			filepath.Join("gateway", "grpc_ai.go"),
-		},
-	}
-
-	for mod, files := range requiredFilesByModule {
-		for _, file := range files {
-			path := filepath.Join(mod, file)
-			if _, err := os.Stat(path); err != nil {
-				t.Fatalf("module %q missing contributor-owned app/gateway file %q: %v", mod, file, err)
 			}
 		}
 	}
@@ -296,11 +215,11 @@ func TestProtectedModuleHandlersDoNotBypassBaseResolverMethods(t *testing.T) {
 
 	// Protected module handlers embed modulehandler.Base, which now embeds the
 	// shared principal request-state seam while keeping user-id helpers local. This
-	// guard detects direct calls to webctx.WithResolvedUserID that would bypass
+	// guard detects direct calls to principal.WithResolvedUserID that would bypass
 	// the designed Base methods (RequestContextAndUserID, RequestLocaleTag,
 	// PageLocalizer, etc.).
 	forbiddenImports := map[string]struct{}{
-		"github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx": {},
+		"github.com/louisbranch/fracturing.space/internal/services/web/principal": {},
 	}
 	protectedModules := []string{"campaigns", "dashboard", "notifications", "settings"}
 	for _, mod := range protectedModules {
@@ -312,7 +231,7 @@ func TestProtectedModuleHandlersDoNotBypassBaseResolverMethods(t *testing.T) {
 			for _, imp := range parsed.Imports {
 				path := strings.Trim(imp.Path.Value, "\"")
 				if _, exists := forbiddenImports[path]; exists {
-					t.Errorf("%s imports %s; use modulehandler.Base methods instead of raw webctx calls", file, path)
+					t.Errorf("%s imports %s; use modulehandler.Base methods instead of raw principal context helpers", file, path)
 				}
 			}
 		}
@@ -322,9 +241,10 @@ func TestProtectedModuleHandlersDoNotBypassBaseResolverMethods(t *testing.T) {
 func TestProtectedModuleServicesDoNotImportWebContext(t *testing.T) {
 	t.Parallel()
 
-	// Service files should not import the webctx package. User ID validation
-	// belongs as a local helper, not as a dependency on web-platform plumbing.
-	forbidden := "github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx"
+	// Service files should not import the principal package just to attach user
+	// metadata. User ID validation belongs as a local helper, not as a dependency
+	// on transport request plumbing.
+	forbidden := "github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	protectedModules := []string{"campaigns", "dashboard", "notifications", "settings"}
 	for _, mod := range protectedModules {
 		for _, file := range moduleServiceFiles(t, mod) {
@@ -413,7 +333,7 @@ func TestSelectedModuleHandlersDoNotReadRawPathValues(t *testing.T) {
 				if !ok || sel.Sel == nil || sel.Sel.Name != "PathValue" {
 					return true
 				}
-				t.Errorf("%s calls raw PathValue; use platform/routeparam helpers instead", file)
+				t.Errorf("%s calls raw PathValue; use platform/httpx route-param helpers instead", file)
 				return true
 			})
 		}
@@ -692,4 +612,15 @@ func isGatewayFile(path string) bool {
 		return true
 	}
 	return strings.Contains(filepath.Base(path), "gateway")
+}
+
+func hasNonDocGoFilesUnder(t *testing.T, root string) bool {
+	t.Helper()
+
+	for _, file := range goFilesUnder(t, root, false) {
+		if filepath.Base(file) != "doc.go" {
+			return true
+		}
+	}
+	return false
 }
