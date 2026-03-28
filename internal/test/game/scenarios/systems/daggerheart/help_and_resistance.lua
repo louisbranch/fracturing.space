@@ -23,8 +23,10 @@ dh:attack{
   difficulty = 0,
   damage_type = "physical",
   resist_physical = true,
-  modifiers = {
+  hope_spends = {
     Modifiers.hope("help"),
+  },
+  modifiers = {
     Modifiers.mod("training", 10)
   },
   expect_hope_delta = -1,

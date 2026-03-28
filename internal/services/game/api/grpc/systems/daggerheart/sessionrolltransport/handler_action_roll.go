@@ -152,7 +152,10 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 	if in.GetUnderwater() && rollKind == pb.RollKind_ROLL_KIND_ACTION {
 		disadvantage++
 	}
-	hopeSpends := hopeSpendsFromModifiers(in.GetModifiers())
+	hopeSpends, err := normalizeHopeSpends(in.GetHopeSpends())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	spendEventCount := 0
 	totalSpend := 0
 	for _, spend := range hopeSpends {

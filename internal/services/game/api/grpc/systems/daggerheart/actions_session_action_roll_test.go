@@ -175,8 +175,8 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 		CharacterId: "char-1",
 		Trait:       "agility",
 		Difficulty:  10,
-		Modifiers: []*pb.ActionRollModifier{
-			{Value: 1, Source: "experience"},
+		HopeSpends: []*pb.ActionRollHopeSpend{
+			{Amount: 1, Source: "experience"},
 		},
 	})
 	if err != nil {
@@ -310,6 +310,9 @@ func TestSessionActionRoll_WithModifiers(t *testing.T) {
 		Difficulty:  10,
 		Modifiers: []*pb.ActionRollModifier{
 			{Value: 2, Source: "experience"},
+		},
+		HopeSpends: []*pb.ActionRollHopeSpend{
+			{Amount: 1, Source: "experience"},
 		},
 	})
 	if err != nil {

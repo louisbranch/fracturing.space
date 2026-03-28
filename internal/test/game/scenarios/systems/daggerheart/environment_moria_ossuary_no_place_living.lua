@@ -25,7 +25,7 @@ dh:action_roll{
   trait = "instinct",
   difficulty = 12,
   outcome = "success_hope",
-  modifiers = {
+  hope_spends = {
     Modifiers.hope("hope_feature")
   }
 }

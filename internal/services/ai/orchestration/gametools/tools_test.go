@@ -136,6 +136,9 @@ func TestProductionToolDescriptionsUseBeatBasedInteractionGuidance(t *testing.T)
 	if !strings.Contains(actionResolve.Description, "authoritative Daggerheart action roll") || !strings.Contains(actionResolve.Description, "applies its outcome") {
 		t.Fatalf("daggerheart_action_roll_resolve description = %q", actionResolve.Description)
 	}
+	if !interactionSchemaHasProperty(actionResolve.InputSchema, "hope_spends") {
+		t.Fatalf("daggerheart_action_roll_resolve schema missing hope_spends: %#v", actionResolve.InputSchema)
+	}
 
 	gmMove, ok := byName["daggerheart_gm_move_apply"]
 	if !ok {
@@ -184,6 +187,9 @@ func TestProductionToolDescriptionsUseBeatBasedInteractionGuidance(t *testing.T)
 	if !strings.Contains(attackFlow.Description, "authoritative Daggerheart attack flow") || !strings.Contains(attackFlow.Description, "damage application") || !strings.Contains(attackFlow.Description, "default attack profile") {
 		t.Fatalf("daggerheart_attack_flow_resolve description = %q", attackFlow.Description)
 	}
+	if !interactionSchemaHasProperty(attackFlow.InputSchema, "hope_spends") {
+		t.Fatalf("daggerheart_attack_flow_resolve schema missing hope_spends: %#v", attackFlow.InputSchema)
+	}
 
 	adversaryAttackFlow, ok := byName["daggerheart_adversary_attack_flow_resolve"]
 	if !ok {
@@ -200,6 +206,9 @@ func TestProductionToolDescriptionsUseBeatBasedInteractionGuidance(t *testing.T)
 	if !strings.Contains(groupActionFlow.Description, "authoritative Daggerheart group action flow") || !strings.Contains(groupActionFlow.Description, "leader roll") {
 		t.Fatalf("daggerheart_group_action_flow_resolve description = %q", groupActionFlow.Description)
 	}
+	if !interactionSchemaHasProperty(groupActionFlow.InputSchema, "leader_hope_spends") {
+		t.Fatalf("daggerheart_group_action_flow_resolve schema missing leader_hope_spends: %#v", groupActionFlow.InputSchema)
+	}
 
 	reactionFlow, ok := byName["daggerheart_reaction_flow_resolve"]
 	if !ok {
@@ -215,6 +224,9 @@ func TestProductionToolDescriptionsUseBeatBasedInteractionGuidance(t *testing.T)
 	}
 	if !strings.Contains(tagTeamFlow.Description, "authoritative Daggerheart tag-team flow") || !strings.Contains(tagTeamFlow.Description, "selected combined outcome") {
 		t.Fatalf("daggerheart_tag_team_flow_resolve description = %q", tagTeamFlow.Description)
+	}
+	if !interactionSchemaHasProperty(tagTeamFlow.InputSchema, "first", "hope_spends") || !interactionSchemaHasProperty(tagTeamFlow.InputSchema, "second", "hope_spends") {
+		t.Fatalf("daggerheart_tag_team_flow_resolve schema missing participant hope_spends: %#v", tagTeamFlow.InputSchema)
 	}
 
 	referenceSearch, ok := byName["system_reference_search"]

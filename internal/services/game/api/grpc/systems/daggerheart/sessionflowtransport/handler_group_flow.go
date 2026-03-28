@@ -105,6 +105,7 @@ func (h *Handler) SessionGroupActionFlow(ctx context.Context, in *pb.SessionGrou
 		RollKind:    pb.RollKind_ROLL_KIND_ACTION,
 		Difficulty:  in.GetDifficulty(),
 		Modifiers:   leaderModifiers,
+		HopeSpends:  in.GetLeaderHopeSpends(),
 		Context:     in.GetLeaderContext(),
 		Rng:         in.GetLeaderRng(),
 	})
@@ -198,6 +199,7 @@ func (h *Handler) SessionTagTeamFlow(ctx context.Context, in *pb.SessionTagTeamF
 		RollKind:    pb.RollKind_ROLL_KIND_ACTION,
 		Difficulty:  in.GetDifficulty(),
 		Modifiers:   first.GetModifiers(),
+		HopeSpends:  first.GetHopeSpends(),
 		Rng:         first.GetRng(),
 	})
 	if err != nil {
@@ -212,6 +214,7 @@ func (h *Handler) SessionTagTeamFlow(ctx context.Context, in *pb.SessionTagTeamF
 		RollKind:    pb.RollKind_ROLL_KIND_ACTION,
 		Difficulty:  in.GetDifficulty(),
 		Modifiers:   second.GetModifiers(),
+		HopeSpends:  second.GetHopeSpends(),
 		Rng:         second.GetRng(),
 	})
 	if err != nil {

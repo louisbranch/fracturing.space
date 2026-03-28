@@ -28,7 +28,7 @@ dh:action_roll{
   difficulty = 13,
   outcome = "fear",
   expect_hope_delta = -3,
-  modifiers = {
+  hope_spends = {
     Modifiers.hope("hope_feature")
   }
 }

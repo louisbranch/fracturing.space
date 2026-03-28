@@ -1,6 +1,7 @@
 package sessionrolltransport
 
 import (
+	"fmt"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -91,33 +92,42 @@ func resolveRoll(kind pb.RollKind, request daggerheartdomain.ActionRequest) (dag
 	}
 }
 
-func hopeSpendsFromModifiers(modifiers []*pb.ActionRollModifier) []hopeSpend {
-	if len(modifiers) == 0 {
-		return nil
+func normalizeHopeSpends(values []*pb.ActionRollHopeSpend) ([]hopeSpend, error) {
+	if len(values) == 0 {
+		return nil, nil
 	}
 
-	spends := make([]hopeSpend, 0)
-	for _, modifier := range modifiers {
-		if modifier == nil {
+	spends := make([]hopeSpend, 0, len(values))
+	for index, value := range values {
+		if value == nil {
 			continue
 		}
-		sourceKey := normalizeHopeSpendSource(modifier.GetSource())
-		amount := 0
-		switch sourceKey {
-		case "experience", "help":
-			amount = 1
-		case "tag_team", "hope_feature":
-			amount = 3
-		default:
-			continue
+		sourceKey := normalizeHopeSpendSource(value.GetSource())
+		expectedAmount, ok := hopeSpendAmountForSource(sourceKey)
+		if !ok {
+			return nil, fmt.Errorf("hope_spends[%d].source is unsupported", index)
+		}
+		amount := int(value.GetAmount())
+		if amount != expectedAmount {
+			return nil, fmt.Errorf("hope_spends[%d].amount must be %d for source %q", index, expectedAmount, sourceKey)
 		}
 		spends = append(spends, hopeSpend{Source: sourceKey, Amount: amount})
 	}
-
 	if len(spends) == 0 {
-		return nil
+		return nil, nil
 	}
-	return spends
+	return spends, nil
+}
+
+func hopeSpendAmountForSource(source string) (int, bool) {
+	switch source {
+	case "experience", "help":
+		return 1, true
+	case "tag_team", "hope_feature":
+		return 3, true
+	default:
+		return 0, false
+	}
 }
 
 func normalizeHopeSpendSource(value string) string {

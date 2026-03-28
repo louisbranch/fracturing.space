@@ -26,7 +26,9 @@
     "max_reference_searches": 0,
     "max_reference_reads": 0,
     "expected_hope": 1,
-    "expect_action_roll_modifier_source": "experience"
+    "expect_action_roll_modifier_source": "experience",
+    "expect_action_roll_hope_spend_source": "experience",
+    "expect_action_roll_hope_spend_amount": 1
   },
   {
     "scenario": "ai_gm_campaign_context_stance_capability",

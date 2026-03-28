@@ -105,9 +105,23 @@ func modifierHelper(state *lua.State) int {
 
 func hopeSpendHelper(state *lua.State) int {
 	source := lua.CheckString(state, 1)
+	amount := lua.OptInteger(state, 2, 0)
+	if amount == 0 {
+		switch strings.ToLower(strings.NewReplacer(" ", "_", "-", "_").Replace(strings.TrimSpace(source))) {
+		case "experience", "help":
+			amount = 1
+		case "tag_team", "hope_feature":
+			amount = 3
+		default:
+			lua.Errorf(state, "hope spend amount is required for source %q", source)
+			return 0
+		}
+	}
 	state.NewTable()
 	state.PushString(source)
 	state.SetField(-2, "source")
+	state.PushInteger(amount)
+	state.SetField(-2, "amount")
 	return 1
 }
 

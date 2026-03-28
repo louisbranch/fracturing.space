@@ -998,6 +998,9 @@ message SessionActionRollRequest {
 
   // Optional declared context for narrow rules that depend on the kind of action being attempted.
   ActionRollContext context = 15;
+
+  // Explicit Hope spends declared as part of this roll.
+  repeated ActionRollHopeSpend hope_spends = 16;
 }
 
 message SessionActionRollResponse {
@@ -1089,6 +1092,7 @@ message SessionAttackFlowRequest {
   bool replace_hope_with_armor = 19;
   bool target_is_adversary = 22;
   repeated string nearby_adversary_ids = 23;
+  repeated ActionRollHopeSpend hope_spends = 24;
   oneof attack_profile {
     SessionStandardAttackProfile standard_attack = 20;
     SessionBeastformAttackProfile beastform_attack = 21;
@@ -1249,6 +1253,7 @@ message SessionGroupActionFlowRequest {
   common.v1.RngRequest leader_rng = 8;
   string scene_id = 9;
   ActionRollContext leader_context = 10;
+  repeated ActionRollHopeSpend leader_hope_spends = 11;
 }
 
 message SessionGroupActionFlowResponse {
@@ -1265,6 +1270,7 @@ message TagTeamParticipant {
   string trait = 2;
   repeated ActionRollModifier modifiers = 3;
   common.v1.RngRequest rng = 4;
+  repeated ActionRollHopeSpend hope_spends = 5;
 }
 
 message SessionTagTeamFlowRequest {

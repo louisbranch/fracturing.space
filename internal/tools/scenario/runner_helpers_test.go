@@ -1138,15 +1138,11 @@ func TestBuildActionRollModifiers(t *testing.T) {
 			},
 		}
 		mods := buildActionRollModifiers(args, "mods")
-		if len(mods) != 2 {
-			t.Fatalf("expected 2 modifiers, got %d", len(mods))
+		if len(mods) != 1 {
+			t.Fatalf("expected 1 modifier, got %d", len(mods))
 		}
 		if mods[0].Source != "buff" || mods[0].Value != 2 {
 			t.Fatalf("mod 0: %+v", mods[0])
-		}
-		// experience is a hope spend source, so value=0 is ok
-		if mods[1].Source != "experience" || mods[1].Value != 0 {
-			t.Fatalf("mod 1: %+v", mods[1])
 		}
 	})
 	t.Run("with_flat_modifier", func(t *testing.T) {
@@ -1159,6 +1155,43 @@ func TestBuildActionRollModifiers(t *testing.T) {
 		}
 		if mods[1].Source != "modifier" || mods[1].Value != 3 {
 			t.Fatalf("flat modifier not forwarded: %+v", mods[1])
+		}
+	})
+}
+
+func TestBuildActionRollHopeSpends(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		spends := buildActionRollHopeSpends(map[string]any{}, "hope_spends")
+		if spends != nil {
+			t.Fatal("expected nil")
+		}
+	})
+
+	t.Run("with_explicit_amount", func(t *testing.T) {
+		spends := buildActionRollHopeSpends(map[string]any{
+			"hope_spends": []any{
+				map[string]any{"source": "experience", "amount": 1},
+			},
+		}, "hope_spends")
+		if len(spends) != 1 {
+			t.Fatalf("expected 1 spend, got %d", len(spends))
+		}
+		if spends[0].GetSource() != "experience" || spends[0].GetAmount() != 1 {
+			t.Fatalf("unexpected spend: %+v", spends[0])
+		}
+	})
+
+	t.Run("defaults_known_source_amount", func(t *testing.T) {
+		spends := buildActionRollHopeSpends(map[string]any{
+			"hope_spends": []any{
+				map[string]any{"source": "tag_team"},
+			},
+		}, "hope_spends")
+		if len(spends) != 1 {
+			t.Fatalf("expected 1 spend, got %d", len(spends))
+		}
+		if spends[0].GetAmount() != 3 {
+			t.Fatalf("amount = %d, want 3", spends[0].GetAmount())
 		}
 	})
 }

@@ -1,6 +1,7 @@
 # Core smoke scenarios that protect durable gameplay contracts.
 systems/daggerheart/basic_flow.lua
 systems/daggerheart/action_roll_outcomes.lua
+systems/daggerheart/hope_spend_then_hope_outcome.lua
 systems/daggerheart/reaction_flow.lua
 systems/daggerheart/condition_lifecycle.lua
 systems/daggerheart/countdown_lifecycle.lua
