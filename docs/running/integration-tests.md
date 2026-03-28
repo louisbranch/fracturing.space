@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 7
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-17"
+last_reviewed: "2026-03-24"
 ---
 
 # Integration Tests
@@ -38,6 +38,35 @@ aliases.
 The integration harness creates a shared fixture stack and provides per-test
 suites with gRPC clients and user identity. AI-scoped fixtures exercise the
 full orchestration path including direct tool dispatch.
+
+## Canonical Service Chains
+
+Use integration tests for cross-service runtime chains that need real transport,
+storage, and startup wiring:
+
+- `invite -> worker -> notifications -> userhub`: prove invite outbox events
+  become inbox notifications and then appear on the dashboard.
+- `web -> play -> game`: prove authenticated web launch reaches play and a real
+  interaction mutates game state.
+- `admin -> game`: prove admin pages and HTMX refresh paths stay aligned with
+  live game mutations.
+- `discovery -> game`: prove builtin starter reconciliation creates a real
+  starter campaign and persists the resulting discovery `source_id`.
+- `userhub` degraded mode: prove one optional downstream can fail without
+  breaking the whole dashboard.
+
+Keep pure game acceptance behavior in scenario scripts. Do not move game-only
+workflows into integration tests just to increase service count.
+
+## Lane Ownership
+
+- `make test`: unit and package-level seams. Keep this fast.
+- `make smoke`: one representative test per critical service chain plus the
+  scenario smoke manifest.
+- `make check`: full local confidence before PR update.
+
+When adding a new runtime feature, prefer extending one canonical service-chain
+suite instead of creating another bespoke bootstrap stack.
 
 ## Determinism and Randomness
 

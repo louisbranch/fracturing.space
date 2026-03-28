@@ -152,7 +152,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store contentstore.Dagg
 				HopeCost: 3,
 			},
 		},
-		DomainIDs: []string{"domain.valor"},
+		DomainIDs: []string{"domain.valor", "domain.blade"},
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
@@ -360,6 +360,270 @@ func writeIntegrationSeedData(ctx context.Context, store contentstore.Daggerhear
 		UpdatedAt: now,
 	}); err != nil {
 		return fmt.Errorf("seed stamina potion: %w", err)
+	}
+
+	for _, class := range []contentstore.DaggerheartClass{
+		{
+			ID:              "class.ranger",
+			Name:            "Ranger",
+			StartingEvasion: 10,
+			StartingHP:      6,
+			DomainIDs:       []string{"domain.bone", "domain.sage"},
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		},
+		{
+			ID:              "class.bard",
+			Name:            "Bard",
+			StartingEvasion: 10,
+			StartingHP:      6,
+			DomainIDs:       []string{"domain.grace", "domain.codex"},
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		},
+	} {
+		if err := store.PutDaggerheartClass(ctx, class); err != nil {
+			return fmt.Errorf("seed discovery integration class %s: %w", class.ID, err)
+		}
+	}
+
+	for _, subclass := range []contentstore.DaggerheartSubclass{
+		{
+			ID:        "subclass.wayfinder",
+			Name:      "Wayfinder",
+			ClassID:   "class.ranger",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		{
+			ID:             "subclass.wordsmith",
+			Name:           "Wordsmith",
+			ClassID:        "class.bard",
+			SpellcastTrait: "presence",
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		},
+	} {
+		if err := store.PutDaggerheartSubclass(ctx, subclass); err != nil {
+			return fmt.Errorf("seed discovery integration subclass %s: %w", subclass.ID, err)
+		}
+	}
+
+	for _, heritage := range []contentstore.DaggerheartHeritage{
+		{
+			ID:   "heritage.elf",
+			Name: "Elf",
+			Kind: "ancestry",
+			Features: []contentstore.DaggerheartFeature{
+				{
+					ID:          "feature.elf-quick-reactions",
+					Name:        "Quick Reactions",
+					Description: "Integration seed primary elf ancestry feature.",
+					Level:       1,
+				},
+				{
+					ID:          "feature.elf-celestial-trance",
+					Name:        "Celestial Trance",
+					Description: "Integration seed secondary elf ancestry feature.",
+					Level:       1,
+				},
+			},
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		{
+			ID:        "heritage.seaborne",
+			Name:      "Seaborne",
+			Kind:      "community",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		{
+			ID:        "heritage.wildborne",
+			Name:      "Wildborne",
+			Kind:      "community",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		{
+			ID:        "heritage.loreborne",
+			Name:      "Loreborne",
+			Kind:      "community",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+	} {
+		if err := store.PutDaggerheartHeritage(ctx, heritage); err != nil {
+			return fmt.Errorf("seed discovery integration heritage %s: %w", heritage.ID, err)
+		}
+	}
+
+	for _, domain := range []contentstore.DaggerheartDomain{
+		{ID: "domain.blade", Name: "Blade", Description: "Integration seed blade domain.", CreatedAt: now, UpdatedAt: now},
+		{ID: "domain.bone", Name: "Bone", Description: "Integration seed bone domain.", CreatedAt: now, UpdatedAt: now},
+		{ID: "domain.sage", Name: "Sage", Description: "Integration seed sage domain.", CreatedAt: now, UpdatedAt: now},
+		{ID: "domain.grace", Name: "Grace", Description: "Integration seed grace domain.", CreatedAt: now, UpdatedAt: now},
+		{ID: "domain.codex", Name: "Codex", Description: "Integration seed codex domain.", CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := store.PutDaggerheartDomain(ctx, domain); err != nil {
+			return fmt.Errorf("seed discovery integration domain %s: %w", domain.ID, err)
+		}
+	}
+
+	for _, card := range []contentstore.DaggerheartDomainCard{
+		{
+			ID:          "domain_card.valor-i-am-your-shield",
+			Name:        "I Am Your Shield",
+			DomainID:    "domain.valor",
+			Level:       1,
+			Type:        "ability",
+			UsageLimit:  "None",
+			FeatureText: "Integration seed discovery starter card.",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "domain_card.blade-get-back-up",
+			Name:        "Get Back Up",
+			DomainID:    "domain.blade",
+			Level:       1,
+			Type:        "ability",
+			UsageLimit:  "None",
+			FeatureText: "Integration seed discovery starter card.",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "domain_card.bone-i-see-it-coming",
+			Name:        "I See It Coming",
+			DomainID:    "domain.bone",
+			Level:       1,
+			Type:        "ability",
+			UsageLimit:  "None",
+			FeatureText: "Integration seed discovery starter card.",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "domain_card.sage-gifted-tracker",
+			Name:        "Gifted Tracker",
+			DomainID:    "domain.sage",
+			Level:       1,
+			Type:        "ability",
+			UsageLimit:  "None",
+			FeatureText: "Integration seed discovery starter card.",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "domain_card.grace-inspirational-words",
+			Name:        "Inspirational Words",
+			DomainID:    "domain.grace",
+			Level:       1,
+			Type:        "spell",
+			UsageLimit:  "None",
+			FeatureText: "Integration seed discovery starter card.",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "domain_card.book-of-illiat",
+			Name:        "Book of Illiat",
+			DomainID:    "domain.codex",
+			Level:       1,
+			Type:        "spell",
+			UsageLimit:  "None",
+			FeatureText: "Integration seed discovery starter card.",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	} {
+		if err := store.PutDaggerheartDomainCard(ctx, card); err != nil {
+			return fmt.Errorf("seed discovery integration domain card %s: %w", card.ID, err)
+		}
+	}
+
+	for _, weapon := range []contentstore.DaggerheartWeapon{
+		{
+			ID:         "weapon.shortbow",
+			Name:       "Shortbow",
+			Category:   "primary",
+			Tier:       1,
+			Trait:      "Agility",
+			Range:      "far",
+			DamageDice: []contentstore.DaggerheartDamageDie{{Sides: 8, Count: 1}},
+			DamageType: "physical",
+			Burden:     2,
+			Feature:    "Integration seed discovery starter weapon.",
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		},
+		{
+			ID:         "weapon.dagger",
+			Name:       "Dagger",
+			Category:   "primary",
+			Tier:       1,
+			Trait:      "Finesse",
+			Range:      "very_close",
+			DamageDice: []contentstore.DaggerheartDamageDie{{Sides: 6, Count: 1}},
+			DamageType: "physical",
+			Burden:     1,
+			Feature:    "Integration seed discovery starter weapon.",
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		},
+		{
+			ID:         "weapon.small-dagger",
+			Name:       "Small Dagger",
+			Category:   "secondary",
+			Tier:       1,
+			Trait:      "Finesse",
+			Range:      "very_close",
+			DamageDice: []contentstore.DaggerheartDamageDie{{Sides: 6, Count: 1}},
+			DamageType: "physical",
+			Burden:     1,
+			Feature:    "Integration seed discovery starter weapon.",
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		},
+	} {
+		if err := store.PutDaggerheartWeapon(ctx, weapon); err != nil {
+			return fmt.Errorf("seed discovery integration weapon %s: %w", weapon.ID, err)
+		}
+	}
+
+	for _, armor := range []contentstore.DaggerheartArmor{
+		{
+			ID:                  "armor.leather-armor",
+			Name:                "Leather Armor",
+			Tier:                1,
+			BaseMajorThreshold:  6,
+			BaseSevereThreshold: 13,
+			ArmorScore:          3,
+			CreatedAt:           now,
+			UpdatedAt:           now,
+		},
+		{
+			ID:                  "armor.chainmail-armor",
+			Name:                "Chainmail Armor",
+			Tier:                1,
+			BaseMajorThreshold:  7,
+			BaseSevereThreshold: 15,
+			ArmorScore:          4,
+			Feature:             "Heavy: -1 to Evasion",
+			Rules: contentstore.DaggerheartArmorRules{
+				AutomationStatus:       contentstore.DaggerheartArmorAutomationStatusSupported,
+				MitigationMode:         contentstore.DaggerheartArmorMitigationModeAny,
+				EvasionDelta:           -1,
+				SeverityReductionSteps: 1,
+			},
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+	} {
+		if err := store.PutDaggerheartArmor(ctx, armor); err != nil {
+			return fmt.Errorf("seed discovery integration armor %s: %w", armor.ID, err)
+		}
 	}
 
 	return nil

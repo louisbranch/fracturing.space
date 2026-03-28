@@ -25,6 +25,7 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update user dashboard aggregation | `internal/services/userhub/domain/`, `internal/services/userhub/api/grpc/userhub/`, `internal/services/userhub/app/` |
 | Add/update worker outbox processing | `internal/services/worker/app/`, `internal/services/worker/domain/`, `internal/services/worker/storage/sqlite/` |
 | Add/update discovery catalog entries and APIs | `internal/services/discovery/api/grpc/discovery/`, `internal/services/discovery/catalog/`, `internal/services/discovery/storage/sqlite/` |
+| Add/update cross-service runtime workflows or service-chain coverage | `internal/test/integration/`, `internal/test/testkit/`, `docs/running/integration-tests.md` |
 | Add/update status reporting and overrides | `internal/services/status/api/grpc/status/`, `internal/services/status/domain/`, `internal/services/status/storage/sqlite/` |
 | Add/update shared service infrastructure | `internal/services/shared/` |
 | Add/update web module routes/handlers | `internal/services/web/modules/<area>/` |

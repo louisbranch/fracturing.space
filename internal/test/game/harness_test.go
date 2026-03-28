@@ -3,13 +3,9 @@
 package game
 
 import (
-	"crypto/ed25519"
-	"crypto/rand"
-	"encoding/base64"
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"testing"
 	"time"
 
@@ -17,18 +13,8 @@ import (
 )
 
 var (
-	joinGrantIssuer     = "scenario-issuer"
-	joinGrantAudience   = "game-service"
-	joinGrantKeyOnce    sync.Once
-	joinGrantPrivateKey ed25519.PrivateKey
-	joinGrantPublicKey  ed25519.PublicKey
-)
-
-const (
-	testAISessionGrantIssuer   = "fracturing-space-game"
-	testAISessionGrantAudience = "fracturing-space-ai"
-	testAISessionGrantTTL      = "10m"
-	testAISessionGrantHMACKey  = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY"
+	joinGrantIssuer   = "scenario-issuer"
+	joinGrantAudience = "game-service"
 )
 
 func scenarioTimeout() time.Duration {
@@ -38,40 +24,12 @@ func scenarioTimeout() time.Duration {
 func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Helper()
 
-	mesh := testkit.NewMesh(t, testkit.MeshConfig{
+	runtime := testkit.StartGameRuntime(t, testkit.GameRuntimeConfig{
 		ContentSeedProfile: testkit.ContentSeedProfileScenario,
+		JoinGrantIssuer:    joinGrantIssuer,
+		JoinGrantAudience:  joinGrantAudience,
 	})
-	setJoinGrantEnv(t)
-	setAISessionGrantEnv(t)
-	authAddr := mesh.StartAuthServer()
-	addr := mesh.StartGameServer()
-	return addr, authAddr, func() {}
-}
-
-func setJoinGrantEnv(t *testing.T) {
-	t.Helper()
-
-	joinGrantKeyOnce.Do(func() {
-		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			t.Fatalf("generate join grant key: %v", err)
-		}
-		joinGrantPublicKey = publicKey
-		joinGrantPrivateKey = privateKey
-	})
-
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", joinGrantIssuer)
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience)
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey))
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey))
-}
-
-func setAISessionGrantEnv(t *testing.T) {
-	t.Helper()
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", testAISessionGrantIssuer)
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", testAISessionGrantAudience)
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", testAISessionGrantHMACKey)
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", testAISessionGrantTTL)
+	return runtime.GameAddr, runtime.AuthAddr, func() {}
 }
 
 func repoRoot(t *testing.T) string {

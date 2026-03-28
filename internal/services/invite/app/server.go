@@ -36,6 +36,32 @@ type Config struct {
 	AuthAddr string
 }
 
+type runtimeDeps struct {
+	loadEnv   func() serverEnv
+	listen    func(network, address string) (net.Listener, error)
+	openStore func(string) (*invitesqlite.Store, error)
+	dialGame  func(context.Context, string, func(string, ...any)) (*grpc.ClientConn, error)
+	dialAuth  func(context.Context, string, func(string, ...any)) (*grpc.ClientConn, error)
+	logf      func(format string, args ...any)
+}
+
+var defaultRuntimeDeps = runtimeDeps{
+	loadEnv:   loadServerEnv,
+	listen:    net.Listen,
+	openStore: openInviteStore,
+	dialGame: func(ctx context.Context, addr string, logf func(string, ...any)) (*grpc.ClientConn, error) {
+		gameDialOpts := append(
+			platformgrpc.LenientDialOptions(),
+			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceInvite)),
+		)
+		return platformgrpc.DialLenient(ctx, addr, logf, gameDialOpts...), nil
+	},
+	dialAuth: func(ctx context.Context, addr string, logf func(string, ...any)) (*grpc.ClientConn, error) {
+		return platformgrpc.DialLenient(ctx, addr, logf), nil
+	},
+	logf: log.Printf,
+}
+
 type serverEnv struct {
 	DBPath string `env:"FRACTURING_SPACE_INVITE_DB_PATH"`
 }
@@ -58,6 +84,7 @@ type Server struct {
 	gameConn   *grpc.ClientConn
 	authConn   *grpc.ClientConn
 	closeOnce  sync.Once
+	logf       func(format string, args ...any)
 }
 
 // Run creates and serves an invite server until context cancellation.
@@ -73,29 +100,62 @@ func Run(ctx context.Context, cfg Config) error {
 // Use "127.0.0.1:0" for tests to let the OS pick an ephemeral port; call
 // Addr() after construction to discover the assigned address.
 func NewWithAddr(ctx context.Context, addr, gameAddr, authAddr string) (*Server, error) {
-	listener, err := net.Listen("tcp", addr)
+	return newWithDeps(ctx, addr, gameAddr, authAddr, defaultRuntimeDeps)
+}
+
+func newWithDeps(ctx context.Context, addr, gameAddr, authAddr string, deps runtimeDeps) (*Server, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if deps.loadEnv == nil {
+		return nil, errors.New("invite server env loader is required")
+	}
+	if deps.listen == nil {
+		return nil, errors.New("invite listener constructor is required")
+	}
+	if deps.openStore == nil {
+		return nil, errors.New("invite store opener is required")
+	}
+	if deps.dialGame == nil {
+		return nil, errors.New("invite game dialer is required")
+	}
+	if deps.dialAuth == nil {
+		return nil, errors.New("invite auth dialer is required")
+	}
+	if deps.logf == nil {
+		deps.logf = log.Printf
+	}
+
+	listener, err := deps.listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
 	}
 
-	srvEnv := loadServerEnv()
-	store, err := openInviteStore(srvEnv.DBPath)
+	srvEnv := deps.loadEnv()
+	store, err := deps.openStore(srvEnv.DBPath)
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
 	}
 
 	logf := func(format string, args ...any) {
-		log.Printf("[invite] "+format, args...)
+		deps.logf("[invite] "+format, args...)
 	}
-
-	// Dial game service with invite service identity so BindParticipant is authorized.
-	gameDialOpts := append(
-		platformgrpc.LenientDialOptions(),
-		grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceInvite)),
-	)
-	gameConn := platformgrpc.DialLenient(ctx, gameAddr, logf, gameDialOpts...)
-	authConn := platformgrpc.DialLenient(ctx, authAddr, logf)
+	gameConn, err := deps.dialGame(ctx, gameAddr, logf)
+	if err != nil {
+		_ = listener.Close()
+		_ = store.Close()
+		return nil, fmt.Errorf("dial game service: %w", err)
+	}
+	authConn, err := deps.dialAuth(ctx, authAddr, logf)
+	if err != nil {
+		_ = listener.Close()
+		_ = store.Close()
+		if gameConn != nil {
+			_ = gameConn.Close()
+		}
+		return nil, fmt.Errorf("dial auth service: %w", err)
+	}
 
 	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 
@@ -122,6 +182,7 @@ func NewWithAddr(ctx context.Context, addr, gameAddr, authAddr string) (*Server,
 		store:      store,
 		gameConn:   gameConn,
 		authConn:   authConn,
+		logf:       deps.logf,
 	}, nil
 }
 
@@ -137,7 +198,11 @@ func (s *Server) Addr() string {
 func (s *Server) Serve(ctx context.Context) error {
 	defer s.close()
 
-	log.Printf("invite server listening at %v", s.listener.Addr())
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
+	}
+	logf("invite server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
 	go func() {
 		serveErr <- s.grpcServer.Serve(s.listener)
@@ -166,6 +231,10 @@ func (s *Server) close() {
 	if s == nil {
 		return
 	}
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
+	}
 	s.closeOnce.Do(func() {
 		if s.health != nil {
 			s.health.Shutdown()
@@ -184,7 +253,7 @@ func (s *Server) close() {
 		}
 		if s.store != nil {
 			if err := s.store.Close(); err != nil {
-				log.Printf("close invite store: %v", err)
+				logf("close invite store: %v", err)
 			}
 		}
 	})

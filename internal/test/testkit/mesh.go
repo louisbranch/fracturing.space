@@ -29,6 +29,7 @@ type Mesh struct {
 	socialAddr        string
 	notificationsAddr string
 	inviteAddr        string
+	discoveryAddr     string
 	workerAddr        string
 	userhubAddr       string
 }
@@ -47,6 +48,7 @@ func NewMesh(t *testing.T, cfg MeshConfig) *Mesh {
 	SetSocialDBPath(t, base, setenv)
 	SetNotificationsDBPath(t, base, setenv)
 	SetInviteDBPath(t, base, setenv)
+	SetDiscoveryDBPath(t, base, setenv)
 
 	if cfg.ContentSeedProfile != "" {
 		SeedDaggerheartContent(t, cfg.ContentSeedProfile)
@@ -167,6 +169,18 @@ func (m *Mesh) StartInviteServer() string {
 	return m.inviteAddr
 }
 
+// StartDiscoveryServer boots the discovery runtime once for this suite and returns its address.
+func (m *Mesh) StartDiscoveryServer() string {
+	m.t.Helper()
+
+	if m.discoveryAddr != "" {
+		return m.discoveryAddr
+	}
+	addr, _ := StartDiscoveryServer(m.t, m.StartGameServer())
+	m.discoveryAddr = addr
+	return m.discoveryAddr
+}
+
 // StartWorkerRuntime boots the worker runtime once for this suite and returns its health address.
 func (m *Mesh) StartWorkerRuntime() string {
 	m.t.Helper()
@@ -176,9 +190,9 @@ func (m *Mesh) StartWorkerRuntime() string {
 	}
 
 	cfg := workerapp.RuntimeConfig{
-		Port:              portFromAddress(m.t, pickUnusedAddress(m.t)),
+		Port:              portFromAddress(m.t, PickUnusedAddress(m.t)),
 		AuthAddr:          m.StartAuthServer(),
-		AIAddr:            pickUnusedAddress(m.t),
+		AIAddr:            PickUnusedAddress(m.t),
 		GameAddr:          m.StartGameServer(),
 		InviteAddr:        m.StartInviteServer(),
 		NotificationsAddr: m.StartNotificationsServer(),
@@ -245,7 +259,7 @@ func (m *Mesh) StartUserHubServer(cfg userhubapp.RuntimeConfig) string {
 		cfg.NotificationsAddr = m.StartNotificationsServer()
 	}
 	if cfg.StatusAddr == "" {
-		cfg.StatusAddr = pickUnusedAddress(m.t)
+		cfg.StatusAddr = PickUnusedAddress(m.t)
 	}
 	if cfg.CacheFreshTTL == 0 {
 		cfg.CacheFreshTTL = time.Minute
@@ -259,7 +273,8 @@ func (m *Mesh) StartUserHubServer(cfg userhubapp.RuntimeConfig) string {
 	return m.userhubAddr
 }
 
-func pickUnusedAddress(t *testing.T) string {
+// PickUnusedAddress returns an ephemeral localhost TCP address for tests.
+func PickUnusedAddress(t *testing.T) string {
 	t.Helper()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

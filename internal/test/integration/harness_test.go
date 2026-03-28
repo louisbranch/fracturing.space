@@ -4,10 +4,6 @@ package integration
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"net"
@@ -50,17 +46,15 @@ type suiteFixture struct {
 
 func newSuiteFixture(t *testing.T) *suiteFixture {
 	t.Helper()
-	mesh := testkit.NewMesh(t, testkit.MeshConfig{
+	runtime := testkit.StartGameRuntime(t, testkit.GameRuntimeConfig{
 		ContentSeedProfile: testkit.ContentSeedProfileIntegration,
+		JoinGrantIssuer:    joinGrantIssuer,
+		JoinGrantAudience:  joinGrantAudience,
 	})
-	setJoinGrantEnv(t)
-	setAISessionGrantEnv(t)
-	authAddr := mesh.StartAuthServer()
-	grpcAddr := mesh.StartGameServer()
 	return &suiteFixture{
-		mesh:     mesh,
-		grpcAddr: grpcAddr,
-		authAddr: authAddr,
+		mesh:     runtime.Mesh,
+		grpcAddr: runtime.GameAddr,
+		authAddr: runtime.AuthAddr,
 	}
 }
 
@@ -112,6 +106,11 @@ func (f *suiteFixture) startInviteServer(t *testing.T) string {
 	return f.mesh.StartInviteServer()
 }
 
+func (f *suiteFixture) startDiscoveryServer(t *testing.T) string {
+	t.Helper()
+	return f.mesh.StartDiscoveryServer()
+}
+
 func (f *suiteFixture) startWorkerRuntime(t *testing.T) string {
 	t.Helper()
 	return f.mesh.StartWorkerRuntime()
@@ -137,17 +136,8 @@ func (s *integrationSuite) ctx(parent context.Context) context.Context {
 }
 
 var (
-	joinGrantIssuer     = "test-issuer"
-	joinGrantAudience   = "game-service"
-	joinGrantPrivateKey ed25519.PrivateKey
-	joinGrantPublicKey  ed25519.PublicKey
-)
-
-const (
-	testAISessionGrantIssuer   = "fracturing-space-game"
-	testAISessionGrantAudience = "fracturing-space-ai"
-	testAISessionGrantTTL      = "10m"
-	testAISessionGrantHMACKey  = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY"
+	joinGrantIssuer   = "test-issuer"
+	joinGrantAudience = "game-service"
 )
 
 // integrationTimeout returns the default timeout for integration calls.
@@ -158,40 +148,12 @@ func integrationTimeout() time.Duration {
 // startGRPCServer boots the game server and returns its address and shutdown function.
 func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Helper()
-	mesh := testkit.NewMesh(t, testkit.MeshConfig{
+	runtime := testkit.StartGameRuntime(t, testkit.GameRuntimeConfig{
 		ContentSeedProfile: testkit.ContentSeedProfileIntegration,
+		JoinGrantIssuer:    joinGrantIssuer,
+		JoinGrantAudience:  joinGrantAudience,
 	})
-	setJoinGrantEnv(t)
-	setAISessionGrantEnv(t)
-	authAddr := mesh.StartAuthServer()
-	addr := mesh.StartGameServer()
-	return addr, authAddr, func() {}
-}
-
-func setJoinGrantEnv(t *testing.T) {
-	t.Helper()
-
-	if joinGrantPrivateKey == nil {
-		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			t.Fatalf("generate join grant key: %v", err)
-		}
-		joinGrantPublicKey = publicKey
-		joinGrantPrivateKey = privateKey
-	}
-
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", joinGrantIssuer)
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience)
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey))
-	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey))
-}
-
-func setAISessionGrantEnv(t *testing.T) {
-	t.Helper()
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", testAISessionGrantIssuer)
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", testAISessionGrantAudience)
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", testAISessionGrantHMACKey)
-	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", testAISessionGrantTTL)
+	return runtime.GameAddr, runtime.AuthAddr, func() {}
 }
 
 func createAuthUser(t *testing.T, authAddr, username string) string {
@@ -279,38 +241,7 @@ func withSessionID(ctx context.Context, sessionID string) context.Context {
 
 func joinGrantToken(t *testing.T, campaignID, inviteID, userID string, now time.Time) string {
 	t.Helper()
-	if joinGrantPrivateKey == nil {
-		t.Fatal("join grant key is not configured")
-	}
-	if now.IsZero() {
-		now = time.Now().UTC()
-	}
-	headerJSON, err := json.Marshal(map[string]string{
-		"alg": "EdDSA",
-		"typ": "JWT",
-	})
-	if err != nil {
-		t.Fatalf("encode join grant header: %v", err)
-	}
-	payloadJSON, err := json.Marshal(map[string]any{
-		"iss":         joinGrantIssuer,
-		"aud":         joinGrantAudience,
-		"exp":         now.Add(5 * time.Minute).Unix(),
-		"iat":         now.Unix(),
-		"jti":         fmt.Sprintf("jti-%d", now.UnixNano()),
-		"campaign_id": campaignID,
-		"invite_id":   inviteID,
-		"user_id":     userID,
-	})
-	if err != nil {
-		t.Fatalf("encode join grant payload: %v", err)
-	}
-	encodedHeader := base64.RawURLEncoding.EncodeToString(headerJSON)
-	encodedPayload := base64.RawURLEncoding.EncodeToString(payloadJSON)
-	signingInput := encodedHeader + "." + encodedPayload
-	signature := ed25519.Sign(joinGrantPrivateKey, []byte(signingInput))
-	encodedSig := base64.RawURLEncoding.EncodeToString(signature)
-	return signingInput + "." + encodedSig
+	return testkit.SignJoinGrantToken(t, joinGrantIssuer, joinGrantAudience, campaignID, inviteID, userID, now)
 }
 
 // parseRFC3339 parses an RFC3339 timestamp string.

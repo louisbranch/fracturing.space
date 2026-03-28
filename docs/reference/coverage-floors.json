@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-24T13:53:18Z",
+  "updated_at": "2026-03-24T15:35:00Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog",
@@ -84,13 +84,18 @@
       "description": "Auth gRPC transport handlers including account, passkey, and session RPCs."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/app",
+      "floor": 79,
+      "description": "Auth application runtime lifecycle, transport startup seams, and OAuth wiring."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/auth/oauth",
       "floor": 81.6,
       "description": "OAuth configuration, PKCE flow, and provider lifecycle."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/discovery/app",
-      "floor": 58.7,
+      "floor": 63,
       "description": "Discovery service application layer composing catalog and reference lookup workflows."
     },
     {
@@ -259,6 +264,16 @@
       "description": "Notifications application layer with worker runtime and email delivery."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/domain",
+      "floor": 90,
+      "description": "Notifications domain lifecycle for dedupe, unread state, and mark-read behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/render",
+      "floor": 96,
+      "description": "Notifications rendering templates and message construction helpers."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/storage/sqlite",
       "floor": 70.2,
       "description": "Notifications SQLite persistence for inbox entries, unread state, and listing queries."
@@ -267,6 +282,16 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/play/app",
       "floor": 82.6,
       "description": "Play service application layer including realtime rooms and launch grant flow."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/play/storage/sqlite",
+      "floor": 79.5,
+      "description": "Play SQLite persistence for transcripts, session bootstrap, and transport-facing reads."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/play/transcript",
+      "floor": 73,
+      "description": "Play transcript parsing and persistence-facing serialization helpers."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/play/protocol",
@@ -292,6 +317,16 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/userhub/app",
       "floor": 75.8,
       "description": "UserHub application layer for user profile aggregation."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/userhub/api/grpc/userhub",
+      "floor": 68.8,
+      "description": "UserHub gRPC transport handlers for dashboard reads and control invalidation."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/userhub/domain",
+      "floor": 83,
+      "description": "UserHub dashboard aggregation, degraded dependency handling, and cache freshness policy."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/app",
@@ -347,6 +382,16 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/worker/app",
       "floor": 76.9,
       "description": "Worker application loop for outbox polling, handler dispatch, and retry-aware acknowledgements."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/worker/domain",
+      "floor": 78,
+      "description": "Worker domain event handlers for invite, signup, and AI orchestration workflows."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/worker/storage/sqlite",
+      "floor": 68,
+      "description": "Worker SQLite persistence for processing attempts, leases, and retry state."
     }
   ]
 }

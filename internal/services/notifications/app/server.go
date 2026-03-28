@@ -25,6 +25,20 @@ import (
 
 const defaultEmailDeliveryWorkerPollInterval = 5 * time.Second
 
+type runtimeDeps struct {
+	loadEnv   func() serverEnv
+	listen    func(network, address string) (net.Listener, error)
+	openStore func(string) (*notificationssqlite.Store, error)
+	logf      func(format string, args ...any)
+}
+
+var defaultRuntimeDeps = runtimeDeps{
+	loadEnv:   loadServerEnv,
+	listen:    net.Listen,
+	openStore: openNotificationsStore,
+	logf:      log.Printf,
+}
+
 // serverEnv captures env-driven notifications startup settings.
 type serverEnv struct {
 	DBPath                  string `env:"FRACTURING_SPACE_NOTIFICATIONS_DB_PATH"`
@@ -72,6 +86,7 @@ type Server struct {
 	health     *health.Server
 	store      *notificationssqlite.Store
 	closeOnce  sync.Once
+	logf       func(format string, args ...any)
 }
 
 // New creates a configured notifications server listening on the given port.
@@ -81,13 +96,30 @@ func New(port int) (*Server, error) {
 
 // NewWithAddr creates a configured notifications server listening on the given address.
 func NewWithAddr(addr string) (*Server, error) {
-	srvEnv := loadServerEnv()
-	listener, err := net.Listen("tcp", addr)
+	return newWithDeps(addr, defaultRuntimeDeps)
+}
+
+func newWithDeps(addr string, deps runtimeDeps) (*Server, error) {
+	if deps.loadEnv == nil {
+		return nil, errors.New("notifications server env loader is required")
+	}
+	if deps.listen == nil {
+		return nil, errors.New("notifications listener constructor is required")
+	}
+	if deps.openStore == nil {
+		return nil, errors.New("notifications store opener is required")
+	}
+	if deps.logf == nil {
+		deps.logf = log.Printf
+	}
+
+	srvEnv := deps.loadEnv()
+	listener, err := deps.listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
 	}
 
-	store, err := openNotificationsStore(srvEnv.DBPath)
+	store, err := deps.openStore(srvEnv.DBPath)
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
@@ -112,6 +144,7 @@ func NewWithAddr(addr string) (*Server, error) {
 		grpcServer: grpcServer,
 		health:     healthServer,
 		store:      store,
+		logf:       deps.logf,
 	}, nil
 }
 
@@ -151,7 +184,11 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 	defer s.Close()
 
-	log.Printf("notifications server listening at %v", s.listener.Addr())
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
+	}
+	logf("notifications server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
 	go func() {
 		serveErr <- s.grpcServer.Serve(s.listener)
@@ -181,6 +218,10 @@ func (s *Server) Close() {
 	if s == nil {
 		return
 	}
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
+	}
 	s.closeOnce.Do(func() {
 		if s.health != nil {
 			s.health.Shutdown()
@@ -193,7 +234,7 @@ func (s *Server) Close() {
 		}
 		if s.store != nil {
 			if err := s.store.Close(); err != nil {
-				log.Printf("close notifications store: %v", err)
+				logf("close notifications store: %v", err)
 			}
 		}
 	})

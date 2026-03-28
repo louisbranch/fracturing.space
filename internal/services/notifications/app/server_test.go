@@ -2,14 +2,68 @@ package server
 
 import (
 	"context"
+	"errors"
+	"net"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
+	notificationssqlite "github.com/louisbranch/fracturing.space/internal/services/notifications/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+func TestNewWithDepsRequiresRuntimeHooks(t *testing.T) {
+	t.Parallel()
+
+	testEnv := func() serverEnv { return serverEnv{DBPath: filepath.Join("testdata", "notifications.db")} }
+	tests := []struct {
+		name string
+		deps runtimeDeps
+		want string
+	}{
+		{name: "env loader", deps: runtimeDeps{listen: net.Listen, openStore: openNotificationsStore}, want: "notifications server env loader is required"},
+		{name: "listener", deps: runtimeDeps{loadEnv: testEnv, openStore: openNotificationsStore}, want: "notifications listener constructor is required"},
+		{name: "store", deps: runtimeDeps{loadEnv: testEnv, listen: net.Listen}, want: "notifications store opener is required"},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := newWithDeps("127.0.0.1:0", tc.deps)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("newWithDeps error = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestNewWithDepsClosesListenerWhenStoreOpenFails(t *testing.T) {
+	t.Parallel()
+
+	listener := &notificationsListenerStub{addr: &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 32011}}
+	_, err := newWithDeps("127.0.0.1:0", runtimeDeps{
+		loadEnv: func() serverEnv { return serverEnv{DBPath: filepath.Join("testdata", "notifications.db")} },
+		listen: func(string, string) (net.Listener, error) {
+			return listener, nil
+		},
+		openStore: func(string) (*notificationssqlite.Store, error) {
+			return nil, errors.New("open boom")
+		},
+		logf: func(string, ...any) {},
+	})
+	if err == nil || !strings.Contains(err.Error(), "open boom") {
+		t.Fatalf("newWithDeps error = %v, want store failure", err)
+	}
+	if !listener.closed {
+		t.Fatal("listener closed = false, want true")
+	}
+}
 
 func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 	dbPath := t.TempDir() + "/notifications.db"
@@ -120,3 +174,17 @@ func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 		t.Fatalf("unread_count after mark read = %d, want 0", unreadAfterResp.GetUnreadCount())
 	}
 }
+
+type notificationsListenerStub struct {
+	addr   net.Addr
+	closed bool
+}
+
+func (l *notificationsListenerStub) Accept() (net.Conn, error) {
+	return nil, errors.New("not implemented")
+}
+func (l *notificationsListenerStub) Close() error {
+	l.closed = true
+	return nil
+}
+func (l *notificationsListenerStub) Addr() net.Addr { return l.addr }
