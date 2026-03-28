@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	domainmodule "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
@@ -23,13 +24,18 @@ func TestSessionStartBootstrapSeedsFearFromPCCount(t *testing.T) {
 	module := NewModule()
 	now := time.Date(2026, 3, 13, 12, 0, 0, 0, time.UTC)
 
-	events, err := module.SessionStartBootstrap(
-		daggerheartstate.SnapshotState{GMFear: daggerheartstate.GMFearDefault},
-		map[ids.CharacterID]character.State{
-			"pc-1":  {CharacterID: "pc-1", Created: true, Kind: character.KindPC},
-			"pc-2":  {CharacterID: "pc-2", Created: true, Kind: character.KindPC},
-			"npc-1": {CharacterID: "npc-1", Created: true, Kind: character.KindNPC},
-		},
+	emitter, err := module.BindSessionStartBootstrap("camp-1", map[domainmodule.Key]any{
+		{ID: SystemID, Version: SystemVersion}: daggerheartstate.SnapshotState{GMFear: daggerheartstate.GMFearDefault},
+	})
+	if err != nil {
+		t.Fatalf("BindSessionStartBootstrap returned error: %v", err)
+	}
+
+	events, err := emitter.EmitSessionStartBootstrap(map[ids.CharacterID]character.State{
+		"pc-1":  {CharacterID: "pc-1", Created: true, Kind: character.KindPC},
+		"pc-2":  {CharacterID: "pc-2", Created: true, Kind: character.KindPC},
+		"npc-1": {CharacterID: "npc-1", Created: true, Kind: character.KindNPC},
+	},
 		command.Command{
 			CampaignID:    "camp-1",
 			SessionID:     "sess-1",
@@ -40,11 +46,9 @@ func TestSessionStartBootstrapSeedsFearFromPCCount(t *testing.T) {
 			ActorID:       "gm-1",
 			CorrelationID: "corr-1",
 			CausationID:   "cause-1",
-		},
-		now,
-	)
+		}, now)
 	if err != nil {
-		t.Fatalf("SessionStartBootstrap returned error: %v", err)
+		t.Fatalf("EmitSessionStartBootstrap returned error: %v", err)
 	}
 	if len(events) != 1 {
 		t.Fatalf("events = %d, want 1", len(events))
@@ -70,16 +74,20 @@ func TestSessionStartBootstrapSeedsFearFromPCCount(t *testing.T) {
 func TestSessionStartBootstrapSkipsWhenFearAlreadySeeded(t *testing.T) {
 	module := NewModule()
 
-	events, err := module.SessionStartBootstrap(
-		daggerheartstate.SnapshotState{GMFear: 3},
-		map[ids.CharacterID]character.State{
-			"pc-1": {CharacterID: "pc-1", Created: true, Kind: character.KindPC},
-		},
-		command.Command{CampaignID: "camp-1"},
-		time.Now(),
-	)
+	emitter, err := module.BindSessionStartBootstrap("camp-1", map[domainmodule.Key]any{
+		{ID: SystemID, Version: SystemVersion}: daggerheartstate.SnapshotState{GMFear: 3},
+	})
 	if err != nil {
-		t.Fatalf("SessionStartBootstrap returned error: %v", err)
+		t.Fatalf("BindSessionStartBootstrap returned error: %v", err)
+	}
+
+	events, err := emitter.EmitSessionStartBootstrap(map[ids.CharacterID]character.State{
+		"pc-1": {CharacterID: "pc-1", Created: true, Kind: character.KindPC},
+	},
+		command.Command{CampaignID: "camp-1"},
+		time.Now())
+	if err != nil {
+		t.Fatalf("EmitSessionStartBootstrap returned error: %v", err)
 	}
 	if len(events) != 0 {
 		t.Fatalf("events = %d, want 0", len(events))
@@ -89,18 +97,22 @@ func TestSessionStartBootstrapSkipsWhenFearAlreadySeeded(t *testing.T) {
 func TestSessionStartBootstrapNoopsWithoutCreatedPCs(t *testing.T) {
 	module := NewModule()
 
-	events, err := module.SessionStartBootstrap(
-		daggerheartstate.SnapshotState{GMFear: daggerheartstate.GMFearDefault},
-		map[ids.CharacterID]character.State{
-			"npc-1": {CharacterID: "npc-1", Created: true, Kind: character.KindNPC},
-			"pc-1":  {CharacterID: "pc-1", Created: false, Kind: character.KindPC},
-			"pc-2":  {CharacterID: "pc-2", Created: true, Deleted: true, Kind: character.KindPC},
-		},
-		command.Command{CampaignID: "camp-1"},
-		time.Now(),
-	)
+	emitter, err := module.BindSessionStartBootstrap("camp-1", map[domainmodule.Key]any{
+		{ID: SystemID, Version: SystemVersion}: daggerheartstate.SnapshotState{GMFear: daggerheartstate.GMFearDefault},
+	})
 	if err != nil {
-		t.Fatalf("SessionStartBootstrap returned error: %v", err)
+		t.Fatalf("BindSessionStartBootstrap returned error: %v", err)
+	}
+
+	events, err := emitter.EmitSessionStartBootstrap(map[ids.CharacterID]character.State{
+		"npc-1": {CharacterID: "npc-1", Created: true, Kind: character.KindNPC},
+		"pc-1":  {CharacterID: "pc-1", Created: false, Kind: character.KindPC},
+		"pc-2":  {CharacterID: "pc-2", Created: true, Deleted: true, Kind: character.KindPC},
+	},
+		command.Command{CampaignID: "camp-1"},
+		time.Now())
+	if err != nil {
+		t.Fatalf("EmitSessionStartBootstrap returned error: %v", err)
 	}
 	if len(events) != 0 {
 		t.Fatalf("events = %d, want 0", len(events))
@@ -110,17 +122,11 @@ func TestSessionStartBootstrapNoopsWithoutCreatedPCs(t *testing.T) {
 func TestSessionStartBootstrapRejectsInvalidSystemState(t *testing.T) {
 	module := NewModule()
 
-	events, err := module.SessionStartBootstrap(
-		struct{}{},
-		nil,
-		command.Command{CampaignID: "camp-1"},
-		time.Now(),
-	)
+	_, err := module.BindSessionStartBootstrap("camp-1", map[domainmodule.Key]any{
+		{ID: SystemID, Version: SystemVersion}: struct{}{},
+	})
 	if err == nil {
 		t.Fatal("expected invalid system state error")
-	}
-	if len(events) != 0 {
-		t.Fatalf("events = %d, want 0 on error", len(events))
 	}
 }
 

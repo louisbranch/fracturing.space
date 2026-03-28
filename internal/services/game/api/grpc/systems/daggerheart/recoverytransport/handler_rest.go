@@ -3,7 +3,6 @@ package recoverytransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -20,7 +19,6 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,10 +37,10 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return RestResult{}, handleDomainError(err)
+		return RestResult{}, handleDomainError(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return RestResult{}, handleDomainError(err)
+		return RestResult{}, handleDomainError(ctx, err)
 	}
 	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart rest"); err != nil {
 		return RestResult{}, err
@@ -66,8 +64,10 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 		return RestResult{}, grpcerror.Internal("failed to resolve rest seed", err)
 	}
 	currentSnap, err := h.deps.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return RestResult{}, grpcerror.Internal("get daggerheart snapshot", err)
+	if err != nil {
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart snapshot"); lookupErr != nil {
+			return RestResult{}, lookupErr
+		}
 	}
 	restType, err := restTypeFromProto(in.Rest.RestType)
 	if err != nil {
@@ -83,7 +83,7 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 	if longTermCountdownID != "" {
 		storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID.String())
 		if err != nil {
-			return RestResult{}, handleDomainError(err)
+			return RestResult{}, handleDomainError(ctx, err)
 		}
 		if storedCountdown.SessionID != "" || storedCountdown.SceneID != "" {
 			return RestResult{}, status.Error(codes.InvalidArgument, "campaign_countdown_id must reference a campaign countdown")
@@ -102,11 +102,11 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 		}
 		profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 		if err != nil {
-			return RestResult{}, handleDomainError(err)
+			return RestResult{}, handleDomainError(ctx, err)
 		}
 		current, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 		if err != nil {
-			return RestResult{}, handleDomainError(err)
+			return RestResult{}, handleDomainError(ctx, err)
 		}
 		normalizedCharacterID := ids.CharacterID(characterID)
 		profilesByCharacterID[normalizedCharacterID] = profile
@@ -122,7 +122,7 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 				if _, exists := countdownsByID[move.CountdownID]; !exists {
 					storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, move.CountdownID.String())
 					if err != nil {
-						return RestResult{}, handleDomainError(err)
+						return RestResult{}, handleDomainError(ctx, err)
 					}
 					if storedCountdown.SessionID != "" || storedCountdown.SceneID != "" {
 						return RestResult{}, status.Error(codes.InvalidArgument, "work_on_project requires a campaign countdown")
@@ -203,7 +203,7 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 	for _, characterID := range affectedCharacterIDs {
 		currentState, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
+			if grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart character state") == nil {
 				continue
 			}
 			return RestResult{}, grpcerror.Internal("get daggerheart character state", err)
@@ -214,7 +214,7 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 	for _, countdownID := range result.UpdatedCountdownIDs {
 		countdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID.String())
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
+			if grpcerror.OptionalLookupErrorContext(ctx, err, "load daggerheart countdown") == nil {
 				continue
 			}
 			return RestResult{}, grpcerror.Internal("load daggerheart countdown", err)

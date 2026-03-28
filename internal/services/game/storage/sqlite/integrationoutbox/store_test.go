@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
@@ -120,6 +123,40 @@ func TestIntegrationOutbox_LeaseAndMarkDead(t *testing.T) {
 	}
 	if done.ProcessedAt == nil || !done.ProcessedAt.Equal(processedAt) {
 		t.Fatalf("processed at = %v, want %v", done.ProcessedAt, processedAt)
+	}
+}
+
+func TestIntegrationOutbox_EnqueueForEventDedupesBySourceEvent(t *testing.T) {
+	store, root := openTestIntegrationOutboxStore(t)
+	now := time.Date(2026, 3, 12, 12, 0, 0, 0, time.UTC)
+	sourceEvent := event.Event{
+		CampaignID: ids.CampaignID("camp-1"),
+		Seq:        33,
+		SessionID:  ids.SessionID("sess-1"),
+		Type:       session.EventTypeOOCClosed,
+		Timestamp:  now,
+	}
+
+	for range 2 {
+		tx, err := root.DB().BeginTx(context.Background(), nil)
+		if err != nil {
+			t.Fatalf("begin tx: %v", err)
+		}
+		if err := integrationoutbox.EnqueueForEvent(context.Background(), tx, sourceEvent); err != nil {
+			_ = tx.Rollback()
+			t.Fatalf("enqueue for event: %v", err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatalf("commit tx: %v", err)
+		}
+	}
+
+	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 10, now, time.Minute)
+	if err != nil {
+		t.Fatalf("lease integration outbox events: %v", err)
+	}
+	if len(leased) != 1 {
+		t.Fatalf("leased len = %d, want 1", len(leased))
 	}
 }
 

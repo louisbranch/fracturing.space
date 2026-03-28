@@ -8,6 +8,13 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+var (
+	_ storage.SessionGateStore        = (*FakeSessionGateStore)(nil)
+	_ storage.SessionStore            = (*FakeSessionStore)(nil)
+	_ storage.SessionSpotlightStore   = (*FakeSessionSpotlightStore)(nil)
+	_ storage.SessionInteractionStore = (*FakeSessionInteractionStore)(nil)
+)
+
 // FakeSessionGateStore is a test double for storage.SessionGateStore.
 type FakeSessionGateStore struct {
 	Gates  map[string]storage.SessionGate

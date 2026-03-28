@@ -4,23 +4,17 @@ import (
 	"context"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-type CampaignStore interface {
-	Get(ctx context.Context, campaignID string) (storage.CampaignRecord, error)
-}
+type CampaignStore = daggerheartguard.CampaignStore
 
-type SessionStore interface {
-	GetSession(ctx context.Context, campaignID, sessionID string) (storage.SessionRecord, error)
-}
+type SessionStore = daggerheartguard.SessionStore
 
-type SessionGateStore interface {
-	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (storage.SessionGate, error)
-}
+type SessionGateStore = daggerheartguard.SessionGateStore
 
 type DaggerheartStore interface {
 	GetDaggerheartEnvironmentEntity(ctx context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error)
@@ -31,19 +25,7 @@ type ContentStore interface {
 	GetDaggerheartEnvironment(ctx context.Context, id string) (contentstore.DaggerheartEnvironment, error)
 }
 
-type DomainCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+type DomainCommandInput = workflowwrite.DomainCommandInput
 
 type Dependencies struct {
 	Campaign CampaignStore

@@ -24,7 +24,16 @@ func newSystemCommandDispatcher(systems *module.Registry) systemCommandDispatche
 // system state snapshot.
 func (d systemCommandDispatcher) Decide(current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	key := module.Key{ID: cmd.SystemID, Version: cmd.SystemVersion}
-	systemState := current.Systems[key]
+	_, systemState, err := module.ResolveSnapshotState(
+		d.systems,
+		cmd.CampaignID,
+		cmd.SystemID,
+		cmd.SystemVersion,
+		current.Systems[key],
+	)
+	if err != nil {
+		return command.Reject(command.Rejection{Code: "SYSTEM_COMMAND_REJECTED", Message: err.Error()})
+	}
 	decision, err := module.RouteCommand(d.systems, systemState, cmd, now)
 	if err != nil {
 		return command.Reject(command.Rejection{Code: "SYSTEM_COMMAND_REJECTED", Message: err.Error()})

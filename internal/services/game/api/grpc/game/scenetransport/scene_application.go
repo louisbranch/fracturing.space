@@ -18,7 +18,7 @@ type Deps struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	Character          storage.CharacterStore
-	Event              storage.EventStore
+	Event              storage.EventHistoryStore
 	Session            storage.SessionStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore

@@ -47,13 +47,6 @@ const (
 	// nil checks and skip claim logic when the store is nil.
 )
 
-// handlerEntry declares preconditions for validatePreconditions. Used by the
-// CoreRouter for store/ID checks before handler dispatch.
-type handlerEntry struct {
-	stores storeRequirement
-	ids    idRequirement
-}
-
 // registrationRequirements keeps contributor-facing projection registration
 // readable while preserving the internal bitset checks used at dispatch time.
 type registrationRequirements struct {
@@ -124,8 +117,8 @@ type storeCheck struct {
 	isNil func(Applier) bool
 }
 
-// storeChecks is the single table that drives both ValidateStorePreconditions
-// and validatePreconditions, eliminating duplicated nil-check logic.
+// storeChecks is the single table that drives both startup validation and
+// per-event dispatch preconditions, eliminating duplicated nil-check logic.
 var storeChecks = []storeCheck{
 	{storeCampaign, "campaign", func(a Applier) bool { return a.Campaign == nil }},
 	{storeCharacter, "character", func(a Applier) bool { return a.Character == nil }},
@@ -156,52 +149,65 @@ func checkMissingStores(required storeRequirement, a Applier) []string {
 	return missing
 }
 
-// ValidateStorePreconditions verifies that every store dependency declared in
-// the handler registry is satisfied by this Applier. Call at startup to fail
-// fast on misconfiguration instead of discovering nil stores at runtime when the
-// first event of a given type arrives.
-//
-// In addition to core router requirements, it checks that Adapters is present
-// whenever the event registry contains system-owned event types, since those
-// events are routed through the adapter path rather than the core router.
-func (a Applier) ValidateStorePreconditions() error {
-	// Collect the union of all store requirements across router entries.
+func coreRequiredStores() storeRequirement {
 	var required storeRequirement
 	for _, h := range coreRouter.handlers {
 		required |= h.stores
 	}
+	return required
+}
 
-	// System-owned events bypass the core router and route through Adapters.
-	// Require Adapters when the event registry contains any system event types.
-	if a.Events != nil {
-		for _, def := range a.Events.ListDefinitions() {
-			if def.Owner == event.OwnerSystem {
-				required |= storeAdapters
-				break
-			}
+func requiresSystemAdapters(events *event.Registry) bool {
+	if events == nil {
+		return false
+	}
+	for _, def := range events.ListDefinitions() {
+		if def.Owner == event.OwnerSystem {
+			return true
 		}
 	}
+	return false
+}
 
-	if missing := checkMissingStores(required, a); len(missing) > 0 {
+// ValidateCoreStorePreconditions verifies that every store dependency declared
+// by core projection handlers is satisfied by this Applier.
+func (a Applier) ValidateCoreStorePreconditions() error {
+	if missing := checkMissingStores(coreRequiredStores(), a); len(missing) > 0 {
 		return fmt.Errorf("projection stores not configured: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }
 
-// validatePreconditions checks that the applier's stores and event envelope
-// fields satisfy the handler's declared requirements.
-func (a Applier) validatePreconditions(h handlerEntry, evt event.Event) error {
-	if missing := checkMissingStores(h.stores, a); len(missing) > 0 {
+// ValidateRuntimePreconditions verifies that the applier is fully configured
+// for runtime projection work.
+//
+// This checks both core projection-handler stores and the system adapter
+// registry required to apply system-owned events declared in the event
+// registry.
+func (a Applier) ValidateRuntimePreconditions() error {
+	if err := a.ValidateCoreStorePreconditions(); err != nil {
+		return err
+	}
+	if requiresSystemAdapters(a.Events) && a.Adapters == nil {
+		return fmt.Errorf("projection system adapters are not configured")
+	}
+	return nil
+}
+
+// validateHandlerPreconditions checks that the applier's stores and event
+// envelope fields satisfy one handler's declared requirements.
+func (a Applier) validateHandlerPreconditions(stores storeRequirement, ids idRequirement, evt event.Event) error {
+	if missing := checkMissingStores(stores, a); len(missing) > 0 {
 		return fmt.Errorf("%s store is not configured", missing[0])
 	}
 
-	if h.ids&fieldCampaignID != 0 && strings.TrimSpace(string(evt.CampaignID)) == "" {
+	if ids&fieldCampaignID != 0 && strings.TrimSpace(string(evt.CampaignID)) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-	if h.ids&fieldEntityID != 0 && strings.TrimSpace(evt.EntityID) == "" {
+	if ids&fieldEntityID != 0 && strings.TrimSpace(evt.EntityID) == "" {
 		return fmt.Errorf("entity id is required")
 	}
-	if h.ids&fieldSessionID != 0 && strings.TrimSpace(evt.SessionID.String()) == "" {
+	if ids&fieldSessionID != 0 && strings.TrimSpace(evt.SessionID.String()) == "" {
 		return fmt.Errorf("session id is required")
 	}
 	return nil

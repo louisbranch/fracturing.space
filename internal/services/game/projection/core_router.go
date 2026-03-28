@@ -40,7 +40,7 @@ func (r *CoreRouter) Route(a Applier, ctx context.Context, evt event.Event) erro
 	if !ok {
 		return fmt.Errorf("unhandled projection event type: %s", evt.Type)
 	}
-	if err := a.validatePreconditions(handlerEntry{stores: h.stores, ids: h.ids}, evt); err != nil {
+	if err := a.validateHandlerPreconditions(h.stores, h.ids, evt); err != nil {
 		return err
 	}
 	return h.apply(a, ctx, evt)

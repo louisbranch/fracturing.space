@@ -112,8 +112,13 @@ func newOverviewHandler(t *testing.T, authErr error) (Handler, *overviewAutomati
 	configuration := &overviewConfiguration{}
 	return NewHandler(detailHandler, HandlerServices{
 		automationReads: overviewAutomationReads{
-			summary:  campaignapp.CampaignAIBindingSummary{Status: "Not required", CanManage: true},
-			settings: campaignapp.CampaignAIBindingSettings{CurrentID: "agent-1"},
+			summary: campaignapp.CampaignAIBindingSummary{Status: "Not required", CanManage: true},
+			settings: campaignapp.CampaignAIBindingSettings{
+				CurrentID: "agent-1",
+				Options: []campaignapp.CampaignAIAgentOption{
+					{ID: "agent-1", Label: "Narrator", Enabled: true, Selected: true},
+				},
+			},
 		},
 		automationMutate: automationMutation,
 		configuration:    configuration,
@@ -158,6 +163,52 @@ func TestHandleOverviewRendersOwnedOverviewPage(t *testing.T) {
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing overview marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestHandleCampaignEditRendersOwnedEditPage(t *testing.T) {
+	t.Parallel()
+
+	h, _, _ := newOverviewHandler(t, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignEdit("camp-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleCampaignEdit(rr, req, "camp-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`action="` + routepath.AppCampaignEdit("camp-1") + `"`,
+		`value="The Guildhouse"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing campaign-edit marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestHandleCampaignAIBindingPageRendersOwnedPage(t *testing.T) {
+	t.Parallel()
+
+	h, _, _ := newOverviewHandler(t, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignAIBinding("camp-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleCampaignAIBindingPage(rr, req, "camp-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-ai-binding-page="true"`,
+		`Narrator`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing ai-binding marker %q: %q", marker, body)
 		}
 	}
 }

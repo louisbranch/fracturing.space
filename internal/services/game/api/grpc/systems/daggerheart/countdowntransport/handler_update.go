@@ -49,7 +49,7 @@ func (h *Handler) AdvanceSceneCountdown(ctx context.Context, in *pb.DaggerheartA
 	}
 	storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return AdvanceResult{}, grpcerror.HandleDomainError(err)
+		return AdvanceResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if storedCountdown.SessionID != sessionID || storedCountdown.SceneID != sceneID {
 		return AdvanceResult{}, status.Error(codes.NotFound, "scene countdown was not found")
@@ -101,7 +101,7 @@ func (h *Handler) AdvanceCampaignCountdown(ctx context.Context, in *pb.Daggerhea
 	}
 	storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return AdvanceResult{}, grpcerror.HandleDomainError(err)
+		return AdvanceResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if storedCountdown.SessionID != "" || storedCountdown.SceneID != "" {
 		return AdvanceResult{}, status.Error(codes.NotFound, "campaign countdown was not found")
@@ -158,7 +158,7 @@ func (h *Handler) ResolveSceneCountdownTrigger(ctx context.Context, in *pb.Dagge
 	}
 	storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return TriggerResolveResult{}, grpcerror.HandleDomainError(err)
+		return TriggerResolveResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if storedCountdown.SessionID != sessionID || storedCountdown.SceneID != sceneID {
 		return TriggerResolveResult{}, status.Error(codes.NotFound, "scene countdown was not found")
@@ -197,7 +197,7 @@ func (h *Handler) ResolveCampaignCountdownTrigger(ctx context.Context, in *pb.Da
 	}
 	storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return TriggerResolveResult{}, grpcerror.HandleDomainError(err)
+		return TriggerResolveResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if storedCountdown.SessionID != "" || storedCountdown.SceneID != "" {
 		return TriggerResolveResult{}, status.Error(codes.NotFound, "campaign countdown was not found")

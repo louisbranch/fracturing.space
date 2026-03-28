@@ -4,11 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -40,7 +39,7 @@ func TestTransitionScene_UsesSourceSceneSessionID(t *testing.T) {
 		},
 	})
 
-	_, _ = svc.TransitionScene(gametest.ContextWithParticipantID("manager-1"), &statev1.TransitionSceneRequest{
+	_, _ = svc.TransitionScene(requestctx.WithParticipantID("manager-1"), &statev1.TransitionSceneRequest{
 		CampaignId:    "c1",
 		SourceSceneId: "sc-1",
 		Name:          "Room B",

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -43,9 +43,6 @@ func (fakeModule) EmittableEventTypes() []event.Type {
 func (fakeModule) Decider() module.Decider           { return nil }
 func (fakeModule) Folder() module.Folder             { return nil }
 func (fakeModule) StateFactory() module.StateFactory { return nil }
-func (fakeModule) CharacterReady(any, character.State) (bool, string) {
-	return true, ""
-}
 
 type syntheticModule struct {
 	id          string
@@ -75,14 +72,11 @@ func (m syntheticModule) EmittableEventTypes() []event.Type {
 func (m syntheticModule) Decider() module.Decider           { return nil }
 func (m syntheticModule) Folder() module.Folder             { return nil }
 func (m syntheticModule) StateFactory() module.StateFactory { return nil }
-func (m syntheticModule) CharacterReady(any, character.State) (bool, string) {
-	return true, ""
-}
 
 func TestCoreDomains_AllRegistered(t *testing.T) {
-	domains := CoreDomains()
+	domains := aggregate.CoreDomainRegistrations()
 	if len(domains) != 6 {
-		t.Fatalf("CoreDomains() = %d, want 6", len(domains))
+		t.Fatalf("aggregate.CoreDomainRegistrations() = %d, want 6", len(domains))
 	}
 	seen := make(map[string]bool)
 	for _, d := range domains {
@@ -256,7 +250,7 @@ func TestValidateFoldCoverage_CoreProjectionEventsHaveFoldHandlers(t *testing.T)
 		t.Fatalf("build registries: %v", err)
 	}
 
-	if err := ValidateFoldCoverage(registries.Events); err != nil {
+	if err := ValidateFoldCoverage(registries.Events, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("fold coverage validation failed: %v", err)
 	}
 }
@@ -272,7 +266,7 @@ func TestValidateFoldCoverage_ReturnsErrorForMissingHandler(t *testing.T) {
 		t.Fatalf("register event: %v", err)
 	}
 
-	err := ValidateFoldCoverage(eventRegistry)
+	err := ValidateFoldCoverage(eventRegistry, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for unhandled projection event")
 	}
@@ -292,7 +286,7 @@ func TestValidateFoldCoverage_IgnoresAuditOnlyEvents(t *testing.T) {
 		t.Fatalf("register event: %v", err)
 	}
 
-	if err := ValidateFoldCoverage(eventRegistry); err != nil {
+	if err := ValidateFoldCoverage(eventRegistry, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("expected no error for audit-only event, got: %v", err)
 	}
 }
@@ -309,7 +303,7 @@ func TestValidateFoldCoverage_IgnoresSystemEvents(t *testing.T) {
 		t.Fatalf("register event: %v", err)
 	}
 
-	if err := ValidateFoldCoverage(eventRegistry); err != nil {
+	if err := ValidateFoldCoverage(eventRegistry, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("expected no error for system event, got: %v", err)
 	}
 }
@@ -360,7 +354,7 @@ func TestValidateFoldCoverage_RequiresHandlerForReplayOnlyEvents(t *testing.T) {
 		t.Fatalf("register event: %v", err)
 	}
 
-	err := ValidateFoldCoverage(eventRegistry)
+	err := ValidateFoldCoverage(eventRegistry, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for unhandled replay-only event")
 	}
@@ -538,13 +532,13 @@ func TestValidateAggregateFoldDispatch_PassesWithCurrentDomains(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	if err := ValidateAggregateFoldDispatch(registries.Events); err != nil {
+	if err := ValidateAggregateFoldDispatch(registries.Events, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }
 
 func TestValidateAggregateFoldDispatch_RejectsNilRegistry(t *testing.T) {
-	err := ValidateAggregateFoldDispatch(nil)
+	err := ValidateAggregateFoldDispatch(nil, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for nil event registry")
 	}
@@ -555,7 +549,7 @@ func TestValidateEntityKeyedAddressing_PassesWithCurrentDomains(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	if err := ValidateEntityKeyedAddressing(registries.Events); err != nil {
+	if err := ValidateEntityKeyedAddressing(registries.Events, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }
@@ -584,7 +578,7 @@ func TestValidateEntityKeyedAddressing_RejectsMissingPolicy(t *testing.T) {
 		}
 	}
 
-	err := ValidateEntityKeyedAddressing(eventRegistry)
+	err := ValidateEntityKeyedAddressing(eventRegistry, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for entity-keyed type without entity addressing")
 	}
@@ -944,7 +938,7 @@ func TestValidateProjectionRegistries_PassesWithCurrentDomains(t *testing.T) {
 		// Provide all core projection-and-replay events by pulling them from
 		// the current domains — same approach used by projection.ProjectionHandledTypes().
 	}
-	for _, domain := range CoreDomains() {
+	for _, domain := range aggregate.CoreDomainRegistrations() {
 		for _, def := range registries.Events.ListDefinitions() {
 			if def.Owner != event.OwnerCore || def.Intent != event.IntentProjectionAndReplay {
 				continue
@@ -962,7 +956,7 @@ func TestValidateProjectionRegistries_PassesWithCurrentDomains(t *testing.T) {
 		event.Type("sys.system_1.action.tested"),
 	})
 
-	err = ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes)
+	err = ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes, aggregate.CoreDomainRegistrations())
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -974,7 +968,7 @@ func TestValidateProjectionRegistries_PassesWithoutAdapters(t *testing.T) {
 		t.Fatalf("build registries: %v", err)
 	}
 	handledTypes := projectionHandledTypesFromRegistry(registries.Events)
-	if err := ValidateProjectionRegistries(registries.Events, registries.Systems, nil, handledTypes); err != nil {
+	if err := ValidateProjectionRegistries(registries.Events, registries.Systems, nil, handledTypes, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("expected no error without adapters, got: %v", err)
 	}
 }
@@ -992,7 +986,7 @@ func TestValidateProjectionRegistries_FailsOnMissingProjectionHandler(t *testing
 	moduleRegistry := module.NewRegistry()
 	adapters := bridge.NewAdapterRegistry()
 
-	err := ValidateProjectionRegistries(eventRegistry, moduleRegistry, adapters, nil)
+	err := ValidateProjectionRegistries(eventRegistry, moduleRegistry, adapters, nil, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for unhandled projection event")
 	}
@@ -1016,7 +1010,7 @@ func TestValidateProjectionRegistries_FailsOnDeadProjectionHandler(t *testing.T)
 
 	// Projection handler registered for an audit-only event — dead code.
 	projectionHandled := []event.Type{event.Type("test.audit_event")}
-	err := ValidateProjectionRegistries(eventRegistry, moduleRegistry, adapters, projectionHandled)
+	err := ValidateProjectionRegistries(eventRegistry, moduleRegistry, adapters, projectionHandled, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for dead projection handler")
 	}
@@ -1035,7 +1029,7 @@ func TestValidateProjectionRegistries_FailsOnMissingAdapterHandler(t *testing.T)
 	adapters := buildFakeAdapterRegistry(t, nil)
 	handledTypes := projectionHandledTypesFromRegistry(registries.Events)
 
-	err = ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes)
+	err = ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for uncovered adapter event")
 	}
@@ -1316,9 +1310,6 @@ func (m *noValidatorModule) EmittableEventTypes() []event.Type {
 func (m *noValidatorModule) Decider() module.Decider           { return nil }
 func (m *noValidatorModule) Folder() module.Folder             { return nil }
 func (m *noValidatorModule) StateFactory() module.StateFactory { return nil }
-func (m *noValidatorModule) CharacterReady(any, character.State) (bool, string) {
-	return true, ""
-}
 
 // --- Router-definition parity tests ---
 
@@ -1472,7 +1463,7 @@ func TestValidateCoreDeciderCommandCoverage_PassesWithCurrentDomains(t *testing.
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	if err := ValidateCoreDeciderCommandCoverage(registries.Commands); err != nil {
+	if err := ValidateCoreDeciderCommandCoverage(registries.Commands, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }
@@ -1487,7 +1478,7 @@ func TestValidateCoreDeciderCommandCoverage_FailsOnMissingHandler(t *testing.T) 
 		t.Fatalf("register command: %v", err)
 	}
 
-	err := ValidateCoreDeciderCommandCoverage(cmdRegistry)
+	err := ValidateCoreDeciderCommandCoverage(cmdRegistry, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for core command without decider handler")
 	}
@@ -1509,7 +1500,7 @@ func TestValidateCoreDeciderCommandCoverage_IgnoresSystemCommands(t *testing.T) 
 		t.Fatalf("register command: %v", err)
 	}
 
-	if err := ValidateCoreDeciderCommandCoverage(registries.Commands); err != nil {
+	if err := ValidateCoreDeciderCommandCoverage(registries.Commands, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("expected no error for system command, got: %v", err)
 	}
 }
@@ -1521,7 +1512,7 @@ func TestValidateCoreDeciderCommandCoverage_FailsOnStaleDeclaredCommand(t *testi
 	// a type not registered in the command registry, the reverse check catches it.
 	cmdRegistry := command.NewRegistry()
 
-	err := ValidateCoreDeciderCommandCoverage(cmdRegistry)
+	err := ValidateCoreDeciderCommandCoverage(cmdRegistry, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error for declared command types not in registry")
 	}
@@ -1539,7 +1530,7 @@ func TestValidateCoreProjectionDeclarations_PassesWithCurrentDomains(t *testing.
 	}
 	// Collect all projection handled types from domain declarations.
 	var declared []event.Type
-	for _, domain := range CoreDomains() {
+	for _, domain := range aggregate.CoreDomainRegistrations() {
 		if domain.ProjectionHandledTypes != nil {
 			declared = append(declared, domain.ProjectionHandledTypes()...)
 		}

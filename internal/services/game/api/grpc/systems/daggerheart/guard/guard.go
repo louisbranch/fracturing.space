@@ -5,7 +5,6 @@ package guard
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -18,6 +17,18 @@ import (
 // SessionGateStore is the read contract used by EnsureNoOpenSessionGate.
 type SessionGateStore interface {
 	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (storage.SessionGate, error)
+}
+
+// CampaignStore is the campaign-read contract used by shared Daggerheart
+// transport guards and sibling handler packages.
+type CampaignStore interface {
+	Get(ctx context.Context, campaignID string) (storage.CampaignRecord, error)
+}
+
+// SessionStore is the session-read contract used by shared Daggerheart
+// transport helpers and sibling handler packages.
+type SessionStore interface {
+	GetSession(ctx context.Context, campaignID, sessionID string) (storage.SessionRecord, error)
 }
 
 // CampaignSupportsDaggerheart reports whether a campaign record belongs to the
@@ -53,8 +64,5 @@ func EnsureNoOpenSessionGate(ctx context.Context, store SessionGateStore, campai
 	if err == nil {
 		return status.Errorf(codes.FailedPrecondition, "session gate is open: %s", gate.GateID)
 	}
-	if errors.Is(err, storage.ErrNotFound) {
-		return nil
-	}
-	return grpcerror.Internal("load session gate", err)
+	return grpcerror.OptionalLookupErrorContext(ctx, err, "load session gate")
 }

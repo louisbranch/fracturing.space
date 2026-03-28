@@ -23,6 +23,7 @@ import (
 // All unary calls are captured to make cross-service telemetry coverage explicit
 // while preserving existing read/write classification in event attributes.
 func AuditInterceptor(policy audit.Policy) grpc.UnaryServerInterceptor {
+	emitter := audit.NewEmitter(policy)
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
 		if !policy.Enabled() {
@@ -38,10 +39,10 @@ func AuditInterceptor(policy audit.Policy) grpc.UnaryServerInterceptor {
 		severity := audit.SeverityInfo
 		code := codes.OK
 		if err != nil {
-			severity = audit.SeverityError
 			if st, ok := status.FromError(err); ok {
 				code = st.Code()
 			}
+			severity = severityForGRPCCode(code)
 		}
 
 		campaignID, sessionID := extractScope(req)
@@ -57,7 +58,6 @@ func AuditInterceptor(policy audit.Policy) grpc.UnaryServerInterceptor {
 			spanID = sc.SpanID().String()
 		}
 
-		emitter := audit.NewEmitter(policy)
 		emitErr := emitter.Emit(ctx, storage.AuditEvent{
 			EventName:    eventName,
 			Severity:     string(severity),
@@ -89,6 +89,7 @@ func AuditInterceptor(policy audit.Policy) grpc.UnaryServerInterceptor {
 // available at the interceptor level for streams — only the handler has access
 // to the request message.
 func StreamAuditInterceptor(policy audit.Policy) grpc.StreamServerInterceptor {
+	emitter := audit.NewEmitter(policy)
 	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		err := handler(srv, stream)
 		if !policy.Enabled() {
@@ -100,10 +101,10 @@ func StreamAuditInterceptor(policy audit.Policy) grpc.StreamServerInterceptor {
 		severity := audit.SeverityInfo
 		code := codes.OK
 		if err != nil {
-			severity = audit.SeverityError
 			if st, ok := status.FromError(err); ok {
 				code = st.Code()
 			}
+			severity = severityForGRPCCode(code)
 		}
 
 		actorID := grpcmeta.ParticipantIDFromContext(ctx)
@@ -118,7 +119,6 @@ func StreamAuditInterceptor(policy audit.Policy) grpc.StreamServerInterceptor {
 			spanID = sc.SpanID().String()
 		}
 
-		emitter := audit.NewEmitter(policy)
 		emitErr := emitter.Emit(ctx, storage.AuditEvent{
 			EventName:    events.GRPCStream,
 			Severity:     string(severity),
@@ -214,5 +214,21 @@ func classifyMethodKind(fullMethod string) string {
 		return "read"
 	default:
 		return "write"
+	}
+}
+
+func severityForGRPCCode(code codes.Code) audit.Severity {
+	switch code {
+	case codes.OK:
+		return audit.SeverityInfo
+	case codes.Unknown,
+		codes.DeadlineExceeded,
+		codes.Unimplemented,
+		codes.Internal,
+		codes.Unavailable,
+		codes.DataLoss:
+		return audit.SeverityError
+	default:
+		return audit.SeverityWarn
 	}
 }

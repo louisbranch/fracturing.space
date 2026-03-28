@@ -44,7 +44,7 @@ func (h *Handler) ApplyClassFeature(ctx context.Context, in *pb.DaggerheartApply
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 
 	classState := classStateFromProjection(state.ClassState)
@@ -99,7 +99,7 @@ func (h *Handler) resolveClassFeaturePayload(
 		_ = feature
 		classEntry, loadErr := h.deps.Content.GetDaggerheartClass(ctx, profile.ClassID)
 		if loadErr != nil {
-			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		rule := classEntry.HopeFeature.HopeFeatureRule
 		if rule == nil {
@@ -192,11 +192,11 @@ func (h *Handler) resolveClassFeaturePayload(
 		for _, targetID := range targetIDs {
 			targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 			if loadErr != nil {
-				return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+				return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 			}
 			targetProfile, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, targetID)
 			if loadErr != nil {
-				return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+				return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 			}
 			hpGain := 0
 			for _, die := range classState.RallyDice {
@@ -219,7 +219,7 @@ func (h *Handler) resolveClassFeaturePayload(
 		}
 		targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 		if loadErr != nil {
-			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		payload.Feature = "make_a_scene"
 		payload.Targets = []daggerheartpayload.ClassFeatureTargetPatchPayload{
@@ -259,11 +259,11 @@ func (h *Handler) resolveClassFeaturePayload(
 		}
 		targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 		if loadErr != nil {
-			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		targetProfile, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, targetID)
 		if loadErr != nil {
-			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.ClassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		payload.Feature = "life_support"
 		payload.Targets = []daggerheartpayload.ClassFeatureTargetPatchPayload{

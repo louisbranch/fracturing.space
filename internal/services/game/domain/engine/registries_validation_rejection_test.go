@@ -1,15 +1,19 @@
 package engine
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
+)
 
 func TestValidateCoreRejectionCodeUniqueness_NoCollisions(t *testing.T) {
-	if err := ValidateCoreRejectionCodeUniqueness(); err != nil {
+	if err := ValidateCoreRejectionCodeUniqueness(aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("rejection code collision detected: %v", err)
 	}
 }
 
 func TestValidateCoreRejectionCodeUniqueness_AllDomainsExportCodes(t *testing.T) {
-	for _, domain := range CoreDomains() {
+	for _, domain := range aggregate.CoreDomainRegistrations() {
 		if domain.RejectionCodes == nil {
 			t.Errorf("core domain %s does not export RejectionCodes()", domain.Name())
 			continue

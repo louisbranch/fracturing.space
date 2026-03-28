@@ -3,7 +3,6 @@ package environmenttransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -17,7 +16,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -60,10 +58,10 @@ func (h *Handler) CreateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart environment entities"); err != nil {
 		return nil, err
@@ -72,17 +70,14 @@ func (h *Handler) CreateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 		return nil, internal("session store is not configured")
 	}
 	if _, err := h.deps.Session.GetSession(ctx, campaignID, sessionID); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 	entry, err := h.deps.Content.GetDaggerheartEnvironment(ctx, environmentID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "environment not found")
-		}
-		return nil, grpcerror.Internal("load environment", err)
+		return nil, grpcerror.LookupErrorContext(ctx, err, "load environment", "environment not found")
 	}
 	difficulty := entry.Difficulty
 	if in.Difficulty != nil {
@@ -157,10 +152,10 @@ func (h *Handler) UpdateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart environment entities"); err != nil {
 		return nil, err
@@ -168,7 +163,7 @@ func (h *Handler) UpdateEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 
 	current, err := h.deps.Daggerheart.GetDaggerheartEnvironmentEntity(ctx, campaignID, environmentEntityID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if current.SessionID != "" {
 		if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, current.SessionID); err != nil {
@@ -250,10 +245,10 @@ func (h *Handler) DeleteEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart environment entities"); err != nil {
 		return nil, err
@@ -261,7 +256,7 @@ func (h *Handler) DeleteEnvironmentEntity(ctx context.Context, in *pb.Daggerhear
 
 	current, err := h.deps.Daggerheart.GetDaggerheartEnvironmentEntity(ctx, campaignID, environmentEntityID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if current.SessionID != "" {
 		if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, current.SessionID); err != nil {
@@ -315,7 +310,7 @@ func (h *Handler) GetEnvironmentEntity(ctx context.Context, in *pb.DaggerheartGe
 	}
 	environmentEntity, err := h.deps.Daggerheart.GetDaggerheartEnvironmentEntity(ctx, campaignID, environmentEntityID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	return &pb.DaggerheartGetEnvironmentEntityResponse{EnvironmentEntity: environmentEntityToProto(environmentEntity)}, nil
 }
@@ -341,7 +336,7 @@ func (h *Handler) ListEnvironmentEntities(ctx context.Context, in *pb.Daggerhear
 	}
 	environmentEntities, err := h.deps.Daggerheart.ListDaggerheartEnvironmentEntities(ctx, campaignID, sessionID, sceneID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	resp := &pb.DaggerheartListEnvironmentEntitiesResponse{EnvironmentEntities: make([]*pb.DaggerheartEnvironmentEntity, 0, len(environmentEntities))}
 	for _, environmentEntity := range environmentEntities {

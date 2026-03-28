@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	errori18n "github.com/louisbranch/fracturing.space/internal/platform/errors/i18n"
+	grpcstatus "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcstatus"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -120,7 +120,7 @@ func NormalizeDomainWriteOptions(ctx context.Context, options *Options, config N
 			if engine.IsNonRetryable(err) {
 				return status.Errorf(codes.FailedPrecondition, "%s: %v", message, err)
 			}
-			return grpcInternal(message, err)
+			return grpcstatus.Internal(message, err)
 		}
 	}
 	if options.ApplyErr == nil {
@@ -129,10 +129,10 @@ func NormalizeDomainWriteOptions(ctx context.Context, options *Options, config N
 			message = "apply event"
 		}
 		if config.PreserveDomainCodeOnApply {
-			options.ApplyErr = ApplyErrorWithDomainCodePreserve(message)
+			options.ApplyErr = grpcstatus.ApplyErrorWithDomainCodePreserve(message)
 		} else {
 			options.ApplyErr = func(err error) error {
-				return grpcInternal(message, err)
+				return grpcstatus.Internal(message, err)
 			}
 		}
 	}
@@ -146,24 +146,6 @@ func NormalizeDomainWriteOptions(ctx context.Context, options *Options, config N
 			return status.Error(codes.FailedPrecondition, message)
 		}
 	}
-}
-
-// ApplyErrorWithDomainCodePreserve preserves structured domain errors and wraps
-// unknown errors in a gRPC internal status for apply callback flows.
-func ApplyErrorWithDomainCodePreserve(message string) func(error) error {
-	return func(err error) error {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return err
-		}
-		return grpcInternal(message, err)
-	}
-}
-
-// grpcInternal logs the full error server-side and returns a sanitized gRPC
-// Internal status that does not expose implementation details to clients.
-func grpcInternal(msg string, err error) error {
-	slog.Error(msg, "error", err)
-	return status.Error(codes.Internal, msg)
 }
 
 // auditStoreDeps is an optional interface that Deps implementors can satisfy

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -76,7 +77,7 @@ func TestListActiveSessionsForUser_ReturnsSortedPage(t *testing.T) {
 		Session:     sessionStore,
 	})
 
-	resp, err := svc.ListActiveSessionsForUser(gametest.ContextWithUserID("user-1"), &statev1.ListActiveSessionsForUserRequest{PageSize: 2})
+	resp, err := svc.ListActiveSessionsForUser(requestctx.WithUserID("user-1"), &statev1.ListActiveSessionsForUserRequest{PageSize: 2})
 	if err != nil {
 		t.Fatalf("ListActiveSessionsForUser() error = %v", err)
 	}
@@ -113,6 +114,6 @@ func TestListActiveSessionsForUser_PropagatesParticipantLookupFailure(t *testing
 		Session:     gametest.NewFakeSessionStore(),
 	})
 
-	_, err := svc.ListActiveSessionsForUser(gametest.ContextWithUserID("user-1"), &statev1.ListActiveSessionsForUserRequest{})
+	_, err := svc.ListActiveSessionsForUser(requestctx.WithUserID("user-1"), &statev1.ListActiveSessionsForUserRequest{})
 	assertStatusCode(t, err, codes.Internal)
 }

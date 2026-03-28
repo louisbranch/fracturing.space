@@ -9,6 +9,8 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -60,9 +62,9 @@ func TestUpdateCampaign_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := newTestCampaignService(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.UpdateCampaign(gametest.ContextWithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
+	resp, err := svc.UpdateCampaign(requestctx.WithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
 		CampaignId:  "c1",
 		Name:        wrapperspb.String("  New Name  "),
 		ThemePrompt: wrapperspb.String("  New theme  "),
@@ -113,9 +115,9 @@ func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = storedCampaign
 
 	domain := &fakeDomainEngine{store: ts.Event}
-	svc := newTestCampaignService(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.UpdateCampaign(gametest.ContextWithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
+	resp, err := svc.UpdateCampaign(requestctx.WithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
 		CampaignId:  "c1",
 		Name:        wrapperspb.String("Existing Name"),
 		ThemePrompt: wrapperspb.String("Existing theme"),
@@ -158,9 +160,9 @@ func TestSetCampaignCover_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := newTestCampaignService(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.SetCampaignCover(gametest.ContextWithParticipantID("owner-1"), &statev1.SetCampaignCoverRequest{
+	resp, err := svc.SetCampaignCover(requestctx.WithParticipantID("owner-1"), &statev1.SetCampaignCoverRequest{
 		CampaignId:   "c1",
 		CoverAssetId: "camp-cover-04",
 	})

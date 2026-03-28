@@ -3,7 +3,6 @@ package gmmovetransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -27,10 +26,7 @@ import (
 func (h *Handler) loadAdversaryForSession(ctx context.Context, campaignID, sessionID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 	adversary, err := h.deps.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return projectionstore.DaggerheartAdversary{}, status.Error(codes.NotFound, "adversary not found")
-		}
-		return projectionstore.DaggerheartAdversary{}, grpcerror.Internal("load adversary", err)
+		return projectionstore.DaggerheartAdversary{}, grpcerror.LookupErrorContext(ctx, err, "load adversary", "adversary not found")
 	}
 	if adversary.SessionID != sessionID {
 		return projectionstore.DaggerheartAdversary{}, status.Error(codes.FailedPrecondition, "adversary is not in session")
@@ -44,10 +40,7 @@ func (h *Handler) loadEnvironmentEntityForSession(ctx context.Context, campaignI
 	}
 	environmentEntity, err := h.deps.Daggerheart.GetDaggerheartEnvironmentEntity(ctx, campaignID, environmentEntityID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return projectionstore.DaggerheartEnvironmentEntity{}, status.Error(codes.NotFound, "environment entity not found")
-		}
-		return projectionstore.DaggerheartEnvironmentEntity{}, grpcerror.Internal("load environment entity", err)
+		return projectionstore.DaggerheartEnvironmentEntity{}, grpcerror.LookupErrorContext(ctx, err, "load environment entity", "environment entity not found")
 	}
 	if environmentEntity.SessionID != "" && environmentEntity.SessionID != sessionID {
 		return projectionstore.DaggerheartEnvironmentEntity{}, status.Error(codes.FailedPrecondition, "environment entity is not in session")
@@ -65,8 +58,8 @@ func (h *Handler) validateAdversarySpotlight(ctx context.Context, campaignID, se
 	if gateOpen {
 		spotlight, err := h.deps.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
 		if err != nil {
-			if !errors.Is(err, storage.ErrNotFound) {
-				return grpcerror.Internal("load session spotlight", err)
+			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load session spotlight"); lookupErr != nil {
+				return lookupErr
 			}
 		} else if spotlight.SpotlightType != session.SpotlightTypeGM || strings.TrimSpace(spotlight.CharacterID) != "" {
 			return status.Error(codes.FailedPrecondition, "session spotlight is not gm-owned")
@@ -133,10 +126,10 @@ func (h *Handler) recordAdversarySpotlight(ctx context.Context, campaignID, sess
 func (h *Handler) currentGMConsequenceGate(ctx context.Context, campaignID, sessionID string) (storage.SessionGate, bool, error) {
 	gate, err := h.deps.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
+		if grpcerror.OptionalLookupErrorContext(ctx, err, "load session gate") == nil {
 			return storage.SessionGate{}, false, nil
 		}
-		return storage.SessionGate{}, false, grpcerror.Internal("load session gate", err)
+		return storage.SessionGate{}, false, grpcerror.OptionalLookupErrorContext(ctx, err, "load session gate")
 	}
 	if strings.TrimSpace(gate.GateType) != "gm_consequence" {
 		return storage.SessionGate{}, false, status.Errorf(codes.FailedPrecondition, "session gate is open: %s", gate.GateID)
@@ -322,11 +315,5 @@ func toBridgeAdversaryPendingExperience(in *projectionstore.DaggerheartAdversary
 }
 
 func mapContentErr(action string, err error) error {
-	if err == nil {
-		return nil
-	}
-	if err == storage.ErrNotFound {
-		return status.Errorf(codes.NotFound, "%s: %v", action, err)
-	}
-	return grpcerror.Internal(action, err)
+	return grpcerror.LookupError(err, action, action+": "+storage.ErrNotFound.Error())
 }

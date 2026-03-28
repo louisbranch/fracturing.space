@@ -9,9 +9,9 @@ import (
 )
 
 // ValidateAggregateFoldDispatch verifies that every core event type declared
-// in CoreDomains().FoldHandledTypes is actually wired into the aggregate
-// applier's fold dispatch sets.
-func ValidateAggregateFoldDispatch(events *event.Registry) error {
+// in the provided core-domain fold declarations is actually wired into the
+// aggregate applier's fold dispatch sets.
+func ValidateAggregateFoldDispatch(events *event.Registry, domains []CoreDomain) error {
 	if events == nil {
 		return fmt.Errorf("event registry is required for aggregate fold dispatch validation")
 	}
@@ -23,7 +23,7 @@ func ValidateAggregateFoldDispatch(events *event.Registry) error {
 	}
 
 	declared := make(map[event.Type]struct{})
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		for _, t := range domain.FoldHandledTypes() {
 			declared[t] = struct{}{}
 		}

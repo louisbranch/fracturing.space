@@ -20,7 +20,7 @@ type Importer interface {
 
 // Service imports historical journal events behind one explicit write seam.
 type Service struct {
-	events    storage.EventStore
+	events    storage.EventAppender
 	applier   projection.Applier
 	runtime   *domainwrite.Runtime
 	registry  *event.Registry
@@ -28,7 +28,7 @@ type Service struct {
 }
 
 // NewService constructs the centralized historical event importer.
-func NewService(events storage.EventStore, applier projection.Applier, runtime *domainwrite.Runtime, registry *event.Registry) Service {
+func NewService(events storage.EventAppender, applier projection.Applier, runtime *domainwrite.Runtime, registry *event.Registry) Service {
 	return Service{
 		events:    events,
 		applier:   applier,
@@ -80,10 +80,7 @@ func (s Service) appendBatch(ctx context.Context, batch []event.Event) ([]event.
 		validated = append(validated, validatedEvent)
 	}
 
-	type batchAppender interface {
-		BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error)
-	}
-	if ba, ok := s.events.(batchAppender); ok {
+	if ba, ok := s.events.(storage.BatchEventAppender); ok {
 		stored, err := ba.BatchAppendEvents(ctx, validated)
 		if err != nil {
 			return nil, fmt.Errorf("append imported events: %w", err)

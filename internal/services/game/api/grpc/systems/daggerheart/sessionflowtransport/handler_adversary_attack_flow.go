@@ -2,17 +2,16 @@ package sessionflowtransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -54,10 +53,7 @@ func (h *Handler) SessionAdversaryAttackFlow(ctx context.Context, in *pb.Session
 
 	adversary, err := h.deps.LoadAdversary(ctx, campaignID, adversaryID, sessionID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "adversary not found")
-		}
-		return nil, status.Error(codes.Internal, "load adversary failed")
+		return nil, grpcerror.LookupErrorContext(ctx, err, "load adversary failed", "adversary not found")
 	}
 	entry, err := h.deps.LoadAdversaryEntry(ctx, adversary.AdversaryEntryID)
 	if err != nil {

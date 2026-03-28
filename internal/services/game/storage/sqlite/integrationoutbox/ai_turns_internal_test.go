@@ -27,6 +27,7 @@ func TestIntegrationOutboxEventsForEventBuildsAIGMTurnRequests(t *testing.T) {
 			name: "gm authority set",
 			evt: event.Event{
 				CampaignID: ids.CampaignID("camp-1"),
+				Seq:        21,
 				SessionID:  ids.SessionID("sess-1"),
 				Type:       session.EventTypeGMAuthoritySet,
 				Timestamp:  now,
@@ -41,6 +42,7 @@ func TestIntegrationOutboxEventsForEventBuildsAIGMTurnRequests(t *testing.T) {
 			name: "ooc resumed",
 			evt: event.Event{
 				CampaignID: ids.CampaignID("camp-1"),
+				Seq:        22,
 				SessionID:  ids.SessionID("sess-1"),
 				Type:       session.EventTypeOOCClosed,
 				Timestamp:  now,
@@ -54,6 +56,7 @@ func TestIntegrationOutboxEventsForEventBuildsAIGMTurnRequests(t *testing.T) {
 			name: "player phase review started",
 			evt: event.Event{
 				CampaignID: ids.CampaignID("camp-1"),
+				Seq:        23,
 				SessionID:  ids.SessionID("sess-1"),
 				Type:       scene.EventTypePlayerPhaseReviewStarted,
 				Timestamp:  now,
@@ -84,8 +87,8 @@ func TestIntegrationOutboxEventsForEventBuildsAIGMTurnRequests(t *testing.T) {
 			if outboxEvent.EventType != gameintegration.AIGMTurnRequestedOutboxEventType {
 				t.Fatalf("event type = %q, want %q", outboxEvent.EventType, gameintegration.AIGMTurnRequestedOutboxEventType)
 			}
-			if outboxEvent.DedupeKey != gameintegration.AIGMTurnRequestedDedupeKey(outboxEvent.ID) {
-				t.Fatalf("dedupe key = %q, want id-derived key", outboxEvent.DedupeKey)
+			if outboxEvent.DedupeKey != gameintegration.AIGMTurnRequestedDedupeKey("camp-1", tc.evt.Seq) {
+				t.Fatalf("dedupe key = %q, want source-event-derived key", outboxEvent.DedupeKey)
 			}
 			var payload gameintegration.AIGMTurnRequestedOutboxPayload
 			if err := json.Unmarshal([]byte(outboxEvent.PayloadJSON), &payload); err != nil {
@@ -119,11 +122,29 @@ func TestIntegrationOutboxEventsForEventSkipsAIRequestWithoutCampaignOrSession(t
 	}
 }
 
+func TestIntegrationOutboxEventsForEventRejectsMissingSourceSequence(t *testing.T) {
+	t.Parallel()
+
+	_, err := integrationOutboxEventsForEvent(event.Event{
+		CampaignID: ids.CampaignID("camp-1"),
+		SessionID:  ids.SessionID("sess-1"),
+		Type:       session.EventTypeOOCClosed,
+		Timestamp:  time.Date(2026, 3, 12, 20, 0, 0, 0, time.UTC),
+		PayloadJSON: mustJSON(t, session.OOCClosedPayload{
+			SessionID: ids.SessionID("sess-1"),
+		}),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestIntegrationOutboxEventsForEventRejectsInvalidAIGMSourcePayload(t *testing.T) {
 	t.Parallel()
 
 	_, err := integrationOutboxEventsForEvent(event.Event{
 		CampaignID:  ids.CampaignID("camp-1"),
+		Seq:         24,
 		SessionID:   ids.SessionID("sess-1"),
 		Type:        scene.EventTypePlayerPhaseReviewStarted,
 		Timestamp:   time.Date(2026, 3, 12, 20, 0, 0, 0, time.UTC),

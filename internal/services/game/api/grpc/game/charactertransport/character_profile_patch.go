@@ -2,19 +2,18 @@ package charactertransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/characterworkflow"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -34,10 +33,10 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 	}
 
 	dhProfile, err := c.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart profile"); lookupErr != nil {
+		return "", projectionstore.DaggerheartCharacterProfile{}, lookupErr
+	}
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return "", projectionstore.DaggerheartCharacterProfile{}, err
-		}
 		record, recordErr := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
 		if recordErr != nil {
 			return "", projectionstore.DaggerheartCharacterProfile{}, recordErr

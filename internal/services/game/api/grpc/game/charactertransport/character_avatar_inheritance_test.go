@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -64,7 +63,7 @@ func TestCreateCharacter_InheritsControllerAvatarWhenAutoAssigned(t *testing.T) 
 		),
 	}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-123"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-123"))
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "part-1",
@@ -145,7 +144,7 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 		),
 	}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-456"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-456"))
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "part-1",
@@ -229,7 +228,7 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 		),
 	}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-789"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-789"))
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "part-1",

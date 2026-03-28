@@ -30,12 +30,19 @@ const (
 // Deps holds all dependencies needed by the event transport layer.
 type Deps struct {
 	Auth        authz.PolicyDeps
-	Event       storage.EventStore
+	Event       eventHistoryStore
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
 	Session     storage.SessionStore
 	Write       domainwrite.WritePath
+}
+
+// eventHistoryStore narrows the event transport read-side dependency to the
+// journal history capabilities it actually consumes.
+type eventHistoryStore interface {
+	ListEvents(ctx context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error)
+	ListEventsPage(ctx context.Context, req storage.ListEventsPageRequest) (storage.ListEventsPageResult, error)
 }
 
 type eventApplication struct {
@@ -46,7 +53,7 @@ type eventApplication struct {
 }
 
 type eventApplicationStores struct {
-	Event       storage.EventStore
+	Event       eventHistoryStore
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore

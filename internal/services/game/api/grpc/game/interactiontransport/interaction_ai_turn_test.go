@@ -8,6 +8,7 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -278,7 +279,7 @@ func TestAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligibl
 		"gm-ai": {ID: "gm-ai", CampaignID: "camp-1", Role: participant.RoleGM, Controller: participant.ControllerAI},
 	}
 
-	runtime := gametest.SetupRuntime()
+	runtime := runtimekit.SetupRuntime()
 	runtime.SetInlineApplyEnabled(false)
 	app := NewAIOrchestrationApplication(Deps{
 		Campaign:           campaignStore,
@@ -286,7 +287,7 @@ func TestAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligibl
 		Participant:        participantStore,
 		SessionInteraction: sessionInteractionStore,
 		Write:              domainwrite.WritePath{Executor: domain, Runtime: runtime},
-	}, gametest.FixedIDGenerator("unused"))
+	}, runtimekit.FixedIDGenerator("unused"))
 
 	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.scene_activated", "", "")
 	if err != nil {

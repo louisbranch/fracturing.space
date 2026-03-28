@@ -37,25 +37,28 @@ func (v registryContractValidator) ValidateWritePath(bootstrap registryBootstrap
 			return ValidateDeciderCommandCoverage(state.systemRegistry, state.commandRegistry)
 		}},
 		namedRegistryValidationStep{name: "core decider command coverage", run: func(state registryBootstrap) error {
-			return ValidateCoreDeciderCommandCoverage(state.commandRegistry)
+			return ValidateCoreDeciderCommandCoverage(state.commandRegistry, v.domains)
 		}},
 		namedRegistryValidationStep{name: "active session policy coverage", run: func(state registryBootstrap) error {
 			return ValidateActiveSessionPolicyCoverage(state.commandRegistry)
 		}},
 		namedRegistryValidationStep{name: "fold coverage", run: func(state registryBootstrap) error {
-			return ValidateFoldCoverage(state.eventRegistry)
+			return ValidateFoldCoverage(state.eventRegistry, v.domains)
 		}},
 		namedRegistryValidationStep{name: "alias fold coverage", run: func(state registryBootstrap) error {
-			return ValidateAliasFoldCoverage(state.eventRegistry)
+			return ValidateAliasFoldCoverage(state.eventRegistry, v.domains)
 		}},
 		namedRegistryValidationStep{name: "aggregate fold dispatch", run: func(state registryBootstrap) error {
-			return ValidateAggregateFoldDispatch(state.eventRegistry)
+			return ValidateAggregateFoldDispatch(state.eventRegistry, v.domains)
 		}},
 		namedRegistryValidationStep{name: "entity keyed addressing", run: func(state registryBootstrap) error {
-			return ValidateEntityKeyedAddressing(state.eventRegistry)
+			return ValidateEntityKeyedAddressing(state.eventRegistry, v.domains)
 		}},
 		namedRegistryValidationStep{name: "audit-only fold handler exclusion", run: func(state registryBootstrap) error {
 			return ValidateNoFoldHandlersForAuditOnlyEvents(state.eventRegistry, allFoldHandled)
+		}},
+		namedRegistryValidationStep{name: "optional system state hooks", run: func(state registryBootstrap) error {
+			return ValidateOptionalSystemStateHooks(state.systemRegistry)
 		}},
 		namedRegistryValidationStep{name: "state factory determinism", run: func(state registryBootstrap) error {
 			return ValidateStateFactoryDeterminism(state.systemRegistry)
@@ -73,7 +76,7 @@ func (v registryContractValidator) ValidateWritePath(bootstrap registryBootstrap
 // registry definitions and module metadata.
 func (v registryContractValidator) ValidateProjection(bootstrap registryBootstrap) error {
 	projectionHandled := collectProjectionHandledTypes(v.domains)
-	return ValidateProjectionRegistries(bootstrap.eventRegistry, bootstrap.systemRegistry, nil, projectionHandled)
+	return ValidateProjectionRegistries(bootstrap.eventRegistry, bootstrap.systemRegistry, nil, projectionHandled, v.domains)
 }
 
 // registryPayloadValidator rejects non-audit event types that skipped payload

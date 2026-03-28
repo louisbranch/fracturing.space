@@ -63,5 +63,5 @@ func ExecuteWithoutInlineApply(
 // ApplyErrorWithCodePreserve returns an error wrapper that maps apply errors
 // while preserving domain status codes.
 func ApplyErrorWithCodePreserve(message string) func(error) error {
-	return domainwrite.ApplyErrorWithDomainCodePreserve(message)
+	return grpcerror.ApplyErrorWithDomainCodePreserve(message)
 }

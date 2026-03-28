@@ -129,6 +129,29 @@ func TestHandleParticipantsRendersOwnedParticipantsPage(t *testing.T) {
 	}
 }
 
+func TestHandleParticipantCreatePageRendersOwnedCreatePage(t *testing.T) {
+	t.Parallel()
+
+	h, _ := newParticipantHandler(t)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantCreate("camp-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleParticipantCreatePage(rr, req, "camp-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-participant-create-page="true"`,
+		`value="Pending Seat"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing create-page marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestHandleParticipantCreateRedirectsAndForwardsInput(t *testing.T) {
 	t.Parallel()
 
@@ -147,6 +170,29 @@ func TestHandleParticipantCreateRedirectsAndForwardsInput(t *testing.T) {
 	}
 	if mutation.lastCreate.Name != "Pending Seat" {
 		t.Fatalf("create input = %#v", mutation.lastCreate)
+	}
+}
+
+func TestHandleParticipantEditRendersOwnedEditPage(t *testing.T) {
+	t.Parallel()
+
+	h, _ := newParticipantHandler(t)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("camp-1", "p-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleParticipantEdit(rr, req, "camp-1", "p-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-participant-edit-page="true"`,
+		`value="Owner"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing edit-page marker %q: %q", marker, body)
+		}
 	}
 }
 

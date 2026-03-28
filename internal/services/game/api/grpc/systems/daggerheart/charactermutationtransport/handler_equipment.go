@@ -83,7 +83,7 @@ func (h *Handler) enrichArmorSwapPayload(ctx context.Context, campaignID string,
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, payload.CharacterID.String())
 	if err != nil {
-		return grpcerror.HandleDomainError(err)
+		return grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 
 	var currentArmor *contentstore.DaggerheartArmor

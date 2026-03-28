@@ -22,6 +22,7 @@ import (
 
 func TestDefaultSystemsBootstrapperBootstrapsAllChecks(t *testing.T) {
 	systemRegistry := bridge.NewMetadataRegistry()
+	systemRegistration := loadSystemRegistrationSnapshot()
 	adapters := bridge.NewAdapterRegistry()
 	registries := engine.Registries{Commands: command.NewRegistry()}
 	applier := projection.Applier{Adapters: adapters}
@@ -29,12 +30,18 @@ func TestDefaultSystemsBootstrapperBootstrapsAllChecks(t *testing.T) {
 	order := make([]string, 0, 4)
 
 	bootstrapper := defaultSystemsBootstrapper{
-		buildSystemRegistry: func() (*bridge.MetadataRegistry, error) {
+		buildSystemRegistry: func(got systemRegistrationSnapshot) (*bridge.MetadataRegistry, error) {
 			order = append(order, "build")
+			if !reflect.DeepEqual(got.modulesCopy(), systemRegistration.modulesCopy()) {
+				t.Fatal("expected system registration snapshot to flow to system registry builder")
+			}
 			return systemRegistry, nil
 		},
 		validateSystemRegistration: func(modules []module.Module, metadata *bridge.MetadataRegistry, gotAdapters *bridge.AdapterRegistry) error {
 			order = append(order, "parity")
+			if !reflect.DeepEqual(modules, systemRegistration.modulesCopy()) {
+				t.Fatal("expected system registration modules to flow to parity validation")
+			}
 			if metadata != systemRegistry {
 				t.Fatal("expected built system registry to flow to parity validation")
 			}
@@ -64,7 +71,7 @@ func TestDefaultSystemsBootstrapperBootstrapsAllChecks(t *testing.T) {
 		},
 	}
 
-	state, err := bootstrapper.Bootstrap(context.Background(), bundle, registries, applier)
+	state, err := bootstrapper.Bootstrap(context.Background(), bundle, systemRegistration, registries, applier)
 	if err != nil {
 		t.Fatalf("bootstrap systems: %v", err)
 	}
@@ -78,7 +85,7 @@ func TestDefaultSystemsBootstrapperBootstrapsAllChecks(t *testing.T) {
 
 func TestDefaultSystemsBootstrapperWrapsFailures(t *testing.T) {
 	bootstrapper := defaultSystemsBootstrapper{
-		buildSystemRegistry: func() (*bridge.MetadataRegistry, error) {
+		buildSystemRegistry: func(systemRegistrationSnapshot) (*bridge.MetadataRegistry, error) {
 			return nil, errors.New("boom")
 		},
 		validateSystemRegistration: func([]module.Module, *bridge.MetadataRegistry, *bridge.AdapterRegistry) error {
@@ -90,7 +97,7 @@ func TestDefaultSystemsBootstrapperWrapsFailures(t *testing.T) {
 		repairProjectionGaps: func(context.Context, *storageBundle, projection.Applier) {},
 	}
 
-	_, err := bootstrapper.Bootstrap(context.Background(), nil, engine.Registries{}, projection.Applier{})
+	_, err := bootstrapper.Bootstrap(context.Background(), nil, loadSystemRegistrationSnapshot(), engine.Registries{}, projection.Applier{})
 	if err == nil {
 		t.Fatal("expected wrapped systems bootstrap error")
 	}

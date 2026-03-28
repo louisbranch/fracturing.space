@@ -123,20 +123,18 @@ func (a Applier) applySceneEnded(ctx context.Context, evt event.Event, payload s
 		return err
 	}
 	sceneState, err := a.SceneInteraction.GetSceneInteraction(ctx, string(evt.CampaignID), sceneID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+	if err != nil {
 		return fmt.Errorf("get scene interaction on end: %w", err)
 	}
-	if err == nil {
-		sceneState.PhaseOpen = false
-		sceneState.PhaseID = ""
-		sceneState.PhaseStatus = ""
-		sceneState.ActingCharacterIDs = []string{}
-		sceneState.ActingParticipantIDs = []string{}
-		sceneState.Slots = []storage.ScenePlayerSlot{}
-		sceneState.UpdatedAt = endedAt
-		if err := a.SceneInteraction.PutSceneInteraction(ctx, sceneState); err != nil {
-			return fmt.Errorf("put scene interaction on end: %w", err)
-		}
+	sceneState.PhaseOpen = false
+	sceneState.PhaseID = ""
+	sceneState.PhaseStatus = ""
+	sceneState.ActingCharacterIDs = []string{}
+	sceneState.ActingParticipantIDs = []string{}
+	sceneState.Slots = []storage.ScenePlayerSlot{}
+	sceneState.UpdatedAt = endedAt
+	if err := a.SceneInteraction.PutSceneInteraction(ctx, sceneState); err != nil {
+		return fmt.Errorf("put scene interaction on end: %w", err)
 	}
 	// Clear spotlight when scene ends. Suppress ErrNotFound (no spotlight was
 	// set), but propagate real storage errors to avoid inconsistent state.

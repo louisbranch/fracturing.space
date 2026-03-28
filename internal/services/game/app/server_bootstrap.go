@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
@@ -37,14 +38,8 @@ func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
 	return newServerBootstrap().NewWithAddr(ctx, addr)
 }
 
-func buildSystemRegistry() (*bridge.MetadataRegistry, error) {
-	registry := bridge.NewMetadataRegistry()
-	for _, gameSystem := range registeredMetadataSystems() {
-		if err := registry.Register(gameSystem); err != nil {
-			return nil, fmt.Errorf("register system %s@%s: %w", gameSystem.ID(), gameSystem.Version(), err)
-		}
-	}
-	return registry, nil
+func buildSystemRegistry(systemRegistration systemRegistrationSnapshot) (*bridge.MetadataRegistry, error) {
+	return systemRegistration.buildMetadataRegistry()
 }
 
 // buildProjectionRegistries validates projection coverage using pre-built
@@ -53,7 +48,7 @@ func buildSystemRegistry() (*bridge.MetadataRegistry, error) {
 // exist, and every system-emittable event has an adapter handler.
 func buildProjectionRegistries(registries engine.Registries, adapters *bridge.AdapterRegistry) (*event.Registry, error) {
 	handledTypes := projection.ProjectionHandledTypes()
-	if err := engine.ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes); err != nil {
+	if err := engine.ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes, aggregate.CoreDomainRegistrations()); err != nil {
 		return nil, err
 	}
 	return registries.Events, nil

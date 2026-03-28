@@ -162,6 +162,25 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 	}
 }
 
+func TestFolderApplyRejectsNilState(t *testing.T) {
+	projector := NewFolder()
+	payload, err := json.Marshal(daggerheartpayload.GMFearChangedPayload{Value: 5, Reason: "shift"})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	_, err = projector.Fold(nil, event.Event{
+		CampaignID:    "camp-1",
+		Type:          daggerheartpayload.EventTypeGMFearChanged,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   payload,
+	})
+	if err == nil {
+		t.Fatal("expected nil state fold error")
+	}
+}
+
 func TestFolderApplyCharacterStatePatched_DoesNotMutateWithoutAfterFields(t *testing.T) {
 	projector := NewFolder()
 	payload, err := json.Marshal(daggerheartpayload.CharacterStatePatchedPayload{

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -28,7 +28,7 @@ func testDecisionEvent() event.Event {
 func TestExecuteSessionGateCommandAndLoad_Success(t *testing.T) {
 	// Use a dedicated runtime with inline apply disabled: this test
 	// validates the execute-then-load callback flow, not projection apply.
-	runtime := gametest.SetupRuntime()
+	runtime := runtimekit.SetupRuntime()
 	runtime.SetInlineApplyEnabled(false)
 
 	domain := &fakeDomainEngine{

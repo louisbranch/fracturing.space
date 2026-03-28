@@ -46,10 +46,10 @@ func (h *Handler) SessionAdversaryAttackRoll(ctx context.Context, in *pb.Session
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart adversary rolls"); err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (h *Handler) SessionAdversaryAttackRoll(ctx context.Context, in *pb.Session
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")

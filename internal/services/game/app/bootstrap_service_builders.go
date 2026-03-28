@@ -25,6 +25,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/gameplaystores"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -56,8 +57,10 @@ type campaignRegistrationDeps struct {
 	sessionInteraction storage.SessionInteractionStore
 	sceneInteraction   storage.SceneInteractionStore
 	systemStores       gamegrpc.SystemStores
+	systemMetadata     *bridge.MetadataRegistry
+	systemModules      *module.Registry
 	claimIndexStore    storage.ClaimIndexStore
-	eventStore         storage.EventStore
+	eventHistoryStore  storage.EventHistoryStore
 	contentStore       contentstore.DaggerheartContentReadStore
 	socialClient       socialv1.SocialServiceClient
 	writePath          gamegrpc.WritePath
@@ -92,7 +95,8 @@ type sessionRegistrationDeps struct {
 	sceneInteraction   storage.SceneInteractionStore
 	sceneGMInteraction storage.SceneGMInteractionStore
 	campaignForkStore  storage.CampaignForkStore
-	eventStore         storage.EventStore
+	eventHistoryStore  storage.EventHistoryStore
+	eventJournal       storage.EventStore
 	eventRegistry      *event.Registry
 	socialClient       socialv1.SocialServiceClient
 	writePath          gamegrpc.WritePath
@@ -181,7 +185,9 @@ func buildCampaignServiceDescriptors(
 		Character:          deps.characterStore,
 		Session:            deps.sessionStore,
 		SessionInteraction: deps.sessionInteraction,
-		Daggerheart:        deps.systemStores.Daggerheart,
+		SystemStores:       deps.systemStores,
+		SystemMetadata:     deps.systemMetadata,
+		SystemModules:      deps.systemModules,
 		Social:             deps.socialClient,
 		Write:              deps.writePath,
 		Applier:            deps.applier,
@@ -213,7 +219,7 @@ func buildCampaignServiceDescriptors(
 		Write:                  deps.writePath,
 		Applier:                deps.applier,
 		ClaimIndex:             deps.claimIndexStore,
-		Event:                  deps.eventStore,
+		Event:                  deps.eventHistoryStore,
 		ClearCampaignAIBinding: campaigntransport.NewClearCampaignAIBindingFunc(deps.campaignStore, deps.writePath, deps.applier),
 	}, deps.authClient)
 	characterService := charactertransport.NewService(charactertransport.Deps{
@@ -297,7 +303,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Campaign:           deps.campaignStore,
 		Participant:        deps.participantStore,
 		Character:          deps.characterStore,
-		Event:              deps.eventStore,
+		Event:              deps.eventHistoryStore,
 		Session:            deps.sessionStore,
 		SessionInteraction: deps.sessionInteraction,
 		Scene:              deps.sceneStore,
@@ -314,7 +320,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Character:     deps.characterStore,
 		Session:       deps.sessionStore,
 		CampaignFork:  deps.campaignForkStore,
-		Event:         deps.eventStore,
+		Event:         deps.eventJournal,
 		EventRegistry: deps.eventRegistry,
 		Social:        deps.socialClient,
 		Write:         deps.writePath,
@@ -322,7 +328,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 	})
 	eventService := eventtransport.NewService(eventtransport.Deps{
 		Auth:        policy,
-		Event:       deps.eventStore,
+		Event:       deps.eventHistoryStore,
 		Campaign:    deps.campaignStore,
 		Participant: deps.participantStore,
 		Character:   deps.characterStore,
@@ -334,7 +340,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Campaign:           deps.campaignStore,
 		Participant:        deps.participantStore,
 		Character:          deps.characterStore,
-		Event:              deps.eventStore,
+		Event:              deps.eventHistoryStore,
 		Session:            deps.sessionStore,
 		SessionInteraction: deps.sessionInteraction,
 		Scene:              deps.sceneStore,

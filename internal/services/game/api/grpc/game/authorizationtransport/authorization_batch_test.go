@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,7 +13,7 @@ import (
 
 func TestAuthorizationServiceBatchCan(t *testing.T) {
 	svc := newAuthorizationServiceFixture(t)
-	resp, err := svc.BatchCan(gametest.ContextWithParticipantID("member-1"), &campaignv1.BatchCanRequest{
+	resp, err := svc.BatchCan(requestctx.WithParticipantID("member-1"), &campaignv1.BatchCanRequest{
 		Checks: []*campaignv1.BatchCanCheck{
 			{
 				CheckId:    "char-member-1",
@@ -91,7 +90,7 @@ func TestAuthorizationServiceBatchCanRejectsInvalidRequests(t *testing.T) {
 		t.Fatalf("status code = %s, want %s", status.Code(err), codes.InvalidArgument)
 	}
 
-	_, err = svc.BatchCan(gametest.ContextWithParticipantID("owner-1"), &campaignv1.BatchCanRequest{
+	_, err = svc.BatchCan(requestctx.WithParticipantID("owner-1"), &campaignv1.BatchCanRequest{
 		Checks: []*campaignv1.BatchCanCheck{
 			{
 				CampaignId: "c1",

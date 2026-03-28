@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
@@ -16,14 +14,11 @@ import (
 )
 
 func (s *Store) PutDaggerheartEnvironment(ctx context.Context, env contentstore.DaggerheartEnvironment) error {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return err
 	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(env.ID) == "" {
-		return fmt.Errorf("environment id is required")
+	if err := requireCatalogEntryID(env.ID, "environment"); err != nil {
+		return err
 	}
 
 	impulsesJSON, err := json.Marshal(env.Impulses)
@@ -60,14 +55,11 @@ func (s *Store) PutDaggerheartEnvironment(ctx context.Context, env contentstore.
 
 // GetDaggerheartEnvironment retrieves a Daggerheart environment catalog entry.
 func (s *Store) GetDaggerheartEnvironment(ctx context.Context, id string) (contentstore.DaggerheartEnvironment, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return contentstore.DaggerheartEnvironment{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return contentstore.DaggerheartEnvironment{}, fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(id) == "" {
-		return contentstore.DaggerheartEnvironment{}, fmt.Errorf("environment id is required")
+	if err := requireCatalogEntryID(id, "environment"); err != nil {
+		return contentstore.DaggerheartEnvironment{}, err
 	}
 
 	row, err := s.q.GetDaggerheartEnvironment(ctx, id)
@@ -87,11 +79,8 @@ func (s *Store) GetDaggerheartEnvironment(ctx context.Context, id string) (conte
 
 // ListDaggerheartEnvironments lists all Daggerheart environment catalog entries.
 func (s *Store) ListDaggerheartEnvironments(ctx context.Context) ([]contentstore.DaggerheartEnvironment, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return nil, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return nil, fmt.Errorf("storage is not configured")
 	}
 
 	rows, err := s.q.ListDaggerheartEnvironments(ctx)
@@ -112,14 +101,11 @@ func (s *Store) ListDaggerheartEnvironments(ctx context.Context) ([]contentstore
 
 // DeleteDaggerheartEnvironment removes a Daggerheart environment catalog entry.
 func (s *Store) DeleteDaggerheartEnvironment(ctx context.Context, id string) error {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return err
 	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(id) == "" {
-		return fmt.Errorf("environment id is required")
+	if err := requireCatalogEntryID(id, "environment"); err != nil {
+		return err
 	}
 
 	return s.q.DeleteDaggerheartEnvironment(ctx, id)
@@ -127,17 +113,14 @@ func (s *Store) DeleteDaggerheartEnvironment(ctx context.Context, id string) err
 
 // ListDaggerheartContentStrings returns localized content strings for content ids.
 func (s *Store) ListDaggerheartContentStrings(ctx context.Context, contentType string, contentIDs []string, locale string) ([]contentstore.DaggerheartContentString, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return nil, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return nil, fmt.Errorf("storage is not configured")
+	if err := requireContentField(contentType, "content type"); err != nil {
+		return nil, err
 	}
-	if strings.TrimSpace(contentType) == "" {
-		return nil, fmt.Errorf("content type is required")
-	}
-	if strings.TrimSpace(locale) == "" {
-		return nil, fmt.Errorf("locale is required")
+	if err := requireContentField(locale, "locale"); err != nil {
+		return nil, err
 	}
 	if len(contentIDs) == 0 {
 		return []contentstore.DaggerheartContentString{}, nil
@@ -160,29 +143,23 @@ func (s *Store) ListDaggerheartContentStrings(ctx context.Context, contentType s
 
 // PutDaggerheartContentString upserts a localized content string.
 func (s *Store) PutDaggerheartContentString(ctx context.Context, entry contentstore.DaggerheartContentString) error {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return err
 	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
+	if err := requireCatalogEntryID(entry.ContentID, "content"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(entry.ContentID) == "" {
-		return fmt.Errorf("content id is required")
+	if err := requireContentField(entry.Field, "field"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(entry.Field) == "" {
-		return fmt.Errorf("field is required")
+	if err := requireContentField(entry.Locale, "locale"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(entry.Locale) == "" {
-		return fmt.Errorf("locale is required")
+	if entry.CreatedAt.IsZero() {
+		return fmt.Errorf("created at is required")
 	}
-
-	createdAt := entry.CreatedAt
-	if createdAt.IsZero() {
-		createdAt = time.Now().UTC()
-	}
-	updatedAt := entry.UpdatedAt
-	if updatedAt.IsZero() {
-		updatedAt = createdAt
+	if entry.UpdatedAt.IsZero() {
+		return fmt.Errorf("updated at is required")
 	}
 
 	return s.q.PutDaggerheartContentString(ctx, db.PutDaggerheartContentStringParams{
@@ -191,7 +168,7 @@ func (s *Store) PutDaggerheartContentString(ctx context.Context, entry contentst
 		Field:       entry.Field,
 		Locale:      entry.Locale,
 		Text:        entry.Text,
-		CreatedAt:   sqliteutil.ToMillis(createdAt),
-		UpdatedAt:   sqliteutil.ToMillis(updatedAt),
+		CreatedAt:   sqliteutil.ToMillis(entry.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(entry.UpdatedAt),
 	})
 }

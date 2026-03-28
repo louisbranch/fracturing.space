@@ -64,6 +64,9 @@ func ValidateSystemConformance(t *testing.T, mod module.Module, adapter bridge.A
 	if err := engine.ValidateStateFactoryDeterminism(modules); err != nil {
 		t.Errorf("state factory determinism: %v", err)
 	}
+	if err := engine.ValidateOptionalSystemStateHooks(modules); err != nil {
+		t.Errorf("optional system state hooks: %v", err)
+	}
 	if err := engine.ValidateStateFactoryFoldCompatibility(modules); err != nil {
 		t.Errorf("state factory fold compatibility: %v", err)
 	}

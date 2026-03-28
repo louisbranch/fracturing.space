@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -84,12 +85,12 @@ func (w registryBuildWorkflow) Build() (Registries, error) {
 // This is the shared bootstrap point where all command/event contracts become a
 // single validated registry consumed by the write handler and projections.
 func BuildRegistries(modules ...module.Module) (Registries, error) {
-	return buildRegistries(CoreDomains(), modules)
+	return buildRegistries(aggregate.CoreDomainRegistrations(), modules)
 }
 
-// buildRegistries executes registry bootstrap with explicit domain/module inputs.
-// This seam keeps production wiring simple while allowing deterministic branch
-// tests around startup validation failures.
-func buildRegistries(domains []CoreDomain, modules []module.Module) (Registries, error) {
-	return newRegistryBuildWorkflow(domains, modules).Build()
+// buildRegistries executes registry bootstrap with explicit core-domain/module
+// inputs. This seam keeps production wiring simple while allowing deterministic
+// branch tests around startup validation failures.
+func buildRegistries(coreDomains []CoreDomain, modules []module.Module) (Registries, error) {
+	return newRegistryBuildWorkflow(append([]CoreDomain(nil), coreDomains...), modules).Build()
 }

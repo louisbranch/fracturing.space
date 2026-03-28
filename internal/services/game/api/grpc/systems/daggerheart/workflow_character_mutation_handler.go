@@ -2,39 +2,17 @@ package daggerheart
 
 import (
 	"context"
-	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 func (s *DaggerheartService) characterMutationHandler() *charactermutationtransport.Handler {
 	return charactermutationtransport.NewHandler(charactermutationtransport.Dependencies{
-		Campaign:    s.stores.Campaign,
-		Daggerheart: s.stores.Daggerheart,
-		Content:     s.stores.Content,
-		ExecuteCharacterCommand: func(ctx context.Context, in charactermutationtransport.CharacterCommandInput) error {
-			adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-			_, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, adapter, command.Command{
-				CampaignID:    ids.CampaignID(in.CampaignID),
-				Type:          in.CommandType,
-				ActorType:     command.ActorTypeSystem,
-				SessionID:     ids.SessionID(strings.TrimSpace(in.SessionID)),
-				RequestID:     in.RequestID,
-				InvocationID:  in.InvocationID,
-				EntityType:    "character",
-				EntityID:      in.CharacterID,
-				SystemID:      daggerheart.SystemID,
-				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   in.PayloadJSON,
-			}, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, in.ApplyErrMessage))
-			return err
-		},
+		Campaign:                s.stores.Campaign,
+		Daggerheart:             s.stores.Daggerheart,
+		Content:                 s.stores.Content,
+		ExecuteCharacterCommand: s.executeCharacterMutationCommand,
 	})
 }
 

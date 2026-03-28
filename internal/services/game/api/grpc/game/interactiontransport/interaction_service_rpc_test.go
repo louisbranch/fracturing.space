@@ -9,6 +9,8 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -264,7 +266,7 @@ func TestNewInteractionServiceGetInteractionStateReturnsProjectedSnapshot(t *tes
 	}}
 
 	resp, err := h.service().GetInteractionState(
-		gametest.ContextWithParticipantID("player-1"),
+		requestctx.WithParticipantID("player-1"),
 		&gamev1.GetInteractionStateRequest{CampaignId: "c1"},
 	)
 	if err != nil {
@@ -346,7 +348,7 @@ func TestNewInteractionServiceGetInteractionStateFallsBackToEventHistoryForGMInt
 	h.events.NextSeq["c1"] = 2
 
 	resp, err := h.service().GetInteractionState(
-		gametest.ContextWithParticipantID("player-1"),
+		requestctx.WithParticipantID("player-1"),
 		&gamev1.GetInteractionStateRequest{CampaignId: "c1"},
 	)
 	if err != nil {
@@ -372,7 +374,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().ActivateScene(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ActivateSceneRequest{CampaignId: "c1", SceneId: "scene-2"},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -387,7 +389,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().ActivateScene(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ActivateSceneRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -402,7 +404,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().OpenScenePlayerPhase(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.OpenScenePlayerPhaseRequest{
 				CampaignId:   "c1",
 				SceneId:      "scene-1",
@@ -422,7 +424,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().SubmitScenePlayerAction(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.SubmitScenePlayerActionRequest{CampaignId: "c1", SceneId: "scene-1", SummaryText: "I rush ahead."},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -442,7 +444,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().YieldScenePlayerPhase(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.YieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -465,7 +467,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().WithdrawScenePlayerYield(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.WithdrawScenePlayerYieldRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.PermissionDenied)
@@ -485,7 +487,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().InterruptScenePlayerPhase(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.InterruptScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -504,7 +506,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().OpenSessionOOC(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.OpenSessionOOCRequest{CampaignId: "c1", Reason: "rules question"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -526,7 +528,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().OpenSessionOOC(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.OpenSessionOOCRequest{CampaignId: "c1", Reason: "rules question"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -541,7 +543,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().PostSessionOOC(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.PostSessionOOCRequest{CampaignId: "c1", Body: "Can I help here?"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -556,7 +558,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().MarkOOCReadyToResume(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.MarkOOCReadyToResumeRequest{CampaignId: "c1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -571,7 +573,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().ClearOOCReadyToResume(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.ClearOOCReadyToResumeRequest{CampaignId: "c1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -586,7 +588,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().ResolveSessionOOC(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveSessionOOCRequest{
 				CampaignId: "c1",
 				Resolution: &gamev1.ResolveSessionOOCRequest_ResumeInterruptedPhase{
@@ -606,7 +608,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().SetSessionGMAuthority(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.SetSessionGMAuthorityRequest{CampaignId: "c1", ParticipantId: "gm-ai"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -649,7 +651,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().RetryAIGMTurn(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.RetryAIGMTurnRequest{CampaignId: "c1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -675,7 +677,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().ActivateScene(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ActivateSceneRequest{CampaignId: "c1", SceneId: "scene-3"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -690,7 +692,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().OpenScenePlayerPhase(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.OpenScenePlayerPhaseRequest{
 				CampaignId:   "c1",
 				SceneId:      "scene-1",
@@ -719,7 +721,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().SubmitScenePlayerAction(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.SubmitScenePlayerActionRequest{
 				CampaignId:   "c1",
 				SceneId:      "scene-1",
@@ -747,7 +749,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().YieldScenePlayerPhase(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.YieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -770,7 +772,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().WithdrawScenePlayerYield(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.WithdrawScenePlayerYieldRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -792,7 +794,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().InterruptScenePlayerPhase(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.InterruptScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1", Reason: "gm_interrupted"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -815,7 +817,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -848,7 +850,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -878,7 +880,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		}
 
 		resp, err := h.serviceWithSuccessfulWrite(t).ActivateScene(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ActivateSceneRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		if err != nil || resp.GetState() == nil {
@@ -905,7 +907,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		svc := h.serviceWithSuccessfulWrite(t)
 
 		if resp, err := svc.OpenScenePlayerPhase(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.OpenScenePlayerPhaseRequest{
 				CampaignId:   "c1",
 				SceneId:      "scene-1",
@@ -916,25 +918,25 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			t.Fatalf("OpenScenePlayerPhase() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.SubmitScenePlayerAction(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.SubmitScenePlayerActionRequest{CampaignId: "c1", SceneId: "scene-1", CharacterIds: []string{"char-1"}, SummaryText: "Advance"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("SubmitScenePlayerAction() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.YieldScenePlayerPhase(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.YieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("YieldScenePlayerPhase() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.WithdrawScenePlayerYield(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.WithdrawScenePlayerYieldRequest{CampaignId: "c1", SceneId: "scene-1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("WithdrawScenePlayerYield() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.InterruptScenePlayerPhase(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.InterruptScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1", Reason: "gm_interrupted"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("InterruptScenePlayerPhase() = %#v, %v", resp, err)
@@ -950,7 +952,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			ActingParticipantIDs: []string{"player-1"},
 		}
 		if resp, err := svc.ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -974,7 +976,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			ActingParticipantIDs: []string{"player-1"},
 		}
 		if resp, err := svc.ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -1019,7 +1021,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		svc := h.serviceWithSuccessfulWrite(t)
 
 		if resp, err := svc.ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -1039,7 +1041,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		}
 
 		if resp, err := svc.ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -1074,7 +1076,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		svc := h.serviceWithSuccessfulWrite(t)
 
 		_, err := svc.ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -1091,7 +1093,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1",
 		}
 		_, err = svc.ResolveScenePlayerReview(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveScenePlayerReviewRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -1120,7 +1122,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 		}
 		if resp, err := svc.OpenSessionOOC(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.OpenSessionOOCRequest{CampaignId: "c1", Reason: "rules"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("OpenSessionOOC() = %#v, %v", resp, err)
@@ -1136,25 +1138,25 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			OOCInterruptedPhaseID:    "phase-1",
 		}
 		if resp, err := svc.PostSessionOOC(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.PostSessionOOCRequest{CampaignId: "c1", Body: "Question"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("PostSessionOOC() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.MarkOOCReadyToResume(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.MarkOOCReadyToResumeRequest{CampaignId: "c1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("MarkOOCReadyToResume() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.ClearOOCReadyToResume(
-			gametest.ContextWithParticipantID("player-1"),
+			requestctx.WithParticipantID("player-1"),
 			&gamev1.ClearOOCReadyToResumeRequest{CampaignId: "c1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("ClearOOCReadyToResume() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.ResolveSessionOOC(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.ResolveSessionOOCRequest{
 				CampaignId: "c1",
 				Resolution: &gamev1.ResolveSessionOOCRequest_ReturnToGm{
@@ -1188,13 +1190,13 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			CampaignID: "c1", SceneID: "scene-1", SessionID: "sess-1", PhaseOpen: false,
 		}
 		if resp, err := svc.SetSessionGMAuthority(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.SetSessionGMAuthorityRequest{CampaignId: "c1", ParticipantId: "gm-ai"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("SetSessionGMAuthority() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.RetryAIGMTurn(
-			gametest.ContextWithParticipantID("gm-1"),
+			requestctx.WithParticipantID("gm-1"),
 			&gamev1.RetryAIGMTurnRequest{CampaignId: "c1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("RetryAIGMTurn() = %#v, %v", resp, err)
@@ -1272,10 +1274,10 @@ func TestInteractionApplicationActivateScenePreservesOwningAIGMTurn(t *testing.T
 		SceneCharacter:     h.sceneCharacters,
 		SceneInteraction:   h.sceneInteraction,
 		Write:              domainwrite.WritePath{Executor: domain, Runtime: runtime},
-	}, gametest.FixedIDGenerator("unused"))
+	}, runtimekit.FixedIDGenerator("unused"))
 
 	if _, err := app.ActivateScene(
-		gametest.ContextWithParticipantID("gm-ai"),
+		requestctx.WithParticipantID("gm-ai"),
 		"c1",
 		&gamev1.ActivateSceneRequest{SceneId: "scene-1"},
 	); err != nil {
@@ -1357,10 +1359,10 @@ func TestInteractionApplicationActivateSceneClearsAIGMTurnForDifferentActor(t *t
 		SceneCharacter:     h.sceneCharacters,
 		SceneInteraction:   h.sceneInteraction,
 		Write:              domainwrite.WritePath{Executor: domain, Runtime: runtime},
-	}, gametest.FixedIDGenerator("unused"))
+	}, runtimekit.FixedIDGenerator("unused"))
 
 	if _, err := app.ActivateScene(
-		gametest.ContextWithParticipantID("gm-1"),
+		requestctx.WithParticipantID("gm-1"),
 		"c1",
 		&gamev1.ActivateSceneRequest{SceneId: "scene-1"},
 	); err != nil {
@@ -1382,25 +1384,25 @@ func TestInteractionServiceOOCRequiresPausedSessionForParticipantActions(t *test
 	svc := h.service()
 
 	_, err := svc.PostSessionOOC(
-		gametest.ContextWithParticipantID("player-1"),
+		requestctx.WithParticipantID("player-1"),
 		&gamev1.PostSessionOOCRequest{CampaignId: "c1", Body: "hello"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
 
 	_, err = svc.MarkOOCReadyToResume(
-		gametest.ContextWithParticipantID("player-1"),
+		requestctx.WithParticipantID("player-1"),
 		&gamev1.MarkOOCReadyToResumeRequest{CampaignId: "c1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
 
 	_, err = svc.ClearOOCReadyToResume(
-		gametest.ContextWithParticipantID("player-1"),
+		requestctx.WithParticipantID("player-1"),
 		&gamev1.ClearOOCReadyToResumeRequest{CampaignId: "c1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
 
 	_, err = svc.ResolveSessionOOC(
-		gametest.ContextWithParticipantID("gm-1"),
+		requestctx.WithParticipantID("gm-1"),
 		&gamev1.ResolveSessionOOCRequest{
 			CampaignId: "c1",
 			Resolution: &gamev1.ResolveSessionOOCRequest_ResumeInterruptedPhase{
@@ -1420,7 +1422,7 @@ func TestInteractionServiceSetSessionGMAuthorityRejectsPlayerTarget(t *testing.T
 	}
 
 	_, err := h.service().SetSessionGMAuthority(
-		gametest.ContextWithParticipantID("gm-1"),
+		requestctx.WithParticipantID("gm-1"),
 		&gamev1.SetSessionGMAuthorityRequest{CampaignId: "c1", ParticipantId: "player-1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -1449,7 +1451,7 @@ func TestInteractionServiceRetryAIGMTurnRequiresFailedTurn(t *testing.T) {
 	}
 
 	_, err := h.service().RetryAIGMTurn(
-		gametest.ContextWithParticipantID("gm-1"),
+		requestctx.WithParticipantID("gm-1"),
 		&gamev1.RetryAIGMTurnRequest{CampaignId: "c1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)

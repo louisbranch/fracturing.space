@@ -1,4 +1,4 @@
-package gametest
+package daggerhearttestkit
 
 import (
 	"context"

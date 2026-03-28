@@ -256,7 +256,7 @@ func TestOpenEventStoreRequiresKey(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestOpenEventStoreSuccess(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestOpenEventStoreProjectionOutboxEnabledEnqueuesOnAppend(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -340,7 +340,7 @@ func TestOpenEventStoreProjectionOutboxDisabledSkipsAppendEnqueue(t *testing.T) 
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -392,7 +392,7 @@ func TestOpenStorageBundleSuccess(t *testing.T) {
 	base := t.TempDir()
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -413,7 +413,7 @@ func TestOpenStorageBundleProjectionFailure(t *testing.T) {
 	base := t.TempDir()
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -896,7 +896,7 @@ func TestStartProjectionWorkerProcessesRowsWhenEnabled(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -976,7 +976,7 @@ func TestStartProjectionShadowWorkerProcessesRowsWhenEnabled(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -1038,7 +1038,7 @@ func TestStartProjectionShadowWorkerProcessesRowsWhenEnabled(t *testing.T) {
 
 func TestBuildDomainEngine_SpotlightSet(t *testing.T) {
 	store := newFakeDomainEventStore()
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -1073,7 +1073,7 @@ func TestBuildDomainEngine_SpotlightSet(t *testing.T) {
 
 func TestBuildDomainEngine_CampaignCreate(t *testing.T) {
 	store := newFakeDomainEventStore()
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -1107,7 +1107,7 @@ func TestBuildDomainEngine_CampaignCreate(t *testing.T) {
 
 func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 	store := newFakeDomainEventStore()
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -1143,7 +1143,7 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 
 func TestBuildDomainEngine_ReplaysCommandsFromJournalTruth(t *testing.T) {
 	store := newFakeDomainEventStore()
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -1197,7 +1197,7 @@ func TestConfigureDomainEnabled_SetsDomain(t *testing.T) {
 	infrastructureStores := &gamegrpc.InfrastructureStores{Event: newFakeDomainEventStore()}
 	runtimeStores := &gamegrpc.RuntimeStores{}
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -1214,7 +1214,7 @@ func TestConfigureDomainDisabled_SetsDisabledDomain(t *testing.T) {
 	infrastructureStores := &gamegrpc.InfrastructureStores{}
 	runtimeStores := &gamegrpc.RuntimeStores{}
 
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}

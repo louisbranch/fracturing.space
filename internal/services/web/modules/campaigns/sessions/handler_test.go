@@ -234,6 +234,29 @@ func TestHandleSessionDetailReturnsNotFoundWhenSessionMissing(t *testing.T) {
 	}
 }
 
+func TestHandleSessionDetailRendersOwnedSessionPage(t *testing.T) {
+	t.Parallel()
+
+	h, _, _ := newSessionsHandler(t)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignSession("camp-1", "sess-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleSessionDetail(rr, req, "camp-1", "sess-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-session-detail-id="sess-1"`,
+		`data-campaign-session-detail-name="Session One"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing session-detail marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestHandleGameRedirectsIntoPlaySurface(t *testing.T) {
 	t.Parallel()
 
@@ -249,5 +272,24 @@ func TestHandleGameRedirectsIntoPlaySurface(t *testing.T) {
 	location := rr.Header().Get("Location")
 	if !strings.Contains(location, "/campaigns/camp-1?launch=") {
 		t.Fatalf("Location = %q, want play launch redirect", location)
+	}
+}
+
+func TestHandleGameWritesHXRedirectForHTMXRequests(t *testing.T) {
+	t.Parallel()
+
+	h, _, _ := newSessionsHandler(t)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com"+routepath.AppCampaignGame("camp-1"), nil)
+	req.Header.Set("HX-Request", "true")
+	rr := httptest.NewRecorder()
+
+	h.HandleGame(rr, req, "camp-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	location := rr.Header().Get("HX-Redirect")
+	if !strings.Contains(location, "/campaigns/camp-1?launch=") {
+		t.Fatalf("HX-Redirect = %q, want play launch redirect", location)
 	}
 }

@@ -4,10 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 )
@@ -21,7 +20,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenAIAgentMissing(t *testing.T) {
 		includePlayerSeat: true,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("ai-gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("ai-gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -39,7 +38,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenAIAgentMissingIncludesAction(t *t
 		includePlayerSeat: true,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -71,7 +70,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenAIGMParticipantMissing(t *testing
 		includeAIGM: false,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -87,7 +86,7 @@ func TestGetCampaignSessionReadiness_UsesRequestedLocale(t *testing.T) {
 		includeAIGM: false,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 		Locale:     commonv1.Locale_LOCALE_PT_BR,
 	})
@@ -108,7 +107,7 @@ func TestGetCampaignSessionReadiness_FallsBackToCampaignLocale(t *testing.T) {
 		locale:      "pt-BR",
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {

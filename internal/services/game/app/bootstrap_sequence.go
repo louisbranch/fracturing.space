@@ -22,12 +22,13 @@ func (b *serverBootstrap) loadEnvPhase() (serverEnv, error) {
 	return srvEnv, nil
 }
 
-func (b *serverBootstrap) buildRegistriesPhase() (engine.Registries, error) {
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+func (b *serverBootstrap) buildRegistriesPhase() (systemRegistrationSnapshot, engine.Registries, error) {
+	systemRegistration := loadSystemRegistrationSnapshot()
+	registries, err := engine.BuildRegistries(systemRegistration.modulesCopy()...)
 	if err != nil {
-		return engine.Registries{}, wrapStartupError(startupPhaseRegistries, "build registries", err)
+		return systemRegistrationSnapshot{}, engine.Registries{}, wrapStartupError(startupPhaseRegistries, "build registries", err)
 	}
-	return registries, nil
+	return systemRegistration, registries, nil
 }
 
 func (b *serverBootstrap) openListenerPhase(addr string, rollback *startupRollback) (net.Listener, error) {
@@ -77,10 +78,11 @@ func (b *serverBootstrap) configureStoresPhase(
 func (b *serverBootstrap) bootstrapSystemsPhase(
 	ctx context.Context,
 	bundle *storageBundle,
+	systemRegistration systemRegistrationSnapshot,
 	registries engine.Registries,
 	applier projection.Applier,
 ) (systemsRuntimeState, error) {
-	systemState, err := b.config.systemsBootstrapper.Bootstrap(ctx, bundle, registries, applier)
+	systemState, err := b.config.systemsBootstrapper.Bootstrap(ctx, bundle, systemRegistration, registries, applier)
 	if err != nil {
 		return systemsRuntimeState{}, wrapStartupError(startupPhaseSystems, "bootstrap systems phase", err)
 	}

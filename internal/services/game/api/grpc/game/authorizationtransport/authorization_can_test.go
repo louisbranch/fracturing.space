@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"google.golang.org/grpc/metadata"
@@ -22,7 +21,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 	}{
 		{
 			name: "owner can manage campaign",
-			ctx:  gametest.ContextWithParticipantID("owner-1"),
+			ctx:  requestctx.WithParticipantID("owner-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -33,7 +32,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "manager can manage campaign",
-			ctx:  gametest.ContextWithParticipantID("manager-1"),
+			ctx:  requestctx.WithParticipantID("manager-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -55,7 +54,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "member character mutation requires ownership",
-			ctx:  gametest.ContextWithParticipantID("member-1"),
+			ctx:  requestctx.WithParticipantID("member-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
@@ -69,7 +68,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "member character mutation owned passes",
-			ctx:  gametest.ContextWithParticipantID("member-1"),
+			ctx:  requestctx.WithParticipantID("member-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
@@ -83,7 +82,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "manager cannot mutate owner participant target",
-			ctx:  gametest.ContextWithParticipantID("manager-1"),
+			ctx:  requestctx.WithParticipantID("manager-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -98,7 +97,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "manager cannot assign owner campaign access",
-			ctx:  gametest.ContextWithParticipantID("manager-1"),
+			ctx:  requestctx.WithParticipantID("manager-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -114,7 +113,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "owner cannot demote final owner",
-			ctx:  gametest.ContextWithParticipantID("owner-1"),
+			ctx:  requestctx.WithParticipantID("owner-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -130,7 +129,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "owner remove operation denies final owner",
-			ctx:  gametest.ContextWithParticipantID("owner-1"),
+			ctx:  requestctx.WithParticipantID("owner-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -146,7 +145,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "owner remove operation denies target owning active characters",
-			ctx:  gametest.ContextWithParticipantID("owner-1"),
+			ctx:  requestctx.WithParticipantID("owner-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -162,7 +161,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "owner mutate operation allows owner target",
-			ctx:  gametest.ContextWithParticipantID("owner-1"),
+			ctx:  requestctx.WithParticipantID("owner-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -178,7 +177,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 		},
 		{
 			name: "owner can promote member to manager",
-			ctx:  gametest.ContextWithParticipantID("owner-1"),
+			ctx:  requestctx.WithParticipantID("owner-1"),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
 				Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
@@ -252,7 +251,7 @@ func TestAuthorizationServiceCanRejectsInvalidRequests(t *testing.T) {
 		t.Fatal("expected missing action/resource to fail")
 	}
 
-	_, err = svc.Can(gametest.ContextWithParticipantID("owner-1"), &campaignv1.CanRequest{
+	_, err = svc.Can(requestctx.WithParticipantID("owner-1"), &campaignv1.CanRequest{
 		CampaignId: "c1",
 		Action:     campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
 		Resource:   campaignv1.AuthorizationResource_AUTHORIZATION_RESOURCE_PARTICIPANT,

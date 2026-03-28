@@ -1,11 +1,8 @@
 package contenttransport
 
 import (
-	"errors"
-
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -53,8 +50,5 @@ func (h *Handler) contentStore() (contentstore.DaggerheartContentReadStore, erro
 }
 
 func mapContentErr(action string, err error) error {
-	if errors.Is(err, storage.ErrNotFound) {
-		return status.Error(codes.NotFound, "content not found")
-	}
-	return grpcerror.Internal(action, err)
+	return grpcerror.LookupError(err, action, "content not found")
 }

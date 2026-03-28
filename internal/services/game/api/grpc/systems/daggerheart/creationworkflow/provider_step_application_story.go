@@ -2,15 +2,12 @@ package creationworkflow
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -56,10 +53,7 @@ func applyDomainCardsInput(ctx context.Context, content contentstore.Daggerheart
 	}
 	class, err := content.GetDaggerheartClass(ctx, profile.ClassID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "class_id %q is not found", profile.ClassID)
-		}
-		return grpcerror.Internal("get class", err)
+		return invalidContentLookup(ctx, err, "get class", "class_id %q is not found", profile.ClassID)
 	}
 	allowedDomains := make(map[string]struct{}, len(class.DomainIDs))
 	for _, domainID := range class.DomainIDs {
@@ -85,10 +79,7 @@ func applyDomainCardsInput(ctx context.Context, content contentstore.Daggerheart
 		}
 		card, err := content.GetDaggerheartDomainCard(ctx, trimmed)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return status.Errorf(codes.InvalidArgument, "domain_card_id %q is not found", trimmed)
-			}
-			return grpcerror.Internal("get domain card", err)
+			return invalidContentLookup(ctx, err, "get domain card", "domain_card_id %q is not found", trimmed)
 		}
 		if card.Level != 1 {
 			return status.Errorf(codes.InvalidArgument, "domain_card_id %q is level %d, only level 1 cards are allowed at creation", trimmed, card.Level)

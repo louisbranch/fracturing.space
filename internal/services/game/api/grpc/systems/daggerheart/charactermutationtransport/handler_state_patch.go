@@ -37,7 +37,7 @@ func (h *Handler) ApplyCharacterStatePatch(ctx context.Context, in *pb.Daggerhea
 
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 
 	payload := daggerheartpayload.CharacterStatePatchPayload{

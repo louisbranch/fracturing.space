@@ -2,12 +2,12 @@ package eventtransport
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -119,11 +119,11 @@ func (r *timelineProjectionResolver) lookupCampaign(ctx context.Context, campaig
 		return cached, true, nil
 	}
 	entry, err := r.campaignStore.Get(ctx, campaignID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load campaign projection"); lookupErr != nil {
+		return storage.CampaignRecord{}, false, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return storage.CampaignRecord{}, false, nil
-		}
-		return storage.CampaignRecord{}, false, err
+		return storage.CampaignRecord{}, false, nil
 	}
 	r.campaignCache[campaignID] = entry
 	return entry, true, nil
@@ -144,11 +144,11 @@ func (r *timelineProjectionResolver) lookupParticipant(ctx context.Context, camp
 		return cached, true, nil
 	}
 	entry, err := r.participantStore.GetParticipant(ctx, campaignID, participantID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load participant projection"); lookupErr != nil {
+		return storage.ParticipantRecord{}, false, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return storage.ParticipantRecord{}, false, nil
-		}
-		return storage.ParticipantRecord{}, false, err
+		return storage.ParticipantRecord{}, false, nil
 	}
 	r.participantCache[key] = entry
 	return entry, true, nil
@@ -169,11 +169,11 @@ func (r *timelineProjectionResolver) lookupCharacter(ctx context.Context, campai
 		return cached, true, nil
 	}
 	entry, err := r.characterStore.GetCharacter(ctx, campaignID, characterID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load character projection"); lookupErr != nil {
+		return storage.CharacterRecord{}, false, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return storage.CharacterRecord{}, false, nil
-		}
-		return storage.CharacterRecord{}, false, err
+		return storage.CharacterRecord{}, false, nil
 	}
 	r.characterCache[key] = entry
 	return entry, true, nil
@@ -194,11 +194,11 @@ func (r *timelineProjectionResolver) lookupSession(ctx context.Context, campaign
 		return cached, true, nil
 	}
 	entry, err := r.sessionStore.GetSession(ctx, campaignID, sessionID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load session projection"); lookupErr != nil {
+		return storage.SessionRecord{}, false, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return storage.SessionRecord{}, false, nil
-		}
-		return storage.SessionRecord{}, false, err
+		return storage.SessionRecord{}, false, nil
 	}
 	r.sessionCache[key] = entry
 	return entry, true, nil

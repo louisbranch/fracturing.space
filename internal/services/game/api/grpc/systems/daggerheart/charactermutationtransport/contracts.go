@@ -3,17 +3,15 @@ package charactermutationtransport
 import (
 	"context"
 
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // CampaignStore is the campaign-read contract consumed by character mutation
 // transport.
-type CampaignStore interface {
-	Get(ctx context.Context, id string) (storage.CampaignRecord, error)
-}
+type CampaignStore = daggerheartguard.CampaignStore
 
 // DaggerheartStore is the character-profile projection contract consumed by
 // character mutation transport.

@@ -9,6 +9,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+var _ storage.ParticipantStore = (*FakeParticipantStore)(nil)
+
 // FakeParticipantStore is a test double for storage.ParticipantStore.
 type FakeParticipantStore struct {
 	Participants                      map[string]map[string]storage.ParticipantRecord // campaignID -> participantID -> Participant

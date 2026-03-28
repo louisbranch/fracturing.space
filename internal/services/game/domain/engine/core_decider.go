@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -34,28 +35,27 @@ func NewCoreDecider(systems *module.Registry, definitions []command.Definition) 
 // Decide routes system envelopes to the system dispatcher and all remaining
 // commands through the core router.
 func (d CoreDecider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
-	current := aggregateState(state)
+	current, err := requireAggregateState(state)
+	if err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "STATE_ASSERT_FAILED",
+			Message: fmt.Sprintf("core decider aggregate state assertion: %v", err),
+		})
+	}
 	if isSystemCommand(cmd) {
 		return d.systemCommands.Decide(current, cmd, now)
 	}
 	return d.coreCommands.Decide(current, cmd, now)
 }
 
-// aggregateState converts whatever aggregate representation reached this decider
-// into a concrete value.
+// requireAggregateState converts whatever aggregate representation reached this
+// decider into a concrete value.
 //
-// It supports both typed values and pointers for convenience in tests and caller
-// boundaries while keeping downstream code safe and side-effect free.
-func aggregateState(state any) aggregate.State {
-	switch typed := state.(type) {
-	case aggregate.State:
-		return typed
-	case *aggregate.State:
-		if typed != nil {
-			return *typed
-		}
-	}
-	return aggregate.State{}
+// It supports both typed values and pointers for convenience in tests and
+// caller boundaries, but rejects nil and wrong types instead of silently
+// fabricating a zero aggregate state.
+func requireAggregateState(state any) (aggregate.State, error) {
+	return aggregate.AssertState[aggregate.State](state)
 }
 
 // isSystemCommand centralizes the write-path distinction between core command

@@ -2,7 +2,6 @@ package interactiontransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -28,7 +27,7 @@ type Deps struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	Character          storage.CharacterStore
-	Event              storage.EventStore
+	Event              storage.EventHistoryStore
 	Session            storage.SessionStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore
@@ -53,7 +52,7 @@ type interactionApplicationStores struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	Character          storage.CharacterStore
-	Event              storage.EventStore
+	Event              storage.EventHistoryStore
 	Session            storage.SessionStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore
@@ -133,11 +132,11 @@ func (a interactionApplication) GetInteractionState(ctx context.Context, campaig
 	}
 
 	sceneRecord, err := a.stores.Scene.GetScene(ctx, campaignID, sessionInteraction.ActiveSceneID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load active scene"); lookupErr != nil {
+		return nil, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return state, nil
-		}
-		return nil, grpcerror.Internal("load active scene", err)
+		return state, nil
 	}
 	activeScene, sceneInteraction, err := a.loadSceneState(ctx, campaignID, sceneRecord)
 	if err != nil {

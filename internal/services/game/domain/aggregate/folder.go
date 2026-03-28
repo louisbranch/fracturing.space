@@ -16,9 +16,9 @@ import (
 // Named "Folder" (not "Applier") to distinguish pure state folds from
 // projection.Applier, which performs side-effecting I/O writes to stores.
 //
-// Core domain dispatch is declarative: coreFoldEntries() defines the mapping
-// from event types to fold functions. Adding a new core domain requires only
-// adding an entry in fold_registry.go.
+// Core domain dispatch is declarative: CoreDomainRegistrations defines the
+// built-in inventory and coreFoldEntries derives the runtime dispatch table
+// from that shared registration set.
 type Folder struct {
 	// Events provides event definitions so the folder can skip audit-only
 	// events that do not affect aggregate state.
@@ -48,8 +48,8 @@ func (a *Folder) initFoldIndex() {
 
 // FoldDispatchedTypes returns the union of all event types wired into the
 // applier's fold dispatch index. ValidateAggregateFoldDispatch uses this to
-// verify that every type declared in CoreDomains().FoldHandledTypes actually
-// reaches a fold function at runtime.
+// verify that every declared core fold type actually reaches a fold function
+// at runtime.
 func (a *Folder) FoldDispatchedTypes() []event.Type {
 	a.initFoldIndex()
 	types := make([]event.Type, 0, len(a.foldIndex))

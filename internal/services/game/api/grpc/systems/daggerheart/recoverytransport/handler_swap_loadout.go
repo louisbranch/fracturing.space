@@ -35,10 +35,10 @@ func (h *Handler) SwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadout
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart loadout"); err != nil {
 		return CharacterStateResult{}, err
@@ -62,11 +62,11 @@ func (h *Handler) SwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadout
 	}
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	current, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	state := daggerheart.NewCharacterState(daggerheart.CharacterStateConfig{
 		CampaignID:  campaignID,
@@ -84,7 +84,7 @@ func (h *Handler) SwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadout
 	stressBefore := state.Stress
 	if !in.Swap.InRest && in.Swap.RecallCost > 0 {
 		if _, _, err := state.SpendResource(daggerheart.ResourceStress, int(in.Swap.RecallCost)); err != nil {
-			return CharacterStateResult{}, handleDomainError(err)
+			return CharacterStateResult{}, handleDomainError(ctx, err)
 		}
 	}
 	stressAfter := state.Stress

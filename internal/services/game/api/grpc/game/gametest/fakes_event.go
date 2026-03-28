@@ -7,6 +7,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+var (
+	_ storage.EventHistoryStore  = (*FakeEventStore)(nil)
+	_ storage.EventStore         = (*FakeEventStore)(nil)
+	_ storage.BatchEventAppender = (*FakeBatchEventStore)(nil)
+)
+
 // FakeEventStore is a test double for storage.EventStore.
 type FakeEventStore struct {
 	Events    map[string][]event.Event // campaignID -> Events

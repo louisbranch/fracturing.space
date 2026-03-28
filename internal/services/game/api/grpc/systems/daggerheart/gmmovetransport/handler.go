@@ -67,10 +67,10 @@ func (h *Handler) ApplyGmMove(ctx context.Context, in *pb.DaggerheartApplyGmMove
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return Result{}, grpcerror.HandleDomainError(err)
+		return Result{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpSessionAction); err != nil {
-		return Result{}, grpcerror.HandleDomainError(err)
+		return Result{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart gm moves"); err != nil {
 		return Result{}, err
@@ -78,7 +78,7 @@ func (h *Handler) ApplyGmMove(ctx context.Context, in *pb.DaggerheartApplyGmMove
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return Result{}, grpcerror.HandleDomainError(err)
+		return Result{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if sess.Status != session.StatusActive {
 		return Result{}, status.Error(codes.FailedPrecondition, "session is not active")

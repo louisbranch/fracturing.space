@@ -9,17 +9,22 @@ import (
 	"testing"
 	"time"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -30,7 +35,7 @@ import (
 var testRuntime *domainwrite.Runtime
 
 func TestMain(m *testing.M) {
-	testRuntime = gametest.SetupRuntime()
+	testRuntime = runtimekit.SetupRuntime()
 	os.Exit(m.Run())
 }
 
@@ -110,6 +115,23 @@ func newTestDeps() *testDepsBuilder {
 func (b *testDepsBuilder) withSession() *testDepsBuilder {
 	b.Session = gametest.NewFakeSessionStore()
 	return b
+}
+
+func testSystemRegistries(t *testing.T) (*bridge.MetadataRegistry, *module.Registry) {
+	t.Helper()
+	return mustTestSystemRegistries()
+}
+
+func mustTestSystemRegistries() (*bridge.MetadataRegistry, *module.Registry) {
+	metadata := bridge.NewMetadataRegistry()
+	if err := metadata.Register(daggerheartdomain.NewRegistrySystem()); err != nil {
+		panic("register daggerheart metadata system: " + err.Error())
+	}
+	modules := module.NewRegistry()
+	if err := modules.Register(daggerheartdomain.NewModule()); err != nil {
+		panic("register daggerheart module: " + err.Error())
+	}
+	return metadata, modules
 }
 
 func (b *testDepsBuilder) withDomain(d handler.Domain) *testDepsBuilder {
@@ -340,13 +362,17 @@ func newReadinessServiceFixture(config readinessServiceFixtureConfig) (*Campaign
 			ParticipantID: "player-1",
 		},
 	}
+	metadata, modules := mustTestSystemRegistries()
+	systemStores := systemmanifest.ProjectionStores{Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore()}
 
 	service := NewCampaignService(Deps{
-		Campaign:    stores.campaign,
-		Participant: stores.participant,
-		Character:   stores.character,
-		Session:     stores.session,
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Campaign:       stores.campaign,
+		Participant:    stores.participant,
+		Character:      stores.character,
+		Session:        stores.session,
+		SystemStores:   systemStores,
+		SystemMetadata: metadata,
+		SystemModules:  modules,
 	})
 	return service, stores
 }
@@ -419,7 +445,7 @@ func writeDeps(domain handler.Domain, base Deps) Deps {
 }
 
 // withAuthClient returns a copy of deps with the AuthClient set.
-func withAuthClient(deps Deps, authClient authv1.AuthServiceClient) Deps {
+func withAuthClient(deps Deps, authClient handler.AuthUserClient) Deps {
 	deps.AuthClient = authClient
 	return deps
 }

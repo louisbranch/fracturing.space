@@ -41,10 +41,10 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
+		return AdversaryDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
+		return AdversaryDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
 		return AdversaryDamageResult{}, err
@@ -80,7 +80,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 
 	result, mitigated, err := ResolveAdversaryDamage(in.Damage, adversary)
 	if err != nil {
-		return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
+		return AdversaryDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if rules.AdversaryIsMinion(entry) && in.Damage.Amount > 0 {
 		result.HPAfter = 0
@@ -103,7 +103,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 	if rollSeq != nil {
 		rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 		if err != nil {
-			return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
+			return AdversaryDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 		}
 		if rollEvent.Type != action.EventTypeRollResolved {
 			return AdversaryDamageResult{}, status.Error(codes.InvalidArgument, "roll_seq must reference action.roll_resolved")

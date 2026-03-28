@@ -174,8 +174,8 @@ func TestAuditInterceptorErrorSeverity(t *testing.T) {
 	if store.count != 1 {
 		t.Fatalf("expected event to be emitted, got %d", store.count)
 	}
-	if store.last.Severity != "ERROR" {
-		t.Fatalf("expected error severity, got %s", store.last.Severity)
+	if store.last.Severity != "WARN" {
+		t.Fatalf("expected warn severity for client-visible not-found, got %s", store.last.Severity)
 	}
 	if store.last.Attributes["code"] != codes.NotFound.String() {
 		t.Fatalf("expected code NotFound, got %v", store.last.Attributes["code"])

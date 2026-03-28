@@ -36,6 +36,12 @@ func TestDaggerheartValidationGuards(t *testing.T) {
 	if err := store.PutDaggerheartCharacterState(ctx, projectionstore.DaggerheartCharacterState{CampaignID: "c"}); err == nil {
 		t.Fatal("expected error for empty character ID in PutDaggerheartCharacterState")
 	}
+	if err := store.PutDaggerheartCharacterState(ctx, projectionstore.DaggerheartCharacterState{CampaignID: "c", CharacterID: "ch", LifeState: "alive"}); err == nil {
+		t.Fatal("expected error for zero hope max in PutDaggerheartCharacterState")
+	}
+	if err := store.PutDaggerheartCharacterState(ctx, projectionstore.DaggerheartCharacterState{CampaignID: "c", CharacterID: "ch", HopeMax: 6}); err == nil {
+		t.Fatal("expected error for empty life state in PutDaggerheartCharacterState")
+	}
 
 	// GetDaggerheartCharacterState
 	if _, err := store.GetDaggerheartCharacterState(ctx, "", "ch"); err == nil {

@@ -2,12 +2,10 @@ package forktransport
 
 import (
 	"context"
-	"errors"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func (a forkApplication) GetLineage(ctx context.Context, campaignID string) (*campaignv1.Lineage, error) {
@@ -20,8 +18,10 @@ func (a forkApplication) GetLineage(ctx context.Context, campaignID string) (*ca
 	}
 
 	metadata, err := a.stores.CampaignFork.GetCampaignForkMetadata(ctx, campaignID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, grpcerror.Internal("get fork metadata", err)
+	if err != nil {
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get fork metadata"); lookupErr != nil {
+			return nil, lookupErr
+		}
 	}
 
 	depth := 0

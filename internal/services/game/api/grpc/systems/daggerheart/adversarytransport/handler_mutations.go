@@ -3,7 +3,6 @@ package adversarytransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -17,7 +16,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -53,10 +51,10 @@ func (h *Handler) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateA
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
@@ -66,17 +64,14 @@ func (h *Handler) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateA
 		return nil, internal("session store is not configured")
 	}
 	if _, err := h.deps.Session.GetSession(ctx, campaignID, sessionID); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 	entry, err := h.deps.Content.GetDaggerheartAdversaryEntry(ctx, adversaryEntryID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "adversary entry not found")
-		}
-		return nil, grpcerror.Internal("load adversary entry", err)
+		return nil, grpcerror.LookupErrorContext(ctx, err, "load adversary entry", "adversary entry not found")
 	}
 
 	adversaryID, err := h.deps.GenerateID()
@@ -151,10 +146,10 @@ func (h *Handler) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateA
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
@@ -162,7 +157,7 @@ func (h *Handler) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateA
 
 	current, err := h.deps.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	currentSessionID := strings.TrimSpace(current.SessionID)
 	if currentSessionID != "" {
@@ -248,10 +243,10 @@ func (h *Handler) DeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteA
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
@@ -259,7 +254,7 @@ func (h *Handler) DeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteA
 
 	current, err := h.deps.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	sessionID := strings.TrimSpace(current.SessionID)
 	sceneID := strings.TrimSpace(in.GetSceneId())
@@ -321,16 +316,16 @@ func (h *Handler) ApplyAdversaryFeature(ctx context.Context, in *pb.DaggerheartA
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
 	}
 	if _, err := h.deps.Session.GetSession(ctx, campaignID, sessionID); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
 		return nil, err
@@ -341,10 +336,7 @@ func (h *Handler) ApplyAdversaryFeature(ctx context.Context, in *pb.DaggerheartA
 	}
 	entry, err := h.deps.Content.GetDaggerheartAdversaryEntry(ctx, adversary.AdversaryEntryID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "adversary entry not found")
-		}
-		return nil, grpcerror.Internal("load adversary entry", err)
+		return nil, grpcerror.LookupErrorContext(ctx, err, "load adversary entry", "adversary entry not found")
 	}
 	feature, ok := findEntryFeature(entry, featureID)
 	if !ok {

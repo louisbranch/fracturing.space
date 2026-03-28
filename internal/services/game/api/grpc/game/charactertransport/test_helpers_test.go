@@ -11,8 +11,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -36,7 +38,7 @@ import (
 var testRuntime *domainwrite.Runtime
 
 func TestMain(m *testing.M) {
-	testRuntime = gametest.SetupRuntime()
+	testRuntime = runtimekit.SetupRuntime()
 	os.Exit(m.Run())
 }
 
@@ -76,7 +78,7 @@ type testStoresBuilder struct {
 	Participant *gametest.FakeParticipantStore
 	Event       *gametest.FakeEventStore
 	Character   *gametest.FakeCharacterStore
-	Daggerheart *gametest.FakeDaggerheartStore
+	Daggerheart *daggerhearttestkit.FakeDaggerheartStore
 	Content     contentstore.DaggerheartContentReadStore
 
 	domain       handler.Domain
@@ -93,7 +95,7 @@ func newTestStores() *testStoresBuilder {
 
 func (b *testStoresBuilder) withCharacter() *testStoresBuilder {
 	b.Character = gametest.NewFakeCharacterStore()
-	b.Daggerheart = gametest.NewFakeDaggerheartStore()
+	b.Daggerheart = daggerhearttestkit.NewFakeDaggerheartStore()
 	return b
 }
 
@@ -258,7 +260,7 @@ func newWorkflowCharacterService(t *testing.T, profile projectionstore.Daggerhea
 		},
 	}
 
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	if profile.CharacterID != "" {
 		dhStore.Profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 			"ch1": profile,

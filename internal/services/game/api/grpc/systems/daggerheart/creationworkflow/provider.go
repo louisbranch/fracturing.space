@@ -2,7 +2,6 @@ package creationworkflow
 
 import (
 	"context"
-	"errors"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/characterworkflow"
@@ -12,7 +11,6 @@ import (
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -35,8 +33,8 @@ func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps characterw
 
 	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return characterworkflow.Progress{}, grpcerror.Internal("get daggerheart profile", err)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart profile"); lookupErr != nil {
+			return characterworkflow.Progress{}, lookupErr
 		}
 		profile = projectionstore.DaggerheartCharacterProfile{CampaignID: campaignContext.ID, CharacterID: characterID}
 	}
@@ -70,8 +68,8 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps characterwor
 
 	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return nil, characterworkflow.Progress{}, grpcerror.Internal("get daggerheart profile", err)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart profile"); lookupErr != nil {
+			return nil, characterworkflow.Progress{}, lookupErr
 		}
 		profile = defaultProfileForCharacter(campaignContext.ID, characterRecord.Kind)
 	} else {
@@ -128,8 +126,8 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps characte
 
 	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return nil, characterworkflow.Progress{}, grpcerror.Internal("get daggerheart profile", err)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart profile"); lookupErr != nil {
+			return nil, characterworkflow.Progress{}, lookupErr
 		}
 		profile = defaultProfileForCharacter(campaignContext.ID, characterRecord.Kind)
 	} else {

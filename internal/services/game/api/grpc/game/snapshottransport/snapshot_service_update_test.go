@@ -8,6 +8,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -30,7 +32,7 @@ func TestUpdateSnapshotState_NilRequest(t *testing.T) {
 func TestUpdateSnapshotState_MissingCampaignId(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    gametest.NewFakeCampaignStore(),
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
 	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
@@ -43,7 +45,7 @@ func TestUpdateSnapshotState_MissingCampaignId(t *testing.T) {
 func TestUpdateSnapshotState_CampaignNotFound(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    gametest.NewFakeCampaignStore(),
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
 	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "nonexistent",
@@ -61,7 +63,7 @@ func TestUpdateSnapshotState_RequiresManageSessionsPolicy(t *testing.T) {
 	svc := NewService(Deps{
 		Auth:        authz.PolicyDeps{Participant: gametest.NewFakeParticipantStore()},
 		Campaign:    campaignStore,
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
 
 	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
@@ -79,7 +81,7 @@ func TestUpdateSnapshotState_CampaignArchivedDisallowed(t *testing.T) {
 
 	svc := NewService(Deps{
 		Campaign:    campaignStore,
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
 	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
@@ -96,9 +98,9 @@ func TestUpdateSnapshotState_NegativeGmFear(t *testing.T) {
 
 	svc := NewService(Deps{
 		Campaign:    campaignStore,
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
-	_, err := svc.UpdateSnapshotState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	_, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: -1},
@@ -109,7 +111,7 @@ func TestUpdateSnapshotState_NegativeGmFear(t *testing.T) {
 
 func TestUpdateSnapshotState_RequiresDomainEngine(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
@@ -118,7 +120,7 @@ func TestUpdateSnapshotState_RequiresDomainEngine(t *testing.T) {
 		Daggerheart: dhStore,
 	})
 
-	_, err := svc.UpdateSnapshotState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	_, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 7},
@@ -129,7 +131,7 @@ func TestUpdateSnapshotState_RequiresDomainEngine(t *testing.T) {
 
 func TestUpdateSnapshotState_Success(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	eventStore := gametest.NewFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
@@ -163,7 +165,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.UpdateSnapshotState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 7},
@@ -194,7 +196,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 
 func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	eventStore := gametest.NewFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
@@ -229,7 +231,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.UpdateSnapshotState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 10},
@@ -250,7 +252,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 
 func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	eventStore := gametest.NewFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
@@ -285,7 +287,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.UpdateSnapshotState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 0},
@@ -301,7 +303,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 
 func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	eventStore := gametest.NewFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
@@ -335,7 +337,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	_, err = svc.UpdateSnapshotState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	_, err = svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 5},

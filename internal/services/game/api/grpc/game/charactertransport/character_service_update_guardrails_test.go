@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -75,7 +76,7 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	_, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
+	_, err := svc.UpdateCharacter(requestctx.WithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("Renamed"),
@@ -102,7 +103,7 @@ func TestUpdateCharacter_DeniesControllerWhenOwnershipUnresolved(t *testing.T) {
 
 	domain := &fakeDomainEngine{store: ts.Event}
 	svc := NewService(ts.withDomain(domain).build())
-	_, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("controller-1"), &statev1.UpdateCharacterRequest{
+	_, err := svc.UpdateCharacter(requestctx.WithParticipantID("controller-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("Renamed"),
@@ -156,7 +157,7 @@ func TestUpdateCharacter_DeniesManagerOwnershipTransfer(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	_, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
+	_, err := svc.UpdateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		OwnerParticipantId: wrapperspb.String("member-1"),
@@ -176,7 +177,7 @@ func TestUpdateCharacter_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
+	_, err := svc.UpdateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("New Hero"),

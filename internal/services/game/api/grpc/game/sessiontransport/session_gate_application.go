@@ -5,7 +5,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -95,8 +94,8 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 
 	if _, err := a.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
 		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, "session gate already open")
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return storage.SessionGate{}, grpcerror.Internal("check session gate", err)
+	} else if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "check session gate"); lookupErr != nil {
+		return storage.SessionGate{}, lookupErr
 	}
 
 	gateID := strings.TrimSpace(in.GetGateId())

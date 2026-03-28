@@ -85,8 +85,9 @@ Blocker ordering is deterministic:
 ## Bootstrap extension point
 
 `internal/services/game/domain/module/registry.go` exposes the optional
-`SessionStartBootstrapper` interface for system-owned first-session bootstrap
-events.
+`SessionStartBootstrapProvider` interface for system-owned first-session
+bootstrap events. Systems bind a typed bootstrap emitter against their current
+snapshot state before the readiness workflow executes it.
 
 Current use:
 

@@ -47,14 +47,14 @@ func (h *Handler) TransformBeastform(ctx context.Context, in *pb.DaggerheartTran
 	}
 	beastform, err := h.deps.Content.GetDaggerheartBeastform(ctx, beastformID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if beastform.Tier > tierForLevel(profile.Level) {
 		return nil, status.Error(codes.FailedPrecondition, "beastform tier exceeds character tier")
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	classState := classStateFromProjection(state.ClassState)
 	payload := daggerheartpayload.BeastformTransformPayload{
@@ -132,7 +132,7 @@ func (h *Handler) DropBeastform(ctx context.Context, in *pb.DaggerheartDropBeast
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	classState := classStateFromProjection(state.ClassState)
 	if classState.ActiveBeastform == nil {

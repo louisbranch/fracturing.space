@@ -225,14 +225,14 @@ func TestSessionStartWorkflowStart(t *testing.T) {
 
 func TestSessionStartWorkflowSystemReadinessGuardRails(t *testing.T) {
 	t.Run("nil registry", func(t *testing.T) {
-		checker := sessionStartWorkflow{}.systemReadiness(aggregate.State{})
+		checker := sessionStartWorkflow{}.systemReadiness(aggregate.State{}, "camp-1")
 		if checker != nil {
 			t.Fatal("expected nil checker when systems registry is missing")
 		}
 	})
 
 	t.Run("blank system id", func(t *testing.T) {
-		checker := sessionStartWorkflow{systems: module.NewRegistry()}.systemReadiness(aggregate.State{})
+		checker := sessionStartWorkflow{systems: module.NewRegistry()}.systemReadiness(aggregate.State{}, "camp-1")
 		if checker != nil {
 			t.Fatal("expected nil checker when campaign system id is blank")
 		}
@@ -245,7 +245,7 @@ func TestSessionStartWorkflowSystemReadinessGuardRails(t *testing.T) {
 		}
 		checker := sessionStartWorkflow{systems: systems}.systemReadiness(aggregate.State{
 			Campaign: workflowCampaignState("stub"),
-		})
+		}, "camp-1")
 		if checker != nil {
 			t.Fatal("expected nil checker when module does not implement readiness")
 		}
@@ -254,7 +254,7 @@ func TestSessionStartWorkflowSystemReadinessGuardRails(t *testing.T) {
 	t.Run("missing module", func(t *testing.T) {
 		checker := sessionStartWorkflow{systems: module.NewRegistry()}.systemReadiness(aggregate.State{
 			Campaign: workflowCampaignState("missing"),
-		})
+		}, "camp-1")
 		if checker != nil {
 			t.Fatal("expected nil checker when system registry has no matching module")
 		}
@@ -270,7 +270,7 @@ func TestSessionStartWorkflowSystemReadinessGuardRails(t *testing.T) {
 			Systems: map[module.Key]any{
 				{ID: "stub", Version: "1.0.0"}: struct{}{},
 			},
-		})
+		}, "camp-1")
 		if checker == nil {
 			t.Fatal("expected readiness checker")
 		}
@@ -293,13 +293,36 @@ func TestSessionStartWorkflowSystemReadinessGuardRails(t *testing.T) {
 			Systems: map[module.Key]any{
 				{ID: "stub", Version: "1.0.0"}: struct{}{},
 			},
-		})
+		}, "camp-1")
 		if checker == nil {
 			t.Fatal("expected readiness checker")
 		}
 		ready, reason := checker("char-1")
 		if ready || reason != "class is required" {
 			t.Fatalf("checker result = (%t, %q), want (false, %q)", ready, reason, "class is required")
+		}
+	})
+
+	t.Run("seeds missing system state from factory", func(t *testing.T) {
+		systems := module.NewRegistry()
+		if err := systems.Register(seededReadinessModule{}); err != nil {
+			t.Fatalf("register module: %v", err)
+		}
+		checker := sessionStartWorkflow{systems: systems}.systemReadiness(
+			aggregate.State{
+				Campaign: workflowCampaignState("seeded"),
+				Characters: map[ids.CharacterID]character.State{
+					"char-1": {CharacterID: "char-1", Created: true},
+				},
+			},
+			"camp-1",
+		)
+		if checker == nil {
+			t.Fatal("expected readiness checker")
+		}
+		ready, reason := checker("char-1")
+		if ready || reason != "seeded state checked" {
+			t.Fatalf("checker result = (%t, %q), want (false, %q)", ready, reason, "seeded state checked")
 		}
 	})
 }
@@ -378,6 +401,22 @@ func TestSessionStartWorkflowSystemBootstrapEventsGuardRails(t *testing.T) {
 			t.Fatalf("event type = %s, want %s", events[0].Type, expected.Type)
 		}
 	})
+
+	t.Run("seeds missing system state from factory", func(t *testing.T) {
+		systems := module.NewRegistry()
+		if err := systems.Register(seededBootstrapModule{}); err != nil {
+			t.Fatalf("register module: %v", err)
+		}
+		events, err := sessionStartWorkflow{systems: systems}.systemBootstrapEvents(aggregate.State{
+			Campaign: workflowCampaignState("seeded"),
+		}, cmd, now)
+		if err != nil {
+			t.Fatalf("systemBootstrapEvents returned error: %v", err)
+		}
+		if len(events) != 1 || events[0].Type != event.Type("sys.seeded.bootstrapped") {
+			t.Fatalf("events = %v, want one sys.seeded.bootstrapped event", events)
+		}
+	})
 }
 
 func workflowCampaignState(systemID string) campaign.State {
@@ -433,8 +472,43 @@ func (m stubReadinessModule) EmittableEventTypes() []event.Type        { return 
 func (m stubReadinessModule) Decider() module.Decider                  { return nil }
 func (m stubReadinessModule) Folder() module.Folder                    { return nil }
 func (m stubReadinessModule) StateFactory() module.StateFactory        { return nil }
-func (m stubReadinessModule) CharacterReady(any, character.State) (bool, string) {
-	return m.ready, m.reason
+func (m stubReadinessModule) BindCharacterReadiness(ids.CampaignID, map[module.Key]any) (module.CharacterReadinessEvaluator, error) {
+	return workflowReadinessEvaluator{ready: m.ready, reason: m.reason}, nil
+}
+
+type seededReadinessModule struct{}
+
+func (seededReadinessModule) ID() string                               { return "seeded" }
+func (seededReadinessModule) Version() string                          { return "1.0.0" }
+func (seededReadinessModule) RegisterCommands(*command.Registry) error { return nil }
+func (seededReadinessModule) RegisterEvents(*event.Registry) error     { return nil }
+func (seededReadinessModule) EmittableEventTypes() []event.Type        { return nil }
+func (seededReadinessModule) Decider() module.Decider                  { return nil }
+func (seededReadinessModule) Folder() module.Folder                    { return nil }
+func (seededReadinessModule) StateFactory() module.StateFactory        { return seededReadinessFactory{} }
+func (seededReadinessModule) BindCharacterReadiness(campaignID ids.CampaignID, currentByKey map[module.Key]any) (module.CharacterReadinessEvaluator, error) {
+	systemState := currentByKey[module.Key{ID: "seeded", Version: "1.0.0"}]
+	if systemState == nil {
+		seeded, err := seededReadinessFactory{}.NewSnapshotState(campaignID)
+		if err != nil {
+			return nil, err
+		}
+		systemState = seeded
+	}
+	if systemState != "seeded-state" {
+		return nil, errBootstrapBoom
+	}
+	return workflowReadinessEvaluator{ready: false, reason: "seeded state checked"}, nil
+}
+
+type seededReadinessFactory struct{}
+
+func (seededReadinessFactory) NewSnapshotState(ids.CampaignID) (any, error) {
+	return "seeded-state", nil
+}
+
+func (seededReadinessFactory) NewCharacterState(ids.CampaignID, ids.CharacterID, string) (any, error) {
+	return nil, nil
 }
 
 var errBootstrapBoom = json.Unmarshal([]byte("{"), &struct{}{})
@@ -452,6 +526,49 @@ func (m stubBootstrapModule) EmittableEventTypes() []event.Type        { return 
 func (m stubBootstrapModule) Decider() module.Decider                  { return nil }
 func (m stubBootstrapModule) Folder() module.Folder                    { return nil }
 func (m stubBootstrapModule) StateFactory() module.StateFactory        { return nil }
-func (m stubBootstrapModule) SessionStartBootstrap(any, map[ids.CharacterID]character.State, command.Command, time.Time) ([]event.Event, error) {
-	return m.events, m.err
+func (m stubBootstrapModule) BindSessionStartBootstrap(ids.CampaignID, map[module.Key]any) (module.SessionStartBootstrapEmitter, error) {
+	return workflowBootstrapEmitter{events: m.events, err: m.err}, nil
+}
+
+type seededBootstrapModule struct{}
+
+func (seededBootstrapModule) ID() string                               { return "seeded" }
+func (seededBootstrapModule) Version() string                          { return "1.0.0" }
+func (seededBootstrapModule) RegisterCommands(*command.Registry) error { return nil }
+func (seededBootstrapModule) RegisterEvents(*event.Registry) error     { return nil }
+func (seededBootstrapModule) EmittableEventTypes() []event.Type        { return nil }
+func (seededBootstrapModule) Decider() module.Decider                  { return nil }
+func (seededBootstrapModule) Folder() module.Folder                    { return nil }
+func (seededBootstrapModule) StateFactory() module.StateFactory        { return seededReadinessFactory{} }
+func (seededBootstrapModule) BindSessionStartBootstrap(campaignID ids.CampaignID, currentByKey map[module.Key]any) (module.SessionStartBootstrapEmitter, error) {
+	systemState := currentByKey[module.Key{ID: "seeded", Version: "1.0.0"}]
+	if systemState == nil {
+		seeded, err := seededReadinessFactory{}.NewSnapshotState(campaignID)
+		if err != nil {
+			return nil, err
+		}
+		systemState = seeded
+	}
+	if systemState != "seeded-state" {
+		return nil, errBootstrapBoom
+	}
+	return workflowBootstrapEmitter{events: []event.Event{{Type: event.Type("sys.seeded.bootstrapped")}}}, nil
+}
+
+type workflowReadinessEvaluator struct {
+	ready  bool
+	reason string
+}
+
+func (e workflowReadinessEvaluator) CharacterReady(character.State) (bool, string) {
+	return e.ready, e.reason
+}
+
+type workflowBootstrapEmitter struct {
+	events []event.Event
+	err    error
+}
+
+func (e workflowBootstrapEmitter) EmitSessionStartBootstrap(map[ids.CharacterID]character.State, command.Command, time.Time) ([]event.Event, error) {
+	return e.events, e.err
 }

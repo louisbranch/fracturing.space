@@ -8,6 +8,8 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -30,7 +32,7 @@ func TestForkCampaign_RequiresCampaignManagePolicy(t *testing.T) {
 		CampaignFork: gametest.NewFakeCampaignForkStore(),
 		Event:        gametest.NewFakeEventStore(),
 		Participant:  participantStore,
-	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(context.Background(), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -58,9 +60,9 @@ func TestForkCampaign_AllowsManagerManagePolicy(t *testing.T) {
 		CampaignFork: gametest.NewFakeCampaignForkStore(),
 		Event:        gametest.NewFakeEventStore(),
 		Participant:  participantStore,
-	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(gametest.ContextWithParticipantID("manager-1"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithParticipantID("manager-1"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Campaign",
 	})
@@ -86,9 +88,9 @@ func TestForkCampaign_DeniesMemberManagePolicy(t *testing.T) {
 		CampaignFork: gametest.NewFakeCampaignForkStore(),
 		Event:        gametest.NewFakeEventStore(),
 		Participant:  participantStore,
-	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(gametest.ContextWithParticipantID("member-1"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithParticipantID("member-1"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Campaign",
 	})

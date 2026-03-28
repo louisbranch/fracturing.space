@@ -491,6 +491,24 @@ func TestContentStoreEmptyIDValidation(t *testing.T) {
 	if err := store.DeleteDaggerheartEnvironment(ctx, ""); err == nil {
 		t.Fatal("expected error for empty environment ID in Delete")
 	}
+	if err := store.PutDaggerheartContentString(ctx, contentstore.DaggerheartContentString{
+		ContentID:   "content-1",
+		ContentType: "class",
+		Field:       "name",
+		Locale:      "en",
+		UpdatedAt:   time.Now(),
+	}); err == nil {
+		t.Fatal("expected error for zero created at in PutDaggerheartContentString")
+	}
+	if err := store.PutDaggerheartContentString(ctx, contentstore.DaggerheartContentString{
+		ContentID:   "content-1",
+		ContentType: "class",
+		Field:       "name",
+		Locale:      "en",
+		CreatedAt:   time.Now(),
+	}); err == nil {
+		t.Fatal("expected error for zero updated at in PutDaggerheartContentString")
+	}
 	if err := store.PutDaggerheartDomain(ctx, contentstore.DaggerheartDomain{}); err == nil {
 		t.Fatal("expected error for empty domain ID")
 	}

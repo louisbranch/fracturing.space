@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -21,7 +22,7 @@ import (
 func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 	ctx := context.Background()
 	eventStore := gametest.NewFakeEventStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	payload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "ch1",
@@ -86,7 +87,7 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 	ctx := context.Background()
 	eventStore := gametest.NewFakeEventStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	payload := daggerheartpayload.ConditionChangedPayload{
 		CharacterID: "ch1",
@@ -148,7 +149,7 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 func TestApplyStressVulnerableCondition_NoOpWhenUnchanged(t *testing.T) {
 	ctx := context.Background()
 	eventStore := gametest.NewFakeEventStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	noopDomain := &fakeDomainEngine{}
 	write := domainwrite.WritePath{Executor: noopDomain}
 
@@ -178,7 +179,7 @@ func TestApplyStressVulnerableCondition_NoOpWhenUnchanged(t *testing.T) {
 func TestApplyStressVulnerableCondition_NoOpWhenAlreadyVulnerable(t *testing.T) {
 	ctx := context.Background()
 	eventStore := gametest.NewFakeEventStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	noopDomain := &fakeDomainEngine{}
 	write := domainwrite.WritePath{Executor: noopDomain}
 

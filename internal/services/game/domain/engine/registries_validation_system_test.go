@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -244,4 +246,116 @@ func TestValidateStateFactoryFoldCompatibility_RejectsNilRegistry(t *testing.T) 
 	if !strings.Contains(err.Error(), "module registry is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+type readinessOnlyModule struct {
+	paramModule
+}
+
+func (m readinessOnlyModule) BindCharacterReadiness(ids.CampaignID, map[module.Key]any) (module.CharacterReadinessEvaluator, error) {
+	return staticReadinessEvaluator{}, nil
+}
+
+type bootstrapOnlyModule struct {
+	paramModule
+}
+
+func (m bootstrapOnlyModule) BindSessionStartBootstrap(ids.CampaignID, map[module.Key]any) (module.SessionStartBootstrapEmitter, error) {
+	return staticBootstrapEmitter{}, nil
+}
+
+type readinessWithFactoryModule struct {
+	paramModule
+	factory module.StateFactory
+}
+
+func (m readinessWithFactoryModule) StateFactory() module.StateFactory {
+	return m.factory
+}
+
+func (m readinessWithFactoryModule) BindCharacterReadiness(ids.CampaignID, map[module.Key]any) (module.CharacterReadinessEvaluator, error) {
+	return staticReadinessEvaluator{}, nil
+}
+
+func TestValidateOptionalSystemStateHooks_PassesWithoutHookModules(t *testing.T) {
+	registry := module.NewRegistry()
+	if err := registry.Register(paramModule{id: "plain", version: "v1"}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := ValidateOptionalSystemStateHooks(registry); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateOptionalSystemStateHooks_FailsReadinessHookWithoutFactory(t *testing.T) {
+	registry := module.NewRegistry()
+	if err := registry.Register(readinessOnlyModule{paramModule{id: "ready", version: "v1"}}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	err := ValidateOptionalSystemStateHooks(registry)
+	if err == nil {
+		t.Fatal("expected error for readiness hook without state factory")
+	}
+	if !strings.Contains(err.Error(), "CharacterReadinessProvider") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(err.Error(), "ready@v1") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateOptionalSystemStateHooks_FailsBootstrapHookWithoutFactory(t *testing.T) {
+	registry := module.NewRegistry()
+	if err := registry.Register(bootstrapOnlyModule{paramModule{id: "bootstrap", version: "v1"}}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	err := ValidateOptionalSystemStateHooks(registry)
+	if err == nil {
+		t.Fatal("expected error for bootstrap hook without state factory")
+	}
+	if !strings.Contains(err.Error(), "SessionStartBootstrapProvider") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(err.Error(), "bootstrap@v1") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateOptionalSystemStateHooks_PassesWhenHookModuleHasFactory(t *testing.T) {
+	registry := module.NewRegistry()
+	if err := registry.Register(readinessWithFactoryModule{
+		paramModule: paramModule{id: "ready", version: "v1"},
+		factory:     &compatFactory{},
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := ValidateOptionalSystemStateHooks(registry); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateOptionalSystemStateHooks_RejectsNilRegistry(t *testing.T) {
+	err := ValidateOptionalSystemStateHooks(nil)
+	if err == nil {
+		t.Fatal("expected error for nil registry")
+	}
+	if !strings.Contains(err.Error(), "module registry is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+type staticReadinessEvaluator struct{}
+
+func (staticReadinessEvaluator) CharacterReady(character.State) (bool, string) {
+	return true, ""
+}
+
+type staticBootstrapEmitter struct{}
+
+func (staticBootstrapEmitter) EmitSessionStartBootstrap(map[ids.CharacterID]character.State, command.Command, time.Time) ([]event.Event, error) {
+	return nil, nil
 }

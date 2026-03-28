@@ -12,7 +12,7 @@ import (
 // replayParticipantState replays one participant aggregate from the event
 // journal so bind-time occupancy checks use authoritative history rather than
 // potentially stale projections.
-func replayParticipantState(ctx context.Context, store storage.EventStore, campaignID, participantID string) (participant.State, error) {
+func replayParticipantState(ctx context.Context, store storage.EventHistoryStore, campaignID, participantID string) (participant.State, error) {
 	return replayEntity(ctx, store, campaignID, "participant", participantID, participant.State{}, participant.Fold)
 }
 
@@ -20,7 +20,7 @@ func replayParticipantState(ctx context.Context, store storage.EventStore, campa
 // events into domain state.
 func replayEntity[T any](
 	ctx context.Context,
-	store storage.EventStore,
+	store storage.EventHistoryStore,
 	campaignID string,
 	entityType string,
 	entityID string,

@@ -17,6 +17,7 @@ func ValidateProjectionRegistries(
 	modules *module.Registry,
 	adapters *bridge.AdapterRegistry,
 	projectionHandledTypes []event.Type,
+	coreDomains []CoreDomain,
 ) error {
 	if err := ValidateProjectionCoverage(events, projectionHandledTypes); err != nil {
 		return fmt.Errorf("validate projection coverage: %w", err)
@@ -34,7 +35,7 @@ func ValidateProjectionRegistries(
 	}
 	// Collect core domain projection declarations for alignment check.
 	var coreProjectionDeclared []event.Type
-	for _, domain := range CoreDomains() {
+	for _, domain := range coreDomains {
 		if domain.ProjectionHandledTypes != nil {
 			coreProjectionDeclared = append(coreProjectionDeclared, domain.ProjectionHandledTypes()...)
 		}

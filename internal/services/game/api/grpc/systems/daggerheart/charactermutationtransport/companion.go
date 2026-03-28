@@ -50,7 +50,7 @@ func (h *Handler) BeginCompanionExperience(ctx context.Context, in *pb.Daggerhea
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	companionState := companionStateForCharacter(profile, state)
 	if companionState.Status == daggerheartstate.CompanionStatusAway {
@@ -119,7 +119,7 @@ func (h *Handler) ReturnCompanion(ctx context.Context, in *pb.DaggerheartReturnC
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	companionState := companionStateForCharacter(profile, state)
 	if companionState.Status != daggerheartstate.CompanionStatusAway || strings.TrimSpace(companionState.ActiveExperienceID) == "" {

@@ -3,8 +3,8 @@ package forktransport
 import (
 	"time"
 
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/journalimport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -21,7 +21,7 @@ type Deps struct {
 	Session       storage.SessionStore
 	CampaignFork  storage.CampaignForkStore
 	Event         storage.EventStore
-	Social        socialv1.SocialServiceClient
+	Social        handler.SocialProfileClient
 	Write         domainwrite.WritePath
 	Applier       projection.Applier
 	EventRegistry *event.Registry
@@ -45,7 +45,7 @@ type forkApplicationStores struct {
 	Session      storage.SessionStore
 	CampaignFork storage.CampaignForkStore
 	Event        storage.EventStore
-	Social       socialv1.SocialServiceClient
+	Social       handler.SocialProfileClient
 }
 
 func newForkApplicationWithDependencies(

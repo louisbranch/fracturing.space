@@ -3,7 +3,6 @@ package forktransport
 import (
 	"context"
 
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -18,7 +17,7 @@ func applyParticipantProfileSnapshot(
 	applier projection.Applier,
 	participantStore storage.ParticipantStore,
 	characterStore storage.CharacterStore,
-	socialClient socialv1.SocialServiceClient,
+	socialClient handler.SocialProfileClient,
 	campaignID string,
 	participantID string,
 	userID string,

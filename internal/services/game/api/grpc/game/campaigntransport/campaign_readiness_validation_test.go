@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -33,7 +34,7 @@ func TestGetCampaignSessionReadiness_NotFound(t *testing.T) {
 		Session:     gametest.NewFakeSessionStore(),
 	})
 
-	_, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("owner-1"), &statev1.GetCampaignSessionReadinessRequest{CampaignId: "missing"})
+	_, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("owner-1"), &statev1.GetCampaignSessionReadinessRequest{CampaignId: "missing"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
@@ -52,14 +53,14 @@ func TestGetCampaignSessionReadiness_PermissionDeniedWhenActorMissing(t *testing
 		Session:     gametest.NewFakeSessionStore(),
 	})
 
-	_, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("missing"), &statev1.GetCampaignSessionReadinessRequest{CampaignId: "c1"})
+	_, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("missing"), &statev1.GetCampaignSessionReadinessRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestGetCampaignSessionReadiness_ReadyCampaign(t *testing.T) {
 	svc, _ := newReadinessServiceFixture(readinessServiceFixtureConfig{})
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -81,7 +82,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenStatusDisallowsStart(t *testing.T
 		status: campaign.StatusCompleted,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -104,7 +105,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenActiveSessionExists(t *testing.T)
 	}
 	stores.session.ActiveSession["c1"] = "s1"
 
-	resp, err := svc.GetCampaignSessionReadiness(gametest.ContextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {

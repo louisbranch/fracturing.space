@@ -2,7 +2,6 @@ package campaigntransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -201,11 +200,11 @@ func (c campaignApplication) listCampaignsByIDs(ctx context.Context, campaignIDs
 			continue
 		}
 		record, err := c.stores.Campaign.Get(ctx, campaignID)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get campaign"); lookupErr != nil {
+			return nil, "", lookupErr
+		}
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				continue
-			}
-			return nil, "", grpcerror.Internal("get campaign", err)
+			continue
 		}
 		if !campaignRecordMatchesStatuses(record, statusFilter) {
 			continue

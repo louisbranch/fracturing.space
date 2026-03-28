@@ -29,7 +29,14 @@ type Store struct {
 	sqlDB *sql.DB
 }
 
-var _ storage.IntegrationOutboxStore = (*Store)(nil)
+var (
+	_ storage.IntegrationOutboxWriter       = (*Store)(nil)
+	_ storage.IntegrationOutboxReader       = (*Store)(nil)
+	_ storage.IntegrationOutboxLeaser       = (*Store)(nil)
+	_ storage.IntegrationOutboxAcknowledger = (*Store)(nil)
+	_ storage.IntegrationOutboxWorkerStore  = (*Store)(nil)
+	_ storage.IntegrationOutboxStore        = (*Store)(nil)
+)
 
 // Bind creates an integration-outbox backend bound to the provided SQLite DB.
 func Bind(sqlDB *sql.DB) *Store {
@@ -149,6 +156,9 @@ func buildAIGMTurnRequestedOutboxEvent(evt event.Event) ([]storage.IntegrationOu
 	if strings.TrimSpace(payload.CampaignID) == "" || strings.TrimSpace(payload.SessionID) == "" {
 		return nil, nil
 	}
+	if evt.Seq == 0 {
+		return nil, fmt.Errorf("source event sequence is required")
+	}
 	outboxEventID, err := id.NewID()
 	if err != nil {
 		return nil, fmt.Errorf("generate integration outbox event id: %w", err)
@@ -162,7 +172,7 @@ func buildAIGMTurnRequestedOutboxEvent(evt event.Event) ([]storage.IntegrationOu
 		ID:            outboxEventID,
 		EventType:     gameintegration.AIGMTurnRequestedOutboxEventType,
 		PayloadJSON:   string(payloadJSON),
-		DedupeKey:     gameintegration.AIGMTurnRequestedDedupeKey(outboxEventID),
+		DedupeKey:     gameintegration.AIGMTurnRequestedDedupeKey(payload.CampaignID, evt.Seq),
 		Status:        storage.IntegrationOutboxStatusPending,
 		AttemptCount:  0,
 		NextAttemptAt: now,

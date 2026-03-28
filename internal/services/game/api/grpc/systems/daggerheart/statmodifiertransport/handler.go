@@ -50,10 +50,10 @@ func (h *Handler) ApplyStatModifiers(ctx context.Context, in *pb.DaggerheartAppl
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return StatModifiersResult{}, grpcerror.HandleDomainError(err)
+		return StatModifiersResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return StatModifiersResult{}, grpcerror.HandleDomainError(err)
+		return StatModifiersResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart stat modifiers"); err != nil {
 		return StatModifiersResult{}, err
@@ -92,7 +92,7 @@ func (h *Handler) ApplyStatModifiers(ctx context.Context, in *pb.DaggerheartAppl
 
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return StatModifiersResult{}, grpcerror.HandleDomainError(err)
+		return StatModifiersResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 
 	before := ProjectionStatModifiersToDomain(state.StatModifiers)

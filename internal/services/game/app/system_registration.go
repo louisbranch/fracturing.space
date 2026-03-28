@@ -16,21 +16,47 @@ var (
 	errSystemModuleRegistryMismatch   = errors.New("system module registry mismatch")
 )
 
-// registeredSystemModules returns the concrete system modules wired into runtime.
+// systemRegistrationSnapshot freezes the manifest-derived system inventory used
+// by one server bootstrap run.
 //
-// The manifest package is the built-in source of truth for system registration.
-// Keeping startup on that path prevents app-local lists from drifting away from
-// metadata or adapter registration.
-func registeredSystemModules() []domainsystem.Module {
-	return systemmanifest.Modules()
+// Startup should resolve the built-in module and metadata sets once, then pass
+// that explicit snapshot through the registration and parity-validation phases
+// instead of reaching back into manifest helpers from scattered call sites.
+type systemRegistrationSnapshot struct {
+	modules  []domainsystem.Module
+	metadata []domainbridge.GameSystem
 }
 
-// registeredMetadataSystems returns system metadata surfaced in API contracts and registry.
-//
-// The metadata side stays manifest-derived as well so startup parity validation
-// compares three views of the same built-in descriptor list.
-func registeredMetadataSystems() []domainbridge.GameSystem {
-	return systemmanifest.MetadataSystems()
+// loadSystemRegistrationSnapshot materializes the manifest-derived startup
+// inventory once so later phases all validate against the same slice contents.
+func loadSystemRegistrationSnapshot() systemRegistrationSnapshot {
+	return systemRegistrationSnapshot{
+		modules:  append([]domainsystem.Module(nil), systemmanifest.Modules()...),
+		metadata: append([]domainbridge.GameSystem(nil), systemmanifest.MetadataSystems()...),
+	}
+}
+
+// modulesCopy returns the frozen built-in system modules for this bootstrap run.
+func (s systemRegistrationSnapshot) modulesCopy() []domainsystem.Module {
+	return append([]domainsystem.Module(nil), s.modules...)
+}
+
+// metadataSystemsCopy returns the frozen built-in metadata registrations for this
+// bootstrap run.
+func (s systemRegistrationSnapshot) metadataSystemsCopy() []domainbridge.GameSystem {
+	return append([]domainbridge.GameSystem(nil), s.metadata...)
+}
+
+// buildMetadataRegistry builds a registry from the frozen manifest metadata so
+// startup parity checks and API registration observe one explicit inventory.
+func (s systemRegistrationSnapshot) buildMetadataRegistry() (*domainbridge.MetadataRegistry, error) {
+	registry := domainbridge.NewMetadataRegistry()
+	for _, gameSystem := range s.metadata {
+		if err := registry.Register(gameSystem); err != nil {
+			return nil, fmt.Errorf("register system %s@%s: %w", gameSystem.ID(), gameSystem.Version(), err)
+		}
+	}
+	return registry, nil
 }
 
 // validateSystemRegistrationParity ensures module, metadata, and adapter registries match.

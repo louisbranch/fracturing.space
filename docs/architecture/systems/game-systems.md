@@ -53,9 +53,7 @@ Startup validation enforces coverage:
 
 ## Extension surfaces and registry wiring
 
-Adding a game system requires four registries, all wired from one
-`SystemDescriptor` in `domain/systems/manifest/manifest.go`. If a system is
-present in one registry and missing in another, startup validation fails.
+Adding a game system requires four registries, all wired from one `SystemDescriptor` in `domain/systems/manifest/manifest.go`. If a system is present in one registry and missing in another, startup validation fails.
 
 ```mermaid
 flowchart TD
@@ -84,15 +82,13 @@ flowchart TD
 | **Metadata** | API surface | `domain/systems/registry_bridge.go` | Transport-facing contracts, state handler factories, outcome appliers |
 | **Manifest** | Glue | `domain/systems/manifest/manifest.go` | Single descriptor that wires the other three together |
 
-Metadata registry contracts are domain-owned (`SystemID`, metadata status enums).
-gRPC/API adapters map those values to protobuf enums at transport boundaries so
-domain packages remain independent from generated API code.
+Metadata registry contracts are domain-owned (`SystemID`, metadata status enums`). gRPC/API adapters map those values to protobuf enums at transport boundaries so domain packages remain independent from generated API code.
+
+Optional session-start behavior belongs to the module surface. Systems that need custom readiness gates or first-session bootstrap events implement the bound provider contracts in `domain/module/registry.go`, so runtime code binds typed helpers once and never executes those rules through raw `any` state. If the read side must load projected state first, the metadata system may also expose `SessionStartReadinessStateProvider` in `domain/systems/`.
 
 ### Startup validation order
 
-`BuildRegistries()` in `domain/engine/registries_builder.go` keeps this order
-explicit through separate collaborators for core-domain registration,
-system-module registration, and post-registration contract validation:
+`BuildRegistries()` in `domain/engine/registries_builder.go` keeps this order explicit through separate collaborators for core-domain registration, system-module registration, and post-registration contract validation:
 
 1. **Register core domains** — core commands, events, and aliases.
 2. **Register system modules** — run module-scoped registration pipeline (`register commands`, `register events`, `validate type namespace`, `validate emittable events`).

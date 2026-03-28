@@ -3,12 +3,12 @@ package gmconsequence
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -18,9 +18,7 @@ import (
 )
 
 // SessionGateStore reads the open gate for a session.
-type SessionGateStore interface {
-	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (storage.SessionGate, error)
-}
+type SessionGateStore = daggerheartguard.SessionGateStore
 
 // SessionSpotlightStore reads the current session spotlight state.
 type SessionSpotlightStore interface {
@@ -29,19 +27,7 @@ type SessionSpotlightStore interface {
 
 // CoreCommandInput describes one core command emitted while repairing GM
 // consequence state.
-type CoreCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+type CoreCommandInput = workflowwrite.CoreCommandInput
 
 // Dependencies groups the exact read stores and write callback used by the GM
 // consequence helper.
@@ -76,8 +62,8 @@ func Resolve(ctx context.Context, deps Dependencies, campaignID, sessionID strin
 	gateOpen := false
 	if _, err := deps.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
 		gateOpen = true
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return res, grpcerror.Internal("check session gate", err)
+	} else if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "check session gate"); lookupErr != nil {
+		return res, lookupErr
 	}
 	if !gateOpen {
 		gateID, err := id.NewID()
@@ -114,8 +100,8 @@ func Resolve(ctx context.Context, deps Dependencies, campaignID, sessionID strin
 		if spotlight.SpotlightType == session.SpotlightTypeGM && strings.TrimSpace(spotlight.CharacterID) == "" {
 			return res, nil
 		}
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return res, grpcerror.Internal("check session spotlight", err)
+	} else if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "check session spotlight"); lookupErr != nil {
+		return res, lookupErr
 	}
 
 	spotlightPayload := session.SpotlightSetPayload{SpotlightType: string(session.SpotlightTypeGM)}

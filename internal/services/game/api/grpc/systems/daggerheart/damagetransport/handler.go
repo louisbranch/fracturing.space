@@ -52,10 +52,10 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
 		return CharacterDamageResult{}, err
@@ -82,11 +82,11 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 
 	var armor *contentstore.DaggerheartArmor
@@ -100,7 +100,7 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 
 	result, mitigated, err := ResolveCharacterDamage(in.Damage, profile, state, armor)
 	if err != nil {
-		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	impenetrableBefore := state.ImpenetrableUsedThisShortRest
 	impenetrableAfter := impenetrableBefore
@@ -166,7 +166,7 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 	if rollSeq != nil {
 		rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 		if err != nil {
-			return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
+			return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 		}
 		if rollEvent.Type != action.EventTypeRollResolved {
 			return CharacterDamageResult{}, status.Error(codes.InvalidArgument, "roll_seq must reference action.roll_resolved")

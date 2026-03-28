@@ -6,6 +6,7 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -43,7 +44,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 			SessionInteraction: sessionInteractionStore,
 			Applier:            projection.Applier{},
 		},
-		gametest.FixedIDGenerator("unused"),
+		runtimekit.FixedIDGenerator("unused"),
 	)
 
 	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.scene_activated", "", "")
@@ -111,7 +112,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSceneInteractionStor
 			SessionInteraction: sessionInteractionStore,
 			Applier:            projection.Applier{},
 		},
-		gametest.FixedIDGenerator("unused"),
+		runtimekit.FixedIDGenerator("unused"),
 	)
 
 	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.scene_activated", "scene-1", "")

@@ -2,7 +2,6 @@ package interactiontransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -132,11 +131,11 @@ func (a interactionApplication) aiTurnEligibility(
 		return aiTurnEligibilityResult{reason: "session gm authority is not assigned"}, nil
 	}
 	owner, err := a.stores.Participant.GetParticipant(ctx, campaignRecord.ID, sessionInteraction.GMAuthorityParticipantID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load gm authority participant"); lookupErr != nil {
+		return aiTurnEligibilityResult{}, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return aiTurnEligibilityResult{reason: "gm authority participant was not found"}, nil
-		}
-		return aiTurnEligibilityResult{}, grpcerror.Internal("load gm authority participant", err)
+		return aiTurnEligibilityResult{reason: "gm authority participant was not found"}, nil
 	}
 	if owner.Role != participant.RoleGM {
 		return aiTurnEligibilityResult{reason: "gm authority participant is not a gm"}, nil
@@ -151,8 +150,8 @@ func (a interactionApplication) aiTurnEligibility(
 		return aiTurnEligibilityResult{reason: "active scene interaction state is unavailable"}, nil
 	}
 	sceneInteraction, err := a.stores.SceneInteraction.GetSceneInteraction(ctx, campaignRecord.ID, sessionInteraction.ActiveSceneID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return aiTurnEligibilityResult{}, grpcerror.Internal("load active scene interaction", err)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load active scene interaction"); lookupErr != nil {
+		return aiTurnEligibilityResult{}, lookupErr
 	}
 	if sessionInteraction.OOCResolutionPending {
 		return aiTurnEligibilityResult{ok: true, ownerParticipant: owner}, nil

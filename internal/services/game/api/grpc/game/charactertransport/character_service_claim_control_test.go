@@ -9,6 +9,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -54,7 +55,7 @@ func TestClaimCharacterControl_Success_WithUserIdentity(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.ClaimCharacterControl(gametest.ContextWithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
+	resp, err := svc.ClaimCharacterControl(requestctx.WithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -115,7 +116,7 @@ func TestClaimCharacterControl_RejectsAssignedCharacter(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.ClaimCharacterControl(gametest.ContextWithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
+	_, err := svc.ClaimCharacterControl(requestctx.WithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -140,7 +141,7 @@ func TestClaimCharacterControl_DeniesEmptyResolvedParticipantID(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.ClaimCharacterControl(gametest.ContextWithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
+	_, err := svc.ClaimCharacterControl(requestctx.WithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})

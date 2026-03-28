@@ -24,3 +24,10 @@ func requireCatalogEntryID(id string, label string) error {
 	}
 	return nil
 }
+
+func requireContentField(value string, label string) error {
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("%s is required", label)
+	}
+	return nil
+}

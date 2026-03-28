@@ -15,7 +15,7 @@ import (
 // systemsBootstrapper owns the startup phase that validates system registration
 // parity and runs best-effort projection repair before transport is exposed.
 type systemsBootstrapper interface {
-	Bootstrap(context.Context, *storageBundle, engine.Registries, projection.Applier) (systemsRuntimeState, error)
+	Bootstrap(context.Context, *storageBundle, systemRegistrationSnapshot, engine.Registries, projection.Applier) (systemsRuntimeState, error)
 }
 
 type systemsRuntimeState struct {
@@ -23,7 +23,7 @@ type systemsRuntimeState struct {
 }
 
 type defaultSystemsBootstrapper struct {
-	buildSystemRegistry        func() (*bridge.MetadataRegistry, error)
+	buildSystemRegistry        func(systemRegistrationSnapshot) (*bridge.MetadataRegistry, error)
 	validateSystemRegistration func([]module.Module, *bridge.MetadataRegistry, *bridge.AdapterRegistry) error
 	validateSessionLockPolicy  func(*command.Registry) error
 	repairProjectionGaps       func(context.Context, *storageBundle, projection.Applier)
@@ -32,14 +32,15 @@ type defaultSystemsBootstrapper struct {
 func (b defaultSystemsBootstrapper) Bootstrap(
 	ctx context.Context,
 	bundle *storageBundle,
+	systemRegistration systemRegistrationSnapshot,
 	registries engine.Registries,
 	applier projection.Applier,
 ) (systemsRuntimeState, error) {
-	systemRegistry, err := b.buildSystemRegistry()
+	systemRegistry, err := b.buildSystemRegistry(systemRegistration)
 	if err != nil {
 		return systemsRuntimeState{}, fmt.Errorf("build system registry: %w", err)
 	}
-	if err := b.validateSystemRegistration(registeredSystemModules(), systemRegistry, applier.Adapters); err != nil {
+	if err := b.validateSystemRegistration(systemRegistration.modulesCopy(), systemRegistry, applier.Adapters); err != nil {
 		return systemsRuntimeState{}, fmt.Errorf("validate system parity: %w", err)
 	}
 	if err := b.validateSessionLockPolicy(registries.Commands); err != nil {

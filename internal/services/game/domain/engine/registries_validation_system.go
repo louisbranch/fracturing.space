@@ -240,6 +240,50 @@ func ValidateStateFactoryDeterminism(modules *module.Registry) error {
 	return nil
 }
 
+// ValidateOptionalSystemStateHooks verifies that modules implementing
+// readiness/bootstrap hooks also provide a StateFactory.
+//
+// Those hooks are evaluated from aggregate snapshots and may be invoked before
+// any system event has seeded runtime state. The runtime now seeds missing
+// state through StateFactory; modules that opt into these hooks must therefore
+// expose a factory rather than relying on raw nil inputs.
+func ValidateOptionalSystemStateHooks(modules *module.Registry) error {
+	if modules == nil {
+		return fmt.Errorf("module registry is required for optional system state hook validation")
+	}
+
+	for _, mod := range modules.List() {
+		_, hasReadiness := mod.(module.CharacterReadinessProvider)
+		_, hasBootstrap := mod.(module.SessionStartBootstrapProvider)
+		if !hasReadiness && !hasBootstrap {
+			continue
+		}
+		if mod.StateFactory() != nil {
+			continue
+		}
+
+		label := mod.ID() + "@" + mod.Version()
+		switch {
+		case hasReadiness && hasBootstrap:
+			return fmt.Errorf(
+				"module %s implements CharacterReadinessProvider and SessionStartBootstrapProvider but does not provide StateFactory",
+				label,
+			)
+		case hasReadiness:
+			return fmt.Errorf(
+				"module %s implements CharacterReadinessProvider but does not provide StateFactory",
+				label,
+			)
+		default:
+			return fmt.Errorf(
+				"module %s implements SessionStartBootstrapProvider but does not provide StateFactory",
+				label,
+			)
+		}
+	}
+	return nil
+}
+
 // ValidateStateFactoryFoldCompatibility verifies that each module's
 // StateFactory produces state whose type is accepted by the module's Folder.
 // Because StateFactory returns `any` and Folder.Fold takes `any`, a module

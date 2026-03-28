@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/adversarytransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/sessionrolltransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
@@ -20,32 +18,20 @@ import (
 
 func (s *DaggerheartService) sessionRollHandler() *sessionrolltransport.Handler {
 	return sessionrolltransport.NewHandler(sessionrolltransport.Dependencies{
-		Campaign:    s.stores.Campaign,
-		Session:     s.stores.Session,
-		SessionGate: s.stores.SessionGate,
-		Daggerheart: s.stores.Daggerheart,
-		Content:     s.stores.Content,
-		Event:       s.stores.Event,
-		SeedFunc:    s.seedFunc,
-		ExecuteActionRollResolve: func(ctx context.Context, in sessionrolltransport.RollResolveInput) (uint64, error) {
-			return s.executeSessionRollResolve(ctx, in)
-		},
-		ExecuteDamageRollResolve: func(ctx context.Context, in sessionrolltransport.RollResolveInput) (uint64, error) {
-			return s.executeSessionRollResolve(ctx, in)
-		},
-		ExecuteAdversaryRollResolve: func(ctx context.Context, in sessionrolltransport.RollResolveInput) (uint64, error) {
-			return s.executeSessionRollResolve(ctx, in)
-		},
-		ExecuteHopeSpend: func(ctx context.Context, in sessionrolltransport.HopeSpendInput) error {
-			return s.executeSessionHopeSpend(ctx, in)
-		},
-		ExecuteArmorBackedHopeSpend: func(ctx context.Context, in sessionrolltransport.ArmorBackedHopeSpendInput) error {
-			return s.executeArmorBackedHopeSpend(ctx, in)
-		},
-		ExecuteAdversaryFeatureApply: func(ctx context.Context, in sessionrolltransport.AdversaryFeatureApplyInput) error {
-			return s.executeSessionRollAdversaryFeatureApply(ctx, in)
-		},
-		AdvanceBreathCountdown: s.workflowEffectsHandler().AdvanceBreathCountdown,
+		Campaign:                     s.stores.Campaign,
+		Session:                      s.stores.Session,
+		SessionGate:                  s.stores.SessionGate,
+		Daggerheart:                  s.stores.Daggerheart,
+		Content:                      s.stores.Content,
+		Event:                        s.stores.Event,
+		SeedFunc:                     s.seedFunc,
+		ExecuteActionRollResolve:     s.executeSessionRollResolve,
+		ExecuteDamageRollResolve:     s.executeSessionRollResolve,
+		ExecuteAdversaryRollResolve:  s.executeSessionRollResolve,
+		ExecuteHopeSpend:             s.executeSessionHopeSpend,
+		ExecuteArmorBackedHopeSpend:  s.executeArmorBackedHopeSpend,
+		ExecuteAdversaryFeatureApply: s.executeSessionRollAdversaryFeatureApply,
+		AdvanceBreathCountdown:       s.workflowEffectsHandler().AdvanceBreathCountdown,
 		LoadAdversaryForSession: func(ctx context.Context, campaignID, sessionID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 			return adversarytransport.LoadAdversaryForSession(ctx, s.stores.Daggerheart, campaignID, sessionID, adversaryID)
 		},
@@ -53,22 +39,19 @@ func (s *DaggerheartService) sessionRollHandler() *sessionrolltransport.Handler 
 }
 
 func (s *DaggerheartService) executeSessionRollResolve(ctx context.Context, in sessionrolltransport.RollResolveInput) (uint64, error) {
-	applier, err := s.resolvedApplier()
-	if err != nil {
-		return 0, err
-	}
-	cmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
-		CampaignID:   in.CampaignID,
-		Type:         commandTypeActionRollResolve,
-		SessionID:    in.SessionID,
-		SceneID:      in.SceneID,
-		RequestID:    in.RequestID,
-		InvocationID: in.InvocationID,
-		EntityType:   in.EntityType,
-		EntityID:     in.EntityID,
-		PayloadJSON:  in.PayloadJSON,
+	domainResult, err := s.executeWorkflowCoreCommand(ctx, workflowwrite.CoreCommandInput{
+		CampaignID:      in.CampaignID,
+		CommandType:     commandTypeActionRollResolve,
+		SessionID:       in.SessionID,
+		SceneID:         in.SceneID,
+		RequestID:       in.RequestID,
+		InvocationID:    in.InvocationID,
+		EntityType:      in.EntityType,
+		EntityID:        in.EntityID,
+		PayloadJSON:     in.PayloadJSON,
+		MissingEventMsg: in.MissingEventMsg,
+		ApplyErrMessage: "execute domain command",
 	})
-	domainResult, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, applier, cmd, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, "execute domain command"))
 	if err != nil {
 		return 0, err
 	}
@@ -76,7 +59,6 @@ func (s *DaggerheartService) executeSessionRollResolve(ctx context.Context, in s
 }
 
 func (s *DaggerheartService) executeSessionHopeSpend(ctx context.Context, in sessionrolltransport.HopeSpendInput) error {
-	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	payloadJSON, err := json.Marshal(daggerheartpayload.HopeSpendPayload{
 		CharacterID: ids.CharacterID(in.CharacterID),
 		Amount:      in.Amount,
@@ -88,7 +70,7 @@ func (s *DaggerheartService) executeSessionHopeSpend(ctx context.Context, in ses
 	if err != nil {
 		return err
 	}
-	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+	return s.executeWorkflowSystemCommand(ctx, workflowruntime.SystemCommandInput{
 		CampaignID:      in.CampaignID,
 		CommandType:     commandTypeDaggerheartHopeSpend,
 		SessionID:       in.SessionID,
@@ -104,7 +86,6 @@ func (s *DaggerheartService) executeSessionHopeSpend(ctx context.Context, in ses
 }
 
 func (s *DaggerheartService) executeArmorBackedHopeSpend(ctx context.Context, in sessionrolltransport.ArmorBackedHopeSpendInput) error {
-	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	payloadJSON, err := json.Marshal(daggerheartpayload.CharacterStatePatchPayload{
 		CharacterID: ids.CharacterID(in.CharacterID),
 		Source:      "armor.hopeful",
@@ -114,7 +95,7 @@ func (s *DaggerheartService) executeArmorBackedHopeSpend(ctx context.Context, in
 	if err != nil {
 		return err
 	}
-	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+	return s.executeWorkflowSystemCommand(ctx, workflowruntime.SystemCommandInput{
 		CampaignID:      in.CampaignID,
 		CommandType:     commandTypeDaggerheartCharacterStatePatch,
 		SessionID:       in.SessionID,
@@ -130,7 +111,6 @@ func (s *DaggerheartService) executeArmorBackedHopeSpend(ctx context.Context, in
 }
 
 func (s *DaggerheartService) executeSessionRollAdversaryFeatureApply(ctx context.Context, in sessionrolltransport.AdversaryFeatureApplyInput) error {
-	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	payloadJSON, err := json.Marshal(daggerheartpayload.AdversaryFeatureApplyPayload{
 		ActorAdversaryID:    dhids.AdversaryID(in.Adversary.AdversaryID),
 		AdversaryID:         dhids.AdversaryID(in.Adversary.AdversaryID),
@@ -159,7 +139,7 @@ func (s *DaggerheartService) executeSessionRollAdversaryFeatureApply(ctx context
 	if err != nil {
 		return err
 	}
-	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+	return s.executeWorkflowSystemCommand(ctx, workflowruntime.SystemCommandInput{
 		CampaignID:      in.CampaignID,
 		CommandType:     commandids.DaggerheartAdversaryFeatureApply,
 		SessionID:       in.SessionID,

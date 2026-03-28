@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -24,7 +26,7 @@ import (
 var testRuntime *domainwrite.Runtime
 
 func TestMain(m *testing.M) {
-	testRuntime = gametest.SetupRuntime()
+	testRuntime = runtimekit.SetupRuntime()
 	os.Exit(m.Run())
 }
 
@@ -111,7 +113,7 @@ func newServiceForTest(
 	return newServiceWithDependencies(deps, clock, idGenerator)
 }
 
-func testApplier(t *testing.T, deps Deps, dhStore *gametest.FakeDaggerheartStore) projection.Applier {
+func testApplier(t *testing.T, deps Deps, dhStore *daggerhearttestkit.FakeDaggerheartStore) projection.Applier {
 	t.Helper()
 	adapters, err := manifest.AdapterRegistry(manifest.ProjectionStores{Daggerheart: dhStore})
 	if err != nil {

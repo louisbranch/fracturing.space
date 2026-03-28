@@ -90,6 +90,24 @@ func SessionLockInterceptor(sessionStore storage.SessionStore) grpc.UnaryServerI
 	}
 }
 
+// SessionLockStreamInterceptor fails closed for any streaming RPC that is
+// later classified as blocked during active sessions. The current API surface
+// has no blocked streaming mutators, so any future match indicates transport
+// drift that must be handled with a request-aware stream lock implementation
+// instead of silently bypassing lock enforcement.
+func SessionLockStreamInterceptor() grpc.StreamServerInterceptor {
+	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		if !isBlockedMethod(info.FullMethod) {
+			return handler(srv, stream)
+		}
+		return status.Errorf(
+			codes.FailedPrecondition,
+			"streaming mutator %s is not supported by session lock enforcement",
+			info.FullMethod,
+		)
+	}
+}
+
 // isBlockedMethod reports whether a method is a mutator blocked during active sessions.
 func isBlockedMethod(fullMethod string) bool {
 	_, ok := blockedMethodCommandTypes[fullMethod]

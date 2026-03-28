@@ -2,7 +2,6 @@ package snapshottransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -16,7 +15,6 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID string, in *campaignv1.PatchCharacterStateRequest) (string, projectionstore.DaggerheartCharacterState, error) {
@@ -44,8 +42,10 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 
 	// Get Daggerheart profile for validation
 	dhProfile, err := a.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return "", projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("get daggerheart profile", err)
+	if err != nil {
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart profile"); lookupErr != nil {
+			return "", projectionstore.DaggerheartCharacterState{}, lookupErr
+		}
 	}
 
 	// Apply Daggerheart-specific patches (including HP)

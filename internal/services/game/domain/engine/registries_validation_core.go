@@ -10,9 +10,9 @@ import (
 
 // validateCoreEmittableEventTypes ensures every event type a core domain
 // decider declares as emittable is registered in the event registry.
-func validateCoreEmittableEventTypes(events *event.Registry) error {
+func validateCoreEmittableEventTypes(events *event.Registry, domains []CoreDomain) error {
 	var missing []string
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		for _, t := range domain.EmittableEventTypes() {
 			if _, ok := events.Definition(t); !ok {
 				missing = append(missing, string(t))
@@ -32,13 +32,13 @@ func validateCoreEmittableEventTypes(events *event.Registry) error {
 //
 // This is a startup-time safety check: if a developer adds a new event that affects
 // aggregate state and forgets the fold case, the server refuses to start.
-func ValidateFoldCoverage(events *event.Registry) error {
+func ValidateFoldCoverage(events *event.Registry, domains []CoreDomain) error {
 	if events == nil {
 		return fmt.Errorf("event registry is required for fold coverage validation")
 	}
 
 	handled := make(map[event.Type]struct{})
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		for _, t := range domain.FoldHandledTypes() {
 			handled[t] = struct{}{}
 		}
@@ -92,13 +92,13 @@ func ValidateNoFoldHandlersForAuditOnlyEvents(events *event.Registry, foldHandle
 // core domain. A domain is entity-keyed when ANY of its registered
 // FoldHandledTypes have AddressingPolicyEntityTarget. Once identified as
 // entity-keyed, ALL fold types in that domain must have the same policy.
-func ValidateEntityKeyedAddressing(events *event.Registry) error {
+func ValidateEntityKeyedAddressing(events *event.Registry, domains []CoreDomain) error {
 	if events == nil {
 		return fmt.Errorf("event registry is required for entity-keyed addressing validation")
 	}
 
 	var missing []string
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		types := domain.FoldHandledTypes()
 
 		// Check if any registered fold type uses entity addressing.
@@ -139,7 +139,7 @@ func ValidateEntityKeyedAddressing(events *event.Registry) error {
 // handler in the core domain dispatch table. An alias that resolves to a type
 // with no fold handler would silently ignore legacy events after alias
 // resolution (A1), creating silent state divergence.
-func ValidateAliasFoldCoverage(events *event.Registry) error {
+func ValidateAliasFoldCoverage(events *event.Registry, domains []CoreDomain) error {
 	if events == nil {
 		return fmt.Errorf("event registry is required for alias fold coverage validation")
 	}
@@ -151,7 +151,7 @@ func ValidateAliasFoldCoverage(events *event.Registry) error {
 
 	// Build set of all fold-handled types from core domains.
 	handled := make(map[event.Type]struct{})
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		for _, t := range domain.FoldHandledTypes() {
 			handled[t] = struct{}{}
 		}
@@ -180,10 +180,10 @@ func ValidateAliasFoldCoverage(events *event.Registry) error {
 // ValidateCoreRejectionCodeUniqueness verifies that no two core domains
 // declare the same rejection code string. A collision would make rejection
 // handling ambiguous for callers that branch on the code value.
-func ValidateCoreRejectionCodeUniqueness() error {
+func ValidateCoreRejectionCodeUniqueness(domains []CoreDomain) error {
 	seen := make(map[string]string) // code -> owning domain name
 	var collisions []string
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		if domain.RejectionCodes == nil {
 			continue
 		}
@@ -207,14 +207,14 @@ func ValidateCoreRejectionCodeUniqueness() error {
 // DeciderHandledCommands, and conversely that every declared handler has a
 // matching registration. This is the core-domain counterpart of
 // ValidateDeciderCommandCoverage for system modules.
-func ValidateCoreDeciderCommandCoverage(commands *command.Registry) error {
+func ValidateCoreDeciderCommandCoverage(commands *command.Registry, domains []CoreDomain) error {
 	if commands == nil {
 		return fmt.Errorf("command registry is required for core decider coverage validation")
 	}
 
 	// Collect all types each core domain declares its decider handles.
 	declared := make(map[command.Type]struct{})
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		if domain.DeciderHandledCommands == nil {
 			continue
 		}

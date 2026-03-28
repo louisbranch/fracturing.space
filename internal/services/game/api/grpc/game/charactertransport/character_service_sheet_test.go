@@ -7,6 +7,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
@@ -68,7 +69,7 @@ func TestGetCharacterSheet_CharacterNotFound(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.GetCharacterSheet(gametest.ContextWithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
+	_, err := svc.GetCharacterSheet(requestctx.WithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
 		CharacterId: "nonexistent",
 	})
@@ -142,7 +143,7 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 
 	svc := NewService(ts.build())
 
-	resp, err := svc.GetCharacterSheet(gametest.ContextWithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
+	resp, err := svc.GetCharacterSheet(requestctx.WithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})

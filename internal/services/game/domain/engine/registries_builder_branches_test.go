@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -72,7 +73,7 @@ func TestBuildRegistries_PropagatesModuleEventRegistrationError(t *testing.T) {
 
 func TestValidateCoreEmittableEventTypes_FailsOnMissingRegistration(t *testing.T) {
 	events := event.NewRegistry()
-	err := validateCoreEmittableEventTypes(events)
+	err := validateCoreEmittableEventTypes(events, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected missing core emittable event type error")
 	}

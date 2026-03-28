@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 )
 
@@ -13,6 +13,6 @@ import (
 var testRuntime *domainwrite.Runtime
 
 func TestMain(m *testing.M) {
-	testRuntime = gametest.SetupRuntime()
+	testRuntime = runtimekit.SetupRuntime()
 	os.Exit(m.Run())
 }

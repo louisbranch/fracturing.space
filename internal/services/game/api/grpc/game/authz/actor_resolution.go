@@ -2,7 +2,6 @@ package authz
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -51,10 +50,10 @@ func ResolvePolicyActor(ctx context.Context, participants storage.ParticipantSto
 	if actorID != "" {
 		actor, err := participants.GetParticipant(ctx, campaignID, actorID)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
+			if grpcerror.OptionalLookupErrorContext(ctx, err, "load participant") == nil {
 				return storage.ParticipantRecord{}, ReasonDenyActorNotFound, status.Error(codes.PermissionDenied, "participant lacks permission")
 			}
-			return storage.ParticipantRecord{}, ReasonErrorActorLoad, grpcerror.Internal("load participant", err)
+			return storage.ParticipantRecord{}, ReasonErrorActorLoad, grpcerror.OptionalLookupErrorContext(ctx, err, "load participant")
 		}
 		return actor, ReasonAllowAccessLevel, nil
 	}
@@ -127,10 +126,10 @@ func ResolveCharacterMutationOwnerParticipantIDFromStore(
 	}
 	characterRecord, err := characters.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
+		if grpcerror.OptionalLookupErrorContext(ctx, err, "load character owner") == nil {
 			return "", nil
 		}
-		return "", grpcerror.Internal("load character owner", err)
+		return "", grpcerror.OptionalLookupErrorContext(ctx, err, "load character owner")
 	}
 	return strings.TrimSpace(characterRecord.OwnerParticipantID), nil
 }

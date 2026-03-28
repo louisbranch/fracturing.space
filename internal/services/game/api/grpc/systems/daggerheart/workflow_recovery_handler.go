@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/conditiontransport"
@@ -16,37 +15,18 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workfloweffects"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func (s *DaggerheartService) recoveryHandler() *recoverytransport.Handler {
 	return recoverytransport.NewHandler(recoverytransport.Dependencies{
-		Campaign:      s.stores.Campaign,
-		SessionGate:   s.stores.SessionGate,
-		Daggerheart:   s.stores.Daggerheart,
-		SeedGenerator: s.seedFunc,
-		ExecuteSystemCommand: func(ctx context.Context, in recoverytransport.SystemCommandInput) error {
-			adapter := bridge.NewAdapter(s.stores.Daggerheart)
-			_, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, adapter, command.Command{
-				CampaignID:    ids.CampaignID(in.CampaignID),
-				Type:          in.CommandType,
-				ActorType:     command.ActorTypeSystem,
-				SessionID:     ids.SessionID(in.SessionID),
-				SceneID:       ids.SceneID(in.SceneID),
-				RequestID:     in.RequestID,
-				InvocationID:  in.InvocationID,
-				EntityType:    in.EntityType,
-				EntityID:      in.EntityID,
-				SystemID:      bridge.SystemID,
-				SystemVersion: bridge.SystemVersion,
-				PayloadJSON:   in.PayloadJSON,
-			}, domainwrite.RequireEventsWithDiagnostics(in.MissingEventMsg, in.ApplyErrMessage))
-			return err
-		},
+		Campaign:             s.stores.Campaign,
+		SessionGate:          s.stores.SessionGate,
+		Daggerheart:          s.stores.Daggerheart,
+		SeedGenerator:        s.seedFunc,
+		ExecuteSystemCommand: s.executeWorkflowSystemCommand,
 		ApplyStressConditionChange: func(ctx context.Context, in recoverytransport.StressConditionInput) error {
 			return s.workflowEffectsHandler().ApplyStressVulnerableCondition(ctx, workfloweffects.ApplyStressVulnerableConditionInput{
 				CampaignID:    in.CampaignID,
@@ -72,21 +52,18 @@ func (s *DaggerheartService) recoveryHandler() *recoverytransport.Handler {
 			if err != nil {
 				return grpcerror.Internal("encode payload", err)
 			}
-			applier, err := s.resolvedApplier()
-			if err != nil {
-				return grpcerror.Internal("build projection applier", err)
-			}
-			_, err = workflowwrite.ExecuteAndApply(ctx, s.stores.Write, applier, command.Command{
-				CampaignID:   ids.CampaignID(in.CampaignID),
-				Type:         commandTypeCharacterDelete,
-				ActorType:    command.ActorTypeSystem,
-				SessionID:    ids.SessionID(grpcmeta.SessionIDFromContext(ctx)),
-				RequestID:    grpcmeta.RequestIDFromContext(ctx),
-				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-				EntityType:   "character",
-				EntityID:     in.CharacterID,
-				PayloadJSON:  payloadJSON,
-			}, domainwrite.RequireEventsWithDiagnostics("character delete did not emit an event", "apply event"))
+			_, err = s.executeWorkflowCoreCommand(ctx, workflowwrite.CoreCommandInput{
+				CampaignID:      in.CampaignID,
+				CommandType:     commandTypeCharacterDelete,
+				SessionID:       grpcmeta.SessionIDFromContext(ctx),
+				RequestID:       grpcmeta.RequestIDFromContext(ctx),
+				InvocationID:    grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:      "character",
+				EntityID:        in.CharacterID,
+				PayloadJSON:     payloadJSON,
+				MissingEventMsg: "character delete did not emit an event",
+				ApplyErrMessage: "apply event",
+			})
 			return err
 		},
 	})

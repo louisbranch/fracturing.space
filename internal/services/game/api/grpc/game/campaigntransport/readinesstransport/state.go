@@ -2,8 +2,6 @@ package readinesstransport
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
@@ -16,10 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -62,15 +56,13 @@ func campaignHasActiveSession(ctx context.Context, store storage.SessionStore, c
 	if err == nil {
 		return true, nil
 	}
-	if errors.Is(err, storage.ErrNotFound) {
+	if grpcerror.OptionalLookupErrorContext(ctx, err, "check active session") == nil {
 		return false, nil
 	}
-	return false, grpcerror.Internal("check active session", err)
+	return false, grpcerror.OptionalLookupErrorContext(ctx, err, "check active session")
 }
 
 func campaignReadinessAggregateState(
-	ctx context.Context,
-	daggerheartStore projectionstore.Store,
 	campaignRecord storage.CampaignRecord,
 	participantRecords []storage.ParticipantRecord,
 	characterRecords []storage.CharacterRecord,
@@ -115,49 +107,29 @@ func campaignReadinessAggregateState(
 		}
 	}
 
-	if handler.SystemIDFromCampaignRecord(campaignRecord) == bridge.SystemIDDaggerheart {
-		if daggerheartStore == nil {
-			return aggregate.State{}, status.Error(codes.Internal, "daggerheart projection store is not configured")
-		}
-		snapshot := daggerheartstate.SnapshotState{
-			CampaignID:        ids.CampaignID(campaignRecord.ID),
-			GMFear:            daggerheartstate.GMFearDefault,
-			CharacterProfiles: make(map[ids.CharacterID]daggerheartstate.CharacterProfile),
-			CharacterStates:   make(map[ids.CharacterID]daggerheartstate.CharacterState),
-			AdversaryStates:   make(map[dhids.AdversaryID]daggerheartstate.AdversaryState),
-			CountdownStates:   make(map[dhids.CountdownID]daggerheartstate.CountdownState),
-		}
-		for characterID, characterState := range state.Characters {
-			profile, err := daggerheartStore.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, string(characterID))
-			if err != nil {
-				if errors.Is(err, storage.ErrNotFound) {
-					continue
-				}
-				return aggregate.State{}, grpcerror.Internal(fmt.Sprintf("get daggerheart character profile %s", characterID), err)
-			}
-			snapshot.CharacterProfiles[characterID] = daggerheartstate.CharacterProfileFromStorage(profile)
-			state.Characters[characterID] = characterState
-		}
-		state.Systems[module.Key{ID: daggerheartdomain.SystemID, Version: daggerheartdomain.SystemVersion}] = snapshot
-	}
-
 	return state, nil
 }
 
-func systemReadinessChecker(system bridge.SystemID, state aggregate.State) readiness.CharacterSystemReadiness {
-	switch system {
-	case bridge.SystemIDDaggerheart:
-		systemKey := module.Key{ID: daggerheartdomain.SystemID, Version: daggerheartdomain.SystemVersion}
-		return func(characterID string) (bool, string) {
-			snapshotAny := state.Systems[systemKey]
-			ch, ok := state.Characters[ids.CharacterID(characterID)]
-			if !ok {
-				return false, "character is missing"
-			}
-			mod := daggerheartdomain.NewModule()
-			return mod.CharacterReady(snapshotAny, ch)
+func systemReadinessChecker(
+	registry *module.Registry,
+	campaignID ids.CampaignID,
+	system bridge.SystemID,
+	state aggregate.State,
+) readiness.CharacterSystemReadiness {
+	evaluator, enabled, err := module.ResolveCharacterReadiness(registry, campaignID, system.String(), state.Systems)
+	if err != nil {
+		return func(string) (bool, string) {
+			return false, "system state is invalid"
 		}
-	default:
+	}
+	if !enabled {
 		return nil
+	}
+	return func(characterID string) (bool, string) {
+		ch, ok := state.Characters[ids.CharacterID(characterID)]
+		if !ok {
+			return false, "character is missing"
+		}
+		return evaluator.CharacterReady(ch)
 	}
 }

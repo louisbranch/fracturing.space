@@ -22,7 +22,7 @@ type Folder struct {
 // NewFolder creates a Folder with all fold handlers registered.
 func NewFolder(applyLevelUp LevelUpApplier) *Folder {
 	f := &Folder{applyLevelUp: applyLevelUp}
-	router := module.NewFoldRouter(daggerheartstate.AssertSnapshotState)
+	router := module.NewFoldRouter(daggerheartstate.RequireSnapshotState)
 	f.registerFoldHandlers(router)
 	f.Router = router
 	return f
@@ -35,9 +35,9 @@ func (f *Folder) FoldHandledTypes() []event.Type {
 
 // Fold folds a Daggerheart event into system state. It delegates to the
 // FoldRouter after ensuring the snapshot CampaignID is populated from the
-// event envelope — required because the first fold may receive nil state.
+// event envelope.
 func (f *Folder) Fold(state any, evt event.Event) (any, error) {
-	s, err := daggerheartstate.AssertSnapshotState(state)
+	s, err := daggerheartstate.RequireSnapshotState(state)
 	if err != nil {
 		return nil, err
 	}

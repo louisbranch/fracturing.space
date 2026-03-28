@@ -37,7 +37,7 @@ func (w sessionStartWorkflow) Start(current aggregate.State, cmd command.Command
 	fixedNow := func() time.Time { return decisionTime }
 
 	report := EvaluateSessionStartReport(current, ReportOptions{
-		SystemReadiness:        w.systemReadiness(current),
+		SystemReadiness:        w.systemReadiness(current, cmd.CampaignID),
 		IncludeSessionBoundary: true,
 		HasActiveSession:       current.Session.Started,
 	})
@@ -78,48 +78,47 @@ func (w sessionStartWorkflow) Start(current aggregate.State, cmd command.Command
 	return command.Accept(events...)
 }
 
-func (w sessionStartWorkflow) systemReadiness(current aggregate.State) CharacterSystemReadiness {
+func (w sessionStartWorkflow) systemReadiness(current aggregate.State, campaignID ids.CampaignID) CharacterSystemReadiness {
+	systemID := string(current.Campaign.GameSystem)
 	if w.systems == nil {
 		return nil
 	}
-	systemID := strings.TrimSpace(string(current.Campaign.GameSystem))
-	if systemID == "" {
+	if strings.TrimSpace(systemID) == "" {
 		return nil
 	}
-	mod := w.systems.Get(systemID, "")
-	if mod == nil {
+	evaluator, enabled, err := module.ResolveCharacterReadiness(
+		w.systems,
+		campaignID,
+		systemID,
+		current.Systems,
+	)
+	if !enabled {
 		return nil
 	}
-	checker, ok := mod.(module.CharacterReadinessChecker)
-	if !ok {
-		return nil
+	if err != nil {
+		return func(string) (bool, string) {
+			return false, "system state is invalid"
+		}
 	}
-	systemState := current.Systems[module.Key{ID: mod.ID(), Version: mod.Version()}]
 	return func(characterID string) (bool, string) {
 		ch, ok := current.Characters[ids.CharacterID(characterID)]
 		if !ok {
 			return false, "character is missing"
 		}
-		return checker.CharacterReady(systemState, ch)
+		return evaluator.CharacterReady(ch)
 	}
 }
 
 func (w sessionStartWorkflow) systemBootstrapEvents(current aggregate.State, cmd command.Command, now time.Time) ([]event.Event, error) {
-	if w.systems == nil {
-		return nil, nil
+	systemID := string(current.Campaign.GameSystem)
+	emitter, enabled, err := module.ResolveSessionStartBootstrap(
+		w.systems,
+		cmd.CampaignID,
+		systemID,
+		current.Systems,
+	)
+	if err != nil || !enabled {
+		return nil, err
 	}
-	systemID := strings.TrimSpace(string(current.Campaign.GameSystem))
-	if systemID == "" {
-		return nil, nil
-	}
-	mod := w.systems.Get(systemID, "")
-	if mod == nil {
-		return nil, nil
-	}
-	bootstrapper, ok := mod.(module.SessionStartBootstrapper)
-	if !ok {
-		return nil, nil
-	}
-	systemState := current.Systems[module.Key{ID: mod.ID(), Version: mod.Version()}]
-	return bootstrapper.SessionStartBootstrap(systemState, current.Characters, cmd, now)
+	return emitter.EmitSessionStartBootstrap(current.Characters, cmd, now)
 }

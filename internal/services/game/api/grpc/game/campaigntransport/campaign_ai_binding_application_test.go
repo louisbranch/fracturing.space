@@ -10,6 +10,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -112,7 +114,7 @@ func TestSetCampaignAIBindingSuccess(t *testing.T) {
 
 	deps := ts.withDomain(domain).build()
 	deps.AIClient = aiClient
-	svc := newTestCampaignService(deps, gametest.FixedClock(now), nil)
+	svc := newTestCampaignService(deps, runtimekit.FixedClock(now), nil)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "owner-1",
 		grpcmeta.RequestIDHeader, "req-1",
@@ -169,7 +171,7 @@ func TestSetCampaignAIBindingRequiresConfiguredAIClient(t *testing.T) {
 	}
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.SetCampaignAIBinding(gametest.ContextWithParticipantID("owner-1"), &statev1.SetCampaignAIBindingRequest{
+	_, err := svc.SetCampaignAIBinding(requestctx.WithParticipantID("owner-1"), &statev1.SetCampaignAIBindingRequest{
 		CampaignId: "c1",
 		AiAgentId:  "agent-7",
 	})
@@ -219,7 +221,7 @@ func TestClearCampaignAIBindingSuccess(t *testing.T) {
 		},
 	}
 
-	svc := newTestCampaignService(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "owner-1",
 		grpcmeta.RequestIDHeader, "req-2",
@@ -258,7 +260,7 @@ func TestRequireCampaignOwnerRequiresOwnerUserIdentity(t *testing.T) {
 			},
 		}
 
-		_, err := requireCampaignOwner(gametest.ContextWithParticipantID("manager-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
+		_, err := requireCampaignOwner(requestctx.WithParticipantID("manager-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
 		assertStatusCode(t, err, codes.PermissionDenied)
 	})
 
@@ -272,7 +274,7 @@ func TestRequireCampaignOwnerRequiresOwnerUserIdentity(t *testing.T) {
 			},
 		}
 
-		_, err := requireCampaignOwner(gametest.ContextWithParticipantID("owner-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
+		_, err := requireCampaignOwner(requestctx.WithParticipantID("owner-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
 		assertStatusCode(t, err, codes.PermissionDenied)
 	})
 }
