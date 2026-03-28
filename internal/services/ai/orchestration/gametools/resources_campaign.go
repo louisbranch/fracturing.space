@@ -51,22 +51,27 @@ func (s *DirectSession) readCampaign(ctx context.Context, uri string) (string, e
 	}
 	campaign := resp.Campaign
 	return marshalIndent(campaignPayload{
-		Campaign: campaignListEntry{
-			ID:               campaign.GetId(),
-			Name:             campaign.GetName(),
-			Status:           campaignStatusToString(campaign.GetStatus()),
-			GmMode:           gmModeToString(campaign.GetGmMode()),
-			Intent:           campaignIntentToString(campaign.GetIntent()),
-			AccessPolicy:     campaignAccessPolicyToString(campaign.GetAccessPolicy()),
-			ParticipantCount: int(campaign.GetParticipantCount()),
-			CharacterCount:   int(campaign.GetCharacterCount()),
-			ThemePrompt:      campaign.GetThemePrompt(),
-			CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
-			UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
-			CompletedAt:      formatTimestamp(campaign.GetCompletedAt()),
-			ArchivedAt:       formatTimestamp(campaign.GetArchivedAt()),
-		},
+		Campaign: campaignProtoToEntry(campaign),
 	})
+}
+
+// campaignProtoToEntry converts a proto Campaign to a campaignListEntry.
+func campaignProtoToEntry(c *statev1.Campaign) campaignListEntry {
+	return campaignListEntry{
+		ID:               c.GetId(),
+		Name:             c.GetName(),
+		Status:           campaignStatusToString(c.GetStatus()),
+		GmMode:           gmModeToString(c.GetGmMode()),
+		Intent:           campaignIntentToString(c.GetIntent()),
+		AccessPolicy:     campaignAccessPolicyToString(c.GetAccessPolicy()),
+		ParticipantCount: int(c.GetParticipantCount()),
+		CharacterCount:   int(c.GetCharacterCount()),
+		ThemePrompt:      c.GetThemePrompt(),
+		CreatedAt:        formatTimestamp(c.GetCreatedAt()),
+		UpdatedAt:        formatTimestamp(c.GetUpdatedAt()),
+		CompletedAt:      formatTimestamp(c.GetCompletedAt()),
+		ArchivedAt:       formatTimestamp(c.GetArchivedAt()),
+	}
 }
 
 type participantListEntry struct {
@@ -102,20 +107,27 @@ func (s *DirectSession) readParticipantList(ctx context.Context, uri string) (st
 	if resp == nil {
 		return "", fmt.Errorf("participant list response is missing")
 	}
-	var payload participantListPayload
-	for _, participant := range resp.GetParticipants() {
-		payload.Participants = append(payload.Participants, participantListEntry{
-			ID:         participant.GetId(),
-			CampaignID: participant.GetCampaignId(),
-			Name:       participant.GetName(),
-			Role:       participantRoleToString(participant.GetRole()),
-			Controller: controllerToString(participant.GetController()),
-			Pronouns:   sharedpronouns.FromProto(participant.GetPronouns()),
-			CreatedAt:  formatTimestamp(participant.GetCreatedAt()),
-			UpdatedAt:  formatTimestamp(participant.GetUpdatedAt()),
+	return marshalIndent(participantListPayload{
+		Participants: participantProtosToEntries(resp.GetParticipants()),
+	})
+}
+
+// participantProtosToEntries converts proto Participant messages to list entries.
+func participantProtosToEntries(participants []*statev1.Participant) []participantListEntry {
+	out := make([]participantListEntry, 0, len(participants))
+	for _, p := range participants {
+		out = append(out, participantListEntry{
+			ID:         p.GetId(),
+			CampaignID: p.GetCampaignId(),
+			Name:       p.GetName(),
+			Role:       participantRoleToString(p.GetRole()),
+			Controller: controllerToString(p.GetController()),
+			Pronouns:   sharedpronouns.FromProto(p.GetPronouns()),
+			CreatedAt:  formatTimestamp(p.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(p.GetUpdatedAt()),
 		})
 	}
-	return marshalIndent(payload)
+	return out
 }
 
 type characterListEntry struct {
@@ -152,27 +164,34 @@ func (s *DirectSession) readCharacterList(ctx context.Context, uri string) (stri
 	if resp == nil {
 		return "", fmt.Errorf("character list response is missing")
 	}
-	var payload characterListPayload
-	for _, character := range resp.GetCharacters() {
-		aliases := character.GetAliases()
+	return marshalIndent(characterListPayload{
+		Characters: characterProtosToEntries(resp.GetCharacters()),
+	})
+}
+
+// characterProtosToEntries converts proto Character messages to list entries.
+func characterProtosToEntries(characters []*statev1.Character) []characterListEntry {
+	out := make([]characterListEntry, 0, len(characters))
+	for _, c := range characters {
+		aliases := c.GetAliases()
 		if len(aliases) == 0 {
 			aliases = []string{}
 		} else {
 			aliases = append([]string(nil), aliases...)
 		}
-		payload.Characters = append(payload.Characters, characterListEntry{
-			ID:         character.GetId(),
-			CampaignID: character.GetCampaignId(),
-			Name:       character.GetName(),
-			Kind:       characterKindToString(character.GetKind()),
-			Notes:      character.GetNotes(),
-			Pronouns:   sharedpronouns.FromProto(character.GetPronouns()),
+		out = append(out, characterListEntry{
+			ID:         c.GetId(),
+			CampaignID: c.GetCampaignId(),
+			Name:       c.GetName(),
+			Kind:       characterKindToString(c.GetKind()),
+			Notes:      c.GetNotes(),
+			Pronouns:   sharedpronouns.FromProto(c.GetPronouns()),
 			Aliases:    aliases,
-			CreatedAt:  formatTimestamp(character.GetCreatedAt()),
-			UpdatedAt:  formatTimestamp(character.GetUpdatedAt()),
+			CreatedAt:  formatTimestamp(c.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(c.GetUpdatedAt()),
 		})
 	}
-	return marshalIndent(payload)
+	return out
 }
 
 type sessionListEntry struct {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -46,7 +47,7 @@ func TestListClasses_InvalidFilter(t *testing.T) {
 	_, err := svc.ListClasses(context.Background(), &pb.ListDaggerheartClassesRequest{
 		Filter: "invalid @@@ filter",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListClasses_InvalidOrderBy(t *testing.T) {
@@ -54,7 +55,7 @@ func TestListClasses_InvalidOrderBy(t *testing.T) {
 	_, err := svc.ListClasses(context.Background(), &pb.ListDaggerheartClassesRequest{
 		OrderBy: "unknown_column",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListClasses_PaginationSecondPage(t *testing.T) {
@@ -138,7 +139,7 @@ func TestListReferenceContentEndpoints_NilRequests(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.InvalidArgument)
+			grpcassert.StatusCode(t, tc.fn(), codes.InvalidArgument)
 		})
 	}
 }
@@ -158,7 +159,7 @@ func TestListReferenceContentEndpoints_NoStore(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.Internal)
+			grpcassert.StatusCode(t, tc.fn(), codes.Internal)
 		})
 	}
 }
@@ -178,7 +179,7 @@ func TestGetReferenceContentEndpoints_NilRequests(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.InvalidArgument)
+			grpcassert.StatusCode(t, tc.fn(), codes.InvalidArgument)
 		})
 	}
 }
@@ -201,7 +202,7 @@ func TestGetReferenceContentEndpoints_NoStore(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.Internal)
+			grpcassert.StatusCode(t, tc.fn(), codes.Internal)
 		})
 	}
 }
@@ -223,7 +224,7 @@ func TestGetReferenceContentEndpoints_EmptyID(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.InvalidArgument)
+			grpcassert.StatusCode(t, tc.fn(), codes.InvalidArgument)
 		})
 	}
 }
@@ -251,7 +252,7 @@ func TestGetReferenceContentEndpoints_NotFound(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.NotFound)
+			grpcassert.StatusCode(t, tc.fn(), codes.NotFound)
 		})
 	}
 }

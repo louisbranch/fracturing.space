@@ -11,6 +11,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -63,7 +64,7 @@ func TestListTimelineEntries_MissingParticipantStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	assertStatusMessage(t, err, "resolve timeline entry")
+	grpcassert.StatusMessage(t, err, "resolve timeline entry")
 }
 
 func TestListTimelineEntries_MissingCampaignStoreFailsFast(t *testing.T) {
@@ -83,7 +84,7 @@ func TestListTimelineEntries_MissingCampaignStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	assertStatusMessage(t, err, "resolve timeline entry")
+	grpcassert.StatusMessage(t, err, "resolve timeline entry")
 }
 
 func TestListTimelineEntries_MissingCharacterStoreFailsFast(t *testing.T) {
@@ -103,7 +104,7 @@ func TestListTimelineEntries_MissingCharacterStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	assertStatusMessage(t, err, "resolve timeline entry")
+	grpcassert.StatusMessage(t, err, "resolve timeline entry")
 }
 
 func TestListTimelineEntries_MissingSessionStoreFailsFast(t *testing.T) {
@@ -123,5 +124,5 @@ func TestListTimelineEntries_MissingSessionStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	assertStatusMessage(t, err, "resolve timeline entry")
+	grpcassert.StatusMessage(t, err, "resolve timeline entry")
 }

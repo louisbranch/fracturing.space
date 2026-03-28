@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -201,7 +202,7 @@ func TestActionHandlersRejectNilRequests(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.call(service), codes.InvalidArgument)
+			grpcassert.StatusCode(t, tc.call(service), codes.InvalidArgument)
 		})
 	}
 }

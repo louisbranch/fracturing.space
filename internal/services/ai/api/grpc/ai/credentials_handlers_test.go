@@ -9,6 +9,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
@@ -20,7 +21,7 @@ func TestCreateCredentialRequiresUserID(t *testing.T) {
 		Label:    "Main",
 		Secret:   "sk-1",
 	})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	grpcassert.StatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestCreateCredentialSealError(t *testing.T) {
@@ -31,7 +32,7 @@ func TestCreateCredentialSealError(t *testing.T) {
 		Label:    "Main",
 		Secret:   "sk-1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestCreateCredentialRejectsUnavailableProvider(t *testing.T) {
@@ -42,7 +43,7 @@ func TestCreateCredentialRejectsUnavailableProvider(t *testing.T) {
 		Label:    "Main",
 		Secret:   "sk-1",
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestListCredentialsReturnsOwnedPage(t *testing.T) {
@@ -96,7 +97,7 @@ func TestRevokeCredentialRequiresIDAndReturnsUpdatedRecord(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	_, err := h.RevokeCredential(ctx, &aiv1.RevokeCredentialRequest{})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 
 	resp, err := h.RevokeCredential(ctx, &aiv1.RevokeCredentialRequest{CredentialId: "cred-1"})
 	if err != nil {

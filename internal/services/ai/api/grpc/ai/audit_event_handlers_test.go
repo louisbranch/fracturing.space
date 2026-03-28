@@ -7,6 +7,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -15,7 +16,7 @@ import (
 func TestListAuditEventsRequiresUserID(t *testing.T) {
 	th := newAccessRequestHandlersWithStores(t, newFakeStore(), newFakeStore(), newFakeStore())
 	_, err := th.ListAuditEvents(context.Background(), &aiv1.ListAuditEventsRequest{PageSize: 10})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	grpcassert.StatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestListAuditEventsOwnerScoped(t *testing.T) {
@@ -172,5 +173,5 @@ func TestListAuditEventsRejectsInvalidTimeWindow(t *testing.T) {
 		CreatedAfter:  timestamppb.New(now.Add(2 * time.Minute)),
 		CreatedBefore: timestamppb.New(now),
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }

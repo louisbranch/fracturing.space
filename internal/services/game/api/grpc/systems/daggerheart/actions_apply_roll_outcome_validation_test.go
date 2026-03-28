@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -14,7 +15,7 @@ func TestApplyRollOutcome_MissingStores(t *testing.T) {
 	_, err := svc.ApplyRollOutcome(context.Background(), &pb.ApplyRollOutcomeRequest{
 		SessionId: "s1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyRollOutcome_MissingCampaignId(t *testing.T) {
@@ -23,7 +24,7 @@ func TestApplyRollOutcome_MissingCampaignId(t *testing.T) {
 	_, err := svc.ApplyRollOutcome(context.Background(), &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyRollOutcome_MissingSessionId(t *testing.T) {
@@ -33,7 +34,7 @@ func TestApplyRollOutcome_MissingSessionId(t *testing.T) {
 	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		RollSeq: 1,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
@@ -43,7 +44,7 @@ func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
 	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyRollOutcome_RequiresDomainEngine(t *testing.T) {
@@ -58,5 +59,5 @@ func TestApplyRollOutcome_RequiresDomainEngine(t *testing.T) {
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }

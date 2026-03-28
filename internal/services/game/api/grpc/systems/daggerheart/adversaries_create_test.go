@@ -8,19 +8,20 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
 func TestCreateAdversary_NilRequest(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.CreateAdversary(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateAdversary_MissingStores(t *testing.T) {
 	svc := &DaggerheartService{}
 	_, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestCreateAdversary_MissingCampaignID(t *testing.T) {
@@ -30,7 +31,7 @@ func TestCreateAdversary_MissingCampaignID(t *testing.T) {
 		SceneId:          testAdversarySceneID,
 		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateAdversary_MissingAdversaryEntryID(t *testing.T) {
@@ -40,7 +41,7 @@ func TestCreateAdversary_MissingAdversaryEntryID(t *testing.T) {
 		SessionId:  testAdversarySessionID,
 		SceneId:    testAdversarySceneID,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateAdversary_CampaignNotFound(t *testing.T) {
@@ -51,7 +52,7 @@ func TestCreateAdversary_CampaignNotFound(t *testing.T) {
 		SceneId:          testAdversarySceneID,
 		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestCreateAdversary_NonDaggerheartCampaign(t *testing.T) {
@@ -62,7 +63,7 @@ func TestCreateAdversary_NonDaggerheartCampaign(t *testing.T) {
 		SceneId:          testAdversarySceneID,
 		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestCreateAdversary_Success(t *testing.T) {
@@ -156,7 +157,7 @@ func TestCreateAdversary_SessionNotFound(t *testing.T) {
 		SceneId:          testAdversarySceneID,
 		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestCreateAdversary_MissingSceneID(t *testing.T) {
@@ -166,5 +167,5 @@ func TestCreateAdversary_MissingSceneID(t *testing.T) {
 		SessionId:        testAdversarySessionID,
 		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }

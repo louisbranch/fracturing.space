@@ -7,13 +7,14 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
 func TestDeleteAdversary_NilRequest(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.DeleteAdversary(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDeleteAdversary_MissingCampaignID(t *testing.T) {
@@ -21,7 +22,7 @@ func TestDeleteAdversary_MissingCampaignID(t *testing.T) {
 	_, err := svc.DeleteAdversary(context.Background(), &pb.DaggerheartDeleteAdversaryRequest{
 		AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDeleteAdversary_MissingAdversaryID(t *testing.T) {
@@ -29,7 +30,7 @@ func TestDeleteAdversary_MissingAdversaryID(t *testing.T) {
 	_, err := svc.DeleteAdversary(context.Background(), &pb.DaggerheartDeleteAdversaryRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDeleteAdversary_NotFound(t *testing.T) {
@@ -37,7 +38,7 @@ func TestDeleteAdversary_NotFound(t *testing.T) {
 	_, err := svc.DeleteAdversary(context.Background(), &pb.DaggerheartDeleteAdversaryRequest{
 		CampaignId: "camp-1", AdversaryId: "nonexistent",
 	})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestDeleteAdversary_Success(t *testing.T) {
@@ -63,7 +64,7 @@ func TestDeleteAdversary_Success(t *testing.T) {
 	_, err = svc.GetAdversary(context.Background(), &pb.DaggerheartGetAdversaryRequest{
 		CampaignId: "camp-1", AdversaryId: createResp.Adversary.Id,
 	})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestDeleteAdversary_UsesDomainEngine(t *testing.T) {

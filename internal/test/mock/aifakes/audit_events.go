@@ -16,6 +16,8 @@ import (
 type AuditEventStore struct {
 	AuditEvents     []auditevent.Event
 	AuditEventNames []string
+	PutErr          error
+	ListErr         error
 }
 
 // NewAuditEventStore creates an initialized audit-event fake.
@@ -25,6 +27,9 @@ func NewAuditEventStore() *AuditEventStore {
 
 // PutAuditEvent appends an audit event record.
 func (s *AuditEventStore) PutAuditEvent(_ context.Context, record auditevent.Event) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	if strings.TrimSpace(record.ID) == "" {
 		record.ID = fmt.Sprintf("%d", len(s.AuditEvents)+1)
 	}
@@ -35,6 +40,9 @@ func (s *AuditEventStore) PutAuditEvent(_ context.Context, record auditevent.Eve
 
 // ListAuditEventsByOwner returns paginated audit events matching the filter.
 func (s *AuditEventStore) ListAuditEventsByOwner(_ context.Context, ownerUserID string, pageSize int, pageToken string, filter auditevent.Filter) (auditevent.Page, error) {
+	if s.ListErr != nil {
+		return auditevent.Page{}, s.ListErr
+	}
 	if pageSize <= 0 {
 		return auditevent.Page{}, errors.New("page size must be greater than zero")
 	}

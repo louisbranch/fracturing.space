@@ -7,6 +7,7 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -25,7 +26,7 @@ func TestTransportErrorToStatus(t *testing.T) {
 		t.Parallel()
 
 		err := transportErrorToStatus(service.Errorf(service.ErrKindInvalidArgument, "bad input"), cfg)
-		assertStatusCode(t, err, codes.InvalidArgument)
+		grpcassert.StatusCode(t, err, codes.InvalidArgument)
 	})
 
 	t.Run("app error", func(t *testing.T) {
@@ -35,7 +36,7 @@ func TestTransportErrorToStatus(t *testing.T) {
 			apperrors.Wrap(apperrors.CodeAIOrchestrationStepLimitExceeded, "step limit exceeded", errors.New("boom")),
 			cfg,
 		)
-		assertStatusCode(t, err, codes.Internal)
+		grpcassert.StatusCode(t, err, codes.Internal)
 		assertStatusReason(t, err, apperrors.CodeAIOrchestrationStepLimitExceeded)
 	})
 
@@ -43,7 +44,7 @@ func TestTransportErrorToStatus(t *testing.T) {
 		t.Parallel()
 
 		err := transportErrorToStatus(context.DeadlineExceeded, cfg)
-		assertStatusCode(t, err, codes.DeadlineExceeded)
+		grpcassert.StatusCode(t, err, codes.DeadlineExceeded)
 		assertStatusReason(t, err, apperrors.CodeAIOrchestrationTimedOut)
 	})
 
@@ -51,7 +52,7 @@ func TestTransportErrorToStatus(t *testing.T) {
 		t.Parallel()
 
 		err := transportErrorToStatus(context.Canceled, cfg)
-		assertStatusCode(t, err, codes.Canceled)
+		grpcassert.StatusCode(t, err, codes.Canceled)
 		assertStatusReason(t, err, apperrors.CodeAIOrchestrationCanceled)
 	})
 
@@ -59,6 +60,6 @@ func TestTransportErrorToStatus(t *testing.T) {
 		t.Parallel()
 
 		err := transportErrorToStatus(errors.New("boom"), transportErrorConfig{Operation: "search system reference"})
-		assertStatusCode(t, err, codes.Internal)
+		grpcassert.StatusCode(t, err, codes.Internal)
 	})
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -75,7 +76,7 @@ func TestApplyConditions_LifeStateNoChange(t *testing.T) {
 		CharacterId: "char-1",
 		LifeState:   pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE,
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestApplyConditions_InvalidStoredLifeState(t *testing.T) {
@@ -91,7 +92,7 @@ func TestApplyConditions_InvalidStoredLifeState(t *testing.T) {
 		CharacterId: "char-1",
 		LifeState:   pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyConditions_NoConditionChanges(t *testing.T) {
@@ -109,7 +110,7 @@ func TestApplyConditions_NoConditionChanges(t *testing.T) {
 		CharacterId:   "char-1",
 		AddConditions: []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestApplyConditions_RequiresDomainEngine(t *testing.T) {
@@ -120,7 +121,7 @@ func TestApplyConditions_RequiresDomainEngine(t *testing.T) {
 		CharacterId:   "char-1",
 		AddConditions: []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyConditions_UsesDomainEngine(t *testing.T) {

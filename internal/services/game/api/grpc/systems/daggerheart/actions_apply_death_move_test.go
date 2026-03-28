@@ -16,6 +16,7 @@ import (
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -24,7 +25,7 @@ func TestApplyDeathMove_MissingStores(t *testing.T) {
 	_, err := svc.ApplyDeathMove(context.Background(), &pb.DaggerheartApplyDeathMoveRequest{
 		CampaignId: "c1", CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyDeathMove_MissingSeedFunc(t *testing.T) {
@@ -38,7 +39,7 @@ func TestApplyDeathMove_MissingSeedFunc(t *testing.T) {
 	_, err := svc.ApplyDeathMove(context.Background(), &pb.DaggerheartApplyDeathMoveRequest{
 		CampaignId: "c1", CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyDeathMove_MissingCampaignId(t *testing.T) {
@@ -48,7 +49,7 @@ func TestApplyDeathMove_MissingCampaignId(t *testing.T) {
 	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
 		CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDeathMove_MissingSessionId(t *testing.T) {
@@ -57,7 +58,7 @@ func TestApplyDeathMove_MissingSessionId(t *testing.T) {
 	_, err := svc.ApplyDeathMove(context.Background(), &pb.DaggerheartApplyDeathMoveRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDeathMove_UnspecifiedMove(t *testing.T) {
@@ -69,7 +70,7 @@ func TestApplyDeathMove_UnspecifiedMove(t *testing.T) {
 		CharacterId: "char-1",
 		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_UNSPECIFIED,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDeathMove_HpClearOnNonRiskItAll(t *testing.T) {
@@ -83,7 +84,7 @@ func TestApplyDeathMove_HpClearOnNonRiskItAll(t *testing.T) {
 		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH,
 		HpClear:     &hpClear,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDeathMove_HpNotZero(t *testing.T) {
@@ -95,7 +96,7 @@ func TestApplyDeathMove_HpNotZero(t *testing.T) {
 		CharacterId: "char-1",
 		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH,
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestApplyDeathMove_AlreadyDead(t *testing.T) {
@@ -114,7 +115,7 @@ func TestApplyDeathMove_AlreadyDead(t *testing.T) {
 		CharacterId: "char-1",
 		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH,
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {

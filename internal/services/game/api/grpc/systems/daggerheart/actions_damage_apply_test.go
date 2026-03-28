@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -21,7 +22,7 @@ func TestApplyDamage_MissingStores(t *testing.T) {
 	_, err := svc.ApplyDamage(context.Background(), &pb.DaggerheartApplyDamageRequest{
 		CampaignId: "c1", CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyDamage_RequiresDomainEngine(t *testing.T) {
@@ -35,7 +36,7 @@ func TestApplyDamage_RequiresDomainEngine(t *testing.T) {
 			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 		},
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyDamage_MissingCampaignId(t *testing.T) {
@@ -43,7 +44,7 @@ func TestApplyDamage_MissingCampaignId(t *testing.T) {
 	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{CharacterId: "ch1"})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDamage_MissingCharacterId(t *testing.T) {
@@ -51,7 +52,7 @@ func TestApplyDamage_MissingCharacterId(t *testing.T) {
 	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{CampaignId: "camp-1"})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDamage_MissingSessionId(t *testing.T) {
@@ -60,7 +61,7 @@ func TestApplyDamage_MissingSessionId(t *testing.T) {
 	_, err := svc.ApplyDamage(context.Background(), &pb.DaggerheartApplyDamageRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDamage_MissingDamage(t *testing.T) {
@@ -70,7 +71,7 @@ func TestApplyDamage_MissingDamage(t *testing.T) {
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDamage_NegativeAmount(t *testing.T) {
@@ -85,7 +86,7 @@ func TestApplyDamage_NegativeAmount(t *testing.T) {
 			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDamage_UnspecifiedType(t *testing.T) {
@@ -100,7 +101,7 @@ func TestApplyDamage_UnspecifiedType(t *testing.T) {
 			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_UNSPECIFIED,
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyDamage_Success(t *testing.T) {
@@ -322,5 +323,5 @@ func TestApplyDamage_RequireDamageRollWithoutSeq(t *testing.T) {
 		},
 		RequireDamageRoll: true,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }

@@ -988,3 +988,41 @@ func mustNewAgentService(t *testing.T, deps agentServiceDeps) *AgentService {
 	}
 	return svc
 }
+
+// --- Error injection tests ---
+
+func TestAgentServiceListReturnsInternalOnStoreError(t *testing.T) {
+	t.Parallel()
+	agentStore := aifakes.NewAgentStore()
+	agentStore.ListErr = errors.New("db read fail")
+	svc := mustNewAgentService(t, agentServiceDeps{
+		agentStore:      agentStore,
+		credentialStore: aifakes.NewCredentialStore(),
+	})
+
+	_, err := svc.List(context.Background(), "user-1", 10, "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if got := ErrorKindOf(err); got != ErrKindInternal {
+		t.Fatalf("ErrorKindOf = %v, want %v", got, ErrKindInternal)
+	}
+}
+
+func TestAgentServiceDeleteReturnsInternalOnStoreError(t *testing.T) {
+	t.Parallel()
+	agentStore := aifakes.NewAgentStore()
+	agentStore.DeleteErr = errors.New("db delete fail")
+	svc := mustNewAgentService(t, agentServiceDeps{
+		agentStore:      agentStore,
+		credentialStore: aifakes.NewCredentialStore(),
+	})
+
+	err := svc.Delete(context.Background(), "user-1", "agent-1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if got := ErrorKindOf(err); got != ErrKindInternal {
+		t.Fatalf("ErrorKindOf = %v, want %v", got, ErrKindInternal)
+	}
+}

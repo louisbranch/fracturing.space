@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -20,7 +21,7 @@ func TestSessionTagTeamFlow_MissingStores(t *testing.T) {
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionTagTeamFlow_MissingCampaignId(t *testing.T) {
@@ -29,7 +30,7 @@ func TestSessionTagTeamFlow_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionTagTeamFlow_MissingSessionId(t *testing.T) {
@@ -38,7 +39,7 @@ func TestSessionTagTeamFlow_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionTagTeamFlow_MissingDifficulty(t *testing.T) {
@@ -47,7 +48,7 @@ func TestSessionTagTeamFlow_MissingDifficulty(t *testing.T) {
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionTagTeamFlow_MissingFirst(t *testing.T) {
@@ -56,7 +57,7 @@ func TestSessionTagTeamFlow_MissingFirst(t *testing.T) {
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionTagTeamFlow_MissingSecond(t *testing.T) {
@@ -66,7 +67,7 @@ func TestSessionTagTeamFlow_MissingSecond(t *testing.T) {
 		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
 		First: &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "agility"},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionTagTeamFlow_SameParticipant(t *testing.T) {
@@ -78,7 +79,7 @@ func TestSessionTagTeamFlow_SameParticipant(t *testing.T) {
 		Second:              &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "strength"},
 		SelectedCharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionTagTeamFlow_Success(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/adversarytransport"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -13,7 +14,7 @@ import (
 func TestGetAdversary_NilRequest(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.GetAdversary(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetAdversary_MissingCampaignID(t *testing.T) {
@@ -21,7 +22,7 @@ func TestGetAdversary_MissingCampaignID(t *testing.T) {
 	_, err := svc.GetAdversary(context.Background(), &pb.DaggerheartGetAdversaryRequest{
 		AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetAdversary_MissingAdversaryID(t *testing.T) {
@@ -29,7 +30,7 @@ func TestGetAdversary_MissingAdversaryID(t *testing.T) {
 	_, err := svc.GetAdversary(context.Background(), &pb.DaggerheartGetAdversaryRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetAdversary_NotFound(t *testing.T) {
@@ -37,7 +38,7 @@ func TestGetAdversary_NotFound(t *testing.T) {
 	_, err := svc.GetAdversary(context.Background(), &pb.DaggerheartGetAdversaryRequest{
 		CampaignId: "camp-1", AdversaryId: "nonexistent",
 	})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestGetAdversary_NonDaggerheartCampaign(t *testing.T) {
@@ -45,7 +46,7 @@ func TestGetAdversary_NonDaggerheartCampaign(t *testing.T) {
 	_, err := svc.GetAdversary(context.Background(), &pb.DaggerheartGetAdversaryRequest{
 		CampaignId: "camp-non-dh", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestGetAdversary_Success(t *testing.T) {
@@ -70,13 +71,13 @@ func TestGetAdversary_Success(t *testing.T) {
 func TestListAdversaries_NilRequest(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.ListAdversaries(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListAdversaries_MissingCampaignID(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.ListAdversaries(context.Background(), &pb.DaggerheartListAdversariesRequest{})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListAdversaries_EmptyResult(t *testing.T) {
@@ -144,7 +145,7 @@ func TestListAdversaries_FilterBySession(t *testing.T) {
 func TestLoadAdversaryForSession_NotFound(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := adversarytransport.LoadAdversaryForSession(context.Background(), svc.stores.Daggerheart, "camp-1", "sess-1", "nonexistent")
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestLoadAdversaryForSession_WrongSession(t *testing.T) {
@@ -156,7 +157,7 @@ func TestLoadAdversaryForSession_WrongSession(t *testing.T) {
 	}
 
 	_, err = adversarytransport.LoadAdversaryForSession(context.Background(), svc.stores.Daggerheart, "camp-1", "other-session", createResp.Adversary.Id)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestLoadAdversaryForSession_Success(t *testing.T) {

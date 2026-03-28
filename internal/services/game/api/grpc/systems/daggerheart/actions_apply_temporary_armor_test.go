@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -22,7 +23,7 @@ func TestApplyTemporaryArmor_MissingArmor(t *testing.T) {
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyTemporaryArmor_UsesDomainEngine(t *testing.T) {

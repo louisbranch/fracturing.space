@@ -17,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -210,7 +211,7 @@ func TestBeginPasskeyLogin_RequiresUsername(t *testing.T) {
 	svc.passkeyParser = &fakePasskeyParser{}
 
 	_, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestBeginPasskeyLogin_Success(t *testing.T) {
@@ -352,7 +353,7 @@ func TestBeginAccountRegistration_ReservationFailureDoesNotLeakPasskeySession(t 
 	svc.passkeyInitErr = nil
 
 	_, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "alice"})
-	assertStatusCode(t, err, codes.AlreadyExists)
+	grpcassert.StatusCode(t, err, codes.AlreadyExists)
 	if _, err := store.GetPasskeySession(context.Background(), "reg-1"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected no leaked passkey session, got %v", err)
 	}
@@ -548,7 +549,7 @@ func TestAcknowledgeAccountRegistration_PersistFailureLeavesRegistrationState(t 
 		SessionId: beginResp.GetSessionId(),
 		PendingId: pendingID,
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 	if _, ok := userStore.users["user-1"]; ok {
 		t.Fatal("expected user persistence rollback")
 	}
@@ -596,7 +597,7 @@ func TestAcknowledgeAccountRegistration_ExpiredSessionDeletesReservation(t *test
 	_, err := svc.AcknowledgeAccountRegistration(context.Background(), &authv1.AcknowledgeAccountRegistrationRequest{
 		SessionId: "reg-1",
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 	if _, err := store.GetRegistrationSession(context.Background(), "reg-1"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected expired staged signup cleanup, got %v", err)
 	}

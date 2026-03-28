@@ -1,21 +1,9 @@
 package contenttransport
 
 import (
-	"testing"
-
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
-
-func assertStatusCode(t *testing.T, err error, want codes.Code) {
-	t.Helper()
-	got := status.Code(err)
-	if got != want {
-		t.Fatalf("status code = %v, want %v (err=%v)", got, want, err)
-	}
-}
 
 type fakeContentStore struct {
 	classes              map[string]contentstore.DaggerheartClass

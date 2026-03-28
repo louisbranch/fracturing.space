@@ -6,13 +6,14 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
 func TestGetContentCatalog_NoStore(t *testing.T) {
 	svc := &DaggerheartContentService{}
 	_, err := svc.GetContentCatalog(context.Background(), &pb.GetDaggerheartContentCatalogRequest{})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestGetContentCatalog_Success(t *testing.T) {
@@ -42,13 +43,13 @@ func TestGetContentCatalog_Success(t *testing.T) {
 func TestGetAssetMap_NoStore(t *testing.T) {
 	svc := &DaggerheartAssetService{}
 	_, err := svc.GetAssetMap(context.Background(), &pb.GetDaggerheartAssetMapRequest{})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestGetAssetMap_NilRequest(t *testing.T) {
 	svc := newAssetTestService()
 	_, err := svc.GetAssetMap(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetAssetMap_Success(t *testing.T) {

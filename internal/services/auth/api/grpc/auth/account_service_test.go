@@ -8,6 +8,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -97,5 +98,5 @@ func TestUpdateProfile_UserNotFound(t *testing.T) {
 
 	svc := NewAccountService(newFakeUserStore())
 	_, err := svc.UpdateProfile(context.Background(), &authv1.UpdateProfileRequest{UserId: "missing"})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }

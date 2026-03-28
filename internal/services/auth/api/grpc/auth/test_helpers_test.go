@@ -7,8 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type fakeUserStore struct {
@@ -94,18 +92,4 @@ func openTempAuthStore(t *testing.T) *authsqlite.Store {
 	}
 	t.Cleanup(func() { store.Close() })
 	return store
-}
-
-func assertStatusCode(t *testing.T, err error, want codes.Code) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("expected status %v, got nil", want)
-	}
-	st, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("expected gRPC status error, got %v", err)
-	}
-	if st.Code() != want {
-		t.Fatalf("expected status %v, got %v", want, st.Code())
-	}
 }

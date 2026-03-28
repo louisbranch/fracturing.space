@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -48,7 +49,7 @@ func TestApplyAdversaryDamage_MissingStores(t *testing.T) {
 	_, err := svc.ApplyAdversaryDamage(context.Background(), &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId: "c1", AdversaryId: "a1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyAdversaryDamage_MissingCampaignId(t *testing.T) {
@@ -57,7 +58,7 @@ func TestApplyAdversaryDamage_MissingCampaignId(t *testing.T) {
 	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
 		AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryDamage_MissingAdversaryId(t *testing.T) {
@@ -66,7 +67,7 @@ func TestApplyAdversaryDamage_MissingAdversaryId(t *testing.T) {
 	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryDamage_MissingSessionId(t *testing.T) {
@@ -74,7 +75,7 @@ func TestApplyAdversaryDamage_MissingSessionId(t *testing.T) {
 	_, err := svc.ApplyAdversaryDamage(context.Background(), &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId: "camp-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryDamage_MissingDamage(t *testing.T) {
@@ -83,7 +84,7 @@ func TestApplyAdversaryDamage_MissingDamage(t *testing.T) {
 	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId: "camp-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryDamage_NegativeAmount(t *testing.T) {
@@ -97,7 +98,7 @@ func TestApplyAdversaryDamage_NegativeAmount(t *testing.T) {
 			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryDamage_UnspecifiedType(t *testing.T) {
@@ -111,5 +112,5 @@ func TestApplyAdversaryDamage_UnspecifiedType(t *testing.T) {
 			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_UNSPECIFIED,
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }

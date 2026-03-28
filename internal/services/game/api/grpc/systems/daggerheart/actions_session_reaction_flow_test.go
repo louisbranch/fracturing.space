@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -23,7 +24,7 @@ func TestSessionReactionFlow_MissingStores(t *testing.T) {
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionReactionFlow_MissingCampaignId(t *testing.T) {
@@ -32,7 +33,7 @@ func TestSessionReactionFlow_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionReactionFlow_MissingSessionId(t *testing.T) {
@@ -41,7 +42,7 @@ func TestSessionReactionFlow_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionReactionFlow_MissingCharacterId(t *testing.T) {
@@ -50,7 +51,7 @@ func TestSessionReactionFlow_MissingCharacterId(t *testing.T) {
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionReactionFlow_MissingTrait(t *testing.T) {
@@ -59,7 +60,7 @@ func TestSessionReactionFlow_MissingTrait(t *testing.T) {
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionReactionFlow_Success(t *testing.T) {

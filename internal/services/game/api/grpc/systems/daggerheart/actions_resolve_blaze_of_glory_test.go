@@ -16,6 +16,7 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -24,7 +25,7 @@ func TestResolveBlazeOfGlory_MissingStores(t *testing.T) {
 	_, err := svc.ResolveBlazeOfGlory(context.Background(), &pb.DaggerheartResolveBlazeOfGloryRequest{
 		CampaignId: "c1", CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestResolveBlazeOfGlory_MissingCampaignId(t *testing.T) {
@@ -33,7 +34,7 @@ func TestResolveBlazeOfGlory_MissingCampaignId(t *testing.T) {
 	_, err := svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
 		CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestResolveBlazeOfGlory_MissingSessionId(t *testing.T) {
@@ -41,7 +42,7 @@ func TestResolveBlazeOfGlory_MissingSessionId(t *testing.T) {
 	_, err := svc.ResolveBlazeOfGlory(context.Background(), &pb.DaggerheartResolveBlazeOfGloryRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestResolveBlazeOfGlory_CharacterAlreadyDead(t *testing.T) {
@@ -56,7 +57,7 @@ func TestResolveBlazeOfGlory_CharacterAlreadyDead(t *testing.T) {
 	_, err := svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestResolveBlazeOfGlory_NotInBlazeState(t *testing.T) {
@@ -65,7 +66,7 @@ func TestResolveBlazeOfGlory_NotInBlazeState(t *testing.T) {
 	_, err := svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestResolveBlazeOfGlory_Success(t *testing.T) {

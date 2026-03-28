@@ -42,6 +42,9 @@ func TestCatalogServiceHandlersWithUnavailableClient(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("HandleCatalogPage(GET) status = %d", rec.Code)
 	}
+	if rec.Body.Len() == 0 {
+		t.Error("HandleCatalogPage response body is empty")
+	}
 
 	// Method enforcement is handled by the mux (routes registered with method prefix).
 
@@ -51,6 +54,9 @@ func TestCatalogServiceHandlersWithUnavailableClient(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("HandleCatalogSection(non-HTMX) status = %d", rec.Code)
 	}
+	if rec.Body.Len() == 0 {
+		t.Error("HandleCatalogSection(non-HTMX) response body is empty")
+	}
 
 	req = httptest.NewRequest(http.MethodGet, "/app/catalog/daggerheart/classes", nil)
 	req.Header.Set("HX-Request", "true")
@@ -59,6 +65,9 @@ func TestCatalogServiceHandlersWithUnavailableClient(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("HandleCatalogSection(HTMX) status = %d", rec.Code)
 	}
+	if rec.Body.Len() == 0 {
+		t.Error("HandleCatalogSection(HTMX) response body is empty")
+	}
 
 	req = httptest.NewRequest(http.MethodGet, "/app/catalog/daggerheart/classes?fragment=rows", nil)
 	rec = httptest.NewRecorder()
@@ -66,12 +75,18 @@ func TestCatalogServiceHandlersWithUnavailableClient(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("HandleCatalogSectionTable(nil content client) status = %d", rec.Code)
 	}
+	if rec.Body.Len() == 0 {
+		t.Error("HandleCatalogSectionTable response body is empty")
+	}
 
 	req = httptest.NewRequest(http.MethodGet, "/app/catalog/daggerheart/classes/class-1", nil)
 	rec = httptest.NewRecorder()
 	svc.HandleCatalogSectionDetail(rec, req, templates.CatalogSectionClasses, "class-1")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("HandleCatalogSectionDetail(nil content client) status = %d", rec.Code)
+	}
+	if rec.Body.Len() == 0 {
+		t.Error("HandleCatalogSectionDetail response body is empty")
 	}
 }
 

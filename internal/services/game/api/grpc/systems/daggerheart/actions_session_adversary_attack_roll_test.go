@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -23,7 +24,7 @@ func TestSessionAdversaryAttackRoll_MissingStores(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionAdversaryAttackRoll_MissingCampaignId(t *testing.T) {
@@ -31,7 +32,7 @@ func TestSessionAdversaryAttackRoll_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
 		SessionId: "sess-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackRoll_MissingSessionId(t *testing.T) {
@@ -39,7 +40,7 @@ func TestSessionAdversaryAttackRoll_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
 		CampaignId: "camp-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackRoll_MissingAdversaryId(t *testing.T) {
@@ -47,7 +48,7 @@ func TestSessionAdversaryAttackRoll_MissingAdversaryId(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
