@@ -92,9 +92,9 @@ func AIDebugTurnFromProto(turn *aiv1.CampaignDebugTurn) AIDebugTurn {
 			Status:        aiDebugTurnStatusString(turn.GetStatus()),
 			LastError:     strings.TrimSpace(turn.GetLastError()),
 			Usage:         aiDebugUsageFromProto(turn.GetUsage()),
-			StartedAt:     formatTimestamp(turn.GetStartedAt()),
-			UpdatedAt:     formatTimestamp(turn.GetUpdatedAt()),
-			CompletedAt:   formatTimestamp(turn.GetCompletedAt()),
+			StartedAt:     FormatTimestamp(turn.GetStartedAt()),
+			UpdatedAt:     FormatTimestamp(turn.GetUpdatedAt()),
+			CompletedAt:   FormatTimestamp(turn.GetCompletedAt()),
 		},
 		Entries: make([]AIDebugEntry, 0, len(turn.GetEntries())),
 	}
@@ -135,9 +135,9 @@ func aiDebugTurnSummaryFromProto(turn *aiv1.CampaignDebugTurnSummary) AIDebugTur
 		Status:        aiDebugTurnStatusString(turn.GetStatus()),
 		LastError:     strings.TrimSpace(turn.GetLastError()),
 		Usage:         aiDebugUsageFromProto(turn.GetUsage()),
-		StartedAt:     formatTimestamp(turn.GetStartedAt()),
-		UpdatedAt:     formatTimestamp(turn.GetUpdatedAt()),
-		CompletedAt:   formatTimestamp(turn.GetCompletedAt()),
+		StartedAt:     FormatTimestamp(turn.GetStartedAt()),
+		UpdatedAt:     FormatTimestamp(turn.GetUpdatedAt()),
+		CompletedAt:   FormatTimestamp(turn.GetCompletedAt()),
 		EntryCount:    turn.GetEntryCount(),
 	}
 }
@@ -155,7 +155,7 @@ func aiDebugEntryFromProto(entry *aiv1.CampaignDebugEntry) AIDebugEntry {
 		CallID:           strings.TrimSpace(entry.GetCallId()),
 		ResponseID:       strings.TrimSpace(entry.GetResponseId()),
 		IsError:          entry.GetIsError(),
-		CreatedAt:        formatTimestamp(entry.GetCreatedAt()),
+		CreatedAt:        FormatTimestamp(entry.GetCreatedAt()),
 		Usage:            aiDebugUsageFromProto(entry.GetUsage()),
 	}
 }

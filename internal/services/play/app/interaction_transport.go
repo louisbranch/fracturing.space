@@ -57,6 +57,10 @@ func rpcInteractionMutationHandlerWithoutBody[TReq any, TResp interactionStateRe
 
 // handleInteractionMutation owns the common request mapping and response refresh
 // behavior for the browser-facing interaction mutation surface.
+//
+// Security note: the full deserialized request payload is logged at Info level
+// for debugging. This may include user-authored content (player actions, OOC
+// posts). Operators should configure log collection accordingly.
 func (s *Server) handleInteractionMutation(
 	w http.ResponseWriter,
 	r *http.Request,

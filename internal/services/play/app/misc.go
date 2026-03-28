@@ -31,6 +31,7 @@ var rpcErrorMessages = map[gogrpccodes.Code]struct {
 	gogrpccodes.FailedPrecondition: {http.StatusConflict, "action not allowed in current state"},
 	gogrpccodes.Aborted:            {http.StatusConflict, "action not allowed in current state"},
 	gogrpccodes.Unauthenticated:    {http.StatusUnauthorized, "authentication required"},
+	gogrpccodes.ResourceExhausted:  {http.StatusTooManyRequests, "too many requests"},
 }
 
 func writeRPCError(w http.ResponseWriter, err error) {

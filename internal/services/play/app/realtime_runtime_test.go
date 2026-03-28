@@ -93,7 +93,7 @@ func TestCampaignRoomProjectionSubscriptionUsesConfiguredRetryDelay(t *testing.T
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
 	events := &failingEventClient{err: errors.New("subscribe failed")}
-	server.events = events
+	server.deps.Events = events
 	hub := newRealtimeHubWithRuntime(hubDepsFromServer(server), runtime)
 	server.realtime = hub
 
@@ -124,7 +124,7 @@ func TestCampaignRoomEnsureProjectionSubscriptionUsesAuthenticatedCursor(t *test
 		stream:      &fakeCampaignUpdateStream{},
 		subscribeCh: make(chan struct{}, 1),
 	}
-	server.events = events
+	server.deps.Events = events
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 
@@ -191,8 +191,8 @@ func TestCampaignRoomConsumeProjectionStreamBroadcastsAndTracksSequence(t *testi
 		listResponse:  enrichedCharacterResponse(),
 		sheetResponse: enrichedCharacterSheetResponse(),
 	}
-	server.participants = participants
-	server.characters = characters
+	server.deps.Participants = participants
+	server.deps.Characters = characters
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 
@@ -310,7 +310,7 @@ func TestCampaignRoomRunAIDebugSubscriptionUsesConfiguredRetryDelay(t *testing.T
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
 	aiDebug := &fakePlayAIDebugClient{subscribeErr: errors.New("subscribe failed")}
-	server.aiDebug = aiDebug
+	server.deps.AIDebug = aiDebug
 	hub := newRealtimeHubWithRuntime(hubDepsFromServer(server), runtime)
 	server.realtime = hub
 

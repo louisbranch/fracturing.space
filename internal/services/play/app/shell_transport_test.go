@@ -10,7 +10,7 @@ func TestHandleCampaignShellInvalidLaunchRedirectsToWebAndClearsCookie(t *testin
 	t.Parallel()
 
 	server := &Server{
-		auth: &fakePlayAuthClient{sessions: map[string]string{"stale-session": "stale-user"}},
+		deps: Dependencies{Auth: &fakePlayAuthClient{sessions: map[string]string{"stale-session": "stale-user"}}},
 	}
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/campaigns/c1?launch=bad-token", nil)
 	req.SetPathValue("campaignID", "c1")
@@ -35,7 +35,7 @@ func TestHandleCampaignShellStalePlaySessionRedirectsToWebAndClearsCookie(t *tes
 	t.Parallel()
 
 	server := &Server{
-		auth: &fakePlayAuthClient{sessions: map[string]string{}},
+		deps: Dependencies{Auth: &fakePlayAuthClient{sessions: map[string]string{}}},
 	}
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/campaigns/c1", nil)
 	req.SetPathValue("campaignID", "c1")

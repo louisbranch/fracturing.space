@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
 	"strings"
 	"sync"
 
@@ -46,7 +45,7 @@ func (r *campaignRoom) runProjectionSubscription() {
 			continue
 		}
 		afterSeq := r.latestGameSequence()
-		slog.InfoContext(r.ctx, "play realtime: subscribing to campaign updates",
+		r.hub.log().InfoContext(r.ctx, "play realtime: subscribing to campaign updates",
 			"campaign_id", r.campaignID,
 			"user_id", userID,
 			"after_seq", afterSeq,
@@ -59,7 +58,7 @@ func (r *campaignRoom) runProjectionSubscription() {
 			ProjectionScopes: []string{"campaign_sessions", "campaign_scenes"},
 		})
 		if err != nil {
-			slog.WarnContext(r.ctx, "play realtime: subscribe failed",
+			r.hub.log().WarnContext(r.ctx, "play realtime: subscribe failed",
 				"campaign_id", r.campaignID,
 				"user_id", userID,
 				"after_seq", afterSeq,
@@ -72,7 +71,7 @@ func (r *campaignRoom) runProjectionSubscription() {
 			retryDelay = r.hub.runtime.backoff(retryDelay)
 			continue
 		}
-		slog.InfoContext(r.ctx, "play realtime: campaign update stream connected",
+		r.hub.log().InfoContext(r.ctx, "play realtime: campaign update stream connected",
 			"campaign_id", r.campaignID,
 			"user_id", userID,
 			"after_seq", afterSeq,
@@ -90,13 +89,13 @@ func (r *campaignRoom) consumeProjectionStream(stream gogrpc.ServerStreamingClie
 		update, recvErr := stream.Recv()
 		if recvErr != nil {
 			if errors.Is(recvErr, io.EOF) {
-				slog.InfoContext(r.ctx, "play realtime: campaign update stream closed by server",
+				r.hub.log().InfoContext(r.ctx, "play realtime: campaign update stream closed by server",
 					"campaign_id", r.campaignID,
 					"latest_game_seq", r.latestGameSequence(),
 				)
 				return true
 			}
-			slog.WarnContext(r.ctx, "play realtime: campaign update stream recv failed",
+			r.hub.log().WarnContext(r.ctx, "play realtime: campaign update stream recv failed",
 				"campaign_id", r.campaignID,
 				"latest_game_seq", r.latestGameSequence(),
 				"grpc_code", status.Code(recvErr).String(),
@@ -107,7 +106,7 @@ func (r *campaignRoom) consumeProjectionStream(stream gogrpc.ServerStreamingClie
 		if update == nil || update.GetProjectionApplied() == nil {
 			continue
 		}
-		slog.InfoContext(r.ctx, "play realtime: projection update received",
+		r.hub.log().InfoContext(r.ctx, "play realtime: projection update received",
 			"campaign_id", r.campaignID,
 			"seq", update.GetSeq(),
 			"event_type", update.GetEventType(),
@@ -127,6 +126,9 @@ func (r *campaignRoom) add(session *realtimeSession) {
 	r.mu.Unlock()
 }
 
+// remove deletes a session from the room. If the room becomes empty, it
+// cancels the room context and removes itself from the hub.
+// Lock ordering: r.mu must be released before acquiring r.hub.mu to prevent deadlock.
 func (r *campaignRoom) remove(session *realtimeSession) {
 	r.mu.Lock()
 	delete(r.sessions, session)
@@ -174,6 +176,9 @@ func (r *campaignRoom) currentAIDebugSession() string {
 	return r.aiDebugSessionID
 }
 
+// ensureProjectionSubscription starts a single projection subscription
+// goroutine per room. The goroutine exits when the room context is cancelled,
+// which happens when the last session disconnects via remove().
 func (r *campaignRoom) ensureProjectionSubscription() {
 	start := false
 	r.mu.Lock()
@@ -249,9 +254,9 @@ func (r *campaignRoom) broadcastCurrent() {
 		return
 	}
 
-	// Fetch interaction state once — campaign-level fields (active session,
-	// scene, player phase, OOC) are the same for every participant. We use the
-	// first session's auth context because GetInteractionState requires one.
+	// Invariant: GetInteractionState returns campaign-level state that is
+	// participant-independent. Any authenticated user in the room produces the
+	// same result, so we use the first session's auth context.
 	app := r.hub.deps.application()
 	req := playRequest{
 		campaignRequest: campaignRequest{CampaignID: r.campaignID},
@@ -266,7 +271,7 @@ func (r *campaignRoom) broadcastCurrent() {
 	// Build enrichment data and chat cursor once for the campaign.
 	snapshot, err := app.roomSnapshotFromState(r.ctx, req, state, r.latestGameSequence())
 	if err != nil {
-		slog.WarnContext(r.ctx, "play realtime: broadcast current failed; requesting resync",
+		r.hub.log().WarnContext(r.ctx, "play realtime: broadcast current failed; requesting resync",
 			"campaign_id", r.campaignID,
 			"error", err,
 		)
@@ -285,7 +290,7 @@ func (r *campaignRoom) broadcastCurrent() {
 	if snapshot.InteractionState.AITurn != nil {
 		aiTurnStatus = snapshot.InteractionState.AITurn.Status
 	}
-	slog.InfoContext(r.ctx, "play realtime: broadcasting interaction update",
+	r.hub.log().InfoContext(r.ctx, "play realtime: broadcasting interaction update",
 		"campaign_id", r.campaignID,
 		"sessions", len(sessions),
 		"latest_game_seq", snapshot.LatestGameSeq,
@@ -303,7 +308,7 @@ func (r *campaignRoom) broadcastCurrent() {
 }
 
 func (r *campaignRoom) broadcastResync(sessions []*realtimeSession) {
-	slog.WarnContext(r.ctx, "play realtime: broadcasting resync",
+	r.hub.log().WarnContext(r.ctx, "play realtime: broadcasting resync",
 		"campaign_id", r.campaignID,
 		"sessions", len(sessions),
 	)
@@ -330,7 +335,7 @@ func (r *campaignRoom) runAIDebugSubscription(ctx context.Context, sessionID str
 			retryDelay = r.hub.runtime.backoff(retryDelay)
 			continue
 		}
-		slog.InfoContext(ctx, "play realtime: subscribing to ai debug updates",
+		r.hub.log().InfoContext(ctx, "play realtime: subscribing to ai debug updates",
 			"campaign_id", r.campaignID,
 			"session_id", sessionID,
 			"user_id", userID,
@@ -340,7 +345,7 @@ func (r *campaignRoom) runAIDebugSubscription(ctx context.Context, sessionID str
 			SessionId:  sessionID,
 		})
 		if err != nil {
-			slog.WarnContext(ctx, "play realtime: ai debug subscribe failed",
+			r.hub.log().WarnContext(ctx, "play realtime: ai debug subscribe failed",
 				"campaign_id", r.campaignID,
 				"session_id", sessionID,
 				"user_id", userID,
@@ -353,7 +358,7 @@ func (r *campaignRoom) runAIDebugSubscription(ctx context.Context, sessionID str
 			retryDelay = r.hub.runtime.backoff(retryDelay)
 			continue
 		}
-		slog.InfoContext(ctx, "play realtime: ai debug stream connected",
+		r.hub.log().InfoContext(ctx, "play realtime: ai debug stream connected",
 			"campaign_id", r.campaignID,
 			"session_id", sessionID,
 			"user_id", userID,
@@ -374,12 +379,12 @@ func (r *campaignRoom) consumeAIDebugStream(
 		update, recvErr := stream.Recv()
 		if recvErr != nil {
 			if errors.Is(recvErr, io.EOF) {
-				slog.InfoContext(ctx, "play realtime: ai debug stream closed by server",
+				r.hub.log().InfoContext(ctx, "play realtime: ai debug stream closed by server",
 					"campaign_id", r.campaignID,
 					"session_id", sessionID,
 				)
 			} else {
-				slog.WarnContext(ctx, "play realtime: ai debug stream recv failed",
+				r.hub.log().WarnContext(ctx, "play realtime: ai debug stream recv failed",
 					"campaign_id", r.campaignID,
 					"session_id", sessionID,
 					"grpc_code", status.Code(recvErr).String(),
@@ -398,7 +403,7 @@ func (r *campaignRoom) consumeAIDebugStream(
 		if strings.TrimSpace(payload.Turn.ID) == "" {
 			continue
 		}
-		slog.InfoContext(ctx, "play realtime: ai debug update received",
+		r.hub.log().InfoContext(ctx, "play realtime: ai debug update received",
 			"campaign_id", r.campaignID,
 			"session_id", sessionID,
 			"turn_id", payload.Turn.ID,

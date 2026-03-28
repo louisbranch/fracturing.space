@@ -69,7 +69,7 @@ func TestRequirePlayRequest(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 
-		server := &Server{auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}}}
+		server := &Server{deps: Dependencies{Auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}}}}
 		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap", nil)
 		req.SetPathValue("campaignID", "c1")
 		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
@@ -102,7 +102,7 @@ func TestRequirePlayRequest(t *testing.T) {
 	t.Run("missing play session returns unauthorized", func(t *testing.T) {
 		t.Parallel()
 
-		server := &Server{auth: &fakePlayAuthClient{}}
+		server := &Server{deps: Dependencies{Auth: &fakePlayAuthClient{}}}
 		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap", nil)
 		req.SetPathValue("campaignID", "c1")
 		rr := httptest.NewRecorder()
@@ -242,7 +242,7 @@ func TestHandleAIDebugVariants(t *testing.T) {
 			},
 		}
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns?page_size=10", nil)
 		req.SetPathValue("campaignID", "c1")
@@ -286,7 +286,7 @@ func TestHandleAIDebugVariants(t *testing.T) {
 			},
 		}
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns/turn-1", nil)
 		req.SetPathValue("campaignID", "c1")
@@ -332,7 +332,7 @@ func TestHandleAIDebugVariants(t *testing.T) {
 		state.ActiveSession = nil
 		aiDebug := &fakePlayAIDebugClient{}
 		server := newAuthedPlayServer(newRecordingInteractionClient(state), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns", nil)
 		req.SetPathValue("campaignID", "c1")
@@ -358,7 +358,7 @@ func TestHandleAIDebugVariants(t *testing.T) {
 
 		aiDebug := &fakePlayAIDebugClient{listErr: status.Error(codes.Unavailable, "down")}
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns", nil)
 		req.SetPathValue("campaignID", "c1")
@@ -391,7 +391,7 @@ func TestHandleAIDebugVariants(t *testing.T) {
 
 		aiDebug := &fakePlayAIDebugClient{getErr: status.Error(codes.NotFound, "missing")}
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/ai-debug/turns/turn-1", nil)
 		req.SetPathValue("campaignID", "c1")

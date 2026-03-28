@@ -25,7 +25,7 @@ func (s *Server) resolvePlayUserIDFromSessionID(ctx context.Context, sessionID s
 	if sessionID == "" {
 		return "", errors.New("play session cookie is required")
 	}
-	resp, err := s.auth.GetWebSession(ctx, &authv1.GetWebSessionRequest{SessionId: sessionID})
+	resp, err := s.deps.Auth.GetWebSession(ctx, &authv1.GetWebSessionRequest{SessionId: sessionID})
 	if err != nil {
 		return "", fmt.Errorf("lookup play session: %w", err)
 	}
@@ -71,7 +71,7 @@ func (s *Server) exchangeLaunchGrantForPlaySession(
 		clearPlaySessionCookie(w, r, s.requestSchemePolicy)
 		return shellAccess{RedirectToWeb: true}, false
 	}
-	resp, err := s.auth.CreateWebSession(r.Context(), &authv1.CreateWebSessionRequest{UserId: claims.UserID})
+	resp, err := s.deps.Auth.CreateWebSession(r.Context(), &authv1.CreateWebSessionRequest{UserId: claims.UserID})
 	if err != nil || resp == nil || resp.GetSession() == nil {
 		writeJSONError(w, http.StatusBadGateway, "failed to create play session")
 		return shellAccess{}, true

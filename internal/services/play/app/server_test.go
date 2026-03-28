@@ -39,7 +39,7 @@ func TestHandleCampaignShellExchangesLaunchGrantForPlaySession(t *testing.T) {
 	t.Parallel()
 
 	auth := &fakePlayAuthClient{createdSessionID: "ps-1"}
-	server := &Server{auth: auth}
+	server := &Server{deps: Dependencies{Auth: auth}}
 	grantCfg := testPlayLaunchGrantConfig(t)
 	grant, _, err := playlaunchgrant.Issue(grantCfg, playlaunchgrant.IssueInput{
 		GrantID:    "grant-1",
@@ -81,7 +81,7 @@ func TestHandleCampaignShellLaunchGrantOverridesExistingPlaySession(t *testing.T
 		sessions:         map[string]string{"stale-session": "stale-user"},
 		createdSessionID: "ps-2",
 	}
-	server := &Server{auth: auth}
+	server := &Server{deps: Dependencies{Auth: auth}}
 	grantCfg := testPlayLaunchGrantConfig(t)
 	grant, _, err := playlaunchgrant.Issue(grantCfg, playlaunchgrant.IssueInput{
 		GrantID:    "grant-2",
@@ -115,24 +115,26 @@ func TestHandleCampaignShellRendersSPAShellForExistingPlaySession(t *testing.T) 
 	t.Parallel()
 
 	server := &Server{
-		auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
-		interaction: fakePlayInteractionClient{
-			response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
-				CampaignId:   "c1",
-				CampaignName: "The Guildhouse",
-				Viewer:       &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery", Role: gamev1.ParticipantRole_PLAYER},
-				ActiveSession: &gamev1.InteractionSession{
-					SessionId: "s1",
-					Name:      "Session One",
-				},
-			}},
+		deps: Dependencies{
+			Auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
+			Interaction: fakePlayInteractionClient{
+				response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
+					CampaignId:   "c1",
+					CampaignName: "The Guildhouse",
+					Viewer:       &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery", Role: gamev1.ParticipantRole_PLAYER},
+					ActiveSession: &gamev1.InteractionSession{
+						SessionId: "s1",
+						Name:      "Session One",
+					},
+				}},
+			},
+			Campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+			System:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+			Participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+			Characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+			Transcripts:  &fakeTranscriptStore{},
 		},
-		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
-		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
-		transcripts:  &fakeTranscriptStore{},
-		shellAssets:  shellAssets{devServerURL: "http://localhost:5173"},
+		shellAssets: shellAssets{devServerURL: "http://localhost:5173"},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/campaigns/c1", nil)
@@ -191,23 +193,25 @@ func TestHandleBootstrapReturnsPlayContract(t *testing.T) {
 	t.Parallel()
 
 	server := &Server{
-		auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
-		interaction: fakePlayInteractionClient{
-			response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
-				CampaignId:   "c1",
-				CampaignName: "The Guildhouse",
-				Viewer:       &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
-				ActiveSession: &gamev1.InteractionSession{
-					SessionId: "s1",
-					Name:      "Session One",
-				},
-			}},
+		deps: Dependencies{
+			Auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
+			Interaction: fakePlayInteractionClient{
+				response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
+					CampaignId:   "c1",
+					CampaignName: "The Guildhouse",
+					Viewer:       &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
+					ActiveSession: &gamev1.InteractionSession{
+						SessionId: "s1",
+						Name:      "Session One",
+					},
+				}},
+			},
+			Campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+			System:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+			Participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+			Characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+			Transcripts:  &fakeTranscriptStore{},
 		},
-		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
-		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
-		transcripts:  &fakeTranscriptStore{},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap", nil)
@@ -248,18 +252,20 @@ func TestHandleBootstrapUsesCookieScopedRealtimeURL(t *testing.T) {
 	t.Parallel()
 
 	server := &Server{
-		auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
-		interaction: fakePlayInteractionClient{
-			response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
-				CampaignId: "c1",
-				Viewer:     &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
-			}},
+		deps: Dependencies{
+			Auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
+			Interaction: fakePlayInteractionClient{
+				response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
+					CampaignId: "c1",
+					Viewer:     &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
+				}},
+			},
+			Campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+			System:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+			Participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+			Characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+			Transcripts:  &fakeTranscriptStore{},
 		},
-		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
-		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
-		transcripts:  &fakeTranscriptStore{},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap", nil)
@@ -288,18 +294,20 @@ func TestHandleBootstrapRejectsPlaySessionQueryParamWithoutCookie(t *testing.T) 
 	t.Parallel()
 
 	server := &Server{
-		auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
-		interaction: fakePlayInteractionClient{
-			response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
-				CampaignId: "c1",
-				Viewer:     &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
-			}},
+		deps: Dependencies{
+			Auth: &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
+			Interaction: fakePlayInteractionClient{
+				response: &gamev1.GetInteractionStateResponse{State: &gamev1.InteractionState{
+					CampaignId: "c1",
+					Viewer:     &gamev1.InteractionViewer{ParticipantId: "p1", Name: "Avery"},
+				}},
+			},
+			Campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+			System:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+			Participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+			Characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+			Transcripts:  &fakeTranscriptStore{},
 		},
-		campaign:     fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:       fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		participants: fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
-		characters:   fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
-		transcripts:  &fakeTranscriptStore{},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/api/campaigns/c1/bootstrap?play_session=ps-1", nil)
