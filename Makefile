@@ -30,7 +30,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down play-ui-dist play-ui-check play-ui-check-live ai-eval-promptfoo ai-eval-promptfoo-core ai-eval-promptfoo-decision ai-eval-promptfoo-view cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down play-ui-dist play-ui-check play-ui-check-live ai-eval-promptfoo ai-eval-promptfoo-core ai-eval-promptfoo-decision ai-eval-promptfoo-view cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod prod-env setup-hooks
 
 all: proto
 
@@ -347,8 +347,12 @@ catalog-importer: ## Import Daggerheart catalog content
 bootstrap: ## Generate missing keys and start Compose
 	./scripts/bootstrap.sh
 
-bootstrap-prod: ## Bootstrap using .env.production.example
-	ENV_EXAMPLE=.env.production.example ./scripts/bootstrap.sh
+bootstrap-prod: ## Render .env.production locally and start the production Compose stack
+	./scripts/render-prod-env.sh
+	docker compose --env-file .env.production -f docker-compose.production.yml up -d
+
+prod-env: ## Render a minimal production env file locally without starting Compose
+	./scripts/render-prod-env.sh
 
 setup-hooks: ## Configure repository-managed git hooks path
 	@bash -euo pipefail -c '\
