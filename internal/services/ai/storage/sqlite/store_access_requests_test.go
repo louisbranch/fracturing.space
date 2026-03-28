@@ -280,12 +280,13 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 
 	revokedAt := now
 	if err := store.RevokeAccessRequest(context.Background(), accessrequest.AccessRequest{
-		ID:             "request-1",
-		OwnerUserID:    "owner-1",
-		Status:         accessrequest.StatusRevoked,
-		ReviewerUserID: "owner-1",
-		ReviewNote:     "removed",
-		UpdatedAt:      revokedAt,
+		ID:            "request-1",
+		OwnerUserID:   "owner-1",
+		Status:        accessrequest.StatusRevoked,
+		RevokerUserID: "owner-1",
+		RevokeNote:    "removed",
+		RevokedAt:     &revokedAt,
+		UpdatedAt:     revokedAt,
 	}); err != nil {
 		t.Fatalf("revoke access request: %v", err)
 	}
@@ -300,26 +301,36 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 	if got.ReviewerUserID != "owner-1" {
 		t.Fatalf("reviewer_user_id = %q, want %q", got.ReviewerUserID, "owner-1")
 	}
-	if got.ReviewNote != "removed" {
-		t.Fatalf("review_note = %q, want %q", got.ReviewNote, "removed")
+	if got.ReviewNote != "approved" {
+		t.Fatalf("review_note = %q, want %q", got.ReviewNote, "approved")
+	}
+	if got.RevokerUserID != "owner-1" {
+		t.Fatalf("revoker_user_id = %q, want %q", got.RevokerUserID, "owner-1")
+	}
+	if got.RevokeNote != "removed" {
+		t.Fatalf("revoke_note = %q, want %q", got.RevokeNote, "removed")
+	}
+	if got.RevokedAt == nil || !got.RevokedAt.Equal(revokedAt) {
+		t.Fatalf("revoked_at = %v, want %v", got.RevokedAt, revokedAt)
 	}
 	if !got.UpdatedAt.Equal(revokedAt) {
 		t.Fatalf("updated_at = %v, want %v", got.UpdatedAt, revokedAt)
 	}
 
 	if err := store.RevokeAccessRequest(context.Background(), accessrequest.AccessRequest{
-		ID:             "request-1",
-		OwnerUserID:    "owner-1",
-		Status:         accessrequest.StatusRevoked,
-		ReviewerUserID: "owner-1",
-		ReviewNote:     "again",
-		UpdatedAt:      revokedAt.Add(time.Minute),
+		ID:            "request-1",
+		OwnerUserID:   "owner-1",
+		Status:        accessrequest.StatusRevoked,
+		RevokerUserID: "owner-1",
+		RevokeNote:    "again",
+		RevokedAt:     ptrTime(revokedAt.Add(time.Minute)),
+		UpdatedAt:     revokedAt.Add(time.Minute),
 	}); !errors.Is(err, storage.ErrConflict) {
 		t.Fatalf("second revoke error = %v, want %v", err, storage.ErrConflict)
 	}
 }
 
-func TestRevokeAccessRequestRejectsReviewerMismatch(t *testing.T) {
+func TestRevokeAccessRequestRejectsRevokerMismatch(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 3, 0, 0, 0, time.UTC)
 
@@ -340,17 +351,18 @@ func TestRevokeAccessRequestRejectsReviewerMismatch(t *testing.T) {
 	}
 
 	err := store.RevokeAccessRequest(context.Background(), accessrequest.AccessRequest{
-		ID:             "request-1",
-		OwnerUserID:    "owner-1",
-		Status:         accessrequest.StatusRevoked,
-		ReviewerUserID: "owner-2",
-		ReviewNote:     "removed",
-		UpdatedAt:      now,
+		ID:            "request-1",
+		OwnerUserID:   "owner-1",
+		Status:        accessrequest.StatusRevoked,
+		RevokerUserID: "owner-2",
+		RevokeNote:    "removed",
+		RevokedAt:     ptrTime(now),
+		UpdatedAt:     now,
 	})
 	if err == nil {
-		t.Fatal("expected revoke error for reviewer mismatch")
+		t.Fatal("expected revoke error for revoker mismatch")
 	}
-	if !strings.Contains(err.Error(), "reviewer user id must match owner user id") {
-		t.Fatalf("revoke error = %v, want reviewer mismatch", err)
+	if !strings.Contains(err.Error(), "revoker user id must match owner user id") {
+		t.Fatalf("revoke error = %v, want revoker mismatch", err)
 	}
 }

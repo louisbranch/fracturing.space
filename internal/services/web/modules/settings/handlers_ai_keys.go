@@ -15,7 +15,7 @@ import (
 // handleAIKeysGet handles this route in the module transport layer.
 func (h handlers) handleAIKeysGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	h.renderAIKeysPage(w, r, ctx, userID, http.StatusOK, "", "")
+	h.renderAIKeysPage(w, r, ctx, userID, http.StatusOK, SettingsAIKeysForm{}, "")
 }
 
 // handleAIKeysCreate handles this route in the module transport layer.
@@ -25,12 +25,15 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, err)
 		return
 	}
-	label, secret := parseAIKeyCreateInput(r.PostForm)
-	if err := h.ai.CreateAIKey(ctx, userID, label, secret); err != nil {
+	input := parseAIKeyCreateInput(r.PostForm)
+	if err := h.ai.CreateAIKey(ctx, userID, input); err != nil {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
 			loc, lang := h.PageLocalizer(w, r)
-			h.renderAIKeysPage(w, r, ctx, userID, statusCode, label, webi18n.LocalizeError(loc, err, lang))
+			h.renderAIKeysPage(w, r, ctx, userID, statusCode, SettingsAIKeysForm{
+				Label:    input.Label,
+				Provider: input.Provider,
+			}, webi18n.LocalizeError(loc, err, lang))
 			return
 		}
 		h.WriteError(w, r, err)
@@ -58,13 +61,14 @@ func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, cred
 }
 
 // renderAIKeysPage centralizes this web behavior in one helper seam.
-func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx context.Context, userID string, statusCode int, label string, errorMessage string) {
+func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx context.Context, userID string, statusCode int, form SettingsAIKeysForm, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
 	rows, err := h.loadAIKeyRows(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
+	form.ErrorMessage = errorMessage
 	h.writeSettingsPage(
 		w,
 		r,
@@ -72,10 +76,6 @@ func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx c
 		statusCode,
 		routepath.AppSettingsAIKeys,
 		webtemplates.T(loc, "web.settings.page_ai_keys_title"),
-		SettingsAIKeysFragment(SettingsAIKeysForm{
-			Label:        label,
-			Provider:     "OpenAI",
-			ErrorMessage: errorMessage,
-		}, rows, loc),
+		SettingsAIKeysFragment(form, rows, loc),
 	)
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/domain"
 	"google.golang.org/grpc/codes"
 	grpcmetadata "google.golang.org/grpc/metadata"
@@ -82,7 +82,7 @@ func TestListNotifications_UsesCallerIdentity(t *testing.T) {
 	}
 	svc := NewService(fake)
 
-	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(metadata.UserIDHeader, "user-1"))
+	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(grpcmeta.UserIDHeader, "user-1"))
 	resp, err := svc.ListNotifications(ctx, &notificationsv1.ListNotificationsRequest{
 		PageSize: 10,
 	})
@@ -114,7 +114,7 @@ func TestGetNotification_UsesCallerIdentity(t *testing.T) {
 	}
 	svc := NewService(fake)
 
-	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(metadata.UserIDHeader, "user-1"))
+	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(grpcmeta.UserIDHeader, "user-1"))
 	resp, err := svc.GetNotification(ctx, &notificationsv1.GetNotificationRequest{NotificationId: "notif-3"})
 	if err != nil {
 		t.Fatalf("GetNotification() error = %v", err)
@@ -137,7 +137,7 @@ func TestMarkNotificationRead_NotFound(t *testing.T) {
 		markReadErr: domain.ErrNotFound,
 	}
 	svc := NewService(fake)
-	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(metadata.UserIDHeader, "user-1"))
+	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(grpcmeta.UserIDHeader, "user-1"))
 
 	_, err := svc.MarkNotificationRead(ctx, &notificationsv1.MarkNotificationReadRequest{NotificationId: "missing"})
 	if status.Code(err) != codes.NotFound {
@@ -166,7 +166,7 @@ func TestGetUnreadNotificationStatus_UsesCallerIdentity(t *testing.T) {
 	}
 	svc := NewService(fake)
 
-	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(metadata.UserIDHeader, "user-1"))
+	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(grpcmeta.UserIDHeader, "user-1"))
 	resp, err := svc.GetUnreadNotificationStatus(ctx, &notificationsv1.GetUnreadNotificationStatusRequest{})
 	if err != nil {
 		t.Fatalf("get unread notification status: %v", err)

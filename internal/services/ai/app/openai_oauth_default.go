@@ -5,44 +5,41 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provideroauth"
 )
 
 type defaultOpenAIOAuthAdapter struct{}
 
-func newDefaultOpenAIOAuthAdapter() provider.OAuthAdapter {
+func newDefaultOpenAIOAuthAdapter() provideroauth.Adapter {
 	return defaultOpenAIOAuthAdapter{}
 }
 
-func (defaultOpenAIOAuthAdapter) BuildAuthorizationURL(input provider.AuthorizationURLInput) (string, error) {
+func (defaultOpenAIOAuthAdapter) BuildAuthorizationURL(input provideroauth.AuthorizationURLInput) (string, error) {
 	return fmt.Sprintf("https://oauth.fracturing.space/openai?state=%s", strings.TrimSpace(input.State)), nil
 }
 
-func (defaultOpenAIOAuthAdapter) ExchangeAuthorizationCode(_ context.Context, input provider.AuthorizationCodeInput) (provider.TokenExchangeResult, error) {
+func (defaultOpenAIOAuthAdapter) ExchangeAuthorizationCode(_ context.Context, input provideroauth.AuthorizationCodeInput) (provideroauth.TokenExchangeResult, error) {
 	code := strings.TrimSpace(input.AuthorizationCode)
 	if code == "" {
-		return provider.TokenExchangeResult{}, fmt.Errorf("authorization code is required")
+		return provideroauth.TokenExchangeResult{}, fmt.Errorf("authorization code is required")
 	}
-	return provider.TokenExchangeResult{
-		TokenPlaintext:   "token:" + code,
-		RefreshSupported: true,
+	return provideroauth.TokenExchangeResult{
+		TokenPayload: provideroauth.TokenPayload{
+			AccessToken:  "token:" + code,
+			RefreshToken: "refresh:" + code,
+		},
 	}, nil
 }
 
-func (defaultOpenAIOAuthAdapter) RefreshToken(_ context.Context, input provider.RefreshTokenInput) (provider.TokenExchangeResult, error) {
+func (defaultOpenAIOAuthAdapter) RefreshToken(_ context.Context, input provideroauth.RefreshTokenInput) (provideroauth.TokenExchangeResult, error) {
 	refreshToken := strings.TrimSpace(input.RefreshToken)
 	if refreshToken == "" {
-		return provider.TokenExchangeResult{}, fmt.Errorf("refresh token is required")
+		return provideroauth.TokenExchangeResult{}, fmt.Errorf("refresh token is required")
 	}
-	return provider.TokenExchangeResult{
-		TokenPlaintext:   "token:refresh:" + refreshToken,
-		RefreshSupported: true,
+	return provideroauth.TokenExchangeResult{
+		TokenPayload: provideroauth.TokenPayload{
+			AccessToken:  "token:refresh:" + refreshToken,
+			RefreshToken: "refresh:" + refreshToken,
+		},
 	}, nil
-}
-
-func (defaultOpenAIOAuthAdapter) RevokeToken(_ context.Context, input provider.RevokeTokenInput) error {
-	if strings.TrimSpace(input.Token) == "" {
-		return fmt.Errorf("token is required")
-	}
-	return nil
 }

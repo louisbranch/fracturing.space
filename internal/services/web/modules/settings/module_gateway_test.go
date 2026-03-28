@@ -110,8 +110,15 @@ func TestGRPCGatewayListCreateAndRevokeAIKeys(t *testing.T) {
 	if err != nil || len(rows) != 1 || !rows[0].CanRevoke {
 		t.Fatalf("unexpected rows=%+v err=%v", rows, err)
 	}
-	if err := gateway.CreateAIKey(context.Background(), "user-1", "Primary", "sk-secret"); err != nil {
+	if err := gateway.CreateAIKey(context.Background(), "user-1", settingsapp.CreateAIKeyInput{
+		Label:    "Primary",
+		Provider: "anthropic",
+		Secret:   "sk-secret",
+	}); err != nil {
 		t.Fatalf("CreateAIKey() error = %v", err)
+	}
+	if credentials.lastCreateReq == nil || credentials.lastCreateReq.GetProvider() != aiv1.Provider_PROVIDER_ANTHROPIC {
+		t.Fatalf("unexpected create credential req: %+v", credentials.lastCreateReq)
 	}
 	if err := gateway.RevokeAIKey(context.Background(), "user-1", "cred-1"); err != nil {
 		t.Fatalf("RevokeAIKey() error = %v", err)

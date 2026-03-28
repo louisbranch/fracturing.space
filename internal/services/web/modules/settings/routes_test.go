@@ -237,7 +237,7 @@ func (staticGateway) ListAIKeys(context.Context, string) ([]settingsapp.Settings
 	return []settingsapp.SettingsAIKey{}, nil
 }
 
-func (staticGateway) CreateAIKey(context.Context, string, string, string) error {
+func (staticGateway) CreateAIKey(context.Context, string, settingsapp.CreateAIKeyInput) error {
 	return nil
 }
 
@@ -250,7 +250,7 @@ func (staticGateway) ListAIAgents(context.Context, string) ([]settingsapp.Settin
 }
 
 func (staticGateway) ListAIProviderModels(context.Context, string, string) ([]settingsapp.SettingsAIModelOption, error) {
-	return []settingsapp.SettingsAIModelOption{{ID: "gpt-4o-mini", OwnedBy: "openai"}}, nil
+	return []settingsapp.SettingsAIModelOption{{ID: "gpt-4o-mini"}}, nil
 }
 
 func (staticGateway) CreateAIAgent(context.Context, string, settingsapp.CreateAIAgentInput) error {

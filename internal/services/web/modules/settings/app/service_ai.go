@@ -97,17 +97,18 @@ func (s aiService) ListAIProviderModels(ctx context.Context, userID string, cred
 }
 
 // CreateAIKey executes package-scoped creation behavior for this flow.
-func (s aiService) CreateAIKey(ctx context.Context, userID string, label string, secret string) error {
+func (s aiService) CreateAIKey(ctx context.Context, userID string, input CreateAIKeyInput) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return err
 	}
-	label = strings.TrimSpace(label)
-	secret = strings.TrimSpace(secret)
-	if label == "" || secret == "" {
-		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_keys.error_required", "label and secret are required")
+	input.Label = strings.TrimSpace(input.Label)
+	input.Provider = strings.ToLower(strings.TrimSpace(input.Provider))
+	input.Secret = strings.TrimSpace(input.Secret)
+	if input.Label == "" || input.Provider == "" || input.Secret == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_keys.error_required", "label, provider, and secret are required")
 	}
-	return s.aiKeyGateway.CreateAIKey(ctx, resolvedUserID, label, secret)
+	return s.aiKeyGateway.CreateAIKey(ctx, resolvedUserID, input)
 }
 
 // CreateAIAgent executes package-scoped agent creation behavior.
@@ -230,6 +231,5 @@ func normalizeSettingsAIAgent(agent SettingsAIAgent) SettingsAIAgent {
 // normalizeSettingsAIModelOption ensures model options render predictably.
 func normalizeSettingsAIModelOption(option SettingsAIModelOption) SettingsAIModelOption {
 	option.ID = strings.TrimSpace(option.ID)
-	option.OwnedBy = strings.TrimSpace(option.OwnedBy)
 	return option
 }

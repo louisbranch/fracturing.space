@@ -7,7 +7,7 @@ import (
 )
 
 func TestBuildPlayerPhaseStartReminderIncludesDraftNarration(t *testing.T) {
-	got := buildPlayerPhaseStartReminder("  Hold the pier.  ")
+	got := NewInteractionTurnPolicy().Controller(DefaultCommitToolName).BuildPlayerPhaseStartReminder("  Hold the pier.  ")
 	if !strings.Contains(got, "interaction_open_scene_player_phase") {
 		t.Fatalf("reminder missing player phase tool guidance: %q", got)
 	}

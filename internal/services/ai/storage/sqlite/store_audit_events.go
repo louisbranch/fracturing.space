@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
 )
 
-func (s *Store) PutAuditEvent(ctx context.Context, record storage.AuditEventRecord) error {
+func (s *Store) PutAuditEvent(ctx context.Context, record auditevent.Event) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -63,18 +63,20 @@ INSERT INTO ai_audit_events (
 }
 
 // ListAuditEventsByOwner returns a page of audit events scoped to one owner.
-func (s *Store) ListAuditEventsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter storage.AuditEventFilter) (storage.AuditEventPage, error) {
+func (s *Store) ListAuditEventsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter auditevent.Filter) (auditevent.Page, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.AuditEventPage{}, err
+		return auditevent.Page{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return storage.AuditEventPage{}, fmt.Errorf("storage is not configured")
+	db, err := requireStoreDB(s)
+	if err != nil {
+		return auditevent.Page{}, err
 	}
 	if ownerUserID == "" {
-		return storage.AuditEventPage{}, fmt.Errorf("owner user id is required")
+		return auditevent.Page{}, fmt.Errorf("owner user id is required")
 	}
-	if pageSize <= 0 {
-		return storage.AuditEventPage{}, fmt.Errorf("page size must be greater than zero")
+	limit, err := keysetPageLimit(pageSize)
+	if err != nil {
+		return auditevent.Page{}, err
 	}
 	eventName := filter.EventName
 	agentID := filter.AgentID
@@ -92,10 +94,9 @@ func (s *Store) ListAuditEventsByOwner(ctx context.Context, ownerUserID string, 
 		createdBeforeMillis = &value
 	}
 	if createdAfterMillis != nil && createdBeforeMillis != nil && *createdAfterMillis > *createdBeforeMillis {
-		return storage.AuditEventPage{}, fmt.Errorf("created_after must be before or equal to created_before")
+		return auditevent.Page{}, fmt.Errorf("created_after must be before or equal to created_before")
 	}
 
-	limit := pageSize + 1
 	whereParts := []string{"owner_user_id = ?"}
 	args := []any{ownerUserID}
 	if eventName != "" {
@@ -117,7 +118,7 @@ func (s *Store) ListAuditEventsByOwner(ctx context.Context, ownerUserID string, 
 	if pageToken != "" {
 		tokenValue, parseErr := strconv.ParseInt(pageToken, 10, 64)
 		if parseErr != nil || tokenValue < 0 {
-			return storage.AuditEventPage{}, fmt.Errorf("invalid page token")
+			return auditevent.Page{}, fmt.Errorf("invalid page token")
 		}
 		whereParts = append(whereParts, "id > ?")
 		args = append(args, tokenValue)
@@ -133,48 +134,47 @@ WHERE %s
 ORDER BY id
 LIMIT ?
 `, strings.Join(whereParts, " AND "))
-	rows, err := s.sqlDB.QueryContext(ctx, query, args...)
+	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return storage.AuditEventPage{}, fmt.Errorf("list audit events by owner: %w", err)
+		return auditevent.Page{}, fmt.Errorf("list audit events by owner: %w", err)
 	}
 	defer rows.Close()
 
-	page := storage.AuditEventPage{AuditEvents: make([]storage.AuditEventRecord, 0, pageSize)}
-	for rows.Next() {
-		var (
-			idValue      int64
-			eventName    string
-			actorUserID  string
-			ownerUser    string
-			requesterID  string
-			agentID      string
-			requestID    string
-			outcome      string
-			createdAtRaw int64
-		)
-		if err := rows.Scan(&idValue, &eventName, &actorUserID, &ownerUser, &requesterID, &agentID, &requestID, &outcome, &createdAtRaw); err != nil {
-			return storage.AuditEventPage{}, fmt.Errorf("scan audit event row: %w", err)
-		}
-		page.AuditEvents = append(page.AuditEvents, storage.AuditEventRecord{
-			ID:              strconv.FormatInt(idValue, 10),
-			EventName:       eventName,
-			ActorUserID:     actorUserID,
-			OwnerUserID:     ownerUser,
-			RequesterUserID: requesterID,
-			AgentID:         agentID,
-			AccessRequestID: requestID,
-			Outcome:         outcome,
-			CreatedAt:       sqliteutil.FromMillis(createdAtRaw),
-		})
+	auditEvents, nextPageToken, err := scanIDKeysetPage(rows, pageSize, scanAuditEventRecord, "audit event", func(event auditevent.Event) string {
+		return event.ID
+	})
+	if err != nil {
+		return auditevent.Page{}, err
 	}
-	if err := rows.Err(); err != nil {
-		return storage.AuditEventPage{}, fmt.Errorf("iterate audit event rows: %w", err)
+	return auditevent.Page{AuditEvents: auditEvents, NextPageToken: nextPageToken}, nil
+}
+
+func scanAuditEventRecord(s scanner) (auditevent.Event, error) {
+	var (
+		idValue      int64
+		eventName    string
+		actorUserID  string
+		ownerUser    string
+		requesterID  string
+		agentID      string
+		requestID    string
+		outcome      string
+		createdAtRaw int64
+	)
+	if err := s.Scan(&idValue, &eventName, &actorUserID, &ownerUser, &requesterID, &agentID, &requestID, &outcome, &createdAtRaw); err != nil {
+		return auditevent.Event{}, err
 	}
-	if len(page.AuditEvents) > pageSize {
-		page.NextPageToken = page.AuditEvents[pageSize-1].ID
-		page.AuditEvents = page.AuditEvents[:pageSize]
-	}
-	return page, nil
+	return auditevent.Event{
+		ID:              strconv.FormatInt(idValue, 10),
+		EventName:       auditevent.Name(eventName),
+		ActorUserID:     actorUserID,
+		OwnerUserID:     ownerUser,
+		RequesterUserID: requesterID,
+		AgentID:         agentID,
+		AccessRequestID: requestID,
+		Outcome:         outcome,
+		CreatedAt:       sqliteutil.FromMillis(createdAtRaw),
+	}, nil
 }
 
 // PutProviderGrant persists a provider grant record.

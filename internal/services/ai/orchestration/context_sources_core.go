@@ -24,6 +24,14 @@ func CoreContextSources() []ContextSource {
 	}
 }
 
+// NewCoreContextSourceRegistry builds the always-on collector used by prompt
+// builders before any game-system-specific sources are appended.
+func NewCoreContextSourceRegistry() *ContextSourceRegistry {
+	reg := NewContextSourceRegistry()
+	reg.RegisterAll(CoreContextSources()...)
+	return reg
+}
+
 func currentContextSource(ctx context.Context, sess Session, _ PromptInput) (BriefContribution, error) {
 	current, err := sess.ReadResource(ctx, "context://current")
 	if err != nil {

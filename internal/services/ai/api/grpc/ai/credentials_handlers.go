@@ -33,12 +33,9 @@ func NewCredentialHandlers(cfg CredentialHandlersConfig) (*CredentialHandlers, e
 
 // CreateCredential creates one user-owned provider credential.
 func (h *CredentialHandlers) CreateCredential(ctx context.Context, in *aiv1.CreateCredentialRequest) (*aiv1.CreateCredentialResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "create credential request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "create credential request is required")
+	if err != nil {
+		return nil, err
 	}
 	providerID, err := providerFromProto(in.GetProvider())
 	if err != nil {
@@ -59,12 +56,9 @@ func (h *CredentialHandlers) CreateCredential(ctx context.Context, in *aiv1.Crea
 
 // ListCredentials returns a page of credentials owned by the caller.
 func (h *CredentialHandlers) ListCredentials(ctx context.Context, in *aiv1.ListCredentialsRequest) (*aiv1.ListCredentialsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list credentials request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "list credentials request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	page, err := h.svc.List(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken())
@@ -84,12 +78,9 @@ func (h *CredentialHandlers) ListCredentials(ctx context.Context, in *aiv1.ListC
 
 // RevokeCredential revokes one credential owned by the caller.
 func (h *CredentialHandlers) RevokeCredential(ctx context.Context, in *aiv1.RevokeCredentialRequest) (*aiv1.RevokeCredentialResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "revoke credential request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "revoke credential request is required")
+	if err != nil {
+		return nil, err
 	}
 	credentialID := strings.TrimSpace(in.GetCredentialId())
 	if credentialID == "" {

@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/a-h/templ"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc/metadata"
 )
 

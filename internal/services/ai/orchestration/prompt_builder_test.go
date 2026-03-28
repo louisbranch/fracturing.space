@@ -356,9 +356,5 @@ func TestBriefPromptRendererOOCOpenModeIncludesResolutionGuidance(t *testing.T) 
 // for tests that construct a PromptBuilder via NewPromptBuilder. Game-system
 // sources (e.g. Daggerheart) are tested in their own subpackages.
 func fullSourceRegistry() *ContextSourceRegistry {
-	reg := NewContextSourceRegistry()
-	for _, src := range CoreContextSources() {
-		reg.Register(src)
-	}
-	return reg
+	return NewCoreContextSourceRegistry()
 }

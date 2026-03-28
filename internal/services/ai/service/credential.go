@@ -7,26 +7,29 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providercatalog"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // CredentialService handles credential lifecycle operations.
 type CredentialService struct {
-	credentialStore storage.CredentialStore
-	sealer          secret.Sealer
-	usageGuard      *UsageGuard
-	clock           Clock
-	idGenerator     IDGenerator
+	credentialStore  storage.CredentialStore
+	providerRegistry *providercatalog.Registry
+	sealer           secret.Sealer
+	usagePolicy      *UsagePolicy
+	clock            Clock
+	idGenerator      IDGenerator
 }
 
 // CredentialServiceConfig declares dependencies for the credential service.
 type CredentialServiceConfig struct {
-	CredentialStore storage.CredentialStore
-	Sealer          secret.Sealer
-	UsageGuard      *UsageGuard
-	Clock           Clock
-	IDGenerator     IDGenerator
+	CredentialStore  storage.CredentialStore
+	ProviderRegistry *providercatalog.Registry
+	Sealer           secret.Sealer
+	UsagePolicy      *UsagePolicy
+	Clock            Clock
+	IDGenerator      IDGenerator
 }
 
 // NewCredentialService builds a credential service from explicit deps.
@@ -37,12 +40,16 @@ func NewCredentialService(cfg CredentialServiceConfig) (*CredentialService, erro
 	if cfg.Sealer == nil {
 		return nil, fmt.Errorf("ai: NewCredentialService: sealer is required")
 	}
+	if err := RequireProviderRegistry(cfg.ProviderRegistry, "NewCredentialService"); err != nil {
+		return nil, err
+	}
 	return &CredentialService{
-		credentialStore: cfg.CredentialStore,
-		sealer:          cfg.Sealer,
-		usageGuard:      cfg.UsageGuard,
-		clock:           withDefaultClock(cfg.Clock),
-		idGenerator:     withDefaultIDGenerator(cfg.IDGenerator),
+		credentialStore:  cfg.CredentialStore,
+		providerRegistry: cfg.ProviderRegistry,
+		sealer:           cfg.Sealer,
+		usagePolicy:      cfg.UsagePolicy,
+		clock:            withDefaultClock(cfg.Clock),
+		idGenerator:      withDefaultIDGenerator(cfg.IDGenerator),
 	}, nil
 }
 
@@ -65,6 +72,9 @@ func (s *CredentialService) Create(ctx context.Context, input CreateCredentialIn
 	}, s.clock, s.idGenerator)
 	if err != nil {
 		return credential.Credential{}, Errorf(ErrKindInvalidArgument, "%s", err)
+	}
+	if !s.providerRegistry.HasProvider(created.Provider) {
+		return credential.Credential{}, Errorf(ErrKindFailedPrecondition, "provider is unavailable")
 	}
 
 	sealedSecret, err := s.sealer.Seal(created.Secret)
@@ -97,8 +107,8 @@ func (s *CredentialService) Revoke(ctx context.Context, ownerUserID, credentialI
 	if credentialID == "" {
 		return credential.Credential{}, Errorf(ErrKindInvalidArgument, "credential_id is required")
 	}
-	if s.usageGuard != nil {
-		if err := s.usageGuard.EnsureCredentialNotBoundToActiveCampaigns(ctx, ownerUserID, credentialID); err != nil {
+	if s.usagePolicy != nil {
+		if err := s.usagePolicy.EnsureCredentialNotBoundToActiveCampaigns(ctx, ownerUserID, credentialID); err != nil {
 			return credential.Credential{}, err
 		}
 	}

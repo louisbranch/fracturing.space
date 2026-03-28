@@ -24,13 +24,13 @@ type CampaignDebugTurnsPage struct {
 
 // CampaignDebugService handles read-only access to AI campaign debug traces.
 type CampaignDebugService struct {
-	debugTraceStore storage.DebugTraceStore
+	debugTraceStore debugtrace.Store
 	updateBroker    *CampaignDebugUpdateBroker
 }
 
 // CampaignDebugServiceConfig declares dependencies for debug-trace reads.
 type CampaignDebugServiceConfig struct {
-	DebugTraceStore storage.DebugTraceStore
+	DebugTraceStore debugtrace.Store
 	UpdateBroker    *CampaignDebugUpdateBroker
 }
 

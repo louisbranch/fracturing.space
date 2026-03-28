@@ -12,8 +12,8 @@ const (
 	AuthReferenceKindProviderGrant AuthReferenceKind = "provider_grant"
 )
 
-// AuthReference keeps agent auth selection typed so callers do not juggle
-// nullable ID pairs and reimplement exclusivity rules.
+// AuthReference keeps agent auth selection typed so callers do not reimplement
+// kind dispatch and exclusivity rules.
 type AuthReference struct {
 	Kind AuthReferenceKind
 	ID   string
@@ -27,29 +27,6 @@ func CredentialAuthReference(credentialID string) AuthReference {
 // ProviderGrantAuthReference constructs one provider-grant-backed auth reference.
 func ProviderGrantAuthReference(providerGrantID string) AuthReference {
 	return AuthReference{Kind: AuthReferenceKindProviderGrant, ID: providerGrantID}
-}
-
-// AuthReferenceFromIDs builds one typed auth reference from the legacy storage
-// and transport shape that exposes nullable credential/grant IDs.
-func AuthReferenceFromIDs(credentialID string, providerGrantID string, require bool) (AuthReference, error) {
-	credentialID = strings.TrimSpace(credentialID)
-	providerGrantID = strings.TrimSpace(providerGrantID)
-
-	hasCredential := credentialID != ""
-	hasProviderGrant := providerGrantID != ""
-	if hasCredential && hasProviderGrant {
-		return AuthReference{}, ErrMultipleAuthReferences
-	}
-	if !hasCredential && !hasProviderGrant {
-		if require {
-			return AuthReference{}, ErrMissingAuthReference
-		}
-		return AuthReference{}, nil
-	}
-	if hasCredential {
-		return NormalizeAuthReference(CredentialAuthReference(credentialID), require)
-	}
-	return NormalizeAuthReference(ProviderGrantAuthReference(providerGrantID), require)
 }
 
 // NormalizeAuthReference trims and validates one typed auth reference.

@@ -27,7 +27,7 @@ func (unavailableGateway) ListAIProviderModels(context.Context, string, string) 
 }
 
 // CreateAIKey executes package-scoped creation behavior for this flow.
-func (unavailableGateway) CreateAIKey(context.Context, string, string, string) error {
+func (unavailableGateway) CreateAIKey(context.Context, string, CreateAIKeyInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
 }
 

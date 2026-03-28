@@ -429,10 +429,13 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		t.Fatalf("create credential: %v", err)
 	}
 	agentResp, err := agentClient.CreateAgent(ctxWithUser, &aiv1.CreateAgentRequest{
-		Label:        strings.TrimSpace(opts.AgentLabel),
-		Provider:     aiv1.Provider_PROVIDER_OPENAI,
-		Model:        strings.TrimSpace(opts.Model),
-		CredentialId: credentialResp.GetCredential().GetId(),
+		Label:    strings.TrimSpace(opts.AgentLabel),
+		Provider: aiv1.Provider_PROVIDER_OPENAI,
+		Model:    strings.TrimSpace(opts.Model),
+		AuthReference: &aiv1.AgentAuthReference{
+			Type: aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_CREDENTIAL,
+			Id:   credentialResp.GetCredential().GetId(),
+		},
 	})
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
@@ -565,18 +568,19 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		Reference:   &grpcReferenceAdapter{client: aiv1.NewSystemReferenceServiceClient(aiInternalConn)},
 	})
 	runner := orchestration.NewRunner(orchestration.RunnerConfig{
-		Dialer:   dialer,
-		MaxSteps: 16,
+		Dialer:     dialer,
+		TurnPolicy: orchestration.NewInteractionTurnPolicy(),
+		MaxSteps:   16,
 	})
 	runResp, err := runner.Run(context.Background(), orchestration.Input{
-		CampaignID:       campaignID,
-		SessionID:        sessionID,
-		ParticipantID:    aiGMParticipantID,
-		Input:            spec.Prompt,
-		Model:            strings.TrimSpace(opts.Model),
-		ReasoningEffort:  strings.TrimSpace(opts.ReasoningEffort),
-		CredentialSecret: strings.TrimSpace(opts.CredentialSecret),
-		Provider:         provider,
+		CampaignID:      campaignID,
+		SessionID:       sessionID,
+		ParticipantID:   aiGMParticipantID,
+		Input:           spec.Prompt,
+		Model:           strings.TrimSpace(opts.Model),
+		ReasoningEffort: strings.TrimSpace(opts.ReasoningEffort),
+		AuthToken:       strings.TrimSpace(opts.CredentialSecret),
+		Provider:        provider,
 	})
 	if err != nil {
 		t.Fatalf("run campaign turn: %v", err)

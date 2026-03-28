@@ -108,10 +108,7 @@ func mapAIAgentCredentialTemplateOptions(options []settingsapp.SettingsAICredent
 func mapAIModelTemplateOptions(models []settingsapp.SettingsAIModelOption) []SettingsAIModelOption {
 	rows := make([]SettingsAIModelOption, 0, len(models))
 	for _, model := range models {
-		rows = append(rows, SettingsAIModelOption{
-			ID:      model.ID,
-			OwnedBy: model.OwnedBy,
-		})
+		rows = append(rows, SettingsAIModelOption{ID: model.ID})
 	}
 	return rows
 }

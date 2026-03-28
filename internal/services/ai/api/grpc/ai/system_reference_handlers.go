@@ -23,15 +23,15 @@ func NewSystemReferenceHandlers(corpus *referencecorpus.Corpus) *SystemReference
 
 // SearchSystemReference searches the configured read-only system reference corpus.
 func (h *SystemReferenceHandlers) SearchSystemReference(ctx context.Context, in *aiv1.SearchSystemReferenceRequest) (*aiv1.SearchSystemReferenceResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "search system reference request is required")
+	if err := requireUnaryRequest(in, "search system reference request is required"); err != nil {
+		return nil, err
 	}
 	if h.systemReferenceCorpus == nil {
 		return nil, status.Error(codes.FailedPrecondition, "system reference corpus is unavailable")
 	}
 	results, err := h.systemReferenceCorpus.Search(ctx, in.GetSystem(), in.GetQuery(), int(in.GetMaxResults()))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "search system reference: %v", err)
+		return nil, transportErrorToStatus(err, transportErrorConfig{Operation: "search system reference"})
 	}
 	resp := &aiv1.SearchSystemReferenceResponse{Results: make([]*aiv1.SystemReferenceDocumentSummary, 0, len(results))}
 	for _, result := range results {
@@ -42,15 +42,15 @@ func (h *SystemReferenceHandlers) SearchSystemReference(ctx context.Context, in 
 
 // ReadSystemReferenceDocument returns one full reference document.
 func (h *SystemReferenceHandlers) ReadSystemReferenceDocument(ctx context.Context, in *aiv1.ReadSystemReferenceDocumentRequest) (*aiv1.ReadSystemReferenceDocumentResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "read system reference request is required")
+	if err := requireUnaryRequest(in, "read system reference request is required"); err != nil {
+		return nil, err
 	}
 	if h.systemReferenceCorpus == nil {
 		return nil, status.Error(codes.FailedPrecondition, "system reference corpus is unavailable")
 	}
 	document, err := h.systemReferenceCorpus.Read(ctx, in.GetSystem(), in.GetDocumentId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "read system reference document: %v", err)
+		return nil, transportErrorToStatus(err, transportErrorConfig{Operation: "read system reference document"})
 	}
 	return &aiv1.ReadSystemReferenceDocumentResponse{Document: referenceDocumentToProto(document)}, nil
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"

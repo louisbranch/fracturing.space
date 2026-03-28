@@ -43,7 +43,7 @@ func (s *Store) PutAgent(ctx context.Context, a agent.Agent) error {
 
 	_, err := s.sqlDB.ExecContext(ctx, `
 INSERT INTO ai_agents (
-	id, owner_user_id, label, instructions, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+	id, owner_user_id, label, instructions, provider, model, auth_reference_type, auth_reference_id, status, created_at, updated_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
 	owner_user_id = excluded.owner_user_id,
@@ -51,8 +51,8 @@ ON CONFLICT(id) DO UPDATE SET
 	instructions = excluded.instructions,
 	provider = excluded.provider,
 	model = excluded.model,
-	credential_id = excluded.credential_id,
-	provider_grant_id = excluded.provider_grant_id,
+	auth_reference_type = excluded.auth_reference_type,
+	auth_reference_id = excluded.auth_reference_id,
 	status = excluded.status,
 	updated_at = excluded.updated_at
 `,
@@ -62,8 +62,8 @@ ON CONFLICT(id) DO UPDATE SET
 		a.Instructions,
 		string(a.Provider),
 		a.Model,
-		a.AuthReference.CredentialID(),
-		a.AuthReference.ProviderGrantID(),
+		a.AuthReference.Type(),
+		a.AuthReference.ID,
 		string(a.Status),
 		sqliteutil.ToMillis(a.CreatedAt),
 		sqliteutil.ToMillis(a.UpdatedAt),
@@ -90,7 +90,7 @@ func (s *Store) GetAgent(ctx context.Context, agentID string) (agent.Agent, erro
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
-SELECT id, owner_user_id, label, instructions, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+SELECT id, owner_user_id, label, instructions, provider, model, auth_reference_type, auth_reference_id, status, created_at, updated_at
 FROM ai_agents
 WHERE id = ?
 `, agentID)
@@ -110,32 +110,30 @@ func (s *Store) ListAgentsByOwner(ctx context.Context, ownerUserID string, pageS
 	if err := ctx.Err(); err != nil {
 		return agent.Page{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return agent.Page{}, fmt.Errorf("storage is not configured")
+	db, err := requireStoreDB(s)
+	if err != nil {
+		return agent.Page{}, err
 	}
 	if ownerUserID == "" {
 		return agent.Page{}, fmt.Errorf("owner user id is required")
 	}
-	if pageSize <= 0 {
-		return agent.Page{}, fmt.Errorf("page size must be greater than zero")
+	limit, err := keysetPageLimit(pageSize)
+	if err != nil {
+		return agent.Page{}, err
 	}
 
-	limit := pageSize + 1
-	var (
-		rows *sql.Rows
-		err  error
-	)
+	var rows *sql.Rows
 	if pageToken == "" {
-		rows, err = s.sqlDB.QueryContext(ctx, `
-SELECT id, owner_user_id, label, instructions, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+		rows, err = db.QueryContext(ctx, `
+SELECT id, owner_user_id, label, instructions, provider, model, auth_reference_type, auth_reference_id, status, created_at, updated_at
 FROM ai_agents
 WHERE owner_user_id = ?
 ORDER BY id
 LIMIT ?
 `, ownerUserID, limit)
 	} else {
-		rows, err = s.sqlDB.QueryContext(ctx, `
-SELECT id, owner_user_id, label, instructions, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+		rows, err = db.QueryContext(ctx, `
+SELECT id, owner_user_id, label, instructions, provider, model, auth_reference_type, auth_reference_id, status, created_at, updated_at
 FROM ai_agents
 WHERE owner_user_id = ? AND id > ?
 ORDER BY id
@@ -161,25 +159,26 @@ func (s *Store) ListAccessibleAgents(ctx context.Context, userID string, pageSiz
 	if err := ctx.Err(); err != nil {
 		return agent.Page{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return agent.Page{}, fmt.Errorf("storage is not configured")
+	db, err := requireStoreDB(s)
+	if err != nil {
+		return agent.Page{}, err
 	}
 	if userID == "" {
 		return agent.Page{}, fmt.Errorf("user id is required")
 	}
-	if pageSize <= 0 {
-		return agent.Page{}, fmt.Errorf("page size must be greater than zero")
+	limit, err := keysetPageLimit(pageSize)
+	if err != nil {
+		return agent.Page{}, err
 	}
 
-	limit := pageSize + 1
 	// UNION deduplicates: an owned agent that also has an access request
 	// appears once.
 	const baseQuery = `
-SELECT id, owner_user_id, label, instructions, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+SELECT id, owner_user_id, label, instructions, provider, model, auth_reference_type, auth_reference_id, status, created_at, updated_at
 FROM ai_agents
 WHERE owner_user_id = ? AND id > ?
 UNION
-SELECT a.id, a.owner_user_id, a.label, a.instructions, a.provider, a.model, a.credential_id, a.provider_grant_id, a.status, a.created_at, a.updated_at
+SELECT a.id, a.owner_user_id, a.label, a.instructions, a.provider, a.model, a.auth_reference_type, a.auth_reference_id, a.status, a.created_at, a.updated_at
 FROM ai_agents a
 INNER JOIN ai_access_requests ar ON a.id = ar.agent_id AND a.owner_user_id = ar.owner_user_id
 WHERE ar.requester_user_id = ? AND ar.scope = 'invoke' AND ar.status = 'approved' AND a.id > ?
@@ -191,7 +190,7 @@ LIMIT ?`
 		cursor = pageToken
 	}
 
-	rows, err := s.sqlDB.QueryContext(ctx, baseQuery, userID, cursor, userID, cursor, limit)
+	rows, err := db.QueryContext(ctx, baseQuery, userID, cursor, userID, cursor, limit)
 	if err != nil {
 		return agent.Page{}, fmt.Errorf("list accessible agents: %w", err)
 	}
@@ -239,13 +238,13 @@ WHERE owner_user_id = ? AND id = ?
 // scanAgent reconstructs one agent.Agent from a database row.
 func scanAgent(s scanner) (agent.Agent, error) {
 	var (
-		a               agent.Agent
-		providerStr     string
-		credentialID    string
-		providerGrantID string
-		statusStr       string
-		createdAt       int64
-		updatedAt       int64
+		a           agent.Agent
+		providerStr string
+		authRefType string
+		authRefID   string
+		statusStr   string
+		createdAt   int64
+		updatedAt   int64
 	)
 	if err := s.Scan(
 		&a.ID,
@@ -254,8 +253,8 @@ func scanAgent(s scanner) (agent.Agent, error) {
 		&a.Instructions,
 		&providerStr,
 		&a.Model,
-		&credentialID,
-		&providerGrantID,
+		&authRefType,
+		&authRefID,
 		&statusStr,
 		&createdAt,
 		&updatedAt,
@@ -264,7 +263,10 @@ func scanAgent(s scanner) (agent.Agent, error) {
 	}
 	a.Provider, _ = provider.Normalize(providerStr)
 	a.Status = agent.ParseStatus(statusStr)
-	a.AuthReference, _ = agent.AuthReferenceFromIDs(credentialID, providerGrantID, false)
+	a.AuthReference, _ = agent.NormalizeAuthReference(agent.AuthReference{
+		Kind: agent.AuthReferenceKind(authRefType),
+		ID:   authRefID,
+	}, false)
 	a.CreatedAt = sqliteutil.FromMillis(createdAt)
 	a.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	return a, nil
@@ -272,21 +274,11 @@ func scanAgent(s scanner) (agent.Agent, error) {
 
 // scanAgentPage scans rows into an agent.Page with keyset pagination.
 func scanAgentPage(rows *sql.Rows, pageSize int) (agent.Page, error) {
-	page := agent.Page{Agents: make([]agent.Agent, 0, pageSize)}
-	for rows.Next() {
-		a, err := scanAgent(rows)
-		if err != nil {
-			return agent.Page{}, fmt.Errorf("scan agent row: %w", err)
-		}
-		page.Agents = append(page.Agents, a)
+	agents, nextPageToken, err := scanIDKeysetPage(rows, pageSize, scanAgent, "agent", func(a agent.Agent) string {
+		return a.ID
+	})
+	if err != nil {
+		return agent.Page{}, err
 	}
-	if err := rows.Err(); err != nil {
-		return agent.Page{}, fmt.Errorf("iterate agent rows: %w", err)
-	}
-
-	if len(page.Agents) > pageSize {
-		page.NextPageToken = page.Agents[pageSize-1].ID
-		page.Agents = page.Agents[:pageSize]
-	}
-	return page, nil
+	return agent.Page{Agents: agents, NextPageToken: nextPageToken}, nil
 }

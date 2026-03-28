@@ -23,8 +23,7 @@ type gatewayStub struct {
 	lastUserID       string
 	lastProfile      SettingsProfile
 	lastLocale       string
-	lastLabel        string
-	lastSecret       string
+	lastKey          CreateAIKeyInput
 	lastAgent        CreateAIAgentInput
 	lastAgentID      string
 	lastCredentialID string
@@ -97,10 +96,9 @@ func (g *gatewayStub) ListAIProviderModels(_ context.Context, userID string, cre
 	}
 	return g.models, nil
 }
-func (g *gatewayStub) CreateAIKey(_ context.Context, userID string, label string, secret string) error {
+func (g *gatewayStub) CreateAIKey(_ context.Context, userID string, input CreateAIKeyInput) error {
 	g.lastUserID = userID
-	g.lastLabel = label
-	g.lastSecret = secret
+	g.lastKey = input
 	return g.err
 }
 func (g *gatewayStub) CreateAIAgent(_ context.Context, userID string, input CreateAIAgentInput) error {
@@ -169,7 +167,7 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 	} else if keys != nil {
 		t.Fatalf("ListAIKeys() keys = %+v, want nil", keys)
 	}
-	if err := gateway.CreateAIKey(ctx, "user-1", "Primary", "sk-secret"); err == nil {
+	if err := gateway.CreateAIKey(ctx, "user-1", CreateAIKeyInput{Label: "Primary", Provider: "openai", Secret: "sk-secret"}); err == nil {
 		t.Fatalf("CreateAIKey() error = nil, want unavailable error")
 	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
 		t.Fatalf("CreateAIKey() status = %d, want %d", got, http.StatusServiceUnavailable)
@@ -358,14 +356,14 @@ func TestCreateAndRevokeAIKeyValidationAndDelegation(t *testing.T) {
 
 	gateway := &gatewayStub{}
 	svc := newService(gateway)
-	if err := svc.CreateAIKey(context.Background(), "user-1", "", "secret"); err == nil {
+	if err := svc.CreateAIKey(context.Background(), "user-1", CreateAIKeyInput{Provider: "openai", Secret: "secret"}); err == nil {
 		t.Fatalf("expected create validation error")
 	}
-	if err := svc.CreateAIKey(context.Background(), "user-1", "Primary", "sk-secret"); err != nil {
+	if err := svc.CreateAIKey(context.Background(), "user-1", CreateAIKeyInput{Label: "Primary", Provider: "anthropic", Secret: "sk-secret"}); err != nil {
 		t.Fatalf("CreateAIKey() error = %v", err)
 	}
-	if gateway.lastLabel != "Primary" || gateway.lastSecret != "sk-secret" {
-		t.Fatalf("create delegation mismatch label=%q secret=%q", gateway.lastLabel, gateway.lastSecret)
+	if gateway.lastKey.Label != "Primary" || gateway.lastKey.Provider != "anthropic" || gateway.lastKey.Secret != "sk-secret" {
+		t.Fatalf("create delegation mismatch input=%+v", gateway.lastKey)
 	}
 	if err := svc.RevokeAIKey(context.Background(), "user-1", ""); err == nil {
 		t.Fatalf("expected revoke validation error")
@@ -383,7 +381,7 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 
 	gateway := &gatewayStub{
 		credentials: []SettingsAICredentialOption{{ID: " cred-1 ", Label: " Primary ", Provider: " OpenAI "}},
-		models:      []SettingsAIModelOption{{ID: " gpt-4o-mini ", OwnedBy: " openai "}},
+		models:      []SettingsAIModelOption{{ID: " gpt-4o-mini "}},
 		agents:      []SettingsAIAgent{{ID: " agent-1 ", Label: " narrator ", Provider: " OpenAI ", Model: " gpt-4o-mini ", AuthState: " Ready ", CanDelete: true, ActiveCampaignCount: 2, CreatedAt: " 2026-01-01 00:00 UTC "}},
 	}
 	svc := newService(gateway)

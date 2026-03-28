@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 	"google.golang.org/grpc/codes"
@@ -37,12 +36,9 @@ func NewProviderGrantHandlers(cfg ProviderGrantHandlersConfig) (*ProviderGrantHa
 
 // StartProviderConnect starts a provider OAuth grant handshake.
 func (h *ProviderGrantHandlers) StartProviderConnect(ctx context.Context, in *aiv1.StartProviderConnectRequest) (*aiv1.StartProviderConnectResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "start provider connect request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "start provider connect request is required")
+	if err != nil {
+		return nil, err
 	}
 	providerID, err := providerFromProto(in.GetProvider())
 	if err != nil {
@@ -67,12 +63,9 @@ func (h *ProviderGrantHandlers) StartProviderConnect(ctx context.Context, in *ai
 
 // FinishProviderConnect completes a provider OAuth grant handshake.
 func (h *ProviderGrantHandlers) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProviderConnectRequest) (*aiv1.FinishProviderConnectResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "finish provider connect request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "finish provider connect request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	record, err := h.svc.FinishConnect(ctx, service.FinishConnectInput{
@@ -89,12 +82,9 @@ func (h *ProviderGrantHandlers) FinishProviderConnect(ctx context.Context, in *a
 
 // ListProviderGrants returns a page of provider grants owned by the caller.
 func (h *ProviderGrantHandlers) ListProviderGrants(ctx context.Context, in *aiv1.ListProviderGrantsRequest) (*aiv1.ListProviderGrantsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list provider grants request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "list provider grants request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	filter, err := providerGrantFilterFromRequest(in)
@@ -119,12 +109,9 @@ func (h *ProviderGrantHandlers) ListProviderGrants(ctx context.Context, in *aiv1
 
 // RevokeProviderGrant revokes one provider grant owned by the caller.
 func (h *ProviderGrantHandlers) RevokeProviderGrant(ctx context.Context, in *aiv1.RevokeProviderGrantRequest) (*aiv1.RevokeProviderGrantResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "revoke provider grant request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "revoke provider grant request is required")
+	if err != nil {
+		return nil, err
 	}
 	providerGrantID := strings.TrimSpace(in.GetProviderGrantId())
 	if providerGrantID == "" {
@@ -140,12 +127,12 @@ func (h *ProviderGrantHandlers) RevokeProviderGrant(ctx context.Context, in *aiv
 
 func providerGrantFilterFromRequest(in *aiv1.ListProviderGrantsRequest) (providergrant.Filter, error) {
 	var filter providergrant.Filter
-	switch in.GetProvider() {
-	case aiv1.Provider_PROVIDER_UNSPECIFIED:
-	case aiv1.Provider_PROVIDER_OPENAI:
-		filter.Provider = provider.OpenAI
-	default:
-		return providergrant.Filter{}, fmt.Errorf("provider filter is invalid")
+	if in.GetProvider() != aiv1.Provider_PROVIDER_UNSPECIFIED {
+		providerID, err := providerFromProto(in.GetProvider())
+		if err != nil {
+			return providergrant.Filter{}, fmt.Errorf("provider filter is invalid")
+		}
+		filter.Provider = providerID
 	}
 
 	switch in.GetStatus() {

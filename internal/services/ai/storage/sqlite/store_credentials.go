@@ -109,23 +109,21 @@ func (s *Store) ListCredentialsByOwner(ctx context.Context, ownerUserID string, 
 	if err := ctx.Err(); err != nil {
 		return credential.Page{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return credential.Page{}, fmt.Errorf("storage is not configured")
+	db, err := requireStoreDB(s)
+	if err != nil {
+		return credential.Page{}, err
 	}
 	if ownerUserID == "" {
 		return credential.Page{}, fmt.Errorf("owner user id is required")
 	}
-	if pageSize <= 0 {
-		return credential.Page{}, fmt.Errorf("page size must be greater than zero")
+	limit, err := keysetPageLimit(pageSize)
+	if err != nil {
+		return credential.Page{}, err
 	}
 
-	limit := pageSize + 1
-	var (
-		rows *sql.Rows
-		err  error
-	)
+	var rows *sql.Rows
 	if pageToken == "" {
-		rows, err = s.sqlDB.QueryContext(ctx, `
+		rows, err = db.QueryContext(ctx, `
 SELECT id, owner_user_id, provider, label, secret_ciphertext, status, created_at, updated_at, revoked_at
 FROM ai_credentials
 WHERE owner_user_id = ?
@@ -133,7 +131,7 @@ ORDER BY id
 LIMIT ?
 `, ownerUserID, limit)
 	} else {
-		rows, err = s.sqlDB.QueryContext(ctx, `
+		rows, err = db.QueryContext(ctx, `
 SELECT id, owner_user_id, provider, label, secret_ciphertext, status, created_at, updated_at, revoked_at
 FROM ai_credentials
 WHERE owner_user_id = ? AND id > ?
@@ -146,23 +144,13 @@ LIMIT ?
 	}
 	defer rows.Close()
 
-	page := credential.Page{Credentials: make([]credential.Credential, 0, pageSize)}
-	for rows.Next() {
-		c, err := scanCredential(rows)
-		if err != nil {
-			return credential.Page{}, fmt.Errorf("scan credential row: %w", err)
-		}
-		page.Credentials = append(page.Credentials, c)
+	credentials, nextPageToken, err := scanIDKeysetPage(rows, pageSize, scanCredential, "credential", func(c credential.Credential) string {
+		return c.ID
+	})
+	if err != nil {
+		return credential.Page{}, err
 	}
-	if err := rows.Err(); err != nil {
-		return credential.Page{}, fmt.Errorf("iterate credential rows: %w", err)
-	}
-
-	if len(page.Credentials) > pageSize {
-		page.NextPageToken = page.Credentials[pageSize-1].ID
-		page.Credentials = page.Credentials[:pageSize]
-	}
-	return page, nil
+	return credential.Page{Credentials: credentials, NextPageToken: nextPageToken}, nil
 }
 
 // scanCredential reads one credential row into a domain credential.

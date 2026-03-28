@@ -2,28 +2,27 @@ package ai
 
 import (
 	"context"
-	"strings"
+	"errors"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	gamegrpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/gamebridge"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type campaignContextValidator struct {
-	authorizationClient      gamev1.AuthorizationServiceClient
-	internalServiceAllowlist map[string]struct{}
+// CampaignAccessAuthorizer authorizes one caller against one campaign.
+type CampaignAccessAuthorizer interface {
+	AuthorizeCampaign(context.Context, string, string, gamev1.AuthorizationAction) error
+	IsAllowedInternalServiceCaller(context.Context) bool
 }
 
-func newCampaignContextValidator(client gamev1.AuthorizationServiceClient, allowlist map[string]struct{}) campaignContextValidator {
-	copiedAllowlist := make(map[string]struct{}, len(allowlist))
-	for serviceID := range allowlist {
-		copiedAllowlist[serviceID] = struct{}{}
-	}
+type campaignContextValidator struct {
+	authorizer CampaignAccessAuthorizer
+}
+
+func newCampaignContextValidator(authorizer CampaignAccessAuthorizer) campaignContextValidator {
 	return campaignContextValidator{
-		authorizationClient:      client,
-		internalServiceAllowlist: copiedAllowlist,
+		authorizer: authorizer,
 	}
 }
 
@@ -36,37 +35,28 @@ func (v campaignContextValidator) validateCampaignContext(ctx context.Context, c
 		return nil
 	}
 
-	userID := strings.TrimSpace(userIDFromContext(ctx))
-	if userID == "" {
+	userID, err := requireCallerUserID(ctx)
+	if err != nil {
 		return status.Error(codes.PermissionDenied, "missing caller identity")
 	}
-	if v.authorizationClient == nil {
+	if v.authorizer == nil {
 		return status.Error(codes.FailedPrecondition, "campaign authorization client is unavailable")
 	}
-
-	authCtx := grpcauthctx.WithUserID(ctx, userID)
-	resp, err := v.authorizationClient.Can(authCtx, &gamev1.CanRequest{
-		CampaignId: campaignID,
-		Action:     action,
-		Resource:   gamev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CAMPAIGN,
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "authorize campaign context: %v", err)
-	}
-	if resp == nil || !resp.GetAllowed() {
-		return status.Error(codes.PermissionDenied, "campaign access denied")
+	if err := v.authorizer.AuthorizeCampaign(ctx, userID, campaignID, action); err != nil {
+		switch {
+		case errors.Is(err, gamebridge.ErrCampaignAuthorizationUnavailable):
+			return status.Error(codes.FailedPrecondition, "campaign authorization client is unavailable")
+		case errors.Is(err, gamebridge.ErrCampaignAccessDenied):
+			return status.Error(codes.PermissionDenied, "campaign access denied")
+		case errors.Is(err, gamebridge.ErrMissingCallerIdentity):
+			return status.Error(codes.PermissionDenied, "missing caller identity")
+		default:
+			return transportErrorToStatus(err, transportErrorConfig{Operation: "authorize campaign context"})
+		}
 	}
 	return nil
 }
 
 func (v campaignContextValidator) isAllowedInternalCampaignContextCaller(ctx context.Context) bool {
-	if len(v.internalServiceAllowlist) == 0 {
-		return false
-	}
-	serviceID := strings.ToLower(strings.TrimSpace(gamegrpcmeta.ServiceIDFromContext(ctx)))
-	if serviceID == "" {
-		return false
-	}
-	_, ok := v.internalServiceAllowlist[serviceID]
-	return ok
+	return v.authorizer != nil && v.authorizer.IsAllowedInternalServiceCaller(ctx)
 }

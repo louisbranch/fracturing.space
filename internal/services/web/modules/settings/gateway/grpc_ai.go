@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
@@ -112,9 +113,16 @@ func (g GRPCGateway) ListAIProviderModels(ctx context.Context, userID string, cr
 	if g.AgentClient == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.ai_agent_service_client_is_not_configured", "AI agent service client is not configured")
 	}
+	providerValue, err := g.lookupCredentialProvider(ctx, credentialID)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := g.AgentClient.ListProviderModels(ctx, &aiv1.ListProviderModelsRequest{
-		Provider:     aiv1.Provider_PROVIDER_OPENAI,
-		CredentialId: credentialID,
+		Provider: providerValue,
+		AuthReference: &aiv1.AgentAuthReference{
+			Type: aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_CREDENTIAL,
+			Id:   credentialID,
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -125,22 +133,25 @@ func (g GRPCGateway) ListAIProviderModels(ctx context.Context, userID string, cr
 			continue
 		}
 		models = append(models, settingsapp.SettingsAIModelOption{
-			ID:      strings.TrimSpace(model.GetId()),
-			OwnedBy: strings.TrimSpace(model.GetOwnedBy()),
+			ID: strings.TrimSpace(model.GetId()),
 		})
 	}
 	return models, nil
 }
 
 // CreateAIKey executes package-scoped creation behavior for this flow.
-func (g GRPCGateway) CreateAIKey(ctx context.Context, userID string, label string, secret string) error {
+func (g GRPCGateway) CreateAIKey(ctx context.Context, userID string, input settingsapp.CreateAIKeyInput) error {
 	if g.CredentialClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.credential_service_client_is_not_configured", "credential service client is not configured")
 	}
-	_, err := g.CredentialClient.CreateCredential(ctx, &aiv1.CreateCredentialRequest{
-		Provider: aiv1.Provider_PROVIDER_OPENAI,
-		Label:    label,
-		Secret:   secret,
+	providerValue, err := providerProtoFromWeb(input.Provider)
+	if err != nil {
+		return err
+	}
+	_, err = g.CredentialClient.CreateCredential(ctx, &aiv1.CreateCredentialRequest{
+		Provider: providerValue,
+		Label:    input.Label,
+		Secret:   input.Secret,
 	})
 	return mapAIKeyMutationError(err)
 }
@@ -150,11 +161,18 @@ func (g GRPCGateway) CreateAIAgent(ctx context.Context, userID string, input set
 	if g.AgentClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.ai_agent_service_client_is_not_configured", "AI agent service client is not configured")
 	}
-	_, err := g.AgentClient.CreateAgent(ctx, &aiv1.CreateAgentRequest{
-		Label:        input.Label,
-		Provider:     aiv1.Provider_PROVIDER_OPENAI,
-		Model:        input.Model,
-		CredentialId: input.CredentialID,
+	providerValue, err := g.lookupCredentialProvider(ctx, input.CredentialID)
+	if err != nil {
+		return err
+	}
+	_, err = g.AgentClient.CreateAgent(ctx, &aiv1.CreateAgentRequest{
+		Label:    input.Label,
+		Provider: providerValue,
+		Model:    input.Model,
+		AuthReference: &aiv1.AgentAuthReference{
+			Type: aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_CREDENTIAL,
+			Id:   input.CredentialID,
+		},
 		Instructions: input.Instructions,
 	})
 	return mapAIAgentMutationError(err)
@@ -183,9 +201,62 @@ func providerDisplayLabel(provider aiv1.Provider) string {
 	switch provider {
 	case aiv1.Provider_PROVIDER_OPENAI:
 		return "OpenAI"
+	case aiv1.Provider_PROVIDER_ANTHROPIC:
+		return "Anthropic"
 	default:
 		return "Unknown"
 	}
+}
+
+// providerProtoFromWeb parses the posted provider choice into the AI proto enum.
+func providerProtoFromWeb(value string) (aiv1.Provider, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "openai":
+		return aiv1.Provider_PROVIDER_OPENAI, nil
+	case "anthropic":
+		return aiv1.Provider_PROVIDER_ANTHROPIC, nil
+	default:
+		return aiv1.Provider_PROVIDER_UNSPECIFIED, apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_keys.error_required", "provider is required")
+	}
+}
+
+// lookupCredentialProvider resolves the provider for one stored credential.
+func (g GRPCGateway) lookupCredentialProvider(ctx context.Context, credentialID string) (aiv1.Provider, error) {
+	credential, err := g.lookupCredential(ctx, credentialID)
+	if err != nil {
+		return aiv1.Provider_PROVIDER_UNSPECIFIED, err
+	}
+	return credential.GetProvider(), nil
+}
+
+// lookupCredential pages the AI credential list until it finds one credential.
+func (g GRPCGateway) lookupCredential(ctx context.Context, credentialID string) (*aiv1.Credential, error) {
+	if g.CredentialClient == nil {
+		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.credential_service_client_is_not_configured", "credential service client is not configured")
+	}
+	pageToken := ""
+	for {
+		resp, err := g.CredentialClient.ListCredentials(ctx, &aiv1.ListCredentialsRequest{
+			PageSize:  50,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list credentials: %w", err)
+		}
+		for _, credential := range resp.GetCredentials() {
+			if credential == nil {
+				continue
+			}
+			if strings.TrimSpace(credential.GetId()) == strings.TrimSpace(credentialID) {
+				return credential, nil
+			}
+		}
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			break
+		}
+	}
+	return nil, apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_credential_required", "credential is required")
 }
 
 // credentialStatusDisplayLabel centralizes this web behavior in one helper seam.

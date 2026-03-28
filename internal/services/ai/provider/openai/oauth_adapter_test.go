@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provideroauth"
 )
 
 func TestOAuthAdapterBuildAuthorizationURL(t *testing.T) {
@@ -20,7 +20,7 @@ func TestOAuthAdapterBuildAuthorizationURL(t *testing.T) {
 		RedirectURI:      "https://app.example.com/oauth/callback",
 	})
 
-	raw, err := adapter.BuildAuthorizationURL(provider.AuthorizationURLInput{
+	raw, err := adapter.BuildAuthorizationURL(provideroauth.AuthorizationURLInput{
 		State:           "state-1",
 		CodeChallenge:   "challenge-1",
 		RequestedScopes: []string{"responses.read", "responses.write"},
@@ -102,21 +102,21 @@ func TestOAuthAdapterExchangeAuthorizationCode(t *testing.T) {
 		RedirectURI:  "https://app.example.com/oauth/callback",
 	})
 
-	got, err := adapter.ExchangeAuthorizationCode(context.Background(), provider.AuthorizationCodeInput{
+	got, err := adapter.ExchangeAuthorizationCode(context.Background(), provideroauth.AuthorizationCodeInput{
 		AuthorizationCode: "code-1",
 		CodeVerifier:      "verifier-1",
 	})
 	if err != nil {
 		t.Fatalf("exchange authorization code: %v", err)
 	}
-	if got.TokenPlaintext == "" {
-		t.Fatal("token plaintext is empty")
+	if got.TokenPayload.AccessToken != "at-1" {
+		t.Fatalf("access token = %q, want %q", got.TokenPayload.AccessToken, "at-1")
 	}
-	if strings.Contains(got.TokenPlaintext, "code-1") {
-		t.Fatalf("token plaintext must not contain authorization code: %q", got.TokenPlaintext)
+	if strings.Contains(got.TokenPayload.AccessToken, "code-1") {
+		t.Fatalf("access token must not contain authorization code: %q", got.TokenPayload.AccessToken)
 	}
-	if !got.RefreshSupported {
-		t.Fatal("refresh_supported = false, want true")
+	if got.TokenPayload.RefreshToken != "rt-1" {
+		t.Fatalf("refresh token = %q, want %q", got.TokenPayload.RefreshToken, "rt-1")
 	}
 	if got.ExpiresAt == nil {
 		t.Fatal("expires_at is nil")
@@ -150,14 +150,14 @@ func TestOAuthAdapterRefreshToken(t *testing.T) {
 		ClientID:     "client-1",
 		ClientSecret: "secret-1",
 	})
-	got, err := adapter.RefreshToken(context.Background(), provider.RefreshTokenInput{
+	got, err := adapter.RefreshToken(context.Background(), provideroauth.RefreshTokenInput{
 		RefreshToken: "rt-1",
 	})
 	if err != nil {
 		t.Fatalf("refresh token: %v", err)
 	}
-	if got.TokenPlaintext == "" {
-		t.Fatal("token plaintext is empty")
+	if got.TokenPayload.AccessToken != "at-2" {
+		t.Fatalf("access token = %q, want %q", got.TokenPayload.AccessToken, "at-2")
 	}
 	if got.ExpiresAt == nil || got.ExpiresAt.Before(time.Now().UTC()) {
 		t.Fatalf("expires_at = %v, want future timestamp", got.ExpiresAt)
@@ -181,7 +181,7 @@ func TestOAuthAdapterExchangeAuthorizationCodeNon2xxReadError(t *testing.T) {
 		},
 	}}
 
-	_, err := adapter.ExchangeAuthorizationCode(context.Background(), provider.AuthorizationCodeInput{
+	_, err := adapter.ExchangeAuthorizationCode(context.Background(), provideroauth.AuthorizationCodeInput{
 		AuthorizationCode: "code-1",
 		CodeVerifier:      "verifier-1",
 	})

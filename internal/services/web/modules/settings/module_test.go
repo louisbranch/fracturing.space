@@ -988,7 +988,7 @@ func TestMountAIKeysCreatePostSavesAndRedirects(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	form := url.Values{"label": {"Primary"}, "secret": {"sk-test"}}
+	form := url.Values{"label": {"Primary"}, "provider": {"anthropic"}, "secret": {"sk-test"}}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsAIKeys, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
@@ -1002,8 +1002,8 @@ func TestMountAIKeysCreatePostSavesAndRedirects(t *testing.T) {
 	if !responseHasCookieName(rr, flashnotice.CookieName) {
 		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
 	}
-	if gateway.lastCreatedLabel != "Primary" {
-		t.Fatalf("created label = %q, want %q", gateway.lastCreatedLabel, "Primary")
+	if gateway.lastCreatedKey.Label != "Primary" || gateway.lastCreatedKey.Provider != "anthropic" {
+		t.Fatalf("created key = %+v", gateway.lastCreatedKey)
 	}
 }
 

@@ -5,28 +5,30 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providercatalog"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // InvocationService handles agent invocation operations.
 type InvocationService struct {
-	agentStore                 storage.AgentStore
-	auditEventStore            storage.AuditEventStore
-	accessibleAgentResolver    *AccessibleAgentResolver
-	authTokenResolver          *AuthTokenResolver
-	providerInvocationAdapters map[provider.Provider]provider.InvocationAdapter
-	clock                      Clock
+	agentStore              storage.AgentStore
+	auditEventStore         auditevent.Store
+	accessibleAgentResolver *AccessibleAgentResolver
+	authMaterialResolver    *AuthMaterialResolver
+	providerRegistry        *providercatalog.Registry
+	clock                   Clock
 }
 
 // InvocationServiceConfig declares dependencies for the invocation service.
 type InvocationServiceConfig struct {
-	AgentStore                 storage.AgentStore
-	AuditEventStore            storage.AuditEventStore
-	AccessibleAgentResolver    *AccessibleAgentResolver
-	AuthTokenResolver          *AuthTokenResolver
-	ProviderInvocationAdapters map[provider.Provider]provider.InvocationAdapter
-	Clock                      Clock
+	AgentStore              storage.AgentStore
+	AuditEventStore         auditevent.Store
+	AccessibleAgentResolver *AccessibleAgentResolver
+	AuthMaterialResolver    *AuthMaterialResolver
+	ProviderRegistry        *providercatalog.Registry
+	Clock                   Clock
 }
 
 // NewInvocationService builds an invocation service from explicit deps.
@@ -34,25 +36,23 @@ func NewInvocationService(cfg InvocationServiceConfig) (*InvocationService, erro
 	if cfg.AgentStore == nil {
 		return nil, fmt.Errorf("ai: NewInvocationService: agent store is required")
 	}
-	if cfg.AuthTokenResolver == nil {
-		return nil, fmt.Errorf("ai: NewInvocationService: auth token resolver is required")
+	if err := RequireAuthMaterialResolver(cfg.AuthMaterialResolver, "NewInvocationService"); err != nil {
+		return nil, err
 	}
 	if cfg.AccessibleAgentResolver == nil {
 		return nil, fmt.Errorf("ai: NewInvocationService: accessible agent resolver is required")
 	}
-
-	providerInvocationAdapters := make(map[provider.Provider]provider.InvocationAdapter, len(cfg.ProviderInvocationAdapters))
-	for k, v := range cfg.ProviderInvocationAdapters {
-		providerInvocationAdapters[k] = v
+	if err := RequireProviderRegistry(cfg.ProviderRegistry, "NewInvocationService"); err != nil {
+		return nil, err
 	}
 
 	return &InvocationService{
-		agentStore:                 cfg.AgentStore,
-		auditEventStore:            cfg.AuditEventStore,
-		accessibleAgentResolver:    cfg.AccessibleAgentResolver,
-		authTokenResolver:          cfg.AuthTokenResolver,
-		providerInvocationAdapters: providerInvocationAdapters,
-		clock:                      withDefaultClock(cfg.Clock),
+		agentStore:              cfg.AgentStore,
+		auditEventStore:         cfg.AuditEventStore,
+		accessibleAgentResolver: cfg.AccessibleAgentResolver,
+		authMaterialResolver:    cfg.AuthMaterialResolver,
+		providerRegistry:        cfg.ProviderRegistry,
+		clock:                   withDefaultClock(cfg.Clock),
 	}, nil
 }
 
@@ -97,21 +97,21 @@ func (s *InvocationService) InvokeAgent(ctx context.Context, input InvokeAgentIn
 		return InvokeAgentResult{}, Errorf(ErrKindNotFound, "agent not found")
 	}
 
-	adapter, ok := s.providerInvocationAdapters[agentRecord.Provider]
+	adapter, ok := s.providerRegistry.InvocationAdapter(agentRecord.Provider)
 	if !ok || adapter == nil {
 		return InvokeAgentResult{}, Errorf(ErrKindFailedPrecondition, "provider invocation adapter is unavailable")
 	}
 
-	invokeToken, err := s.authTokenResolver.ResolveAgentInvokeToken(ctx, agentRecord.OwnerUserID, agentRecord)
+	invokeToken, err := s.authMaterialResolver.ResolveAgentInvokeToken(ctx, agentRecord.OwnerUserID, agentRecord)
 	if err != nil {
 		return InvokeAgentResult{}, err
 	}
 	result, err := adapter.Invoke(ctx, provider.InvokeInput{
-		Model:            agentRecord.Model,
-		Input:            input.Input,
-		Instructions:     agentRecord.Instructions,
-		ReasoningEffort:  input.ReasoningEffort,
-		CredentialSecret: invokeToken,
+		Model:           agentRecord.Model,
+		Input:           input.Input,
+		Instructions:    agentRecord.Instructions,
+		ReasoningEffort: input.ReasoningEffort,
+		AuthToken:       invokeToken,
 	})
 	if err != nil {
 		return InvokeAgentResult{}, Wrapf(ErrKindInternal, err, "invoke provider")
@@ -120,8 +120,8 @@ func (s *InvocationService) InvokeAgent(ctx context.Context, input InvokeAgentIn
 		return InvokeAgentResult{}, Errorf(ErrKindInternal, "provider returned empty output")
 	}
 	if authResult.SharedAccess {
-		if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
-			EventName:       "agent.invoke.shared",
+		if err := s.putAuditEvent(ctx, auditevent.Event{
+			EventName:       auditevent.NameAgentInvokeShared,
 			ActorUserID:     input.CallerUserID,
 			OwnerUserID:     agentRecord.OwnerUserID,
 			RequesterUserID: input.CallerUserID,
@@ -142,7 +142,7 @@ func (s *InvocationService) InvokeAgent(ctx context.Context, input InvokeAgentIn
 }
 
 // putAuditEvent persists one audit event record.
-func (s *InvocationService) putAuditEvent(ctx context.Context, record storage.AuditEventRecord) error {
+func (s *InvocationService) putAuditEvent(ctx context.Context, record auditevent.Event) error {
 	if s.auditEventStore == nil {
 		return fmt.Errorf("audit event store is not configured")
 	}

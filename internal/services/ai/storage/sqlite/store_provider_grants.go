@@ -19,6 +19,13 @@ func (s *Store) PutProviderGrant(ctx context.Context, grant providergrant.Provid
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
+	if err := putProviderGrant(ctx, s.sqlDB, grant); err != nil {
+		return err
+	}
+	return nil
+}
+
+func putProviderGrant(ctx context.Context, execer sqlExecer, grant providergrant.ProviderGrant) error {
 	if grant.ID == "" {
 		return fmt.Errorf("provider grant id is required")
 	}
@@ -52,7 +59,7 @@ func (s *Store) PutProviderGrant(ctx context.Context, grant providergrant.Provid
 		lastRefreshedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*grant.RefreshedAt), Valid: true}
 	}
 
-	_, err = s.sqlDB.ExecContext(ctx, `
+	_, err = execer.ExecContext(ctx, `
 INSERT INTO ai_provider_grants (
 	id, owner_user_id, provider, granted_scopes, token_ciphertext, refresh_supported, status, last_refresh_error, created_at, updated_at, revoked_at, expires_at, last_refreshed_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -122,19 +129,20 @@ func (s *Store) ListProviderGrantsByOwner(ctx context.Context, ownerUserID strin
 	if err := ctx.Err(); err != nil {
 		return providergrant.Page{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return providergrant.Page{}, fmt.Errorf("storage is not configured")
+	db, err := requireStoreDB(s)
+	if err != nil {
+		return providergrant.Page{}, err
 	}
 	if ownerUserID == "" {
 		return providergrant.Page{}, fmt.Errorf("owner user id is required")
 	}
-	if pageSize <= 0 {
-		return providergrant.Page{}, fmt.Errorf("page size must be greater than zero")
+	limit, err := keysetPageLimit(pageSize)
+	if err != nil {
+		return providergrant.Page{}, err
 	}
 	filterProvider := strings.ToLower(string(filter.Provider))
 	filterStatus := strings.ToLower(string(filter.Status))
 
-	limit := pageSize + 1
 	whereParts := []string{"owner_user_id = ?"}
 	args := []any{ownerUserID}
 	if filterProvider != "" {
@@ -160,29 +168,19 @@ WHERE %s
 ORDER BY id
 LIMIT ?
 `, strings.Join(whereParts, " AND "))
-	rows, err := s.sqlDB.QueryContext(ctx, query, args...)
+	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return providergrant.Page{}, fmt.Errorf("list provider grants: %w", err)
 	}
 	defer rows.Close()
 
-	page := providergrant.Page{ProviderGrants: make([]providergrant.ProviderGrant, 0, pageSize)}
-	for rows.Next() {
-		grant, err := scanProviderGrant(rows)
-		if err != nil {
-			return providergrant.Page{}, fmt.Errorf("scan provider grant row: %w", err)
-		}
-		page.ProviderGrants = append(page.ProviderGrants, grant)
+	providerGrants, nextPageToken, err := scanIDKeysetPage(rows, pageSize, scanProviderGrant, "provider grant", func(grant providergrant.ProviderGrant) string {
+		return grant.ID
+	})
+	if err != nil {
+		return providergrant.Page{}, err
 	}
-	if err := rows.Err(); err != nil {
-		return providergrant.Page{}, fmt.Errorf("iterate provider grant rows: %w", err)
-	}
-
-	if len(page.ProviderGrants) > pageSize {
-		page.NextPageToken = page.ProviderGrants[pageSize-1].ID
-		page.ProviderGrants = page.ProviderGrants[:pageSize]
-	}
-	return page, nil
+	return providergrant.Page{ProviderGrants: providerGrants, NextPageToken: nextPageToken}, nil
 }
 
 // PutProviderConnectSession persists a provider connect session record.

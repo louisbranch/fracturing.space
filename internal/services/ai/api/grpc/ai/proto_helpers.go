@@ -7,13 +7,14 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaignartifact"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -36,6 +37,8 @@ func providerFromProto(value aiv1.Provider) (provider.Provider, error) {
 	switch value {
 	case aiv1.Provider_PROVIDER_OPENAI:
 		return provider.OpenAI, nil
+	case aiv1.Provider_PROVIDER_ANTHROPIC:
+		return provider.Anthropic, nil
 	default:
 		return "", status.Error(codes.InvalidArgument, "provider is required")
 	}
@@ -50,8 +53,11 @@ func providerFromString(value string) provider.Provider {
 }
 
 func providerToProto(value string) aiv1.Provider {
-	if providerFromString(value) == provider.OpenAI {
+	switch providerFromString(value) {
+	case provider.OpenAI:
 		return aiv1.Provider_PROVIDER_OPENAI
+	case provider.Anthropic:
+		return aiv1.Provider_PROVIDER_ANTHROPIC
 	}
 	return aiv1.Provider_PROVIDER_UNSPECIFIED
 }
@@ -84,6 +90,59 @@ func agentStatusToProto(value agent.Status) aiv1.AgentStatus {
 		return aiv1.AgentStatus_AGENT_STATUS_ACTIVE
 	}
 	return aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED
+}
+
+func agentAuthReferenceTypeToProto(value agent.AuthReferenceKind) aiv1.AgentAuthReferenceType {
+	switch value {
+	case agent.AuthReferenceKindCredential:
+		return aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_CREDENTIAL
+	case agent.AuthReferenceKindProviderGrant:
+		return aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_PROVIDER_GRANT
+	default:
+		return aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_UNSPECIFIED
+	}
+}
+
+func agentAuthReferenceTypeFromProto(value aiv1.AgentAuthReferenceType) (agent.AuthReferenceKind, error) {
+	switch value {
+	case aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_CREDENTIAL:
+		return agent.AuthReferenceKindCredential, nil
+	case aiv1.AgentAuthReferenceType_AGENT_AUTH_REFERENCE_TYPE_PROVIDER_GRANT:
+		return agent.AuthReferenceKindProviderGrant, nil
+	default:
+		return "", status.Error(codes.InvalidArgument, "auth_reference.type is required")
+	}
+}
+
+func agentAuthReferenceToProto(value agent.AuthReference) *aiv1.AgentAuthReference {
+	if value.IsZero() {
+		return nil
+	}
+	return &aiv1.AgentAuthReference{
+		Type: agentAuthReferenceTypeToProto(value.Kind),
+		Id:   value.ID,
+	}
+}
+
+func agentAuthReferenceFromProto(value *aiv1.AgentAuthReference, require bool) (agent.AuthReference, error) {
+	if value == nil {
+		if require {
+			return agent.AuthReference{}, status.Error(codes.InvalidArgument, "auth_reference is required")
+		}
+		return agent.AuthReference{}, nil
+	}
+	kind, err := agentAuthReferenceTypeFromProto(value.GetType())
+	if err != nil {
+		return agent.AuthReference{}, err
+	}
+	reference, err := agent.NormalizeAuthReference(agent.AuthReference{
+		Kind: kind,
+		ID:   value.GetId(),
+	}, require)
+	if err != nil {
+		return agent.AuthReference{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	return reference, nil
 }
 
 func providerGrantStatusToProto(value providergrant.Status) aiv1.ProviderGrantStatus {
@@ -147,17 +206,16 @@ func credentialToProto(c credential.Credential) *aiv1.Credential {
 
 func agentToProto(a agent.Agent) *aiv1.Agent {
 	return &aiv1.Agent{
-		Id:              a.ID,
-		OwnerUserId:     a.OwnerUserID,
-		Label:           a.Label,
-		Instructions:    a.Instructions,
-		Provider:        providerToProto(string(a.Provider)),
-		Model:           a.Model,
-		CredentialId:    a.AuthReference.CredentialID(),
-		ProviderGrantId: a.AuthReference.ProviderGrantID(),
-		Status:          agentStatusToProto(a.Status),
-		CreatedAt:       timestamppb.New(a.CreatedAt),
-		UpdatedAt:       timestamppb.New(a.UpdatedAt),
+		Id:            a.ID,
+		OwnerUserId:   a.OwnerUserID,
+		Label:         a.Label,
+		Instructions:  a.Instructions,
+		Provider:      providerToProto(string(a.Provider)),
+		Model:         a.Model,
+		AuthReference: agentAuthReferenceToProto(a.AuthReference),
+		Status:        agentStatusToProto(a.Status),
+		CreatedAt:     timestamppb.New(a.CreatedAt),
+		UpdatedAt:     timestamppb.New(a.UpdatedAt),
 	}
 }
 
@@ -185,7 +243,7 @@ func providerGrantToProto(grant providergrant.ProviderGrant) *aiv1.ProviderGrant
 	return proto
 }
 
-func campaignArtifactToProto(record storage.CampaignArtifactRecord) *aiv1.CampaignArtifact {
+func campaignArtifactToProto(record campaignartifact.Artifact) *aiv1.CampaignArtifact {
 	return &aiv1.CampaignArtifact{
 		CampaignId: record.CampaignID,
 		Path:       record.Path,
@@ -332,17 +390,22 @@ func accessRequestToProto(ar accessrequest.AccessRequest) *aiv1.AccessRequest {
 		ReviewNote:      ar.ReviewNote,
 		CreatedAt:       timestamppb.New(ar.CreatedAt),
 		UpdatedAt:       timestamppb.New(ar.UpdatedAt),
+		RevokerUserId:   ar.RevokerUserID,
+		RevokeNote:      ar.RevokeNote,
 	}
 	if ar.ReviewedAt != nil {
 		proto.ReviewedAt = timestamppb.New(*ar.ReviewedAt)
 	}
+	if ar.RevokedAt != nil {
+		proto.RevokedAt = timestamppb.New(*ar.RevokedAt)
+	}
 	return proto
 }
 
-func auditEventToProto(record storage.AuditEventRecord) *aiv1.AuditEvent {
+func auditEventToProto(record auditevent.Event) *aiv1.AuditEvent {
 	return &aiv1.AuditEvent{
 		Id:              record.ID,
-		EventName:       record.EventName,
+		EventName:       string(record.EventName),
 		ActorUserId:     record.ActorUserID,
 		OwnerUserId:     record.OwnerUserID,
 		RequesterUserId: record.RequesterUserID,

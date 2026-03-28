@@ -4,14 +4,23 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"io"
+	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 )
 
 func setAISessionGrantEnv(t *testing.T) {
@@ -238,6 +247,120 @@ func TestLoadPromptInstructionsAllowsPartialInstructionLoad(t *testing.T) {
 	}
 }
 
+func TestBuildRuntimeDepsWithoutGameAddrBuildsDegradedGateway(t *testing.T) {
+	logger := newDiscardLogger()
+	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger)
+	if err != nil {
+		t.Fatalf("buildRuntimeDeps() error = %v", err)
+	}
+	t.Cleanup(func() {
+		deps.close(logger)
+	})
+
+	if deps.gameMc != nil {
+		t.Fatal("expected nil managed conn when game addr is unset")
+	}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "worker"))
+	if deps.gameBridge == nil || !deps.gameBridge.IsAllowedInternalServiceCaller(ctx) {
+		t.Fatal("expected degraded gateway to preserve internal-service allowlist")
+	}
+}
+
+func TestBuildRuntimeDepsWhenGameConnUnavailableStillBuildsGateway(t *testing.T) {
+	original := newManagedConn
+	newManagedConn = func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+		return nil, errors.New("dial failed")
+	}
+	t.Cleanup(func() {
+		newManagedConn = original
+	})
+
+	cfg := testRuntimeConfig(t)
+	cfg.GameAddr = "127.0.0.1:7777"
+
+	logger := newDiscardLogger()
+	deps, err := buildRuntimeDeps(context.Background(), cfg, logger)
+	if err != nil {
+		t.Fatalf("buildRuntimeDeps() error = %v", err)
+	}
+	t.Cleanup(func() {
+		deps.close(logger)
+	})
+
+	if deps.gameMc != nil {
+		t.Fatal("expected nil managed conn when optional game dial fails")
+	}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "worker"))
+	if deps.gameBridge == nil || !deps.gameBridge.IsAllowedInternalServiceCaller(ctx) {
+		t.Fatal("expected fallback gateway when optional game dial fails")
+	}
+}
+
+func TestBuildRuntimeDepsRegistersAnthropicWithoutToolRuntime(t *testing.T) {
+	logger := newDiscardLogger()
+	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger)
+	if err != nil {
+		t.Fatalf("buildRuntimeDeps() error = %v", err)
+	}
+	t.Cleanup(func() {
+		deps.close(logger)
+	})
+
+	if deps.providerRegistry == nil || !deps.providerRegistry.HasProvider(provider.Anthropic) {
+		t.Fatal("expected anthropic provider bundle to be registered")
+	}
+	if _, ok := deps.providerRegistry.InvocationAdapter(provider.Anthropic); !ok {
+		t.Fatal("expected anthropic invocation adapter")
+	}
+	if _, ok := deps.providerRegistry.ModelAdapter(provider.Anthropic); !ok {
+		t.Fatal("expected anthropic model adapter")
+	}
+	if _, ok := deps.providerRegistry.OAuthAdapter(provider.Anthropic); ok {
+		t.Fatal("did not expect anthropic oauth adapter")
+	}
+	if _, ok := deps.providerRegistry.ToolAdapter(provider.Anthropic); ok {
+		t.Fatal("did not expect anthropic tool adapter")
+	}
+}
+
+func TestRegisterServicesSetsHealthForAllRegistrations(t *testing.T) {
+	logger := newDiscardLogger()
+	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger)
+	if err != nil {
+		t.Fatalf("buildRuntimeDeps() error = %v", err)
+	}
+	t.Cleanup(func() {
+		deps.close(logger)
+	})
+
+	handlers, err := buildHandlers(deps)
+	if err != nil {
+		t.Fatalf("buildHandlers() error = %v", err)
+	}
+
+	grpcServer := grpc.NewServer()
+	healthServer := health.NewServer()
+	registerServices(grpcServer, healthServer, handlers)
+
+	rootResp, err := healthServer.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{})
+	if err != nil {
+		t.Fatalf("root health check: %v", err)
+	}
+	if rootResp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+		t.Fatalf("root health status = %v, want %v", rootResp.GetStatus(), grpc_health_v1.HealthCheckResponse_SERVING)
+	}
+
+	for _, registration := range serviceRegistrations(handlers) {
+		resp, err := healthServer.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{Service: registration.healthName})
+		if err != nil {
+			t.Fatalf("health check for %s: %v", registration.healthName, err)
+		}
+		if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+			t.Fatalf("health status for %s = %v, want %v", registration.healthName, resp.GetStatus(), grpc_health_v1.HealthCheckResponse_SERVING)
+		}
+	}
+}
+
 type promptTestSession struct {
 	resources map[string]string
 }
@@ -285,4 +408,17 @@ func writePromptInstructionFile(t *testing.T, path string, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
+}
+
+func testRuntimeConfig(t *testing.T) runtimeConfig {
+	t.Helper()
+	return runtimeConfig{
+		DBPath:                   filepath.Join(t.TempDir(), "ai.db"),
+		EncryptionKey:            base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")),
+		InternalServiceAllowlist: map[string]struct{}{"worker": {}},
+	}
+}
+
+func newDiscardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

@@ -45,8 +45,8 @@ Canonical how-to for system-extension changes.
 ## 4. If exposing AI orchestration tooling
 
 1. Add tool handlers in `internal/services/ai/orchestration/gametools/`.
-2. Register the tool in the `tools.go` definition list and add dispatch in `session.go`.
-3. If the production tool surface changes, update `internal/services/ai/orchestration/gametools/tools.go`, `internal/services/ai/orchestration/tool_policy.go`, and the AI reference docs together.
+2. Register the tool in the appropriate `tools_catalog_*.go` definition file and add dispatch in `session.go`.
+3. If the production tool surface changes, update `internal/services/ai/orchestration/gametools/tools.go`, the relevant `tools_catalog_*.go` file, `internal/services/ai/orchestration/tool_policy.go`, and the AI reference docs together.
 4. Add/update tool-focused tests.
 
 ## 5. Startup validation debugging

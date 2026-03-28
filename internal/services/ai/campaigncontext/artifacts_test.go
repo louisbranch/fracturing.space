@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaignartifact"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/aifakes"
 )
 
@@ -169,7 +169,7 @@ func TestManagerEnsureDefaultArtifactsUsesConfiguredSkillsLoader(t *testing.T) {
 
 func TestEnsureArtifactIfMissingPropagatesStoreErrors(t *testing.T) {
 	store := &artifactStoreStub{getErr: context.DeadlineExceeded}
-	err := ensureArtifactUpToDate(context.Background(), store, time.Now, "campaign-1", storage.CampaignArtifactRecord{Path: StoryArtifactPath})
+	err := ensureArtifactUpToDate(context.Background(), store, time.Now, "campaign-1", campaignartifact.Artifact{Path: StoryArtifactPath})
 	if err != context.DeadlineExceeded {
 		t.Fatalf("ensureArtifactUpToDate() error = %v, want %v", err, context.DeadlineExceeded)
 	}
@@ -178,7 +178,7 @@ func TestEnsureArtifactIfMissingPropagatesStoreErrors(t *testing.T) {
 func TestManagerEnsureDefaultArtifactsRefreshesExistingSkillsArtifact(t *testing.T) {
 	store := aifakes.NewCampaignArtifactStore()
 	now := time.Date(2026, 3, 20, 17, 0, 0, 0, time.UTC)
-	store.CampaignArtifacts["campaign-1\x00"+SkillsArtifactPath] = storage.CampaignArtifactRecord{
+	store.CampaignArtifacts["campaign-1\x00"+SkillsArtifactPath] = campaignartifact.Artifact{
 		CampaignID: "campaign-1",
 		Path:       SkillsArtifactPath,
 		Content:    "# Old Skills\nCommit via interaction_record_scene_gm_interaction only.",
@@ -221,14 +221,14 @@ func (s stubSkillsLoader) LoadSkills(string) (string, error) {
 	return s.content, s.err
 }
 
-func (s *artifactStoreStub) PutCampaignArtifact(context.Context, storage.CampaignArtifactRecord) error {
+func (s *artifactStoreStub) PutCampaignArtifact(context.Context, campaignartifact.Artifact) error {
 	return nil
 }
 
-func (s *artifactStoreStub) GetCampaignArtifact(context.Context, string, string) (storage.CampaignArtifactRecord, error) {
-	return storage.CampaignArtifactRecord{}, s.getErr
+func (s *artifactStoreStub) GetCampaignArtifact(context.Context, string, string) (campaignartifact.Artifact, error) {
+	return campaignartifact.Artifact{}, s.getErr
 }
 
-func (s *artifactStoreStub) ListCampaignArtifacts(context.Context, string) ([]storage.CampaignArtifactRecord, error) {
+func (s *artifactStoreStub) ListCampaignArtifacts(context.Context, string) ([]campaignartifact.Artifact, error) {
 	return nil, nil
 }

@@ -2,7 +2,12 @@ package orchestration
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"runtime"
 	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // InteractionStateSnapshot carries the typed interaction facts the prompt
@@ -79,10 +84,28 @@ func (f ContextSourceFunc) Collect(ctx context.Context, sess Session, input Prom
 	return f(ctx, sess, input)
 }
 
+// ContextSourceName derives a stable default name for the wrapped function so
+// the registry can emit useful spans without every caller naming sources
+// manually.
+func (f ContextSourceFunc) ContextSourceName() string {
+	value := reflect.ValueOf(f)
+	if value.IsValid() && value.Kind() == reflect.Func {
+		if fn := runtime.FuncForPC(value.Pointer()); fn != nil {
+			return sanitizeContextSourceName(fn.Name())
+		}
+	}
+	return fallbackContextSourceName(-1)
+}
+
+type registeredContextSource struct {
+	name   string
+	source ContextSource
+}
+
 // ContextSourceRegistry holds an ordered list of context sources that the
 // prompt builder composes into the session brief.
 type ContextSourceRegistry struct {
-	sources []ContextSource
+	sources []registeredContextSource
 }
 
 // NewContextSourceRegistry creates an empty registry.
@@ -92,8 +115,23 @@ func NewContextSourceRegistry() *ContextSourceRegistry {
 
 // Register adds a context source to the registry.
 func (r *ContextSourceRegistry) Register(src ContextSource) {
+	r.RegisterNamed("", src)
+}
+
+// RegisterAll adds each non-nil source to the registry in order.
+func (r *ContextSourceRegistry) RegisterAll(sources ...ContextSource) {
+	for _, src := range sources {
+		r.Register(src)
+	}
+}
+
+// RegisterNamed adds a context source with an explicit span/debug name.
+func (r *ContextSourceRegistry) RegisterNamed(name string, src ContextSource) {
 	if src != nil {
-		r.sources = append(r.sources, src)
+		r.sources = append(r.sources, registeredContextSource{
+			name:   resolveContextSourceName(name, src, len(r.sources)),
+			source: src,
+		})
 	}
 }
 
@@ -105,15 +143,29 @@ func (r *ContextSourceRegistry) CollectBrief(ctx context.Context, sess Session, 
 		return SessionBrief{}, nil
 	}
 	var brief SessionBrief
-	for _, src := range r.sources {
-		contribution, err := src.Collect(ctx, sess, input)
+	for i, entry := range r.sources {
+		sourceCtx, sourceSpan := orchestrationTracer().Start(ctx, "ai.orchestration.context_source")
+		sourceSpan.SetAttributes(
+			attribute.String("ai.orchestration.context_source.name", entry.name),
+			attribute.Int("ai.orchestration.context_source.index", i),
+		)
+
+		contribution, err := entry.source.Collect(sourceCtx, sess, input)
 		if err != nil {
+			recordSpanError(sourceSpan, err)
+			sourceSpan.End()
 			return SessionBrief{}, err
 		}
-		brief.Sections = append(brief.Sections, contribution.Sections...)
-		if contribution.InteractionState != nil {
-			brief.InteractionState = contribution.InteractionState
+		sourceSpan.SetAttributes(
+			attribute.Int("ai.orchestration.context_source.section_count", len(contribution.Sections)),
+			attribute.Bool("ai.orchestration.context_source.has_interaction_state", contribution.InteractionState != nil),
+		)
+		if err := brief.mergeContribution(entry.name, contribution); err != nil {
+			recordSpanError(sourceSpan, err)
+			sourceSpan.End()
+			return SessionBrief{}, err
 		}
+		sourceSpan.End()
 	}
 	return brief, nil
 }
@@ -125,4 +177,68 @@ func (r *ContextSourceRegistry) CollectSections(ctx context.Context, sess Sessio
 		return nil, err
 	}
 	return brief.Sections, nil
+}
+
+func (b *SessionBrief) mergeContribution(sourceName string, contribution BriefContribution) error {
+	b.Sections = append(b.Sections, contribution.Sections...)
+	if contribution.InteractionState == nil {
+		return nil
+	}
+	if b.InteractionState != nil {
+		return fmt.Errorf("context source %q attempted to overwrite interaction state", sourceName)
+	}
+	b.InteractionState = contribution.InteractionState
+	return nil
+}
+
+func resolveContextSourceName(explicit string, src ContextSource, index int) string {
+	if name := sanitizeContextSourceName(explicit); name != "" {
+		return name
+	}
+	return inferContextSourceName(src, index)
+}
+
+func inferContextSourceName(src ContextSource, index int) string {
+	if src == nil {
+		return fallbackContextSourceName(index)
+	}
+	if named, ok := src.(interface{ ContextSourceName() string }); ok {
+		if name := strings.TrimSpace(named.ContextSourceName()); name != "" {
+			return sanitizeContextSourceName(name)
+		}
+	}
+	value := reflect.ValueOf(src)
+	if value.IsValid() && value.Kind() == reflect.Func {
+		if fn := runtime.FuncForPC(value.Pointer()); fn != nil {
+			return sanitizeContextSourceName(fn.Name())
+		}
+	}
+	typ := reflect.TypeOf(src)
+	if typ != nil {
+		return sanitizeContextSourceName(typ.String())
+	}
+	return fallbackContextSourceName(index)
+}
+
+func sanitizeContextSourceName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+	if slash := strings.LastIndex(name, "/"); slash >= 0 {
+		name = name[slash+1:]
+	}
+	name = strings.TrimSuffix(name, "-fm")
+	if dot := strings.LastIndex(name, "."); dot >= 0 {
+		name = name[dot+1:]
+	}
+	name = strings.TrimSpace(name)
+	return name
+}
+
+func fallbackContextSourceName(index int) string {
+	if index < 0 {
+		return "context_source"
+	}
+	return fmt.Sprintf("context_source_%d", index+1)
 }

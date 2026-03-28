@@ -19,9 +19,9 @@ import (
 func TestRunCampaignTurnRejectsInvalidGrant(t *testing.T) {
 	sessionGrantConfig := testAISessionGrantConfig()
 	svc := newCampaignOrchestrationHandlersWithOpts(t, newFakeStore(), newFakeStore(), &fakeSealer{}, campaignOrchestrationTestOpts{
-		campaignTurnRunner:   &fakeCampaignTurnRunner{},
-		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{},
-		sessionGrantConfig:   &sessionGrantConfig,
+		campaignTurnRunner:      &fakeCampaignTurnRunner{},
+		campaignAuthStateReader: &fakeCampaignAIAuthStateClient{},
+		sessionGrantConfig:      &sessionGrantConfig,
 	})
 
 	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
@@ -35,7 +35,7 @@ func TestRunCampaignTurnRejectsStaleGrant(t *testing.T) {
 	svc := newCampaignOrchestrationHandlersWithOpts(t, newFakeStore(), newFakeStore(), &fakeSealer{}, campaignOrchestrationTestOpts{
 		campaignTurnRunner: &fakeCampaignTurnRunner{},
 		sessionGrantConfig: &sessionGrantConfig,
-		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+		campaignAuthStateReader: &fakeCampaignAIAuthStateClient{
 			authState: &gamev1.GetCampaignAIAuthStateResponse{
 				CampaignId:      "camp-1",
 				AiAgentId:       "agent-1",
@@ -87,7 +87,7 @@ func TestRunCampaignTurnMapsRunnerTimeout(t *testing.T) {
 	svc := newCampaignOrchestrationHandlersWithOpts(t, store, store, &fakeSealer{}, campaignOrchestrationTestOpts{
 		campaignTurnRunner: &fakeCampaignTurnRunner{runErr: context.DeadlineExceeded},
 		sessionGrantConfig: &sessionGrantConfig,
-		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+		campaignAuthStateReader: &fakeCampaignAIAuthStateClient{
 			authState: &gamev1.GetCampaignAIAuthStateResponse{
 				CampaignId:      "camp-1",
 				AiAgentId:       "agent-1",
@@ -140,7 +140,7 @@ func TestRunCampaignTurnMapsRunnerStepLimit(t *testing.T) {
 	svc := newCampaignOrchestrationHandlersWithOpts(t, store, store, &fakeSealer{}, campaignOrchestrationTestOpts{
 		campaignTurnRunner: &fakeCampaignTurnRunner{runErr: orchestration.ErrStepLimit},
 		sessionGrantConfig: &sessionGrantConfig,
-		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+		campaignAuthStateReader: &fakeCampaignAIAuthStateClient{
 			authState: &gamev1.GetCampaignAIAuthStateResponse{
 				CampaignId:      "camp-1",
 				AiAgentId:       "agent-1",
@@ -200,7 +200,7 @@ func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 	svc := newCampaignOrchestrationHandlersWithOpts(t, store, store, &fakeSealer{}, campaignOrchestrationTestOpts{
 		campaignTurnRunner: runner,
 		sessionGrantConfig: &sessionGrantConfig,
-		gameCampaignAIClient: &fakeCampaignAIAuthStateClient{
+		campaignAuthStateReader: &fakeCampaignAIAuthStateClient{
 			authState: &gamev1.GetCampaignAIAuthStateResponse{
 				CampaignId:      "camp-1",
 				AiAgentId:       "agent-1",
@@ -243,8 +243,8 @@ func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 	if runner.lastInput.Instructions != "Be the GM." {
 		t.Fatalf("runner instructions = %q", runner.lastInput.Instructions)
 	}
-	if runner.lastInput.CredentialSecret != "sk-1" {
-		t.Fatalf("runner credential secret = %q", runner.lastInput.CredentialSecret)
+	if runner.lastInput.AuthToken != "sk-1" {
+		t.Fatalf("runner auth token = %q", runner.lastInput.AuthToken)
 	}
 	if runner.lastInput.Input != "Frame the next scene." {
 		t.Fatalf("runner input = %q", runner.lastInput.Input)

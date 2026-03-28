@@ -8,7 +8,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 const campaignDebugPayloadMaxBytes = 64 * 1024
@@ -17,7 +16,7 @@ const campaignDebugPayloadSuffix = "\n\n[truncated by AI debug payload budget]"
 
 // campaignDebugTraceRecorder persists a best-effort ordered trace for one GM turn.
 type campaignDebugTraceRecorder struct {
-	store  storage.DebugTraceStore
+	store  debugtrace.Store
 	clock  Clock
 	broker *CampaignDebugUpdateBroker
 
@@ -32,7 +31,7 @@ type campaignDebugTraceRecorder struct {
 // newCampaignDebugTraceRecorder initializes one running turn record when debug tracing is available.
 func newCampaignDebugTraceRecorder(
 	ctx context.Context,
-	store storage.DebugTraceStore,
+	store debugtrace.Store,
 	clock Clock,
 	broker *CampaignDebugUpdateBroker,
 	idGenerator IDGenerator,

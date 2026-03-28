@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"google.golang.org/grpc/metadata"
 )
 

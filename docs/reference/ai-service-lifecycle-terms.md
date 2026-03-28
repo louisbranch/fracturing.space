@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 21
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-18"
+last_reviewed: "2026-03-23"
 ---
 
 # AI service lifecycle terms
@@ -24,8 +24,9 @@ An **auth reference** is the typed selector stored on an AI agent that answers
 
 Why it exists:
 
-- Contributors no longer pass nullable `credential_id` and
-  `provider_grant_id` pairs through transport and storage code.
+- Agent workflows now carry one typed auth-reference value through transport,
+  service, and storage instead of translating through split credential/grant
+  IDs.
 - The `agent` domain owns the exclusivity rule: an agent must use exactly one
   auth source when required.
 
@@ -84,6 +85,27 @@ Contributor rule:
 
 - Refresh-state semantics belong in `internal/services/ai/providergrant`.
 - Do not add ad-hoc refresh status mutations in transport or sqlite code.
+
+## Access request
+
+An **access request** is an owner-gated approval record for delegated agent
+invocation.
+
+- Owning package: `internal/services/ai/accessrequest`
+- Typical use: requester asks an agent owner for invoke access
+
+Lifecycle terms:
+
+- `review_*` fields (`reviewer_user_id`, `review_note`, `reviewed_at`) belong to
+  the approval or denial decision taken while a request is still pending.
+- `revoke_*` fields (`revoker_user_id`, `revoke_note`, `revoked_at`) belong to
+  the later removal of previously approved access.
+
+Contributor rule:
+
+- Keep approval/denial history separate from revoke history.
+- Do not overload review metadata to represent revocation in service, storage,
+  or transport code.
 
 ## Typed session brief
 

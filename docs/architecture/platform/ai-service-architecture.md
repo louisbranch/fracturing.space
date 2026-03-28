@@ -4,132 +4,133 @@ parent: "Platform surfaces"
 nav_order: 16
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-20"
+last_reviewed: "2026-03-23"
 ---
 
 # AI Service Architecture
 
-High-level overview of the AI service's internal structure. For behavioral
-details see the companion docs:
+High-level overview of the AI service. For workflow details, use the companion
+docs:
 
-- [Campaign AI orchestration](campaign-ai-orchestration.md) — grant, tool
-  policy, turn-loop mechanics
-- [Campaign AI agent system](campaign-ai-agent-system.md) — instruction
-  composition, context assembly, extension points
-- [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md) — bootstrap
-  turn behavior and future improvements
-- [AI service contributor map](../../reference/ai-service-contributor-map.md) —
-  package routing for contributors
+- [Campaign AI orchestration](campaign-ai-orchestration.md)
+- [Campaign AI agent system](campaign-ai-agent-system.md)
+- [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)
+- [AI service contributor map](../../reference/ai-service-contributor-map.md)
 
-## Layer Diagram
+## Layer Map
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Transport                         │
-│  api/grpc/ai/  — proto parse → service → proto resp │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────┐
-│                  Service Layer                       │
-│  service/  — use-case orchestration, auth token      │
-│  resolution, access control, usage guards            │
-└──────┬───────────────┬──────────────────────────────┘
-       │               │
-┌──────▼──────┐ ┌──────▼──────────────────────────────┐
-│   Domain    │ │           Orchestration              │
-│  agent/     │ │  orchestration/  — turn runner,      │
-│  credential/│ │  prompt builder, context sources      │
-│  provider-  │ │  orchestration/gametools/  — tool     │
-│   grant/    │ │  execution, gRPC session management   │
-│  access-    │ │  orchestration/daggerheart/  — game-  │
-│   request/  │ │  system-specific context sources      │
-└──────┬──────┘ └──────┬──────────────────────────────┘
-       │               │
-┌──────▼───────────────▼──────────────────────────────┐
-│                    Storage                           │
-│  storage/  — interface contracts (domain types)      │
-│  storage/sqlite/  — concrete SQLite adapter          │
-└─────────────────────────────────────────────────────┘
-```
+- Transport: `internal/services/ai/api/grpc/ai/`
+  Thin proto parse/auth extraction/service call/proto response wrappers.
+- Service: `internal/services/ai/service/`
+  Workflow orchestration, access rules, auth-material resolution, provider
+  capability checks, usage policy.
+- Domain: `agent/`, `credential/`, `providergrant/`, `accessrequest/`
+  Canonical lifecycle models and pure transition functions.
+- Orchestration: `orchestration/`
+  Turn runner, prompt builder, context sources, tool dispatch.
+- Storage: `storage/`, `storage/sqlite/`
+  Repository contracts plus the SQLite implementation.
+- Composition root: `app/`
+  Runtime wiring, provider registration, handler assembly, startup policy.
 
-Supporting packages sit alongside these layers:
+Supporting packages own stable shared vocabularies rather than leaving them in
+`storage/`: `auditevent/`, `campaignartifact/`, `debugtrace/`,
+`providerconnect/`, `provideroauth/`, and `gamebridge/`.
 
-- `provider/` and `provider/openai/` — provider identity, OAuth, model listing,
-  invocation, and Responses API translation
-- `campaigncontext/` — artifact defaults, instruction loading, memory document
-  structure, reference corpus
-- `secret/` — encryption seam for credential and grant secrets
-- `app/` — composition root wiring all layers into the live process
+## Core Boundary Rules
 
-## Domain Models Own the Truth
+- Domain packages own the truth. SQLite scans directly into domain or support
+  package types rather than into storage-only DTOs.
+- Lifecycle transitions stay pure in the owning package; services call them and
+  persist the result.
+- Interfaces are defined at consumption points. The app wiring composes live
+  implementations but does not define business policy.
+- Transport stays thin. Business logic belongs in `service/`, domain packages,
+  provider adapters, or orchestration seams.
+- Game collaboration crosses the AI-owned `gamebridge/` boundary rather than
+  using raw game clients throughout the service tree.
 
-Each domain package (`agent`, `credential`, `providergrant`, `accessrequest`)
-defines the canonical type used by all layers. There are no separate "storage
-record" types — the SQLite adapter scans directly into domain structs. Typed
-fields (e.g., `accessrequest.Status`, `providergrant.Status`, `agent.Status`,
-`provider.Provider`) replace raw strings throughout.
-
-Lifecycle transitions (`Create`, `Review`, `Revoke`, `Refresh`) live in the
-owning domain package as pure functions. The service layer calls these functions,
-then persists the result.
-
-## Service Layer
-
-`internal/services/ai/service/` contains one service struct per workflow family:
+## Service Responsibilities
 
 | Service | Responsibility |
 |---------|---------------|
-| `AgentService` | Agent CRUD, auth state, model listing, campaign binding validation |
-| `CredentialService` | Credential creation (with encryption), listing, revocation |
-| `ProviderGrantService` | OAuth connect flow (PKCE), grant listing, revocation |
+| `AgentService` | Agent CRUD, binding validation, auth readiness, provider model listing |
+| `CredentialService` | Encrypted credential create/list/revoke |
+| `ProviderGrantService` | OAuth connect flow, grant list/revoke |
 | `AccessRequestService` | Shared-access request lifecycle and audit |
-| `InvocationService` | Single-agent invocation with access control |
-| `CampaignOrchestrationService` | Campaign turn execution with grant validation |
+| `InvocationService` | Direct single-agent invocation |
+| `CampaignOrchestrationService` | Campaign-turn execution with grant validation |
 
-Supporting infrastructure in the same package:
+Important service-local seams: `AuthMaterialResolver` resolves invoke-time auth
+material, `ProviderGrantRuntime` owns grant refresh state, `ProviderConnectFinisher`
+commits grant/session completion atomically, `AuthReferencePolicy` validates auth
+usability and provider-model availability, and `UsagePolicy` turns usage reads into
+mutation-blocking preconditions.
 
-- `AuthTokenResolver` — resolves agent auth references to live provider tokens
-- `AccessibleAgentResolver` — ownership or approved-access checks
-- `UsageGuard` — blocks mutations to resources bound to active campaigns
-- `Error`/`ErrorKind` — typed service errors mapped to gRPC codes by transport
+## Authentication and Provider Model
 
-## Transport Layer
+Agents bind to one `agent.AuthReference`, which is either a credential or a
+provider grant. SQLite persists that as `auth_reference_type` plus
+`auth_reference_id`, and the gRPC surface mirrors the same typed model through
+`AgentAuthReference`.
 
-The transport package is a thin gRPC wrapper. Each handler method:
-1. Extracts the caller identity from gRPC metadata
-2. Parses the proto request into service-layer inputs
-3. Calls the corresponding service method
-4. Converts the domain result to a proto response
+Service code resolves an auth reference into invoke-time auth material. Past
+that seam, provider-facing and orchestration-facing contracts intentionally use
+the narrower `AuthToken` name because the domain distinction between decrypted
+credential secret and refreshed access token has already been collapsed.
 
-No business logic lives in the transport layer. Error translation from
-`service.ErrorKind` to gRPC status codes happens in a central mapping function.
+Provider capability registration is centralized in `providercatalog/`. The
+composition root registers one bundle per implemented provider, and services ask
+the registry for invocation, model listing, OAuth, or orchestration capability
+instead of receiving parallel provider-specific maps.
 
-## Authentication Model
+Current runtime shape: OpenAI provides invocation, model listing, OAuth, and
+campaign-turn orchestration support; Anthropic currently provides
+credential-backed invocation and model listing only. Valid provider identity is
+broader than current runtime availability, so services fail closed with
+`FailedPrecondition` when a required capability is not registered.
 
-Agents reference their provider authentication via `AuthReference`, a sealed
-sum type with two variants:
+## Orchestration Shape
 
-- **Credential** — a stored encrypted API key (`credential.Credential`)
-- **Provider Grant** — an OAuth token pair (`providergrant.ProviderGrant`)
+`orchestration/` owns the generic turn runner, prompt builder, context-source
+registry, and render pipeline. The runner now depends on an explicit
+`TurnPolicy` seam for completion/reminder rules.
 
-The `AuthTokenResolver` in the service layer resolves the reference to a live
-token at invocation time, handling credential decryption and provider-grant
-refresh transparently.
+The context-source registry owns source naming, per-source tracing spans, and
+typed brief merge rules. The always-on collector is exposed as
+`NewCoreContextSourceRegistry()`, then extended by the composition root with
+system-specific sources such as the Daggerheart sources in
+`orchestration/daggerheart/`.
 
-## How to Add a New RPC
+Tool execution is split:
 
-1. Define the RPC in `api/proto/ai/v1/service.proto` and run `make proto`.
-2. Add a service method in the appropriate `service/*.go` file.
-3. Add a thin handler method in the transport package that parses the proto,
-   calls the service, and converts the result.
-4. Register the handler in the appropriate handler root file.
-5. Add handler-level tests in the transport package test files.
+- `orchestration/gametools/`
+  Generic registry, direct-session shell, resource dispatch, shared catalogs
+- `orchestration/daggerhearttools/`
+  Daggerheart-specific mechanics, combat-flow, and read/resource execution
 
-## How to Add a Game System Tool
+This is intentionally Daggerheart-first, not a generic per-system plugin
+runtime yet.
 
-1. Define the tool in `orchestration/gametools/tools_*.go`.
-2. Implement the tool's execution logic using `gametools.Session` gRPC calls.
-3. Register the tool in the tool profile returned by `gametools.Tools()`.
-4. Add game-system-specific context sources in
-   `orchestration/{system}/` and register them in the composition root.
-5. Add instruction files under `data/instructions/v1/{system}/`.
+## Transport and Tests
+
+Transport handlers do four things only: extract caller identity, parse proto
+requests, call one service method, and map results back to proto.
+
+Tests are seam-first: package-local tests protect domain/provider/orchestration
+invariants, service tests protect workflow behavior, and transport tests stay
+limited to auth extraction, request validation, proto mapping, and handler-owned
+response shaping.
+
+## Extension Rules
+
+To add a new RPC, update `api/proto/ai/v1/service.proto`, run `make proto`, add
+the workflow method in the owning `service/*.go`, add a thin gRPC handler plus
+app registration, and put behavioral coverage at the owning seam before adding
+transport-only handler tests.
+
+To add a new game-system tool, update the appropriate
+`orchestration/gametools/tools_catalog_*.go`, keep system-specific execution in
+the owning system package such as `orchestration/daggerhearttools/`, register
+always-on prompt/context sources in the composition root, and update
+instruction/reference content when the GM behavior contract changes.

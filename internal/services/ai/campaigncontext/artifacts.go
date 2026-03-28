@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaignartifact"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -28,9 +29,9 @@ var workingArtifactSlugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // ArtifactStore persists campaign-scoped GM artifacts.
 type ArtifactStore interface {
-	PutCampaignArtifact(ctx context.Context, record storage.CampaignArtifactRecord) error
-	GetCampaignArtifact(ctx context.Context, campaignID string, path string) (storage.CampaignArtifactRecord, error)
-	ListCampaignArtifacts(ctx context.Context, campaignID string) ([]storage.CampaignArtifactRecord, error)
+	PutCampaignArtifact(ctx context.Context, record campaignartifact.Artifact) error
+	GetCampaignArtifact(ctx context.Context, campaignID string, path string) (campaignartifact.Artifact, error)
+	ListCampaignArtifacts(ctx context.Context, campaignID string) ([]campaignartifact.Artifact, error)
 }
 
 // SkillsDocumentLoader provides the composed skills document used for default
@@ -74,7 +75,7 @@ func NewManager(cfg ManagerConfig) *Manager {
 }
 
 // EnsureDefaultArtifacts creates built-in GM artifacts if they are missing.
-func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string, storySeed string) ([]storage.CampaignArtifactRecord, error) {
+func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string, storySeed string) ([]campaignartifact.Artifact, error) {
 	if m == nil || m.store == nil {
 		return nil, fmt.Errorf("campaign artifact store is not configured")
 	}
@@ -82,7 +83,7 @@ func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string,
 	if campaignID == "" {
 		return nil, fmt.Errorf("campaign id is required")
 	}
-	if err := ensureArtifactUpToDate(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
+	if err := ensureArtifactUpToDate(ctx, m.store, m.clock, campaignID, campaignartifact.Artifact{
 		CampaignID: campaignID,
 		Path:       SkillsArtifactPath,
 		Content:    m.resolveSkillsContent(),
@@ -90,7 +91,7 @@ func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string,
 	}); err != nil {
 		return nil, err
 	}
-	if err := ensureArtifactUpToDate(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
+	if err := ensureArtifactUpToDate(ctx, m.store, m.clock, campaignID, campaignartifact.Artifact{
 		CampaignID: campaignID,
 		Path:       MemoryArtifactPath,
 		Content:    "",
@@ -100,7 +101,7 @@ func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string,
 	}
 	storySeed = strings.TrimSpace(storySeed)
 	if storySeed != "" {
-		if err := ensureArtifactIfMissing(ctx, m.store, m.clock, campaignID, storage.CampaignArtifactRecord{
+		if err := ensureArtifactIfMissing(ctx, m.store, m.clock, campaignID, campaignartifact.Artifact{
 			CampaignID: campaignID,
 			Path:       StoryArtifactPath,
 			Content:    storySeed,
@@ -113,7 +114,7 @@ func (m *Manager) EnsureDefaultArtifacts(ctx context.Context, campaignID string,
 }
 
 // ListArtifacts returns all persisted campaign artifacts.
-func (m *Manager) ListArtifacts(ctx context.Context, campaignID string) ([]storage.CampaignArtifactRecord, error) {
+func (m *Manager) ListArtifacts(ctx context.Context, campaignID string) ([]campaignartifact.Artifact, error) {
 	if m == nil || m.store == nil {
 		return nil, fmt.Errorf("campaign artifact store is not configured")
 	}
@@ -125,29 +126,29 @@ func (m *Manager) ListArtifacts(ctx context.Context, campaignID string) ([]stora
 }
 
 // GetArtifact returns one persisted campaign artifact.
-func (m *Manager) GetArtifact(ctx context.Context, campaignID string, path string) (storage.CampaignArtifactRecord, error) {
+func (m *Manager) GetArtifact(ctx context.Context, campaignID string, path string) (campaignartifact.Artifact, error) {
 	if m == nil || m.store == nil {
-		return storage.CampaignArtifactRecord{}, fmt.Errorf("campaign artifact store is not configured")
+		return campaignartifact.Artifact{}, fmt.Errorf("campaign artifact store is not configured")
 	}
 	normalizedPath, err := NormalizeArtifactPath(path)
 	if err != nil {
-		return storage.CampaignArtifactRecord{}, err
+		return campaignartifact.Artifact{}, err
 	}
 	return m.store.GetCampaignArtifact(ctx, strings.TrimSpace(campaignID), normalizedPath)
 }
 
 // UpsertArtifact validates policy and replaces one mutable artifact body.
-func (m *Manager) UpsertArtifact(ctx context.Context, campaignID string, path string, content string) (storage.CampaignArtifactRecord, error) {
+func (m *Manager) UpsertArtifact(ctx context.Context, campaignID string, path string, content string) (campaignartifact.Artifact, error) {
 	if m == nil || m.store == nil {
-		return storage.CampaignArtifactRecord{}, fmt.Errorf("campaign artifact store is not configured")
+		return campaignartifact.Artifact{}, fmt.Errorf("campaign artifact store is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
-		return storage.CampaignArtifactRecord{}, fmt.Errorf("campaign id is required")
+		return campaignartifact.Artifact{}, fmt.Errorf("campaign id is required")
 	}
 	normalizedPath, err := normalizeWritableArtifactPath(path)
 	if err != nil {
-		return storage.CampaignArtifactRecord{}, err
+		return campaignartifact.Artifact{}, err
 	}
 	now := m.clock().UTC()
 	record, err := m.store.GetCampaignArtifact(ctx, campaignID, normalizedPath)
@@ -156,7 +157,7 @@ func (m *Manager) UpsertArtifact(ctx context.Context, campaignID string, path st
 		record.Content = content
 		record.UpdatedAt = now
 	case errors.Is(err, storage.ErrNotFound):
-		record = storage.CampaignArtifactRecord{
+		record = campaignartifact.Artifact{
 			CampaignID: campaignID,
 			Path:       normalizedPath,
 			Content:    content,
@@ -165,10 +166,10 @@ func (m *Manager) UpsertArtifact(ctx context.Context, campaignID string, path st
 			UpdatedAt:  now,
 		}
 	default:
-		return storage.CampaignArtifactRecord{}, err
+		return campaignartifact.Artifact{}, err
 	}
 	if err := m.store.PutCampaignArtifact(ctx, record); err != nil {
-		return storage.CampaignArtifactRecord{}, err
+		return campaignartifact.Artifact{}, err
 	}
 	return m.store.GetCampaignArtifact(ctx, campaignID, normalizedPath)
 }
@@ -208,7 +209,7 @@ func normalizeWritableArtifactPath(path string) (string, error) {
 	return normalizedPath, nil
 }
 
-func ensureArtifactUpToDate(ctx context.Context, store ArtifactStore, clock func() time.Time, campaignID string, record storage.CampaignArtifactRecord) error {
+func ensureArtifactUpToDate(ctx context.Context, store ArtifactStore, clock func() time.Time, campaignID string, record campaignartifact.Artifact) error {
 	existing, err := store.GetCampaignArtifact(ctx, campaignID, record.Path)
 	switch {
 	case err == nil:
@@ -229,7 +230,7 @@ func ensureArtifactUpToDate(ctx context.Context, store ArtifactStore, clock func
 	return store.PutCampaignArtifact(ctx, record)
 }
 
-func ensureArtifactIfMissing(ctx context.Context, store ArtifactStore, clock func() time.Time, campaignID string, record storage.CampaignArtifactRecord) error {
+func ensureArtifactIfMissing(ctx context.Context, store ArtifactStore, clock func() time.Time, campaignID string, record campaignartifact.Artifact) error {
 	_, err := store.GetCampaignArtifact(ctx, campaignID, record.Path)
 	if err == nil {
 		return nil

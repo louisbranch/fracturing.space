@@ -27,12 +27,8 @@ type defaultPromptBuilder struct {
 // instruction content. Production callers should inject a fully configured
 // PromptBuilder via RunnerConfig.
 func newDegradedPromptBuilder() PromptBuilder {
-	reg := NewContextSourceRegistry()
-	for _, src := range CoreContextSources() {
-		reg.Register(src)
-	}
 	return NewPromptBuilder(PromptBuilderConfig{
-		Collector: reg,
+		Collector: NewCoreContextSourceRegistry(),
 		Renderer: NewBriefPromptRenderer(BriefPromptRendererConfig{
 			Policy: DefaultPromptRenderPolicy(),
 		}),

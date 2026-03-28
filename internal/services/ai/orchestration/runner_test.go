@@ -95,6 +95,43 @@ func (f *fakePromptBuilder) Build(_ context.Context, _ Session, input PromptInpu
 	return f.prompt, nil
 }
 
+type fakeTurnPolicy struct {
+	controller      *fakeTurnController
+	commitToolName  string
+	controllerCalls int
+}
+
+func (f *fakeTurnPolicy) Controller(commitToolName string) TurnController {
+	f.commitToolName = commitToolName
+	f.controllerCalls++
+	return f.controller
+}
+
+type fakeTurnController struct {
+	observed                []string
+	committedOrResolved     bool
+	readyForCompletion      bool
+	playerHandoffRegressed  bool
+	commitReminderText      string
+	completionReminderText  string
+	playerPhaseReminderText string
+}
+
+func (f *fakeTurnController) ObserveSuccessfulTool(name string, _ string) {
+	f.observed = append(f.observed, name)
+}
+
+func (f *fakeTurnController) HasCommittedOrResolvedInteraction() bool { return f.committedOrResolved }
+func (f *fakeTurnController) ReadyForCompletion() bool                { return f.readyForCompletion }
+func (f *fakeTurnController) PlayerHandoffRegressed() bool            { return f.playerHandoffRegressed }
+func (f *fakeTurnController) BuildCommitReminder(string) string       { return f.commitReminderText }
+func (f *fakeTurnController) BuildTurnCompletionReminder(string) string {
+	return f.completionReminderText
+}
+func (f *fakeTurnController) BuildPlayerPhaseStartReminder(string) string {
+	return f.playerPhaseReminderText
+}
+
 func newTestRunner(dialer Dialer, maxSteps int) CampaignTurnRunner {
 	return NewRunner(RunnerConfig{
 		Dialer:   dialer,
@@ -154,14 +191,14 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Input:            "Advance the scene.",
-		Model:            "gpt-4.1-mini",
-		Instructions:     "Be concise.",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Input:         "Advance the scene.",
+		Model:         "gpt-4.1-mini",
+		Instructions:  "Be concise.",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -183,6 +220,67 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	}
 	if res.Usage != (providerpkg.Usage{InputTokens: 16, OutputTokens: 12, ReasoningTokens: 3, TotalTokens: 28}) {
 		t.Fatalf("usage = %#v", res.Usage)
+	}
+}
+
+func TestRunnerUsesInjectedTurnPolicy(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{{Name: "custom_commit"}},
+		results: map[string]ToolResult{
+			"custom_commit": {Output: `{"ok":true}`},
+		},
+	}
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-1",
+					Name:      "custom_commit",
+					Arguments: `{}`,
+				}},
+			},
+			{
+				ConversationID: "resp-1",
+				OutputText:     "Done.",
+			},
+		},
+	}
+	controller := &fakeTurnController{
+		committedOrResolved: true,
+		readyForCompletion:  true,
+	}
+	policy := &fakeTurnPolicy{controller: controller}
+
+	res, err := NewRunner(RunnerConfig{
+		Dialer:         &fakeDialer{sess: sess},
+		MaxSteps:       2,
+		PromptBuilder:  &fakePromptBuilder{prompt: "Prompt"},
+		TurnPolicy:     policy,
+		CommitToolName: "custom_commit",
+	}).Run(context.Background(), Input{
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Input:         "Prompt",
+		Model:         "gpt-test",
+		AuthToken:     "secret",
+		Provider:      provider,
+	})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if res.OutputText != "Done." {
+		t.Fatalf("output text = %q, want %q", res.OutputText, "Done.")
+	}
+	if policy.commitToolName != "custom_commit" {
+		t.Fatalf("policy commit tool = %q, want %q", policy.commitToolName, "custom_commit")
+	}
+	if policy.controllerCalls != 1 {
+		t.Fatalf("controller calls = %d, want 1", policy.controllerCalls)
+	}
+	if !reflect.DeepEqual(controller.observed, []string{"custom_commit"}) {
+		t.Fatalf("observed tools = %#v, want %#v", controller.observed, []string{"custom_commit"})
 	}
 }
 
@@ -215,13 +313,13 @@ func TestRunnerAcceptsPlayerPhaseStartAsCompletedTurn(t *testing.T) {
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Input:            "Open the scene.",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Input:         "Open the scene.",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -267,13 +365,13 @@ func TestRunnerAcceptsReviewResolverAsCommittedTurn(t *testing.T) {
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Input:            "Resolve the review.",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Input:         "Resolve the review.",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -331,12 +429,12 @@ func TestRunnerRequestsTurnCompletionAfterCommitWithoutPlayerHandoff(t *testing.
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 5).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -365,12 +463,12 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 	}
 
 	_, err := newTestRunner(&fakeDialer{sess: sess}, 2).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if !errors.Is(err, ErrNarrationNotCommitted) {
 		t.Fatalf("err = %v, want %v", err, ErrNarrationNotCommitted)
@@ -419,12 +517,12 @@ func TestRunnerRequestsPlayerPhaseRestartWhenNarrationEndsAfterPhaseStart(t *tes
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 5).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -468,12 +566,12 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -521,12 +619,12 @@ func TestRunnerFiltersSessionToolsThroughConfiguredPolicy(t *testing.T) {
 		ToolPolicy: NewStaticToolPolicy([]string{"scene_create", playerPhaseStartToolName}),
 	})
 	res, err := runner.Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -568,14 +666,14 @@ func TestRunnerPassesPromptSpecificInputToPromptBuilder(t *testing.T) {
 		MaxSteps:      4,
 	})
 	_, err := runner.Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-1",
-		Input:            "Advance the scene.",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
-		Instructions:     "provider-only instructions",
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		Input:         "Advance the scene.",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
+		Instructions:  "provider-only instructions",
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -624,12 +722,12 @@ func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-ai",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-ai",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -676,12 +774,12 @@ func TestRunnerPromptsProviderToCommitDraftNarration(t *testing.T) {
 	}
 
 	res, err := newTestRunner(&fakeDialer{sess: sess}, 6).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-ai",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-ai",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -724,12 +822,12 @@ func TestRunnerAppliesToolResultBudget(t *testing.T) {
 		MaxSteps:           4,
 		ToolResultMaxBytes: 96,
 	}).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-ai",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-ai",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)
@@ -763,12 +861,12 @@ func TestRunnerHonorsTurnTimeout(t *testing.T) {
 		MaxSteps:    4,
 		TurnTimeout: 5 * time.Millisecond,
 	}).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-ai",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-ai",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	})
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v, want context deadline exceeded", err)
@@ -785,12 +883,12 @@ func TestRunnerWrapsPromptBuildFailures(t *testing.T) {
 		PromptBuilder: &fakePromptBuilder{err: errors.New("boom")},
 		MaxSteps:      4,
 	}).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-ai",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         &fakeProvider{},
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-ai",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      &fakeProvider{},
 	})
 	if got := apperrors.GetCode(err); got != apperrors.CodeAIOrchestrationPromptBuildFailed {
 		t.Fatalf("error code = %v, want %v", got, apperrors.CodeAIOrchestrationPromptBuildFailed)
@@ -829,12 +927,12 @@ func TestRunnerEmitsSpansForRunAndToolCalls(t *testing.T) {
 	}
 
 	if _, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
-		CampaignID:       "camp-1",
-		SessionID:        "sess-1",
-		ParticipantID:    "gm-ai",
-		Model:            "gpt-4.1-mini",
-		CredentialSecret: "sk-1",
-		Provider:         provider,
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-ai",
+		Model:         "gpt-4.1-mini",
+		AuthToken:     "sk-1",
+		Provider:      provider,
 	}); err != nil {
 		t.Fatalf("run: %v", err)
 	}
@@ -850,6 +948,9 @@ func TestRunnerEmitsSpansForRunAndToolCalls(t *testing.T) {
 		t.Fatalf("span names = %#v", names)
 	}
 	if !containsSpanName(names, "ai.orchestration.build_prompt") {
+		t.Fatalf("span names = %#v", names)
+	}
+	if !containsSpanName(names, "ai.orchestration.context_source") {
 		t.Fatalf("span names = %#v", names)
 	}
 }

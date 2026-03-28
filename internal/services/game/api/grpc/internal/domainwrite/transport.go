@@ -5,8 +5,8 @@ import (
 	"log/slog"
 
 	errori18n "github.com/louisbranch/fracturing.space/internal/platform/errors/i18n"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	grpcstatus "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcstatus"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
