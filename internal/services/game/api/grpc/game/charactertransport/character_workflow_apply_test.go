@@ -3,10 +3,9 @@ package charactertransport
 import (
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
@@ -20,7 +19,7 @@ func TestApplyCharacterCreationWorkflow_Success(t *testing.T) {
 		Evasion:     10,
 	})
 
-	resp, err := svc.ApplyCharacterCreationWorkflow(gametest.ContextWithParticipantID("manager-1"), &statev1.ApplyCharacterCreationWorkflowRequest{
+	resp, err := svc.ApplyCharacterCreationWorkflow(requestctx.WithParticipantID("manager-1"), &statev1.ApplyCharacterCreationWorkflowRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemWorkflow: &statev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{

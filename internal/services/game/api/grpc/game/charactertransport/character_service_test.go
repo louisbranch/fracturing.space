@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -81,7 +83,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("Renamed"),
@@ -121,7 +123,7 @@ func TestUpdateCharacter_Success(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("New Hero"),
@@ -180,9 +182,9 @@ func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("New Hero"),

@@ -18,7 +18,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -199,10 +198,12 @@ func (h *Handler) resolveCountdownID(countdownID string) (string, error) {
 }
 
 func (h *Handler) ensureCountdownMissing(ctx context.Context, campaignID, countdownID string) error {
-	if _, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err == nil {
+	_, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load campaign countdown"); lookupErr != nil {
+		return lookupErr
+	}
+	if err == nil {
 		return status.Error(codes.FailedPrecondition, "countdown already exists")
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return grpcerror.HandleDomainError(err)
 	}
 	return nil
 }

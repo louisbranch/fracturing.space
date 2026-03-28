@@ -638,15 +638,21 @@ func TestSnapshotStateHelpers(t *testing.T) {
 		t.Fatalf("SnapshotOrDefault(unsupported) = (%+v, %v), want default state and false", defaultState, ok)
 	}
 
-	if _, err := AssertSnapshotState("unsupported"); err == nil {
-		t.Fatal("AssertSnapshotState() error = nil, want error for unsupported type")
+	if _, err := RequireSnapshotState("unsupported"); err == nil {
+		t.Fatal("RequireSnapshotState() error = nil, want error for unsupported type")
 	}
-	asserted, err := AssertSnapshotState(nil)
+	if _, err := RequireSnapshotState(nil); err == nil {
+		t.Fatal("RequireSnapshotState(nil) error = nil, want error")
+	}
+	asserted, err := SnapshotOrDefaultIfAbsent(nil)
 	if err != nil {
-		t.Fatalf("AssertSnapshotState(nil) returned error: %v", err)
+		t.Fatalf("SnapshotOrDefaultIfAbsent(nil) returned error: %v", err)
 	}
 	if asserted.GMFear != GMFearDefault || asserted.CharacterProfiles == nil {
-		t.Fatalf("AssertSnapshotState(nil) = %+v, want default initialized snapshot", asserted)
+		t.Fatalf("SnapshotOrDefaultIfAbsent(nil) = %+v, want default initialized snapshot", asserted)
+	}
+	if _, err := SnapshotOrDefaultIfAbsent("unsupported"); err == nil {
+		t.Fatal("SnapshotOrDefaultIfAbsent(unsupported) error = nil, want error")
 	}
 
 	if got := AppendUnique([]string{"one"}, "one"); !reflect.DeepEqual(got, []string{"one"}) {

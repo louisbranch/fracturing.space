@@ -33,7 +33,7 @@ func (r registryCoreDomainRegistrar) Register(bootstrap registryBootstrap) error
 // Validate enforces core domain emission declarations before system modules are
 // added to the write-path registries.
 func (r registryCoreDomainRegistrar) Validate(bootstrap registryBootstrap) error {
-	return validateCoreEmittableEventTypes(bootstrap.eventRegistry)
+	return validateCoreEmittableEventTypes(bootstrap.eventRegistry, r.domains)
 }
 
 // registerCoreDomains keeps the historical test seam while delegating ownership
@@ -44,6 +44,6 @@ func (b registryBootstrap) registerCoreDomains(domains []CoreDomain) error {
 
 // validateCoreRegistrations keeps the historical test seam while delegating the
 // actual validation responsibility to the core-domain registrar.
-func (b registryBootstrap) validateCoreRegistrations() error {
-	return newRegistryCoreDomainRegistrar(nil).Validate(b)
+func (b registryBootstrap) validateCoreRegistrations(domains []CoreDomain) error {
+	return newRegistryCoreDomainRegistrar(domains).Validate(b)
 }

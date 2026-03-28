@@ -51,10 +51,10 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart rolls"); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
@@ -73,11 +73,11 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	rollContext := normalizeActionRollContext(in.GetContext())
 	replaceHopeWithArmor := in.GetReplaceHopeWithArmor()
@@ -94,7 +94,7 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 		}
 		armor, err := h.deps.Content.GetDaggerheartArmor(ctx, profile.EquippedArmorID)
 		if err != nil {
-			return nil, grpcerror.HandleDomainError(err)
+			return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 		}
 		armorRules := rules.EffectiveArmorRules(&armor)
 		if !armorRules.HopefulReplaceHopeWithArmor {
@@ -129,7 +129,7 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 		if equippedArmorID := strings.TrimSpace(profile.EquippedArmorID); equippedArmorID != "" {
 			armor, err := h.deps.Content.GetDaggerheartArmor(ctx, equippedArmorID)
 			if err != nil {
-				return nil, grpcerror.HandleDomainError(err)
+				return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 			}
 			armorRules := rules.EffectiveArmorRules(&armor)
 			modifierTotal, modifierList = appendActionModifier(

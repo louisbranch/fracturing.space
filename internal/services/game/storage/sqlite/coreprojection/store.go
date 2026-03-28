@@ -1,6 +1,7 @@
 package coreprojection
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
+	sqlitedaggerheartprojection "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartprojection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/migrations"
 )
@@ -41,7 +43,15 @@ func Open(path string) (*Store, error) {
 
 // OpenProjections opens a SQLite projections store at the provided path.
 func OpenProjections(path string) (*Store, error) {
-	return openStore(path, migrations.ProjectionsFS, "projections")
+	store, err := openStore(path, migrations.ProjectionsFS, "projections")
+	if err != nil {
+		return nil, err
+	}
+	if err := sqlitedaggerheartprojection.RepairLegacyConditionStateEncoding(context.Background(), store.sqlDB); err != nil {
+		_ = store.Close()
+		return nil, fmt.Errorf("repair legacy daggerheart condition encoding: %w", err)
+	}
+	return store, nil
 }
 
 // Close closes the underlying SQLite database.

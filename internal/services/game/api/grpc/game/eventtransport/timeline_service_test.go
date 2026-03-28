@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -116,7 +117,7 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 		Session:     sessionStore,
 	})
 
-	resp, err := svc.ListTimelineEntries(gametest.ContextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})

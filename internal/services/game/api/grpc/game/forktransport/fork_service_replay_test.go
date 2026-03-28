@@ -9,7 +9,10 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -27,13 +30,13 @@ import (
 )
 
 func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
-	ctx := gametest.ContextWithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
 	participantStore := gametest.NewFakeParticipantStore()
 	characterStore := gametest.NewFakeCharacterStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	eventStore := gametest.NewFakeEventStore()
 	forkStore := gametest.NewFakeCampaignForkStore()
 
@@ -196,7 +199,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	}
 	deps.Applier = testApplier(t, deps, dhStore)
 
-	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	svc := newServiceForTest(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	resp, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -269,7 +272,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 }
 
 func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *testing.T) {
-	ctx := gametest.ContextWithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 3, 11, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -366,9 +369,9 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 		CampaignFork: forkStore,
 		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
-	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
+	deps.Applier = testApplier(t, deps, daggerhearttestkit.NewFakeDaggerheartStore())
 
-	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	svc := newServiceForTest(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	if _, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -388,13 +391,13 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 }
 
 func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
-	ctx := gametest.ContextWithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
 	participantStore := gametest.NewFakeParticipantStore()
 	characterStore := gametest.NewFakeCharacterStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	eventStore := gametest.NewFakeEventStore()
 	forkStore := gametest.NewFakeCampaignForkStore()
 
@@ -592,7 +595,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	}
 	deps.Applier = testApplier(t, deps, dhStore)
 
-	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	svc := newServiceForTest(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	_, err = svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -628,7 +631,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 }
 
 func TestForkCampaign_UsesDomainEngine(t *testing.T) {
-	ctx := gametest.ContextWithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -701,8 +704,8 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 		CampaignFork: forkStore,
 		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
-	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
-	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	deps.Applier = testApplier(t, deps, daggerhearttestkit.NewFakeDaggerheartStore())
+	svc := newServiceForTest(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	_, err = svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -736,7 +739,7 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 }
 
 func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
-	ctx := gametest.ContextWithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 2, 9, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -877,8 +880,8 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 		Session:      sessionStore,
 		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
-	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
-	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	deps.Applier = testApplier(t, deps, daggerhearttestkit.NewFakeDaggerheartStore())
+	svc := newServiceForTest(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	resp, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",

@@ -319,7 +319,7 @@ func (b *serverBootstrap) configureStoresAndApplier(
 	if err != nil {
 		return configuredDomainState{}, err
 	}
-	if err := applier.ValidateStorePreconditions(); err != nil {
+	if err := applier.ValidateRuntimePreconditions(); err != nil {
 		return configuredDomainState{}, err
 	}
 	if err := assertWatermarkStoreConfigured(srvEnv, storeGroups.infrastructure); err != nil {
@@ -386,7 +386,7 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		}
 	}()
 
-	registries, err := b.buildRegistriesPhase()
+	systemRegistration, registries, err := b.buildRegistriesPhase()
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +406,7 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		return nil, err
 	}
 
-	systemState, err := b.bootstrapSystemsPhase(startupCtx, bundle, registries, domainState.applier)
+	systemState, err := b.bootstrapSystemsPhase(startupCtx, bundle, systemRegistration, registries, domainState.applier)
 	if err != nil {
 		return nil, err
 	}
@@ -427,6 +427,7 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		authClient:      newAuthServiceClient(deps.auth.Conn()),
 		aiAgentClient:   newAIAgentServiceClient(deps.ai.Conn()),
 		systemRegistry:  systemState.systemRegistry,
+		systemModules:   registries.Systems,
 	})
 
 	transportState, err := b.bootstrapTransportPhase(

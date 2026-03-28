@@ -41,37 +41,45 @@ type Decider interface {
 // all fold consumers (engine, replay, module).
 type Folder = fold.Folder
 
-// CharacterReadinessChecker is an optional module extension point used by
-// session-start readiness evaluation.
+// CharacterReadinessEvaluator is a bound, typed session-start readiness hook.
 //
-// Implementations validate system-specific character readiness from typed
-// system state plus the core character snapshot. Returning false blocks
-// session.start and the reason is surfaced in the command rejection message.
-//
-// Modules that do not implement this interface fall back to core readiness
-// rules only (for example, controller assignment).
-type CharacterReadinessChecker interface {
-	CharacterReady(systemState any, ch character.State) (ready bool, reason string)
+// Implementations are produced by a system package after it has recovered its
+// own typed snapshot state. Runtime callers then execute readiness checks
+// without passing raw system state through generic interfaces.
+type CharacterReadinessEvaluator interface {
+	CharacterReady(ch character.State) (ready bool, reason string)
 }
 
-// SessionStartBootstrapper is an optional module extension point used by the
-// readiness-owned session.start workflow.
+// CharacterReadinessProvider is an optional module extension point used by
+// session-start readiness evaluation.
 //
-// Implementations can emit system-owned bootstrap events that should be
-// appended atomically alongside the first session.started transition. This is
-// intended for ruleset-level campaign/session initialization that depends on
-// current campaign characters, such as Daggerheart's initial GM Fear seeding.
+// Implementations bind one system-owned readiness evaluator against the
+// current system state map for the target campaign. The provider owns any
+// version-aware lookup, missing-state seeding, and typed snapshot recovery.
+type CharacterReadinessProvider interface {
+	BindCharacterReadiness(campaignID ids.CampaignID, currentByKey map[Key]any) (CharacterReadinessEvaluator, error)
+}
+
+// SessionStartBootstrapEmitter is a bound, typed first-session bootstrap hook.
 //
-// The workflow only calls this hook when the campaign is transitioning from
-// draft to active on its first session start. Modules that do not implement the
-// interface simply contribute no bootstrap events.
-type SessionStartBootstrapper interface {
-	SessionStartBootstrap(
-		systemState any,
+// Implementations emit system-owned bootstrap events after the system package
+// has already recovered its typed snapshot state.
+type SessionStartBootstrapEmitter interface {
+	EmitSessionStartBootstrap(
 		characters map[ids.CharacterID]character.State,
 		cmd command.Command,
 		now time.Time,
 	) ([]event.Event, error)
+}
+
+// SessionStartBootstrapProvider is an optional module extension point used by
+// the readiness-owned session.start workflow.
+//
+// Implementations bind one bootstrap emitter against the current system state
+// map for the target campaign. Modules that do not implement this interface
+// contribute no bootstrap events on first session start.
+type SessionStartBootstrapProvider interface {
+	BindSessionStartBootstrap(campaignID ids.CampaignID, currentByKey map[Key]any) (SessionStartBootstrapEmitter, error)
 }
 
 // CommandTyper must be implemented by deciders whose modules register system
@@ -181,6 +189,116 @@ func resolveCommandModule(registry *Registry, cmd command.Command) (Module, erro
 func resolveEventModule(registry *Registry, evt event.Event) (Module, error) {
 	module, _, _, err := resolveModule(registry, evt.SystemID, evt.SystemVersion)
 	return module, err
+}
+
+// ResolveSnapshotState resolves one system module and returns the current
+// snapshot state for runtime callers.
+//
+// If current is nil and the module exposes a StateFactory, the helper seeds
+// the runtime state by calling NewSnapshotState with the provided campaign ID.
+// Callers that already have state keep full ownership of that state value; the
+// helper only fills in the missing-state case.
+func ResolveSnapshotState(
+	registry *Registry,
+	campaignID ids.CampaignID,
+	systemID, systemVersion string,
+	current any,
+) (Module, any, error) {
+	mod, resolvedID, resolvedVersion, err := resolveModule(registry, systemID, systemVersion)
+	if err != nil {
+		return nil, nil, err
+	}
+	if current != nil {
+		return mod, current, nil
+	}
+	factory := mod.StateFactory()
+	if factory == nil {
+		return mod, nil, nil
+	}
+	seed, err := factory.NewSnapshotState(campaignID)
+	if err != nil {
+		return nil, nil, fmt.Errorf(
+			"system state factory %s@%s NewSnapshotState: %w",
+			resolvedID,
+			resolvedVersion,
+			err,
+		)
+	}
+	return mod, seed, nil
+}
+
+// ResolveCharacterReadiness resolves one module's optional bound session-start
+// readiness evaluator by default system version.
+//
+// The boolean return reports whether the module exposes the capability at all.
+// The provider owns state binding so runtime callers only execute the returned
+// typed evaluator.
+func ResolveCharacterReadiness(
+	registry *Registry,
+	campaignID ids.CampaignID,
+	systemID string,
+	currentByKey map[Key]any,
+) (evaluator CharacterReadinessEvaluator, enabled bool, err error) {
+	if registry == nil {
+		return nil, false, nil
+	}
+	resolvedID := strings.TrimSpace(systemID)
+	if resolvedID == "" {
+		return nil, false, nil
+	}
+	mod := registry.Get(resolvedID, "")
+	if mod == nil {
+		return nil, false, nil
+	}
+	provider, ok := mod.(CharacterReadinessProvider)
+	if !ok {
+		return nil, false, nil
+	}
+	evaluator, err = provider.BindCharacterReadiness(campaignID, currentByKey)
+	if err != nil {
+		return nil, true, err
+	}
+	if evaluator == nil {
+		return nil, true, fmt.Errorf("module %s@%s returned a nil character readiness evaluator", mod.ID(), mod.Version())
+	}
+	return evaluator, true, nil
+}
+
+// ResolveSessionStartBootstrap resolves one module's optional bound
+// first-session bootstrap emitter by default system version.
+//
+// The boolean return reports whether the module exposes the capability at all.
+// The provider owns state binding so runtime callers only execute the returned
+// typed emitter.
+func ResolveSessionStartBootstrap(
+	registry *Registry,
+	campaignID ids.CampaignID,
+	systemID string,
+	currentByKey map[Key]any,
+) (emitter SessionStartBootstrapEmitter, enabled bool, err error) {
+	if registry == nil {
+		return nil, false, nil
+	}
+	resolvedID := strings.TrimSpace(systemID)
+	if resolvedID == "" {
+		return nil, false, nil
+	}
+	mod := registry.Get(resolvedID, "")
+	if mod == nil {
+		return nil, false, nil
+	}
+	provider, ok := mod.(SessionStartBootstrapProvider)
+	if !ok {
+		return nil, false, nil
+	}
+	emitter, err = provider.BindSessionStartBootstrap(campaignID, currentByKey)
+	if err != nil {
+		return nil, true, err
+	}
+	if emitter == nil {
+		return nil, true, fmt.Errorf("module %s@%s returned a nil session-start bootstrap emitter", mod.ID(), mod.Version())
+	}
+	return emitter, true, nil
 }
 
 // RouteCommand routes a system command to the registered module decider.

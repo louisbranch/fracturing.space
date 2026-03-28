@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -53,11 +55,11 @@ func TestResolveSessionGate_UsesDomainEngine(t *testing.T) {
 			Participant: participantStore,
 			Write:       testWritePath(domain),
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	_, err := svc.ResolveSessionGate(gametest.ContextWithParticipantID("manager-1"), &statev1.ResolveSessionGateRequest{
+	_, err := svc.ResolveSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.ResolveSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateId:     "g1",

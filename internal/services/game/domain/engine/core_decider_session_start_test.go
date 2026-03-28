@@ -172,7 +172,7 @@ func TestCoreDeciderSessionStart_ActiveSessionBoundaryRejected(t *testing.T) {
 	}
 }
 
-func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessChecker(t *testing.T) {
+func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessProvider(t *testing.T) {
 	systems := module.NewRegistry()
 	if err := systems.Register(stubReadinessModule{ready: false, reason: "class is required"}); err != nil {
 		t.Fatalf("register stub module: %v", err)
@@ -245,6 +245,15 @@ func (m stubReadinessModule) EmittableEventTypes() []event.Type        { return 
 func (m stubReadinessModule) Decider() module.Decider                  { return nil }
 func (m stubReadinessModule) Folder() module.Folder                    { return nil }
 func (m stubReadinessModule) StateFactory() module.StateFactory        { return nil }
-func (m stubReadinessModule) CharacterReady(any, character.State) (bool, string) {
-	return m.ready, m.reason
+func (m stubReadinessModule) BindCharacterReadiness(ids.CampaignID, map[module.Key]any) (module.CharacterReadinessEvaluator, error) {
+	return engineStubReadinessEvaluator{ready: m.ready, reason: m.reason}, nil
+}
+
+type engineStubReadinessEvaluator struct {
+	ready  bool
+	reason string
+}
+
+func (e engineStubReadinessEvaluator) CharacterReady(character.State) (bool, string) {
+	return e.ready, e.reason
 }

@@ -102,7 +102,7 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 	ctx := context.Background()
 	campaignID := ids.CampaignID("camp-1")
 	base := time.Date(2026, 2, 28, 10, 0, 0, 0, time.UTC)
-	var folded any
+	var folded any = daggerheartstate.NewSnapshotState(campaignID)
 	for i, typ := range sequence {
 		payloadJSON, err := json.Marshal(vectors[typ])
 		if err != nil {

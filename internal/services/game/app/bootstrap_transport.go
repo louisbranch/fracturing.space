@@ -159,6 +159,7 @@ func newDefaultGRPCServer(bundle *storageBundle, srvEnv serverEnv) *grpc.Server 
 			grpcmeta.StreamServerInterceptor(nil),
 			interceptors.InternalServiceIdentityStreamInterceptor(internalIdentity),
 			interceptors.StreamAuditInterceptor(audit.EnabledPolicy(bundle.events)),
+			interceptors.SessionLockStreamInterceptor(),
 			interceptors.ErrorConversionStreamInterceptor(),
 		),
 	)

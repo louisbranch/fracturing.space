@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -54,7 +55,7 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Event: eventStore, Character: characterStore})
-	resp, err := svc.ListTimelineEntries(gametest.ContextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})
@@ -127,7 +128,7 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Event: eventStore, Character: characterStore})
-	resp, err := svc.ListTimelineEntries(gametest.ContextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})

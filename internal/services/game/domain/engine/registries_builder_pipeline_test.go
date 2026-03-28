@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/coredomain"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -203,11 +204,13 @@ func TestRegistryBootstrapRegisterCoreDomains_WrapsCommandRegistrationError(t *t
 
 	err := bootstrap.registerCoreDomains([]CoreDomain{
 		{
-			name: "test-domain",
-			RegisterCommands: func(*command.Registry) error {
-				return errExpected
+			Contracts: coredomain.Contracts{
+				DomainName: "test-domain",
+				RegisterCommands: func(*command.Registry) error {
+					return errExpected
+				},
+				RegisterEvents: func(*event.Registry) error { return nil },
 			},
-			RegisterEvents: func(*event.Registry) error { return nil },
 		},
 	})
 	if !errors.Is(err, errExpected) {
@@ -224,10 +227,12 @@ func TestRegistryBootstrapRegisterCoreDomains_WrapsEventRegistrationError(t *tes
 
 	err := bootstrap.registerCoreDomains([]CoreDomain{
 		{
-			name:             "test-domain",
-			RegisterCommands: func(*command.Registry) error { return nil },
-			RegisterEvents: func(*event.Registry) error {
-				return errExpected
+			Contracts: coredomain.Contracts{
+				DomainName:       "test-domain",
+				RegisterCommands: func(*command.Registry) error { return nil },
+				RegisterEvents: func(*event.Registry) error {
+					return errExpected
+				},
 			},
 		},
 	})
@@ -245,10 +250,12 @@ func TestCollectFoldHandledTypes_IncludesCoreAndModuleTypes(t *testing.T) {
 	foldHandled := collectFoldHandledTypes(
 		[]CoreDomain{
 			{
-				name:             "core",
-				RegisterCommands: func(*command.Registry) error { return nil },
-				RegisterEvents:   func(*event.Registry) error { return nil },
-				FoldHandledTypes: func() []event.Type { return []event.Type{coreType} },
+				Contracts: coredomain.Contracts{
+					DomainName:       "core",
+					RegisterCommands: func(*command.Registry) error { return nil },
+					RegisterEvents:   func(*event.Registry) error { return nil },
+					FoldHandledTypes: func() []event.Type { return []event.Type{coreType} },
+				},
 			},
 		},
 		[]module.Module{
@@ -271,15 +278,19 @@ func TestCollectFoldHandledTypes_IncludesCoreAndModuleTypes(t *testing.T) {
 func TestCollectProjectionHandledTypes_SkipsNilDomainFunctions(t *testing.T) {
 	types := collectProjectionHandledTypes([]CoreDomain{
 		{
-			name:             "without-projection",
-			RegisterCommands: func(*command.Registry) error { return nil },
-			RegisterEvents:   func(*event.Registry) error { return nil },
+			Contracts: coredomain.Contracts{
+				DomainName:       "without-projection",
+				RegisterCommands: func(*command.Registry) error { return nil },
+				RegisterEvents:   func(*event.Registry) error { return nil },
+			},
 		},
 		{
-			name:                   "with-projection",
-			RegisterCommands:       func(*command.Registry) error { return nil },
-			RegisterEvents:         func(*event.Registry) error { return nil },
-			ProjectionHandledTypes: func() []event.Type { return []event.Type{"core.projected"} },
+			Contracts: coredomain.Contracts{
+				DomainName:             "with-projection",
+				RegisterCommands:       func(*command.Registry) error { return nil },
+				RegisterEvents:         func(*event.Registry) error { return nil },
+				ProjectionHandledTypes: func() []event.Type { return []event.Type{"core.projected"} },
+			},
 		},
 	})
 	if len(types) != 1 {
@@ -323,13 +334,15 @@ func TestBuildRegistries_FailsWhenCoreDomainCommandRegistrationFails(t *testing.
 	_, err := buildRegistries(
 		[]CoreDomain{
 			{
-				name: "core",
-				RegisterCommands: func(*command.Registry) error {
-					return errExpected
+				Contracts: coredomain.Contracts{
+					DomainName: "core",
+					RegisterCommands: func(*command.Registry) error {
+						return errExpected
+					},
+					RegisterEvents:      func(*event.Registry) error { return nil },
+					EmittableEventTypes: func() []event.Type { return nil },
+					FoldHandledTypes:    func() []event.Type { return nil },
 				},
-				RegisterEvents:      func(*event.Registry) error { return nil },
-				EmittableEventTypes: func() []event.Type { return nil },
-				FoldHandledTypes:    func() []event.Type { return nil },
 			},
 		},
 		nil,
@@ -339,21 +352,23 @@ func TestBuildRegistries_FailsWhenCoreDomainCommandRegistrationFails(t *testing.
 	}
 }
 
-func TestBuildRegistries_FailsCoreEmittableValidationWhenCoreDomainsMissing(t *testing.T) {
+func TestBuildRegistries_FailsCoreEmittableValidationWhenDeclaredTypeIsNotRegistered(t *testing.T) {
 	_, err := buildRegistries(
 		[]CoreDomain{
 			{
-				name:             "participant-only",
-				RegisterCommands: func(*command.Registry) error { return nil },
-				RegisterEvents: func(registry *event.Registry) error {
-					return registry.Register(event.Definition{
-						Type:            participant.EventTypeSeatReassigned,
-						Owner:           event.OwnerCore,
-						ValidatePayload: noopValidator,
-					})
+				Contracts: coredomain.Contracts{
+					DomainName:       "participant-declared",
+					RegisterCommands: func(*command.Registry) error { return nil },
+					RegisterEvents: func(registry *event.Registry) error {
+						return registry.Register(event.Definition{
+							Type:            participant.EventTypeSeatReassigned,
+							Owner:           event.OwnerCore,
+							ValidatePayload: noopValidator,
+						})
+					},
+					EmittableEventTypes: func() []event.Type { return []event.Type{participant.EventTypeJoined} },
+					FoldHandledTypes:    func() []event.Type { return nil },
 				},
-				EmittableEventTypes: func() []event.Type { return nil },
-				FoldHandledTypes:    func() []event.Type { return nil },
 			},
 		},
 		nil,

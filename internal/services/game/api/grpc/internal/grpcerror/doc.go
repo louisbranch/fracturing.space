@@ -6,8 +6,7 @@
 // errors become codes.Internal (with server-side slog), and structured
 // domain codes are preserved when configured.
 //
-// HandleDomainErrorLocale is the preferred entry point when the caller's
-// locale is known — it formats error messages in the appropriate language.
-// Callers with a request context should extract the locale via
-// grpcmeta.LocaleFromContext before calling.
+// HandleDomainErrorContext is the preferred entry point when a request context
+// is available. HandleDomainErrorLocale remains available for non-request
+// seams that already resolved locale explicitly.
 package grpcerror

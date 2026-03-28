@@ -36,12 +36,14 @@ func newCampaignServiceWithDependencies(
 	return &CampaignService{
 		app: newCampaignApplicationWithDependencies(deps, clock, idGenerator),
 		readiness: readinesstransport.NewApplication(readinesstransport.Deps{
-			Auth:        deps.Auth,
-			Campaign:    deps.Campaign,
-			Participant: deps.Participant,
-			Character:   deps.Character,
-			Session:     deps.Session,
-			Daggerheart: deps.Daggerheart,
+			Auth:           deps.Auth,
+			Campaign:       deps.Campaign,
+			Participant:    deps.Participant,
+			Character:      deps.Character,
+			Session:        deps.Session,
+			SystemStores:   deps.SystemStores,
+			SystemMetadata: deps.SystemMetadata,
+			SystemModules:  deps.SystemModules,
 		}),
 	}
 }

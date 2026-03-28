@@ -3,6 +3,7 @@ package app
 import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
@@ -26,6 +27,7 @@ type registrationAssemblySources struct {
 	authClient      authv1.AuthServiceClient
 	aiAgentClient   aiv1.AgentServiceClient
 	systemRegistry  *bridge.MetadataRegistry
+	systemModules   *module.Registry
 }
 
 // buildRegistrationAssemblies assembles the transport registration families
@@ -49,8 +51,10 @@ func buildRegistrationAssemblies(sources registrationAssemblySources) registrati
 			sessionInteraction: sources.domainState.projectionStores.SessionInteraction,
 			sceneInteraction:   sources.domainState.projectionStores.SceneInteraction,
 			systemStores:       sources.domainState.systemStores,
+			systemMetadata:     sources.systemRegistry,
+			systemModules:      sources.systemModules,
 			claimIndexStore:    sources.domainState.projectionStores.ClaimIndex,
-			eventStore:         sources.domainState.infrastructureStores.Event,
+			eventHistoryStore:  sources.domainState.infrastructureStores.Event,
 			contentStore:       sources.domainState.contentStores.DaggerheartContent,
 			socialClient:       sources.domainState.contentStores.Social,
 			writePath:          sources.domainState.runtimeStores.Write,
@@ -71,7 +75,8 @@ func buildRegistrationAssemblies(sources registrationAssemblySources) registrati
 			sceneCharacter:     sources.domainState.projectionStores.SceneCharacter,
 			sceneInteraction:   sources.domainState.projectionStores.SceneInteraction,
 			campaignForkStore:  sources.domainState.projectionStores.CampaignFork,
-			eventStore:         sources.domainState.infrastructureStores.Event,
+			eventHistoryStore:  sources.domainState.infrastructureStores.Event,
+			eventJournal:       sources.domainState.infrastructureStores.Event,
 			eventRegistry:      sources.domainState.applier.Events,
 			socialClient:       sources.domainState.contentStores.Social,
 			writePath:          sources.domainState.runtimeStores.Write,

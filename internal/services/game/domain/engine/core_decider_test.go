@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -170,23 +169,39 @@ func TestSessionStartRoute_UsesInjectedSessionStartWorkflow(t *testing.T) {
 	}
 }
 
-func TestAggregateState_ConvertsSupportedInputs(t *testing.T) {
+func TestRequireAggregateState_ConvertsSupportedInputs(t *testing.T) {
 	value := aggregate.State{Campaign: campaign.State{Created: true}}
-	if got := aggregateState(value); !got.Campaign.Created {
-		t.Fatal("expected aggregateState to return value input")
+	if got, err := requireAggregateState(value); err != nil || !got.Campaign.Created {
+		t.Fatalf("requireAggregateState(value) = (%+v, %v), want created state and nil error", got, err)
 	}
 
-	if got := aggregateState(&value); !got.Campaign.Created {
-		t.Fatal("expected aggregateState to dereference pointer input")
+	if got, err := requireAggregateState(&value); err != nil || !got.Campaign.Created {
+		t.Fatalf("requireAggregateState(pointer) = (%+v, %v), want created state and nil error", got, err)
 	}
+}
 
+func TestRequireAggregateState_RejectsInvalidInputs(t *testing.T) {
 	var nilPointer *aggregate.State
-	if got := aggregateState(nilPointer); !reflect.DeepEqual(got, aggregate.State{}) {
-		t.Fatalf("aggregateState(nil pointer) = %+v, want zero state", got)
+	if _, err := requireAggregateState(nilPointer); err == nil {
+		t.Fatal("requireAggregateState(nil pointer) error = nil, want error")
 	}
 
-	if got := aggregateState(42); !reflect.DeepEqual(got, aggregate.State{}) {
-		t.Fatalf("aggregateState(invalid input) = %+v, want zero state", got)
+	if _, err := requireAggregateState(42); err == nil {
+		t.Fatal("requireAggregateState(invalid input) error = nil, want error")
+	}
+}
+
+func TestCoreDeciderDecide_RejectsInvalidAggregateState(t *testing.T) {
+	decision := CoreDecider{}.Decide(42, command.Command{Type: command.Type("core.unknown")}, time.Now)
+
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "STATE_ASSERT_FAILED" {
+		t.Fatalf("rejection code = %q, want %q", decision.Rejections[0].Code, "STATE_ASSERT_FAILED")
+	}
+	if !strings.Contains(decision.Rejections[0].Message, "aggregate state assertion") {
+		t.Fatalf("rejection message = %q, want aggregate state assertion context", decision.Rejections[0].Message)
 	}
 }
 

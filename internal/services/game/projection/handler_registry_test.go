@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
@@ -50,10 +51,10 @@ func TestCheckMissingStores_SomeMissing(t *testing.T) {
 	}
 }
 
-func TestValidateStorePreconditions_ReportsNilStores(t *testing.T) {
+func TestValidateCoreStorePreconditions_ReportsNilStores(t *testing.T) {
 	// Zero-value Applier has all stores nil.
 	applier := Applier{}
-	err := applier.ValidateStorePreconditions()
+	err := applier.ValidateCoreStorePreconditions()
 	if err == nil {
 		t.Fatal("expected error for nil stores")
 	}
@@ -65,8 +66,13 @@ func TestValidateStorePreconditions_ReportsNilStores(t *testing.T) {
 	}
 }
 
-func TestValidateStorePreconditions_PassesWhenAllConfigured(t *testing.T) {
+func TestValidateRuntimePreconditions_PassesWhenAllConfigured(t *testing.T) {
+	events := event.NewRegistry()
+	if err := events.Register(event.Definition{Type: "sys.test.happened", Owner: event.OwnerSystem}); err != nil {
+		t.Fatalf("register system event: %v", err)
+	}
 	applier := Applier{
+		Events:             events,
 		Campaign:           newProjectionCampaignStore(),
 		Character:          newFakeCharacterStore(),
 		CampaignFork:       newFakeCampaignForkStore(),
@@ -83,8 +89,40 @@ func TestValidateStorePreconditions_PassesWhenAllConfigured(t *testing.T) {
 		SceneGMInteraction: newFakeSceneGMInteractionStore(),
 		Adapters:           bridge.NewAdapterRegistry(),
 	}
-	if err := applier.ValidateStorePreconditions(); err != nil {
+	if err := applier.ValidateRuntimePreconditions(); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateRuntimePreconditions_RequiresAdaptersForSystemEvents(t *testing.T) {
+	events := event.NewRegistry()
+	if err := events.Register(event.Definition{Type: "sys.test.happened", Owner: event.OwnerSystem}); err != nil {
+		t.Fatalf("register system event: %v", err)
+	}
+
+	applier := Applier{
+		Events:             events,
+		Campaign:           newProjectionCampaignStore(),
+		Character:          newFakeCharacterStore(),
+		CampaignFork:       newFakeCampaignForkStore(),
+		Participant:        newProjectionParticipantStore(),
+		Session:            &fakeSessionStore{},
+		SessionGate:        newFakeSessionGateStore(),
+		SessionSpotlight:   newFakeSessionSpotlightStore(),
+		SessionInteraction: newFakeSessionInteractionStore(),
+		Scene:              newFakeSceneStore(),
+		SceneCharacter:     newFakeSceneCharacterStore(),
+		SceneGate:          newFakeSceneGateStore(),
+		SceneSpotlight:     newFakeSceneSpotlightStore(),
+		SceneInteraction:   newFakeSceneInteractionStore(),
+		SceneGMInteraction: newFakeSceneGMInteractionStore(),
+	}
+	err := applier.ValidateRuntimePreconditions()
+	if err == nil {
+		t.Fatal("expected error for missing system adapters")
+	}
+	if !strings.Contains(err.Error(), "system adapters") {
+		t.Fatalf("error = %v, want system adapters mention", err)
 	}
 }
 

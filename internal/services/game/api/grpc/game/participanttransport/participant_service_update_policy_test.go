@@ -8,6 +8,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -42,7 +43,7 @@ func TestUpdateParticipant_DeniesHumanGMForAIGMCampaign(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.UpdateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.UpdateParticipantRequest{
+	_, err := svc.UpdateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
 		Role:          statev1.ParticipantRole_GM,
@@ -77,7 +78,7 @@ func TestUpdateParticipant_CampaignAccess(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:     "c1",
 		ParticipantId:  "p1",
@@ -110,7 +111,7 @@ func TestUpdateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := gametest.ContextWithParticipantID("manager-1")
+	ctx := requestctx.WithParticipantID("manager-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:     "c1",
 		ParticipantId:  "member-1",
@@ -129,7 +130,7 @@ func TestUpdateParticipant_DeniesManagerMutatingOwnerWithoutAccessChange(t *test
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := gametest.ContextWithParticipantID("manager-1")
+	ctx := requestctx.WithParticipantID("manager-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "owner-1",
@@ -172,7 +173,7 @@ func TestUpdateParticipant_AllowsSelfOwnedProfileChanges(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	resp, err := svc.UpdateParticipant(gametest.ContextWithUserID("user-1"), &statev1.UpdateParticipantRequest{
+	resp, err := svc.UpdateParticipant(requestctx.WithUserID("user-1"), &statev1.UpdateParticipantRequest{
 		CampaignId:     "c1",
 		ParticipantId:  "p1",
 		Name:           wrapperspb.String("Player Prime"),
@@ -208,7 +209,7 @@ func TestUpdateParticipant_DeniesSelfOwnedGovernanceChange(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.UpdateParticipant(gametest.ContextWithUserID("user-1"), &statev1.UpdateParticipantRequest{
+	_, err := svc.UpdateParticipant(requestctx.WithUserID("user-1"), &statev1.UpdateParticipantRequest{
 		CampaignId:     "c1",
 		ParticipantId:  "p1",
 		Name:           wrapperspb.String("Player Prime"),
@@ -228,7 +229,7 @@ func TestUpdateParticipant_DeniesDemotingFinalOwner(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:     "c1",
 		ParticipantId:  "owner-1",

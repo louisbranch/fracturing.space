@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -954,7 +955,7 @@ func TestStoresApplier_ApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	ctx := context.Background()
 	stores := testProjectionStoreGroups{
 		ProjectionStores: ProjectionStores{},
-		SystemStores:     SystemStores{Daggerheart: gametest.NewFakeDaggerheartStore()},
+		SystemStores:     SystemStores{Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore()},
 	}
 	applier := testProjectionApplierFromStores(t, stores)
 

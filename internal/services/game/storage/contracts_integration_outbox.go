@@ -36,12 +36,38 @@ type IntegrationOutboxEvent struct {
 	UpdatedAt      time.Time
 }
 
-// IntegrationOutboxStore persists durable game integration work for workers.
-type IntegrationOutboxStore interface {
+// IntegrationOutboxWriter persists new durable game integration work items.
+type IntegrationOutboxWriter interface {
 	EnqueueIntegrationOutboxEvent(ctx context.Context, event IntegrationOutboxEvent) error
+}
+
+// IntegrationOutboxReader loads persisted game integration work by id.
+type IntegrationOutboxReader interface {
 	GetIntegrationOutboxEvent(ctx context.Context, id string) (IntegrationOutboxEvent, error)
+}
+
+// IntegrationOutboxLeaser claims due integration work for one worker.
+type IntegrationOutboxLeaser interface {
 	LeaseIntegrationOutboxEvents(ctx context.Context, consumer string, limit int, now time.Time, leaseTTL time.Duration) ([]IntegrationOutboxEvent, error)
+}
+
+// IntegrationOutboxAcknowledger records worker outcomes for leased work items.
+type IntegrationOutboxAcknowledger interface {
 	MarkIntegrationOutboxSucceeded(ctx context.Context, id string, consumer string, processedAt time.Time) error
 	MarkIntegrationOutboxRetry(ctx context.Context, id string, consumer string, nextAttemptAt time.Time, lastError string) error
 	MarkIntegrationOutboxDead(ctx context.Context, id string, consumer string, lastError string, processedAt time.Time) error
+}
+
+// IntegrationOutboxWorkerStore is the worker-facing lease/ack surface.
+type IntegrationOutboxWorkerStore interface {
+	IntegrationOutboxLeaser
+	IntegrationOutboxAcknowledger
+}
+
+// IntegrationOutboxStore persists durable game integration work for both
+// production writers and worker consumers.
+type IntegrationOutboxStore interface {
+	IntegrationOutboxWriter
+	IntegrationOutboxReader
+	IntegrationOutboxWorkerStore
 }

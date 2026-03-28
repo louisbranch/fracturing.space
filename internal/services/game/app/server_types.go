@@ -70,7 +70,7 @@ type eventBackend interface {
 	storage.EventIntegrityVerifier
 	Close() error
 	ProjectionApplyOutboxStore() storage.ProjectionApplyOutboxStore
-	IntegrationOutboxStore() storage.IntegrationOutboxStore
+	IntegrationOutboxStore() storage.IntegrationOutboxWorkerStore
 }
 
 type projectionBackend interface {

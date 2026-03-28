@@ -3,8 +3,9 @@ package outcometransport
 import (
 	"context"
 
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
@@ -13,15 +14,11 @@ import (
 
 // CampaignStore is the campaign-read contract consumed by the outcome
 // transport slice.
-type CampaignStore interface {
-	Get(ctx context.Context, id string) (storage.CampaignRecord, error)
-}
+type CampaignStore = daggerheartguard.CampaignStore
 
 // SessionStore is the session-read contract consumed by the outcome transport
 // slice.
-type SessionStore interface {
-	GetSession(ctx context.Context, campaignID, sessionID string) (storage.SessionRecord, error)
-}
+type SessionStore = daggerheartguard.SessionStore
 
 // DaggerheartStore is the system-owned gameplay projection contract needed by
 // outcome application.
@@ -46,9 +43,7 @@ type EventStore interface {
 
 // SessionGateStore is the read-only gate contract needed to block writes when
 // a session gate is already open.
-type SessionGateStore interface {
-	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (storage.SessionGate, error)
-}
+type SessionGateStore = daggerheartguard.SessionGateStore
 
 // SessionSpotlightStore is the read-only spotlight contract needed when a GM
 // consequence may have to repair spotlight state.
@@ -62,20 +57,7 @@ type SystemCommandInput = workflowruntime.SystemCommandInput
 
 // CoreCommandInput describes one core command emitted by the outcome transport
 // slice.
-type CoreCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	CorrelationID   string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+type CoreCommandInput = workflowwrite.CoreCommandInput
 
 // ApplyStressVulnerableConditionInput groups the arguments needed to reuse the
 // existing stress/vulnerable write helper that still lives in the root package.

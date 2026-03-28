@@ -49,7 +49,7 @@ func (h *Handler) DeleteSceneCountdown(ctx context.Context, in *pb.DaggerheartDe
 
 	storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return DeleteResult{}, grpcerror.HandleDomainError(err)
+		return DeleteResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if storedCountdown.SessionID != sessionID || storedCountdown.SceneID != sceneID {
 		return DeleteResult{}, status.Error(codes.NotFound, "scene countdown was not found")
@@ -103,7 +103,7 @@ func (h *Handler) DeleteCampaignCountdown(ctx context.Context, in *pb.Daggerhear
 
 	storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return DeleteResult{}, grpcerror.HandleDomainError(err)
+		return DeleteResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if storedCountdown.SessionID != "" || storedCountdown.SceneID != "" {
 		return DeleteResult{}, status.Error(codes.NotFound, "campaign countdown was not found")

@@ -2,7 +2,6 @@ package recoverytransport
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -32,8 +31,8 @@ func requireDaggerheartSystem(record storage.CampaignRecord, unsupportedMessage 
 	return status.Error(codes.FailedPrecondition, unsupportedMessage)
 }
 
-func handleDomainError(err error) error {
-	return grpcerror.HandleDomainError(err)
+func handleDomainError(ctx context.Context, err error) error {
+	return grpcerror.HandleDomainErrorContext(ctx, err)
 }
 
 func ensureNoOpenSessionGate(ctx context.Context, store SessionGateStore, campaignID, sessionID string) error {
@@ -47,10 +46,7 @@ func ensureNoOpenSessionGate(ctx context.Context, store SessionGateStore, campai
 	if err == nil {
 		return status.Errorf(codes.FailedPrecondition, "session gate is open: %s", gate.GateID)
 	}
-	if errors.Is(err, storage.ErrNotFound) {
-		return nil
-	}
-	return grpcerror.Internal("load session gate", err)
+	return grpcerror.OptionalLookupErrorContext(ctx, err, "load session gate")
 }
 
 func resolveSeed(rng *commonv1.RngRequest, seedFunc func() (int64, error), resolve func(*commonv1.RngRequest, func() (int64, error), func(commonv1.RollMode) bool) (int64, string, commonv1.RollMode, error)) (int64, error) {

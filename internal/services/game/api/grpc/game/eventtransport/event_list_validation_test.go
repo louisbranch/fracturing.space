@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
@@ -143,7 +144,7 @@ func TestListEvents_TokenWithChangedOrderBy(t *testing.T) {
 
 func TestListEvents_TokenWithChangedAfterSeq(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := gametest.ContextWithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride("events-test")
 	now := time.Now().UTC()
 	eventStore.Events["c1"] = []event.Event{
 		{CampaignID: "c1", Seq: 1, Type: event.Type("e1"), Timestamp: now},

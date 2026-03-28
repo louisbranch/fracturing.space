@@ -3,7 +3,6 @@ package workfloweffects
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -16,7 +15,6 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -73,8 +71,8 @@ func (h *Handler) AdvanceBreathCountdown(ctx context.Context, campaignID, sessio
 	}
 
 	if _, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return grpcerror.HandleDomainError(err)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load breath countdown"); lookupErr != nil {
+			return lookupErr
 		}
 		createErr := h.deps.CreateSceneCountdown(ctx, &pb.DaggerheartCreateSceneCountdownRequest{
 			CampaignId:        campaignID,

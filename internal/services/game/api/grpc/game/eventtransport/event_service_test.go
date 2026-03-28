@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -12,7 +13,7 @@ import (
 
 func TestListEvents_EmptyResult(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := gametest.ContextWithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride("events-test")
 	svc := NewService(Deps{Event: eventStore})
 
 	resp, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
@@ -31,7 +32,7 @@ func TestListEvents_EmptyResult(t *testing.T) {
 
 func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := gametest.ContextWithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride("events-test")
 	now := time.Now().UTC()
 
 	eventStore.Events["c1"] = []event.Event{
@@ -60,7 +61,7 @@ func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
 
 func TestListEvents_ASC_Pagination(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := gametest.ContextWithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride("events-test")
 	now := time.Now().UTC()
 
 	// Add 5 events
@@ -136,7 +137,7 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 
 func TestListEvents_DESC_Pagination(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := gametest.ContextWithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride("events-test")
 	now := time.Now().UTC()
 
 	// Add 5 events

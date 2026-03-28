@@ -18,7 +18,7 @@ func (s *Store) DB() *sql.DB {
 
 // IntegrationOutboxStore binds the integration-outbox backend to this event
 // store's SQLite database so worker-facing delivery persistence is explicit.
-func (s *Store) IntegrationOutboxStore() storage.IntegrationOutboxStore {
+func (s *Store) IntegrationOutboxStore() storage.IntegrationOutboxWorkerStore {
 	if s == nil {
 		return nil
 	}

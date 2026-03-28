@@ -923,15 +923,16 @@ func TestDaggerheartContentString(t *testing.T) {
 		t.Fatalf("put content string: %v", err)
 	}
 
-	// Test auto-timestamp when zero
-	auto := contentstore.DaggerheartContentString{
+	second := contentstore.DaggerheartContentString{
 		ContentID:   "class-warrior",
 		ContentType: "class",
 		Field:       "description",
 		Locale:      "en-US",
 		Text:        "A mighty warrior",
+		CreatedAt:   now.Add(time.Minute),
+		UpdatedAt:   now.Add(time.Minute),
 	}
-	if err := store.PutDaggerheartContentString(context.Background(), auto); err != nil {
-		t.Fatalf("put content string with auto timestamp: %v", err)
+	if err := store.PutDaggerheartContentString(context.Background(), second); err != nil {
+		t.Fatalf("put second content string: %v", err)
 	}
 }

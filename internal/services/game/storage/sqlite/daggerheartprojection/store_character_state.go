@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
@@ -16,17 +15,20 @@ import (
 
 // PutDaggerheartCharacterState persists a Daggerheart character state extension.
 func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projectionstore.DaggerheartCharacterState) error {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateProjectionStore(ctx); err != nil {
 		return err
 	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
+	if err := requireProjectionField(state.CampaignID, "campaign id"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(state.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
+	if err := requireProjectionField(state.CharacterID, "character id"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(state.CharacterID) == "" {
-		return fmt.Errorf("character id is required")
+	if state.HopeMax <= 0 {
+		return fmt.Errorf("hope max must be greater than zero")
+	}
+	if err := requireProjectionField(state.LifeState, "life state"); err != nil {
+		return err
 	}
 
 	conditions := state.Conditions
@@ -62,27 +64,17 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 		return fmt.Errorf("encode stat modifiers: %w", err)
 	}
 
-	hopeMax := state.HopeMax
-	if hopeMax == 0 {
-		hopeMax = daggerheartstate.HopeMaxDefault
-	}
-
-	lifeState := state.LifeState
-	if strings.TrimSpace(lifeState) == "" {
-		lifeState = daggerheartstate.LifeStateAlive
-	}
-
 	return s.q.PutDaggerheartCharacterState(ctx, db.PutDaggerheartCharacterStateParams{
 		CampaignID:                    state.CampaignID,
 		CharacterID:                   state.CharacterID,
 		Hp:                            int64(state.Hp),
 		Hope:                          int64(state.Hope),
-		HopeMax:                       int64(hopeMax),
+		HopeMax:                       int64(state.HopeMax),
 		Stress:                        int64(state.Stress),
 		Armor:                         int64(state.Armor),
 		ConditionsJson:                string(conditionsJSON),
 		TemporaryArmorJson:            string(temporaryArmorJSON),
-		LifeState:                     lifeState,
+		LifeState:                     state.LifeState,
 		ClassStateJson:                string(classStateJSON),
 		SubclassStateJson:             string(subclassStateJSON),
 		CompanionStateJson:            string(companionStateJSON),
@@ -93,17 +85,14 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 
 // GetDaggerheartCharacterState retrieves a Daggerheart character state extension.
 func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateProjectionStore(ctx); err != nil {
 		return projectionstore.DaggerheartCharacterState{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("storage is not configured")
+	if err := requireProjectionField(campaignID, "campaign id"); err != nil {
+		return projectionstore.DaggerheartCharacterState{}, err
 	}
-	if strings.TrimSpace(campaignID) == "" {
-		return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(characterID) == "" {
-		return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("character id is required")
+	if err := requireProjectionField(characterID, "character id"); err != nil {
+		return projectionstore.DaggerheartCharacterState{}, err
 	}
 
 	row, err := s.q.GetDaggerheartCharacterState(ctx, db.GetDaggerheartCharacterStateParams{
@@ -117,12 +106,17 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 		return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("get daggerheart character state: %w", err)
 	}
 
+	return dbDaggerheartCharacterStateToDomain(row)
+}
+
+func dbDaggerheartCharacterStateToDomain(row db.DaggerheartCharacterState) (projectionstore.DaggerheartCharacterState, error) {
 	var conditions []projectionstore.DaggerheartConditionState
 	if row.ConditionsJson != "" {
-		conditions, err = decodeProjectionConditionStates(row.ConditionsJson)
+		decodedConditions, err := decodeProjectionConditionStates(row.ConditionsJson)
 		if err != nil {
 			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode conditions: %w", err)
 		}
+		conditions = decodedConditions
 	}
 	var temporaryArmor []projectionstore.DaggerheartTemporaryArmor
 	if row.TemporaryArmorJson != "" {
@@ -136,25 +130,17 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode class state: %w", err)
 		}
 	}
-	var subclassState *projectionstore.DaggerheartSubclassState
-	if row.SubclassStateJson != "" && row.SubclassStateJson != "null" && row.SubclassStateJson != "{}" {
-		var decoded projectionstore.DaggerheartSubclassState
-		if err := json.Unmarshal([]byte(row.SubclassStateJson), &decoded); err != nil {
-			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode subclass state: %w", err)
-		}
-		subclassState = &decoded
+	subclassState, err := decodeProjectionOptionalState[projectionstore.DaggerheartSubclassState](row.SubclassStateJson)
+	if err != nil {
+		return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode subclass state: %w", err)
 	}
-	var companionState *projectionstore.DaggerheartCompanionState
-	if row.CompanionStateJson != "" && row.CompanionStateJson != "null" && row.CompanionStateJson != "{}" {
-		var decoded projectionstore.DaggerheartCompanionState
-		if err := json.Unmarshal([]byte(row.CompanionStateJson), &decoded); err != nil {
-			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode companion state: %w", err)
-		}
-		companionState = &decoded
+	companionState, err := decodeProjectionOptionalState[projectionstore.DaggerheartCompanionState](row.CompanionStateJson)
+	if err != nil {
+		return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode companion state: %w", err)
 	}
 
 	lifeState := row.LifeState
-	if strings.TrimSpace(lifeState) == "" {
+	if requireProjectionField(lifeState, "life state") != nil {
 		lifeState = daggerheartstate.LifeStateAlive
 	}
 	var statModifiers []projectionstore.DaggerheartStatModifier
@@ -181,4 +167,15 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 		ImpenetrableUsedThisShortRest: row.ImpenetrableUsedThisShortRest != 0,
 		StatModifiers:                 statModifiers,
 	}, nil
+}
+
+func decodeProjectionOptionalState[T any](raw string) (*T, error) {
+	if raw == "" || raw == "null" || raw == "{}" {
+		return nil, nil
+	}
+	var decoded T
+	if err := json.Unmarshal([]byte(raw), &decoded); err != nil {
+		return nil, err
+	}
+	return &decoded, nil
 }

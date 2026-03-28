@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
@@ -64,7 +65,7 @@ func TestGetScene_ReturnsScene(t *testing.T) {
 		Scene:          sceneStore,
 		SceneCharacter: sceneCharStore,
 	})
-	resp, err := svc.GetScene(gametest.ContextWithParticipantID("manager-1"), &statev1.GetSceneRequest{
+	resp, err := svc.GetScene(requestctx.WithParticipantID("manager-1"), &statev1.GetSceneRequest{
 		CampaignId: "c1",
 		SceneId:    "sc-1",
 	})
@@ -109,7 +110,7 @@ func TestListScenes_ReturnsEmpty(t *testing.T) {
 		Campaign: campaignStore,
 		Scene:    sceneStore,
 	})
-	resp, err := svc.ListScenes(gametest.ContextWithParticipantID("manager-1"), &statev1.ListScenesRequest{
+	resp, err := svc.ListScenes(requestctx.WithParticipantID("manager-1"), &statev1.ListScenesRequest{
 		CampaignId: "c1",
 		SessionId:  "s-1",
 	})
@@ -152,7 +153,7 @@ func TestListScenes_ReturnsScenes(t *testing.T) {
 		Campaign: campaignStore,
 		Scene:    sceneStore,
 	})
-	resp, err := svc.ListScenes(gametest.ContextWithParticipantID("manager-1"), &statev1.ListScenesRequest{
+	resp, err := svc.ListScenes(requestctx.WithParticipantID("manager-1"), &statev1.ListScenesRequest{
 		CampaignId: "c1",
 		SessionId:  "s-1",
 	})

@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -55,7 +57,7 @@ func TestEndSession_SessionNotFound(t *testing.T) {
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
 	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
-	_, err := svc.EndSession(gametest.ContextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	_, err := svc.EndSession(requestctx.WithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
@@ -82,7 +84,7 @@ func TestEndSession_DeniesMemberAccess(t *testing.T) {
 		Session:     sessionStore,
 		Participant: participantStore,
 	})
-	_, err := svc.EndSession(gametest.ContextWithParticipantID("member-1"), &statev1.EndSessionRequest{
+	_, err := svc.EndSession(requestctx.WithParticipantID("member-1"), &statev1.EndSessionRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 	})
@@ -102,7 +104,7 @@ func TestEndSession_RequiresDomainEngine(t *testing.T) {
 	sessionStore.ActiveSession["c1"] = "s1"
 
 	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
-	_, err := svc.EndSession(gametest.ContextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	_, err := svc.EndSession(requestctx.WithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -139,11 +141,11 @@ func TestEndSession_Success(t *testing.T) {
 			SessionInteraction: gametest.NewFakeSessionInteractionStore(),
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
-		gametest.FixedIDGenerator("session-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedIDGenerator("session-123"),
 	)
 
-	resp, err := svc.EndSession(gametest.ContextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	resp, err := svc.EndSession(requestctx.WithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("EndSession returned error: %v", err)
 	}
@@ -195,11 +197,11 @@ func TestEndSession_UsesDomainEngine(t *testing.T) {
 			SessionInteraction: gametest.NewFakeSessionInteractionStore(),
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	_, err := svc.EndSession(gametest.ContextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	_, err := svc.EndSession(requestctx.WithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("EndSession returned error: %v", err)
 	}
@@ -229,11 +231,11 @@ func TestEndSession_AlreadyEnded(t *testing.T) {
 			Session:     sessionStore,
 			Participant: participantStore,
 		},
-		gametest.FixedClock(now),
-		gametest.FixedIDGenerator("session-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedIDGenerator("session-123"),
 	)
 
-	resp, err := svc.EndSession(gametest.ContextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	resp, err := svc.EndSession(requestctx.WithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("EndSession returned error: %v", err)
 	}

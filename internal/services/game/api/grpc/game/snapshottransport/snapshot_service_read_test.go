@@ -7,6 +7,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -24,7 +26,7 @@ func TestGetSnapshot_NilRequest(t *testing.T) {
 func TestGetSnapshot_MissingCampaignId(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    gametest.NewFakeCampaignStore(),
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 		Character:   gametest.NewFakeCharacterStore(),
 	})
 	_, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{})
@@ -34,7 +36,7 @@ func TestGetSnapshot_MissingCampaignId(t *testing.T) {
 func TestGetSnapshot_CampaignNotFound(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    gametest.NewFakeCampaignStore(),
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 		Character:   gametest.NewFakeCharacterStore(),
 	})
 	_, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "nonexistent"})
@@ -48,7 +50,7 @@ func TestGetSnapshot_RequiresCampaignReadPolicy(t *testing.T) {
 	svc := NewService(Deps{
 		Auth:        authz.PolicyDeps{Participant: gametest.NewFakeParticipantStore()},
 		Campaign:    campaignStore,
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 		Character:   gametest.NewFakeCharacterStore(),
 	})
 
@@ -58,7 +60,7 @@ func TestGetSnapshot_RequiresCampaignReadPolicy(t *testing.T) {
 
 func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	characterStore := gametest.NewFakeCharacterStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ArchivedCampaignRecord("c1")
@@ -70,7 +72,7 @@ func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -84,7 +86,7 @@ func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 
 func TestGetSnapshot_Success_NoCharacters(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	characterStore := gametest.NewFakeCharacterStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
@@ -96,7 +98,7 @@ func TestGetSnapshot_Success_NoCharacters(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -116,7 +118,7 @@ func TestGetSnapshot_Success_NoCharacters(t *testing.T) {
 
 func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	characterStore := gametest.NewFakeCharacterStore()
 	now := time.Now().UTC()
 
@@ -137,7 +139,7 @@ func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -151,7 +153,7 @@ func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 
 func TestGetSnapshot_Success_DefaultGmFear(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	characterStore := gametest.NewFakeCharacterStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
@@ -162,7 +164,7 @@ func TestGetSnapshot_Success_DefaultGmFear(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}

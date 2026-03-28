@@ -5,12 +5,13 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -23,11 +24,13 @@ type Deps struct {
 	Character          storage.CharacterStore
 	Session            storage.SessionStore
 	SessionInteraction storage.SessionInteractionStore
-	Daggerheart        projectionstore.Store
-	Social             socialv1.SocialServiceClient
+	SystemStores       systemmanifest.ProjectionStores
+	SystemMetadata     *bridge.MetadataRegistry
+	SystemModules      *module.Registry
+	Social             handler.SocialProfileClient
 	Write              domainwrite.WritePath
 	Applier            projection.Applier
-	AuthClient         authv1.AuthServiceClient
+	AuthClient         handler.AuthUserClient
 	AIClient           aiv1.AgentServiceClient
 }
 
@@ -40,7 +43,7 @@ type campaignApplication struct {
 	applier     projection.Applier
 	clock       func() time.Time
 	idGenerator func() (string, error)
-	authClient  authv1.AuthServiceClient
+	authClient  handler.AuthUserClient
 	aiClient    aiv1.AgentServiceClient
 }
 
@@ -48,7 +51,7 @@ type campaignApplicationStores struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Session     storage.SessionStore
-	Social      socialv1.SocialServiceClient
+	Social      handler.SocialProfileClient
 }
 
 type campaignCommandExecution struct {

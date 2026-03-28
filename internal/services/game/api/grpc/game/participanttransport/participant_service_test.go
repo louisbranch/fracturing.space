@@ -7,6 +7,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -47,7 +49,7 @@ func TestUpdateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -86,7 +88,7 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -153,12 +155,12 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 		nil,
 	)
 
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",

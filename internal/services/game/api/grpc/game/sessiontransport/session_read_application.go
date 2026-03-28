@@ -4,7 +4,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 
 	"context"
-	"errors"
 	"sort"
 	"strings"
 
@@ -129,18 +128,18 @@ func (a sessionApplication) GetActiveSessionContext(ctx context.Context, campaig
 
 	activeSession, err := a.stores.Session.GetActiveSession(ctx, campaignID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
+		if grpcerror.OptionalLookupErrorContext(ctx, err, "get active session") == nil {
 			return activeSessionContext{}, nil
 		}
-		return activeSessionContext{}, grpcerror.Internal("get active session", err)
+		return activeSessionContext{}, grpcerror.OptionalLookupErrorContext(ctx, err, "get active session")
 	}
 
 	contextState := activeSessionContext{session: &activeSession}
 	if a.stores.SessionGate != nil {
 		activeGate, err := a.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, activeSession.ID)
 		if err != nil {
-			if !errors.Is(err, storage.ErrNotFound) {
-				return activeSessionContext{}, grpcerror.Internal("get open session gate", err)
+			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get open session gate"); lookupErr != nil {
+				return activeSessionContext{}, lookupErr
 			}
 		} else {
 			contextState.gate = &activeGate
@@ -150,8 +149,8 @@ func (a sessionApplication) GetActiveSessionContext(ctx context.Context, campaig
 	if a.stores.SessionSpotlight != nil {
 		spotlight, err := a.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, activeSession.ID)
 		if err != nil {
-			if !errors.Is(err, storage.ErrNotFound) {
-				return activeSessionContext{}, grpcerror.Internal("get session spotlight", err)
+			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get session spotlight"); lookupErr != nil {
+				return activeSessionContext{}, lookupErr
 			}
 		} else {
 			contextState.spotlight = &spotlight
@@ -194,18 +193,18 @@ func (a sessionApplication) ListActiveSessionsForUser(ctx context.Context, in *c
 
 		campaignRecord, err := a.stores.Campaign.Get(ctx, campaignID)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
+			if grpcerror.OptionalLookupErrorContext(ctx, err, "get campaign") == nil {
 				continue
 			}
-			return activeUserSessionPage{}, grpcerror.Internal("get campaign", err)
+			return activeUserSessionPage{}, grpcerror.OptionalLookupErrorContext(ctx, err, "get campaign")
 		}
 
 		sess, err := a.stores.Session.GetActiveSession(ctx, campaignID)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
+			if grpcerror.OptionalLookupErrorContext(ctx, err, "get active session") == nil {
 				continue
 			}
-			return activeUserSessionPage{}, grpcerror.Internal("get active session", err)
+			return activeUserSessionPage{}, grpcerror.OptionalLookupErrorContext(ctx, err, "get active session")
 		}
 
 		activeSessions = append(activeSessions, activeUserSessionRecord{

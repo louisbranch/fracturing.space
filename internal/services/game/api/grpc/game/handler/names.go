@@ -14,18 +14,18 @@ import (
 // DefaultUnknownParticipantName returns the localized default name for an
 // unknown participant.
 func DefaultUnknownParticipantName(locale commonv1.Locale) string {
-	return LocalizeByLocale(locale, gamei18n.ParticipantDefaultUnknownNameKey, gamei18n.ParticipantDefaultUnknownNameFallback)
+	return LocalizeByLocale(locale, gamei18n.ParticipantDefaultUnknownName.Key, gamei18n.ParticipantDefaultUnknownName.Fallback)
 }
 
 // DefaultAIParticipantName returns the localized default name for an AI
 // participant.
 func DefaultAIParticipantName(locale commonv1.Locale) string {
-	return LocalizeByLocale(locale, gamei18n.ParticipantDefaultAINameKey, gamei18n.ParticipantDefaultAINameFallback)
+	return LocalizeByLocale(locale, gamei18n.ParticipantDefaultAIName.Key, gamei18n.ParticipantDefaultAIName.Fallback)
 }
 
 // DefaultSessionName returns the localized default name for an auto-named session.
 func DefaultSessionName(locale commonv1.Locale, count int) string {
-	return LocalizeFormatByLocale(locale, gamei18n.SessionDefaultNameKey, fmt.Sprintf(gamei18n.SessionDefaultNameFallback, count), count)
+	return LocalizeMessageByLocale(locale, gamei18n.SessionDefaultName.Key, gamei18n.SessionDefaultName.Fallback, count)
 }
 
 // DefaultUnknownParticipantPronouns returns the default pronouns for an
@@ -43,16 +43,21 @@ func DefaultAIParticipantPronouns() string {
 // LocalizeByLocale returns a localized value for the given key and locale,
 // falling back to the provided default when the key is not found.
 func LocalizeByLocale(locale commonv1.Locale, key, fallback string) string {
-	return LocalizeFormatByLocale(locale, key, fallback)
-}
-
-// LocalizeFormatByLocale returns a localized formatted value for the given key
-// and locale, falling back to the provided default when the key is not found.
-func LocalizeFormatByLocale(locale commonv1.Locale, key, fallback string, args ...any) string {
-	value := message.NewPrinter(platformi18n.TagForLocale(locale)).Sprintf(key, args...)
+	value := message.NewPrinter(platformi18n.TagForLocale(locale)).Sprintf(key)
 	value = strings.TrimSpace(value)
 	if value == "" || value == key {
 		return fallback
+	}
+	return value
+}
+
+// LocalizeMessageByLocale returns a localized value for the given key and
+// locale, falling back to the provided default when the key is not found.
+func LocalizeMessageByLocale(locale commonv1.Locale, key, fallback string, args ...any) string {
+	value := message.NewPrinter(platformi18n.TagForLocale(locale)).Sprintf(key, args...)
+	value = strings.TrimSpace(value)
+	if value == "" || value == key {
+		return fmt.Sprintf(fallback, args...)
 	}
 	return value
 }

@@ -9,6 +9,8 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -78,7 +80,7 @@ func TestSetDefaultControl_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.SetDefaultControl(gametest.ContextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
+	_, err := svc.SetDefaultControl(requestctx.WithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String(""),
@@ -114,7 +116,7 @@ func TestSetDefaultControl_ParticipantNotFound(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.SetDefaultControl(gametest.ContextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
+	_, err := svc.SetDefaultControl(requestctx.WithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String("nonexistent"),
@@ -147,7 +149,7 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 
 	svc := NewService(ts.withDomain(domain).build())
 
-	resp, err := svc.SetDefaultControl(gametest.ContextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
+	resp, err := svc.SetDefaultControl(requestctx.WithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String(""),
@@ -242,7 +244,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 
 	svc := NewService(ts.withDomain(domain).build())
 
-	resp, err := svc.SetDefaultControl(gametest.ContextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
+	resp, err := svc.SetDefaultControl(requestctx.WithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String("p1"),
@@ -323,9 +325,9 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.SetDefaultControl(gametest.ContextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
+	resp, err := svc.SetDefaultControl(requestctx.WithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String("p1"),

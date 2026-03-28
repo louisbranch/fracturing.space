@@ -9,18 +9,11 @@ last_reviewed: "2026-03-11"
 
 # Adding a Game System
 
-Step-by-step guide for registering a new game system in the game service. Use
-Daggerheart as the reference implementation for manifest/module/adapter shape
-(`internal/services/game/domain/systems/daggerheart/`), but do not copy its
-surface area blindly. New systems should follow the manifest-driven path
-described here rather than wiring startup through ad hoc app or engine edits.
+Step-by-step guide for registering a new game system in the game service. Use Daggerheart as the reference implementation for manifest/module/adapter shape (`internal/services/game/domain/systems/daggerheart/`), but do not copy its surface area blindly. New systems should follow the manifest-driven path described here rather than wiring startup through ad hoc app or engine edits.
 
 ## Required parts
 
-A game system requires three required implementations plus optional metadata
-hooks registered through a single
-`SystemDescriptor` entry in the manifest. Startup parity validation catches
-any mismatches between the registered pieces automatically.
+A game system requires three required implementations plus optional metadata hooks registered through a single `SystemDescriptor` entry in the manifest. Startup parity validation catches any mismatches between the registered pieces automatically.
 
 | Component | Interface | Purpose |
 |-----------|-----------|---------|
@@ -31,13 +24,7 @@ any mismatches between the registered pieces automatically.
 
 ## Module vs systems
 
-The component split above reflects a CQRS boundary. A **module** owns the
-write path: it implements command handling (Decider), event folding (Folder),
-and state initialization (StateFactory), giving the system its command-execution
-and event-replay behavior. A **systems adapter** owns the read path: it
-implements projection application (Apply) and snapshot materialization, turning
-committed events into queryable state. The companion `systems.GameSystem`
-provides system metadata for the read-side registry.
+The component split above reflects a CQRS boundary. A **module** owns the write path: it implements command handling (Decider), event folding (Folder), and state initialization (StateFactory), giving the system its command-execution and event-replay behavior. A **systems adapter** owns the read path: it implements projection application (Apply) and snapshot materialization, turning committed events into queryable state. The companion `systems.GameSystem` provides system metadata for the read-side registry.
 
 Both sides are registered together through a single `SystemDescriptor` in the
 manifest, which validates parity at startup so that every event a module can
@@ -71,12 +58,21 @@ registration, decider, folder, state factory, and emittable event types. Run
 `internal/services/game/domain/module/testkit/` against the module to validate
 coverage and durable write-path behavior.
 
+If the system needs custom session-start behavior, implement
+`CharacterReadinessProvider` and/or `SessionStartBootstrapProvider` from
+`domain/module/registry.go`. Keep typed state recovery inside the system
+package and return bound helpers instead of raw `any`-typed business methods.
+
 ## Step 3: Implement the Metadata System
 
 Implement `systems.GameSystem` for system name/version metadata and any optional
 state-handler or outcome-application hooks. `StateHandlerFactory` and
 `OutcomeApplier` may be `nil`, but only when the system truly does not expose
 those surfaces yet; document that choice in package comments.
+If campaign readiness preview needs projected system state before the module's
+bound session-start hooks can run, also implement
+`SessionStartReadinessStateProvider` so the system package owns that read-side
+state loading.
 
 ## Step 4: Implement the Adapter
 

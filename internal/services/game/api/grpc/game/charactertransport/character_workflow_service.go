@@ -28,7 +28,7 @@ func (s *Service) GetCharacterCreationProgress(ctx context.Context, in *campaign
 
 	progress, err := s.app.GetCharacterCreationProgress(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, daggerheartcreation.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(ctx, err)
 	}
 
 	return &campaignv1.GetCharacterCreationProgressResponse{
@@ -53,7 +53,7 @@ func (s *Service) ApplyCharacterCreationStep(ctx context.Context, in *campaignv1
 
 	profile, progress, err := s.app.ApplyCharacterCreationStep(ctx, campaignID, in)
 	if err != nil {
-		return nil, daggerheartcreation.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(ctx, err)
 	}
 
 	return &campaignv1.ApplyCharacterCreationStepResponse{
@@ -79,7 +79,7 @@ func (s *Service) ApplyCharacterCreationWorkflow(ctx context.Context, in *campai
 
 	profile, progress, err := s.app.ApplyCharacterCreationWorkflow(ctx, campaignID, in)
 	if err != nil {
-		return nil, daggerheartcreation.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(ctx, err)
 	}
 
 	return &campaignv1.ApplyCharacterCreationWorkflowResponse{
@@ -105,7 +105,7 @@ func (s *Service) ResetCharacterCreationWorkflow(ctx context.Context, in *campai
 
 	progress, err := s.app.ResetCharacterCreationWorkflow(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, daggerheartcreation.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(ctx, err)
 	}
 
 	return &campaignv1.ResetCharacterCreationWorkflowResponse{

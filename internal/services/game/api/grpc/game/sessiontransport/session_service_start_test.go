@@ -8,6 +8,8 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -84,7 +86,7 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 		Participant: participantStore,
 		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	})
-	_, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
+	_, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -112,7 +114,7 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 		Participant: participantStore,
 		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	})
-	_, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
+	_, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -124,7 +126,7 @@ func TestStartSession_RequiresDomainEngine(t *testing.T) {
 	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
 
 	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
-	_, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
+	_, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -190,11 +192,11 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 			SessionInteraction: &fakeSessionInteractionStore{},
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
-		gametest.FixedIDGenerator("session-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedIDGenerator("session-123"),
 	)
 
-	resp, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{
+	resp, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{
 		CampaignId: "c1",
 		Name:       "First Session",
 	})
@@ -277,11 +279,11 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 			SessionInteraction: &fakeSessionInteractionStore{},
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
-		gametest.FixedIDGenerator("session-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedIDGenerator("session-123"),
 	)
 
-	resp, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
+	resp, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("StartSession returned error: %v", err)
 	}
@@ -401,11 +403,11 @@ func TestStartSession_BlankNameDefaultsToCampaignLocaleSequence(t *testing.T) {
 					SessionInteraction: &fakeSessionInteractionStore{},
 					Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 				},
-				gametest.FixedClock(now),
-				gametest.FixedIDGenerator("session-123"),
+				runtimekit.FixedClock(now),
+				runtimekit.FixedIDGenerator("session-123"),
 			)
 
-			resp, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{
+			resp, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{
 				CampaignId: "c1",
 				Name:       "   ",
 			})
@@ -479,11 +481,11 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 			SessionInteraction: &fakeSessionInteractionStore{},
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
-		gametest.FixedIDGenerator("session-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedIDGenerator("session-123"),
 	)
 
-	_, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{
+	_, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{
 		CampaignId: "c1",
 		Name:       "First Session",
 	})

@@ -10,15 +10,16 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -137,59 +138,12 @@ func TestCampaignHasActiveSession_LoadError(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 }
 
-func TestCampaignReadinessAggregateState_DaggerheartStoreRequired(t *testing.T) {
-	_, err := campaignReadinessAggregateState(
-		context.Background(),
-		nil,
-		storage.CampaignRecord{
-			ID:     "c1",
-			Status: campaign.StatusActive,
-			GmMode: campaign.GmModeHuman,
-			System: bridge.SystemIDDaggerheart,
-		},
-		nil,
-		[]storage.CharacterRecord{{ID: "char-1", CampaignID: "c1"}},
-	)
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestCampaignReadinessAggregateState_DaggerheartProfileLoadError(t *testing.T) {
-	daggerheartStore := gametest.NewFakeDaggerheartStore()
-	daggerheartStore.GetErr = errors.New("boom")
-
-	_, err := campaignReadinessAggregateState(
-		context.Background(),
-		daggerheartStore,
-		storage.CampaignRecord{
-			ID:     "c1",
-			Status: campaign.StatusActive,
-			GmMode: campaign.GmModeHuman,
-			System: bridge.SystemIDDaggerheart,
-		},
-		nil,
-		[]storage.CharacterRecord{{ID: "char-1", CampaignID: "c1"}},
-	)
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) {
-	daggerheartStore := gametest.NewFakeDaggerheartStore()
-	daggerheartStore.Profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
-		"char-1": {
-			CampaignID:  "c1",
-			CharacterID: "char-1",
-			Level:       2,
-		},
-	}
-
+func TestCampaignReadinessAggregateState_MapsCoreState(t *testing.T) {
 	state, err := campaignReadinessAggregateState(
-		context.Background(),
-		daggerheartStore,
 		storage.CampaignRecord{
 			ID:     "c1",
 			Status: campaign.StatusActive,
 			GmMode: campaign.GmModeHuman,
-			System: bridge.SystemIDDaggerheart,
 		},
 		[]storage.ParticipantRecord{
 			{
@@ -221,17 +175,60 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) 
 	if characterState.Name != "Aria" {
 		t.Fatalf("character name = %q, want %q", characterState.Name, "Aria")
 	}
+	if len(state.Systems) != 0 {
+		t.Fatalf("len(state.Systems) = %d, want 0 before system-specific enrichment", len(state.Systems))
+	}
+}
 
-	systemState, ok := state.Systems[module.Key{ID: daggerheartdomain.SystemID, Version: daggerheartdomain.SystemVersion}]
-	if !ok {
-		t.Fatal("daggerheart system state not found")
+func TestSystemReadinessChecker_UsesRegisteredProvider(t *testing.T) {
+	registry := module.NewRegistry()
+	if err := registry.Register(&readinessModuleStub{
+		id:      "testsys",
+		version: "1.0.0",
+		evaluator: readinessEvaluatorFunc(func(ch character.State) (bool, string) {
+			return false, "not ready"
+		}),
+	}); err != nil {
+		t.Fatalf("register module: %v", err)
 	}
-	snapshot, ok := systemState.(daggerheartstate.SnapshotState)
-	if !ok {
-		t.Fatalf("daggerheart system state type = %T, want SnapshotState", systemState)
+
+	checker := systemReadinessChecker(registry, "camp-1", "testsys", aggregate.State{
+		Characters: map[ids.CharacterID]character.State{
+			"char-1": {CharacterID: "char-1"},
+		},
+		Systems: map[module.Key]any{},
+	})
+	if checker == nil {
+		t.Fatal("systemReadinessChecker() returned nil")
 	}
-	if got := snapshot.CharacterProfiles["char-1"].Level; got != 2 {
-		t.Fatalf("system profile level = %v, want 2", got)
+	ready, reason := checker("char-1")
+	if ready || reason != "not ready" {
+		t.Fatalf("checker(char-1) = (%v, %q), want (false, %q)", ready, reason, "not ready")
+	}
+}
+
+func TestSystemReadinessChecker_BindErrorFailsClosed(t *testing.T) {
+	registry := module.NewRegistry()
+	if err := registry.Register(&readinessModuleStub{
+		id:      "testsys",
+		version: "1.0.0",
+		bindErr: errors.New("boom"),
+	}); err != nil {
+		t.Fatalf("register module: %v", err)
+	}
+
+	checker := systemReadinessChecker(registry, "camp-1", "testsys", aggregate.State{
+		Characters: map[ids.CharacterID]character.State{
+			"char-1": {CharacterID: "char-1"},
+		},
+		Systems: map[module.Key]any{},
+	})
+	if checker == nil {
+		t.Fatal("systemReadinessChecker() returned nil")
+	}
+	ready, reason := checker("char-1")
+	if ready || reason != "system state is invalid" {
+		t.Fatalf("checker(char-1) = (%v, %q), want (false, %q)", ready, reason, "system state is invalid")
 	}
 }
 
@@ -370,6 +367,45 @@ func TestLocalizeReadinessBlockerMessage_CharacterSystemUsesCharacterName(t *tes
 		t.Fatalf("message = %q, want readiness reason", msg)
 	}
 }
+
+type readinessEvaluatorFunc func(character.State) (bool, string)
+
+func (f readinessEvaluatorFunc) CharacterReady(ch character.State) (bool, string) {
+	return f(ch)
+}
+
+type readinessModuleStub struct {
+	id        string
+	version   string
+	evaluator module.CharacterReadinessEvaluator
+	bindErr   error
+}
+
+func (m *readinessModuleStub) ID() string { return m.id }
+
+func (m *readinessModuleStub) Version() string { return m.version }
+
+func (m *readinessModuleStub) RegisterCommands(*command.Registry) error { return nil }
+
+func (m *readinessModuleStub) RegisterEvents(*event.Registry) error { return nil }
+
+func (m *readinessModuleStub) EmittableEventTypes() []event.Type { return nil }
+
+func (m *readinessModuleStub) Decider() module.Decider { return nil }
+
+func (m *readinessModuleStub) Folder() module.Folder { return nil }
+
+func (m *readinessModuleStub) StateFactory() module.StateFactory { return nil }
+
+func (m *readinessModuleStub) BindCharacterReadiness(ids.CampaignID, map[module.Key]any) (module.CharacterReadinessEvaluator, error) {
+	if m.bindErr != nil {
+		return nil, m.bindErr
+	}
+	return m.evaluator, nil
+}
+
+var _ module.Module = (*readinessModuleStub)(nil)
+var _ module.CharacterReadinessProvider = (*readinessModuleStub)(nil)
 
 func TestLocalizeReadinessBlockerMessage_PlayerCharacterUsesParticipantName(t *testing.T) {
 	msg := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{

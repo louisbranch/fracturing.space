@@ -2,7 +2,6 @@ package forktransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -53,14 +52,16 @@ func (a forkApplication) loadForkSourceState(ctx context.Context, sourceCampaign
 				activeSession.ID,
 			)
 		}
-		if !errors.Is(err, storage.ErrNotFound) {
-			return forkSourceState{}, grpcerror.Internal("check active session", err)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "check active session"); lookupErr != nil {
+			return forkSourceState{}, lookupErr
 		}
 	}
 
 	sourceMetadata, err := a.stores.CampaignFork.GetCampaignForkMetadata(ctx, sourceCampaignID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return forkSourceState{}, grpcerror.Internal("get source fork metadata", err)
+	if err != nil {
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get source fork metadata"); lookupErr != nil {
+			return forkSourceState{}, lookupErr
+		}
 	}
 
 	originCampaignID := sourceMetadata.OriginCampaignID

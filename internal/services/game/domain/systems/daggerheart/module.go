@@ -1,15 +1,11 @@
 package daggerheart
 
 import (
-	"encoding/json"
 	"errors"
-	"time"
 
 	daggerheartdecider "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
-	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -191,76 +187,18 @@ func (m *Module) StateFactory() module.StateFactory {
 	return m.factory
 }
 
-// CharacterReady evaluates Daggerheart-specific character readiness gates used
-// by session.start.
-func (m *Module) CharacterReady(systemState any, ch character.State) (bool, string) {
-	snapshot, err := daggerheartstate.AssertSnapshotState(systemState)
-	if err != nil {
-		return false, "daggerheart state is invalid"
-	}
-	profile, ok := snapshot.CharacterProfiles[ch.CharacterID]
-	if !ok {
-		return false, "daggerheart profile is missing"
-	}
-	return EvaluateCreationReadiness(profile)
+// BindCharacterReadiness binds the Daggerheart session-start readiness
+// evaluator against the current campaign snapshot.
+func (m *Module) BindCharacterReadiness(campaignID ids.CampaignID, currentByKey map[module.Key]any) (module.CharacterReadinessEvaluator, error) {
+	return bindCharacterReadiness(m.factory, campaignID, currentByKey)
 }
 
-// SessionStartBootstrap seeds Daggerheart campaign Fear when a draft campaign
-// starts its first session. The seed equals the number of created PCs in the
-// campaign snapshot at activation time. Later session starts intentionally
-// contribute no bootstrap events so existing Fear carries over unchanged.
-func (m *Module) SessionStartBootstrap(
-	systemState any,
-	characters map[ids.CharacterID]character.State,
-	cmd command.Command,
-	now time.Time,
-) ([]event.Event, error) {
-	snapshot, err := daggerheartstate.AssertSnapshotState(systemState)
-	if err != nil {
-		return nil, err
-	}
-	if snapshot.GMFear != daggerheartstate.GMFearDefault {
-		return nil, nil
-	}
-
-	pcCount := 0
-	for _, ch := range characters {
-		if !ch.Created || ch.Deleted || ch.Kind != character.KindPC {
-			continue
-		}
-		pcCount++
-	}
-	if pcCount == daggerheartstate.GMFearDefault {
-		return nil, nil
-	}
-
-	payloadJSON, err := json.Marshal(daggerheartpayload.GMFearChangedPayload{
-		Value:  pcCount,
-		Reason: "campaign_start",
-	})
-	if err != nil {
-		return nil, err
-	}
-	return []event.Event{{
-		CampaignID:    cmd.CampaignID,
-		Type:          daggerheartpayload.EventTypeGMFearChanged,
-		Timestamp:     now.UTC(),
-		ActorType:     event.ActorType(cmd.ActorType),
-		ActorID:       cmd.ActorID,
-		SessionID:     cmd.SessionID,
-		SceneID:       cmd.SceneID,
-		RequestID:     cmd.RequestID,
-		InvocationID:  cmd.InvocationID,
-		EntityType:    "campaign",
-		EntityID:      string(cmd.CampaignID),
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		CorrelationID: cmd.CorrelationID,
-		CausationID:   cmd.CausationID,
-		PayloadJSON:   payloadJSON,
-	}}, nil
+// BindSessionStartBootstrap binds the Daggerheart first-session bootstrap
+// emitter against the current campaign snapshot.
+func (m *Module) BindSessionStartBootstrap(campaignID ids.CampaignID, currentByKey map[module.Key]any) (module.SessionStartBootstrapEmitter, error) {
+	return bindSessionStartBootstrap(m.factory, campaignID, currentByKey)
 }
 
 var _ module.Module = (*Module)(nil)
-var _ module.CharacterReadinessChecker = (*Module)(nil)
-var _ module.SessionStartBootstrapper = (*Module)(nil)
+var _ module.CharacterReadinessProvider = (*Module)(nil)
+var _ module.SessionStartBootstrapProvider = (*Module)(nil)

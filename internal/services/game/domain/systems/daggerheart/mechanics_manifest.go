@@ -122,7 +122,7 @@ func MechanicsManifest() []Mechanic {
 			Category:    CategoryCharacterModel,
 			Status:      MechanicImplemented,
 			Requirement: Required,
-			Notes:       "Full creation workflow with readiness gates. Validated by CharacterReady().",
+			Notes:       "Full creation workflow with readiness gates. Validated by the bound session-start readiness provider.",
 		},
 		{
 			ID:          "character-state-patch",

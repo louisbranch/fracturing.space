@@ -34,10 +34,10 @@ func (h *Handler) ApplyTemporaryArmor(ctx context.Context, in *pb.DaggerheartApp
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart temporary armor"); err != nil {
 		return CharacterStateResult{}, err
@@ -54,10 +54,10 @@ func (h *Handler) ApplyTemporaryArmor(ctx context.Context, in *pb.DaggerheartApp
 		return CharacterStateResult{}, status.Error(codes.InvalidArgument, "armor is required")
 	}
 	if _, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	if _, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, handleDomainError(ctx, err)
 	}
 	payloadJSON, err := json.Marshal(daggerheartpayload.CharacterTemporaryArmorApplyPayload{
 		CharacterID: ids.CharacterID(characterID),

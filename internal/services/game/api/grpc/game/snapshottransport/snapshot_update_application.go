@@ -3,7 +3,6 @@ package snapshottransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -20,7 +19,6 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -44,10 +42,10 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			return projectionstore.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheartstate.GMFearMin, daggerheartstate.GMFearMax)
 		}
 		existingSnap, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
-		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return projectionstore.DaggerheartSnapshot{}, grpcerror.Internal("load existing daggerheart snapshot", err)
-		}
-		if errors.Is(err, storage.ErrNotFound) {
+		if err != nil {
+			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load existing daggerheart snapshot"); lookupErr != nil {
+				return projectionstore.DaggerheartSnapshot{}, lookupErr
+			}
 			existingSnap = projectionstore.DaggerheartSnapshot{
 				CampaignID: campaignID,
 				GMFear:     daggerheartstate.GMFearDefault,

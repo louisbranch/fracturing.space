@@ -2,7 +2,6 @@ package aitransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -87,11 +86,11 @@ func (a application) IssueCampaignAISessionGrant(
 	}
 
 	activeSession, err := a.stores.Session.GetActiveSession(ctx, campaignID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get active session"); lookupErr != nil {
+		return nil, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.FailedPrecondition, "campaign session is not active")
-		}
-		return nil, grpcerror.Internal("get active session", err)
+		return nil, status.Error(codes.FailedPrecondition, "campaign session is not active")
 	}
 	if strings.TrimSpace(activeSession.ID) != sessionID {
 		return nil, status.Error(codes.FailedPrecondition, "requested session does not match active campaign session")
@@ -178,8 +177,8 @@ func (a application) GetCampaignAIAuthState(
 	activeSession, err := a.stores.Session.GetActiveSession(ctx, campaignID)
 	if err == nil {
 		activeSessionID = strings.TrimSpace(activeSession.ID)
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return nil, grpcerror.Internal("get active session", err)
+	} else if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get active session"); lookupErr != nil {
+		return nil, lookupErr
 	}
 	participantID := ""
 	if activeSessionID != "" {
@@ -211,10 +210,10 @@ func (a application) campaignAIParticipantID(ctx context.Context, campaignID, se
 
 	interaction, err := a.stores.SessionInteraction.GetSessionInteraction(ctx, campaignID, sessionID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
+		if grpcerror.OptionalLookupErrorContext(ctx, err, "get session interaction") == nil {
 			return "", nil
 		}
-		return "", grpcerror.Internal("get session interaction", err)
+		return "", grpcerror.OptionalLookupErrorContext(ctx, err, "get session interaction")
 	}
 
 	pid := strings.TrimSpace(interaction.AITurn.OwnerParticipantID)
@@ -227,10 +226,10 @@ func (a application) campaignAIParticipantID(ctx context.Context, campaignID, se
 
 	record, err := a.stores.Participant.GetParticipant(ctx, campaignID, pid)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
+		if grpcerror.OptionalLookupErrorContext(ctx, err, "get ai participant") == nil {
 			return "", nil
 		}
-		return "", grpcerror.Internal("get ai participant", err)
+		return "", grpcerror.OptionalLookupErrorContext(ctx, err, "get ai participant")
 	}
 	if record.Role != participant.RoleGM || record.Controller != participant.ControllerAI {
 		return "", nil

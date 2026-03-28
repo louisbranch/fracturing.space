@@ -10,8 +10,11 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/testclients"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -24,7 +27,7 @@ import (
 )
 
 func TestForkCampaign_AllowsPublicStarterTemplateForkAndReassignsOwnerSeat(t *testing.T) {
-	ctx := gametest.ContextWithUserID("user-launcher")
+	ctx := requestctx.WithUserID("user-launcher")
 	now := time.Date(2025, 2, 4, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -208,9 +211,9 @@ func TestForkCampaign_AllowsPublicStarterTemplateForkAndReassignsOwnerSeat(t *te
 		Social:       socialClient,
 		Write:        domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	}
-	deps.Applier = testApplier(t, deps, gametest.NewFakeDaggerheartStore())
+	deps.Applier = testApplier(t, deps, daggerhearttestkit.NewFakeDaggerheartStore())
 
-	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	svc := newServiceForTest(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	resp, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -287,9 +290,9 @@ func TestForkCampaign_RejectsPublicCampaignForkWithoutParticipantCopy(t *testing
 		CampaignFork: gametest.NewFakeCampaignForkStore(),
 		Event:        gametest.NewFakeEventStore(),
 		Participant:  gametest.NewFakeParticipantStore(),
-	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(gametest.ContextWithUserID("user-launcher"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithUserID("user-launcher"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Starter",
 		CopyParticipants: false,
@@ -298,13 +301,13 @@ func TestForkCampaign_RejectsPublicCampaignForkWithoutParticipantCopy(t *testing
 }
 
 func TestForkCampaign_PublicSeatClaimResyncsControlledCharacterAvatar(t *testing.T) {
-	ctx := gametest.ContextWithUserID("user-launcher")
+	ctx := requestctx.WithUserID("user-launcher")
 	now := time.Date(2025, 2, 4, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
 	participantStore := gametest.NewFakeParticipantStore()
 	characterStore := gametest.NewFakeCharacterStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 	eventStore := gametest.NewFakeEventStore()
 	forkStore := gametest.NewFakeCampaignForkStore()
 	socialClient := &testclients.FakeSocialClient{Profile: &socialv1.UserProfile{
@@ -510,7 +513,7 @@ func TestForkCampaign_PublicSeatClaimResyncsControlledCharacterAvatar(t *testing
 	}
 	deps.Applier = testApplier(t, deps, dhStore)
 
-	svc := newServiceForTest(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	svc := newServiceForTest(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	if _, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -581,9 +584,9 @@ func TestForkCampaign_RejectsInvalidPublicStarterTemplateShape(t *testing.T) {
 		CampaignFork: gametest.NewFakeCampaignForkStore(),
 		Event:        gametest.NewFakeEventStore(),
 		Participant:  participantStore,
-	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(gametest.ContextWithUserID("user-launcher"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithUserID("user-launcher"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Starter",
 		CopyParticipants: true,

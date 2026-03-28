@@ -7,17 +7,29 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// EventStore owns the event stream boundary that drives replay and command
-// rehydration; this is the source of truth for state reconstruction.
-type EventStore interface {
+// EventAppender appends one authoritative event to the journal.
+type EventAppender interface {
 	// AppendEvent atomically appends an event and returns it with sequence and hash set.
 	AppendEvent(ctx context.Context, evt event.Event) (event.Event, error)
+}
+
+// BatchEventAppender atomically appends one decision-sized batch of events.
+type BatchEventAppender interface {
+	BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error)
+}
+
+// EventLookupStore resolves specific journal events by stable identifiers.
+type EventLookupStore interface {
 	// GetEventByHash retrieves an event by its content hash.
 	// Returns ErrNotFound if no event matches the hash.
 	GetEventByHash(ctx context.Context, hash string) (event.Event, error)
 	// GetEventBySeq retrieves a specific event by sequence number.
 	// Returns ErrNotFound if no event exists at the given sequence.
 	GetEventBySeq(ctx context.Context, campaignID string, seq uint64) (event.Event, error)
+}
+
+// EventHistoryStore reads event history feeds and pages without append access.
+type EventHistoryStore interface {
 	// ListEvents returns events ordered by sequence ascending.
 	ListEvents(ctx context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error)
 	// ListEventsBySession returns events for a specific session.
@@ -27,6 +39,19 @@ type EventStore interface {
 	GetLatestEventSeq(ctx context.Context, campaignID string) (uint64, error)
 	// ListEventsPage returns a paginated, filtered, and sorted list of events.
 	ListEventsPage(ctx context.Context, req ListEventsPageRequest) (ListEventsPageResult, error)
+}
+
+// EventReadStore groups journal lookup and history-read capabilities.
+type EventReadStore interface {
+	EventLookupStore
+	EventHistoryStore
+}
+
+// EventStore owns the event stream boundary that drives replay and command
+// rehydration; this is the source of truth for state reconstruction.
+type EventStore interface {
+	EventAppender
+	EventReadStore
 }
 
 // ListEventsPageRequest describes request filters for operator and UI event history views.

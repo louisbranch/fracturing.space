@@ -2,11 +2,11 @@ package game
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,12 +21,12 @@ const (
 // IntegrationService exposes worker-facing game integration outbox leasing.
 type IntegrationService struct {
 	gamev1.UnimplementedIntegrationServiceServer
-	store storage.IntegrationOutboxStore
+	store storage.IntegrationOutboxWorkerStore
 	clock func() time.Time
 }
 
 // NewIntegrationService creates the internal game integration outbox service.
-func NewIntegrationService(store storage.IntegrationOutboxStore) *IntegrationService {
+func NewIntegrationService(store storage.IntegrationOutboxWorkerStore) *IntegrationService {
 	return &IntegrationService{
 		store: store,
 		clock: time.Now,
@@ -110,10 +110,7 @@ func (s *IntegrationService) AckIntegrationOutboxEvent(ctx context.Context, in *
 	}
 
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, storage.ErrNotFound.Error())
-		}
-		return nil, status.Errorf(codes.Internal, "Ack integration outbox event: %v", err)
+		return nil, grpcerror.LookupErrorContext(ctx, err, "ack integration outbox event", storage.ErrNotFound.Error())
 	}
 	return &gamev1.AckIntegrationOutboxEventResponse{}, nil
 }

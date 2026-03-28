@@ -2,7 +2,6 @@ package authz
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -65,8 +64,8 @@ func EvaluateCanParticipantGovernanceTargetWithStores(
 	if targetParticipantID != "" && targetAccess == participant.CampaignAccessUnspecified && participants != nil {
 		targetRecord, err := participants.GetParticipant(ctx, campaignID, targetParticipantID)
 		if err != nil {
-			if !errors.Is(err, storage.ErrNotFound) {
-				return domainauthz.PolicyDecision{}, nil, false, grpcerror.Internal("load target participant", err)
+			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load target participant"); lookupErr != nil {
+				return domainauthz.PolicyDecision{}, nil, false, lookupErr
 			}
 		} else {
 			targetAccess = targetRecord.CampaignAccess

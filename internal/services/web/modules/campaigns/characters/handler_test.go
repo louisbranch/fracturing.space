@@ -307,6 +307,50 @@ func TestHandleCharacterCreateRedirectsIntoWorkflowWhenEnabled(t *testing.T) {
 	}
 }
 
+func TestHandleCharacterCreateRedirectsToDetailWhenWorkflowDisabled(t *testing.T) {
+	t.Parallel()
+
+	h, mutation, _, _ := newCharacterHandler(t, "Blades")
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("camp-1"), strings.NewReader("name=Nyx&kind=pc"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+
+	h.HandleCharacterCreate(rr, req, "camp-1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("camp-1", "char-2") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("camp-1", "char-2"))
+	}
+	if mutation.lastCreate.Name != "Nyx" {
+		t.Fatalf("create input = %#v", mutation.lastCreate)
+	}
+}
+
+func TestHandleCharacterCreatePageRendersOwnedCreatePage(t *testing.T) {
+	t.Parallel()
+
+	h, _, _, _ := newCharacterHandler(t, "Daggerheart")
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacterCreate("camp-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleCharacterCreatePage(rr, req, "camp-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-create-page="true"`,
+		`action="` + routepath.AppCampaignCharacterCreate("camp-1") + `"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing create-page marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestHandleCharacterDetailRendersOwnedDetailAndWorkflowCard(t *testing.T) {
 	t.Parallel()
 
@@ -332,6 +376,74 @@ func TestHandleCharacterDetailRendersOwnedDetailAndWorkflowCard(t *testing.T) {
 	}
 }
 
+func TestHandleCharacterEditRendersOwnedEditPage(t *testing.T) {
+	t.Parallel()
+
+	h, _, _, _ := newCharacterHandler(t, "Daggerheart")
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacterEdit("camp-1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleCharacterEdit(rr, req, "camp-1", "char-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-edit-page="true"`,
+		`action="` + routepath.AppCampaignCharacterEdit("camp-1", "char-1") + `"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing edit-page marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestHandleCharacterUpdateRedirectsAndForwardsInput(t *testing.T) {
+	t.Parallel()
+
+	h, mutation, _, _ := newCharacterHandler(t, "Daggerheart")
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterEdit("camp-1", "char-1"), strings.NewReader("name=  Nyx  &pronouns= they%2Fthem "))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+
+	h.HandleCharacterUpdate(rr, req, "camp-1", "char-1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("camp-1", "char-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("camp-1", "char-1"))
+	}
+	if mutation.lastUpdateCampaignID != "camp-1" || mutation.lastUpdateCharacterID != "char-1" {
+		t.Fatalf("update identity = %#v", mutation)
+	}
+	if mutation.lastUpdate.Name != "Nyx" || mutation.lastUpdate.Pronouns != "they/them" {
+		t.Fatalf("update input = %#v", mutation.lastUpdate)
+	}
+}
+
+func TestHandleCharacterControlSetRedirectsAndForwardsParticipant(t *testing.T) {
+	t.Parallel()
+
+	h, _, control, _ := newCharacterHandler(t, "Daggerheart")
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterControl("camp-1", "char-1"), strings.NewReader("participant_id=part-9"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+
+	h.HandleCharacterControlSet(rr, req, "camp-1", "char-1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("camp-1", "char-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("camp-1", "char-1"))
+	}
+	if control.lastSetCampaignID != "camp-1" || control.lastSetCharacterID != "char-1" || control.lastSetParticipantID != "part-9" {
+		t.Fatalf("set control = %#v", control)
+	}
+}
+
 func TestHandleCharacterControlClaimRedirectsAndUsesViewer(t *testing.T) {
 	t.Parallel()
 
@@ -350,6 +462,27 @@ func TestHandleCharacterControlClaimRedirectsAndUsesViewer(t *testing.T) {
 	}
 	if control.lastClaimCampaignID != "camp-1" || control.lastClaimCharacterID != "char-1" || control.lastClaimUserID != "user-1" {
 		t.Fatalf("claim = %#v", control)
+	}
+}
+
+func TestHandleCharacterControlReleaseRedirectsAndUsesViewer(t *testing.T) {
+	t.Parallel()
+
+	h, _, control, _ := newCharacterHandler(t, "Daggerheart")
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterControlRelease("camp-1", "char-1"), strings.NewReader("release=true"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+
+	h.HandleCharacterControlRelease(rr, req, "camp-1", "char-1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("camp-1", "char-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("camp-1", "char-1"))
+	}
+	if control.lastReleaseCampaignID != "camp-1" || control.lastReleaseCharacterID != "char-1" || control.lastReleaseUserID != "user-1" {
+		t.Fatalf("release = %#v", control)
 	}
 }
 

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
@@ -49,7 +51,7 @@ func TestCreateCharacter_CompletedCampaignDisallowed(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 
 	svc := NewService(ts.build())
-	ctx := gametest.ContextWithParticipantID("manager-1")
+	ctx := requestctx.WithParticipantID("manager-1")
 	_, err := svc.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
@@ -103,7 +105,7 @@ func TestCreateCharacter_RequiresDomainEngine(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 
 	svc := NewService(ts.build())
-	_, err := svc.CreateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
+	_, err := svc.CreateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
 		Kind:       statev1.CharacterKind_PC,
@@ -132,9 +134,9 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 		},
 	)}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-123"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-123"))
 
-	resp, err := svc.CreateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
+	resp, err := svc.CreateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
 		Kind:       statev1.CharacterKind_PC,
@@ -189,9 +191,9 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 		},
 	)}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("npc-456"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("npc-456"))
 
-	resp, err := svc.CreateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
+	resp, err := svc.CreateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Shopkeeper",
 		Kind:       statev1.CharacterKind_NPC,
@@ -229,9 +231,9 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 		},
 	)}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-123"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-123"))
 
-	resp, err := svc.CreateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
+	resp, err := svc.CreateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
 		Kind:       statev1.CharacterKind_PC,
@@ -284,9 +286,9 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 		},
 	)}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-123"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-123"))
 
-	_, err := svc.CreateCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
+	_, err := svc.CreateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
 		Kind:       statev1.CharacterKind_PC,
@@ -330,9 +332,9 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 		},
 	)}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-123"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-123"))
 
-	resp, err := svc.CreateCharacter(gametest.ContextWithParticipantID("player-1"), &statev1.CreateCharacterRequest{
+	resp, err := svc.CreateCharacter(requestctx.WithParticipantID("player-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
 		Kind:       statev1.CharacterKind_PC,
@@ -387,9 +389,9 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 		},
 	)}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("char-123"))
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("char-123"))
 
-	resp, err := svc.CreateCharacter(gametest.ContextWithParticipantID("gm-1"), &statev1.CreateCharacterRequest{
+	resp, err := svc.CreateCharacter(requestctx.WithParticipantID("gm-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Guide",
 		Kind:       statev1.CharacterKind_NPC,

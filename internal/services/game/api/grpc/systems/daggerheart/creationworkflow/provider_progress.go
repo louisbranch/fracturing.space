@@ -1,6 +1,8 @@
 package creationworkflow
 
 import (
+	"context"
+
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/characterworkflow"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -26,12 +28,12 @@ func progressFromDaggerheart(progress daggerheart.CreationProgress) characterwor
 
 // HandleWorkflowError maps domain errors to gRPC status errors for workflow
 // endpoints. Unknown errors pass through unchanged.
-func HandleWorkflowError(err error) error {
+func HandleWorkflowError(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
 	if apperrors.GetCode(err) != apperrors.CodeUnknown {
-		return grpcerror.HandleDomainError(err)
+		return grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	return err
 }

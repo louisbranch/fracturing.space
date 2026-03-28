@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -40,7 +42,7 @@ func TestDeleteCharacter_Success(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.DeleteCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
+	resp, err := svc.DeleteCharacter(requestctx.WithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Reason:      "retired",
@@ -112,7 +114,7 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	_, err := svc.DeleteCharacter(gametest.ContextWithParticipantID("member-1"), &statev1.DeleteCharacterRequest{
+	_, err := svc.DeleteCharacter(requestctx.WithParticipantID("member-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Reason:      "retired",
@@ -132,7 +134,7 @@ func TestDeleteCharacter_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.DeleteCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
+	_, err := svc.DeleteCharacter(requestctx.WithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -163,9 +165,9 @@ func TestDeleteCharacter_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.DeleteCharacter(gametest.ContextWithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
+	resp, err := svc.DeleteCharacter(requestctx.WithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Reason:      "retired",

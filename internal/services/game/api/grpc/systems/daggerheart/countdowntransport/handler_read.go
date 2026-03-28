@@ -45,7 +45,7 @@ func (h *Handler) GetSceneCountdown(ctx context.Context, in *pb.DaggerheartGetSc
 	}
 	countdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if countdown.SessionID != sessionID || countdown.SceneID != sceneID {
 		return nil, status.Error(codes.NotFound, "scene countdown was not found")
@@ -82,7 +82,7 @@ func (h *Handler) ListSceneCountdowns(ctx context.Context, in *pb.DaggerheartLis
 	}
 	countdowns, err := h.deps.Daggerheart.ListDaggerheartCountdowns(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	resp := &pb.DaggerheartListSceneCountdownsResponse{Countdowns: make([]*pb.DaggerheartSceneCountdown, 0, len(countdowns))}
 	for _, countdown := range countdowns {
@@ -116,7 +116,7 @@ func (h *Handler) GetCampaignCountdown(ctx context.Context, in *pb.DaggerheartGe
 	}
 	countdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if countdown.SessionID != "" || countdown.SceneID != "" {
 		return nil, status.Error(codes.NotFound, "campaign countdown was not found")
@@ -142,7 +142,7 @@ func (h *Handler) ListCampaignCountdowns(ctx context.Context, in *pb.Daggerheart
 	}
 	countdowns, err := h.deps.Daggerheart.ListDaggerheartCountdowns(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	resp := &pb.DaggerheartListCampaignCountdownsResponse{Countdowns: make([]*pb.DaggerheartCampaignCountdown, 0, len(countdowns))}
 	for _, countdown := range countdowns {
@@ -168,10 +168,10 @@ func (h *Handler) requireReadDependencies() error {
 func (h *Handler) validateCampaignRead(ctx context.Context, campaignID, systemMessage string) error {
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return grpcerror.HandleDomainError(err)
+		return grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return grpcerror.HandleDomainError(err)
+		return grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, systemMessage); err != nil {
 		return err

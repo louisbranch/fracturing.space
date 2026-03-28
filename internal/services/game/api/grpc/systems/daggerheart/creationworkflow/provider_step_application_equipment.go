@@ -2,17 +2,14 @@ package creationworkflow
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -103,10 +100,7 @@ func applyEquipmentInput(ctx context.Context, content contentstore.DaggerheartCo
 		seenWeaponIDs[trimmedWeaponID] = struct{}{}
 		weapon, err := content.GetDaggerheartWeapon(ctx, trimmedWeaponID)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return status.Errorf(codes.InvalidArgument, "weapon_id %q is not found", trimmedWeaponID)
-			}
-			return grpcerror.Internal("get weapon", err)
+			return invalidContentLookup(ctx, err, "get weapon", "weapon_id %q is not found", trimmedWeaponID)
 		}
 		selectedWeapons = append(selectedWeapons, startingWeaponSelection{
 			ID:       trimmedWeaponID,
@@ -126,10 +120,7 @@ func applyEquipmentInput(ctx context.Context, content contentstore.DaggerheartCo
 	}
 	armor, err := content.GetDaggerheartArmor(ctx, armorID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "armor_id %q is not found", armorID)
-		}
-		return grpcerror.Internal("get armor", err)
+		return invalidContentLookup(ctx, err, "get armor", "armor_id %q is not found", armorID)
 	}
 	if armor.Tier != 1 {
 		return status.Errorf(codes.InvalidArgument, "armor_id %q must be tier 1", armorID)
@@ -145,10 +136,7 @@ func applyEquipmentInput(ctx context.Context, content contentstore.DaggerheartCo
 		)
 	}
 	if _, err := content.GetDaggerheartItem(ctx, potionItemID); err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "potion_item_id %q is not found", potionItemID)
-		}
-		return grpcerror.Internal("get potion item", err)
+		return invalidContentLookup(ctx, err, "get potion item", "potion_item_id %q is not found", potionItemID)
 	}
 
 	profile.StartingWeaponIDs = normalizedWeaponIDs

@@ -157,7 +157,22 @@ func TestApplySceneEnded(t *testing.T) {
 		CreatedAt: sceneStamp, UpdatedAt: sceneStamp,
 	}
 	spotlightStore := newFakeSceneSpotlightStore()
-	applier := Applier{Scene: sceneStore, SceneSpotlight: spotlightStore, SceneInteraction: newFakeSceneInteractionStore()}
+	sceneInteractionStore := newFakeSceneInteractionStore()
+	sceneInteractionStore.interactions["camp-1:sc-1"] = storage.SceneInteraction{
+		CampaignID:           "camp-1",
+		SceneID:              "sc-1",
+		SessionID:            "sess-1",
+		PhaseOpen:            true,
+		PhaseID:              "phase-1",
+		PhaseStatus:          scene.PlayerPhaseStatusPlayers,
+		ActingCharacterIDs:   []string{"char-1"},
+		ActingParticipantIDs: []string{"p-1"},
+		Slots: []storage.ScenePlayerSlot{{
+			ParticipantID: "p-1",
+			CharacterIDs:  []string{"char-1"},
+		}},
+	}
+	applier := Applier{Scene: sceneStore, SceneSpotlight: spotlightStore, SceneInteraction: sceneInteractionStore}
 
 	data, _ := json.Marshal(scene.EndPayload{SceneID: "sc-1"})
 	later := sceneStamp.Add(time.Hour)
@@ -173,6 +188,16 @@ func TestApplySceneEnded(t *testing.T) {
 	if rec.EndedAt == nil {
 		t.Fatal("expected ended_at")
 	}
+	gotInteraction, err := sceneInteractionStore.GetSceneInteraction(ctx, "camp-1", "sc-1")
+	if err != nil {
+		t.Fatalf("get scene interaction: %v", err)
+	}
+	if gotInteraction.PhaseOpen || gotInteraction.PhaseID != "" || gotInteraction.PhaseStatus != "" {
+		t.Fatalf("interaction phase state = %#v, want cleared", gotInteraction)
+	}
+	if len(gotInteraction.ActingCharacterIDs) != 0 || len(gotInteraction.ActingParticipantIDs) != 0 || len(gotInteraction.Slots) != 0 {
+		t.Fatalf("interaction actors/slots = %#v, want cleared", gotInteraction)
+	}
 }
 
 func TestApplySceneEnded_MissingStore(t *testing.T) {
@@ -180,6 +205,31 @@ func TestApplySceneEnded_MissingStore(t *testing.T) {
 	evt := sceneEvent(scene.EventTypeEnded, "camp-1", "sess-1", "sc-1", data, sceneStamp)
 	if err := (Applier{}).Apply(context.Background(), evt); err == nil {
 		t.Fatal("expected error for missing scene store")
+	}
+}
+
+func TestApplySceneEnded_MissingSceneInteractionFails(t *testing.T) {
+	ctx := context.Background()
+	sceneStore := newFakeSceneStore()
+	sceneStore.scenes["camp-1:sc-1"] = storage.SceneRecord{
+		CampaignID: "camp-1", SceneID: "sc-1", Open: true,
+		CreatedAt: sceneStamp, UpdatedAt: sceneStamp,
+	}
+	applier := Applier{
+		Scene:            sceneStore,
+		SceneSpotlight:   newFakeSceneSpotlightStore(),
+		SceneInteraction: newFakeSceneInteractionStore(),
+	}
+
+	data, _ := json.Marshal(scene.EndPayload{SceneID: "sc-1"})
+	evt := sceneEvent(scene.EventTypeEnded, "camp-1", "sess-1", "sc-1", data, sceneStamp.Add(time.Hour))
+
+	err := applier.Apply(ctx, evt)
+	if err == nil {
+		t.Fatal("expected error for missing scene interaction state")
+	}
+	if got := err.Error(); got != "get scene interaction on end: record not found" {
+		t.Fatalf("error = %q, want missing interaction failure", got)
 	}
 }
 

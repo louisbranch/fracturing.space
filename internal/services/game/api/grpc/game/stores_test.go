@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
@@ -91,7 +92,7 @@ func TestRootStoreConcernBuilders(t *testing.T) {
 		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
 	}
 
-	systemStores := SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}}
+	systemStores := SystemStores{Daggerheart: &daggerhearttestkit.FakeDaggerheartStore{}}
 	infrastructure := NewInfrastructureStores(projectionStore, StoresInfrastructureConfig{
 		EventStore: eventAuditStoreStub{
 			EventStore:      gametest.NewFakeEventStore(),
@@ -210,7 +211,7 @@ func validRootStoreGroups() rootStoreGroupsFixture {
 			SceneGMInteraction: stubSceneGMInteractionStore{},
 			CampaignFork:       &gametest.FakeCampaignForkStore{},
 		},
-		system: SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}},
+		system: SystemStores{Daggerheart: &daggerhearttestkit.FakeDaggerheartStore{}},
 		infrastructure: InfrastructureStores{
 			Event:      gametest.NewFakeEventStore(),
 			Audit:      stubAudit{},

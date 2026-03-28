@@ -2,9 +2,7 @@ package campaigntransport
 
 import (
 	"context"
-	"errors"
 
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -17,10 +15,10 @@ func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, camp
 	}
 	_, err := store.GetActiveSession(ctx, campaignID)
 	if err == nil {
-		return apperrors.HandleError(storage.ErrActiveSessionExists, apperrors.DefaultLocale)
+		return grpcerror.HandleDomainErrorContext(ctx, storage.ErrActiveSessionExists)
 	}
-	if errors.Is(err, storage.ErrNotFound) {
+	if grpcerror.OptionalLookupErrorContext(ctx, err, "check active session") == nil {
 		return nil
 	}
-	return grpcerror.Internal("check active session", err)
+	return grpcerror.OptionalLookupErrorContext(ctx, err, "check active session")
 }

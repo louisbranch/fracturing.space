@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 15
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-12"
+last_reviewed: "2026-03-23"
 ---
 
 # Game service contributor map
@@ -34,7 +34,9 @@ check sequence.
 | Change Daggerheart deterministic read/mechanics endpoints | `internal/services/game/api/grpc/systems/daggerheart/mechanicstransport/` |
 | Change Daggerheart gameplay mutation/read transport | `internal/services/game/api/grpc/systems/daggerheart/*transport/` and thin root wrappers in `internal/services/game/api/grpc/systems/daggerheart/` |
 | Change Daggerheart content/catalog or asset endpoints | `internal/services/game/api/grpc/systems/daggerheart/contenttransport/`, `internal/services/game/api/grpc/systems/daggerheart/content_service.go`, `internal/services/game/api/grpc/systems/daggerheart/asset_service.go` |
+| Change game-specific localized fallback copy or message keys | `internal/services/game/i18n/` and consumers in `internal/services/game/api/grpc/game/handler/names.go` |
 | Change Daggerheart character-creation workflow provider | `internal/services/game/api/grpc/systems/daggerheart/creationworkflow/` |
+| Change shared game-service test support or fake stores | `internal/services/game/api/grpc/game/gametest/`, `internal/services/game/api/grpc/game/requestctx/`, `internal/services/game/api/grpc/game/runtimekit/`, `internal/services/game/api/grpc/game/testclients/`, and `internal/services/game/api/grpc/systems/daggerheart/testkit/` |
 | Change command dispatch, replay, or cross-aggregate engine policy | `internal/services/game/domain/command/`, `internal/services/game/domain/engine/`, `internal/services/game/domain/readiness/` |
 | Change aggregate rules for campaigns, sessions, characters, participants, invites, scenes, forks, or readiness | `internal/services/game/domain/<aggregate>/` plus the owning workflow-local `decider_*.go` or workflow package listed below |
 | Change system-owned domain behavior for Daggerheart | `internal/services/game/domain/systems/daggerheart/` |
@@ -112,11 +114,24 @@ behavior:
 - `workflowtransport/`, `workflowruntime/`, `workfloweffects/`: shared gameplay workflow seams
 - `creationworkflow/`: character-creation workflow provider
 
+## Test support routing
+
+Use the smallest owned test-support package that matches the seam you are
+changing instead of defaulting to `gametest` for everything.
+
+| If you need... | Start here | Why |
+| --- | --- | --- |
+| Core game storage fakes or campaign/participant record fixtures | `internal/services/game/api/grpc/game/gametest/` | This package now owns only shared core fake stores and record fixtures used across game transport packages. |
+| Incoming request metadata contexts for transport tests | `internal/services/game/api/grpc/game/requestctx/` | Keeps participant/user/admin override metadata setup out of generic fake-store packages. |
+| Runtime bootstrap, fixed clocks, or deterministic ID generators | `internal/services/game/api/grpc/game/runtimekit/` | Keeps test runtime construction and deterministic helpers in one owned harness package. |
+| Narrow auth/social client fakes for game transport tests | `internal/services/game/api/grpc/game/testclients/` | This package tracks only the handler-facing auth/social method surface, not whole generated clients. |
+| Daggerheart-specific projection fakes | `internal/services/game/api/grpc/systems/daggerheart/testkit/` | System-specific fakes belong with the owning system, not in generic game transport test support. |
+
 ## Where to add tests
 
 | If you changed... | Put tests here first | Why |
 | --- | --- | --- |
-| Domain invariants, deciders, replay folds, or registry metadata | `internal/services/game/domain/<area>/*_test.go` next to the owning workflow file | Protect durable business rules at the owning package seam without routing back through package-wide hubs. |
+| Domain invariants, deciders, replay folds, or registry metadata | `internal/services/game/domain/<area>/*_test.go` next to the owning workflow file | Protect durable business rules at the owning package seam without routing back through package-wide hubs. For replay semantics, keep deterministic and fuzz/property invariants in `internal/services/game/domain/replay/` so paging, checkpointing, and cursor behavior stay protected independently of any one aggregate. |
 | Core game gRPC handler orchestration | `internal/services/game/api/grpc/game/*_test.go` or the owning `<capability>transport/` package | Keep transport assertions near the application seam and protobuf mapping boundary. |
 | Daggerheart transport behavior | The owning Daggerheart sibling package such as `*transport/*_test.go`, `workflowruntime/*_test.go`, or `creationworkflow/*_test.go` | New transport splits are intended to carry their own seam coverage instead of root-package regression tests. |
 | Projection apply behavior or event dispatch ordering | `internal/services/game/projection/*_test.go` plus integration coverage when ordering matters | Projection rules are durability-sensitive and should be tested where apply happens. |

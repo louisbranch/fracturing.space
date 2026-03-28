@@ -7,6 +7,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+var (
+	_ storage.CampaignStore     = (*FakeCampaignStore)(nil)
+	_ storage.StatisticsStore   = (*FakeStatisticsStore)(nil)
+	_ storage.CampaignForkStore = (*FakeCampaignForkStore)(nil)
+)
+
 // FakeCampaignStore is a test double for storage.CampaignStore.
 type FakeCampaignStore struct {
 	Campaigns map[string]storage.CampaignRecord

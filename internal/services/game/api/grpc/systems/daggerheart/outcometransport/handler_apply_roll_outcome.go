@@ -3,7 +3,6 @@ package outcometransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -18,7 +17,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -51,10 +49,10 @@ func (h *Handler) ApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeR
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, handleDomainError(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, handleDomainError(err)
+		return nil, handleDomainError(ctx, err)
 	}
 	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart outcomes"); err != nil {
 		return nil, err
@@ -62,7 +60,7 @@ func (h *Handler) ApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeR
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, handleDomainError(ctx, err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
@@ -70,7 +68,7 @@ func (h *Handler) ApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeR
 
 	rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, in.GetRollSeq())
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, handleDomainError(ctx, err)
 	}
 	if rollEvent.Type != eventTypeActionRollResolved {
 		return nil, status.Error(codes.InvalidArgument, "roll seq does not reference action.roll_resolved")
@@ -169,8 +167,10 @@ func (h *Handler) ApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeR
 
 	if gmFearDelta > 0 && !gmFearAlreadyApplied {
 		currentSnap, err := h.deps.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
-		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return nil, grpcerror.Internal("load gm fear", err)
+		if err != nil {
+			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load gm fear"); lookupErr != nil {
+				return nil, lookupErr
+			}
 		}
 		beforeFear := currentSnap.GMFear
 		before, after, err := rules.ApplyGMFearGain(beforeFear, gmFearDelta)
@@ -207,7 +207,7 @@ func (h *Handler) ApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeR
 	for _, target := range targets {
 		profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, target)
 		if err != nil {
-			return nil, handleDomainError(err)
+			return nil, handleDomainError(ctx, err)
 		}
 		subclassRules, err := h.activeSubclassRuleSummary(ctx, profile)
 		if err != nil {
@@ -215,7 +215,7 @@ func (h *Handler) ApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeR
 		}
 		state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, target)
 		if err != nil {
-			return nil, handleDomainError(err)
+			return nil, handleDomainError(ctx, err)
 		}
 
 		hopeBefore := state.Hope

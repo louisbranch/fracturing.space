@@ -8,6 +8,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+var _ storage.IntegrationOutboxWorkerStore = (*fakeIntegrationOutboxEventStore)(nil)
+
 type fakeIntegrationOutboxEventStore struct {
 	*gametest.FakeEventStore
 	outbox map[string]storage.IntegrationOutboxEvent

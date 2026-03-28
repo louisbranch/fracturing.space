@@ -5,7 +5,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
@@ -88,13 +87,13 @@ func (c characterApplication) GetCharacterSheet(ctx context.Context, campaignID,
 	}
 
 	dhProfile, err := c.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, characterID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return characterSheetState{}, grpcerror.Internal("get daggerheart profile", err)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart profile"); lookupErr != nil {
+		return characterSheetState{}, lookupErr
 	}
 
 	dhState, err := c.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignRecord.ID, characterID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return characterSheetState{}, grpcerror.Internal("get daggerheart state", err)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart state"); lookupErr != nil {
+		return characterSheetState{}, lookupErr
 	}
 
 	return characterSheetState{

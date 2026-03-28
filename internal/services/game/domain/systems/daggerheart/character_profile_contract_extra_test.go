@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -95,12 +96,20 @@ func TestCharacterProfileFromStorage_CopiesAllFields(t *testing.T) {
 func TestModuleCharacterReady_ReportsInvalidStateAndMissingProfile(t *testing.T) {
 	systemModule := NewModule()
 
-	ready, reason := systemModule.CharacterReady(struct{}{}, character.State{CharacterID: "char-1"})
-	if ready || reason != "daggerheart state is invalid" {
-		t.Fatalf("invalid state readiness = (%t, %q), want false and invalid-state reason", ready, reason)
+	_, err := systemModule.BindCharacterReadiness("camp-1", map[module.Key]any{
+		{ID: SystemID, Version: SystemVersion}: struct{}{},
+	})
+	if err == nil {
+		t.Fatal("expected invalid state bind error")
 	}
 
-	ready, reason = systemModule.CharacterReady(daggerheartstate.SnapshotState{}, character.State{CharacterID: "char-1"})
+	evaluator, err := systemModule.BindCharacterReadiness("camp-1", map[module.Key]any{
+		{ID: SystemID, Version: SystemVersion}: daggerheartstate.SnapshotState{},
+	})
+	if err != nil {
+		t.Fatalf("BindCharacterReadiness() error = %v", err)
+	}
+	ready, reason := evaluator.CharacterReady(character.State{CharacterID: "char-1"})
 	if ready || reason != "daggerheart profile is missing" {
 		t.Fatalf("missing profile readiness = (%t, %q), want false and missing-profile reason", ready, reason)
 	}
@@ -183,7 +192,7 @@ func TestFoldCharacterProfileReplaced_NormalizesLevelAndSeedsState(t *testing.T)
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	folded, err := folder.Fold(nil, event.Event{
+	folded, err := folder.Fold(daggerheartstate.NewSnapshotState("camp-1"), event.Event{
 		CampaignID:    ids.CampaignID("camp-1"),
 		EntityID:      "char-1",
 		SystemID:      SystemID,
@@ -239,7 +248,7 @@ func TestAdapterAndFolder_LevelUpAppliedStayInParity(t *testing.T) {
 	if err := adapter.Apply(context.Background(), replaceEvent); err != nil {
 		t.Fatalf("apply replace: %v", err)
 	}
-	folded, err := folder.Fold(nil, replaceEvent)
+	folded, err := folder.Fold(daggerheartstate.NewSnapshotState("camp-1"), replaceEvent)
 	if err != nil {
 		t.Fatalf("fold replace: %v", err)
 	}

@@ -2,7 +2,6 @@ package adversarytransport
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -12,7 +11,6 @@ import (
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -122,10 +120,7 @@ func loadAdversaryForSession(ctx context.Context, store DaggerheartStore, campai
 	}
 	adversary, err := store.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return projectionstore.DaggerheartAdversary{}, status.Error(codes.NotFound, "adversary not found")
-		}
-		return projectionstore.DaggerheartAdversary{}, grpcerror.Internal("load adversary", err)
+		return projectionstore.DaggerheartAdversary{}, grpcerror.LookupErrorContext(ctx, err, "load adversary", "adversary not found")
 	}
 	if adversary.SessionID != "" && adversary.SessionID != sessionID {
 		return projectionstore.DaggerheartAdversary{}, status.Error(codes.FailedPrecondition, "adversary is not in session")

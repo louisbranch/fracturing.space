@@ -4,9 +4,8 @@ import (
 	"context"
 	"time"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -31,7 +30,7 @@ type Deps struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
-	Social      socialv1.SocialServiceClient
+	Social      handler.SocialProfileClient
 	Write       domainwrite.WritePath
 	Applier     projection.Applier
 
@@ -41,7 +40,7 @@ type Deps struct {
 
 	// Event provides authoritative event replay for bind-time conflict
 	// detection. Optional — if nil, replay checks are skipped.
-	Event storage.EventStore
+	Event storage.EventHistoryStore
 
 	// ClearCampaignAIBinding is called when participant mutations require
 	// clearing the campaign's AI binding (e.g., owner access changes or removal).
@@ -58,9 +57,9 @@ type participantApplication struct {
 	applier                projection.Applier
 	clock                  func() time.Time
 	idGenerator            func() (string, error)
-	authClient             authv1.AuthServiceClient
+	authClient             handler.AuthUserClient
 	claimIndex             storage.ClaimIndexStore
-	eventStore             storage.EventStore
+	eventStore             storage.EventHistoryStore
 	clearCampaignAIBinding ClearCampaignAIBindingFunc
 }
 
@@ -68,14 +67,14 @@ type participantApplicationStores struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
-	Social      socialv1.SocialServiceClient
+	Social      handler.SocialProfileClient
 }
 
 func newParticipantApplicationFromDeps(
 	deps Deps,
 	clock func() time.Time,
 	idGenerator func() (string, error),
-	authClient authv1.AuthServiceClient,
+	authClient handler.AuthUserClient,
 ) participantApplication {
 	app := participantApplication{
 		auth: deps.Auth,

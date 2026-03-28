@@ -38,7 +38,7 @@ func (h *Handler) ApplySubclassFeature(ctx context.Context, in *pb.DaggerheartAp
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 
 	classState := classStateFromProjection(state.ClassState)

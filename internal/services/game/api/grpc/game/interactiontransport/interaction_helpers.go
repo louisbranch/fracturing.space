@@ -3,7 +3,6 @@ package interactiontransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sort"
 	"strings"
 
@@ -59,17 +58,17 @@ func (a interactionApplication) requireManageSessions(ctx context.Context, campa
 
 func (a interactionApplication) loadActiveSessionInteraction(ctx context.Context, campaignID string) (*storage.SessionRecord, storage.SessionInteraction, error) {
 	activeSession, err := a.stores.Session.GetActiveSession(ctx, campaignID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load active session"); lookupErr != nil {
+		return nil, storage.SessionInteraction{}, lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, storage.SessionInteraction{}, nil
-		}
-		return nil, storage.SessionInteraction{}, grpcerror.Internal("load active session", err)
+		return nil, storage.SessionInteraction{}, nil
 	}
 	interaction, err := a.stores.SessionInteraction.GetSessionInteraction(ctx, campaignID, activeSession.ID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load session interaction"); lookupErr != nil {
+		return nil, storage.SessionInteraction{}, lookupErr
+	}
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return nil, storage.SessionInteraction{}, grpcerror.Internal("load session interaction", err)
-		}
 		interaction = storage.SessionInteraction{
 			CampaignID:                  campaignID,
 			SessionID:                   activeSession.ID,
@@ -245,11 +244,11 @@ func (a interactionApplication) loadSceneState(ctx context.Context, campaignID s
 	characters := make([]*campaignv1.InteractionCharacter, 0, len(sceneCharacters))
 	for _, sceneCharacter := range sceneCharacters {
 		characterRecord, err := a.stores.Character.GetCharacter(ctx, campaignID, sceneCharacter.CharacterID)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load scene character"); lookupErr != nil {
+			return nil, storage.SceneInteraction{}, lookupErr
+		}
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				continue
-			}
-			return nil, storage.SceneInteraction{}, grpcerror.Internal("load scene character", err)
+			continue
 		}
 		characters = append(characters, &campaignv1.InteractionCharacter{
 			CharacterId:        characterRecord.ID,
@@ -265,10 +264,10 @@ func (a interactionApplication) loadSceneState(ctx context.Context, campaignID s
 	})
 
 	sceneInteraction, err := a.stores.SceneInteraction.GetSceneInteraction(ctx, campaignID, sceneRecord.SceneID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load scene interaction"); lookupErr != nil {
+		return nil, storage.SceneInteraction{}, lookupErr
+	}
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return nil, storage.SceneInteraction{}, grpcerror.Internal("load scene interaction", err)
-		}
 		sceneInteraction = storage.SceneInteraction{
 			CampaignID:           campaignID,
 			SceneID:              sceneRecord.SceneID,
@@ -407,10 +406,10 @@ func (a interactionApplication) requireActiveSceneForGM(
 		return storage.SceneRecord{}, storage.SceneInteraction{}, status.Error(codes.FailedPrecondition, "scene is not in the active session")
 	}
 	sceneInteraction, err := a.stores.SceneInteraction.GetSceneInteraction(ctx, campaignID, sceneID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load scene interaction"); lookupErr != nil {
+		return storage.SceneRecord{}, storage.SceneInteraction{}, lookupErr
+	}
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return storage.SceneRecord{}, storage.SceneInteraction{}, grpcerror.Internal("load scene interaction", err)
-		}
 		sceneInteraction = storage.SceneInteraction{
 			CampaignID:           campaignID,
 			SceneID:              sceneID,
@@ -677,18 +676,18 @@ func (a interactionApplication) endScenePhase(ctx context.Context, campaignID, s
 
 func (a interactionApplication) endScenePhaseIfOpen(ctx context.Context, campaignID, sceneID, reason string) error {
 	sceneRecord, err := a.stores.Scene.GetScene(ctx, campaignID, sceneID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load scene"); lookupErr != nil {
+		return lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil
-		}
-		return err
+		return nil
 	}
 	sceneInteraction, err := a.stores.SceneInteraction.GetSceneInteraction(ctx, campaignID, sceneID)
+	if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load scene interaction"); lookupErr != nil {
+		return lookupErr
+	}
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil
-		}
-		return grpcerror.Internal("load scene interaction", err)
+		return nil
 	}
 	if !sceneInteraction.PhaseOpen || strings.TrimSpace(sceneInteraction.PhaseID) == "" {
 		return nil

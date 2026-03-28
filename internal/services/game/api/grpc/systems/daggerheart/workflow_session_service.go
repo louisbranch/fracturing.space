@@ -7,7 +7,6 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/dhids"
@@ -101,7 +100,6 @@ func (s *DaggerheartService) sessionFlowHandler() *sessionflowtransport.Handler 
 }
 
 func (s *DaggerheartService) executeSessionFlowCharacterStatePatch(ctx context.Context, in sessionflowtransport.CharacterStatePatchInput) error {
-	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	payloadJSON, err := json.Marshal(daggerheartpayload.CharacterStatePatchPayload{
 		CharacterID:                         ids.CharacterID(in.CharacterID),
 		Source:                              in.Source,
@@ -119,7 +117,7 @@ func (s *DaggerheartService) executeSessionFlowCharacterStatePatch(ctx context.C
 	if err != nil {
 		return err
 	}
-	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+	return s.executeWorkflowSystemCommand(ctx, workflowruntime.SystemCommandInput{
 		CampaignID:      in.CampaignID,
 		CommandType:     commandids.DaggerheartCharacterStatePatch,
 		SessionID:       in.SessionID,
@@ -188,8 +186,7 @@ func (s *DaggerheartService) executeSessionFlowAdversaryUpdate(ctx context.Conte
 	if err != nil {
 		return err
 	}
-	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
-	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+	return s.executeWorkflowSystemCommand(ctx, workflowruntime.SystemCommandInput{
 		CampaignID:      in.CampaignID,
 		CommandType:     commandids.DaggerheartAdversaryUpdate,
 		SessionID:       in.SessionID,
@@ -219,7 +216,6 @@ func (s *DaggerheartService) executeSessionFlowGMFearAdjust(ctx context.Context,
 	if nextFear == snapshot.GMFear {
 		return nil
 	}
-	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	payloadJSON, err := json.Marshal(daggerheartpayload.GMFearSetPayload{
 		After:  &nextFear,
 		Reason: in.Reason,
@@ -227,7 +223,7 @@ func (s *DaggerheartService) executeSessionFlowGMFearAdjust(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+	return s.executeWorkflowSystemCommand(ctx, workflowruntime.SystemCommandInput{
 		CampaignID:      in.CampaignID,
 		CommandType:     commandids.DaggerheartGMFearSet,
 		SessionID:       in.SessionID,

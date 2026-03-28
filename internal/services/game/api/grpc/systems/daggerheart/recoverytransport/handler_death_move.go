@@ -38,10 +38,10 @@ func (h *Handler) ApplyDeathMove(ctx context.Context, in *pb.DaggerheartApplyDea
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, handleDomainError(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, handleDomainError(ctx, err)
 	}
 	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart death moves"); err != nil {
 		return DeathMoveResult{}, err
@@ -67,11 +67,11 @@ func (h *Handler) ApplyDeathMove(ctx context.Context, in *pb.DaggerheartApplyDea
 	}
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, handleDomainError(ctx, err)
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, handleDomainError(ctx, err)
 	}
 	if state.Hp > 0 {
 		return DeathMoveResult{}, status.Error(codes.FailedPrecondition, "death move requires hp to be zero")

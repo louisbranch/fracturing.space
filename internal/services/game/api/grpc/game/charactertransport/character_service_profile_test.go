@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -73,7 +74,7 @@ func TestPatchCharacterProfile_CompletedCampaignDisallowed(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 
 	svc := NewService(ts.build())
-	ctx := gametest.ContextWithParticipantID("manager-1")
+	ctx := requestctx.WithParticipantID("manager-1")
 	_, err := svc.PatchCharacterProfile(ctx, &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -163,7 +164,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	_, err := svc.PatchCharacterProfile(gametest.ContextWithParticipantID("member-1"), &statev1.PatchCharacterProfileRequest{
+	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("member-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{
@@ -220,7 +221,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(gametest.ContextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 0}},
@@ -268,7 +269,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(gametest.ContextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10, StressMax: wrapperspb.Int32(8)}},
@@ -322,7 +323,7 @@ func TestPatchCharacterProfile_SynthesizesDefaultsWhenProfileMissing(t *testing.
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(gametest.ContextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10}},
@@ -371,7 +372,7 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(gametest.ContextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10, StressMax: wrapperspb.Int32(8)}},
@@ -415,7 +416,7 @@ func TestPatchCharacterProfile_RejectsCreationWorkflowFields(t *testing.T) {
 
 	svc := NewService(ts.withDomain(domain).build())
 
-	_, err := svc.PatchCharacterProfile(gametest.ContextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
@@ -549,7 +550,7 @@ func TestPatchCharacterProfile_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.PatchCharacterProfile(gametest.ContextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10}},

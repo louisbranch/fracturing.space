@@ -162,35 +162,51 @@ func SnapshotOrDefault(state any) (SnapshotState, bool) {
 			return *typed, true
 		}
 	}
-	s := SnapshotState{GMFear: GMFearDefault}
-	s.EnsureMaps()
-	return s, false
+	return defaultSnapshotState(), false
 }
 
-// AssertSnapshotState converts untyped state to *SnapshotState for the fold
-// router. It handles nil (first event), value types, and pointer types.
-// EnsureMaps is called on the result so deserialized states with nil maps
-// are safe to use immediately.
-func AssertSnapshotState(state any) (*SnapshotState, error) {
-	var s *SnapshotState
+// SnapshotOrDefaultIfAbsent converts untyped state to SnapshotState while
+// treating nil or nil pointers as the factory-aligned default.
+//
+// Unlike SnapshotOrDefault, unsupported types remain errors so readiness and
+// bootstrap paths can distinguish absent state from invalid state wiring.
+func SnapshotOrDefaultIfAbsent(state any) (SnapshotState, error) {
 	switch typed := state.(type) {
 	case nil:
-		v := SnapshotState{GMFear: GMFearDefault}
-		s = &v
+		return defaultSnapshotState(), nil
 	case SnapshotState:
-		s = &typed
+		typed.EnsureMaps()
+		return typed, nil
 	case *SnapshotState:
 		if typed != nil {
-			s = typed
-		} else {
-			v := SnapshotState{GMFear: GMFearDefault}
-			s = &v
+			typed.EnsureMaps()
+			return *typed, nil
 		}
+		return defaultSnapshotState(), nil
+	default:
+		return SnapshotState{}, fmt.Errorf("unsupported state type %T", state)
+	}
+}
+
+// RequireSnapshotState converts untyped state to *SnapshotState for the fold
+// router. Nil inputs are rejected because write-path folding must receive
+// state from the module StateFactory rather than silently fabricating it.
+func RequireSnapshotState(state any) (*SnapshotState, error) {
+	switch typed := state.(type) {
+	case nil:
+		return nil, fmt.Errorf("unsupported state type %T", state)
+	case SnapshotState:
+		typed.EnsureMaps()
+		return &typed, nil
+	case *SnapshotState:
+		if typed == nil {
+			return nil, fmt.Errorf("unsupported state type %T", state)
+		}
+		typed.EnsureMaps()
+		return typed, nil
 	default:
 		return nil, fmt.Errorf("unsupported state type %T", state)
 	}
-	s.EnsureMaps()
-	return s, nil
 }
 
 // AppendUnique appends a string value to a slice only if it is not already present.
@@ -224,4 +240,8 @@ func NewSnapshotState(campaignID ids.CampaignID) SnapshotState {
 	}
 	state.CountdownStates = state.CampaignCountdownStates
 	return state
+}
+
+func defaultSnapshotState() SnapshotState {
+	return NewSnapshotState("")
 }

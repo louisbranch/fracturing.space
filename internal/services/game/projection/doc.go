@@ -12,6 +12,9 @@
 // transport packages. Core handler registration is also split by concern so
 // campaign, participant, invite, session, and scene projection edits do not
 // share one mandatory registration file.
+// Startup validation is explicit too: core-handler store requirements and
+// system-adapter requirements are validated as separate concerns even though
+// both feed the same runtime applier.
 //
 // # Handler Ordering
 //

@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -13,7 +15,7 @@ import (
 
 func TestPatchCharacterState_RequiresDomainEngine(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 	dhStore.States["c1"] = map[string]projectionstore.DaggerheartCharacterState{
@@ -28,7 +30,7 @@ func TestPatchCharacterState_RequiresDomainEngine(t *testing.T) {
 		Daggerheart: dhStore,
 	})
 
-	_, err := svc.PatchCharacterState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{

@@ -4,26 +4,20 @@ import (
 	"context"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // CampaignStore loads campaign records for adversary transport checks.
-type CampaignStore interface {
-	Get(ctx context.Context, campaignID string) (storage.CampaignRecord, error)
-}
+type CampaignStore = daggerheartguard.CampaignStore
 
 // SessionStore validates optional adversary session placement.
-type SessionStore interface {
-	GetSession(ctx context.Context, campaignID, sessionID string) (storage.SessionRecord, error)
-}
+type SessionStore = daggerheartguard.SessionStore
 
 // SessionGateStore guards against writes while a session gate is open.
-type SessionGateStore interface {
-	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (storage.SessionGate, error)
-}
+type SessionGateStore = daggerheartguard.SessionGateStore
 
 // DaggerheartStore loads Daggerheart adversary projections.
 type DaggerheartStore interface {
@@ -38,19 +32,7 @@ type ContentStore interface {
 }
 
 // DomainCommandInput captures the command metadata needed by the write callback.
-type DomainCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+type DomainCommandInput = workflowwrite.DomainCommandInput
 
 // Dependencies defines the explicit seams used by the adversary transport.
 type Dependencies struct {

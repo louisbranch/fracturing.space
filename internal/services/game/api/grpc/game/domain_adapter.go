@@ -17,11 +17,11 @@ var (
 )
 
 type EventStoreAdapter struct {
-	store storage.EventStore
+	store storage.EventHistoryStore
 }
 
 // NewEventStoreAdapter adapts the event store for replay.
-func NewEventStoreAdapter(store storage.EventStore) replay.EventStore {
+func NewEventStoreAdapter(store storage.EventHistoryStore) replay.EventStore {
 	return EventStoreAdapter{store: store}
 }
 
@@ -37,11 +37,11 @@ func (a EventStoreAdapter) ListEvents(ctx context.Context, campaignID string, af
 }
 
 type JournalAdapter struct {
-	store storage.EventStore
+	store storage.EventAppender
 }
 
 // NewJournalAdapter adapts the event store for journaling.
-func NewJournalAdapter(store storage.EventStore) engine.EventJournal {
+func NewJournalAdapter(store storage.EventAppender) engine.EventJournal {
 	return JournalAdapter{store: store}
 }
 
@@ -65,10 +65,7 @@ func (a JournalAdapter) BatchAppend(ctx context.Context, events []event.Event) (
 	if a.store == nil {
 		return nil, errJournalEventStoreRequired
 	}
-	type batchAppender interface {
-		BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error)
-	}
-	ba, ok := a.store.(batchAppender)
+	ba, ok := a.store.(storage.BatchEventAppender)
 	if !ok {
 		return nil, fmt.Errorf("batch append not supported by underlying store")
 	}

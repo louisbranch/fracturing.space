@@ -14,8 +14,9 @@ import (
 
 func TestCoreFoldEntries_HasExpectedDomainEntries(t *testing.T) {
 	entries := coreFoldEntries()
-	if len(entries) != 6 {
-		t.Fatalf("coreFoldEntries() len = %d, want 6", len(entries))
+	registrations := CoreDomainRegistrations()
+	if len(entries) != len(registrations) {
+		t.Fatalf("coreFoldEntries() len = %d, want %d", len(entries), len(registrations))
 	}
 
 	seen := make(map[event.Type]bool)

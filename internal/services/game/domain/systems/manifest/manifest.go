@@ -16,6 +16,12 @@ type ProjectionStores struct {
 	Daggerheart projectionstore.Store
 }
 
+// DaggerheartProjectionStore exposes the built-in Daggerheart projection store
+// for system-owned read-side loaders that only receive a dynamic store source.
+func (s ProjectionStores) DaggerheartProjectionStore() projectionstore.Store {
+	return s.Daggerheart
+}
+
 // ProjectionStoresProvider exposes a built-in system projection-store bundle
 // from a concrete store source such as the SQLite root projections store.
 type ProjectionStoresProvider interface {

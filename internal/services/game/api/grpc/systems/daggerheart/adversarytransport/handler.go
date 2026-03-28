@@ -38,17 +38,17 @@ func (h *Handler) GetAdversary(ctx context.Context, in *pb.DaggerheartGetAdversa
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
 	}
 	adversary, err := h.deps.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	return &pb.DaggerheartGetAdversaryResponse{Adversary: adversaryToProto(adversary)}, nil
 }
@@ -66,10 +66,10 @@ func (h *Handler) ListAdversaries(ctx context.Context, in *pb.DaggerheartListAdv
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (h *Handler) ListAdversaries(ctx context.Context, in *pb.DaggerheartListAdv
 	}
 	adversaries, err := h.deps.Daggerheart.ListDaggerheartAdversaries(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, grpcerror.HandleDomainError(err)
+		return nil, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	resp := &pb.DaggerheartListAdversariesResponse{Adversaries: make([]*pb.DaggerheartAdversary, 0, len(adversaries))}
 	for _, adversary := range adversaries {

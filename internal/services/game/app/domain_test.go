@@ -68,7 +68,7 @@ func TestNewCoreDecider_RejectsMissingCoreRoute(t *testing.T) {
 }
 
 func TestNewCoreDecider_IncludesRegisteredCoreRoutes(t *testing.T) {
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestNewCoreDecider_RejectsStaleStaticRoute(t *testing.T) {
 }
 
 func TestNewCoreDecider_StaticRoutesMatchCoreRegistry(t *testing.T) {
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	registries, err := engine.BuildRegistries(manifestSystemModulesForTest()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}

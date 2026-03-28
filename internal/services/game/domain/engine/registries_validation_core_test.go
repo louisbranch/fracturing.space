@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
@@ -21,7 +22,7 @@ func TestValidateAliasFoldCoverage_PassesWhenAliasTargetHandled(t *testing.T) {
 	}
 
 	// campaign.created is a core fold type, so the alias should be covered.
-	if err := ValidateAliasFoldCoverage(registry); err != nil {
+	if err := ValidateAliasFoldCoverage(registry, aggregate.CoreDomainRegistrations()); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -40,7 +41,7 @@ func TestValidateAliasFoldCoverage_FailsWhenAliasTargetNotHandled(t *testing.T) 
 		t.Fatalf("register alias: %v", err)
 	}
 
-	err := ValidateAliasFoldCoverage(registry)
+	err := ValidateAliasFoldCoverage(registry, aggregate.CoreDomainRegistrations())
 	if err == nil {
 		t.Fatal("expected error when alias target has no fold handler")
 	}

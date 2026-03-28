@@ -51,4 +51,11 @@ func (r *RegistrySystem) OutcomeApplier() bridge.OutcomeApplier {
 	return nil
 }
 
+// SessionStartReadinessStateLoader returns the Daggerheart-owned read-side
+// state loader used by campaign readiness preview.
+func (r *RegistrySystem) SessionStartReadinessStateLoader() bridge.SessionStartReadinessStateLoader {
+	return sessionStartReadinessStateLoader{}
+}
+
 var _ bridge.GameSystem = (*RegistrySystem)(nil)
+var _ bridge.SessionStartReadinessStateProvider = (*RegistrySystem)(nil)

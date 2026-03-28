@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -50,11 +52,11 @@ func TestSetSessionSpotlight_Success(t *testing.T) {
 			Participant:      participantStore,
 			Write:            domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	resp, err := svc.SetSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	resp, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -99,7 +101,7 @@ func TestSetSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		nil,
 		nil,
 	)
-	_, err := svc.SetSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -142,11 +144,11 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Participant:      participantStore,
 			Write:            domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	_, err := svc.SetSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -189,7 +191,7 @@ func TestGetSessionSpotlight_Success(t *testing.T) {
 		Participant:      participantStore,
 	})
 
-	resp, err := svc.GetSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.GetSessionSpotlightRequest{
+	resp, err := svc.GetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.GetSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 	})
@@ -247,7 +249,7 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 	deps.Applier = testApplier(deps)
 	svc := NewSessionService(deps)
 
-	resp, err := svc.ClearSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
+	resp, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		Reason:     "scene change",
@@ -294,7 +296,7 @@ func TestClearSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		nil,
 		nil,
 	)
-	_, err := svc.ClearSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
+	_, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1", SessionId: "s1", Reason: "break",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -342,11 +344,11 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Participant:      participantStore,
 			Write:            domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	_, err := svc.ClearSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
+	_, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		Reason:     "scene change",
@@ -488,7 +490,7 @@ func TestSetSessionSpotlight_SessionNotActive(t *testing.T) {
 		SessionSpotlight: gametest.NewFakeSessionSpotlightStore(),
 		Participant:      participantStore,
 	})
-	_, err := svc.SetSessionSpotlight(gametest.ContextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId: "c1", SessionId: "s1",
 		Type: statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
 	})

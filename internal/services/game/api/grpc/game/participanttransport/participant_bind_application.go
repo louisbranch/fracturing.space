@@ -3,7 +3,6 @@ package participanttransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
@@ -36,8 +35,8 @@ func (c participantApplication) BindParticipant(ctx context.Context, campaignID,
 	// Claim index: reject if user already holds a different seat in this campaign.
 	if c.claimIndex != nil {
 		claim, err := c.claimIndex.GetParticipantClaim(ctx, campaignID, userID)
-		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return storage.ParticipantRecord{}, grpcerror.Internal("load participant claim", err)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load participant claim"); lookupErr != nil {
+			return storage.ParticipantRecord{}, lookupErr
 		}
 		if err == nil && claim.ParticipantID != participantID {
 			return storage.ParticipantRecord{}, apperrors.WithMetadata(

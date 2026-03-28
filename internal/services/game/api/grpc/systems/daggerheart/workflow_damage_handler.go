@@ -7,12 +7,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/adversarytransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/damagetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/statetransport"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
 
 func (s *DaggerheartService) damageHandler() *damagetransport.Handler {
-	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
 	return damagetransport.NewHandler(damagetransport.Dependencies{
 		Campaign:             s.stores.Campaign,
 		SessionGate:          s.stores.SessionGate,
@@ -20,7 +18,7 @@ func (s *DaggerheartService) damageHandler() *damagetransport.Handler {
 		Content:              s.stores.Content,
 		Event:                s.stores.Event,
 		SeedFunc:             s.seedFunc,
-		ExecuteSystemCommand: runtime.ExecuteSystemCommand,
+		ExecuteSystemCommand: s.executeWorkflowSystemCommand,
 		LoadAdversaryForSession: func(ctx context.Context, campaignID, sessionID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 			return adversarytransport.LoadAdversaryForSession(ctx, s.stores.Daggerheart, campaignID, sessionID, adversaryID)
 		},

@@ -7,6 +7,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -42,7 +43,7 @@ func TestReleaseCharacterControl_Success_WithUserIdentity(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.ReleaseCharacterControl(gametest.ContextWithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
+	resp, err := svc.ReleaseCharacterControl(requestctx.WithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -84,7 +85,7 @@ func TestReleaseCharacterControl_DeniesNonController(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.ReleaseCharacterControl(gametest.ContextWithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
+	_, err := svc.ReleaseCharacterControl(requestctx.WithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -104,7 +105,7 @@ func TestReleaseCharacterControl_RejectsUnassignedCharacter(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.ReleaseCharacterControl(gametest.ContextWithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
+	_, err := svc.ReleaseCharacterControl(requestctx.WithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})

@@ -10,9 +10,11 @@ import (
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 )
 
-func TestRegisteredSystemModulesAndMetadataStayManifestDerived(t *testing.T) {
+func TestLoadSystemRegistrationSnapshotStaysManifestDerived(t *testing.T) {
+	snapshot := loadSystemRegistrationSnapshot()
+
 	manifestModules := systemmanifest.Modules()
-	registeredModules := registeredSystemModules()
+	registeredModules := snapshot.modulesCopy()
 	if len(registeredModules) != len(manifestModules) {
 		t.Fatalf("registered module count = %d, want %d", len(registeredModules), len(manifestModules))
 	}
@@ -30,7 +32,7 @@ func TestRegisteredSystemModulesAndMetadataStayManifestDerived(t *testing.T) {
 	}
 
 	manifestMetadata := systemmanifest.MetadataSystems()
-	registeredMetadata := registeredMetadataSystems()
+	registeredMetadata := snapshot.metadataSystemsCopy()
 	if len(registeredMetadata) != len(manifestMetadata) {
 		t.Fatalf("registered metadata count = %d, want %d", len(registeredMetadata), len(manifestMetadata))
 	}
@@ -45,6 +47,20 @@ func TestRegisteredSystemModulesAndMetadataStayManifestDerived(t *testing.T) {
 				manifestMetadata[i].Version(),
 			)
 		}
+	}
+}
+
+func TestSystemRegistrationSnapshotBuildsMetadataRegistry(t *testing.T) {
+	snapshot := loadSystemRegistrationSnapshot()
+
+	registry, err := snapshot.buildMetadataRegistry()
+	if err != nil {
+		t.Fatalf("build metadata registry: %v", err)
+	}
+
+	metadataSystems := snapshot.metadataSystemsCopy()
+	if got, want := len(registry.List()), len(metadataSystems); got != want {
+		t.Fatalf("registry metadata count = %d, want %d", got, want)
 	}
 }
 
@@ -126,4 +142,8 @@ func asModules(modules []fakeSystemModule) []module.Module {
 		out = append(out, module)
 	}
 	return out
+}
+
+func manifestSystemModulesForTest() []module.Module {
+	return loadSystemRegistrationSnapshot().modulesCopy()
 }

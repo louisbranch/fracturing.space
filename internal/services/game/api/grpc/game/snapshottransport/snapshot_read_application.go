@@ -2,13 +2,11 @@ package snapshottransport
 
 import (
 	"context"
-	"errors"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 type snapshotReadState struct {
@@ -30,8 +28,8 @@ func (a snapshotApplication) GetSnapshot(ctx context.Context, campaignID string)
 
 	systemState, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			return snapshotReadState{}, grpcerror.Internal("get daggerheart snapshot", err)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart snapshot"); lookupErr != nil {
+			return snapshotReadState{}, lookupErr
 		}
 		systemState = projectionstore.DaggerheartSnapshot{CampaignID: campaignID}
 	}
@@ -45,10 +43,10 @@ func (a snapshotApplication) GetSnapshot(ctx context.Context, campaignID string)
 	for _, record := range charPage.Characters {
 		state, err := a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, record.ID)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
+			if grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart character state") == nil {
 				continue
 			}
-			return snapshotReadState{}, grpcerror.Internal("get daggerheart character state", err)
+			return snapshotReadState{}, grpcerror.OptionalLookupErrorContext(ctx, err, "get daggerheart character state")
 		}
 		characterStates = append(characterStates, state)
 	}

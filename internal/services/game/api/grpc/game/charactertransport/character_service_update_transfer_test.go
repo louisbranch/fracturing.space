@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -70,7 +71,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("Renamed"),
@@ -129,7 +130,7 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(gametest.ContextWithParticipantID("owner-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("owner-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		OwnerParticipantId: wrapperspb.String("member-1"),

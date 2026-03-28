@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -102,7 +104,7 @@ func TestAbandonSessionGate_DeniesMemberAccess(t *testing.T) {
 		SessionGate: gateStore,
 		Participant: participantStore,
 	})
-	_, err := svc.AbandonSessionGate(gametest.ContextWithParticipantID("member-1"), &statev1.AbandonSessionGateRequest{
+	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID("member-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	assertStatusCode(t, err, codes.PermissionDenied)
@@ -133,11 +135,11 @@ func TestAbandonSessionGate_AlreadyAbandoned(t *testing.T) {
 			SessionGate: gateStore,
 			Participant: participantStore,
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	resp, err := svc.AbandonSessionGate(gametest.ContextWithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
+	resp, err := svc.AbandonSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	if err != nil {
@@ -200,11 +202,11 @@ func TestAbandonSessionGate_Success(t *testing.T) {
 			Participant: participantStore,
 			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	ctx := gametest.ContextWithParticipantID("part-1")
+	ctx := requestctx.WithParticipantID("part-1")
 	resp, err := svc.AbandonSessionGate(ctx, &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1", Reason: "timeout",
 	})
@@ -249,7 +251,7 @@ func TestAbandonSessionGate_RequiresDomainEngine(t *testing.T) {
 		nil,
 		nil,
 	)
-	_, err := svc.AbandonSessionGate(gametest.ContextWithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
+	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -294,11 +296,11 @@ func TestAbandonSessionGate_UsesDomainEngine(t *testing.T) {
 			Participant: participantStore,
 			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 	)
 
-	_, err := svc.AbandonSessionGate(gametest.ContextWithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
+	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateId:     "g1",

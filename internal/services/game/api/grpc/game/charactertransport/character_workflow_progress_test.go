@@ -3,9 +3,8 @@ package charactertransport
 import (
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 )
@@ -22,7 +21,7 @@ func TestGetCharacterCreationProgress_Success(t *testing.T) {
 		SubclassID:  "subclass.stalwart",
 	})
 
-	resp, err := svc.GetCharacterCreationProgress(gametest.ContextWithParticipantID("manager-1"), &statev1.GetCharacterCreationProgressRequest{
+	resp, err := svc.GetCharacterCreationProgress(requestctx.WithParticipantID("manager-1"), &statev1.GetCharacterCreationProgressRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -70,7 +69,7 @@ func TestResetCharacterCreationWorkflow_Success(t *testing.T) {
 		SevereThreshold:      12,
 	})
 
-	resp, err := svc.ResetCharacterCreationWorkflow(gametest.ContextWithParticipantID("manager-1"), &statev1.ResetCharacterCreationWorkflowRequest{
+	resp, err := svc.ResetCharacterCreationWorkflow(requestctx.WithParticipantID("manager-1"), &statev1.ResetCharacterCreationWorkflowRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})

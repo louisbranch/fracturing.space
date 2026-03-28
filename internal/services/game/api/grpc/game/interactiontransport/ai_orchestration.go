@@ -2,7 +2,6 @@ package interactiontransport
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -132,11 +131,11 @@ func (a AIOrchestrationApplication) CompleteAIGMTurn(ctx context.Context, campai
 			return nil, status.Error(codes.FailedPrecondition, "ai gm turn must leave an active scene ready for players or ooc")
 		}
 		sceneInteraction, err := a.interaction.stores.SceneInteraction.GetSceneInteraction(ctx, campaignID, sessionInteraction.ActiveSceneID)
+		if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load ai turn completion scene interaction"); lookupErr != nil {
+			return nil, lookupErr
+		}
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return nil, status.Error(codes.FailedPrecondition, "ai gm turn must open a player phase or pause for ooc before completion")
-			}
-			return nil, grpcerror.Internal("load ai turn completion scene interaction", err)
+			return nil, status.Error(codes.FailedPrecondition, "ai gm turn must open a player phase or pause for ooc before completion")
 		}
 		if !sceneInteraction.PhaseOpen || strings.TrimSpace(sceneInteraction.PhaseID) == "" || sceneInteraction.PhaseStatus != scene.PlayerPhaseStatusPlayers || len(sceneInteraction.ActingParticipantIDs) == 0 {
 			return nil, status.Error(codes.FailedPrecondition, "ai gm turn must open the next player phase or pause for ooc before completion")

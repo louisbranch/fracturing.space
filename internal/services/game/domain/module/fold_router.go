@@ -31,7 +31,8 @@ type FoldRouter[S any] struct {
 
 // NewFoldRouter creates a fold router. The assert callback converts untyped
 // state to the system's concrete state pointer, returning an error on type
-// mismatch. It must handle nil input by creating a zero-value state.
+// mismatch. Callers may choose whether nil means "initialize default state" or
+// "fail closed" depending on the folder contract.
 func NewFoldRouter[S any](assert func(any) (S, error)) *FoldRouter[S] {
 	return &FoldRouter[S]{
 		assert:   assert,

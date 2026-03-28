@@ -6,6 +6,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -19,7 +21,7 @@ import (
 )
 
 func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
-	ctx := gametest.ContextWithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -58,7 +60,7 @@ func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
 		Character:    characterStore,
 		Event:        eventStore,
 		CampaignFork: forkStore,
-	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -69,7 +71,7 @@ func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
-	ctx := gametest.ContextWithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 2, 9, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -107,7 +109,7 @@ func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
 		Event:        eventStore,
 		CampaignFork: forkStore,
 		Write:        domainwrite.WritePath{Executor: &fakeDomainEngine{store: eventStore}},
-	}, gametest.FixedClock(now), gametest.FixedIDGenerator("fork-1"))
+	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",

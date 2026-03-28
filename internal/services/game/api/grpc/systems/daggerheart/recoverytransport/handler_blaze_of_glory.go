@@ -38,10 +38,10 @@ func (h *Handler) ResolveBlazeOfGlory(ctx context.Context, in *pb.DaggerheartRes
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return BlazeResult{}, handleDomainError(err)
+		return BlazeResult{}, handleDomainError(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return BlazeResult{}, handleDomainError(err)
+		return BlazeResult{}, handleDomainError(ctx, err)
 	}
 	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart blaze of glory"); err != nil {
 		return BlazeResult{}, err
@@ -56,7 +56,7 @@ func (h *Handler) ResolveBlazeOfGlory(ctx context.Context, in *pb.DaggerheartRes
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return BlazeResult{}, handleDomainError(err)
+		return BlazeResult{}, handleDomainError(ctx, err)
 	}
 	if state.LifeState == "" {
 		state.LifeState = daggerheartstate.LifeStateAlive

@@ -75,11 +75,11 @@ func (h *Handler) resolveSubclassFeaturePayload(
 			for _, targetID := range uniqueTrimmedIDs(targetIDs) {
 				targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 				if loadErr != nil {
-					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 				}
 				targetProfile, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, targetID)
 				if loadErr != nil {
-					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 				}
 				payload.Targets = append(payload.Targets, daggerheartpayload.SubclassFeatureTargetPatchPayload{
 					CharacterID: ids.CharacterID(targetID),
@@ -103,7 +103,7 @@ func (h *Handler) resolveSubclassFeaturePayload(
 			for _, targetID := range uniqueTrimmedIDs(targetIDs) {
 				targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 				if loadErr != nil {
-					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 				}
 				payload.Targets = append(payload.Targets, daggerheartpayload.SubclassFeatureTargetPatchPayload{
 					CharacterID: ids.CharacterID(targetID),
@@ -130,7 +130,7 @@ func (h *Handler) resolveSubclassFeaturePayload(
 			if feature.GiftedPerformer.GetTargetIsAdversary() {
 				target, loadErr := h.deps.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, targetID)
 				if loadErr != nil {
-					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 				}
 				before, normalizeErr := rules.NormalizeConditionStates(projectionConditionStatesToDomain(target.Conditions))
 				if normalizeErr != nil {
@@ -149,7 +149,7 @@ func (h *Handler) resolveSubclassFeaturePayload(
 			} else {
 				target, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 				if loadErr != nil {
-					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+					return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 				}
 				before, normalizeErr := rules.NormalizeConditionStates(projectionConditionStatesToDomain(target.Conditions))
 				if normalizeErr != nil {
@@ -215,11 +215,11 @@ func (h *Handler) resolveSubclassFeaturePayload(
 		}
 		targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 		if loadErr != nil {
-			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		targetProfile, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, targetID)
 		if loadErr != nil {
-			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		next := subclassState
 		next.SparingTouchUsesThisLongRest++
@@ -381,7 +381,7 @@ func (h *Handler) resolveSubclassFeaturePayload(
 			}
 			targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 			if loadErr != nil {
-				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 			}
 			payload.Targets = append(payload.Targets, daggerheartpayload.SubclassFeatureTargetPatchPayload{
 				CharacterID:  ids.CharacterID(targetID),
@@ -406,11 +406,11 @@ func (h *Handler) resolveSubclassFeaturePayload(
 		}
 		targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 		if loadErr != nil {
-			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		targetProfile, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, targetID)
 		if loadErr != nil {
-			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+			return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 		}
 		payload.Feature = "regeneration"
 		payload.Targets = []daggerheartpayload.SubclassFeatureTargetPatchPayload{
@@ -452,11 +452,11 @@ func (h *Handler) resolveSubclassFeaturePayload(
 		for _, targetID := range targetIDs {
 			targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 			if loadErr != nil {
-				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 			}
 			targetProfile, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, targetID)
 			if loadErr != nil {
-				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 			}
 			payload.Targets = append(payload.Targets, daggerheartpayload.SubclassFeatureTargetPatchPayload{
 				CharacterID: ids.CharacterID(targetID),
@@ -506,7 +506,7 @@ func (h *Handler) resolveSubclassFeaturePayload(
 		for _, targetID := range targetIDs {
 			targetState, loadErr := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, targetID)
 			if loadErr != nil {
-				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainError(loadErr)
+				return daggerheartpayload.SubclassFeatureApplyPayload{}, grpcerror.HandleDomainErrorContext(ctx, loadErr)
 			}
 			payload.Targets = append(payload.Targets, daggerheartpayload.SubclassFeatureTargetPatchPayload{
 				CharacterID:  ids.CharacterID(targetID),

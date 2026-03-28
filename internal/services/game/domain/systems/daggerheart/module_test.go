@@ -242,27 +242,31 @@ func TestModuleMetadata(t *testing.T) {
 	}
 }
 
-func TestModule_ImplementsCharacterReadinessChecker(t *testing.T) {
+func TestModule_BindsCharacterReadiness(t *testing.T) {
 	systemModule := NewModule()
-	checker, ok := any(systemModule).(domainmodule.CharacterReadinessChecker)
+	provider, ok := any(systemModule).(domainmodule.CharacterReadinessProvider)
 	if !ok {
-		t.Fatal("expected daggerheart module to implement CharacterReadinessChecker")
+		t.Fatal("expected daggerheart module to implement CharacterReadinessProvider")
 	}
 
-	ready, _ := checker.CharacterReady(
-		daggerheartstate.SnapshotState{
+	evaluator, err := provider.BindCharacterReadiness("camp-1", map[domainmodule.Key]any{
+		{ID: SystemID, Version: SystemVersion}: daggerheartstate.SnapshotState{
 			CharacterProfiles: map[ids.CharacterID]daggerheartstate.CharacterProfile{
 				"char-1": {ClassID: "class.guardian"},
 			},
 		},
-		character.State{CharacterID: "char-1"},
-	)
+	})
+	if err != nil {
+		t.Fatalf("BindCharacterReadiness() error = %v", err)
+	}
+
+	ready, _ := evaluator.CharacterReady(character.State{CharacterID: "char-1"})
 	if ready {
 		t.Fatal("character readiness = true, want false for incomplete workflow")
 	}
 
-	ready, reason := checker.CharacterReady(
-		daggerheartstate.SnapshotState{
+	evaluator, err = provider.BindCharacterReadiness("camp-1", map[domainmodule.Key]any{
+		{ID: SystemID, Version: SystemVersion}: daggerheartstate.SnapshotState{
 			CharacterProfiles: map[ids.CharacterID]daggerheartstate.CharacterProfile{
 				"char-1": {
 					ClassID:    "class.guardian",
@@ -299,8 +303,12 @@ func TestModule_ImplementsCharacterReadinessChecker(t *testing.T) {
 				},
 			},
 		},
-		character.State{CharacterID: "char-1"},
-	)
+	})
+	if err != nil {
+		t.Fatalf("BindCharacterReadiness() error = %v", err)
+	}
+
+	ready, reason := evaluator.CharacterReady(character.State{CharacterID: "char-1"})
 	if !ready {
 		t.Fatal("character readiness = false, want true")
 	}

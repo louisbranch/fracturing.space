@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/testclients"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -102,8 +102,8 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 
 	svc := newTestCampaignService(
 		withAuthClient(ts.withDomain(domain).build(), &testclients.FakeAuthClient{User: &authv1.User{Id: "user-123", Username: "owner"}}),
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
 	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -189,8 +189,8 @@ func TestCreateCampaign_AllowsOwnerlessPublicStarterTemplate(t *testing.T) {
 	}
 	svc := newTestCampaignService(
 		ts.withDomain(domain).build(),
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
 	)
 
 	resp, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
@@ -226,8 +226,8 @@ func TestCreateCampaign_AllowsOwnerlessPublicStarterTemplate(t *testing.T) {
 func TestCreateCampaign_RequiresDomainEngine(t *testing.T) {
 	svc := newTestCampaignService(
 		newTestDeps().build(),
-		gametest.FixedClock(time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-123"),
+		runtimekit.FixedClock(time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-123"),
 	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -271,8 +271,8 @@ func TestCreateCampaign_Success(t *testing.T) {
 	}
 	svc := newTestCampaignService(
 		withAuthClient(ts.withDomain(domain).build(), &testclients.FakeAuthClient{User: &authv1.User{Id: "user-123", Username: "owner"}}),
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-123"),
 	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -367,8 +367,8 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 
 	svc := newTestCampaignService(
 		withAuthClient(ts.withDomain(domain).build(), &testclients.FakeAuthClient{User: &authv1.User{Id: "user-123", Username: "owner"}}),
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-123"),
 	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -478,8 +478,8 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 			}
 			svc := newTestCampaignService(
 				withAuthClient(ts.withDomain(domain).build(), &testclients.FakeAuthClient{User: &authv1.User{Id: "user-123", Username: "owner"}}),
-				gametest.FixedClock(now),
-				gametest.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+				runtimekit.FixedClock(now),
+				runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
 			)
 
 			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -600,8 +600,8 @@ func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) 
 	stores.Social = socialClient
 	svc := newTestCampaignService(
 		stores,
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-123"),
 	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
@@ -681,8 +681,8 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 	stores.Social = socialClient
 	svc := newTestCampaignService(
 		stores,
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-123"),
 	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
@@ -738,8 +738,8 @@ func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameWithoutSocialProf
 
 	svc := newTestCampaignService(
 		withAuthClient(ts.withDomain(domain).build(), authClient),
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-123"),
 	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
@@ -811,8 +811,8 @@ func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameForLocale(t *test
 
 	svc := newTestCampaignService(
 		withAuthClient(ts.withDomain(domain).build(), authClient),
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-123"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-123"),
 	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
@@ -884,8 +884,8 @@ func TestCreateCampaign_AIUsesLocalizedNameAndOwnerFallsBackToAuthUsernameForLoc
 
 	svc := newTestCampaignService(
 		withAuthClient(ts.withDomain(domain).build(), authClient),
-		gametest.FixedClock(now),
-		gametest.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		runtimekit.FixedClock(now),
+		runtimekit.FixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
 	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{

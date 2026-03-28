@@ -6,6 +6,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	daggerhearttestkit "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/testkit"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -22,7 +24,7 @@ func TestPatchCharacterState_NilRequest(t *testing.T) {
 func TestPatchCharacterState_MissingCampaignId(t *testing.T) {
 	svc := NewService(Deps{
 		Campaign:    gametest.NewFakeCampaignStore(),
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
 	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
 		CharacterId: "ch1",
@@ -37,7 +39,7 @@ func TestPatchCharacterState_MissingCharacterId(t *testing.T) {
 	svc := NewService(Deps{
 		Auth:        authz.PolicyDeps{Participant: gametest.NewFakeParticipantStore()},
 		Campaign:    campaignStore,
-		Daggerheart: gametest.NewFakeDaggerheartStore(),
+		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
 	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
 		CampaignId: "c1",
@@ -47,7 +49,7 @@ func TestPatchCharacterState_MissingCharacterId(t *testing.T) {
 
 func TestPatchCharacterState_InvalidHope(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 	dhStore.States["c1"] = map[string]projectionstore.DaggerheartCharacterState{
@@ -58,7 +60,7 @@ func TestPatchCharacterState_InvalidHope(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
 	})
-	_, err := svc.PatchCharacterState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 15, Hope: 7, Stress: 1}},
@@ -68,7 +70,7 @@ func TestPatchCharacterState_InvalidHope(t *testing.T) {
 
 func TestPatchCharacterState_InvalidStress(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 	dhStore.States["c1"] = map[string]projectionstore.DaggerheartCharacterState{
@@ -82,7 +84,7 @@ func TestPatchCharacterState_InvalidStress(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
 	})
-	_, err := svc.PatchCharacterState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 15, Hope: 3, Stress: 10}},
@@ -92,7 +94,7 @@ func TestPatchCharacterState_InvalidStress(t *testing.T) {
 
 func TestPatchCharacterState_InvalidHp(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
-	dhStore := gametest.NewFakeDaggerheartStore()
+	dhStore := daggerhearttestkit.NewFakeDaggerheartStore()
 
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 	dhStore.States["c1"] = map[string]projectionstore.DaggerheartCharacterState{
@@ -106,7 +108,7 @@ func TestPatchCharacterState_InvalidHp(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
 	})
-	_, err := svc.PatchCharacterState(gametest.ContextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 25, Hope: 3, Stress: 1}},

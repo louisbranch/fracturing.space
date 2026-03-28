@@ -375,6 +375,37 @@ func TestSessionLockInterceptor_UpdateSnapshotState_NotBlocked(t *testing.T) {
 	}
 }
 
+func TestSessionLockStreamInterceptor_NonBlockedMethod_PassesThrough(t *testing.T) {
+	interceptor := SessionLockStreamInterceptor()
+	stream := &fakeServerStream{ctx: context.Background()}
+	info := &grpc.StreamServerInfo{FullMethod: statev1.EventService_SubscribeCampaignUpdates_FullMethodName}
+	called := false
+
+	err := interceptor(nil, stream, info, func(srv any, stream grpc.ServerStream) error {
+		called = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Fatal("expected stream handler to be called")
+	}
+}
+
+func TestSessionLockStreamInterceptor_BlockedMethod_FailsClosed(t *testing.T) {
+	interceptor := SessionLockStreamInterceptor()
+	stream := &fakeServerStream{ctx: context.Background()}
+	info := &grpc.StreamServerInfo{FullMethod: statev1.ParticipantService_CreateParticipant_FullMethodName}
+
+	err := interceptor(nil, stream, info, func(srv any, stream grpc.ServerStream) error {
+		t.Fatal("blocked streaming mutator should not reach handler")
+		return nil
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	assertStatusMessage(t, err, "streaming mutator /game.v1.ParticipantService/CreateParticipant is not supported by session lock enforcement")
+}
+
 func TestIsBlockedMethod(t *testing.T) {
 	tests := []struct {
 		method  string

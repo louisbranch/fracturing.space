@@ -2,18 +2,15 @@ package creationworkflow
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -30,17 +27,11 @@ func applyClassSubclassInput(ctx context.Context, content contentstore.Daggerhea
 		return err
 	}
 	if _, err := content.GetDaggerheartClass(ctx, classID); err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "class_id %q is not found", classID)
-		}
-		return grpcerror.Internal("get class", err)
+		return invalidContentLookup(ctx, err, "get class", "class_id %q is not found", classID)
 	}
 	subclass, err := content.GetDaggerheartSubclass(ctx, subclassID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "subclass_id %q is not found", subclassID)
-		}
-		return grpcerror.Internal("get subclass", err)
+		return invalidContentLookup(ctx, err, "get subclass", "subclass_id %q is not found", subclassID)
 	}
 	if strings.TrimSpace(subclass.ClassID) != classID {
 		return status.Errorf(codes.InvalidArgument, "subclass_id %q does not belong to class_id %q", subclassID, classID)
@@ -95,10 +86,7 @@ func companionSheetFromInput(ctx context.Context, content contentstore.Daggerhea
 			return nil, status.Error(codes.InvalidArgument, "companion experience_ids must be distinct")
 		}
 		if _, err := content.GetDaggerheartCompanionExperience(ctx, experienceID); err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return nil, status.Errorf(codes.InvalidArgument, "companion experience_id %q is not found", experienceID)
-			}
-			return nil, grpcerror.Internal("get companion experience", err)
+			return nil, invalidContentLookup(ctx, err, "get companion experience", "companion experience_id %q is not found", experienceID)
 		}
 		seen[experienceID] = struct{}{}
 		experiences = append(experiences, projectionstore.DaggerheartCompanionExperience{
@@ -146,10 +134,7 @@ func applyHeritageInput(ctx context.Context, content contentstore.DaggerheartCon
 
 	firstAncestry, err := content.GetDaggerheartHeritage(ctx, firstAncestryID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "first_feature_ancestry_id %q is not found", firstAncestryID)
-		}
-		return grpcerror.Internal("get ancestry heritage", err)
+		return invalidContentLookup(ctx, err, "get ancestry heritage", "first_feature_ancestry_id %q is not found", firstAncestryID)
 	}
 	if !strings.EqualFold(strings.TrimSpace(firstAncestry.Kind), "ancestry") {
 		return status.Errorf(codes.InvalidArgument, "first_feature_ancestry_id %q is not an ancestry heritage", firstAncestryID)
@@ -157,10 +142,7 @@ func applyHeritageInput(ctx context.Context, content contentstore.DaggerheartCon
 
 	secondAncestry, err := content.GetDaggerheartHeritage(ctx, secondAncestryID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "second_feature_ancestry_id %q is not found", secondAncestryID)
-		}
-		return grpcerror.Internal("get secondary ancestry heritage", err)
+		return invalidContentLookup(ctx, err, "get secondary ancestry heritage", "second_feature_ancestry_id %q is not found", secondAncestryID)
 	}
 	if !strings.EqualFold(strings.TrimSpace(secondAncestry.Kind), "ancestry") {
 		return status.Errorf(codes.InvalidArgument, "second_feature_ancestry_id %q is not an ancestry heritage", secondAncestryID)
@@ -168,10 +150,7 @@ func applyHeritageInput(ctx context.Context, content contentstore.DaggerheartCon
 
 	community, err := content.GetDaggerheartHeritage(ctx, communityID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "community_id %q is not found", communityID)
-		}
-		return grpcerror.Internal("get community heritage", err)
+		return invalidContentLookup(ctx, err, "get community heritage", "community_id %q is not found", communityID)
 	}
 	if !strings.EqualFold(strings.TrimSpace(community.Kind), "community") {
 		return status.Errorf(codes.InvalidArgument, "community_id %q is not a community heritage", communityID)
@@ -258,10 +237,7 @@ func applyDetailsInput(ctx context.Context, content contentstore.DaggerheartCont
 	}
 	class, err := content.GetDaggerheartClass(ctx, profile.ClassID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "class_id %q is not found", profile.ClassID)
-		}
-		return grpcerror.Internal("get class", err)
+		return invalidContentLookup(ctx, err, "get class", "class_id %q is not found", profile.ClassID)
 	}
 	if class.StartingHP <= 0 {
 		return status.Errorf(codes.InvalidArgument, "class_id %q has invalid starting hp", profile.ClassID)

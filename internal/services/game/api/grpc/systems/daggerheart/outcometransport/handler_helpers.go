@@ -3,7 +3,6 @@ package outcometransport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -61,10 +60,10 @@ func (h *Handler) validateSessionOutcome(
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return sessionOutcomePrelude{}, handleDomainError(err)
+		return sessionOutcomePrelude{}, handleDomainError(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return sessionOutcomePrelude{}, handleDomainError(err)
+		return sessionOutcomePrelude{}, handleDomainError(ctx, err)
 	}
 	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart outcomes"); err != nil {
 		return sessionOutcomePrelude{}, err
@@ -72,7 +71,7 @@ func (h *Handler) validateSessionOutcome(
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return sessionOutcomePrelude{}, handleDomainError(err)
+		return sessionOutcomePrelude{}, handleDomainError(ctx, err)
 	}
 	if sess.Status != session.StatusActive {
 		return sessionOutcomePrelude{}, status.Error(codes.FailedPrecondition, "session is not active")
@@ -83,7 +82,7 @@ func (h *Handler) validateSessionOutcome(
 
 	rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, rollSeq)
 	if err != nil {
-		return sessionOutcomePrelude{}, handleDomainError(err)
+		return sessionOutcomePrelude{}, handleDomainError(ctx, err)
 	}
 	if rollEvent.Type != eventTypeActionRollResolved {
 		return sessionOutcomePrelude{}, status.Error(codes.InvalidArgument, "roll seq does not reference action.roll_resolved")
@@ -181,7 +180,7 @@ func (h *Handler) buildApplyRollOutcomeIdempotentResponse(
 	for _, target := range targets {
 		state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, target)
 		if err != nil {
-			return nil, handleDomainError(err)
+			return nil, handleDomainError(ctx, err)
 		}
 		updatedStates = append(updatedStates, &pb.OutcomeCharacterState{
 			CharacterId: target,
@@ -310,10 +309,7 @@ func (h *Handler) ensureNoOpenSessionGate(ctx context.Context, campaignID, sessi
 	if err == nil {
 		return status.Errorf(codes.FailedPrecondition, "session gate is open: %s", gate.GateID)
 	}
-	if errors.Is(err, storage.ErrNotFound) {
-		return nil
-	}
-	return grpcerror.Internal("load session gate", err)
+	return grpcerror.OptionalLookupErrorContext(ctx, err, "load session gate")
 }
 
 // requireSessionOutcomeDependencies checks the read-side dependencies shared by
@@ -363,7 +359,7 @@ func (h *Handler) activeSubclassRuleSummary(ctx context.Context, profile project
 	typed := daggerheartstate.CharacterProfileFromStorage(profile)
 	featureSets, err := daggerheartstate.ActiveSubclassTrackFeaturesFromLoader(ctx, h.deps.Content.GetDaggerheartSubclass, typed.SubclassTracks)
 	if err != nil {
-		return daggerheartstate.ActiveSubclassRuleSummary{}, handleDomainError(err)
+		return daggerheartstate.ActiveSubclassRuleSummary{}, handleDomainError(ctx, err)
 	}
 	return daggerheartstate.SummarizeActiveSubclassRules(daggerheartstate.FlattenActiveSubclassFeatures(featureSets)), nil
 }
@@ -386,8 +382,8 @@ func requireDaggerheartSystem(record storage.CampaignRecord, unsupportedMessage 
 
 // handleDomainError preserves the existing status-code mapping used by the root
 // Daggerheart service.
-func handleDomainError(err error) error {
-	return grpcerror.HandleDomainError(err)
+func handleDomainError(ctx context.Context, err error) error {
+	return grpcerror.HandleDomainErrorContext(ctx, err)
 }
 
 // clamp keeps integer state transitions inside their legal domain bounds.

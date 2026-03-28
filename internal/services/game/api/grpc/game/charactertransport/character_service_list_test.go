@@ -7,6 +7,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -53,7 +54,7 @@ func TestListCharacters_EmptyList(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	resp, err := svc.ListCharacters(gametest.ContextWithParticipantID("p1"), &statev1.ListCharactersRequest{CampaignId: "c1"})
+	resp, err := svc.ListCharacters(requestctx.WithParticipantID("p1"), &statev1.ListCharactersRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListCharacters returned error: %v", err)
 	}
@@ -76,7 +77,7 @@ func TestListCharacters_WithCharacters(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	resp, err := svc.ListCharacters(gametest.ContextWithParticipantID("p1"), &statev1.ListCharactersRequest{CampaignId: "c1"})
+	resp, err := svc.ListCharacters(requestctx.WithParticipantID("p1"), &statev1.ListCharactersRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListCharacters returned error: %v", err)
 	}
@@ -120,7 +121,7 @@ func TestListCharacterProfiles_EmptyForNonDaggerheartCampaigns(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	resp, err := svc.ListCharacterProfiles(gametest.ContextWithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{CampaignId: "c1"})
+	resp, err := svc.ListCharacterProfiles(requestctx.WithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListCharacterProfiles returned error: %v", err)
 	}
@@ -167,7 +168,7 @@ func TestListCharacterProfiles_WithProfiles(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	resp, err := svc.ListCharacterProfiles(gametest.ContextWithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{CampaignId: "c1", PageSize: 1})
+	resp, err := svc.ListCharacterProfiles(requestctx.WithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{CampaignId: "c1", PageSize: 1})
 	if err != nil {
 		t.Fatalf("ListCharacterProfiles returned error: %v", err)
 	}
@@ -184,7 +185,7 @@ func TestListCharacterProfiles_WithProfiles(t *testing.T) {
 		t.Fatalf("next page token = %q, want %q", got, "ch-a")
 	}
 
-	resp, err = svc.ListCharacterProfiles(gametest.ContextWithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{
+	resp, err = svc.ListCharacterProfiles(requestctx.WithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{
 		CampaignId: "c1",
 		PageSize:   1,
 		PageToken:  resp.GetNextPageToken(),

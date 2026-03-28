@@ -243,9 +243,6 @@ func (acceptingSystemModule) EmittableEventTypes() []event.Type { return nil }
 func (acceptingSystemModule) Decider() module.Decider           { return acceptingSystemDecider{} }
 func (acceptingSystemModule) Folder() module.Folder             { return nil }
 func (acceptingSystemModule) StateFactory() module.StateFactory { return nil }
-func (acceptingSystemModule) CharacterReady(any, character.State) (bool, string) {
-	return true, ""
-}
 
 type acceptingSystemDecider struct{}
 
@@ -262,4 +259,68 @@ func (acceptingSystemDecider) Decide(_ any, cmd command.Command, now func() time
 		[]byte(`{"ok":true}`),
 		eventTime,
 	))
+}
+
+type seededSystemModule struct{}
+
+func (seededSystemModule) ID() string                               { return "seeded" }
+func (seededSystemModule) Version() string                          { return "v1" }
+func (seededSystemModule) RegisterCommands(*command.Registry) error { return nil }
+func (seededSystemModule) RegisterEvents(*event.Registry) error     { return nil }
+func (seededSystemModule) EmittableEventTypes() []event.Type        { return nil }
+func (seededSystemModule) Decider() module.Decider                  { return seededSystemDecider{} }
+func (seededSystemModule) Folder() module.Folder                    { return nil }
+func (seededSystemModule) StateFactory() module.StateFactory        { return seededSystemFactory{} }
+
+type seededSystemFactory struct{}
+
+func (seededSystemFactory) NewSnapshotState(ids.CampaignID) (any, error) {
+	return "seeded-state", nil
+}
+
+func (seededSystemFactory) NewCharacterState(ids.CampaignID, ids.CharacterID, string) (any, error) {
+	return nil, nil
+}
+
+type seededSystemDecider struct{}
+
+func (seededSystemDecider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
+	if state != "seeded-state" {
+		return command.Reject(command.Rejection{
+			Code:    "STATE_ASSERT_FAILED",
+			Message: "expected seeded-state",
+		})
+	}
+	return command.Accept(command.NewEvent(
+		cmd,
+		event.Type("sys.seeded.event"),
+		"system_entity",
+		"system-1",
+		[]byte(`{}`),
+		command.NowFunc(now)().UTC(),
+	))
+}
+
+func TestCoreDeciderDecide_SeedsMissingSystemStateFromFactory(t *testing.T) {
+	systemRegistry := module.NewRegistry()
+	if err := systemRegistry.Register(seededSystemModule{}); err != nil {
+		t.Fatalf("register system module: %v", err)
+	}
+
+	decision := CoreDecider{systemCommands: newSystemCommandDispatcher(systemRegistry)}.Decide(
+		aggregate.State{},
+		command.Command{
+			CampaignID:    "camp-1",
+			Type:          command.Type("sys.seeded.command"),
+			SystemID:      "seeded",
+			SystemVersion: "v1",
+		},
+		time.Now,
+	)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("rejections = %d, want 0 (%v)", len(decision.Rejections), decision.Rejections)
+	}
+	if len(decision.Events) != 1 || decision.Events[0].Type != event.Type("sys.seeded.event") {
+		t.Fatalf("events = %v, want one sys.seeded.event", decision.Events)
+	}
 }

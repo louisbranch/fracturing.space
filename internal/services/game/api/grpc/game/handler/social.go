@@ -6,6 +6,7 @@ import (
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
+	"google.golang.org/grpc"
 )
 
 // SocialProfileSnapshot carries the profile fields create flows can safely
@@ -17,9 +18,14 @@ type SocialProfileSnapshot struct {
 	AvatarAssetID string
 }
 
+// SocialProfileClient is the narrow social dependency needed by game transport.
+type SocialProfileClient interface {
+	GetUserProfile(ctx context.Context, req *socialv1.GetUserProfileRequest, opts ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error)
+}
+
 // LoadSocialProfileSnapshot returns best-effort profile data for user-linked
 // create flows so callers can fill missing fields while keeping request values authoritative.
-func LoadSocialProfileSnapshot(ctx context.Context, socialClient socialv1.SocialServiceClient, userID string) SocialProfileSnapshot {
+func LoadSocialProfileSnapshot(ctx context.Context, socialClient SocialProfileClient, userID string) SocialProfileSnapshot {
 	userID = strings.TrimSpace(userID)
 	if userID == "" || socialClient == nil {
 		return SocialProfileSnapshot{}

@@ -3,23 +3,19 @@ package damagetransport
 import (
 	"context"
 
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // CampaignStore is the campaign-read contract consumed by damage transport.
-type CampaignStore interface {
-	Get(ctx context.Context, id string) (storage.CampaignRecord, error)
-}
+type CampaignStore = daggerheartguard.CampaignStore
 
 // SessionGateStore is the read-only gate contract used to block damage writes
 // while a session gate is open.
-type SessionGateStore interface {
-	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (storage.SessionGate, error)
-}
+type SessionGateStore = daggerheartguard.SessionGateStore
 
 // DaggerheartStore is the system-owned gameplay projection contract needed by
 // damage transport.

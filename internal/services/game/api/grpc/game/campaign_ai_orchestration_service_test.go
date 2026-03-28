@@ -6,6 +6,7 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -164,7 +165,7 @@ func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *te
 func TestCampaignAIOrchestrationApplicationCampaignSupportsAI(t *testing.T) {
 	t.Parallel()
 
-	app := newCampaignAIOrchestrationApplicationWithDependencies(CampaignAIOrchestrationDeps{}, gametest.FixedIDGenerator("unused"))
+	app := newCampaignAIOrchestrationApplicationWithDependencies(CampaignAIOrchestrationDeps{}, runtimekit.FixedIDGenerator("unused"))
 	if !app.CampaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeAI}) {
 		t.Fatal("gm mode ai should be supported")
 	}

@@ -4,14 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
 // foldEntry describes how a set of event types maps to a fold function that
@@ -52,7 +47,8 @@ func foldEntityKeyed[K ~string, S any](
 }
 
 // coreFoldEntries returns the declarative fold dispatch table for all core
-// domains. Adding a new core domain requires only adding an entry here.
+// domains. The authoritative core-domain registration inventory lives in
+// CoreDomainRegistrations so engine startup and aggregate replay stay aligned.
 //
 // Entity-keyed entries (participant, character) perform an EntityID
 // presence check at fold time. This is intentional defense-in-depth:
@@ -61,57 +57,16 @@ func foldEntityKeyed[K ~string, S any](
 // without the startup validator being updated. Both checks are cheap and
 // should be preserved.
 func coreFoldEntries() []foldEntry {
-	return []foldEntry{
-		{
-			types: campaign.FoldHandledTypes,
-			fold: func(state *State, evt event.Event) error {
-				updated, err := campaign.Fold(state.Campaign, evt)
-				if err != nil {
-					return err
-				}
-				state.Campaign = updated
-				return nil
-			},
-		},
-		{
-			types: session.FoldHandledTypes,
-			fold: func(state *State, evt event.Event) error {
-				updated, err := session.Fold(state.Session, evt)
-				if err != nil {
-					return err
-				}
-				state.Session = updated
-				return nil
-			},
-		},
-		{
-			types: action.FoldHandledTypes,
-			fold: func(state *State, evt event.Event) error {
-				updated, err := action.Fold(state.Action, evt)
-				if err != nil {
-					return err
-				}
-				state.Action = updated
-				return nil
-			},
-		},
-		{
-			types: participant.FoldHandledTypes,
-			fold: func(state *State, evt event.Event) error {
-				return foldEntityKeyed(&state.Participants, evt, "participant", participant.Fold)
-			},
-		},
-		{
-			types: character.FoldHandledTypes,
-			fold: func(state *State, evt event.Event) error {
-				return foldEntityKeyed(&state.Characters, evt, "character", character.Fold)
-			},
-		},
-		{
-			types: scene.FoldHandledTypes,
-			fold:  foldScene,
-		},
+	registrations := CoreDomainRegistrations()
+	entries := make([]foldEntry, 0, len(registrations))
+	for _, registration := range registrations {
+		entry := registration
+		entries = append(entries, foldEntry{
+			types: entry.FoldHandledTypes,
+			fold:  entry.Fold,
+		})
 	}
+	return entries
 }
 
 // foldScene routes scene events to the correct scene state entry.
@@ -121,19 +76,15 @@ func coreFoldEntries() []foldEntry {
 // handle both patterns uniformly, foldScene extracts the scene_id from
 // the event payload.
 func foldScene(state *State, evt event.Event) error {
-	sceneID, err := extractSceneID(evt)
-	if err != nil {
+	if err := foldKeyedState(
+		state,
+		func(state *State) *map[ids.SceneID]scene.State { return &state.Scenes },
+		extractSceneID,
+		evt,
+		scene.Fold,
+	); err != nil {
 		return fmt.Errorf("scene fold: %w", err)
 	}
-	if state.Scenes == nil {
-		state.Scenes = make(map[ids.SceneID]scene.State)
-	}
-	sub := state.Scenes[sceneID]
-	updated, err := scene.Fold(sub, evt)
-	if err != nil {
-		return err
-	}
-	state.Scenes[sceneID] = updated
 	return nil
 }
 

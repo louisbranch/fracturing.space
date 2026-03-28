@@ -1,4 +1,4 @@
-package gametest
+package runtimekit
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"

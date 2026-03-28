@@ -7,6 +7,8 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -37,7 +39,7 @@ func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.RestoreCampaign(gametest.ContextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	_, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -47,7 +49,7 @@ func TestRestoreCampaign_RequiresDomainEngine(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.ArchivedCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.RestoreCampaign(gametest.ContextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	_, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -70,9 +72,9 @@ func TestRestoreCampaign_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := newTestCampaignService(ts.withDomain(domain).build(), gametest.FixedClock(now), gametest.FixedIDGenerator("campaign-123"))
+	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("campaign-123"))
 
-	resp, err := svc.RestoreCampaign(gametest.ContextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("RestoreCampaign returned error: %v", err)
 	}
@@ -110,9 +112,9 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := newTestCampaignService(ts.withDomain(domain).build(), gametest.FixedClock(now), nil)
+	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	_, err := svc.RestoreCampaign(gametest.ContextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	_, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("RestoreCampaign returned error: %v", err)
 	}

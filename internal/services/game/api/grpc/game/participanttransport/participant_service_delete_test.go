@@ -8,6 +8,8 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -30,7 +32,7 @@ func TestDeleteParticipant_DeniesManagerRemovingOwner(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore})
-	ctx := gametest.ContextWithParticipantID("manager-1")
+	ctx := requestctx.WithParticipantID("manager-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "owner-1",
@@ -49,7 +51,7 @@ func TestDeleteParticipant_DeniesRemovingFinalOwner(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "owner-1",
@@ -67,7 +69,7 @@ func TestDeleteParticipant_DeniesMemberWithoutManageAccess(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := gametest.ContextWithParticipantID("member-1")
+	ctx := requestctx.WithParticipantID("member-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -103,7 +105,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -179,7 +181,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -237,7 +239,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -303,7 +305,7 @@ func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) 
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -378,7 +380,7 @@ func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testin
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -406,7 +408,7 @@ func TestDeleteParticipant_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore})
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -451,12 +453,12 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 			Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore},
 		},
-		gametest.FixedClock(now),
+		runtimekit.FixedClock(now),
 		nil,
 		nil,
 	)
 
-	ctx := gametest.ContextWithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",

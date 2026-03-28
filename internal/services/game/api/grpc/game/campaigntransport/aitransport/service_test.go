@@ -8,6 +8,8 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -40,13 +42,13 @@ func campaignAIGrantConfig(now time.Time) aisessiongrant.Config {
 		Audience: "test-audience",
 		HMACKey:  []byte("0123456789abcdef0123456789abcdef"),
 		TTL:      10 * time.Minute,
-		Now:      gametest.FixedClock(now),
+		Now:      runtimekit.FixedClock(now),
 	}
 }
 
 func newServiceForTest(deps Deps, now time.Time) *Service {
 	deps.SessionGrantConfig = campaignAIGrantConfig(now)
-	return newServiceWithDependencies(deps, gametest.FixedClock(now), gametest.FixedIDGenerator("grant-1"))
+	return newServiceWithDependencies(deps, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("grant-1"))
 }
 
 func assertStatusCode(t *testing.T, err error, want codes.Code) {
@@ -211,7 +213,7 @@ func TestIssueCampaignAISessionGrantSuccess(t *testing.T) {
 		Participant:        participantStore,
 		SessionInteraction: sessionInteractionStore,
 	}, now)
-	resp, err := svc.IssueCampaignAISessionGrant(gametest.ContextWithUserID("user-7"), &statev1.IssueCampaignAISessionGrantRequest{
+	resp, err := svc.IssueCampaignAISessionGrant(requestctx.WithUserID("user-7"), &statev1.IssueCampaignAISessionGrantRequest{
 		CampaignId: "camp-1",
 		SessionId:  "session-1",
 	})

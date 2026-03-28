@@ -53,10 +53,10 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterConditionsResult{}, grpcerror.HandleDomainError(err)
+		return CharacterConditionsResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterConditionsResult{}, grpcerror.HandleDomainError(err)
+		return CharacterConditionsResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart conditions"); err != nil {
 		return CharacterConditionsResult{}, err
@@ -73,7 +73,7 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterConditionsResult{}, grpcerror.HandleDomainError(err)
+		return CharacterConditionsResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 
 	lifeStateProvided := in.GetLifeState() != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED
@@ -266,10 +266,10 @@ func (h *Handler) ApplyAdversaryConditions(ctx context.Context, in *pb.Daggerhea
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return AdversaryConditionsResult{}, grpcerror.HandleDomainError(err)
+		return AdversaryConditionsResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return AdversaryConditionsResult{}, grpcerror.HandleDomainError(err)
+		return AdversaryConditionsResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart conditions"); err != nil {
 		return AdversaryConditionsResult{}, err
@@ -419,7 +419,7 @@ func (h *Handler) validateRollSeq(ctx context.Context, campaignID, sessionID str
 	}
 	rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 	if err != nil {
-		return grpcerror.HandleDomainError(err)
+		return grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	if sessionID != "" && rollEvent.SessionID.String() != sessionID {
 		return status.Error(codes.InvalidArgument, "roll seq does not match session")
