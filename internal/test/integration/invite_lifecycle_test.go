@@ -29,7 +29,7 @@ type inviteLifecycleSuite struct {
 func runInviteLifecycleTests(t *testing.T, fixture *suiteFixture) {
 	t.Helper()
 
-	inviteAddr := startInviteServer(t, fixture.grpcAddr, fixture.authAddr)
+	inviteAddr := fixture.startInviteServer(t)
 
 	ownerUserID := createAuthUser(t, fixture.authAddr, uniqueTestUsername(t, "invite-owner"))
 

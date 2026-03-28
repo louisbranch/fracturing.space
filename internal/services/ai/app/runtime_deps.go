@@ -43,8 +43,10 @@ type runtimeDeps struct {
 	gameMc                  *platformgrpc.ManagedConn
 }
 
-func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logger) (runtimeDeps, error) {
-	store, err := openAIStore(cfg.DBPath)
+func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logger, deps serverDependencies) (runtimeDeps, error) {
+	deps = deps.withDefaults()
+
+	store, err := deps.openStore(cfg.DBPath)
 	if err != nil {
 		return runtimeDeps{}, err
 	}
@@ -97,7 +99,7 @@ func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logge
 		referenceCorpus = referencecorpus.New(cfg.DaggerheartReferenceRoot)
 	}
 
-	gameMc, gameBridge := dialGameService(ctx, cfg.GameAddr, cfg.InternalServiceAllowlist, logger)
+	gameMc, gameBridge := dialGameService(ctx, cfg.GameAddr, cfg.InternalServiceAllowlist, logger, deps.newManagedConn)
 
 	return runtimeDeps{
 		cfg:                     cfg,
@@ -122,12 +124,21 @@ func (d runtimeDeps) close(logger *slog.Logger) {
 	closeManagedConn(d.gameMc, "game", logger)
 }
 
-func dialGameService(ctx context.Context, gameAddr string, internalServiceAllowlist map[string]struct{}, logger *slog.Logger) (*platformgrpc.ManagedConn, *gamebridge.Gateway) {
+func dialGameService(
+	ctx context.Context,
+	gameAddr string,
+	internalServiceAllowlist map[string]struct{},
+	logger *slog.Logger,
+	newManagedConn func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error),
+) (*platformgrpc.ManagedConn, *gamebridge.Gateway) {
 	gameAddr = strings.TrimSpace(gameAddr)
 	if gameAddr == "" {
 		return nil, gamebridge.New(gamebridge.Config{
 			InternalServiceAllowlist: internalServiceAllowlist,
 		})
+	}
+	if newManagedConn == nil {
+		newManagedConn = platformgrpc.NewManagedConn
 	}
 	mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "game",

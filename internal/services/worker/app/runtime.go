@@ -52,13 +52,39 @@ const (
 	defaultWorkerDB   = "data/worker.db"
 )
 
-var (
-	newManagedConn  = platformgrpc.NewManagedConn
-	openSQLiteStore = workersqlite.Open
-	listenTCP       = net.Listen
-)
-
 const socialDirectoryBackfillPageSize = 50
+
+type runtimeDependencies struct {
+	newManagedConn  func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error)
+	openSQLiteStore func(string) (*workersqlite.Store, error)
+	listenTCP       func(string, string) (net.Listener, error)
+	logf            func(string, ...any)
+}
+
+func defaultRuntimeDependencies() runtimeDependencies {
+	return runtimeDependencies{
+		newManagedConn:  platformgrpc.NewManagedConn,
+		openSQLiteStore: workersqlite.Open,
+		listenTCP:       net.Listen,
+		logf:            log.Printf,
+	}
+}
+
+func (d runtimeDependencies) withDefaults() runtimeDependencies {
+	if d.newManagedConn == nil {
+		d.newManagedConn = platformgrpc.NewManagedConn
+	}
+	if d.openSQLiteStore == nil {
+		d.openSQLiteStore = workersqlite.Open
+	}
+	if d.listenTCP == nil {
+		d.listenTCP = net.Listen
+	}
+	if d.logf == nil {
+		d.logf = log.Printf
+	}
+	return d
+}
 
 type workerLoop interface {
 	Run(ctx context.Context) error
@@ -105,9 +131,14 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 
 // NewRuntime constructs a configured worker runtime with dependency wiring.
 func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
+	return newRuntime(ctx, cfg, defaultRuntimeDependencies())
+}
+
+func newRuntime(ctx context.Context, cfg RuntimeConfig, deps runtimeDependencies) (*Runtime, error) {
 	if ctx == nil {
 		return nil, errors.New("context is required")
 	}
+	deps = deps.withDefaults()
 	normalized, err := normalizeRuntimeConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -119,31 +150,27 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		}
 	}
 
-	workerStore, err := openSQLiteStore(normalized.DBPath)
+	workerStore, err := deps.openSQLiteStore(normalized.DBPath)
 	if err != nil {
 		return nil, fmt.Errorf("open worker sqlite store: %w", err)
 	}
 
-	logf := func(format string, args ...any) {
-		log.Printf(format, args...)
-	}
-
-	authMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	authMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "auth",
 		Addr: normalized.AuthAddr,
 		Mode: platformgrpc.ModeRequired,
-		Logf: logf,
+		Logf: deps.logf,
 	})
 	if err != nil {
 		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("worker: managed conn auth: %w", err)
 	}
 
-	aiMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	aiMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "ai",
 		Addr: normalized.AIAddr,
 		Mode: platformgrpc.ModeOptional,
-		Logf: logf,
+		Logf: deps.logf,
 	})
 	if err != nil {
 		closeManagedConn(authMc, "auth")
@@ -151,11 +178,11 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		return nil, fmt.Errorf("worker: managed conn ai: %w", err)
 	}
 
-	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	gameMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "game",
 		Addr: normalized.GameAddr,
 		Mode: platformgrpc.ModeOptional,
-		Logf: logf,
+		Logf: deps.logf,
 	})
 	if err != nil {
 		closeManagedConn(aiMc, "ai")
@@ -164,11 +191,11 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		return nil, fmt.Errorf("worker: managed conn game: %w", err)
 	}
 
-	notificationsMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	notificationsMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "notifications",
 		Addr: normalized.NotificationsAddr,
 		Mode: platformgrpc.ModeOptional,
-		Logf: logf,
+		Logf: deps.logf,
 	})
 	if err != nil {
 		closeManagedConn(gameMc, "game")
@@ -178,11 +205,11 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		return nil, fmt.Errorf("worker: managed conn notifications: %w", err)
 	}
 
-	socialMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	socialMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "social",
 		Addr: normalized.SocialAddr,
 		Mode: platformgrpc.ModeRequired,
-		Logf: logf,
+		Logf: deps.logf,
 	})
 	if err != nil {
 		closeManagedConn(notificationsMc, "notifications")
@@ -193,11 +220,11 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		return nil, fmt.Errorf("worker: managed conn social: %w", err)
 	}
 
-	inviteMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	inviteMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "invite",
 		Addr: normalized.InviteAddr,
 		Mode: platformgrpc.ModeOptional,
-		Logf: logf,
+		Logf: deps.logf,
 	})
 	if err != nil {
 		closeManagedConn(socialMc, "social")
@@ -282,7 +309,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		nil,
 	)
 
-	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
+	listener, err := deps.listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
 		closeManagedConn(inviteMc, "invite")
 		closeManagedConn(socialMc, "social")

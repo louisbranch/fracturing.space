@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
+	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type loopRunnerFunc func(ctx context.Context) error
@@ -155,10 +156,29 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 	}
 }
 
-func stubManagedConn(t *testing.T) {
+func TestRuntimeDependenciesWithDefaultsFillsNilHooks(t *testing.T) {
+	t.Parallel()
+
+	deps := (runtimeDependencies{}).withDefaults()
+	if deps.newManagedConn == nil {
+		t.Fatal("expected managed conn constructor")
+	}
+	if deps.openSQLiteStore == nil {
+		t.Fatal("expected sqlite store opener")
+	}
+	if deps.listenTCP == nil {
+		t.Fatal("expected listener constructor")
+	}
+	if deps.logf == nil {
+		t.Fatal("expected log function")
+	}
+}
+
+func stubManagedConnDeps(t *testing.T) runtimeDependencies {
 	t.Helper()
-	previous := newManagedConn
-	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+
+	deps := defaultRuntimeDependencies()
+	deps.newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
 		cfg.Mode = platformgrpc.ModeOptional
 		cfg.DialOpts = []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -167,16 +187,14 @@ func stubManagedConn(t *testing.T) {
 		cfg.Logf = func(string, ...any) {}
 		return platformgrpc.NewManagedConn(ctx, cfg)
 	}
-	t.Cleanup(func() {
-		newManagedConn = previous
-	})
+	return deps
 }
 
-func recordManagedConnModes(t *testing.T) *sync.Map {
+func recordManagedConnModesDeps(t *testing.T) (runtimeDependencies, *sync.Map) {
 	t.Helper()
 	modes := &sync.Map{}
-	previous := newManagedConn
-	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+	deps := defaultRuntimeDependencies()
+	deps.newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
 		modes.Store(cfg.Name, cfg.Mode)
 		cfg.Mode = platformgrpc.ModeOptional
 		cfg.DialOpts = []grpc.DialOption{
@@ -186,10 +204,7 @@ func recordManagedConnModes(t *testing.T) *sync.Map {
 		cfg.Logf = func(string, ...any) {}
 		return platformgrpc.NewManagedConn(ctx, cfg)
 	}
-	t.Cleanup(func() {
-		newManagedConn = previous
-	})
-	return modes
+	return deps, modes
 }
 
 type lifecycleAuthServer struct {
@@ -222,6 +237,9 @@ func startLifecycleDependencyServers(t *testing.T) lifecycleDependencyAddrs {
 			t.Fatalf("%s listen: %v", label, err)
 		}
 		server := grpc.NewServer()
+		healthServer := health.NewServer()
+		grpc_health_v1.RegisterHealthServer(server, healthServer)
+		healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 		register(server)
 		go func() {
 			_ = server.Serve(listener)
@@ -248,10 +266,10 @@ func startLifecycleDependencyServers(t *testing.T) lifecycleDependencyAddrs {
 }
 
 func TestNewRuntimeBuildsAndCloses(t *testing.T) {
-	stubManagedConn(t)
+	deps := stubManagedConnDeps(t)
 	addrs := startLifecycleDependencyServers(t)
 
-	srv, err := NewRuntime(context.Background(), RuntimeConfig{
+	srv, err := newRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
 		AuthAddr:          addrs.auth,
 		AIAddr:            addrs.ai,
@@ -260,7 +278,7 @@ func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 		NotificationsAddr: addrs.notifications,
 		SocialAddr:        addrs.social,
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
-	})
+	}, deps)
 	if err != nil {
 		t.Fatalf("NewRuntime: %v", err)
 	}
@@ -271,11 +289,41 @@ func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 	srv.Close()
 }
 
+func TestRunStartsAndStopsWithDefaultDependencies(t *testing.T) {
+	addrs := startLifecycleDependencyServers(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Run(ctx, RuntimeConfig{
+			Port:              freeWorkerTCPPort(t),
+			AuthAddr:          addrs.auth,
+			AIAddr:            addrs.ai,
+			GameAddr:          addrs.game,
+			InviteAddr:        addrs.invite,
+			NotificationsAddr: addrs.notifications,
+			SocialAddr:        addrs.social,
+			DBPath:            filepath.Join(t.TempDir(), "worker.db"),
+		})
+	}()
+
+	time.Sleep(1500 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not stop after cancellation")
+	}
+}
+
 func TestNewRuntime_UsesOptionalManagedConnsForGameAndNotifications(t *testing.T) {
-	modes := recordManagedConnModes(t)
+	deps, modes := recordManagedConnModesDeps(t)
 	addrs := startLifecycleDependencyServers(t)
 
-	srv, err := NewRuntime(context.Background(), RuntimeConfig{
+	srv, err := newRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
 		AuthAddr:          addrs.auth,
 		AIAddr:            "127.0.0.1:3",
@@ -284,7 +332,7 @@ func TestNewRuntime_UsesOptionalManagedConnsForGameAndNotifications(t *testing.T
 		NotificationsAddr: "127.0.0.1:2",
 		SocialAddr:        addrs.social,
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
-	})
+	}, deps)
 	if err != nil {
 		t.Fatalf("NewRuntime: %v", err)
 	}
@@ -340,10 +388,10 @@ func TestRuntimeServeStopsOnContextCancellation(t *testing.T) {
 }
 
 func TestRuntimeServeRequiresContext(t *testing.T) {
-	stubManagedConn(t)
+	deps := stubManagedConnDeps(t)
 	addrs := startLifecycleDependencyServers(t)
 
-	runtime, err := NewRuntime(context.Background(), RuntimeConfig{
+	runtime, err := newRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
 		AuthAddr:          addrs.auth,
 		AIAddr:            addrs.ai,
@@ -352,7 +400,7 @@ func TestRuntimeServeRequiresContext(t *testing.T) {
 		NotificationsAddr: addrs.notifications,
 		SocialAddr:        addrs.social,
 		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
-	})
+	}, deps)
 	if err != nil {
 		t.Fatalf("NewRuntime: %v", err)
 	}

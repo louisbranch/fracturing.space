@@ -22,10 +22,32 @@ import (
 	"google.golang.org/grpc/health"
 )
 
-var (
-	newManagedConn = platformgrpc.NewManagedConn
-	listenTCP      = net.Listen
-)
+type serverDependencies struct {
+	listenTCP      func(string, string) (net.Listener, error)
+	newManagedConn func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error)
+	openStore      func(string) (*aisqlite.Store, error)
+}
+
+func defaultServerDependencies() serverDependencies {
+	return serverDependencies{
+		listenTCP:      net.Listen,
+		newManagedConn: platformgrpc.NewManagedConn,
+		openStore:      openAIStore,
+	}
+}
+
+func (d serverDependencies) withDefaults() serverDependencies {
+	if d.listenTCP == nil {
+		d.listenTCP = net.Listen
+	}
+	if d.newManagedConn == nil {
+		d.newManagedConn = platformgrpc.NewManagedConn
+	}
+	if d.openStore == nil {
+		d.openStore = openAIStore
+	}
+	return d
+}
 
 // Server hosts the AI service and coordinates gRPC + health serving.
 //
@@ -51,15 +73,16 @@ func New(ctx context.Context, addr string) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newServerWithRuntimeConfig(ctx, addr, cfg)
+	return newServerWithRuntimeConfig(ctx, addr, cfg, defaultServerDependencies())
 }
 
-func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeConfig) (*Server, error) {
+func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeConfig, deps serverDependencies) (*Server, error) {
 	if ctx == nil {
 		return nil, errors.New("context is required")
 	}
+	deps = deps.withDefaults()
 
-	listener, err := listenTCP("tcp", addr)
+	listener, err := deps.listenTCP("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
 	}
@@ -72,16 +95,16 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 
 	logger := slog.Default().With("service", "ai")
 
-	deps, err := buildRuntimeDeps(ctx, cfg, logger)
+	runtimeDeps, err := buildRuntimeDeps(ctx, cfg, logger, deps)
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
 	}
 
-	handlers, err := buildHandlers(deps)
+	handlers, err := buildHandlers(runtimeDeps)
 	if err != nil {
 		_ = listener.Close()
-		deps.close(logger)
+		runtimeDeps.close(logger)
 		return nil, fmt.Errorf("build handlers: %w", err)
 	}
 
@@ -92,8 +115,8 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		listener:   listener,
 		grpcServer: grpcServer,
 		health:     healthServer,
-		store:      deps.store,
-		gameMc:     deps.gameMc,
+		store:      runtimeDeps.store,
+		gameMc:     runtimeDeps.gameMc,
 		logger:     logger,
 	}, nil
 }

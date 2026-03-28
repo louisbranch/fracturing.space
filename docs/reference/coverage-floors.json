@@ -1,11 +1,11 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-24T04:45:10Z",
+  "updated_at": "2026-03-24T13:53:18Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog",
-      "floor": 75.1,
+      "floor": 75.4,
       "description": "Asset catalog for avatar, system-specific, and Cloudinary path management."
     },
     {
@@ -50,7 +50,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai",
-      "floor": 75,
+      "floor": 76.5,
       "description": "AI gRPC transport handlers covering RPC validation and error mapping."
     },
     {
@@ -70,7 +70,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/providergrant",
-      "floor": 77,
+      "floor": 95.5,
       "description": "Provider-grant domain lifecycle, refresh logic, and expiry predicates."
     },
     {
@@ -87,6 +87,11 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/auth/oauth",
       "floor": 81.6,
       "description": "OAuth configuration, PKCE flow, and provider lifecycle."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/discovery/app",
+      "floor": 58.7,
+      "description": "Discovery service application layer composing catalog and reference lookup workflows."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -175,12 +180,12 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems",
-      "floor": 97.7,
+      "floor": 99.1,
       "description": "Bridge registry and system metadata routing boundaries."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart",
-      "floor": 91.5,
+      "floor": 93.4,
       "description": "Daggerheart system module, fold, and projection adapter path."
     },
     {
@@ -225,17 +230,17 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state",
-      "floor": 92,
+      "floor": 92.4,
       "description": "Daggerheart campaign snapshot state and supporting runtime value types."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest",
-      "floor": 94.8,
+      "floor": 96.4,
       "description": "Built-in system descriptor and adapter wiring contracts."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/invite/api/grpc/invite",
-      "floor": 89.6,
+      "floor": 91.7,
       "description": "Invite gRPC transport handlers covering validation, status transitions, and cross-service enrichment."
     },
     {
@@ -244,18 +249,28 @@
       "description": "Invite SQLite persistence layer covering CRUD, pagination, and outbox lifecycle."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/api/grpc/notifications",
+      "floor": 69.2,
+      "description": "Notifications gRPC transport handlers for inbox, unread status, and mark-read flows."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/app",
       "floor": 71,
       "description": "Notifications application layer with worker runtime and email delivery."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/storage/sqlite",
+      "floor": 70.2,
+      "description": "Notifications SQLite persistence for inbox entries, unread state, and listing queries."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/play/app",
-      "floor": 76.3,
+      "floor": 82.6,
       "description": "Play service application layer including realtime rooms and launch grant flow."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/play/protocol",
-      "floor": 85.2,
+      "floor": 86.7,
       "description": "Play protocol handlers for AI debug and Daggerheart session messages."
     },
     {
@@ -264,8 +279,18 @@
       "description": "Join-grant verifier used by invite claim boundary."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/social/api/grpc/social",
+      "floor": 63.8,
+      "description": "Social gRPC transport handlers for profile, contacts, and directory lookup flows."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/social/storage/sqlite",
+      "floor": 56.1,
+      "description": "Social SQLite persistence for profiles, contacts, and directory search queries."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/userhub/app",
-      "floor": 68.1,
+      "floor": 75.8,
       "description": "UserHub application layer for user profile aggregation."
     },
     {
@@ -305,7 +330,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta",
-      "floor": 81.7,
+      "floor": 83.3,
       "description": "Scheme/origin request metadata and same-origin proof checks."
     },
     {
@@ -317,6 +342,11 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/templates",
       "floor": 95.8,
       "description": "Template helper contracts for fallback localization and app-error copy mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/worker/app",
+      "floor": 76.9,
+      "description": "Worker application loop for outbox polling, handler dispatch, and retry-aware acknowledgements."
     }
   ]
 }

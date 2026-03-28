@@ -15,16 +15,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/game/app"
-	inviteapp "github.com/louisbranch/fracturing.space/internal/services/invite/app"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	userhubapp "github.com/louisbranch/fracturing.space/internal/services/userhub/app"
 	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -45,15 +43,22 @@ type integrationSuite struct {
 
 // suiteFixture provides shared startup/shutdown wiring for integration tests.
 type suiteFixture struct {
+	mesh     *testkit.Mesh
 	grpcAddr string
 	authAddr string
 }
 
 func newSuiteFixture(t *testing.T) *suiteFixture {
 	t.Helper()
-	grpcAddr, authAddr, stop := startGRPCServer(t)
-	t.Cleanup(stop)
+	mesh := testkit.NewMesh(t, testkit.MeshConfig{
+		ContentSeedProfile: testkit.ContentSeedProfileIntegration,
+	})
+	setJoinGrantEnv(t)
+	setAISessionGrantEnv(t)
+	authAddr := mesh.StartAuthServer()
+	grpcAddr := mesh.StartGameServer()
 	return &suiteFixture{
+		mesh:     mesh,
 		grpcAddr: grpcAddr,
 		authAddr: authAddr,
 	}
@@ -92,6 +97,40 @@ func (f *suiteFixture) newGameSuite(t *testing.T, userID string) *integrationSui
 	}
 }
 
+func (f *suiteFixture) startSocialServer(t *testing.T) string {
+	t.Helper()
+	return f.mesh.StartSocialServer()
+}
+
+func (f *suiteFixture) startNotificationsServer(t *testing.T) string {
+	t.Helper()
+	return f.mesh.StartNotificationsServer()
+}
+
+func (f *suiteFixture) startInviteServer(t *testing.T) string {
+	t.Helper()
+	return f.mesh.StartInviteServer()
+}
+
+func (f *suiteFixture) startWorkerRuntime(t *testing.T) string {
+	t.Helper()
+	return f.mesh.StartWorkerRuntime()
+}
+
+func (f *suiteFixture) startUserHubServer(t *testing.T) string {
+	t.Helper()
+	return f.mesh.StartUserHubServer(userhubapp.RuntimeConfig{
+		AuthAddr:          f.authAddr,
+		GameAddr:          f.grpcAddr,
+		InviteAddr:        f.mesh.StartInviteServer(),
+		SocialAddr:        f.mesh.StartSocialServer(),
+		NotificationsAddr: f.mesh.StartNotificationsServer(),
+		StatusAddr:        pickUnusedAddress(t),
+		CacheFreshTTL:     time.Minute,
+		CacheStaleTTL:     5 * time.Minute,
+	})
+}
+
 // ctx returns a context with the suite's user identity attached as gRPC metadata.
 func (s *integrationSuite) ctx(parent context.Context) context.Context {
 	return withUserID(parent, s.userID)
@@ -100,12 +139,8 @@ func (s *integrationSuite) ctx(parent context.Context) context.Context {
 var (
 	joinGrantIssuer     = "test-issuer"
 	joinGrantAudience   = "game-service"
-	joinGrantKeyOnce    sync.Once
 	joinGrantPrivateKey ed25519.PrivateKey
 	joinGrantPublicKey  ed25519.PublicKey
-
-	sharedFixtureOnce sync.Once
-	sharedFixtureData suiteFixture
 )
 
 const (
@@ -123,138 +158,32 @@ func integrationTimeout() time.Duration {
 // startGRPCServer boots the game server and returns its address and shutdown function.
 func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Helper()
-	if integrationSharedFixtureEnabled() {
-		shared := sharedSuiteFixture(t)
-		return shared.grpcAddr, shared.authAddr, func() {}
-	}
-
-	setTempDBPath(t)
-	setTempAuthDBPath(t)
-	seedDaggerheartContent(t)
+	mesh := testkit.NewMesh(t, testkit.MeshConfig{
+		ContentSeedProfile: testkit.ContentSeedProfileIntegration,
+	})
 	setJoinGrantEnv(t)
 	setAISessionGrantEnv(t)
-	authAddr, stopAuth := startAuthServer(t)
-	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	grpcServer, err := app.NewWithAddr("127.0.0.1:0")
-	if err != nil {
-		cancel()
-		stopAuth()
-		t.Fatalf("new game server: %v", err)
-	}
-
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- grpcServer.Serve(ctx)
-	}()
-
-	addr := grpcServer.Addr()
-	waitForGRPCHealth(t, addr)
-	stop := func() {
-		cancel()
-		select {
-		case err := <-serveErr:
-			if err != nil {
-				t.Fatalf("game server error: %v", err)
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatalf("timed out waiting for game server to stop")
-		}
-		stopAuth()
-	}
-
-	return addr, authAddr, stop
-}
-
-func sharedSuiteFixture(t *testing.T) suiteFixture {
-	t.Helper()
-	sharedFixtureOnce.Do(func() {
-		base, err := os.MkdirTemp("", "integration-shared-fixture-*")
-		if err != nil {
-			t.Fatalf("create shared fixture temp dir: %v", err)
-		}
-
-		testkit.SetGameDBPaths(t, base, os.Setenv)
-		testkit.SetAuthDBPath(t, base, os.Setenv)
-
-		seedDaggerheartContent(t)
-		setJoinGrantProcessEnv(t)
-		setAISessionGrantProcessEnv(t)
-
-		authAddr, _ := startAuthServer(t)
-		if err := os.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr); err != nil {
-			t.Fatalf("set shared auth addr env: %v", err)
-		}
-
-		ctx := context.Background()
-		grpcServer, err := app.NewWithAddr("127.0.0.1:0")
-		if err != nil {
-			t.Fatalf("new shared game server: %v", err)
-		}
-		go func() {
-			if serveErr := grpcServer.Serve(ctx); serveErr != nil {
-				fmt.Fprintf(os.Stderr, "shared integration game server error: %v\n", serveErr)
-			}
-		}()
-
-		grpcAddr := grpcServer.Addr()
-		waitForGRPCHealth(t, grpcAddr)
-
-		sharedFixtureData = suiteFixture{
-			grpcAddr: grpcAddr,
-			authAddr: authAddr,
-		}
-	})
-
-	if strings.TrimSpace(sharedFixtureData.grpcAddr) == "" || strings.TrimSpace(sharedFixtureData.authAddr) == "" {
-		t.Fatal("shared integration fixture failed to initialize")
-	}
-	return sharedFixtureData
+	authAddr := mesh.StartAuthServer()
+	addr := mesh.StartGameServer()
+	return addr, authAddr, func() {}
 }
 
 func setJoinGrantEnv(t *testing.T) {
 	t.Helper()
 
-	joinGrantKeyOnce.Do(func() {
+	if joinGrantPrivateKey == nil {
 		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			t.Fatalf("generate join grant key: %v", err)
 		}
 		joinGrantPublicKey = publicKey
 		joinGrantPrivateKey = privateKey
-	})
+	}
 
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", joinGrantIssuer)
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience)
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey))
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey))
-}
-
-func setJoinGrantProcessEnv(t *testing.T) {
-	t.Helper()
-
-	joinGrantKeyOnce.Do(func() {
-		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			t.Fatalf("generate join grant key: %v", err)
-		}
-		joinGrantPublicKey = publicKey
-		joinGrantPrivateKey = privateKey
-	})
-
-	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", joinGrantIssuer); err != nil {
-		t.Fatalf("set join grant issuer: %v", err)
-	}
-	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience); err != nil {
-		t.Fatalf("set join grant audience: %v", err)
-	}
-	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey)); err != nil {
-		t.Fatalf("set join grant public key: %v", err)
-	}
-	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey)); err != nil {
-		t.Fatalf("set join grant private key: %v", err)
-	}
 }
 
 func setAISessionGrantEnv(t *testing.T) {
@@ -263,34 +192,6 @@ func setAISessionGrantEnv(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", testAISessionGrantAudience)
 	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", testAISessionGrantHMACKey)
 	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", testAISessionGrantTTL)
-}
-
-func setAISessionGrantProcessEnv(t *testing.T) {
-	t.Helper()
-	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", testAISessionGrantIssuer); err != nil {
-		t.Fatalf("set ai session grant issuer: %v", err)
-	}
-	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", testAISessionGrantAudience); err != nil {
-		t.Fatalf("set ai session grant audience: %v", err)
-	}
-	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", testAISessionGrantHMACKey); err != nil {
-		t.Fatalf("set ai session grant hmac key: %v", err)
-	}
-	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", testAISessionGrantTTL); err != nil {
-		t.Fatalf("set ai session grant ttl: %v", err)
-	}
-}
-
-func startAuthServer(t *testing.T) (string, func()) {
-	t.Helper()
-	return testkit.StartAuthServer(t)
-}
-
-const integrationSharedFixtureEnv = "INTEGRATION_SHARED_FIXTURE"
-
-func integrationSharedFixtureEnabled() bool {
-	value := strings.ToLower(strings.TrimSpace(os.Getenv(integrationSharedFixtureEnv)))
-	return value == "1" || value == "true" || value == "yes" || value == "on"
 }
 
 func createAuthUser(t *testing.T, authAddr, username string) string {
@@ -720,24 +621,6 @@ func requireEventTypesAfterSeq(t *testing.T, ctx context.Context, client statev1
 	return after
 }
 
-// setTempDBPath configures a temporary database for integration tests.
-func setTempDBPath(t *testing.T) {
-	t.Helper()
-	testkit.SetTempGameDBPaths(t)
-}
-
-// seedDaggerheartContent writes minimal catalog rows required by integration
-// readiness setup so workflow apply can validate content IDs.
-func seedDaggerheartContent(t *testing.T) {
-	t.Helper()
-	testkit.SeedDaggerheartContent(t, testkit.ContentSeedProfileIntegration)
-}
-
-func setTempAuthDBPath(t *testing.T) {
-	t.Helper()
-	testkit.SetTempAuthDBPath(t)
-}
-
 // repoRoot returns the repository root by walking up to go.mod.
 func repoRoot(t *testing.T) string {
 	t.Helper()
@@ -802,44 +685,5 @@ func pickUnusedAddress(t *testing.T) string {
 	}
 	addr := l.Addr().String()
 	l.Close()
-	return addr
-}
-
-// startInviteServer boots an invite service against the given game and auth
-// servers and returns its gRPC address. The server is shut down when t ends.
-func startInviteServer(t *testing.T, gameAddr, authAddr string) string {
-	t.Helper()
-
-	dbPath := filepath.Join(t.TempDir(), "invite-test.db")
-	t.Setenv("FRACTURING_SPACE_INVITE_DB_PATH", dbPath)
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	server, err := inviteapp.NewWithAddr(ctx, "127.0.0.1:0", gameAddr, authAddr)
-	if err != nil {
-		cancel()
-		t.Fatalf("new invite server: %v", err)
-	}
-
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- server.Serve(ctx)
-	}()
-
-	addr := server.Addr()
-	waitForGRPCHealth(t, addr)
-
-	t.Cleanup(func() {
-		cancel()
-		select {
-		case err := <-serveErr:
-			if err != nil {
-				t.Logf("invite server error: %v", err)
-			}
-		case <-time.After(5 * time.Second):
-			t.Logf("timed out waiting for invite server to stop")
-		}
-	})
-
 	return addr
 }

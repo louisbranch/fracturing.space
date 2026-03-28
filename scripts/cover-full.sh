@@ -15,7 +15,6 @@ stages_total=5
 
 go_test_cache_dir="${GO_TEST_CACHE_DIR:-$repo_root/.tmp/go-cache}"
 go_test_tmp_dir="${GO_TEST_TMP_DIR:-$repo_root/.tmp/go-build}"
-integration_shared_fixture="${INTEGRATION_SHARED_FIXTURE:-true}"
 integration_shards="${INTEGRATION_COVERAGE_SHARDS:-4}"
 integration_parallelism="${INTEGRATION_COVERAGE_PARALLELISM:-1}"
 scenario_parallelism="${SCENARIO_COVERAGE_PARALLELISM:-4}"
@@ -111,7 +110,6 @@ run_integration_shards() {
 				--status-dir "$shard_status_dir" \
 				-- \
 				env GOCACHE="$go_test_cache_dir" GOTMPDIR="$shard_go_tmp_dir" \
-					INTEGRATION_SHARED_FIXTURE="$integration_shared_fixture" \
 					INTEGRATION_SHARD_TOTAL="$integration_shards" \
 					INTEGRATION_SHARD_INDEX="$shard_index" \
 					bash ./scripts/integration-shard.sh -count=1 -json -cover -covermode=set -coverpkg="$integration_coverpkg" -args "-test.gocoverdir=$shard_covdir"

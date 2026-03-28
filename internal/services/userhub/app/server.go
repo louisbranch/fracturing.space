@@ -28,12 +28,23 @@ import (
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// newManagedConn wraps platformgrpc.NewManagedConn for testability.
-var newManagedConn = platformgrpc.NewManagedConn
-
 const defaultPort = 8092
 
-var listenTCP = net.Listen
+// runtimeDeps captures side-effecting startup hooks so tests can pass explicit
+// runtime seams without mutating package-global state.
+type runtimeDeps struct {
+	newManagedConn func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error)
+	listen         func(network, address string) (net.Listener, error)
+	logf           func(format string, args ...any)
+}
+
+// defaultRuntimeDeps binds the production startup hooks for the userhub
+// runtime.
+var defaultRuntimeDeps = runtimeDeps{
+	newManagedConn: platformgrpc.NewManagedConn,
+	listen:         net.Listen,
+	logf:           log.Printf,
+}
 
 // RuntimeConfig controls userhub service startup and dependency wiring.
 type RuntimeConfig struct {
@@ -88,6 +99,11 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 
 // New builds a configured userhub runtime.
 func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
+	return newWithDeps(ctx, cfg, defaultRuntimeDeps)
+}
+
+// newWithDeps builds a configured userhub runtime with explicit startup seams.
+func newWithDeps(ctx context.Context, cfg RuntimeConfig, deps runtimeDeps) (*Server, error) {
 	if ctx == nil {
 		return nil, errors.New("context is required")
 	}
@@ -95,9 +111,14 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	logf := func(format string, args ...any) {
-		log.Printf(format, args...)
+	if deps.newManagedConn == nil {
+		return nil, errors.New("userhub managed conn constructor is required")
+	}
+	if deps.listen == nil {
+		return nil, errors.New("userhub listener constructor is required")
+	}
+	if deps.logf == nil {
+		deps.logf = log.Printf
 	}
 
 	// Status reporter — starts with nil client; bound later when statusMc is ready.
@@ -106,11 +127,11 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	// Dial all dependencies via ManagedConn. Connections are non-nil
 	// immediately; RPCs fail with Unavailable until the peer is up. The domain
 	// layer's DegradedDependencies / stale-cache pattern handles this.
-	authMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	authMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "auth",
 		Addr:             normalized.AuthAddr,
 		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
+		Logf:             deps.logf,
 		StatusReporter:   reporter,
 		StatusCapability: "userhub.auth.integration",
 	})
@@ -118,11 +139,11 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		return nil, fmt.Errorf("userhub: managed conn auth: %w", err)
 	}
 
-	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	gameMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "game",
 		Addr:             normalized.GameAddr,
 		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
+		Logf:             deps.logf,
 		StatusReporter:   reporter,
 		StatusCapability: "userhub.game.integration",
 	})
@@ -130,11 +151,11 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		return nil, fmt.Errorf("userhub: managed conn game: %w", err)
 	}
 
-	inviteMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	inviteMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "invite",
 		Addr:             normalized.InviteAddr,
 		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
+		Logf:             deps.logf,
 		StatusReporter:   reporter,
 		StatusCapability: "userhub.invite.integration",
 	})
@@ -144,11 +165,11 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		return nil, fmt.Errorf("userhub: managed conn invite: %w", err)
 	}
 
-	socialMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	socialMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "social",
 		Addr:             normalized.SocialAddr,
 		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
+		Logf:             deps.logf,
 		StatusReporter:   reporter,
 		StatusCapability: "userhub.social.integration",
 	})
@@ -159,11 +180,11 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		return nil, fmt.Errorf("userhub: managed conn social: %w", err)
 	}
 
-	notificationsMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	notificationsMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "notifications",
 		Addr:             normalized.NotificationsAddr,
 		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
+		Logf:             deps.logf,
 		StatusReporter:   reporter,
 		StatusCapability: "userhub.notifications.integration",
 	})
@@ -214,7 +235,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	apiService := userhubservice.NewService(domainService)
 	controlService := userhubservice.NewControlService(domainService)
 
-	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
+	listener, err := deps.listen("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
 		authMc.Close()
 		gameMc.Close()
@@ -238,11 +259,11 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	if strings.TrimSpace(statusAddr) == "" {
 		statusAddr = serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceStatus)
 	}
-	statusMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+	statusMc, err := deps.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "status",
 		Addr: statusAddr,
 		Mode: platformgrpc.ModeOptional,
-		Logf: logf,
+		Logf: deps.logf,
 	})
 	if err != nil {
 		authMc.Close()

@@ -89,6 +89,80 @@ func TestSessionStartReadinessStateLoader_WrapsSnapshotReadFailure(t *testing.T)
 	}
 }
 
+func TestSessionStartReadinessStateLoader_UsesDirectStoreAndSkipsUnknownProfiles(t *testing.T) {
+	store := &readinessStoreStub{
+		profiles: []projectionstore.DaggerheartCharacterProfile{
+			{CampaignID: "camp-1", CharacterID: "char-1", Level: 2},
+			{CampaignID: "camp-1", CharacterID: "char-2", Level: 4},
+			{CampaignID: "camp-1", CharacterID: " ", Level: 5},
+		},
+	}
+
+	state, err := sessionStartReadinessStateLoader{}.LoadSessionStartReadinessState(
+		context.Background(),
+		"camp-1",
+		store,
+		aggregate.State{
+			Characters: map[ids.CharacterID]character.State{
+				"char-1": {CharacterID: "char-1"},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("LoadSessionStartReadinessState() error = %v", err)
+	}
+
+	systemState := state.Systems[module.Key{ID: SystemID, Version: SystemVersion}]
+	snapshot, ok := systemState.(daggerheartstate.SnapshotState)
+	if !ok {
+		t.Fatalf("system state type = %T, want SnapshotState", systemState)
+	}
+	if len(snapshot.CharacterProfiles) != 1 {
+		t.Fatalf("character profiles len = %d, want 1", len(snapshot.CharacterProfiles))
+	}
+	if _, ok := snapshot.CharacterProfiles["char-2"]; ok {
+		t.Fatal("unexpected profile for character absent from aggregate state")
+	}
+}
+
+func TestListAllCharacterProfiles_PaginatesAndRejectsRepeatedTokens(t *testing.T) {
+	store := &readinessStoreStub{
+		profilePages: map[string]projectionstore.DaggerheartCharacterProfilePage{
+			"": {
+				Profiles:      []projectionstore.DaggerheartCharacterProfile{{CharacterID: "char-1"}},
+				NextPageToken: "next",
+			},
+			"next": {
+				Profiles: []projectionstore.DaggerheartCharacterProfile{{CharacterID: "char-2"}},
+			},
+		},
+	}
+
+	profiles, err := listAllCharacterProfiles(context.Background(), store, "camp-1")
+	if err != nil {
+		t.Fatalf("listAllCharacterProfiles() error = %v", err)
+	}
+	if len(profiles) != 2 {
+		t.Fatalf("profiles len = %d, want 2", len(profiles))
+	}
+
+	store.profilePages = map[string]projectionstore.DaggerheartCharacterProfilePage{
+		"": {
+			Profiles:      []projectionstore.DaggerheartCharacterProfile{{CharacterID: "char-1"}},
+			NextPageToken: "next",
+		},
+		"next": {
+			Profiles:      []projectionstore.DaggerheartCharacterProfile{{CharacterID: "char-2"}},
+			NextPageToken: "next",
+		},
+	}
+
+	_, err = listAllCharacterProfiles(context.Background(), store, "camp-1")
+	if err == nil || err.Error() != "list daggerheart character profiles returned a repeated page token" {
+		t.Fatalf("listAllCharacterProfiles() error = %v, want repeated token error", err)
+	}
+}
+
 type testProjectionStores struct {
 	daggerheart projectionstore.Store
 }
@@ -98,9 +172,10 @@ func (s testProjectionStores) DaggerheartProjectionStore() projectionstore.Store
 }
 
 type readinessStoreStub struct {
-	snapshot projectionstore.DaggerheartSnapshot
-	profiles []projectionstore.DaggerheartCharacterProfile
-	getErr   error
+	snapshot     projectionstore.DaggerheartSnapshot
+	profiles     []projectionstore.DaggerheartCharacterProfile
+	profilePages map[string]projectionstore.DaggerheartCharacterProfilePage
+	getErr       error
 }
 
 func (s *readinessStoreStub) PutDaggerheartCharacterProfile(context.Context, projectionstore.DaggerheartCharacterProfile) error {
@@ -111,9 +186,16 @@ func (s *readinessStoreStub) GetDaggerheartCharacterProfile(context.Context, str
 	return projectionstore.DaggerheartCharacterProfile{}, storage.ErrNotFound
 }
 
-func (s *readinessStoreStub) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (projectionstore.DaggerheartCharacterProfilePage, error) {
+func (s *readinessStoreStub) ListDaggerheartCharacterProfiles(_ context.Context, _ string, _ int, pageToken string) (projectionstore.DaggerheartCharacterProfilePage, error) {
 	if s.getErr != nil {
 		return projectionstore.DaggerheartCharacterProfilePage{}, s.getErr
+	}
+	if s.profilePages != nil {
+		page, ok := s.profilePages[pageToken]
+		if !ok {
+			return projectionstore.DaggerheartCharacterProfilePage{}, nil
+		}
+		return page, nil
 	}
 	return projectionstore.DaggerheartCharacterProfilePage{Profiles: s.profiles}, nil
 }

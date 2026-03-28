@@ -366,7 +366,6 @@ var (
 
 func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec, opts aiGMCampaignScenarioOptions) aiGMCampaignScenarioResult {
 	t.Helper()
-	t.Setenv(integrationSharedFixtureEnv, "false")
 	aiAddr := pickUnusedAddress(t)
 	t.Setenv("FRACTURING_SPACE_AI_ADDR", aiAddr)
 	fixture := newSuiteFixture(t)
