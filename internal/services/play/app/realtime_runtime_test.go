@@ -447,3 +447,122 @@ func TestCampaignRoomConsumeAIDebugStreamStopsOnSessionSwitch(t *testing.T) {
 		t.Fatalf("frames = %#v, want no broadcast", frames)
 	}
 }
+
+// --- Pure function and structural tests for realtimeRuntime ---
+
+func TestDefaultRealtimeRuntime_HasAllFields(t *testing.T) {
+	t.Parallel()
+	rt := defaultRealtimeRuntime()
+	if rt.now == nil {
+		t.Fatal("expected now to be set")
+	}
+	if rt.afterFunc == nil {
+		t.Fatal("expected afterFunc to be set")
+	}
+	if rt.sleepUntilRetry == nil {
+		t.Fatal("expected sleepUntilRetry to be set")
+	}
+	if rt.typingTTL != defaultTypingTTL {
+		t.Fatalf("typingTTL = %v, want %v", rt.typingTTL, defaultTypingTTL)
+	}
+	if rt.projectionRetryTTL != defaultProjectionRetryTTL {
+		t.Fatalf("projectionRetryTTL = %v, want %v", rt.projectionRetryTTL, defaultProjectionRetryTTL)
+	}
+}
+
+func TestNormalize_FillsMissingFields(t *testing.T) {
+	t.Parallel()
+	rt := realtimeRuntime{}.normalize()
+	if rt.now == nil {
+		t.Fatal("normalize should fill now")
+	}
+	if rt.afterFunc == nil {
+		t.Fatal("normalize should fill afterFunc")
+	}
+	if rt.sleepUntilRetry == nil {
+		t.Fatal("normalize should fill sleepUntilRetry")
+	}
+	if rt.typingTTL != defaultTypingTTL {
+		t.Fatalf("typingTTL = %v, want %v", rt.typingTTL, defaultTypingTTL)
+	}
+	if rt.projectionRetryTTL != defaultProjectionRetryTTL {
+		t.Fatalf("projectionRetryTTL = %v, want %v", rt.projectionRetryTTL, defaultProjectionRetryTTL)
+	}
+}
+
+func TestNormalize_PreservesExistingFields(t *testing.T) {
+	t.Parallel()
+	fixedNow := func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
+	rt := realtimeRuntime{
+		now:                fixedNow,
+		typingTTL:          5 * time.Second,
+		projectionRetryTTL: 10 * time.Second,
+	}.normalize()
+	if got := rt.now(); !got.Equal(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("normalize should preserve existing now, got %v", got)
+	}
+	if rt.typingTTL != 5*time.Second {
+		t.Fatalf("typingTTL = %v, want 5s", rt.typingTTL)
+	}
+	if rt.projectionRetryTTL != 10*time.Second {
+		t.Fatalf("projectionRetryTTL = %v, want 10s", rt.projectionRetryTTL)
+	}
+}
+
+func TestBackoff_DoublesDelay(t *testing.T) {
+	t.Parallel()
+	rt := defaultRealtimeRuntime()
+	if got := rt.backoff(time.Second); got != 2*time.Second {
+		t.Fatalf("backoff(1s) = %v, want 2s", got)
+	}
+}
+
+func TestBackoff_CapsAtMax(t *testing.T) {
+	t.Parallel()
+	rt := defaultRealtimeRuntime()
+	if got := rt.backoff(20 * time.Second); got != maxProjectionRetryTTL {
+		t.Fatalf("backoff(20s) = %v, want max %v", got, maxProjectionRetryTTL)
+	}
+}
+
+func TestNowTime_ReturnsUTC(t *testing.T) {
+	t.Parallel()
+	fixed := time.Date(2026, 3, 1, 12, 0, 0, 0, time.FixedZone("EST", -5*3600))
+	rt := realtimeRuntime{now: func() time.Time { return fixed }}.normalize()
+	got := rt.nowTime()
+	if got.Location() != time.UTC {
+		t.Fatalf("nowTime location = %v, want UTC", got.Location())
+	}
+}
+
+func TestSleepUntilRetry_ReturnsOnExpiry(t *testing.T) {
+	t.Parallel()
+	if !sleepUntilRetry(context.Background(), time.Millisecond) {
+		t.Fatal("expected true after timer expiry")
+	}
+}
+
+func TestSleepUntilRetry_ReturnsFalseOnCancel(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if sleepUntilRetry(ctx, time.Hour) {
+		t.Fatal("expected false on cancelled context")
+	}
+}
+
+func TestStdlibRealtimeTimer_StopNilTimer(t *testing.T) {
+	t.Parallel()
+	timer := stdlibRealtimeTimer{}
+	if timer.Stop() {
+		t.Fatal("Stop on nil timer should return false")
+	}
+}
+
+func TestStdlibRealtimeTimer_StopActiveTimer(t *testing.T) {
+	t.Parallel()
+	timer := newStdlibRealtimeTimer(time.Hour, func() {})
+	if !timer.Stop() {
+		t.Fatal("Stop on active timer should return true")
+	}
+}
