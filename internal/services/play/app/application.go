@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"golang.org/x/sync/errgroup"
+
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -15,21 +17,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
+	playdaggerheart "github.com/louisbranch/fracturing.space/internal/services/play/protocol/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 )
 
 // playApplication owns browser-facing state assembly so transport handlers and
 // realtime orchestration can reuse one application seam.
 type playApplication struct {
-	aiDebug            aiDebugClient
-	interaction        interactionClient
-	campaign           campaignClient
-	system             systemClient
-	participants       participantClient
-	characters         characterClient
-	daggerheartContent daggerheartContentClient
-	transcripts        transcript.Store
-	assetBaseURL       string
+	deps         Dependencies
+	logger       *slog.Logger
+	assetBaseURL string
 }
 
 type characterSheetResult struct {
@@ -40,16 +37,14 @@ type characterSheetResult struct {
 
 func (s *Server) application() playApplication {
 	return playApplication{
-		aiDebug:            s.aiDebug,
-		interaction:        s.interaction,
-		campaign:           s.campaign,
-		system:             s.system,
-		participants:       s.participants,
-		characters:         s.characters,
-		daggerheartContent: s.daggerheartContent,
-		transcripts:        s.transcripts,
-		assetBaseURL:       s.assetBaseURL,
+		deps:         s.deps,
+		logger:       s.logger,
+		assetBaseURL: s.assetBaseURL,
 	}
+}
+
+func (a playApplication) log() *slog.Logger {
+	return loggerOrDefault(a.logger)
 }
 
 func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playprotocol.Bootstrap, error) {
@@ -66,7 +61,7 @@ func (a playApplication) bootstrap(ctx context.Context, req playRequest) (playpr
 		return playprotocol.Bootstrap{}, err
 	}
 	participants, catalog := a.enrichedData(ctx, req, state.GetLocale())
-	slog.InfoContext(ctx, "play: bootstrap assembled",
+	a.log().InfoContext(ctx, "play: bootstrap assembled",
 		"campaign_id", strings.TrimSpace(req.CampaignID),
 		"user_id", strings.TrimSpace(req.UserID),
 		"participants", len(participants),
@@ -134,7 +129,7 @@ func (a playApplication) aiDebugTurns(ctx context.Context, req playRequest, page
 	if sessionID == "" {
 		return playprotocol.AIDebugTurnsPage{Turns: []playprotocol.AIDebugTurnSummary{}}, nil
 	}
-	resp, err := a.aiDebug.ListCampaignDebugTurns(req.authContext(ctx), &aiv1.ListCampaignDebugTurnsRequest{
+	resp, err := a.deps.AIDebug.ListCampaignDebugTurns(req.authContext(ctx), &aiv1.ListCampaignDebugTurnsRequest{
 		CampaignId: req.CampaignID,
 		SessionId:  sessionID,
 		PageSize:   int32(page.PageSize),
@@ -147,7 +142,7 @@ func (a playApplication) aiDebugTurns(ctx context.Context, req playRequest, page
 }
 
 func (a playApplication) aiDebugTurn(ctx context.Context, req playRequest, turnID string) (playprotocol.AIDebugTurn, error) {
-	resp, err := a.aiDebug.GetCampaignDebugTurn(req.authContext(ctx), &aiv1.GetCampaignDebugTurnRequest{
+	resp, err := a.deps.AIDebug.GetCampaignDebugTurn(req.authContext(ctx), &aiv1.GetCampaignDebugTurnRequest{
 		CampaignId: req.CampaignID,
 		TurnId:     strings.TrimSpace(turnID),
 	})
@@ -174,7 +169,7 @@ func (a playApplication) roomSnapshotFromState(ctx context.Context, req playRequ
 		campaignRequest: campaignRequest{CampaignID: campaignID},
 		UserID:          req.UserID,
 	}, state.GetLocale())
-	slog.InfoContext(ctx, "play: room snapshot assembled",
+	a.log().InfoContext(ctx, "play: room snapshot assembled",
 		"campaign_id", campaignID,
 		"user_id", strings.TrimSpace(req.UserID),
 		"participants", len(participants),
@@ -200,7 +195,7 @@ func (a playApplication) history(ctx context.Context, req playRequest, page chat
 	if sessionID == "" {
 		return playprotocol.HistoryResponse{SessionID: "", Messages: []playprotocol.ChatMessage{}}, nil
 	}
-	messages, err := a.transcripts.HistoryBefore(ctx, transcript.HistoryBeforeQuery{
+	messages, err := a.deps.Transcripts.HistoryBefore(ctx, transcript.HistoryBeforeQuery{
 		Scope: transcript.Scope{
 			CampaignID: req.CampaignID,
 			SessionID:  sessionID,
@@ -218,7 +213,7 @@ func (a playApplication) history(ctx context.Context, req playRequest, page chat
 }
 
 func (a playApplication) incrementalChatMessages(ctx context.Context, scope transcript.Scope, afterSeq int64) ([]playprotocol.ChatMessage, error) {
-	messages, err := a.transcripts.HistoryAfter(ctx, transcript.HistoryAfterQuery{
+	messages, err := a.deps.Transcripts.HistoryAfter(ctx, transcript.HistoryAfterQuery{
 		Scope:           scope,
 		AfterSequenceID: afterSeq,
 	})
@@ -229,7 +224,7 @@ func (a playApplication) incrementalChatMessages(ctx context.Context, scope tran
 }
 
 func (a playApplication) interactionState(ctx context.Context, req playRequest) (*gamev1.InteractionState, error) {
-	resp, err := a.interaction.GetInteractionState(req.authContext(ctx), &gamev1.GetInteractionStateRequest{CampaignId: req.CampaignID})
+	resp, err := a.deps.Interaction.GetInteractionState(req.authContext(ctx), &gamev1.GetInteractionStateRequest{CampaignId: req.CampaignID})
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +235,7 @@ func (a playApplication) interactionState(ctx context.Context, req playRequest) 
 }
 
 func (a playApplication) systemMetadata(ctx context.Context, req playRequest) (playprotocol.System, error) {
-	resp, err := a.campaign.GetCampaign(req.authContext(ctx), &gamev1.GetCampaignRequest{CampaignId: req.CampaignID})
+	resp, err := a.deps.Campaign.GetCampaign(req.authContext(ctx), &gamev1.GetCampaignRequest{CampaignId: req.CampaignID})
 	if err != nil {
 		return playprotocol.System{}, err
 	}
@@ -249,7 +244,7 @@ func (a playApplication) systemMetadata(ctx context.Context, req playRequest) (p
 		return playprotocol.System{}, nil
 	}
 	system := playprotocol.System{ID: gameSystemIDString(campaign.GetSystem())}
-	infoResp, err := a.system.GetGameSystem(req.authContext(ctx), &gamev1.GetGameSystemRequest{Id: campaign.GetSystem()})
+	infoResp, err := a.deps.System.GetGameSystem(req.authContext(ctx), &gamev1.GetGameSystemRequest{Id: campaign.GetSystem()})
 	if err != nil {
 		return playprotocol.System{}, err
 	}
@@ -270,11 +265,11 @@ func (a playApplication) recentChatSnapshot(ctx context.Context, campaignID stri
 		return playprotocol.ChatSnapshot{SessionID: "", LatestSequenceID: 0, Messages: []playprotocol.ChatMessage{}, HistoryURL: historyURL}, nil
 	}
 	scope := transcript.Scope{CampaignID: campaignID, SessionID: sessionID}
-	latest, err := a.transcripts.LatestSequence(ctx, scope)
+	latest, err := a.deps.Transcripts.LatestSequence(ctx, scope)
 	if err != nil {
 		return playprotocol.ChatSnapshot{}, fmt.Errorf("load latest transcript sequence: %w", err)
 	}
-	messages, err := a.transcripts.HistoryBefore(ctx, transcript.HistoryBeforeQuery{
+	messages, err := a.deps.Transcripts.HistoryBefore(ctx, transcript.HistoryBeforeQuery{
 		Scope:            scope,
 		BeforeSequenceID: latest + 1,
 		Limit:            transcript.DefaultHistoryLimit,
@@ -296,7 +291,7 @@ func (a playApplication) chatCursor(ctx context.Context, campaignID string, stat
 	if sessionID == "" {
 		return playprotocol.ChatSnapshot{SessionID: "", LatestSequenceID: 0, Messages: []playprotocol.ChatMessage{}, HistoryURL: historyURL}, nil
 	}
-	latest, err := a.transcripts.LatestSequence(ctx, transcript.Scope{CampaignID: campaignID, SessionID: sessionID})
+	latest, err := a.deps.Transcripts.LatestSequence(ctx, transcript.Scope{CampaignID: campaignID, SessionID: sessionID})
 	if err != nil {
 		return playprotocol.ChatSnapshot{}, fmt.Errorf("load latest transcript sequence: %w", err)
 	}
@@ -349,17 +344,19 @@ func (a playApplication) enrichedDataForCampaign(ctx context.Context, campaignID
 const enrichmentPageSize = 10
 
 // listAllParticipants paginates through all participants in a campaign.
+// Returns partial results on pagination error — interaction state is the
+// primary data, enrichment is supplementary.
 func (a playApplication) listAllParticipants(ctx context.Context, campaignID string) []playprotocol.Participant {
 	var all []playprotocol.Participant
 	pageToken := ""
 	for {
-		resp, err := a.participants.ListParticipants(ctx, &gamev1.ListParticipantsRequest{
+		resp, err := a.deps.Participants.ListParticipants(ctx, &gamev1.ListParticipantsRequest{
 			CampaignId: campaignID,
 			PageSize:   enrichmentPageSize,
 			PageToken:  pageToken,
 		})
 		if err != nil {
-			slog.WarnContext(ctx, "play: participant pagination truncated", "campaign_id", campaignID, "collected", len(all), "error", err)
+			a.log().WarnContext(ctx, "play: participant pagination truncated", "campaign_id", campaignID, "collected", len(all), "error", err)
 			return all
 		}
 		for _, p := range resp.GetParticipants() {
@@ -374,17 +371,19 @@ func (a playApplication) listAllParticipants(ctx context.Context, campaignID str
 }
 
 // listAllCharacters paginates through all characters in a campaign.
+// Returns partial results on pagination error — interaction state is the
+// primary data, enrichment is supplementary.
 func (a playApplication) listAllCharacters(ctx context.Context, campaignID string) []*gamev1.Character {
 	var all []*gamev1.Character
 	pageToken := ""
 	for {
-		resp, err := a.characters.ListCharacters(ctx, &gamev1.ListCharactersRequest{
+		resp, err := a.deps.Characters.ListCharacters(ctx, &gamev1.ListCharactersRequest{
 			CampaignId: campaignID,
 			PageSize:   enrichmentPageSize,
 			PageToken:  pageToken,
 		})
 		if err != nil {
-			slog.WarnContext(ctx, "play: character pagination truncated", "campaign_id", campaignID, "collected", len(all), "error", err)
+			a.log().WarnContext(ctx, "play: character pagination truncated", "campaign_id", campaignID, "collected", len(all), "error", err)
 			return all
 		}
 		all = append(all, resp.GetCharacters()...)
@@ -406,29 +405,31 @@ func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, ca
 	var (
 		mu      sync.Mutex
 		results []characterSheetResult
-		wg      sync.WaitGroup
 	)
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(10)
 	for _, char := range characters {
 		charID := strings.TrimSpace(char.GetId())
 		if charID == "" {
 			continue
 		}
-		wg.Add(1)
-		go func(c *gamev1.Character, id string) {
-			defer wg.Done()
-			resp, err := a.characters.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+		c := char
+		g.Go(func() error {
+			resp, err := a.deps.Characters.GetCharacterSheet(gCtx, &gamev1.GetCharacterSheetRequest{
 				CampaignId:  campaignID,
-				CharacterId: id,
+				CharacterId: charID,
 			})
 			if err != nil {
-				return
+				a.log().WarnContext(gCtx, "play: character sheet enrichment skipped", "character_id", charID, "error", err)
+				return nil // best-effort enrichment — skip failures
 			}
 			mu.Lock()
-			results = append(results, characterSheetResult{charID: id, char: c, resp: resp})
+			results = append(results, characterSheetResult{charID: charID, char: c, resp: resp})
 			mu.Unlock()
-		}(char, charID)
+			return nil
+		})
 	}
-	wg.Wait()
+	_ = g.Wait()
 
 	domainCards := a.loadDaggerheartDomainCards(ctx, locale, results)
 	catalog := make(map[string]playprotocol.CharacterInspection, len(results))
@@ -439,9 +440,9 @@ func (a playApplication) buildCharacterInspectionCatalog(ctx context.Context, ca
 			continue
 		}
 		catalog[r.charID] = playprotocol.CharacterInspection{
-			System: "daggerheart",
-			Card:   playprotocol.DaggerheartCardFromSheet(a.assetBaseURL, r.char, dhProfile, dhState),
-			Sheet:  playprotocol.DaggerheartSheetFromResponse(a.assetBaseURL, r.char, dhProfile, dhState, domainCards),
+			System: playdaggerheart.SystemID,
+			Card:   playdaggerheart.CardFromSheet(a.assetBaseURL, r.char, dhProfile, dhState),
+			Sheet:  playdaggerheart.SheetFromResponse(a.assetBaseURL, r.char, dhProfile, dhState, domainCards),
 		}
 	}
 	if len(catalog) == 0 {
@@ -456,8 +457,8 @@ func (a playApplication) loadDaggerheartDomainCards(
 	ctx context.Context,
 	locale commonv1.Locale,
 	results []characterSheetResult,
-) map[string]playprotocol.DaggerheartDomainCard {
-	if a.daggerheartContent == nil {
+) map[string]playdaggerheart.DomainCard {
+	if a.deps.DaggerheartContent == nil {
 		return nil
 	}
 
@@ -479,27 +480,25 @@ func (a playApplication) loadDaggerheartDomainCards(
 
 	var (
 		mu    sync.Mutex
-		wg    sync.WaitGroup
-		cards = make(map[string]playprotocol.DaggerheartDomainCard, len(uniqueIDs))
+		cards = make(map[string]playdaggerheart.DomainCard, len(uniqueIDs))
 	)
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(10)
 	for id := range uniqueIDs {
 		cardID := id
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			resp, err := a.daggerheartContent.GetDomainCard(ctx, &daggerheartv1.GetDaggerheartDomainCardRequest{
+		g.Go(func() error {
+			resp, err := a.deps.DaggerheartContent.GetDomainCard(gCtx, &daggerheartv1.GetDaggerheartDomainCardRequest{
 				Id:     cardID,
 				Locale: locale,
 			})
 			if err != nil {
-				slog.WarnContext(ctx, "play: daggerheart domain card enrichment skipped", "card_id", cardID, "error", err)
-				return
+				a.log().WarnContext(gCtx, "play: daggerheart domain card enrichment skipped", "card_id", cardID, "error", err)
+				return nil
 			}
-			card := playprotocol.DaggerheartDomainCardFromContent(resp.GetDomainCard())
+			card := playdaggerheart.DomainCardFromContent(resp.GetDomainCard())
 			if card.Name == "" {
-				slog.WarnContext(ctx, "play: daggerheart domain card enrichment returned empty card", "card_id", cardID)
-				return
+				a.log().WarnContext(gCtx, "play: daggerheart domain card enrichment returned empty card", "card_id", cardID)
+				return nil
 			}
 			if card.ID == "" {
 				card.ID = cardID
@@ -508,9 +507,10 @@ func (a playApplication) loadDaggerheartDomainCards(
 			mu.Lock()
 			cards[cardID] = card
 			mu.Unlock()
-		}()
+			return nil
+		})
 	}
-	wg.Wait()
+	_ = g.Wait()
 	if len(cards) == 0 {
 		return nil
 	}

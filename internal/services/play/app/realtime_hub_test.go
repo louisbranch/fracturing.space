@@ -53,10 +53,10 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 		listResponse:  enrichedCharacterResponse(),
 		sheetResponse: enrichedCharacterSheetResponse(),
 	}
-	server.participants = participants
-	server.characters = characters
+	server.deps.Participants = participants
+	server.deps.Characters = characters
 	events := &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
-	server.events = events
+	server.deps.Events = events
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 
@@ -135,12 +135,12 @@ func TestRealtimeConnectSubscribesToAIDebugAndBroadcastsUpdates(t *testing.T) {
 	interaction := newRecordingInteractionClient(playTestState())
 	transcripts := &scriptTranscriptStore{}
 	server := newAuthedPlayServer(interaction, transcripts)
-	server.events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
+	server.deps.Events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
 	aiDebug := &fakePlayAIDebugClient{
 		subscribeStream: &fakeCampaignDebugUpdateStream{updates: make(chan *aiv1.CampaignDebugTurnUpdate, 1)},
 		subscribeCh:     make(chan struct{}, 1),
 	}
-	server.aiDebug = aiDebug
+	server.deps.AIDebug = aiDebug
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 	defer hub.Close()
@@ -217,7 +217,7 @@ func TestRealtimeChatSendRequiresActiveSession(t *testing.T) {
 	interaction := newRecordingInteractionClient(state)
 	transcripts := &scriptTranscriptStore{}
 	server := newAuthedPlayServer(interaction, transcripts)
-	server.events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}}
+	server.deps.Events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}}
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 	defer hub.Close()
@@ -381,8 +381,8 @@ func TestRealtimeRoomLifecycleAndBroadcasts(t *testing.T) {
 		listResponse:  enrichedCharacterResponse(),
 		sheetResponse: enrichedCharacterSheetResponse(),
 	}
-	server.participants = participants
-	server.characters = characters
+	server.deps.Participants = participants
+	server.deps.Characters = characters
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 	room := &campaignRoom{

@@ -12,7 +12,8 @@ const (
 	// callers do not request an explicit page size.
 	DefaultHistoryLimit = 50
 	// MaxHistoryLimit caps history pagination so one browser request cannot ask
-	// the store for an unbounded transcript slice.
+	// the store for an unbounded transcript slice. Normalize() silently clamps
+	// any requested limit above this value.
 	MaxHistoryLimit = 200
 )
 

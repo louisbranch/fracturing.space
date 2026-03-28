@@ -39,26 +39,28 @@ func hubDepsFromServer(s *Server) realtimeHubDeps {
 	return realtimeHubDeps{
 		resolveUserID: s.resolvePlayUserID,
 		application:   s.application,
-		aiDebug:       s.aiDebug,
-		transcripts:   s.transcripts,
-		events:        s.events,
+		aiDebug:       s.deps.AIDebug,
+		transcripts:   s.deps.Transcripts,
+		events:        s.deps.Events,
 	}
 }
 
 func newAuthedPlayServer(interaction *recordingInteractionClient, transcripts *scriptTranscriptStore) *Server {
 	server := &Server{
-		auth:               &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
-		aiDebug:            &fakePlayAIDebugClient{},
-		interaction:        interaction,
-		campaign:           fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
-		system:             fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
-		participants:       fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
-		characters:         fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
-		daggerheartContent: &fakeDaggerheartContentClient{},
-		transcripts:        transcripts,
-		shellAssets:        shellAssets{devServerURL: "http://localhost:5173"},
-		httpServer:         &http.Server{},
-		webFallbackPort:    "8080",
+		deps: Dependencies{
+			Auth:               &fakePlayAuthClient{sessions: map[string]string{"ps-1": "user-1"}},
+			AIDebug:            &fakePlayAIDebugClient{},
+			Interaction:        interaction,
+			Campaign:           fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{}},
+			System:             fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{}},
+			Participants:       fakePlayParticipantClient{response: &gamev1.ListParticipantsResponse{}},
+			Characters:         fakePlayCharacterClient{listResponse: &gamev1.ListCharactersResponse{}},
+			DaggerheartContent: &fakeDaggerheartContentClient{},
+			Transcripts:        transcripts,
+		},
+		shellAssets:     shellAssets{devServerURL: "http://localhost:5173"},
+		httpServer:      &http.Server{},
+		webFallbackPort: "8080",
 	}
 	server.realtime = newRealtimeHub(server)
 	return server

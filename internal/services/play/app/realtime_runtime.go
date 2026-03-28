@@ -18,6 +18,28 @@ const (
 	projectionBackoffMultiplier = 2.0
 )
 
+// wsRateLimiter enforces a fixed-window frame rate per WebSocket connection.
+type wsRateLimiter struct {
+	now         func() time.Time
+	windowStart time.Time
+	count       int
+}
+
+func newWSRateLimiter(now func() time.Time) wsRateLimiter {
+	return wsRateLimiter{now: now, windowStart: now()}
+}
+
+// allow returns true if the next frame is within the rate limit.
+func (r *wsRateLimiter) allow() bool {
+	now := r.now()
+	if now.Sub(r.windowStart) >= time.Second {
+		r.windowStart = now
+		r.count = 0
+	}
+	r.count++
+	return r.count <= maxFramesPerSecond
+}
+
 type wsFrame struct {
 	Type      string          `json:"type"`
 	RequestID string          `json:"request_id,omitempty"`

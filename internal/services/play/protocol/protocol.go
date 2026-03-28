@@ -224,12 +224,7 @@ func TranscriptMessages(messages []transcript.Message) []ChatMessage {
 }
 
 func interactionRoleString(value gamev1.ParticipantRole) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == gamev1.ParticipantRole_ROLE_UNSPECIFIED.String() {
-		return ""
-	}
-	name = strings.TrimPrefix(name, "PARTICIPANT_ROLE_")
-	return strings.ToLower(name)
+	return ProtoEnumToLower(value, gamev1.ParticipantRole_ROLE_UNSPECIFIED, "PARTICIPANT_ROLE_")
 }
 
 // --- Scene types ---
@@ -324,9 +319,9 @@ func gmInteractionFromProto(interaction *gamev1.GMInteraction) *InteractionGMInt
 		PhaseID:       strings.TrimSpace(interaction.GetPhaseId()),
 		ParticipantID: strings.TrimSpace(interaction.GetParticipantId()),
 		Title:         strings.TrimSpace(interaction.GetTitle()),
-		CharacterIDs:  trimStringSlice(interaction.GetCharacterIds()),
+		CharacterIDs:  TrimStringSlice(interaction.GetCharacterIds()),
 		Beats:         beats,
-		CreatedAt:     formatTimestamp(interaction.GetCreatedAt()),
+		CreatedAt:     FormatTimestamp(interaction.GetCreatedAt()),
 	}
 	if illustration := interaction.GetIllustration(); illustration != nil {
 		result.Illustration = &InteractionGMInteractionIllustration{
@@ -385,48 +380,33 @@ func PlayerPhaseFromGamePhase(phase *gamev1.ScenePlayerPhase) *ScenePlayerPhase 
 		slots = append(slots, ScenePlayerSlot{
 			ParticipantID:      strings.TrimSpace(s.GetParticipantId()),
 			SummaryText:        strings.TrimSpace(s.GetSummaryText()),
-			CharacterIDs:       trimStringSlice(s.GetCharacterIds()),
-			UpdatedAt:          formatTimestamp(s.GetUpdatedAt()),
+			CharacterIDs:       TrimStringSlice(s.GetCharacterIds()),
+			UpdatedAt:          FormatTimestamp(s.GetUpdatedAt()),
 			Yielded:            s.GetYielded(),
 			ReviewStatus:       slotReviewStatusString(s.GetReviewStatus()),
 			ReviewReason:       strings.TrimSpace(s.GetReviewReason()),
-			ReviewCharacterIDs: trimStringSlice(s.GetReviewCharacterIds()),
+			ReviewCharacterIDs: TrimStringSlice(s.GetReviewCharacterIds()),
 		})
 	}
 	return &ScenePlayerPhase{
 		PhaseID:              phaseID,
 		Status:               scenePhaseStatusString(phase.GetStatus()),
-		ActingCharacterIDs:   trimStringSlice(phase.GetActingCharacterIds()),
-		ActingParticipantIDs: trimStringSlice(phase.GetActingParticipantIds()),
+		ActingCharacterIDs:   TrimStringSlice(phase.GetActingCharacterIds()),
+		ActingParticipantIDs: TrimStringSlice(phase.GetActingParticipantIds()),
 		Slots:                slots,
 	}
 }
 
 func gmInteractionBeatTypeString(value gamev1.GMInteractionBeatType) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_UNSPECIFIED.String() {
-		return ""
-	}
-	name = strings.TrimPrefix(name, "GM_INTERACTION_BEAT_TYPE_")
-	return strings.ToLower(name)
+	return ProtoEnumToLower(value, gamev1.GMInteractionBeatType_GM_INTERACTION_BEAT_TYPE_UNSPECIFIED, "GM_INTERACTION_BEAT_TYPE_")
 }
 
 func scenePhaseStatusString(value gamev1.ScenePhaseStatus) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_UNSPECIFIED.String() {
-		return ""
-	}
-	name = strings.TrimPrefix(name, "SCENE_PHASE_STATUS_")
-	return strings.ToLower(name)
+	return ProtoEnumToLower(value, gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_UNSPECIFIED, "SCENE_PHASE_STATUS_")
 }
 
 func slotReviewStatusString(value gamev1.ScenePlayerSlotReviewStatus) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == gamev1.ScenePlayerSlotReviewStatus_SCENE_PLAYER_SLOT_REVIEW_STATUS_UNSPECIFIED.String() {
-		return ""
-	}
-	name = strings.TrimPrefix(name, "SCENE_PLAYER_SLOT_REVIEW_STATUS_")
-	return strings.ToLower(name)
+	return ProtoEnumToLower(value, gamev1.ScenePlayerSlotReviewStatus_SCENE_PLAYER_SLOT_REVIEW_STATUS_UNSPECIFIED, "SCENE_PLAYER_SLOT_REVIEW_STATUS_")
 }
 
 // --- OOC types ---
@@ -457,13 +437,13 @@ func OOCFromGameOOC(ooc *gamev1.OOCState) *OOCState {
 			PostID:        strings.TrimSpace(p.GetPostId()),
 			ParticipantID: strings.TrimSpace(p.GetParticipantId()),
 			Body:          strings.TrimSpace(p.GetBody()),
-			CreatedAt:     formatTimestamp(p.GetCreatedAt()),
+			CreatedAt:     FormatTimestamp(p.GetCreatedAt()),
 		})
 	}
 	return &OOCState{
 		Open:                        ooc.GetOpen(),
 		Posts:                       posts,
-		ReadyToResumeParticipantIDs: trimStringSlice(ooc.GetReadyToResumeParticipantIds()),
+		ReadyToResumeParticipantIDs: TrimStringSlice(ooc.GetReadyToResumeParticipantIds()),
 	}
 }
 
@@ -495,12 +475,7 @@ func AITurnFromGameAITurn(aiTurn *gamev1.AITurnState) *AITurnState {
 }
 
 func aiTurnStatusString(value gamev1.AITurnStatus) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == gamev1.AITurnStatus_AI_TURN_STATUS_UNSPECIFIED.String() {
-		return ""
-	}
-	name = strings.TrimPrefix(name, "AI_TURN_STATUS_")
-	return strings.ToLower(name)
+	return ProtoEnumToLower(value, gamev1.AITurnStatus_AI_TURN_STATUS_UNSPECIFIED, "AI_TURN_STATUS_")
 }
 
 // --- Participant types ---
@@ -536,14 +511,32 @@ func ParticipantFromGameParticipant(assetBaseURL string, p *gamev1.Participant) 
 			avatarEntityID,
 			strings.TrimSpace(p.GetAvatarSetId()),
 			strings.TrimSpace(p.GetAvatarAssetId()),
-			playAvatarDeliveryWidthPX,
+			PlayAvatarDeliveryWidthPX,
 		),
 	}
 }
 
 // --- Character inspection types ---
 
+// CharacterCardPortrait holds avatar rendering data for a character card.
+type CharacterCardPortrait struct {
+	Alt string `json:"alt"`
+	Src string `json:"src,omitempty"`
+}
+
+// CharacterCardIdentity holds character kind and pronoun metadata.
+type CharacterCardIdentity struct {
+	Kind       string   `json:"kind,omitempty"`
+	Controller string   `json:"controller,omitempty"`
+	Pronouns   string   `json:"pronouns,omitempty"`
+	Aliases    []string `json:"aliases,omitempty"`
+}
+
 // CharacterInspection holds both card and sheet data for a character.
+// Card and Sheet are typed as any because the concrete shape depends on the
+// game system. For Daggerheart, Card is DaggerheartCharacterCardData and Sheet
+// is DaggerheartCharacterSheetData. New game systems should follow the same
+// pattern and document their concrete types here.
 type CharacterInspection struct {
 	System string `json:"system"`
 	Card   any    `json:"card"`
@@ -563,14 +556,33 @@ func localeString(value commonv1.Locale) string {
 
 // --- Shared helpers ---
 
-func formatTimestamp(ts *timestamppb.Timestamp) string {
+// ProtoEnumToLower maps a proto enum value to a lowercase string by stripping
+// the given prefix. Returns "" for unspecified or empty values. Exported for
+// use by game-system protocol sub-packages.
+func ProtoEnumToLower[T interface{ String() string }](value T, unspecified T, prefix string) string {
+	name := strings.TrimSpace(value.String())
+	if name == "" || name == unspecified.String() {
+		return ""
+	}
+	return strings.ToLower(strings.TrimPrefix(name, prefix))
+}
+
+// PlayAvatarDeliveryWidthPX is the CDN delivery width used for avatar images
+// in the play UI.
+const PlayAvatarDeliveryWidthPX = 384
+
+// FormatTimestamp formats a proto Timestamp as RFC3339, returning "" for nil or
+// zero timestamps. Exported for use by game-system protocol sub-packages.
+func FormatTimestamp(ts *timestamppb.Timestamp) string {
 	if ts == nil || (ts.GetSeconds() == 0 && ts.GetNanos() == 0) {
 		return ""
 	}
 	return ts.AsTime().Format(time.RFC3339)
 }
 
-func trimStringSlice(values []string) []string {
+// TrimStringSlice returns a new slice containing only non-empty trimmed
+// strings. Exported for use by game-system protocol sub-packages.
+func TrimStringSlice(values []string) []string {
 	result := make([]string, 0, len(values))
 	for _, v := range values {
 		if s := strings.TrimSpace(v); s != "" {
@@ -580,9 +592,9 @@ func trimStringSlice(values []string) []string {
 	return result
 }
 
-// --- Pronouns helper ---
-
-func pronounsString(p *commonv1.Pronouns) string {
+// PronounsString formats a proto Pronouns value as a lowercase display string.
+// Exported for use by game-system protocol sub-packages.
+func PronounsString(p *commonv1.Pronouns) string {
 	if p == nil {
 		return ""
 	}

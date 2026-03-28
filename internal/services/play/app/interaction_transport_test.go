@@ -150,8 +150,8 @@ func TestInteractionMutationResponseKeepsParticipantAndCharacterEnrichment(t *te
 		listResponse:  enrichedCharacterResponse(),
 		sheetResponse: enrichedCharacterSheetResponse(),
 	}
-	server.participants = participants
-	server.characters = characters
+	server.deps.Participants = participants
+	server.deps.Characters = characters
 
 	handler, err := server.newHandler(testPlayLaunchGrantConfig(t))
 	if err != nil {

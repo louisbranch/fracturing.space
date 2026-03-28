@@ -2,13 +2,14 @@ package app
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
+	playdaggerheart "github.com/louisbranch/fracturing.space/internal/services/play/protocol/daggerheart"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,10 +18,10 @@ func TestPlayApplicationSystemMetadata(t *testing.T) {
 	t.Parallel()
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-	server.campaign = fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{
+	server.deps.Campaign = fakePlayCampaignClient{response: &gamev1.GetCampaignResponse{
 		Campaign: &gamev1.Campaign{Id: "c1", System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART},
 	}}
-	server.system = fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{
+	server.deps.System = fakePlaySystemClient{response: &gamev1.GetGameSystemResponse{
 		System: &gamev1.GameSystemInfo{Id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, Name: "Daggerheart", Version: "v1"},
 	}}
 
@@ -40,7 +41,7 @@ func TestBuildCharacterInspectionCatalogEnrichesLocalizedDomainCards(t *testing.
 	t.Parallel()
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-	server.characters = fakePlayCharacterClient{sheetResponse: enrichedCharacterSheetResponse()}
+	server.deps.Characters = fakePlayCharacterClient{sheetResponse: enrichedCharacterSheetResponse()}
 	content := &fakeDaggerheartContentClient{
 		responses: map[string]*daggerheartv1.DaggerheartDomainCard{
 			"domain_card.valor-i-am-your-shield": {
@@ -57,7 +58,7 @@ func TestBuildCharacterInspectionCatalogEnrichesLocalizedDomainCards(t *testing.
 			},
 		},
 	}
-	server.daggerheartContent = content
+	server.deps.DaggerheartContent = content
 
 	catalog := server.application().buildCharacterInspectionCatalog(
 		context.Background(),
@@ -70,7 +71,7 @@ func TestBuildCharacterInspectionCatalogEnrichesLocalizedDomainCards(t *testing.
 	}
 
 	inspection := catalog["char-1"]
-	sheet, ok := inspection.Sheet.(playprotocol.DaggerheartCharacterSheetData)
+	sheet, ok := inspection.Sheet.(playdaggerheart.CharacterSheetData)
 	if !ok {
 		t.Fatalf("sheet type = %T, want DaggerheartCharacterSheetData", inspection.Sheet)
 	}
@@ -101,8 +102,8 @@ func TestBuildCharacterInspectionCatalogFallsBackWhenDomainCardLookupFails(t *te
 	t.Parallel()
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-	server.characters = fakePlayCharacterClient{sheetResponse: enrichedCharacterSheetResponse()}
-	server.daggerheartContent = &fakeDaggerheartContentClient{
+	server.deps.Characters = fakePlayCharacterClient{sheetResponse: enrichedCharacterSheetResponse()}
+	server.deps.DaggerheartContent = &fakeDaggerheartContentClient{
 		responses: map[string]*daggerheartv1.DaggerheartDomainCard{
 			"domain_card.blade-get-back-up": {
 				Id:          "domain_card.blade-get-back-up",
@@ -122,7 +123,7 @@ func TestBuildCharacterInspectionCatalogFallsBackWhenDomainCardLookupFails(t *te
 		commonv1.Locale_LOCALE_EN_US,
 		enrichedCharacterResponse().GetCharacters(),
 	)
-	sheet := catalog["char-1"].Sheet.(playprotocol.DaggerheartCharacterSheetData)
+	sheet := catalog["char-1"].Sheet.(playdaggerheart.CharacterSheetData)
 	if len(sheet.DomainCards) != 2 {
 		t.Fatalf("domain cards = %#v, want 2", sheet.DomainCards)
 	}
@@ -134,6 +135,23 @@ func TestBuildCharacterInspectionCatalogFallsBackWhenDomainCardLookupFails(t *te
 	}
 	if sheet.DomainCards[1].FeatureText != "Stand again and keep fighting." {
 		t.Fatalf("domainCards[1].FeatureText = %q", sheet.DomainCards[1].FeatureText)
+	}
+}
+
+func TestBuildCharacterInspectionCatalogSkipsCharactersWhenSheetFetchFails(t *testing.T) {
+	t.Parallel()
+
+	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+	server.deps.Characters = fakePlayCharacterClient{sheetErr: errors.New("unavailable")}
+
+	catalog := server.application().buildCharacterInspectionCatalog(
+		context.Background(),
+		"c1",
+		commonv1.Locale_LOCALE_EN_US,
+		enrichedCharacterResponse().GetCharacters(),
+	)
+	if len(catalog) != 0 {
+		t.Fatalf("catalog = %#v, want empty when sheet fetch fails", catalog)
 	}
 }
 
@@ -155,7 +173,7 @@ func TestPlayApplicationAIDebugAccessors(t *testing.T) {
 			},
 		}
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		page, err := server.application().aiDebugTurns(context.Background(), playRequest{
 			campaignRequest: campaignRequest{CampaignID: "c1"},
@@ -179,7 +197,7 @@ func TestPlayApplicationAIDebugAccessors(t *testing.T) {
 		state.ActiveSession = nil
 		aiDebug := &fakePlayAIDebugClient{}
 		server := newAuthedPlayServer(newRecordingInteractionClient(state), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		page, err := server.application().aiDebugTurns(context.Background(), playRequest{
 			campaignRequest: campaignRequest{CampaignID: "c1"},
@@ -206,7 +224,7 @@ func TestPlayApplicationAIDebugAccessors(t *testing.T) {
 			},
 		}
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		turn, err := server.application().aiDebugTurn(context.Background(), playRequest{
 			campaignRequest: campaignRequest{CampaignID: "c1"},
@@ -228,7 +246,7 @@ func TestPlayApplicationAIDebugAccessors(t *testing.T) {
 
 		aiDebug := &fakePlayAIDebugClient{getErr: status.Error(codes.NotFound, "missing")}
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-		server.aiDebug = aiDebug
+		server.deps.AIDebug = aiDebug
 
 		if _, err := server.application().aiDebugTurn(context.Background(), playRequest{
 			campaignRequest: campaignRequest{CampaignID: "c1"},

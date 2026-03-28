@@ -59,6 +59,11 @@ type aiDebugClient interface {
 	SubscribeCampaignDebugUpdates(context.Context, *aiv1.SubscribeCampaignDebugUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[aiv1.CampaignDebugTurnUpdate], error)
 }
 
+// interactionClient mirrors the full game InteractionServiceClient surface.
+// This is intentional for a transport gateway: the play service validates
+// browser auth, decodes the request, delegates to the game service, and
+// refreshes interaction state. Every browser mutation maps to one RPC, so the
+// interface surface matches the gRPC surface by design.
 type interactionClient interface {
 	GetInteractionState(context.Context, *gamev1.GetInteractionStateRequest, ...gogrpc.CallOption) (*gamev1.GetInteractionStateResponse, error)
 	ActivateScene(context.Context, *gamev1.ActivateSceneRequest, ...gogrpc.CallOption) (*gamev1.ActivateSceneResponse, error)
@@ -103,7 +108,9 @@ type eventClient interface {
 	SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[gamev1.CampaignUpdate], error)
 }
 
-// Server hosts the play HTTP surface and lifecycle.
+// Server hosts the play HTTP surface and lifecycle. Dependencies are stored in
+// the deps field to avoid duplicating the dependency set across Server and
+// playApplication — adding a new dependency only requires touching Dependencies.
 type Server struct {
 	httpAddr            string
 	httpServer          *http.Server
@@ -111,16 +118,7 @@ type Server struct {
 	webFallbackPort     string
 	assetBaseURL        string
 	requestSchemePolicy requestmeta.SchemePolicy
-	auth                authClient
-	aiDebug             aiDebugClient
-	interaction         interactionClient
-	campaign            campaignClient
-	system              systemClient
-	participants        participantClient
-	characters          characterClient
-	daggerheartContent  daggerheartContentClient
-	events              eventClient
-	transcripts         transcript.Store
+	deps                Dependencies
 	shellAssets         shellAssets
 	realtime            *realtimeHub
 }
@@ -148,16 +146,7 @@ func NewServer(cfg Config, deps Dependencies) (*Server, error) {
 		webFallbackPort:     websupport.ResolveHTTPFallbackPort(cfg.WebHTTPAddr),
 		assetBaseURL:        strings.TrimSpace(cfg.AssetBaseURL),
 		requestSchemePolicy: cfg.RequestSchemePolicy,
-		auth:                deps.Auth,
-		aiDebug:             deps.AIDebug,
-		interaction:         deps.Interaction,
-		campaign:            deps.Campaign,
-		system:              deps.System,
-		participants:        deps.Participants,
-		characters:          deps.Characters,
-		daggerheartContent:  deps.DaggerheartContent,
-		events:              deps.Events,
-		transcripts:         deps.Transcripts,
+		deps:                deps,
 		shellAssets:         shellAssets,
 	}
 	server.realtime = newRealtimeHub(server)

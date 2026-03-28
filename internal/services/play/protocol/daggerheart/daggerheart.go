@@ -1,49 +1,39 @@
-package protocol
+package daggerheart
 
 import (
+	"strconv"
 	"strings"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-const playAvatarDeliveryWidthPX = 384
+// SystemID is the canonical lowercase identifier for the Daggerheart game
+// system, used in CharacterInspection.System and related browser contracts.
+const SystemID = "daggerheart"
 
-// DaggerheartCharacterCardData matches the browser DaggerheartCharacterCardData
-// contract for rendering character portrait cards.
-type DaggerheartCharacterCardData struct {
-	ID          string                        `json:"id"`
-	Name        string                        `json:"name"`
-	Portrait    CharacterCardPortrait         `json:"portrait"`
-	Identity    *CharacterCardIdentity        `json:"identity,omitempty"`
-	Daggerheart *DaggerheartCardSystemSection `json:"daggerheart,omitempty"`
+// CharacterCardData matches the browser DaggerheartCharacterCardData contract
+// for rendering character portrait cards.
+type CharacterCardData struct {
+	ID          string                              `json:"id"`
+	Name        string                              `json:"name"`
+	Portrait    playprotocol.CharacterCardPortrait  `json:"portrait"`
+	Identity    *playprotocol.CharacterCardIdentity `json:"identity,omitempty"`
+	Daggerheart *CardSystemSection                  `json:"daggerheart,omitempty"`
 }
 
-// CharacterCardPortrait holds avatar rendering data.
-type CharacterCardPortrait struct {
-	Alt string `json:"alt"`
-	Src string `json:"src,omitempty"`
+// CardSystemSection holds the daggerheart-specific card summary.
+type CardSystemSection struct {
+	Summary *CharacterSummary `json:"summary,omitempty"`
+	Traits  *CharacterTraits  `json:"traits,omitempty"`
 }
 
-// CharacterCardIdentity holds character kind and pronoun metadata.
-type CharacterCardIdentity struct {
-	Kind       string   `json:"kind,omitempty"`
-	Controller string   `json:"controller,omitempty"`
-	Pronouns   string   `json:"pronouns,omitempty"`
-	Aliases    []string `json:"aliases,omitempty"`
-}
-
-// DaggerheartCardSystemSection holds the daggerheart-specific card summary.
-type DaggerheartCardSystemSection struct {
-	Summary *DaggerheartCharacterSummary `json:"summary,omitempty"`
-	Traits  *DaggerheartCharacterTraits  `json:"traits,omitempty"`
-}
-
-// DaggerheartCharacterSummary is the compact class/stat line on the card.
-type DaggerheartCharacterSummary struct {
+// CharacterSummary is the compact class/stat line on the card.
+type CharacterSummary struct {
 	Level         int32       `json:"level,omitempty"`
 	ClassName     string      `json:"className,omitempty"`
 	SubclassName  string      `json:"subclassName,omitempty"`
@@ -63,8 +53,8 @@ type TrackValue struct {
 	Max     int32 `json:"max"`
 }
 
-// DaggerheartCharacterTraits holds the six trait modifiers.
-type DaggerheartCharacterTraits struct {
+// CharacterTraits holds the six trait modifiers.
+type CharacterTraits struct {
 	Agility   string `json:"agility,omitempty"`
 	Strength  string `json:"strength,omitempty"`
 	Finesse   string `json:"finesse,omitempty"`
@@ -73,67 +63,67 @@ type DaggerheartCharacterTraits struct {
 	Knowledge string `json:"knowledge,omitempty"`
 }
 
-// DaggerheartCharacterSheetData matches the browser DaggerheartCharacterSheetData
-// contract for the full character sheet view.
-type DaggerheartCharacterSheetData struct {
-	ID              string                  `json:"id"`
-	Name            string                  `json:"name"`
-	Portrait        CharacterCardPortrait   `json:"portrait"`
-	Pronouns        string                  `json:"pronouns,omitempty"`
-	Level           int32                   `json:"level,omitempty"`
-	ClassName       string                  `json:"className,omitempty"`
-	SubclassName    string                  `json:"subclassName,omitempty"`
-	AncestryName    string                  `json:"ancestryName,omitempty"`
-	CommunityName   string                  `json:"communityName,omitempty"`
-	Proficiency     *int32                  `json:"proficiency,omitempty"`
-	Traits          []DaggerheartTrait      `json:"traits,omitempty"`
-	HP              *TrackValue             `json:"hp,omitempty"`
-	Stress          *TrackValue             `json:"stress,omitempty"`
-	MajorThreshold  *int32                  `json:"majorThreshold,omitempty"`
-	SevereThreshold *int32                  `json:"severeThreshold,omitempty"`
-	Evasion         *int32                  `json:"evasion,omitempty"`
-	Armor           *TrackValue             `json:"armor,omitempty"`
-	Hope            *TrackValue             `json:"hope,omitempty"`
-	HopeFeature     string                  `json:"hopeFeature,omitempty"`
-	ClassFeature    string                  `json:"classFeature,omitempty"`
-	PrimaryWeapon   *DaggerheartWeapon      `json:"primaryWeapon,omitempty"`
-	SecondaryWeapon *DaggerheartWeapon      `json:"secondaryWeapon,omitempty"`
-	ActiveArmor     *DaggerheartArmor       `json:"activeArmor,omitempty"`
-	Experiences     []DaggerheartExperience `json:"experiences,omitempty"`
-	DomainCards     []DaggerheartDomainCard `json:"domainCards,omitempty"`
-	Description     string                  `json:"description,omitempty"`
-	Background      string                  `json:"background,omitempty"`
-	Connections     string                  `json:"connections,omitempty"`
-	LifeState       string                  `json:"lifeState,omitempty"`
-	Conditions      []string                `json:"conditions,omitempty"`
-	Kind            string                  `json:"kind,omitempty"`
-	Controller      string                  `json:"controller,omitempty"`
+// CharacterSheetData matches the browser DaggerheartCharacterSheetData contract
+// for the full character sheet view.
+type CharacterSheetData struct {
+	ID              string                             `json:"id"`
+	Name            string                             `json:"name"`
+	Portrait        playprotocol.CharacterCardPortrait `json:"portrait"`
+	Pronouns        string                             `json:"pronouns,omitempty"`
+	Level           int32                              `json:"level,omitempty"`
+	ClassName       string                             `json:"className,omitempty"`
+	SubclassName    string                             `json:"subclassName,omitempty"`
+	AncestryName    string                             `json:"ancestryName,omitempty"`
+	CommunityName   string                             `json:"communityName,omitempty"`
+	Proficiency     *int32                             `json:"proficiency,omitempty"`
+	Traits          []Trait                            `json:"traits,omitempty"`
+	HP              *TrackValue                        `json:"hp,omitempty"`
+	Stress          *TrackValue                        `json:"stress,omitempty"`
+	MajorThreshold  *int32                             `json:"majorThreshold,omitempty"`
+	SevereThreshold *int32                             `json:"severeThreshold,omitempty"`
+	Evasion         *int32                             `json:"evasion,omitempty"`
+	Armor           *TrackValue                        `json:"armor,omitempty"`
+	Hope            *TrackValue                        `json:"hope,omitempty"`
+	HopeFeature     string                             `json:"hopeFeature,omitempty"`
+	ClassFeature    string                             `json:"classFeature,omitempty"`
+	PrimaryWeapon   *Weapon                            `json:"primaryWeapon,omitempty"`
+	SecondaryWeapon *Weapon                            `json:"secondaryWeapon,omitempty"`
+	ActiveArmor     *Armor                             `json:"activeArmor,omitempty"`
+	Experiences     []Experience                       `json:"experiences,omitempty"`
+	DomainCards     []DomainCard                       `json:"domainCards,omitempty"`
+	Description     string                             `json:"description,omitempty"`
+	Background      string                             `json:"background,omitempty"`
+	Connections     string                             `json:"connections,omitempty"`
+	LifeState       string                             `json:"lifeState,omitempty"`
+	Conditions      []string                           `json:"conditions,omitempty"`
+	Kind            string                             `json:"kind,omitempty"`
+	Controller      string                             `json:"controller,omitempty"`
 }
 
-// DaggerheartTrait is one of the six core traits on the sheet.
-type DaggerheartTrait struct {
+// Trait is one of the six core traits on the sheet.
+type Trait struct {
 	Name         string   `json:"name"`
 	Abbreviation string   `json:"abbreviation"`
 	Value        int32    `json:"value"`
 	Skills       []string `json:"skills,omitempty"`
 }
 
-// DaggerheartExperience is a named experience modifier.
-type DaggerheartExperience struct {
+// Experience is a named experience modifier.
+type Experience struct {
 	Name     string `json:"name"`
 	Modifier int32  `json:"modifier,omitempty"`
 }
 
-// DaggerheartDomainCard is a selected domain card reference.
-type DaggerheartDomainCard struct {
+// DomainCard is a selected domain card reference.
+type DomainCard struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Domain      string `json:"domain,omitempty"`
 	FeatureText string `json:"featureText,omitempty"`
 }
 
-// DaggerheartWeapon is one active weapon entry on the full character sheet.
-type DaggerheartWeapon struct {
+// Weapon is one active weapon entry on the full character sheet.
+type Weapon struct {
 	Name       string `json:"name"`
 	Trait      string `json:"trait,omitempty"`
 	Range      string `json:"range,omitempty"`
@@ -142,16 +132,16 @@ type DaggerheartWeapon struct {
 	Feature    string `json:"feature,omitempty"`
 }
 
-// DaggerheartArmor is the active armor entry on the full character sheet.
-type DaggerheartArmor struct {
+// Armor is the active armor entry on the full character sheet.
+type Armor struct {
 	Name      string `json:"name"`
 	BaseScore *int32 `json:"baseScore,omitempty"`
 	Feature   string `json:"feature,omitempty"`
 }
 
-// DaggerheartCardFromSheet builds the card data from a GetCharacterSheetResponse.
-func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) DaggerheartCharacterCardData {
-	card := DaggerheartCharacterCardData{
+// CardFromSheet builds the card data from a GetCharacterSheetResponse.
+func CardFromSheet(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState) CharacterCardData {
+	card := CharacterCardData{
 		ID:       strings.TrimSpace(char.GetId()),
 		Name:     strings.TrimSpace(char.GetName()),
 		Portrait: characterPortrait(assetBaseURL, char),
@@ -161,7 +151,7 @@ func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profi
 	if profile != nil {
 		className, subclassName := resolveClassNames(profile)
 		ancestryName, communityName := heritageDisplayNames(profile)
-		summary := &DaggerheartCharacterSummary{
+		summary := &CharacterSummary{
 			Level:         profile.GetLevel(),
 			ClassName:     className,
 			SubclassName:  subclassName,
@@ -173,7 +163,6 @@ func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profi
 			Armor:         profileArmorTrack(profile, state),
 			Hope:          hopeTrack(state),
 		}
-		// Find the first hope feature from active class features.
 		for _, f := range profile.GetActiveClassFeatures() {
 			if f.GetHopeFeature() {
 				summary.Feature = strings.TrimSpace(f.GetName())
@@ -181,8 +170,8 @@ func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profi
 			}
 		}
 
-		traits := daggerheartTraits(profile)
-		card.Daggerheart = &DaggerheartCardSystemSection{
+		traits := characterTraits(profile)
+		card.Daggerheart = &CardSystemSection{
 			Summary: summary,
 			Traits:  traits,
 		}
@@ -190,14 +179,14 @@ func DaggerheartCardFromSheet(assetBaseURL string, char *gamev1.Character, profi
 	return card
 }
 
-// DaggerheartSheetFromResponse builds the full sheet data from a
+// SheetFromResponse builds the full sheet data from a
 // GetCharacterSheetResponse.
-func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState, domainCardLookup map[string]DaggerheartDomainCard) DaggerheartCharacterSheetData {
-	sheet := DaggerheartCharacterSheetData{
+func SheetFromResponse(assetBaseURL string, char *gamev1.Character, profile *daggerheartv1.DaggerheartProfile, state *daggerheartv1.DaggerheartCharacterState, domainCardLookup map[string]DomainCard) CharacterSheetData {
+	sheet := CharacterSheetData{
 		ID:       strings.TrimSpace(char.GetId()),
 		Name:     strings.TrimSpace(char.GetName()),
 		Portrait: characterPortrait(assetBaseURL, char),
-		Pronouns: pronounsString(char.GetPronouns()),
+		Pronouns: playprotocol.PronounsString(char.GetPronouns()),
 		Kind:     characterKindString(char.GetKind()),
 	}
 
@@ -220,28 +209,26 @@ func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, p
 		sheet.Description = strings.TrimSpace(profile.GetDescription())
 		sheet.Background = strings.TrimSpace(profile.GetBackground())
 		sheet.Connections = strings.TrimSpace(profile.GetConnections())
-		sheet.PrimaryWeapon = daggerheartSheetWeapon(profile.GetPrimaryWeapon())
-		sheet.SecondaryWeapon = daggerheartSheetWeapon(profile.GetSecondaryWeapon())
-		sheet.ActiveArmor = daggerheartSheetArmor(profile.GetActiveArmor())
+		sheet.PrimaryWeapon = sheetWeapon(profile.GetPrimaryWeapon())
+		sheet.SecondaryWeapon = sheetWeapon(profile.GetSecondaryWeapon())
+		sheet.ActiveArmor = sheetArmor(profile.GetActiveArmor())
 
-		// Hope feature from active class features.
 		for _, f := range profile.GetActiveClassFeatures() {
 			if f.GetHopeFeature() {
-				sheet.HopeFeature = daggerheartFeatureText(f.GetName(), f.GetDescription())
+				sheet.HopeFeature = featureText(f.GetName(), f.GetDescription())
 				break
 			}
 		}
-		// First non-hope class feature as the classFeature display.
 		for _, f := range profile.GetActiveClassFeatures() {
 			if !f.GetHopeFeature() {
-				sheet.ClassFeature = daggerheartFeatureText(f.GetName(), f.GetDescription())
+				sheet.ClassFeature = featureText(f.GetName(), f.GetDescription())
 				break
 			}
 		}
 
-		sheet.Traits = daggerheartTraitSlice(profile)
-		sheet.Experiences = daggerheartExperiences(profile)
-		sheet.DomainCards = daggerheartDomainCards(profile, domainCardLookup)
+		sheet.Traits = traitSlice(profile)
+		sheet.Experiences = experiences(profile)
+		sheet.DomainCards = domainCards(profile, domainCardLookup)
 	}
 
 	if state != nil {
@@ -252,11 +239,11 @@ func DaggerheartSheetFromResponse(assetBaseURL string, char *gamev1.Character, p
 	return sheet
 }
 
-// DaggerheartDomainCardFromContent converts catalog content into the browser
-// domain-card shape used by the play character sheet.
-func DaggerheartDomainCardFromContent(card *daggerheartv1.DaggerheartDomainCard) DaggerheartDomainCard {
+// DomainCardFromContent converts catalog content into the browser domain-card
+// shape used by the play character sheet.
+func DomainCardFromContent(card *daggerheartv1.DaggerheartDomainCard) DomainCard {
 	if card == nil {
-		return DaggerheartDomainCard{}
+		return DomainCard{}
 	}
 	fallbackName, fallbackDomain := domainCardLabelFromID(card.GetId())
 	name := strings.TrimSpace(card.GetName())
@@ -267,7 +254,7 @@ func DaggerheartDomainCardFromContent(card *daggerheartv1.DaggerheartDomainCard)
 	if domain == "" {
 		domain = fallbackDomain
 	}
-	return DaggerheartDomainCard{
+	return DomainCard{
 		ID:          strings.TrimSpace(card.GetId()),
 		Name:        name,
 		Domain:      domain,
@@ -277,12 +264,12 @@ func DaggerheartDomainCardFromContent(card *daggerheartv1.DaggerheartDomainCard)
 
 // --- Helpers ---
 
-func characterPortrait(assetBaseURL string, char *gamev1.Character) CharacterCardPortrait {
+func characterPortrait(assetBaseURL string, char *gamev1.Character) playprotocol.CharacterCardPortrait {
 	avatarEntityID := strings.TrimSpace(char.GetId())
 	if avatarEntityID == "" {
 		avatarEntityID = strings.TrimSpace(char.GetCampaignId())
 	}
-	return CharacterCardPortrait{
+	return playprotocol.CharacterCardPortrait{
 		Alt: strings.TrimSpace(char.GetName()),
 		Src: websupport.AvatarImageURL(
 			assetBaseURL,
@@ -290,19 +277,19 @@ func characterPortrait(assetBaseURL string, char *gamev1.Character) CharacterCar
 			avatarEntityID,
 			strings.TrimSpace(char.GetAvatarSetId()),
 			strings.TrimSpace(char.GetAvatarAssetId()),
-			playAvatarDeliveryWidthPX,
+			playprotocol.PlayAvatarDeliveryWidthPX,
 		),
 	}
 }
 
-func characterIdentity(char *gamev1.Character) *CharacterCardIdentity {
+func characterIdentity(char *gamev1.Character) *playprotocol.CharacterCardIdentity {
 	kind := characterKindString(char.GetKind())
-	pronouns := pronounsString(char.GetPronouns())
-	aliases := trimStringSlice(char.GetAliases())
+	pronouns := playprotocol.PronounsString(char.GetPronouns())
+	aliases := playprotocol.TrimStringSlice(char.GetAliases())
 	if kind == "" && pronouns == "" && len(aliases) == 0 {
 		return nil
 	}
-	return &CharacterCardIdentity{
+	return &playprotocol.CharacterCardIdentity{
 		Kind:     kind,
 		Pronouns: pronouns,
 		Aliases:  aliases,
@@ -310,17 +297,11 @@ func characterIdentity(char *gamev1.Character) *CharacterCardIdentity {
 }
 
 func characterKindString(value gamev1.CharacterKind) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == gamev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED.String() {
-		return ""
-	}
-	return strings.ToLower(name)
+	return playprotocol.ProtoEnumToLower(value, gamev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED, "")
 }
 
 // resolveClassNames extracts the class and subclass display names from active
-// features already on the profile. The first active class feature at level 1
-// carries the class name; the first active subclass feature provides the
-// subclass name.
+// features already on the profile.
 func resolveClassNames(profile *daggerheartv1.DaggerheartProfile) (string, string) {
 	className := contentLabelFromID(profile.GetClassId())
 	subclassName := contentLabelFromID(profile.GetSubclassId())
@@ -328,8 +309,6 @@ func resolveClassNames(profile *daggerheartv1.DaggerheartProfile) (string, strin
 		return className, subclassName
 	}
 	if features := profile.GetActiveClassFeatures(); len(features) > 0 {
-		// Use the first feature name as class name — the profile features are
-		// already derived and ordered by the game service.
 		for _, f := range features {
 			if n := strings.TrimSpace(f.GetName()); n != "" {
 				className = n
@@ -448,11 +427,11 @@ func wrapperInt32Ptr(w *wrapperspb.Int32Value) *int32 {
 	return &v
 }
 
-func daggerheartTraits(profile *daggerheartv1.DaggerheartProfile) *DaggerheartCharacterTraits {
+func characterTraits(profile *daggerheartv1.DaggerheartProfile) *CharacterTraits {
 	if profile == nil {
 		return nil
 	}
-	return &DaggerheartCharacterTraits{
+	return &CharacterTraits{
 		Agility:   traitString(profile.GetAgility()),
 		Strength:  traitString(profile.GetStrength()),
 		Finesse:   traitString(profile.GetFinesse()),
@@ -462,7 +441,7 @@ func daggerheartTraits(profile *daggerheartv1.DaggerheartProfile) *DaggerheartCh
 	}
 }
 
-func daggerheartTraitSlice(profile *daggerheartv1.DaggerheartProfile) []DaggerheartTrait {
+func traitSlice(profile *daggerheartv1.DaggerheartProfile) []Trait {
 	type traitDef struct {
 		name   string
 		abbr   string
@@ -477,13 +456,13 @@ func daggerheartTraitSlice(profile *daggerheartv1.DaggerheartProfile) []Daggerhe
 		{"Presence", "PRE", []string{"Charm", "Perform", "Deceive"}, profile.GetPresence},
 		{"Knowledge", "KNO", []string{"Recall", "Analyze", "Comprehend"}, profile.GetKnowledge},
 	}
-	traits := make([]DaggerheartTrait, 0, len(defs))
+	traits := make([]Trait, 0, len(defs))
 	for _, d := range defs {
 		w := d.get()
 		if w == nil {
 			continue
 		}
-		traits = append(traits, DaggerheartTrait{
+		traits = append(traits, Trait{
 			Name:         d.name,
 			Abbreviation: d.abbr,
 			Value:        w.GetValue(),
@@ -501,46 +480,25 @@ func traitString(w *wrapperspb.Int32Value) string {
 		return ""
 	}
 	v := w.GetValue()
+	s := strconv.FormatInt(int64(v), 10)
 	if v >= 0 {
-		return "+" + itoa(v)
+		return "+" + s
 	}
-	return itoa(v)
+	return s
 }
 
-func itoa(v int32) string {
-	if v == 0 {
-		return "0"
-	}
-	negative := v < 0
-	if negative {
-		v = -v
-	}
-	var buf [12]byte
-	i := len(buf)
-	for v > 0 {
-		i--
-		buf[i] = byte('0' + v%10)
-		v /= 10
-	}
-	if negative {
-		i--
-		buf[i] = '-'
-	}
-	return string(buf[i:])
-}
-
-func daggerheartExperiences(profile *daggerheartv1.DaggerheartProfile) []DaggerheartExperience {
+func experiences(profile *daggerheartv1.DaggerheartProfile) []Experience {
 	protoExps := profile.GetExperiences()
 	if len(protoExps) == 0 {
 		return nil
 	}
-	exps := make([]DaggerheartExperience, 0, len(protoExps))
+	exps := make([]Experience, 0, len(protoExps))
 	for _, e := range protoExps {
 		name := strings.TrimSpace(e.GetName())
 		if name == "" {
 			continue
 		}
-		exps = append(exps, DaggerheartExperience{
+		exps = append(exps, Experience{
 			Name:     name,
 			Modifier: e.GetModifier(),
 		})
@@ -551,12 +509,12 @@ func daggerheartExperiences(profile *daggerheartv1.DaggerheartProfile) []Daggerh
 	return exps
 }
 
-func daggerheartDomainCards(profile *daggerheartv1.DaggerheartProfile, lookup map[string]DaggerheartDomainCard) []DaggerheartDomainCard {
+func domainCards(profile *daggerheartv1.DaggerheartProfile, lookup map[string]DomainCard) []DomainCard {
 	ids := profile.GetDomainCardIds()
 	if len(ids) == 0 {
 		return nil
 	}
-	cards := make([]DaggerheartDomainCard, 0, len(ids))
+	cards := make([]DomainCard, 0, len(ids))
 	for _, id := range ids {
 		trimmedID := strings.TrimSpace(id)
 		if trimmedID == "" {
@@ -573,7 +531,7 @@ func daggerheartDomainCards(profile *daggerheartv1.DaggerheartProfile, lookup ma
 		}
 		name, domain := domainCardLabelFromID(trimmedID)
 		if name != "" {
-			cards = append(cards, DaggerheartDomainCard{
+			cards = append(cards, DomainCard{
 				ID:     trimmedID,
 				Name:   name,
 				Domain: domain,
@@ -586,7 +544,7 @@ func daggerheartDomainCards(profile *daggerheartv1.DaggerheartProfile, lookup ma
 	return cards
 }
 
-func daggerheartFeatureText(name, description string) string {
+func featureText(name, description string) string {
 	name = strings.TrimSpace(name)
 	description = strings.TrimSpace(description)
 	switch {
@@ -599,11 +557,11 @@ func daggerheartFeatureText(name, description string) string {
 	}
 }
 
-func daggerheartSheetWeapon(summary *daggerheartv1.DaggerheartSheetWeaponSummary) *DaggerheartWeapon {
+func sheetWeapon(summary *daggerheartv1.DaggerheartSheetWeaponSummary) *Weapon {
 	if summary == nil || strings.TrimSpace(summary.GetName()) == "" {
 		return nil
 	}
-	return &DaggerheartWeapon{
+	return &Weapon{
 		Name:       strings.TrimSpace(summary.GetName()),
 		Trait:      strings.TrimSpace(summary.GetTrait()),
 		Range:      strings.TrimSpace(summary.GetRange()),
@@ -613,11 +571,11 @@ func daggerheartSheetWeapon(summary *daggerheartv1.DaggerheartSheetWeaponSummary
 	}
 }
 
-func daggerheartSheetArmor(summary *daggerheartv1.DaggerheartSheetArmorSummary) *DaggerheartArmor {
+func sheetArmor(summary *daggerheartv1.DaggerheartSheetArmorSummary) *Armor {
 	if summary == nil || strings.TrimSpace(summary.GetName()) == "" {
 		return nil
 	}
-	return &DaggerheartArmor{
+	return &Armor{
 		Name:      strings.TrimSpace(summary.GetName()),
 		BaseScore: int32PtrIfNonZero(summary.GetBaseScore()),
 		Feature:   strings.TrimSpace(summary.GetFeature()),
@@ -642,6 +600,14 @@ func int32PtrIfNonZero(v int32) *int32 {
 	return &v
 }
 
+// domainCardLabelFromID extracts a human-readable (name, domain) pair from a
+// composite domain card ID. The expected format after stripping any prefix up
+// to the first "." or ":" separator is "{domain}-{name-words}", where the first
+// "-" separates the domain slug from the card name slug.
+//
+// This is a best-effort heuristic: hyphenated domain names (e.g.,
+// "bone-harvest-ancient-flame") parse the domain as "Bone" rather than "Bone
+// Harvest". Prefer enriched content from the catalog service when available.
 func domainCardLabelFromID(value string) (string, string) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -658,6 +624,10 @@ func domainCardLabelFromID(value string) (string, string) {
 	return humanizeContentSlug(value), domain
 }
 
+// humanizeContentSlug converts a hyphen/underscore-separated slug to
+// title-cased display text (e.g., "ancient-flame" → "Ancient Flame"). This is
+// a best-effort heuristic that title-cases every word; it does not handle
+// acronyms or proper-noun casing.
 func humanizeContentSlug(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -676,12 +646,7 @@ func humanizeContentSlug(value string) string {
 }
 
 func lifeStateString(value daggerheartv1.DaggerheartLifeState) string {
-	name := strings.TrimSpace(value.String())
-	if name == "" || name == daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED.String() {
-		return ""
-	}
-	name = strings.TrimPrefix(name, "DAGGERHEART_LIFE_STATE_")
-	return strings.ToLower(name)
+	return playprotocol.ProtoEnumToLower(value, daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED, "DAGGERHEART_LIFE_STATE_")
 }
 
 func conditionLabels(conditions []*daggerheartv1.DaggerheartConditionState) []string {

@@ -198,6 +198,8 @@ func (s *Store) buildMessage(ctx context.Context, tx *sql.Tx, req transcript.App
 		actor.Name = actor.ParticipantID
 	}
 	sentAt := s.now().UTC()
+	// Message IDs are intentionally deterministic (not UUIDs) so they can be
+	// reconstructed from scope + sequence for debugging and idempotency.
 	return transcript.Message{
 		MessageID:       fmt.Sprintf("playmsg_%s_%s_%d", req.Scope.CampaignID, req.Scope.SessionID, nextSequence),
 		CampaignID:      req.Scope.CampaignID,
@@ -336,6 +338,9 @@ func isAppendRetryable(err error) bool {
 	return isBusyOrLockedError(err) || isUniqueConstraintError(err)
 }
 
+// isBusyOrLockedError checks for SQLite BUSY/LOCKED using typed error codes
+// first, then falls back to string matching as a last resort for driver
+// variations that wrap errors in ways that lose the typed code.
 func isBusyOrLockedError(err error) bool {
 	if sqliteconn.IsBusyOrLockedError(err) {
 		return true
@@ -350,6 +355,9 @@ func isBusyOrLockedError(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "database is locked")
 }
 
+// isUniqueConstraintError checks for SQLite UNIQUE CONSTRAINT violations using
+// typed error codes first, with a string-matching fallback for the same reason
+// as isBusyOrLockedError.
 func isUniqueConstraintError(err error) bool {
 	if err == nil {
 		return false

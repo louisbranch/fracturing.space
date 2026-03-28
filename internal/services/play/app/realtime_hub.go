@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ import (
 type realtimeHubDeps struct {
 	resolveUserID func(context.Context, *http.Request) (string, error)
 	application   func() playApplication
+	logger        *slog.Logger
 	aiDebug       aiDebugClient
 	transcripts   transcript.Store
 	events        eventClient
@@ -39,14 +41,22 @@ func newRealtimeHub(server *Server) *realtimeHub {
 	return newRealtimeHubWithRuntime(realtimeHubDeps{
 		resolveUserID: server.resolvePlayUserID,
 		application:   server.application,
-		aiDebug:       server.aiDebug,
-		transcripts:   server.transcripts,
-		events:        server.events,
+		logger:        server.logger,
+		aiDebug:       server.deps.AIDebug,
+		transcripts:   server.deps.Transcripts,
+		events:        server.deps.Events,
 	}, defaultRealtimeRuntime())
 }
 
 // newRealtimeHubWithRuntime injects runtime hooks for deterministic realtime
 // tests while keeping production callers on the default clock and timers.
+func (h *realtimeHub) log() *slog.Logger {
+	if h != nil && h.deps.logger != nil {
+		return h.deps.logger
+	}
+	return slog.Default()
+}
+
 func newRealtimeHubWithRuntime(deps realtimeHubDeps, runtime realtimeRuntime) *realtimeHub {
 	return &realtimeHub{
 		deps:    deps,
@@ -118,8 +128,7 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 	}
 	defer h.unregisterSession(session)
 
-	windowStart := h.runtime.nowTime()
-	framesInWindow := 0
+	rateLimiter := newWSRateLimiter(h.runtime.nowTime)
 	decodeErrors := 0
 
 	for {
@@ -139,13 +148,7 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 			_ = session.peer.writeError(frame.RequestID, "invalid_argument", "payload too large", nil)
 			continue
 		}
-		now := h.runtime.nowTime()
-		if now.Sub(windowStart) >= time.Second {
-			windowStart = now
-			framesInWindow = 0
-		}
-		framesInWindow++
-		if framesInWindow > maxFramesPerSecond {
+		if !rateLimiter.allow() {
 			_ = session.peer.writeError(frame.RequestID, "resource_exhausted", "rate limit exceeded", nil)
 			return
 		}
