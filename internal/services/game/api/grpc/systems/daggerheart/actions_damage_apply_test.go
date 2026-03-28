@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
@@ -227,7 +228,7 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("command damage type = %s, want %s", got.DamageType, "physical")
 	}
 
-	result, _, err := damagetransport.ResolveCharacterDamage(damage, profile, state, nil)
+	result, _, err := damagetransport.ResolveCharacterDamage(damage, profile, state, nil, rules.BaseArmorDecisionAuto)
 	if err != nil {
 		t.Fatalf("apply daggerheart damage: %v", err)
 	}

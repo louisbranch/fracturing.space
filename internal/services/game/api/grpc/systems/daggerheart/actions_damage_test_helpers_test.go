@@ -16,7 +16,7 @@ import (
 func mustDamageAppliedPayloadJSON(t *testing.T, characterID string, damage *pb.DaggerheartDamageRequest, profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState) []byte {
 	t.Helper()
 
-	result, mitigated, err := damagetransport.ResolveCharacterDamage(damage, profile, state, nil)
+	result, mitigated, err := damagetransport.ResolveCharacterDamage(damage, profile, state, nil, rules.BaseArmorDecisionAuto)
 	if err != nil {
 		t.Fatalf("apply daggerheart damage: %v", err)
 	}

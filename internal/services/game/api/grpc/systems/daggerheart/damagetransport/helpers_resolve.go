@@ -12,7 +12,7 @@ import (
 
 // ResolveCharacterDamage applies a Daggerheart damage request to one character
 // projection snapshot.
-func ResolveCharacterDamage(req *pb.DaggerheartDamageRequest, profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState, armor *contentstore.DaggerheartArmor) (rules.DamageApplication, bool, error) {
+func ResolveCharacterDamage(req *pb.DaggerheartDamageRequest, profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState, armor *contentstore.DaggerheartArmor, baseArmor rules.BaseArmorDecision) (rules.DamageApplication, bool, error) {
 	target := rules.DamageTarget{
 		HP:              state.Hp,
 		Stress:          state.Stress,
@@ -51,7 +51,9 @@ func ResolveCharacterDamage(req *pb.DaggerheartDamageRequest, profile projection
 			ThresholdBonusWhenArmorDepleted: armorRules.ThresholdBonusWhenArmorDepleted,
 		}
 	}
-	return rules.ResolveDamageApplication(target, damageApplyInputFromProto(req))
+	input := damageApplyInputFromProto(req)
+	input.BaseArmor = baseArmor
+	return rules.ResolveDamageApplication(target, input)
 }
 
 // ResolveAdversaryDamage applies a Daggerheart damage request to one adversary

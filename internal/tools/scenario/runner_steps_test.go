@@ -1665,6 +1665,71 @@ func TestRunAdversaryAttackStepForwardsTimeslowingReaction(t *testing.T) {
 	}
 }
 
+func TestRunAdversaryAttackStepPausesForDefenseChoiceAndResumes(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient, eventClient := fixture.env, fixture.daggerheartClient, fixture.eventClient
+	requests := make([]*daggerheartv1.SessionAdversaryAttackFlowRequest, 0, 2)
+	pauseComplete := false
+
+	eventClient.listEvents = func(_ context.Context, req *gamev1.ListEventsRequest, _ ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
+		if !pauseComplete {
+			return &gamev1.ListEventsResponse{}, nil
+		}
+		return &gamev1.ListEventsResponse{Events: []*gamev1.Event{{Seq: 1}}}, nil
+	}
+
+	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, req *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
+		requests = append(requests, req)
+		if len(requests) == 1 {
+			return &daggerheartv1.SessionAdversaryAttackFlowResponse{
+				ChoiceRequired: &daggerheartv1.DaggerheartCombatChoiceRequired{
+					Stage:       daggerheartv1.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_INCOMING_ATTACK_DEFENSE,
+					CharacterId: "char-frodo",
+					OptionCodes: []string{"armor.shifting", "armor.decline"},
+				},
+			}, nil
+		}
+		pauseComplete = true
+		return &daggerheartv1.SessionAdversaryAttackFlowResponse{
+			AttackRoll: &daggerheartv1.SessionAdversaryAttackRollResponse{RollSeq: 101, Roll: 9, Total: 9},
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Ranger"] = "adv-ranger"
+	state.actors["Frodo"] = "char-frodo"
+
+	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
+		Kind: "adversary_attack",
+		Args: map[string]any{
+			"actor":                  "Ranger",
+			"target":                 "Frodo",
+			"difficulty":             10,
+			"damage_type":            "physical",
+			"require_defense_choice": true,
+			"armor_reaction":         "shifting",
+			"expect_choice_stage":    "incoming_attack_defense",
+			"expect_choice_options":  []any{"armor.shifting", "armor.decline"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runAdversaryAttackStep: %v", err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("request count = %d, want 2", len(requests))
+	}
+	if !requests[0].GetRequireDefenseChoice() {
+		t.Fatal("expected first request to require defense choice")
+	}
+	if requests[0].GetTargetDefenseDecision() != nil {
+		t.Fatalf("first target defense decision = %v, want nil", requests[0].GetTargetDefenseDecision())
+	}
+	if requests[1].GetTargetDefenseDecision() == nil || requests[1].GetTargetDefenseDecision().GetArmorReaction() == nil || requests[1].GetTargetDefenseDecision().GetArmorReaction().GetShifting() == nil {
+		t.Fatalf("second target defense decision = %v, want shifting", requests[1].GetTargetDefenseDecision())
+	}
+}
+
 func TestRunAdversaryAttackStepRequiresTargetOrTargets(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
@@ -2644,6 +2709,83 @@ func TestRunCombinedDamageStepForwardsImpenetrableReaction(t *testing.T) {
 	}
 	if applyDamageReq.GetArmorReaction() == nil || applyDamageReq.GetArmorReaction().GetImpenetrable() == nil {
 		t.Fatalf("armor reaction = %v, want impenetrable", applyDamageReq.GetArmorReaction())
+	}
+}
+
+func TestRunCombinedDamageStepPausesForMitigationChoiceAndResumes(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient, eventClient := fixture.env, fixture.daggerheartClient, fixture.eventClient
+	requests := make([]*daggerheartv1.DaggerheartApplyDamageRequest, 0, 2)
+	currentState := &daggerheartv1.DaggerheartCharacterState{Hp: 6, Armor: 1}
+	pauseComplete := false
+	env.characterClient = &fakeCharacterClient{
+		getSheet: func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			return &gamev1.GetCharacterSheetResponse{
+				State: &gamev1.CharacterState{
+					SystemState: &gamev1.CharacterState_Daggerheart{Daggerheart: currentState},
+				},
+			}, nil
+		},
+	}
+	eventClient.listEvents = func(_ context.Context, req *gamev1.ListEventsRequest, _ ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
+		if !pauseComplete {
+			return &gamev1.ListEventsResponse{}, nil
+		}
+		return &gamev1.ListEventsResponse{Events: []*gamev1.Event{{Seq: 1}}}, nil
+	}
+	dhClient.applyDamage = func(_ context.Context, req *daggerheartv1.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error) {
+		requests = append(requests, req)
+		if len(requests) == 1 {
+			return &daggerheartv1.DaggerheartApplyDamageResponse{
+				CharacterId: req.GetCharacterId(),
+				ChoiceRequired: &daggerheartv1.DaggerheartCombatChoiceRequired{
+					Stage:       daggerheartv1.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_DAMAGE_MITIGATION,
+					CharacterId: req.GetCharacterId(),
+					OptionCodes: []string{"armor.base_slot", "armor.decline"},
+				},
+			}, nil
+		}
+		pauseComplete = true
+		currentState = &daggerheartv1.DaggerheartCharacterState{Hp: 4, Armor: 1}
+		return &daggerheartv1.DaggerheartApplyDamageResponse{
+			CharacterId: req.GetCharacterId(),
+			State:       currentState,
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.actors["Rat A"] = "char-rat-a"
+
+	err := runner.runCombinedDamageStep(context.Background(), state, Step{
+		Kind: "combined_damage",
+		Args: map[string]any{
+			"target":                    "Frodo",
+			"damage_type":               "physical",
+			"require_mitigation_choice": true,
+			"base_armor_decision":       "decline",
+			"expect_choice_stage":       "damage_mitigation",
+			"expect_choice_options":     []any{"armor.base_slot", "armor.decline"},
+			"sources": []any{
+				map[string]any{"character": "Rat A", "amount": 8},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runCombinedDamageStep: %v", err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("request count = %d, want 2", len(requests))
+	}
+	if !requests[0].GetRequireMitigationChoice() {
+		t.Fatal("expected first request to require mitigation choice")
+	}
+	if requests[0].GetMitigationDecision() != nil {
+		t.Fatalf("first mitigation decision = %v, want nil", requests[0].GetMitigationDecision())
+	}
+	if requests[1].GetMitigationDecision() == nil || requests[1].GetMitigationDecision().GetBaseArmor() != daggerheartv1.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_DECLINE {
+		t.Fatalf("second mitigation decision = %v, want decline", requests[1].GetMitigationDecision())
 	}
 }
 

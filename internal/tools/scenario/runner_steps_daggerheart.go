@@ -2006,19 +2006,51 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 		if err != nil {
 			return err
 		}
-		_, err = r.env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
-			CampaignId:    state.campaignID,
-			SceneId:       state.activeSceneID,
-			CharacterId:   targetID,
-			ArmorReaction: buildDamageArmorReaction(step.Args, uint64(optionalInt(step.Args, "armor_reaction_seed", 42))),
-			Damage: buildDamageRequestWithSources(
-				step.Args,
-				optionalString(step.Args, "source", "combined"),
-				int32(amountTotal),
-				sourceIDs,
-			),
+		damageRequest := buildDamageRequestWithSources(
+			step.Args,
+			optionalString(step.Args, "source", "combined"),
+			int32(amountTotal),
+			sourceIDs,
+		)
+		applyReq := &daggerheartv1.DaggerheartApplyDamageRequest{
+			CampaignId:        state.campaignID,
+			SceneId:           state.activeSceneID,
+			CharacterId:       targetID,
+			ArmorReaction:     buildDamageArmorReaction(step.Args, uint64(optionalInt(step.Args, "armor_reaction_seed", 42))),
+			Damage:            damageRequest,
 			RequireDamageRoll: false,
-		})
+		}
+		if optionalBool(step.Args, "require_mitigation_choice", false) {
+			applyReq.RequireMitigationChoice = true
+			pauseResponse, err := r.env.daggerheartClient.ApplyDamage(ctxWithSession, applyReq)
+			if err != nil {
+				return fmt.Errorf("combined_damage apply damage: %w", err)
+			}
+			if err := r.assertCombatChoice(step.Args, pauseResponse.GetChoiceRequired()); err != nil {
+				return err
+			}
+			afterPause, err := r.latestSeq(ctx, state)
+			if err != nil {
+				return err
+			}
+			if afterPause != before {
+				return r.assertf("expected combined_damage mitigation choice to pause without emitting events")
+			}
+			resumeReq := &daggerheartv1.DaggerheartApplyDamageRequest{
+				CampaignId:              applyReq.GetCampaignId(),
+				SceneId:                 applyReq.GetSceneId(),
+				CharacterId:             applyReq.GetCharacterId(),
+				Damage:                  applyReq.GetDamage(),
+				RequireDamageRoll:       applyReq.GetRequireDamageRoll(),
+				RequireMitigationChoice: true,
+				MitigationDecision:      buildDamageMitigationDecision(step.Args, uint64(optionalInt(step.Args, "armor_reaction_seed", 42))),
+			}
+			if resumeReq.GetMitigationDecision() == nil {
+				return nil
+			}
+			applyReq = resumeReq
+		}
+		_, err = r.env.daggerheartClient.ApplyDamage(ctxWithSession, applyReq)
 		if err != nil {
 			return fmt.Errorf("combined_damage apply damage: %w", err)
 		}
@@ -2125,7 +2157,7 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return err
 	}
-	response, err := r.env.daggerheartClient.SessionAdversaryAttackFlow(ctx, &daggerheartv1.SessionAdversaryAttackFlowRequest{
+	request := &daggerheartv1.SessionAdversaryAttackFlowRequest{
 		CampaignId:              state.campaignID,
 		SessionId:               state.sessionID,
 		SceneId:                 state.activeSceneID,
@@ -2148,7 +2180,53 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 			Seed:     &damageSeed,
 			RollMode: commonv1.RollMode_REPLAY,
 		},
-	})
+	}
+	var response *daggerheartv1.SessionAdversaryAttackFlowResponse
+	if optionalBool(step.Args, "require_defense_choice", false) {
+		request.RequireDefenseChoice = true
+		request.TargetArmorReaction = nil
+		pauseResponse, err := r.env.daggerheartClient.SessionAdversaryAttackFlow(ctx, request)
+		if err != nil {
+			return fmt.Errorf("adversary attack flow: %w", err)
+		}
+		if err := r.assertCombatChoice(step.Args, pauseResponse.GetChoiceRequired()); err != nil {
+			return err
+		}
+		if pauseResponse.GetAttackRoll() != nil && pauseResponse.GetAttackRoll().GetRollSeq() != 0 {
+			return r.assertf("expected adversary_attack defense choice to pause before rolling")
+		}
+		afterPause, err := r.latestSeq(ctx, state)
+		if err != nil {
+			return err
+		}
+		if afterPause != before {
+			return r.assertf("expected adversary_attack defense choice to pause without emitting events")
+		}
+		resumeReq := &daggerheartv1.SessionAdversaryAttackFlowRequest{
+			CampaignId:              request.GetCampaignId(),
+			SessionId:               request.GetSessionId(),
+			SceneId:                 request.GetSceneId(),
+			AdversaryId:             request.GetAdversaryId(),
+			TargetId:                request.GetTargetId(),
+			TargetIds:               request.GetTargetIds(),
+			FeatureId:               request.GetFeatureId(),
+			ContributorAdversaryIds: request.GetContributorAdversaryIds(),
+			Difficulty:              request.GetDifficulty(),
+			Advantage:               request.GetAdvantage(),
+			Disadvantage:            request.GetDisadvantage(),
+			Damage:                  request.GetDamage(),
+			RequireDamageRoll:       request.GetRequireDamageRoll(),
+			RequireDefenseChoice:    true,
+			AttackRng:               request.GetAttackRng(),
+			DamageRng:               request.GetDamageRng(),
+			TargetDefenseDecision:   buildIncomingAttackDefenseDecision(step.Args, uint64(optionalInt(step.Args, "armor_reaction_seed", int(damageSeed+1)))),
+		}
+		if resumeReq.GetTargetDefenseDecision() == nil {
+			return nil
+		}
+		request = resumeReq
+	}
+	response, err = r.env.daggerheartClient.SessionAdversaryAttackFlow(ctx, request)
 	if err != nil {
 		return fmt.Errorf("adversary attack flow: %w", err)
 	}

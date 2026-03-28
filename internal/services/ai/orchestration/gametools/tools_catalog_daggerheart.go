@@ -173,7 +173,8 @@ func daggerheartToolDefinitions() []productionToolDefinition {
 				Description: "Runs an authoritative Daggerheart attack flow from action roll through damage application, inferring the acting character's default attack profile when possible",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"character_id":              {Type: "string", Description: "attacking character identifier"},
-					"difficulty":                {Type: "integer", Description: "difficulty target for the attack roll"},
+					"checkpoint_id":             {Type: "string", Description: "optional mitigation resume checkpoint returned by an earlier paused combat flow"},
+					"difficulty":                {Type: "integer", Description: "optional explicit difficulty target; omit to infer from the target"},
 					"modifiers":                 {Type: "array", Description: "optional action-roll modifiers", Items: &schemaProperty{Type: "object", Properties: map[string]schemaProperty{"source": {Type: "string", Description: "modifier source label"}, "value": {Type: "integer", Description: "signed modifier value"}}}},
 					"hope_spends":               {Type: "array", Description: "optional explicit Hope spends declared for the attack roll", Items: &schemaProperty{Type: "object", Properties: map[string]schemaProperty{"source": {Type: "string", Description: "Hope spend source, such as experience or hope_feature"}, "amount": {Type: "integer", Description: "Hope amount for that source"}}}},
 					"underwater":                {Type: "boolean", Description: "whether the attack is underwater"},
@@ -187,6 +188,15 @@ func daggerheartToolDefinitions() []productionToolDefinition {
 					"replace_hope_with_armor":   {Type: "boolean", Description: "whether eligible armor may replace a Hope spend"},
 					"target_is_adversary":       {Type: "boolean", Description: "set true when the target is an adversary rather than a character"},
 					"nearby_adversary_ids":      {Type: "array", Description: "optional nearby adversary identifiers for attacks with splash-style follow-through", Items: &schemaProperty{Type: "string"}},
+					"target_mitigation_decision": {Type: "object", Description: "optional explicit post-hit mitigation decision for a character target", Properties: map[string]schemaProperty{
+						"base_armor": {Type: "string", Description: "optional base armor decision: SPEND or DECLINE"},
+						"reaction": {Type: "object", Description: "optional armor feature reaction", Properties: map[string]schemaProperty{
+							"resilient": {Type: "object", Description: "resilient armor reaction", Properties: map[string]schemaProperty{
+								"rng": rngSchemaProperty("optional rng configuration for the resilient roll"),
+							}},
+							"impenetrable": {Type: "object", Description: "impenetrable armor reaction", Properties: map[string]schemaProperty{}},
+						}},
+					}},
 					"standard_attack": {Type: "object", Description: "optional explicit standard attack profile; omit to infer the acting character's default primary-weapon attack", Properties: map[string]schemaProperty{
 						"trait":           {Type: "string", Description: "attack trait, such as strength or finesse"},
 						"damage_dice":     {Type: "array", Description: "damage dice to roll on a hit", Items: &schemaProperty{Type: "object", Properties: map[string]schemaProperty{"sides": {Type: "integer", Description: "die sides"}, "count": {Type: "integer", Description: "dice count"}}}},
@@ -201,13 +211,49 @@ func daggerheartToolDefinitions() []productionToolDefinition {
 		},
 		{
 			Tool: orchestration.Tool{
+				Name:        "daggerheart_incoming_damage_resolve",
+				Description: "Applies incoming Daggerheart damage to one character and returns a mitigation choice when the player can optionally spend armor or trigger an armor feature",
+				InputSchema: schemaObject(map[string]schemaProperty{
+					"character_id":        {Type: "string", Description: "target character identifier"},
+					"checkpoint_id":       {Type: "string", Description: "optional mitigation resume checkpoint returned by an earlier paused damage resolution"},
+					"scene_id":            {Type: "string", Description: "optional explicit scene identifier; defaults to the active scene"},
+					"roll_seq":            {Type: "integer", Description: "optional recorded damage roll sequence"},
+					"require_damage_roll": {Type: "boolean", Description: "whether damage application should require the recorded damage roll; defaults to true"},
+					"damage": {Type: "object", Description: "incoming damage details", Properties: map[string]schemaProperty{
+						"amount":               {Type: "integer", Description: "incoming damage amount"},
+						"damage_type":          {Type: "string", Description: "damage type: physical, magic, or mixed"},
+						"resist_physical":      {Type: "boolean", Description: "whether the target resists physical damage"},
+						"resist_magic":         {Type: "boolean", Description: "whether the target resists magic damage"},
+						"immune_physical":      {Type: "boolean", Description: "whether the target is immune to physical damage"},
+						"immune_magic":         {Type: "boolean", Description: "whether the target is immune to magic damage"},
+						"direct":               {Type: "boolean", Description: "whether the damage bypasses armor mitigation"},
+						"massive_damage":       {Type: "boolean", Description: "whether the damage may use the massive-damage rule"},
+						"source":               {Type: "string", Description: "short source label"},
+						"source_character_ids": {Type: "array", Description: "optional source character or adversary identifiers", Items: &schemaProperty{Type: "string"}},
+					}},
+					"mitigation_decision": {Type: "object", Description: "optional explicit mitigation decision", Properties: map[string]schemaProperty{
+						"base_armor": {Type: "string", Description: "optional base armor decision: SPEND or DECLINE"},
+						"reaction": {Type: "object", Description: "optional armor feature reaction", Properties: map[string]schemaProperty{
+							"resilient": {Type: "object", Description: "resilient armor reaction", Properties: map[string]schemaProperty{
+								"rng": rngSchemaProperty("optional rng configuration for the resilient roll"),
+							}},
+							"impenetrable": {Type: "object", Description: "impenetrable armor reaction", Properties: map[string]schemaProperty{}},
+						}},
+					}},
+				}),
+			},
+			Execute: wrapDaggerheartExecutor(daggerhearttools.IncomingDamageResolve),
+		},
+		{
+			Tool: orchestration.Tool{
 				Name:        "daggerheart_adversary_attack_flow_resolve",
-				Description: "Runs an authoritative Daggerheart adversary attack flow from attack roll through damage application",
+				Description: "Runs an authoritative Daggerheart adversary attack flow from attack roll through damage application, pausing for player-owned defense choices when needed",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"adversary_id":        {Type: "string", Description: "attacking adversary identifier"},
+					"checkpoint_id":       {Type: "string", Description: "optional mitigation resume checkpoint returned by an earlier paused attack flow"},
 					"target_id":           {Type: "string", Description: "primary target character identifier"},
 					"target_ids":          {Type: "array", Description: "optional additional target character identifiers", Items: &schemaProperty{Type: "string"}},
-					"difficulty":          {Type: "integer", Description: "base difficulty before runtime adjustments"},
+					"difficulty":          {Type: "integer", Description: "optional explicit base difficulty before runtime adjustments; omit to infer from the target"},
 					"advantage":           {Type: "integer", Description: "optional advantage count"},
 					"disadvantage":        {Type: "integer", Description: "optional disadvantage count"},
 					"damage":              {Type: "object", Description: "damage application details", Properties: map[string]schemaProperty{"damage_type": {Type: "string", Description: "damage type: physical, magic, or mixed"}, "resist_physical": {Type: "boolean", Description: "whether the target resists physical damage"}, "resist_magic": {Type: "boolean", Description: "whether the target resists magic damage"}, "immune_physical": {Type: "boolean", Description: "whether the target is immune to physical damage"}, "immune_magic": {Type: "boolean", Description: "whether the target is immune to magic damage"}, "direct": {Type: "boolean", Description: "whether the damage bypasses thresholds"}, "massive_damage": {Type: "boolean", Description: "whether the hit counts as massive damage"}, "source": {Type: "string", Description: "short source label"}, "source_character_ids": {Type: "array", Description: "optional source character identifiers", Items: &schemaProperty{Type: "string"}}}},
@@ -216,10 +262,28 @@ func daggerheartToolDefinitions() []productionToolDefinition {
 					"attack_rng":          rngSchemaProperty("optional rng configuration for the adversary attack roll"),
 					"damage_rng":          rngSchemaProperty("optional rng configuration for the damage roll"),
 					"scene_id":            {Type: "string", Description: "optional explicit scene identifier; defaults to the active scene"},
-					"target_armor_reaction": {Type: "object", Description: "optional armor reaction used by the primary target", Properties: map[string]schemaProperty{
+					"target_armor_reaction": {Type: "object", Description: "optional legacy armor reaction used by the primary target", Properties: map[string]schemaProperty{
 						"shifting": {Type: "object", Description: "spend armor for shifting reaction", Properties: map[string]schemaProperty{}},
 						"timeslowing": {Type: "object", Description: "spend armor for timeslowing reaction", Properties: map[string]schemaProperty{
 							"rng": rngSchemaProperty("optional rng configuration for the timeslowing bonus die"),
+						}},
+					}},
+					"target_defense_decision": {Type: "object", Description: "optional explicit pre-roll defense decision for the primary target", Properties: map[string]schemaProperty{
+						"decline_armor_reaction": {Type: "boolean", Description: "set true to explicitly decline an available armor reaction"},
+						"armor_reaction": {Type: "object", Description: "selected armor reaction", Properties: map[string]schemaProperty{
+							"shifting": {Type: "object", Description: "spend armor for shifting reaction", Properties: map[string]schemaProperty{}},
+							"timeslowing": {Type: "object", Description: "spend armor for timeslowing reaction", Properties: map[string]schemaProperty{
+								"rng": rngSchemaProperty("optional rng configuration for the timeslowing bonus die"),
+							}},
+						}},
+					}},
+					"target_mitigation_decision": {Type: "object", Description: "optional explicit post-hit mitigation decision for the primary target", Properties: map[string]schemaProperty{
+						"base_armor": {Type: "string", Description: "optional base armor decision: SPEND or DECLINE"},
+						"reaction": {Type: "object", Description: "optional armor feature reaction", Properties: map[string]schemaProperty{
+							"resilient": {Type: "object", Description: "resilient armor reaction", Properties: map[string]schemaProperty{
+								"rng": rngSchemaProperty("optional rng configuration for the resilient roll"),
+							}},
+							"impenetrable": {Type: "object", Description: "impenetrable armor reaction", Properties: map[string]schemaProperty{}},
 						}},
 					}},
 					"feature_id":                {Type: "string", Description: "optional adversary feature identifier driving the attack"},

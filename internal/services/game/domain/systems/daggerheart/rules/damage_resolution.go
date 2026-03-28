@@ -2,6 +2,20 @@ package rules
 
 import "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 
+// BaseArmorDecision controls whether base armor mitigation should be applied.
+type BaseArmorDecision int
+
+const (
+	// BaseArmorDecisionAuto preserves the legacy behavior of applying armor
+	// automatically when it can mitigate damage.
+	BaseArmorDecisionAuto BaseArmorDecision = iota
+	// BaseArmorDecisionSpend forces base armor mitigation when it is available.
+	BaseArmorDecisionSpend
+	// BaseArmorDecisionDecline skips base armor mitigation even when it would be
+	// available.
+	BaseArmorDecisionDecline
+)
+
 // DamageApplyInput captures transport-agnostic inputs for applying damage.
 type DamageApplyInput struct {
 	Amount       int
@@ -9,6 +23,7 @@ type DamageApplyInput struct {
 	Resistance   ResistanceProfile
 	Direct       bool
 	AllowMassive bool
+	BaseArmor    BaseArmorDecision
 }
 
 // DamageTarget captures current state and thresholds for one damage target.
@@ -55,6 +70,18 @@ func ResolveDamageApplication(target DamageTarget, input DamageApplyInput) (Dama
 		}
 		application.StressBefore = target.Stress
 		application.StressAfter = target.Stress
+		return application, mitigated, nil
+	}
+
+	if input.BaseArmor == BaseArmorDecisionDecline {
+		application, applyErr := ApplyDamage(target.HP, adjusted, target.MajorThreshold, target.SevereThreshold, options)
+		if applyErr != nil {
+			return DamageApplication{}, mitigated, applyErr
+		}
+		application.StressBefore = target.Stress
+		application.StressAfter = target.Stress
+		application.ArmorBefore = target.Armor
+		application.ArmorAfter = target.Armor
 		return application, mitigated, nil
 	}
 

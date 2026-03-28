@@ -3,6 +3,7 @@ package damagetransport
 import (
 	"context"
 
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -47,6 +48,7 @@ type SystemCommandInput = workflowruntime.SystemCommandInput
 type CharacterDamageResult struct {
 	CharacterID string
 	State       projectionstore.DaggerheartCharacterState
+	Choice      *pb.DaggerheartCombatChoiceRequired
 }
 
 // AdversaryDamageResult is the read-model state returned after applying

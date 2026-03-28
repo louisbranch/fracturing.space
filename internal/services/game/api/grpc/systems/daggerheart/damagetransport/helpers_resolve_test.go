@@ -54,7 +54,7 @@ func TestResolveCharacterDamageMitigatedToZero(t *testing.T) {
 	result, mitigated, err := ResolveCharacterDamage(&pb.DaggerheartDamageRequest{
 		Amount:     1,
 		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
-	}, profile, state, nil)
+	}, profile, state, nil, rules.BaseArmorDecisionAuto)
 	if err != nil {
 		t.Fatalf("ResolveCharacterDamage returned error: %v", err)
 	}

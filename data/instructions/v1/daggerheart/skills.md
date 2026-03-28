@@ -13,8 +13,9 @@
 
 - Daggerheart uses a Duality Dice system (Hope die + Fear die) for action rolls.
 - Use daggerheart_action_roll_resolve for authoritative player action resolution during live play.
-- Use daggerheart_attack_flow_resolve when the turn is a full player attack that should carry through roll, attack outcome, and damage.
-- Use daggerheart_adversary_attack_flow_resolve when an adversary attack should carry through roll, outcome, and damage on the board.
+- Use daggerheart_attack_flow_resolve when the turn is a full player attack that should carry through roll, attack outcome, and damage, including post-hit mitigation choices for a character target.
+- Use daggerheart_adversary_attack_flow_resolve when an adversary attack should carry through roll, outcome, and damage on the board, including pre-roll defense choices such as Shifting or Timeslowing when the target has them.
+- Use daggerheart_incoming_damage_resolve for hazards, GM-move damage, environmental fallout, and any other direct incoming damage that is not part of an attack flow.
 - Use daggerheart_group_action_flow_resolve for supporter-assisted action sequences.
 - Use daggerheart_reaction_flow_resolve for true Daggerheart reaction resolution when the rules call for a reaction, not a normal action roll.
 - Use daggerheart_tag_team_flow_resolve for paired action sequences where two characters roll and one result is chosen.
@@ -48,6 +49,7 @@
 
 - Use the Daggerheart combat board context for GM Fear, spotlight, visible countdowns, and active adversaries.
 - Use daggerheart_combat_board_read if you need the latest authoritative board state during a turn.
+- If a combat flow returns `choice_required`, pause to ask only the affected player for that defense decision, then rerun the same tool with the returned `checkpoint_id` plus the explicit decision. Use daggerheart_incoming_damage_resolve when the unresolved step is pure incoming damage.
 - When pressure should persist across beats, create or advance a countdown instead of only describing escalation in prose.
 - Re-read the combat board after countdown or adversary updates when the next narrated beat depends on the changed board state.
 - Keep narration consistent with current spotlight ownership and active adversary pressure.

@@ -10,9 +10,11 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	"google.golang.org/protobuf/proto"
 )
 
 type attackDamageSpecInput struct {
+	Amount             int      `json:"amount,omitempty"`
 	DamageType         string   `json:"damage_type"`
 	ResistPhysical     bool     `json:"resist_physical,omitempty"`
 	ResistMagic        bool     `json:"resist_magic,omitempty"`
@@ -34,24 +36,36 @@ type standardAttackProfileInput struct {
 
 type beastformAttackProfileInput struct{}
 
+type damageArmorReactionInput struct {
+	Resilient    *timeslowingArmorReactionInput `json:"resilient,omitempty"`
+	Impenetrable *struct{}                      `json:"impenetrable,omitempty"`
+}
+
+type damageMitigationDecisionInput struct {
+	BaseArmor string                    `json:"base_armor,omitempty"`
+	Reaction  *damageArmorReactionInput `json:"reaction,omitempty"`
+}
+
 type attackFlowResolveInput struct {
-	CharacterID            string                       `json:"character_id"`
-	Difficulty             int                          `json:"difficulty"`
-	Modifiers              []actionRollModifier         `json:"modifiers,omitempty"`
-	HopeSpends             []actionRollHopeSpend        `json:"hope_spends,omitempty"`
-	Underwater             bool                         `json:"underwater,omitempty"`
-	BreathSceneCountdownID string                       `json:"breath_scene_countdown_id,omitempty"`
-	TargetID               string                       `json:"target_id"`
-	Damage                 *attackDamageSpecInput       `json:"damage"`
-	RequireDamageRoll      *bool                        `json:"require_damage_roll,omitempty"`
-	ActionRng              *rngRequest                  `json:"action_rng,omitempty"`
-	DamageRng              *rngRequest                  `json:"damage_rng,omitempty"`
-	SceneID                string                       `json:"scene_id,omitempty"`
-	ReplaceHopeWithArmor   bool                         `json:"replace_hope_with_armor,omitempty"`
-	TargetIsAdversary      bool                         `json:"target_is_adversary,omitempty"`
-	NearbyAdversaryIDs     []string                     `json:"nearby_adversary_ids,omitempty"`
-	StandardAttack         *standardAttackProfileInput  `json:"standard_attack,omitempty"`
-	BeastformAttack        *beastformAttackProfileInput `json:"beastform_attack,omitempty"`
+	CharacterID              string                         `json:"character_id"`
+	CheckpointID             string                         `json:"checkpoint_id,omitempty"`
+	Difficulty               *int                           `json:"difficulty,omitempty"`
+	Modifiers                []actionRollModifier           `json:"modifiers,omitempty"`
+	HopeSpends               []actionRollHopeSpend          `json:"hope_spends,omitempty"`
+	Underwater               bool                           `json:"underwater,omitempty"`
+	BreathSceneCountdownID   string                         `json:"breath_scene_countdown_id,omitempty"`
+	TargetID                 string                         `json:"target_id"`
+	Damage                   *attackDamageSpecInput         `json:"damage"`
+	RequireDamageRoll        *bool                          `json:"require_damage_roll,omitempty"`
+	ActionRng                *rngRequest                    `json:"action_rng,omitempty"`
+	DamageRng                *rngRequest                    `json:"damage_rng,omitempty"`
+	SceneID                  string                         `json:"scene_id,omitempty"`
+	ReplaceHopeWithArmor     bool                           `json:"replace_hope_with_armor,omitempty"`
+	TargetIsAdversary        bool                           `json:"target_is_adversary,omitempty"`
+	NearbyAdversaryIDs       []string                       `json:"nearby_adversary_ids,omitempty"`
+	TargetMitigationDecision *damageMitigationDecisionInput `json:"target_mitigation_decision,omitempty"`
+	StandardAttack           *standardAttackProfileInput    `json:"standard_attack,omitempty"`
+	BeastformAttack          *beastformAttackProfileInput   `json:"beastform_attack,omitempty"`
 }
 
 type timeslowingArmorReactionInput struct {
@@ -64,21 +78,39 @@ type incomingAttackArmorReactionInput struct {
 }
 
 type adversaryAttackFlowResolveInput struct {
-	AdversaryID             string                            `json:"adversary_id"`
-	TargetID                string                            `json:"target_id,omitempty"`
-	TargetIDs               []string                          `json:"target_ids,omitempty"`
-	Difficulty              int                               `json:"difficulty"`
-	Advantage               int                               `json:"advantage,omitempty"`
-	Disadvantage            int                               `json:"disadvantage,omitempty"`
-	Damage                  *attackDamageSpecInput            `json:"damage"`
-	RequireDamageRoll       *bool                             `json:"require_damage_roll,omitempty"`
-	DamageCritical          bool                              `json:"damage_critical,omitempty"`
-	AttackRng               *rngRequest                       `json:"attack_rng,omitempty"`
-	DamageRng               *rngRequest                       `json:"damage_rng,omitempty"`
-	SceneID                 string                            `json:"scene_id,omitempty"`
-	TargetArmorReaction     *incomingAttackArmorReactionInput `json:"target_armor_reaction,omitempty"`
-	FeatureID               string                            `json:"feature_id,omitempty"`
-	ContributorAdversaryIDs []string                          `json:"contributor_adversary_ids,omitempty"`
+	AdversaryID              string                              `json:"adversary_id"`
+	CheckpointID             string                              `json:"checkpoint_id,omitempty"`
+	TargetID                 string                              `json:"target_id,omitempty"`
+	TargetIDs                []string                            `json:"target_ids,omitempty"`
+	Difficulty               *int                                `json:"difficulty,omitempty"`
+	Advantage                int                                 `json:"advantage,omitempty"`
+	Disadvantage             int                                 `json:"disadvantage,omitempty"`
+	Damage                   *attackDamageSpecInput              `json:"damage"`
+	RequireDamageRoll        *bool                               `json:"require_damage_roll,omitempty"`
+	DamageCritical           bool                                `json:"damage_critical,omitempty"`
+	AttackRng                *rngRequest                         `json:"attack_rng,omitempty"`
+	DamageRng                *rngRequest                         `json:"damage_rng,omitempty"`
+	SceneID                  string                              `json:"scene_id,omitempty"`
+	TargetArmorReaction      *incomingAttackArmorReactionInput   `json:"target_armor_reaction,omitempty"`
+	TargetDefenseDecision    *incomingAttackDefenseDecisionInput `json:"target_defense_decision,omitempty"`
+	TargetMitigationDecision *damageMitigationDecisionInput      `json:"target_mitigation_decision,omitempty"`
+	FeatureID                string                              `json:"feature_id,omitempty"`
+	ContributorAdversaryIDs  []string                            `json:"contributor_adversary_ids,omitempty"`
+}
+
+type incomingAttackDefenseDecisionInput struct {
+	DeclineArmorReaction bool                              `json:"decline_armor_reaction,omitempty"`
+	ArmorReaction        *incomingAttackArmorReactionInput `json:"armor_reaction,omitempty"`
+}
+
+type incomingDamageResolveInput struct {
+	CharacterID        string                         `json:"character_id"`
+	CheckpointID       string                         `json:"checkpoint_id,omitempty"`
+	Damage             *attackDamageSpecInput         `json:"damage"`
+	RollSeq            *uint64                        `json:"roll_seq,omitempty"`
+	RequireDamageRoll  *bool                          `json:"require_damage_roll,omitempty"`
+	SceneID            string                         `json:"scene_id,omitempty"`
+	MitigationDecision *damageMitigationDecisionInput `json:"mitigation_decision,omitempty"`
 }
 
 type groupActionSupporterInput struct {
@@ -175,6 +207,28 @@ type damageRollSummary struct {
 	Rng           *rngResult        `json:"rng,omitempty"`
 }
 
+type damagePreviewSummary struct {
+	Severity     string `json:"severity,omitempty"`
+	Marks        int    `json:"marks"`
+	HPBefore     int    `json:"hp_before"`
+	HPAfter      int    `json:"hp_after"`
+	StressBefore int    `json:"stress_before"`
+	StressAfter  int    `json:"stress_after"`
+	ArmorBefore  int    `json:"armor_before"`
+	ArmorAfter   int    `json:"armor_after"`
+	ArmorSpent   int    `json:"armor_spent"`
+}
+
+type combatChoiceRequiredSummary struct {
+	Stage                 string                `json:"stage,omitempty"`
+	CharacterID           string                `json:"character_id,omitempty"`
+	CheckpointID          string                `json:"checkpoint_id,omitempty"`
+	OptionCodes           []string              `json:"option_codes,omitempty"`
+	Reason                string                `json:"reason,omitempty"`
+	DeclinePreview        *damagePreviewSummary `json:"decline_preview,omitempty"`
+	SpendBaseArmorPreview *damagePreviewSummary `json:"spend_base_armor_preview,omitempty"`
+}
+
 type compactCharacterStateSummary struct {
 	HP         int              `json:"hp"`
 	Hope       int              `json:"hope"`
@@ -201,6 +255,7 @@ type attackFlowResolveResult struct {
 	DamageRoll             *damageRollSummary             `json:"damage_roll,omitempty"`
 	CharacterDamageApplied *characterDamageAppliedSummary `json:"character_damage_applied,omitempty"`
 	AdversaryDamageApplied *adversaryDamageAppliedSummary `json:"adversary_damage_applied,omitempty"`
+	ChoiceRequired         *combatChoiceRequiredSummary   `json:"choice_required,omitempty"`
 }
 
 type adversaryAttackRollSummary struct {
@@ -217,6 +272,12 @@ type adversaryAttackFlowResolveResult struct {
 	DamageRoll         *damageRollSummary              `json:"damage_roll,omitempty"`
 	DamageApplied      *characterDamageAppliedSummary  `json:"damage_applied,omitempty"`
 	DamageApplications []characterDamageAppliedSummary `json:"damage_applications,omitempty"`
+	ChoiceRequired     *combatChoiceRequiredSummary    `json:"choice_required,omitempty"`
+}
+
+type incomingDamageResolveResult struct {
+	CharacterDamageApplied *characterDamageAppliedSummary `json:"character_damage_applied,omitempty"`
+	ChoiceRequired         *combatChoiceRequiredSummary   `json:"choice_required,omitempty"`
 }
 
 type groupActionSupporterRollSummary struct {
@@ -305,29 +366,62 @@ func AttackFlowResolve(runtime Runtime, ctx context.Context, argsJSON []byte) (o
 	if err != nil {
 		return orchestration.ToolResult{}, err
 	}
+	targetIsAdversary := input.TargetIsAdversary || boardPayload.hasAdversary(targetID)
+	if strings.TrimSpace(input.CheckpointID) != "" {
+		if targetIsAdversary {
+			return orchestration.ToolResult{}, fmt.Errorf("checkpoint_id is only supported when the attack target is a character")
+		}
+		if input.TargetMitigationDecision == nil {
+			return orchestration.ToolResult{}, fmt.Errorf("target_mitigation_decision is required when checkpoint_id is set")
+		}
+		return resumeCharacterDamageFromCheckpoint(
+			runtime,
+			callCtx,
+			campaignID,
+			sceneID,
+			targetID,
+			incomingDamageSpecToProto(input.Damage),
+			[]string{characterID},
+			input.RequireDamageRoll,
+			input.TargetMitigationDecision,
+			input.CheckpointID,
+			func(resp *pb.DaggerheartApplyDamageResponse, choice *combatChoiceRequiredSummary) (orchestration.ToolResult, error) {
+				return toolResultJSON(attackFlowResolveResult{
+					CharacterDamageApplied: characterDamageAppliedSummaryFromProto(resp),
+					ChoiceRequired:         choice,
+				})
+			},
+		)
+	}
 	profile, err := resolveAttackProfile(runtime, callCtx, campaignID, characterID, input.StandardAttack, input.BeastformAttack)
+	if err != nil {
+		return orchestration.ToolResult{}, err
+	}
+	difficulty, err := resolveAttackDifficulty(runtime, callCtx, campaignID, targetID, targetIsAdversary, boardPayload, input.Difficulty)
 	if err != nil {
 		return orchestration.ToolResult{}, err
 	}
 	damageSpec := mergeAttackDamageSpec(input.Damage, profile.Damage)
 	req := &pb.SessionAttackFlowRequest{
-		CampaignId:             campaignID,
-		SessionId:              sessionID,
-		SceneId:                sceneID,
-		CharacterId:            characterID,
-		Difficulty:             int32(input.Difficulty),
-		Modifiers:              actionRollModifiersToProto(input.Modifiers),
-		HopeSpends:             actionRollHopeSpendsToProto(input.HopeSpends),
-		Underwater:             input.Underwater,
-		BreathSceneCountdownId: strings.TrimSpace(input.BreathSceneCountdownID),
-		TargetId:               targetID,
-		Damage:                 attackDamageSpecToProto(damageSpec),
-		RequireDamageRoll:      boolDefaultTrue(input.RequireDamageRoll),
-		ActionRng:              rngRequestToProto(input.ActionRng),
-		DamageRng:              rngRequestToProto(input.DamageRng),
-		ReplaceHopeWithArmor:   input.ReplaceHopeWithArmor,
-		TargetIsAdversary:      input.TargetIsAdversary || boardPayload.hasAdversary(targetID),
-		NearbyAdversaryIds:     compactStrings(input.NearbyAdversaryIDs),
+		CampaignId:               campaignID,
+		SessionId:                sessionID,
+		SceneId:                  sceneID,
+		CharacterId:              characterID,
+		Difficulty:               int32(difficulty),
+		Modifiers:                actionRollModifiersToProto(input.Modifiers),
+		HopeSpends:               actionRollHopeSpendsToProto(input.HopeSpends),
+		Underwater:               input.Underwater,
+		BreathSceneCountdownId:   strings.TrimSpace(input.BreathSceneCountdownID),
+		TargetId:                 targetID,
+		Damage:                   attackDamageSpecToProto(damageSpec),
+		RequireDamageRoll:        boolDefaultTrue(input.RequireDamageRoll),
+		ActionRng:                rngRequestToProto(input.ActionRng),
+		DamageRng:                rngRequestToProto(input.DamageRng),
+		ReplaceHopeWithArmor:     input.ReplaceHopeWithArmor,
+		TargetIsAdversary:        targetIsAdversary,
+		NearbyAdversaryIds:       compactStrings(input.NearbyAdversaryIDs),
+		TargetMitigationDecision: damageMitigationDecisionToProto(input.TargetMitigationDecision),
+		RequireDefenseChoice:     true,
 	}
 	if err := applyAttackProfile(req, profile.Standard, profile.Beastform); err != nil {
 		return orchestration.ToolResult{}, err
@@ -346,6 +440,7 @@ func AttackFlowResolve(runtime Runtime, ctx context.Context, argsJSON []byte) (o
 		DamageRoll:             damageRollSummaryFromProto(resp.GetDamageRoll()),
 		CharacterDamageApplied: characterDamageAppliedSummaryFromProto(resp.GetDamageApplied()),
 		AdversaryDamageApplied: adversaryDamageAppliedSummaryFromProto(resp.GetAdversaryDamageApplied()),
+		ChoiceRequired:         choiceRequiredSummaryFromProto(resp.GetChoiceRequired(), resp.GetDamageRoll()),
 	})
 }
 
@@ -381,24 +476,60 @@ func AdversaryAttackFlowResolve(runtime Runtime, ctx context.Context, argsJSON [
 			return orchestration.ToolResult{}, err
 		}
 	}
+	if strings.TrimSpace(input.CheckpointID) != "" {
+		if input.TargetMitigationDecision == nil {
+			return orchestration.ToolResult{}, fmt.Errorf("target_mitigation_decision is required when checkpoint_id is set")
+		}
+		return resumeCharacterDamageFromCheckpoint(
+			runtime,
+			callCtx,
+			campaignID,
+			sceneID,
+			targetIDs[0],
+			incomingDamageSpecToProto(input.Damage),
+			[]string{adversaryID},
+			input.RequireDamageRoll,
+			input.TargetMitigationDecision,
+			input.CheckpointID,
+			func(resp *pb.DaggerheartApplyDamageResponse, choice *combatChoiceRequiredSummary) (orchestration.ToolResult, error) {
+				return toolResultJSON(adversaryAttackFlowResolveResult{
+					DamageApplied:  characterDamageAppliedSummaryFromProto(resp),
+					ChoiceRequired: choice,
+				})
+			},
+		)
+	}
+	difficulty, err := resolveCharacterDifficulty(runtime, callCtx, campaignID, targetIDs[0], input.Difficulty)
+	if err != nil {
+		return orchestration.ToolResult{}, err
+	}
+	targetDefenseDecision := incomingAttackDefenseDecisionToProto(input.TargetDefenseDecision)
+	if targetDefenseDecision == nil && input.TargetArmorReaction != nil {
+		targetDefenseDecision = &pb.DaggerheartIncomingAttackDefenseDecision{
+			ArmorReaction: incomingAttackArmorReactionToProto(input.TargetArmorReaction),
+		}
+	}
 	resp, err := runtime.DaggerheartClient().SessionAdversaryAttackFlow(callCtx, &pb.SessionAdversaryAttackFlowRequest{
-		CampaignId:              campaignID,
-		SessionId:               sessionID,
-		SceneId:                 sceneID,
-		AdversaryId:             adversaryID,
-		TargetId:                targetIDs[0],
-		TargetIds:               targetIDs[1:],
-		Difficulty:              int32(input.Difficulty),
-		Advantage:               int32(input.Advantage),
-		Disadvantage:            int32(input.Disadvantage),
-		Damage:                  attackDamageSpecToProto(input.Damage),
-		RequireDamageRoll:       boolDefaultTrue(input.RequireDamageRoll),
-		DamageCritical:          input.DamageCritical,
-		AttackRng:               rngRequestToProto(input.AttackRng),
-		DamageRng:               rngRequestToProto(input.DamageRng),
-		TargetArmorReaction:     incomingAttackArmorReactionToProto(input.TargetArmorReaction),
-		FeatureId:               strings.TrimSpace(input.FeatureID),
-		ContributorAdversaryIds: compactStrings(input.ContributorAdversaryIDs),
+		CampaignId:               campaignID,
+		SessionId:                sessionID,
+		SceneId:                  sceneID,
+		AdversaryId:              adversaryID,
+		TargetId:                 targetIDs[0],
+		TargetIds:                targetIDs[1:],
+		Difficulty:               int32(difficulty),
+		Advantage:                int32(input.Advantage),
+		Disadvantage:             int32(input.Disadvantage),
+		Damage:                   attackDamageSpecToProto(input.Damage),
+		RequireDamageRoll:        boolDefaultTrue(input.RequireDamageRoll),
+		DamageCritical:           input.DamageCritical,
+		AttackRng:                rngRequestToProto(input.AttackRng),
+		DamageRng:                rngRequestToProto(input.DamageRng),
+		TargetArmorReaction:      incomingAttackArmorReactionToProto(input.TargetArmorReaction),
+		TargetDefenseDecision:    targetDefenseDecision,
+		TargetMitigationDecision: damageMitigationDecisionToProto(input.TargetMitigationDecision),
+		RequireDefenseChoice:     true,
+		FeatureId:                strings.TrimSpace(input.FeatureID),
+		ContributorAdversaryIds:  compactStrings(input.ContributorAdversaryIDs),
 	})
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("session adversary attack flow failed: %w", err)
@@ -419,6 +550,78 @@ func AdversaryAttackFlowResolve(runtime Runtime, ctx context.Context, argsJSON [
 		DamageRoll:         damageRollSummaryFromProto(resp.GetDamageRoll()),
 		DamageApplied:      characterDamageAppliedSummaryFromProto(resp.GetDamageApplied()),
 		DamageApplications: damageApplications,
+		ChoiceRequired:     choiceRequiredSummaryFromProto(resp.GetChoiceRequired(), resp.GetDamageRoll()),
+	})
+}
+
+// IncomingDamageResolve applies incoming damage to a character while exposing
+// optional mitigation choices instead of forcing the caller to stitch together
+// lower-level damage mutations.
+func IncomingDamageResolve(runtime Runtime, ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
+	var input incomingDamageResolveInput
+	if err := json.Unmarshal(argsJSON, &input); err != nil {
+		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
+	}
+	campaignID := runtime.ResolveCampaignID("")
+	if campaignID == "" {
+		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
+	}
+	characterID := strings.TrimSpace(input.CharacterID)
+	if characterID == "" {
+		return orchestration.ToolResult{}, fmt.Errorf("character_id is required")
+	}
+	if input.Damage == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("damage is required")
+	}
+	callCtx, cancel := runtime.CallContext(ctx)
+	defer cancel()
+	sceneID := strings.TrimSpace(input.SceneID)
+	if sceneID == "" {
+		var err error
+		sceneID, err = runtime.ResolveSceneID(callCtx, campaignID, "")
+		if err != nil {
+			return orchestration.ToolResult{}, err
+		}
+	}
+	if strings.TrimSpace(input.CheckpointID) != "" {
+		return resumeCharacterDamageFromCheckpoint(
+			runtime,
+			callCtx,
+			campaignID,
+			sceneID,
+			characterID,
+			incomingDamageSpecToProto(input.Damage),
+			nil,
+			input.RequireDamageRoll,
+			input.MitigationDecision,
+			input.CheckpointID,
+			func(resp *pb.DaggerheartApplyDamageResponse, choice *combatChoiceRequiredSummary) (orchestration.ToolResult, error) {
+				return toolResultJSON(incomingDamageResolveResult{
+					CharacterDamageApplied: characterDamageAppliedSummaryFromProto(resp),
+					ChoiceRequired:         choice,
+				})
+			},
+		)
+	}
+	resp, err := runtime.DaggerheartClient().ApplyDamage(callCtx, &pb.DaggerheartApplyDamageRequest{
+		CampaignId:              campaignID,
+		CharacterId:             characterID,
+		SceneId:                 sceneID,
+		Damage:                  incomingDamageSpecToProto(input.Damage),
+		RollSeq:                 input.RollSeq,
+		RequireDamageRoll:       boolDefaultTrue(input.RequireDamageRoll),
+		MitigationDecision:      damageMitigationDecisionToProto(input.MitigationDecision),
+		RequireMitigationChoice: true,
+	})
+	if err != nil {
+		return orchestration.ToolResult{}, fmt.Errorf("apply damage failed: %w", err)
+	}
+	if resp == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("apply damage response is missing")
+	}
+	return toolResultJSON(incomingDamageResolveResult{
+		CharacterDamageApplied: characterDamageAppliedSummaryFromProto(resp),
+		ChoiceRequired:         choiceRequiredSummaryFromProto(resp.GetChoiceRequired(), nil),
 	})
 }
 
@@ -759,6 +962,38 @@ func characterDamageAppliedSummaryFromProto(resp *pb.DaggerheartApplyDamageRespo
 	}
 }
 
+func choiceRequiredSummaryFromProto(resp *pb.DaggerheartCombatChoiceRequired, damageRoll *pb.SessionDamageRollResponse) *combatChoiceRequiredSummary {
+	if resp == nil {
+		return nil
+	}
+	return &combatChoiceRequiredSummary{
+		Stage:                 resp.GetStage().String(),
+		CharacterID:           strings.TrimSpace(resp.GetCharacterId()),
+		CheckpointID:          damageRollCheckpointID(resp.GetStage(), damageRoll),
+		OptionCodes:           compactStrings(resp.GetOptionCodes()),
+		Reason:                strings.TrimSpace(resp.GetReason()),
+		DeclinePreview:        damagePreviewSummaryFromProto(resp.GetDeclinePreview()),
+		SpendBaseArmorPreview: damagePreviewSummaryFromProto(resp.GetSpendBaseArmorPreview()),
+	}
+}
+
+func damagePreviewSummaryFromProto(resp *pb.DaggerheartDamagePreview) *damagePreviewSummary {
+	if resp == nil {
+		return nil
+	}
+	return &damagePreviewSummary{
+		Severity:     strings.TrimSpace(resp.GetSeverity()),
+		Marks:        int(resp.GetMarks()),
+		HPBefore:     int(resp.GetHpBefore()),
+		HPAfter:      int(resp.GetHpAfter()),
+		StressBefore: int(resp.GetStressBefore()),
+		StressAfter:  int(resp.GetStressAfter()),
+		ArmorBefore:  int(resp.GetArmorBefore()),
+		ArmorAfter:   int(resp.GetArmorAfter()),
+		ArmorSpent:   int(resp.GetArmorSpent()),
+	}
+}
+
 func compactCharacterStateSummaryFromProto(state *pb.DaggerheartCharacterState) *compactCharacterStateSummary {
 	if state == nil {
 		return nil
@@ -771,6 +1006,87 @@ func compactCharacterStateSummaryFromProto(state *pb.DaggerheartCharacterState) 
 		LifeState:  daggerheartLifeStateToString(state.GetLifeState()),
 		Conditions: conditionsFromProto(state.GetConditionStates()),
 	}
+}
+
+func resumeCharacterDamageFromCheckpoint(
+	runtime Runtime,
+	ctx context.Context,
+	campaignID string,
+	sceneID string,
+	characterID string,
+	damage *pb.DaggerheartDamageRequest,
+	sourceCharacterIDs []string,
+	requireDamageRoll *bool,
+	mitigationDecision *damageMitigationDecisionInput,
+	checkpointID string,
+	buildResult func(*pb.DaggerheartApplyDamageResponse, *combatChoiceRequiredSummary) (orchestration.ToolResult, error),
+) (orchestration.ToolResult, error) {
+	if damage == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("damage is required")
+	}
+	rollSeq, amount, err := parseDamageRollCheckpointID(checkpointID)
+	if err != nil {
+		return orchestration.ToolResult{}, err
+	}
+	damage = cloneDamageRequestForCheckpointResume(damage, sourceCharacterIDs, amount)
+	resp, err := runtime.DaggerheartClient().ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
+		CampaignId:              campaignID,
+		CharacterId:             strings.TrimSpace(characterID),
+		SceneId:                 strings.TrimSpace(sceneID),
+		Damage:                  damage,
+		RollSeq:                 &rollSeq,
+		RequireDamageRoll:       boolDefaultTrue(requireDamageRoll),
+		MitigationDecision:      damageMitigationDecisionToProto(mitigationDecision),
+		RequireMitigationChoice: true,
+	})
+	if err != nil {
+		return orchestration.ToolResult{}, fmt.Errorf("resume damage from checkpoint failed: %w", err)
+	}
+	if resp == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("resume damage from checkpoint response is missing")
+	}
+	return buildResult(resp, choiceRequiredSummaryFromProto(resp.GetChoiceRequired(), nil))
+}
+
+func cloneDamageRequestForCheckpointResume(damage *pb.DaggerheartDamageRequest, extraSourceCharacterIDs []string, amount int32) *pb.DaggerheartDamageRequest {
+	if damage == nil {
+		return nil
+	}
+	clone := proto.Clone(damage).(*pb.DaggerheartDamageRequest)
+	clone.Amount = amount
+	clone.SourceCharacterIds = compactStrings(append(clone.GetSourceCharacterIds(), extraSourceCharacterIDs...))
+	return clone
+}
+
+func damageRollCheckpointID(stage pb.DaggerheartCombatChoiceStage, damageRoll *pb.SessionDamageRollResponse) string {
+	if stage != pb.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_DAMAGE_MITIGATION || damageRoll == nil || damageRoll.GetRollSeq() == 0 {
+		return ""
+	}
+	return fmt.Sprintf("damage-roll:%d:%d", damageRoll.GetRollSeq(), damageRoll.GetTotal())
+}
+
+func parseDamageRollCheckpointID(checkpointID string) (uint64, int32, error) {
+	value := strings.TrimSpace(checkpointID)
+	if value == "" {
+		return 0, 0, fmt.Errorf("checkpoint_id is required")
+	}
+	raw, ok := strings.CutPrefix(value, "damage-roll:")
+	if !ok {
+		return 0, 0, fmt.Errorf("unsupported checkpoint_id %q", checkpointID)
+	}
+	parts := strings.Split(raw, ":")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("invalid checkpoint_id %q", checkpointID)
+	}
+	rollSeq, err := strconv.ParseUint(parts[0], 10, 64)
+	if err != nil || rollSeq == 0 {
+		return 0, 0, fmt.Errorf("invalid checkpoint_id %q", checkpointID)
+	}
+	amount, err := strconv.ParseInt(parts[1], 10, 32)
+	if err != nil || amount < 0 {
+		return 0, 0, fmt.Errorf("invalid checkpoint_id %q", checkpointID)
+	}
+	return rollSeq, int32(amount), nil
 }
 
 func adversaryDamageAppliedSummaryFromProto(resp *pb.DaggerheartApplyAdversaryDamageResponse) *adversaryDamageAppliedSummary {
@@ -872,6 +1188,24 @@ func attackDamageSpecToProto(input *attackDamageSpecInput) *pb.DaggerheartAttack
 	}
 }
 
+func incomingDamageSpecToProto(input *attackDamageSpecInput) *pb.DaggerheartDamageRequest {
+	if input == nil {
+		return nil
+	}
+	return &pb.DaggerheartDamageRequest{
+		Amount:             int32(input.Amount),
+		DamageType:         daggerheartDamageTypeToProto(input.DamageType),
+		ResistPhysical:     input.ResistPhysical,
+		ResistMagic:        input.ResistMagic,
+		ImmunePhysical:     input.ImmunePhysical,
+		ImmuneMagic:        input.ImmuneMagic,
+		Direct:             input.Direct,
+		MassiveDamage:      input.MassiveDamage,
+		Source:             strings.TrimSpace(input.Source),
+		SourceCharacterIds: compactStrings(input.SourceCharacterIDs),
+	}
+}
+
 func incomingAttackArmorReactionToProto(input *incomingAttackArmorReactionInput) *pb.DaggerheartIncomingAttackArmorReaction {
 	if input == nil {
 		return nil
@@ -893,6 +1227,67 @@ func incomingAttackArmorReactionToProto(input *incomingAttackArmorReactionInput)
 		}
 	}
 	if selected != 1 {
+		return nil
+	}
+	return resp
+}
+
+func incomingAttackDefenseDecisionToProto(input *incomingAttackDefenseDecisionInput) *pb.DaggerheartIncomingAttackDefenseDecision {
+	if input == nil {
+		return nil
+	}
+	resp := &pb.DaggerheartIncomingAttackDefenseDecision{
+		DeclineArmorReaction: input.DeclineArmorReaction,
+		ArmorReaction:        incomingAttackArmorReactionToProto(input.ArmorReaction),
+	}
+	if !resp.GetDeclineArmorReaction() && resp.GetArmorReaction() == nil {
+		return nil
+	}
+	return resp
+}
+
+func damageArmorReactionToProto(input *damageArmorReactionInput) *pb.DaggerheartDamageArmorReaction {
+	if input == nil {
+		return nil
+	}
+	selected := 0
+	resp := &pb.DaggerheartDamageArmorReaction{}
+	if input.Resilient != nil {
+		selected++
+		resp.Reaction = &pb.DaggerheartDamageArmorReaction_Resilient{
+			Resilient: &pb.DaggerheartResilientArmorReaction{
+				Rng: rngRequestToProto(input.Resilient.Rng),
+			},
+		}
+	}
+	if input.Impenetrable != nil {
+		selected++
+		resp.Reaction = &pb.DaggerheartDamageArmorReaction_Impenetrable{
+			Impenetrable: &pb.DaggerheartImpenetrableArmorReaction{},
+		}
+	}
+	if selected != 1 {
+		return nil
+	}
+	return resp
+}
+
+func damageMitigationDecisionToProto(input *damageMitigationDecisionInput) *pb.DaggerheartDamageMitigationDecision {
+	if input == nil {
+		return nil
+	}
+	resp := &pb.DaggerheartDamageMitigationDecision{
+		ArmorReaction: damageArmorReactionToProto(input.Reaction),
+	}
+	switch strings.ToUpper(strings.TrimSpace(input.BaseArmor)) {
+	case "SPEND":
+		resp.BaseArmor = pb.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_SPEND
+	case "DECLINE":
+		resp.BaseArmor = pb.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_DECLINE
+	default:
+		resp.BaseArmor = pb.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_UNSPECIFIED
+	}
+	if resp.GetBaseArmor() == pb.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_UNSPECIFIED && resp.GetArmorReaction() == nil {
 		return nil
 	}
 	return resp
@@ -974,6 +1369,35 @@ func resolveAttackTargetID(explicitTargetID string, board daggerheartCombatBoard
 		return "", fmt.Errorf("target_id is required when the combat board has multiple visible adversaries; read daggerheart_combat_board_read and specify the intended target_id")
 	}
 	return "", fmt.Errorf("target_id is required")
+}
+
+func resolveAttackDifficulty(runtime Runtime, ctx context.Context, campaignID, targetID string, targetIsAdversary bool, board daggerheartCombatBoardPayload, explicit *int) (int, error) {
+	if explicit != nil {
+		return *explicit, nil
+	}
+	if targetIsAdversary {
+		for _, adversary := range board.Adversaries {
+			if strings.TrimSpace(adversary.ID) == strings.TrimSpace(targetID) {
+				return adversary.Evasion, nil
+			}
+		}
+		return 0, fmt.Errorf("cannot infer difficulty for target %q from the combat board; read daggerheart_combat_board_read and retry", targetID)
+	}
+	return resolveCharacterDifficulty(runtime, ctx, campaignID, targetID, nil)
+}
+
+func resolveCharacterDifficulty(runtime Runtime, ctx context.Context, campaignID, characterID string, explicit *int) (int, error) {
+	if explicit != nil {
+		return *explicit, nil
+	}
+	sheet, err := loadCharacterSheetPayload(runtime, ctx, campaignID, characterID)
+	if err != nil {
+		return 0, err
+	}
+	if sheet.Daggerheart == nil || sheet.Daggerheart.Defenses == nil || sheet.Daggerheart.Defenses.Evasion == nil {
+		return 0, fmt.Errorf("cannot infer difficulty for target %q from the current character sheet; call character_sheet_read and retry", characterID)
+	}
+	return *sheet.Daggerheart.Defenses.Evasion, nil
 }
 
 func resolveAttackProfile(runtime Runtime, ctx context.Context, campaignID, characterID string, explicitStandard *standardAttackProfileInput, explicitBeastform *beastformAttackProfileInput) (inferredAttackProfile, error) {

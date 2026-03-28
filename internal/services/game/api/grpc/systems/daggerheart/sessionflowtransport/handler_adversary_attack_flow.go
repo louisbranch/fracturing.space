@@ -41,6 +41,9 @@ func (h *Handler) SessionAdversaryAttackFlow(ctx context.Context, in *pb.Session
 		return nil, status.Error(codes.InvalidArgument, "target id is required")
 	}
 	targetID := targetIDs[0]
+	if in.GetRequireDefenseChoice() && len(targetIDs) > 1 {
+		return nil, status.Error(codes.FailedPrecondition, "multi-target defense choice is not supported")
+	}
 	if in.GetDifficulty() < 0 {
 		return nil, status.Error(codes.InvalidArgument, "difficulty must be non-negative")
 	}
@@ -127,8 +130,37 @@ func (h *Handler) SessionAdversaryAttackFlow(ctx context.Context, in *pb.Session
 	}
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
+	selectedArmorReaction := in.GetTargetArmorReaction()
+	explicitDefenseDecision := selectedArmorReaction != nil
+	if decision := in.GetTargetDefenseDecision(); decision != nil {
+		explicitDefenseDecision = decision.GetDeclineArmorReaction() || decision.GetArmorReaction() != nil
+		if reaction := decision.GetArmorReaction(); reaction != nil {
+			selectedArmorReaction = reaction
+		} else if decision.GetDeclineArmorReaction() {
+			selectedArmorReaction = nil
+		}
+	}
 	if targetArmor != nil {
 		armorRules := rules.EffectiveArmorRules(targetArmor)
+		if in.GetRequireDefenseChoice() && !explicitDefenseDecision {
+			optionCodes := make([]string, 0, 2)
+			if armorRules.ShiftingAttackDisadvantage > 0 {
+				optionCodes = append(optionCodes, "armor.shifting")
+			}
+			if armorRules.TimeslowingEvasionBonusDieSides > 0 {
+				optionCodes = append(optionCodes, "armor.timeslowing")
+			}
+			if len(optionCodes) > 0 {
+				return &pb.SessionAdversaryAttackFlowResponse{
+					ChoiceRequired: &pb.DaggerheartCombatChoiceRequired{
+						Stage:       pb.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_INCOMING_ATTACK_DEFENSE,
+						CharacterId: targetID,
+						OptionCodes: append(optionCodes, "armor.decline"),
+						Reason:      "incoming attack defense choice is required before rolling the adversary attack",
+					},
+				}, nil
+			}
+		}
 		if armorRules.BurningAttackerStress > 0 && isMeleeAttackRange(attack.Range) {
 			if h.deps.ExecuteAdversaryUpdate == nil {
 				return nil, status.Error(codes.Internal, "adversary update executor is not configured")
@@ -153,7 +185,7 @@ func (h *Handler) SessionAdversaryAttackFlow(ctx context.Context, in *pb.Session
 				adversary.Stress = nextStress
 			}
 		}
-		if armorReaction := in.GetTargetArmorReaction(); armorReaction != nil {
+		if armorReaction := selectedArmorReaction; armorReaction != nil {
 			switch reaction := armorReaction.GetReaction().(type) {
 			case *pb.DaggerheartIncomingAttackArmorReaction_Shifting:
 				_ = reaction
@@ -413,14 +445,21 @@ func (h *Handler) SessionAdversaryAttackFlow(ctx context.Context, in *pb.Session
 	damageApplications := make([]*pb.DaggerheartApplyDamageResponse, 0, len(targetIDs))
 	for _, damageTargetID := range targetIDs {
 		applyDamage, err := h.deps.ApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
-			CampaignId:        campaignID,
-			CharacterId:       damageTargetID,
-			Damage:            damageReq,
-			RollSeq:           &damageRoll.RollSeq,
-			RequireDamageRoll: in.GetRequireDamageRoll(),
+			CampaignId:              campaignID,
+			CharacterId:             damageTargetID,
+			Damage:                  damageReq,
+			RollSeq:                 &damageRoll.RollSeq,
+			RequireDamageRoll:       in.GetRequireDamageRoll(),
+			MitigationDecision:      in.GetTargetMitigationDecision(),
+			RequireMitigationChoice: in.GetRequireDefenseChoice(),
 		})
 		if err != nil {
 			return nil, err
+		}
+		if applyDamage.GetChoiceRequired() != nil {
+			response.DamageRoll = damageRoll
+			response.ChoiceRequired = applyDamage.GetChoiceRequired()
+			return response, nil
 		}
 		damageApplications = append(damageApplications, applyDamage)
 	}
