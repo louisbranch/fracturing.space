@@ -216,3 +216,31 @@ func (g participantMutationGateway) UpdateParticipant(ctx context.Context, campa
 	}
 	return nil
 }
+
+// DeleteParticipant applies this package workflow transition.
+func (g participantMutationGateway) DeleteParticipant(ctx context.Context, campaignID string, participantID string) error {
+	if g.mutation.Participant == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
+	}
+
+	_, err := g.mutation.Participant.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_delete_participant",
+			FallbackMessage: "failed to delete participant",
+		})
+	}
+	return nil
+}

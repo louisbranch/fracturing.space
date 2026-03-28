@@ -58,6 +58,7 @@ func EvaluateCanParticipantGovernanceTargetWithStores(
 		targetParticipantID = strings.TrimSpace(target.GetResourceId())
 	}
 	targetAccess := campaignAccessFromProto(target.GetTargetCampaignAccess())
+	targetController := participant.ControllerUnspecified
 	requestedAccess := campaignAccessFromProto(target.GetRequestedCampaignAccess())
 	participantOperation := target.GetParticipantOperation()
 
@@ -69,6 +70,20 @@ func EvaluateCanParticipantGovernanceTargetWithStores(
 			}
 		} else {
 			targetAccess = targetRecord.CampaignAccess
+			targetController = targetRecord.Controller
+		}
+	}
+	if targetParticipantID != "" && targetController == participant.ControllerUnspecified && participants != nil {
+		targetRecord, err := participants.GetParticipant(ctx, campaignID, targetParticipantID)
+		if err != nil {
+			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load target participant"); lookupErr != nil {
+				return domainauthz.PolicyDecision{}, nil, false, lookupErr
+			}
+		} else {
+			targetController = targetRecord.Controller
+			if targetAccess == participant.CampaignAccessUnspecified {
+				targetAccess = targetRecord.CampaignAccess
+			}
 		}
 	}
 
@@ -106,12 +121,19 @@ func EvaluateCanParticipantGovernanceTargetWithStores(
 		if err != nil {
 			return domainauthz.PolicyDecision{}, extraAttributes, false, err
 		}
+		targetControlsActiveCharacters, err := ParticipantControlsActiveCharacters(ctx, characters, campaignID, targetParticipantID)
+		if err != nil {
+			return domainauthz.PolicyDecision{}, extraAttributes, false, err
+		}
 		extraAttributes["target_owns_active_characters"] = targetOwnsActiveCharacters
-		decision = domainauthz.CanParticipantRemovalWithOwnedResources(
+		extraAttributes["target_controls_active_characters"] = targetControlsActiveCharacters
+		decision = domainauthz.CanParticipantRemovalEligibility(
 			actor.CampaignAccess,
 			targetAccess,
 			ownerCount,
+			targetController,
 			targetOwnsActiveCharacters,
+			targetControlsActiveCharacters,
 		)
 		return decision, extraAttributes, true, nil
 	}

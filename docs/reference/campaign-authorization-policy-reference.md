@@ -47,6 +47,8 @@ Reference behaviors:
 - owner defaults to creator on `character.created`
 - ownership transfer uses explicit owner field mutation
 - participant removal guard checks active owned resources
+- participant removal guard checks active controlled resources
+- participant removal denies AI-controlled targets
 
 ## `AuthorizationService.Can` target semantics
 

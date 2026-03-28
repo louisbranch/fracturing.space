@@ -9,22 +9,25 @@ import (
 )
 
 const (
-	EventDecisionName                = events.AuthzDecision
-	DecisionAllow                    = "allow"
-	DecisionDeny                     = "deny"
-	DecisionOverride                 = "override"
-	PlatformRoleHeader               = grpcmeta.PlatformRoleHeader
-	OverrideReasonHeader             = grpcmeta.AuthzOverrideReasonHeader
-	PlatformRoleAdmin                = grpcmeta.PlatformRoleAdmin
-	ReasonAllowAdminOverride         = domainauthz.ReasonAllowAdminOverride
-	ReasonAllowAccessLevel           = domainauthz.ReasonAllowAccessLevel
-	ReasonAllowResourceOwner         = domainauthz.ReasonAllowResourceOwner
-	ReasonDenyAccessLevelRequired    = domainauthz.ReasonDenyAccessLevelRequired
-	ReasonDenyMissingIdentity        = domainauthz.ReasonDenyMissingIdentity
-	ReasonDenyActorNotFound          = domainauthz.ReasonDenyActorNotFound
-	ReasonDenyNotResourceOwner       = domainauthz.ReasonDenyNotResourceOwner
-	ReasonDenyOverrideReasonRequired = domainauthz.ReasonDenyOverrideReasonRequired
-	ReasonErrorDependencyUnavailable = domainauthz.ReasonErrorDependencyUnavailable
-	ReasonErrorActorLoad             = domainauthz.ReasonErrorActorLoad
-	ReasonErrorOwnerResolution       = domainauthz.ReasonErrorOwnerResolution
+	EventDecisionName                        = events.AuthzDecision
+	DecisionAllow                            = "allow"
+	DecisionDeny                             = "deny"
+	DecisionOverride                         = "override"
+	PlatformRoleHeader                       = grpcmeta.PlatformRoleHeader
+	OverrideReasonHeader                     = grpcmeta.AuthzOverrideReasonHeader
+	PlatformRoleAdmin                        = grpcmeta.PlatformRoleAdmin
+	ReasonAllowAdminOverride                 = domainauthz.ReasonAllowAdminOverride
+	ReasonAllowAccessLevel                   = domainauthz.ReasonAllowAccessLevel
+	ReasonAllowResourceOwner                 = domainauthz.ReasonAllowResourceOwner
+	ReasonDenyAccessLevelRequired            = domainauthz.ReasonDenyAccessLevelRequired
+	ReasonDenyMissingIdentity                = domainauthz.ReasonDenyMissingIdentity
+	ReasonDenyActorNotFound                  = domainauthz.ReasonDenyActorNotFound
+	ReasonDenyNotResourceOwner               = domainauthz.ReasonDenyNotResourceOwner
+	ReasonDenyTargetIsAIParticipant          = domainauthz.ReasonDenyTargetIsAIParticipant
+	ReasonDenyTargetOwnsActiveCharacters     = domainauthz.ReasonDenyTargetOwnsActiveCharacters
+	ReasonDenyTargetControlsActiveCharacters = domainauthz.ReasonDenyTargetControlsActiveCharacters
+	ReasonDenyOverrideReasonRequired         = domainauthz.ReasonDenyOverrideReasonRequired
+	ReasonErrorDependencyUnavailable         = domainauthz.ReasonErrorDependencyUnavailable
+	ReasonErrorActorLoad                     = domainauthz.ReasonErrorActorLoad
+	ReasonErrorOwnerResolution               = domainauthz.ReasonErrorOwnerResolution
 )

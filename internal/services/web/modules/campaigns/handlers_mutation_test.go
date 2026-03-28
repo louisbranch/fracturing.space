@@ -169,6 +169,11 @@ func TestStableMutationRoutesReturnParseErrorFlashKeys(t *testing.T) {
 			wantKey: "error.web.message.failed_to_parse_participant_update_form",
 		},
 		{
+			name:    "participant delete parse error",
+			path:    routepath.AppCampaignParticipantDelete("c1", "p-manager"),
+			wantKey: "error.web.message.failed_to_parse_participant_delete_form",
+		},
+		{
 			name:    "character update parse error",
 			path:    routepath.AppCampaignCharacterEdit("c1", "char-1"),
 			wantKey: "error.web.message.failed_to_parse_character_update_form",
@@ -388,6 +393,13 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			body:         "name=Manager+One&role=player&pronouns=they%2Fthem",
 			wantLocation: routepath.AppCampaignParticipants("c1"),
 			wantFlashKey: "web.campaigns.notice_participant_updated",
+		},
+		{
+			name:         "participant delete",
+			path:         routepath.AppCampaignParticipantDelete("c1", "p-manager"),
+			body:         "",
+			wantLocation: routepath.AppCampaignParticipants("c1"),
+			wantFlashKey: "web.campaigns.notice_participant_deleted",
 		},
 		{
 			name:         "character update",

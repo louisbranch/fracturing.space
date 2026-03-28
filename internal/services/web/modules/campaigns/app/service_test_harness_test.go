@@ -53,6 +53,7 @@ type campaignGatewayStub struct {
 	batchAuthorizationErr                   error
 	batchAuthorizationCalls                 int
 	batchAuthorizationRequests              []AuthorizationCheck
+	authorize                               func(AuthorizationAction, AuthorizationResource, *AuthorizationTarget) (AuthorizationDecision, error, bool)
 	characterCreationProgress               CampaignCharacterCreationProgress
 	characterCreationProgressErr            error
 	characterCreationCatalog                CampaignCharacterCreationCatalog
@@ -65,6 +66,7 @@ type campaignGatewayStub struct {
 	createCharacterErr                      error
 	updateCharacterErr                      error
 	deleteCharacterErr                      error
+	deleteParticipantErr                    error
 	setCharacterControllerErr               error
 	claimCharacterControlErr                error
 	releaseCharacterControlErr              error
@@ -86,6 +88,8 @@ type campaignGatewayStub struct {
 	lastCreateParticipantInput              CreateParticipantInput
 	lastRevokeInviteInput                   RevokeInviteInput
 	lastUpdateParticipantInput              UpdateParticipantInput
+	lastDeleteParticipantCampaignID         string
+	lastDeleteParticipantID                 string
 	applyCharacterCreationStepErr           error
 	resetCharacterCreationWorkflowErr       error
 	calls                                   []string
@@ -323,6 +327,13 @@ func (f *campaignGatewayStub) UpdateParticipant(_ context.Context, _ string, inp
 	return nil
 }
 
+func (f *campaignGatewayStub) DeleteParticipant(_ context.Context, campaignID string, participantID string) error {
+	f.lastDeleteParticipantCampaignID = campaignID
+	f.lastDeleteParticipantID = participantID
+	f.calls = append(f.calls, "delete-participant")
+	return f.deleteParticipantErr
+}
+
 func (f *campaignGatewayStub) CreateInvite(_ context.Context, _ string, input CreateInviteInput) error {
 	f.lastCreateInviteInput = input
 	f.calls = append(f.calls, "create-invite")
@@ -354,6 +365,11 @@ func (f *campaignGatewayStub) CanCampaignAction(
 ) (AuthorizationDecision, error) {
 	f.authorizationCalls++
 	f.authorizationRequests = append(f.authorizationRequests, campaignAuthorizationRequest{Action: action, Resource: resource, Target: target})
+	if f.authorize != nil {
+		if decision, err, ok := f.authorize(action, resource, target); ok {
+			return decision, err
+		}
+	}
 	if f.authorizationErr != nil {
 		return AuthorizationDecision{}, f.authorizationErr
 	}

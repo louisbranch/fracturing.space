@@ -86,26 +86,29 @@ func ParticipantOwnsActiveCharacters(ctx context.Context, characters storage.Cha
 		return false, status.Error(codes.InvalidArgument, "participant id is required")
 	}
 
-	const pageSize = 200
-	pageToken := ""
-	for {
-		page, err := characters.ListCharacters(ctx, campaignID, pageSize, pageToken)
-		if err != nil {
-			return false, grpcerror.Internal("list characters", err)
-		}
-		for _, characterRecord := range page.Characters {
-			if strings.TrimSpace(characterRecord.OwnerParticipantID) == participantID {
-				return true, nil
-			}
-		}
-		nextPageToken := strings.TrimSpace(page.NextPageToken)
-		if nextPageToken == "" {
-			break
-		}
-		pageToken = nextPageToken
+	ownedCharacters, err := characters.ListCharactersByOwnerParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		return false, grpcerror.Internal("list characters by owner participant", err)
+	}
+	return len(ownedCharacters) > 0, nil
+}
+
+// ParticipantControlsActiveCharacters reports whether participantID currently
+// controls at least one active character in projection-backed read state.
+func ParticipantControlsActiveCharacters(ctx context.Context, characters storage.CharacterStore, campaignID, participantID string) (bool, error) {
+	if characters == nil {
+		return false, status.Error(codes.Internal, "character store is not configured")
+	}
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return false, status.Error(codes.InvalidArgument, "participant id is required")
 	}
 
-	return false, nil
+	controlledCharacters, err := characters.ListCharactersByControllerParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		return false, grpcerror.Internal("list characters by controller participant", err)
+	}
+	return len(controlledCharacters) > 0, nil
 }
 
 // ResolveCharacterMutationOwnerParticipantIDFromStore resolves the owner

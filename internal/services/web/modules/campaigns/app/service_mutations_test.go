@@ -36,6 +36,9 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 		{name: "update participant", run: func() error {
 			return svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "player"})
 		}, wantStatus: http.StatusServiceUnavailable},
+		{name: "delete participant", run: func() error {
+			return svc.deleteParticipant(ctx, "c1", "p-1")
+		}, wantStatus: http.StatusServiceUnavailable},
 		{name: "create invite", run: func() error {
 			return svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})
 		}, wantStatus: http.StatusForbidden},
@@ -98,6 +101,9 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if err := svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player Prime", Role: "gm"}); err != nil {
 		t.Fatalf("UpdateParticipant() error = %v", err)
 	}
+	if err := svc.deleteParticipant(ctx, "c1", "p-1"); err != nil {
+		t.Fatalf("DeleteParticipant() error = %v", err)
+	}
 	if err := svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"}); err != nil {
 		t.Fatalf("CreateInvite() error = %v", err)
 	}
@@ -105,7 +111,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 		t.Fatalf("RevokeInvite() error = %v", err)
 	}
 
-	want := []string{"start", "update-campaign", "update-campaign-ai-binding", "end", "create-character", "create-participant", "update-participant", "create-invite", "revoke-invite"}
+	want := []string{"start", "update-campaign", "update-campaign-ai-binding", "end", "create-character", "create-participant", "update-participant", "delete-participant", "create-invite", "revoke-invite"}
 	if len(gateway.calls) != len(want) {
 		t.Fatalf("len(calls) = %d, want %d (%v)", len(gateway.calls), len(want), gateway.calls)
 	}
@@ -128,6 +134,72 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	}
 	if gateway.lastRevokeInviteInput.InviteID != "inv-1" {
 		t.Fatalf("revoke invite input invite id = %q, want %q", gateway.lastRevokeInviteInput.InviteID, "inv-1")
+	}
+}
+
+func TestDeleteParticipantRejectsBlockedRemovalReasons(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		reasonCode string
+		wantKey    string
+		wantStatus int
+	}{
+		{
+			name:       "ai participant",
+			reasonCode: "AUTHZ_DENY_TARGET_IS_AI_PARTICIPANT",
+			wantKey:    "error.web.message.ai_participants_cannot_be_deleted",
+			wantStatus: http.StatusConflict,
+		},
+		{
+			name:       "owns characters",
+			reasonCode: "AUTHZ_DENY_TARGET_OWNS_ACTIVE_CHARACTERS",
+			wantKey:    "error.web.message.participant_owns_active_characters",
+			wantStatus: http.StatusConflict,
+		},
+		{
+			name:       "controls characters",
+			reasonCode: "AUTHZ_DENY_TARGET_CONTROLS_ACTIVE_CHARACTERS",
+			wantKey:    "error.web.message.participant_controls_active_characters",
+			wantStatus: http.StatusConflict,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gateway := &campaignGatewayStub{
+				campaignParticipant: CampaignParticipant{
+					ID:             "p-1",
+					Name:           "Player One",
+					Role:           "player",
+					CampaignAccess: "member",
+				},
+				authorize: func(_ AuthorizationAction, _ AuthorizationResource, target *AuthorizationTarget) (AuthorizationDecision, error, bool) {
+					if target != nil && target.ParticipantOperation == ParticipantGovernanceOperationRemove {
+						return AuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: tc.reasonCode}, nil, true
+					}
+					return AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil, true
+				},
+			}
+			svc := newService(gateway)
+
+			err := svc.deleteParticipant(context.Background(), "c1", "p-1")
+			if err == nil {
+				t.Fatalf("expected deleteParticipant() error")
+			}
+			if got := apperrors.LocalizationKey(err); got != tc.wantKey {
+				t.Fatalf("LocalizationKey(err) = %q, want %q", got, tc.wantKey)
+			}
+			if got := apperrors.HTTPStatus(err); got != tc.wantStatus {
+				t.Fatalf("HTTPStatus(err) = %d, want %d", got, tc.wantStatus)
+			}
+			if gateway.lastDeleteParticipantID != "" {
+				t.Fatalf("DeleteParticipant gateway call = %q, want no delete", gateway.lastDeleteParticipantID)
+			}
+		})
 	}
 }
 

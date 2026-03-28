@@ -64,6 +64,10 @@ func (r participantReads) CampaignParticipantEditor(context.Context, string, str
 type participantMutation struct {
 	lastCreate campaignapp.CreateParticipantInput
 	lastUpdate campaignapp.UpdateParticipantInput
+	lastDelete struct {
+		campaignID    string
+		participantID string
+	}
 }
 
 func (m *participantMutation) CreateParticipant(_ context.Context, _ string, input campaignapp.CreateParticipantInput) (campaignapp.CreateParticipantResult, error) {
@@ -72,6 +76,11 @@ func (m *participantMutation) CreateParticipant(_ context.Context, _ string, inp
 }
 func (m *participantMutation) UpdateParticipant(_ context.Context, _ string, input campaignapp.UpdateParticipantInput) error {
 	m.lastUpdate = input
+	return nil
+}
+func (m *participantMutation) DeleteParticipant(_ context.Context, campaignID string, participantID string) error {
+	m.lastDelete.campaignID = campaignID
+	m.lastDelete.participantID = participantID
 	return nil
 }
 
@@ -100,6 +109,11 @@ func newParticipantHandler(t *testing.T) (Handler, *participantMutation) {
 			},
 			editor: campaignapp.CampaignParticipantEditor{
 				Participant: campaignapp.CampaignParticipant{ID: "p-1", Name: "Owner", Role: "gm"},
+				Delete: campaignapp.CampaignParticipantDeleteState{
+					Visible:           true,
+					Enabled:           true,
+					HasAssociatedUser: true,
+				},
 			},
 		},
 		mutation: mutation,
@@ -126,6 +140,27 @@ func TestHandleParticipantsRendersOwnedParticipantsPage(t *testing.T) {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing participant marker %q: %q", marker, body)
 		}
+	}
+}
+
+func TestHandleParticipantDeleteRedirectsAndForwardsIDs(t *testing.T) {
+	t.Parallel()
+
+	h, mutation := newParticipantHandler(t)
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantDelete("camp-1", "p-1"), strings.NewReader(""))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+
+	h.HandleParticipantDelete(rr, req, "camp-1", "p-1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignParticipants("camp-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignParticipants("camp-1"))
+	}
+	if mutation.lastDelete.campaignID != "camp-1" || mutation.lastDelete.participantID != "p-1" {
+		t.Fatalf("delete input = %#v", mutation.lastDelete)
 	}
 }
 

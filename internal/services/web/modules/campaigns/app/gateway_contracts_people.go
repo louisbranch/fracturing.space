@@ -42,4 +42,5 @@ type CampaignCharacterMutationGateway interface {
 type CampaignParticipantMutationGateway interface {
 	CreateParticipant(context.Context, string, CreateParticipantInput) (CreateParticipantResult, error)
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
+	DeleteParticipant(context.Context, string, string) error
 }

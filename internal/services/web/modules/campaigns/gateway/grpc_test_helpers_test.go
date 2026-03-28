@@ -426,6 +426,13 @@ func (g GRPCGateway) UpdateParticipant(ctx context.Context, campaignID string, i
 	return g.unavailable().UpdateParticipant(ctx, campaignID, input)
 }
 
+func (g GRPCGateway) DeleteParticipant(ctx context.Context, campaignID string, participantID string) error {
+	if gateway := g.participantMutation(); gateway != nil {
+		return gateway.DeleteParticipant(ctx, campaignID, participantID)
+	}
+	return g.unavailable().DeleteParticipant(ctx, campaignID, participantID)
+}
+
 func (g GRPCGateway) StartSession(ctx context.Context, campaignID string, input campaignapp.StartSessionInput) error {
 	if gateway := g.sessionMutation(); gateway != nil {
 		return gateway.StartSession(ctx, campaignID, input)

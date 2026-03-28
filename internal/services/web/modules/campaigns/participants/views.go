@@ -102,6 +102,13 @@ func mapParticipantEditorView(editor campaignapp.CampaignParticipantEditor) camp
 		RoleReadOnly:   editor.RoleReadOnly,
 		AccessOptions:  accessOptions,
 		AccessReadOnly: editor.AccessReadOnly,
+		Delete: campaignrender.ParticipantDeleteView{
+			Visible:                       editor.Delete.Visible,
+			Enabled:                       editor.Delete.Enabled,
+			HasAssociatedUser:             editor.Delete.HasAssociatedUser,
+			BlockedByOwnedCharacters:      editor.Delete.BlockedByOwnedCharacters,
+			BlockedByControlledCharacters: editor.Delete.BlockedByControlledCharacters,
+		},
 	}
 }
 

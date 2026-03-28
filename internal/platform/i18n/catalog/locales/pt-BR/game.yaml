@@ -1,7 +1,7 @@
 locale: "pt-BR"
 namespace: "game"
 messages:
-  "game.participant.default_ai_name": "Oráculo"
+  "game.participant.default_ai_name": "Narrador"
   "game.participant.default_unknown_name": "Pessoa Misteriosa"
   "game.session.default_name": "Sessão %d"
   "game.session_readiness.active_session_exists": "A prontidão da campanha exige que não haja sessão ativa"

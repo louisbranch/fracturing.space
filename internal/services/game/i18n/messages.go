@@ -19,7 +19,7 @@ var (
 	// ParticipantDefaultAIName is the translated fallback for AI participants.
 	ParticipantDefaultAIName = MessageContract{
 		Key:      "game.participant.default_ai_name",
-		Fallback: "Oracle",
+		Fallback: "Narrator",
 	}
 	// SessionDefaultName is the translated fallback for auto-named sessions.
 	SessionDefaultName = MessageContract{

@@ -127,6 +127,7 @@ func (s participantReadService) campaignParticipantEditor(ctx context.Context, c
 			editor.Participant.CampaignAccess = participantAccessMember
 			editor.AccessOptions = []CampaignParticipantAccessOption{{Value: participantAccessMember, Allowed: true}}
 		}
+		editor.Delete = s.participantDeleteState(ctx, campaignID, participant)
 		return editor, nil
 	}
 	target := &AuthorizationTarget{
@@ -168,6 +169,7 @@ func (s participantReadService) campaignParticipantEditor(ctx context.Context, c
 		editor.AccessReadOnly = true
 		editor.AccessOptions = []CampaignParticipantAccessOption{{Value: participantAccessMember, Allowed: true}}
 	}
+	editor.Delete = s.participantDeleteState(ctx, campaignID, participant)
 	return editor, nil
 }
 
@@ -313,4 +315,16 @@ func participantWorkspace(ctx context.Context, workspaceGateway CampaignWorkspac
 		return CampaignWorkspace{}, err
 	}
 	return normalizeCampaignWorkspace(campaignID, workspace), nil
+}
+
+// participantDeleteState evaluates participant-remove authz without widening
+// page-load failures when deletion is simply unavailable.
+func (s participantReadService) participantDeleteState(ctx context.Context, campaignID string, participant CampaignParticipant) CampaignParticipantDeleteState {
+	decision, err := participantDeleteDecision(ctx, s.auth.gateway, campaignID, participant)
+	if err != nil {
+		return CampaignParticipantDeleteState{
+			HasAssociatedUser: strings.TrimSpace(participant.UserID) != "",
+		}
+	}
+	return participantDeleteStateFromDecision(participant, decision)
 }

@@ -138,3 +138,17 @@ func (h Handler) HandleParticipantUpdate(w http.ResponseWriter, r *http.Request,
 	}
 	h.WriteMutationSuccess(w, r, "web.campaigns.notice_participant_updated", routepath.AppCampaignParticipants(campaignID))
 }
+
+// HandleParticipantDelete removes a participant seat.
+func (h Handler) HandleParticipantDelete(w http.ResponseWriter, r *http.Request, campaignID, participantID string) {
+	redirectURL := routepath.AppCampaignParticipantEdit(campaignID, participantID)
+	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_participant_delete_form", redirectURL) {
+		return
+	}
+	ctx, _ := h.RequestContextAndUserID(r)
+	if err := h.participants.mutation.DeleteParticipant(ctx, campaignID, participantID); err != nil {
+		h.WriteMutationError(w, r, err, "error.web.message.failed_to_delete_participant", redirectURL)
+		return
+	}
+	h.WriteMutationSuccess(w, r, "web.campaigns.notice_participant_deleted", routepath.AppCampaignParticipants(campaignID))
+}

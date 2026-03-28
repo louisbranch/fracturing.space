@@ -17,8 +17,12 @@ func participantPolicyDecisionError(reasonCode string) error {
 		return status.Error(codes.PermissionDenied, "manager cannot mutate owner participant")
 	case domainauthz.ReasonDenyLastOwnerGuard:
 		return status.Error(codes.PermissionDenied, "cannot remove or demote final owner")
+	case domainauthz.ReasonDenyTargetIsAIParticipant:
+		return status.Error(codes.FailedPrecondition, "AI participants cannot be deleted")
 	case domainauthz.ReasonDenyTargetOwnsActiveCharacters:
 		return status.Error(codes.FailedPrecondition, "participant owns active characters; transfer ownership first")
+	case domainauthz.ReasonDenyTargetControlsActiveCharacters:
+		return status.Error(codes.FailedPrecondition, "participant controls active characters; clear controller assignments first")
 	default:
 		return status.Error(codes.PermissionDenied, "participant lacks permission")
 	}

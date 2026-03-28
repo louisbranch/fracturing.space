@@ -17,6 +17,11 @@ func (s participantMutationService) UpdateParticipant(ctx context.Context, campa
 	return s.updateParticipant(ctx, campaignID, input)
 }
 
+// DeleteParticipant applies this package workflow transition.
+func (s participantMutationService) DeleteParticipant(ctx context.Context, campaignID string, participantID string) error {
+	return s.deleteParticipant(ctx, campaignID, participantID)
+}
+
 // participantCreateRequest carries normalized participant creation values.
 type participantCreateRequest struct {
 	CampaignID     string
@@ -123,6 +128,33 @@ func (s participantMutationService) updateParticipant(ctx context.Context, campa
 		Pronouns:       request.Pronouns,
 		CampaignAccess: request.RequestedAccess,
 	})
+}
+
+// deleteParticipant applies this package workflow transition.
+func (s participantMutationService) deleteParticipant(ctx context.Context, campaignID string, participantID string) error {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
+	}
+
+	current, err := campaignParticipant(ctx, s.read, campaignID, participantID)
+	if err != nil {
+		return err
+	}
+
+	decision, err := participantDeleteDecision(ctx, s.auth.gateway, campaignID, current)
+	if err != nil {
+		return participantDeleteError(AuthorizationDecision{})
+	}
+	if !decision.Evaluated || !decision.Allowed {
+		return participantDeleteError(decision)
+	}
+
+	return s.mutation.DeleteParticipant(ctx, campaignID, participantID)
 }
 
 // normalizeParticipantCreateRequest validates and normalizes participant-create input.
