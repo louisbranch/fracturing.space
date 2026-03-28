@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-24T15:35:00Z",
+  "updated_at": "2026-03-27T20:30:00Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog",
@@ -65,8 +65,13 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools",
-      "floor": 57.7,
+      "floor": 81.2,
       "description": "AI gametools session shell including enum converters, URI parsers, and resource/tool handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/daggerhearttools",
+      "floor": 79.0,
+      "description": "AI Daggerheart tool runtime including read surfaces, dice entrypoints, and combat/mechanics flow adapters."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/providergrant",
@@ -80,7 +85,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth",
-      "floor": 65,
+      "floor": 79.0,
       "description": "Auth gRPC transport handlers including account, passkey, and session RPCs."
     },
     {
@@ -92,6 +97,16 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/auth/oauth",
       "floor": 81.6,
       "description": "OAuth configuration, PKCE flow, and provider lifecycle."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite",
+      "floor": 69.0,
+      "description": "Auth SQLite persistence for users, passkeys, signup sessions, recovery flows, and durable web sessions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/charactermutationtransport",
+      "floor": 73.0,
+      "description": "Daggerheart mutation transport handlers and helper seams for command payload shaping and guard enforcement."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/discovery/app",
@@ -242,6 +257,11 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest",
       "floor": 96.4,
       "description": "Built-in system descriptor and adapter wiring contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/coreprojection",
+      "floor": 81.0,
+      "description": "Core projection SQLite persistence for campaign/session/interaction reads, idempotent apply, and watermark contracts."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/invite/api/grpc/invite",

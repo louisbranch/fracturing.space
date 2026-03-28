@@ -4,38 +4,12 @@ import (
 	"context"
 	"strings"
 	"testing"
-
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 )
 
-type stubRuntime struct{}
-
-func (stubRuntime) CharacterClient() statev1.CharacterServiceClient { return nil }
-func (stubRuntime) SessionClient() statev1.SessionServiceClient     { return nil }
-func (stubRuntime) SnapshotClient() statev1.SnapshotServiceClient   { return nil }
-func (stubRuntime) DaggerheartClient() pb.DaggerheartServiceClient  { return nil }
-
-func (stubRuntime) CallContext(ctx context.Context) (context.Context, context.CancelFunc) {
-	return context.WithCancel(ctx)
-}
-
-func (stubRuntime) ResolveCampaignID(explicit string) string {
-	return explicit
-}
-
-func (stubRuntime) ResolveSessionID(explicit string) string {
-	return explicit
-}
-
-func (stubRuntime) ResolveSceneID(_ context.Context, _, explicit string) (string, error) {
-	return explicit, nil
-}
-
-func TestReadResourceLeavesGenericURIsUnhandled(t *testing.T) {
-	value, handled, err := ReadResource(stubRuntime{}, context.Background(), "campaign://camp-1/sessions")
+func TestReadResourceReturnsUnhandledForUnknownURI(t *testing.T) {
+	value, handled, err := ReadResource(nil, context.Background(), "mystery://unsupported")
 	if err != nil {
-		t.Fatalf("err = %v, want nil", err)
+		t.Fatalf("ReadResource() error = %v", err)
 	}
 	if handled {
 		t.Fatal("handled = true, want false")
@@ -45,28 +19,62 @@ func TestReadResourceLeavesGenericURIsUnhandled(t *testing.T) {
 	}
 }
 
-func TestReadResourceRejectsMalformedCombatBoardURI(t *testing.T) {
-	_, handled, err := ReadResource(stubRuntime{}, context.Background(), "daggerheart://campaign/camp-1/sessions//combat_board")
-	if !handled {
-		t.Fatal("handled = false, want true")
+func TestParseSnapshotResourceURI(t *testing.T) {
+	campaignID, err := parseSnapshotResourceURI("daggerheart://campaign/camp-1/snapshot")
+	if err != nil {
+		t.Fatalf("parseSnapshotResourceURI() error = %v", err)
 	}
-	if err == nil {
-		t.Fatal("err = nil, want malformed URI error")
+	if campaignID != "camp-1" {
+		t.Fatalf("campaign_id = %q, want camp-1", campaignID)
 	}
-	if !strings.Contains(err.Error(), "campaign and session IDs are required") {
-		t.Fatalf("err = %v, want campaign/session parse failure", err)
+
+	_, err = parseSnapshotResourceURI("daggerheart://campaign//snapshot")
+	if err == nil || !strings.Contains(err.Error(), "campaign ID is required") {
+		t.Fatalf("parseSnapshotResourceURI() error = %v", err)
 	}
 }
 
-func TestReadResourceRejectsMalformedCharacterSheetURI(t *testing.T) {
-	_, handled, err := ReadResource(stubRuntime{}, context.Background(), "campaign://camp-1/characters//sheet")
-	if !handled {
-		t.Fatal("handled = false, want true")
+func TestParseCombatBoardResourceURI(t *testing.T) {
+	campaignID, sessionID, err := parseCombatBoardResourceURI("daggerheart://campaign/camp-1/sessions/sess-1/combat_board")
+	if err != nil {
+		t.Fatalf("parseCombatBoardResourceURI() error = %v", err)
 	}
-	if err == nil {
-		t.Fatal("err = nil, want malformed URI error")
+	if campaignID != "camp-1" || sessionID != "sess-1" {
+		t.Fatalf("parseCombatBoardResourceURI() = (%q, %q)", campaignID, sessionID)
 	}
-	if !strings.Contains(err.Error(), "campaign and character IDs are required") {
-		t.Fatalf("err = %v, want campaign/character parse failure", err)
+
+	_, _, err = parseCombatBoardResourceURI("daggerheart://campaign/camp-1/sessions//combat_board")
+	if err == nil || !strings.Contains(err.Error(), "campaign and session IDs are required") {
+		t.Fatalf("parseCombatBoardResourceURI() error = %v", err)
+	}
+}
+
+func TestParseCampaignCountdownsResourceURI(t *testing.T) {
+	campaignID, err := parseCampaignCountdownsResourceURI("daggerheart://campaign/camp-1/campaign_countdowns")
+	if err != nil {
+		t.Fatalf("parseCampaignCountdownsResourceURI() error = %v", err)
+	}
+	if campaignID != "camp-1" {
+		t.Fatalf("campaign_id = %q, want camp-1", campaignID)
+	}
+
+	_, err = parseCampaignCountdownsResourceURI("daggerheart://campaign//campaign_countdowns")
+	if err == nil || !strings.Contains(err.Error(), "campaign ID is required") {
+		t.Fatalf("parseCampaignCountdownsResourceURI() error = %v", err)
+	}
+}
+
+func TestParseCharacterSheetResourceURI(t *testing.T) {
+	campaignID, characterID, err := parseCharacterSheetResourceURI("campaign://camp-1/characters/char-1/sheet")
+	if err != nil {
+		t.Fatalf("parseCharacterSheetResourceURI() error = %v", err)
+	}
+	if campaignID != "camp-1" || characterID != "char-1" {
+		t.Fatalf("parseCharacterSheetResourceURI() = (%q, %q)", campaignID, characterID)
+	}
+
+	_, _, err = parseCharacterSheetResourceURI("campaign://camp-1/characters//sheet")
+	if err == nil || !strings.Contains(err.Error(), "campaign and character IDs are required") {
+		t.Fatalf("parseCharacterSheetResourceURI() error = %v", err)
 	}
 }

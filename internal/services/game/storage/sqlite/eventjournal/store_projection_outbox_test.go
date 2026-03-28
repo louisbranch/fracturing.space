@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	sqliteprojectionapplyoutbox "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/projectionapplyoutbox"
 	sqlite "modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
 )
@@ -348,6 +350,230 @@ func TestProcessProjectionApplyOutboxApplyFailureMarksRetry(t *testing.T) {
 	}
 	if !strings.Contains(lastError, "apply failed") {
 		t.Fatalf("expected apply error details, got %q", lastError)
+	}
+}
+
+func TestProcessProjectionApplyOutboxSameCampaignUsesSingleProjector(t *testing.T) {
+	raw := openTestRawEventsStore(t, true)
+	first := raw.ProjectionApplyOutboxStore().(*sqliteprojectionapplyoutbox.Store)
+	second := raw.ProjectionApplyOutboxStore().(*sqliteprojectionapplyoutbox.Store)
+	baseNow := time.Now().UTC()
+
+	for seq := 0; seq < 2; seq++ {
+		_, err := raw.AppendEvent(context.Background(), event.Event{
+			CampaignID:  ids.CampaignID("camp-outbox-single-projector"),
+			Timestamp:   baseNow.Add(time.Duration(seq) * time.Second),
+			Type:        event.Type("campaign.created"),
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "camp-outbox-single-projector",
+			PayloadJSON: []byte(`{}`),
+		})
+		if err != nil {
+			t.Fatalf("append event %d: %v", seq+1, err)
+		}
+	}
+
+	now := baseNow.Add(time.Minute)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan struct{})
+	var firstProcessed atomic.Int32
+
+	go func() {
+		defer close(done)
+		processed, err := first.ProcessProjectionApplyOutbox(
+			context.Background(),
+			now,
+			1,
+			func(_ context.Context, evt event.Event) error {
+				firstProcessed.Add(1)
+				if evt.Seq != 1 {
+					t.Errorf("first worker seq = %d, want 1", evt.Seq)
+				}
+				close(started)
+				<-release
+				return nil
+			},
+		)
+		if err != nil {
+			t.Errorf("first worker process outbox: %v", err)
+			return
+		}
+		if processed != 1 {
+			t.Errorf("first worker processed = %d, want 1", processed)
+		}
+	}()
+
+	<-started
+
+	secondProcessed, err := second.ProcessProjectionApplyOutbox(
+		context.Background(),
+		now,
+		10,
+		func(context.Context, event.Event) error {
+			t.Fatal("second worker should not apply same-campaign row while lease is held")
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("second worker process outbox: %v", err)
+	}
+	if secondProcessed != 0 {
+		t.Fatalf("second worker processed = %d, want 0", secondProcessed)
+	}
+
+	close(release)
+	<-done
+
+	remaining, err := second.ProcessProjectionApplyOutbox(
+		context.Background(),
+		now.Add(time.Second),
+		10,
+		func(_ context.Context, evt event.Event) error {
+			if evt.Seq != 2 {
+				t.Fatalf("remaining worker seq = %d, want 2", evt.Seq)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("second pass process outbox: %v", err)
+	}
+	if remaining != 1 {
+		t.Fatalf("second pass processed = %d, want 1", remaining)
+	}
+	if got := firstProcessed.Load(); got != 1 {
+		t.Fatalf("first worker callback count = %d, want 1", got)
+	}
+
+	var leaseCount int
+	if err := raw.DB().QueryRowContext(context.Background(), `SELECT COUNT(*) FROM projection_apply_campaign_leases`).Scan(&leaseCount); err != nil {
+		t.Fatalf("count campaign leases: %v", err)
+	}
+	if leaseCount != 0 {
+		t.Fatalf("campaign lease rows = %d, want 0", leaseCount)
+	}
+}
+
+func TestProcessProjectionApplyOutboxDifferentCampaignsCanProgressIndependently(t *testing.T) {
+	raw := openTestRawEventsStore(t, true)
+	first := raw.ProjectionApplyOutboxStore().(*sqliteprojectionapplyoutbox.Store)
+	second := raw.ProjectionApplyOutboxStore().(*sqliteprojectionapplyoutbox.Store)
+	baseNow := time.Now().UTC()
+
+	for _, campaignID := range []ids.CampaignID{"camp-outbox-independent-a", "camp-outbox-independent-b"} {
+		_, err := raw.AppendEvent(context.Background(), event.Event{
+			CampaignID:  campaignID,
+			Timestamp:   baseNow,
+			Type:        event.Type("campaign.created"),
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    string(campaignID),
+			PayloadJSON: []byte(`{}`),
+		})
+		if err != nil {
+			t.Fatalf("append %s: %v", campaignID, err)
+		}
+	}
+
+	now := baseNow.Add(time.Minute)
+	type processedEvent struct {
+		campaignID string
+	}
+	results := make(chan processedEvent, 2)
+
+	run := func(outbox *sqliteprojectionapplyoutbox.Store) {
+		processed, err := outbox.ProcessProjectionApplyOutbox(
+			context.Background(),
+			now,
+			1,
+			func(_ context.Context, evt event.Event) error {
+				results <- processedEvent{campaignID: string(evt.CampaignID)}
+				return nil
+			},
+		)
+		if err != nil {
+			t.Errorf("process outbox: %v", err)
+			return
+		}
+		if processed != 1 {
+			t.Errorf("processed = %d, want 1", processed)
+		}
+	}
+
+	done := make(chan struct{}, 2)
+	go func() { defer func() { done <- struct{}{} }(); run(first) }()
+	go func() { defer func() { done <- struct{}{} }(); run(second) }()
+	<-done
+	<-done
+	close(results)
+
+	seen := map[string]int{}
+	for result := range results {
+		seen[result.campaignID]++
+	}
+	if len(seen) != 2 || seen["camp-outbox-independent-a"] != 1 || seen["camp-outbox-independent-b"] != 1 {
+		t.Fatalf("seen campaigns = %+v, want one event per campaign", seen)
+	}
+}
+
+func TestProcessProjectionApplyOutboxBlocksLaterRowsBehindEarlierRetry(t *testing.T) {
+	store := openTestEventsStoreWithOutbox(t, true)
+	baseNow := time.Now().UTC()
+	for seq := 0; seq < 2; seq++ {
+		_, err := store.AppendEvent(context.Background(), event.Event{
+			CampaignID:  ids.CampaignID("camp-outbox-ordered"),
+			Timestamp:   baseNow.Add(time.Duration(seq) * time.Second),
+			Type:        event.Type("campaign.created"),
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "camp-outbox-ordered",
+			PayloadJSON: []byte(`{}`),
+		})
+		if err != nil {
+			t.Fatalf("append event %d: %v", seq+1, err)
+		}
+	}
+
+	now := baseNow.Add(time.Minute)
+	if _, err := store.DB().ExecContext(
+		context.Background(),
+		`UPDATE projection_apply_outbox
+		 SET status = 'failed', attempt_count = 1, next_attempt_at = ?, updated_at = ?
+		 WHERE campaign_id = ? AND seq = 1`,
+		now.Add(5*time.Minute).UnixMilli(),
+		now.UnixMilli(),
+		"camp-outbox-ordered",
+	); err != nil {
+		t.Fatalf("prepare failed head row: %v", err)
+	}
+	if _, err := store.DB().ExecContext(
+		context.Background(),
+		`UPDATE projection_apply_outbox
+		 SET next_attempt_at = ?, updated_at = ?
+		 WHERE campaign_id = ? AND seq = 2`,
+		now.Add(-time.Minute).UnixMilli(),
+		now.UnixMilli(),
+		"camp-outbox-ordered",
+	); err != nil {
+		t.Fatalf("prepare due second row: %v", err)
+	}
+
+	processed, err := store.ProcessProjectionApplyOutbox(
+		context.Background(),
+		now,
+		10,
+		func(context.Context, event.Event) error {
+			t.Fatal("later row should stay blocked behind earlier failed row")
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("process projection apply outbox: %v", err)
+	}
+	if processed != 0 {
+		t.Fatalf("processed = %d, want 0", processed)
 	}
 }
 

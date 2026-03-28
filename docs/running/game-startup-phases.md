@@ -165,12 +165,12 @@ helper with one exact startup-owned source input.
 ### 8. Runtime
 
 Configures background workers and status reporting:
-- **Projection apply mode** — resolves `inline_apply_only` (default),
-  `outbox_apply_only`, or `shadow_only` from environment
+- **Projection apply mode** — resolves one of `inline_apply_only`,
+  `outbox_apply_only`, or `shadow_only`
 - **Runtime store seam** — projection runtime policy mutates only the root
   `RuntimeStores` concern group rather than a broad root service container
-- **Outbox worker** — processes queued projection events (if enabled)
-- **Shadow worker** — cleans up processed outbox rows (if enabled)
+- **Outbox worker** — processes queued projection events and owns
+  per-campaign projection scheduling when apply mode is enabled
 - **Status reporter** — heartbeat and catalog availability monitoring
 
 ## Serve loop

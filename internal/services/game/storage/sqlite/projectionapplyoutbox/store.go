@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -22,6 +23,7 @@ type Store struct {
 	sqlDB         *sql.DB
 	eventLoader   eventLoader
 	eventRegistry *event.Registry
+	ownerID       string
 }
 
 var (
@@ -35,7 +37,14 @@ type row struct {
 	CampaignID   string
 	Seq          uint64
 	EventType    string
+	Status       string
 	AttemptCount int
+	NextAttempt  time.Time
+	UpdatedAt    time.Time
+}
+
+type campaignLease struct {
+	CampaignID string
 }
 
 const (
@@ -45,14 +54,30 @@ const (
 
 // Bind creates a projection-apply outbox backend bound to the provided event DB.
 func Bind(sqlDB *sql.DB, loader eventLoader, registry *event.Registry) *Store {
+	return bindWithOwnerID(sqlDB, loader, registry, newOwnerID())
+}
+
+func bindWithOwnerID(sqlDB *sql.DB, loader eventLoader, registry *event.Registry, ownerID string) *Store {
 	if sqlDB == nil {
 		return nil
+	}
+	if strings.TrimSpace(ownerID) == "" {
+		ownerID = newOwnerID()
 	}
 	return &Store{
 		sqlDB:         sqlDB,
 		eventLoader:   loader,
 		eventRegistry: registry,
+		ownerID:       ownerID,
 	}
+}
+
+func newOwnerID() string {
+	value, err := id.NewID()
+	if err == nil {
+		return value
+	}
+	return fmt.Sprintf("projection-apply-%d", time.Now().UTC().UnixNano())
 }
 
 // EnqueueForEvent inserts a pending outbox row for one event inside the
@@ -82,8 +107,9 @@ ON CONFLICT(campaign_id, seq) DO NOTHING
 	return nil
 }
 
-// ProcessProjectionApplyOutbox claims due outbox rows and applies projections
-// through the provided callback. Successful rows are removed from the queue.
+// ProcessProjectionApplyOutbox claims due campaigns, processes their rows in
+// sequence order, and applies projections through the provided callback.
+// Successful rows are removed from the queue.
 func (s *Store) ProcessProjectionApplyOutbox(
 	ctx context.Context,
 	now time.Time,
@@ -106,14 +132,23 @@ func (s *Store) ProcessProjectionApplyOutbox(
 		now = time.Now().UTC()
 	}
 
-	rows, err := s.claimDue(ctx, now, limit)
+	campaigns, err := s.claimDueCampaigns(ctx, now, limit)
 	if err != nil {
 		return 0, err
 	}
 
-	return processRows(rows, func(row row) error {
-		return s.processRow(ctx, row, now, apply)
-	})
+	processed := 0
+	for _, campaign := range campaigns {
+		if processed >= limit {
+			break
+		}
+		count, err := s.processCampaign(ctx, campaign, now, limit-processed, apply)
+		if err != nil {
+			return processed, err
+		}
+		processed += count
+	}
+	return processed, nil
 }
 
 // ProcessProjectionApplyOutboxShadow claims due outbox rows and requeues them
@@ -132,7 +167,7 @@ func (s *Store) ProcessProjectionApplyOutboxShadow(ctx context.Context, now time
 		now = time.Now().UTC()
 	}
 
-	rows, err := s.claimDue(ctx, now, limit)
+	rows, err := s.claimDueRows(ctx, now, limit)
 	if err != nil {
 		return 0, err
 	}
@@ -149,6 +184,45 @@ func processRows(rows []row, handle func(row) error) (int, error) {
 		}
 		processed++
 	}
+	return processed, nil
+}
+
+func (s *Store) processCampaign(
+	ctx context.Context,
+	campaign campaignLease,
+	now time.Time,
+	limit int,
+	apply func(context.Context, event.Event) error,
+) (processed int, err error) {
+	defer func() {
+		releaseErr := s.releaseCampaignLease(ctx, campaign.CampaignID)
+		if err == nil && releaseErr != nil {
+			err = releaseErr
+		}
+	}()
+
+	for processed < limit {
+		leaseNow := time.Now().UTC()
+		if leaseNow.Before(now) {
+			leaseNow = now
+		}
+		if err := s.renewCampaignLease(ctx, campaign.CampaignID, leaseNow); err != nil {
+			return processed, err
+		}
+
+		row, ready, err := s.claimNextRowForCampaign(ctx, campaign.CampaignID, now)
+		if err != nil {
+			return processed, err
+		}
+		if !ready {
+			return processed, nil
+		}
+		if err := s.processRow(ctx, row, now, apply); err != nil {
+			return processed, err
+		}
+		processed++
+	}
+
 	return processed, nil
 }
 
@@ -205,7 +279,86 @@ func (s *Store) scheduleRetry(
 	return s.markRetry(ctx, row, now, attempt, nextAttempt, lastError)
 }
 
-func (s *Store) claimDue(ctx context.Context, now time.Time, limit int) ([]row, error) {
+func (s *Store) claimDueCampaigns(ctx context.Context, now time.Time, limit int) ([]campaignLease, error) {
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin campaign claim tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	staleBefore := now.Add(-processingLease)
+	rows, err := tx.QueryContext(
+		ctx,
+		`SELECT o.campaign_id
+		 FROM projection_apply_outbox o
+		 WHERE o.seq = (
+			 SELECT MIN(seq)
+			 FROM projection_apply_outbox
+			 WHERE campaign_id = o.campaign_id
+		 )
+		 AND (
+			 (o.status IN ('pending', 'failed') AND o.next_attempt_at <= ?)
+			 OR (o.status = 'processing' AND o.updated_at <= ?)
+		 )
+		 ORDER BY o.next_attempt_at, o.seq
+		 LIMIT ?`,
+		sqliteutil.ToMillis(now),
+		sqliteutil.ToMillis(staleBefore),
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list due outbox campaigns: %w", err)
+	}
+	defer rows.Close()
+
+	candidates := make([]campaignLease, 0, limit)
+	for rows.Next() {
+		var candidate campaignLease
+		if err := rows.Scan(&candidate.CampaignID); err != nil {
+			return nil, fmt.Errorf("scan due outbox campaign: %w", err)
+		}
+		candidates = append(candidates, candidate)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate due outbox campaigns: %w", err)
+	}
+
+	claimed := make([]campaignLease, 0, len(candidates))
+	for _, candidate := range candidates {
+		result, err := tx.ExecContext(
+			ctx,
+			`INSERT INTO projection_apply_campaign_leases (campaign_id, owner_id, lease_expires_at, updated_at)
+			 VALUES (?, ?, ?, ?)
+			 ON CONFLICT(campaign_id) DO UPDATE
+			 SET owner_id = excluded.owner_id,
+			     lease_expires_at = excluded.lease_expires_at,
+			     updated_at = excluded.updated_at
+			 WHERE projection_apply_campaign_leases.lease_expires_at <= ?`,
+			candidate.CampaignID,
+			s.ownerID,
+			sqliteutil.ToMillis(now.Add(processingLease)),
+			sqliteutil.ToMillis(now),
+			sqliteutil.ToMillis(staleBefore),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("claim campaign lease %s: %w", candidate.CampaignID, err)
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return nil, fmt.Errorf("claim campaign lease rows affected %s: %w", candidate.CampaignID, err)
+		}
+		if affected == 1 {
+			claimed = append(claimed, candidate)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit campaign claim tx: %w", err)
+	}
+	return claimed, nil
+}
+
+func (s *Store) claimDueRows(ctx context.Context, now time.Time, limit int) ([]row, error) {
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin outbox claim tx: %w", err)
@@ -215,7 +368,7 @@ func (s *Store) claimDue(ctx context.Context, now time.Time, limit int) ([]row, 
 	staleBefore := now.Add(-processingLease)
 	rows, err := tx.QueryContext(
 		ctx,
-		`SELECT campaign_id, seq, event_type, attempt_count
+		`SELECT campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
 		 FROM projection_apply_outbox
 		 WHERE (
 			 status IN ('pending', 'failed') AND next_attempt_at <= ?
@@ -235,12 +388,10 @@ func (s *Store) claimDue(ctx context.Context, now time.Time, limit int) ([]row, 
 
 	candidates := make([]row, 0, limit)
 	for rows.Next() {
-		var candidate row
-		var seq int64
-		if err := rows.Scan(&candidate.CampaignID, &seq, &candidate.EventType, &candidate.AttemptCount); err != nil {
+		candidate, err := scanRow(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan due outbox row: %w", err)
 		}
-		candidate.Seq = uint64(seq)
 		candidates = append(candidates, candidate)
 	}
 	if err := rows.Err(); err != nil {
@@ -272,6 +423,8 @@ func (s *Store) claimDue(ctx context.Context, now time.Time, limit int) ([]row, 
 			return nil, fmt.Errorf("claim outbox row rows affected %s/%d: %w", candidate.CampaignID, candidate.Seq, err)
 		}
 		if affected == 1 {
+			candidate.Status = "processing"
+			candidate.UpdatedAt = now
 			claimed = append(claimed, candidate)
 		}
 	}
@@ -280,6 +433,151 @@ func (s *Store) claimDue(ctx context.Context, now time.Time, limit int) ([]row, 
 		return nil, fmt.Errorf("commit outbox claim tx: %w", err)
 	}
 	return claimed, nil
+}
+
+func scanRow(scanner interface{ Scan(...any) error }) (row, error) {
+	var (
+		result      row
+		seq         int64
+		nextAttempt int64
+		updatedAt   int64
+	)
+	if err := scanner.Scan(
+		&result.CampaignID,
+		&seq,
+		&result.EventType,
+		&result.Status,
+		&result.AttemptCount,
+		&nextAttempt,
+		&updatedAt,
+	); err != nil {
+		return row{}, err
+	}
+	result.Seq = uint64(seq)
+	result.NextAttempt = sqliteutil.FromMillis(nextAttempt)
+	result.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+	return result, nil
+}
+
+func (s *Store) claimNextRowForCampaign(ctx context.Context, campaignID string, now time.Time) (row, bool, error) {
+	staleBefore := now.Add(-processingLease)
+	var (
+		next        row
+		seq         int64
+		nextAttempt int64
+		updatedAt   int64
+	)
+	err := s.sqlDB.QueryRowContext(
+		ctx,
+		`SELECT campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
+		 FROM projection_apply_outbox
+		 WHERE campaign_id = ?
+		 ORDER BY seq
+		 LIMIT 1`,
+		campaignID,
+	).Scan(
+		&next.CampaignID,
+		&seq,
+		&next.EventType,
+		&next.Status,
+		&next.AttemptCount,
+		&nextAttempt,
+		&updatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return row{}, false, nil
+	}
+	if err != nil {
+		return row{}, false, fmt.Errorf("load next outbox row for campaign %s: %w", campaignID, err)
+	}
+	next.Seq = uint64(seq)
+	next.NextAttempt = sqliteutil.FromMillis(nextAttempt)
+	next.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+
+	switch next.Status {
+	case "dead":
+		return row{}, false, nil
+	case "pending", "failed":
+		if next.NextAttempt.After(now) {
+			return row{}, false, nil
+		}
+	case "processing":
+		if next.UpdatedAt.After(staleBefore) {
+			return row{}, false, nil
+		}
+	default:
+		return row{}, false, fmt.Errorf("invalid projection apply outbox status %q for %s/%d", next.Status, next.CampaignID, next.Seq)
+	}
+
+	result, err := s.sqlDB.ExecContext(
+		ctx,
+		`UPDATE projection_apply_outbox
+		 SET status = 'processing', updated_at = ?
+		 WHERE campaign_id = ? AND seq = ?
+		   AND (
+		   	(status IN ('pending', 'failed') AND next_attempt_at <= ?)
+		   	OR (status = 'processing' AND updated_at <= ?)
+		   )`,
+		sqliteutil.ToMillis(now),
+		next.CampaignID,
+		int64(next.Seq),
+		sqliteutil.ToMillis(now),
+		sqliteutil.ToMillis(staleBefore),
+	)
+	if err != nil {
+		return row{}, false, fmt.Errorf("claim next outbox row for campaign %s/%d: %w", next.CampaignID, next.Seq, err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return row{}, false, fmt.Errorf("claim next outbox row rows affected %s/%d: %w", next.CampaignID, next.Seq, err)
+	}
+	if affected != 1 {
+		return row{}, false, nil
+	}
+	next.Status = "processing"
+	next.UpdatedAt = now
+	return next, true, nil
+}
+
+func (s *Store) renewCampaignLease(ctx context.Context, campaignID string, now time.Time) error {
+	result, err := s.sqlDB.ExecContext(
+		ctx,
+		`UPDATE projection_apply_campaign_leases
+		 SET lease_expires_at = ?, updated_at = ?
+		 WHERE campaign_id = ? AND owner_id = ?`,
+		sqliteutil.ToMillis(now.Add(processingLease)),
+		sqliteutil.ToMillis(now),
+		campaignID,
+		s.ownerID,
+	)
+	if err != nil {
+		return fmt.Errorf("renew campaign lease %s: %w", campaignID, err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("renew campaign lease rows affected %s: %w", campaignID, err)
+	}
+	if affected != 1 {
+		return fmt.Errorf("renew campaign lease %s: expected 1 row updated, got %d", campaignID, affected)
+	}
+	return nil
+}
+
+func (s *Store) releaseCampaignLease(ctx context.Context, campaignID string) error {
+	if s == nil || s.sqlDB == nil {
+		return nil
+	}
+	_, err := s.sqlDB.ExecContext(
+		ctx,
+		`DELETE FROM projection_apply_campaign_leases
+		 WHERE campaign_id = ? AND owner_id = ?`,
+		campaignID,
+		s.ownerID,
+	)
+	if err != nil {
+		return fmt.Errorf("release campaign lease %s: %w", campaignID, err)
+	}
+	return nil
 }
 
 func (s *Store) markShadowRetry(ctx context.Context, row row, now time.Time, attempt int, nextAttempt time.Time) error {

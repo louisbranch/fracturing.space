@@ -28,6 +28,16 @@ func TestStoreDBNilSafe(t *testing.T) {
 	}
 }
 
+func TestStoreCloseNilSafe(t *testing.T) {
+	var store *Store
+	if err := store.Close(); err != nil {
+		t.Fatalf("nil store close: %v", err)
+	}
+	if err := (&Store{}).Close(); err != nil {
+		t.Fatalf("zero store close: %v", err)
+	}
+}
+
 func TestOpenRemovesLegacySocialTables(t *testing.T) {
 	store := openTempStore(t)
 
@@ -183,6 +193,17 @@ func TestPutUserCanonicalizesUsername(t *testing.T) {
 	}
 	if got.Username != "test.user" {
 		t.Fatalf("username = %q, want %q", got.Username, "test.user")
+	}
+}
+
+func TestGetUserByUsernameValidationAndNotFound(t *testing.T) {
+	store := openTempStore(t)
+
+	if _, err := store.GetUserByUsername(context.Background(), "   "); err == nil || err.Error() != "Username is required." {
+		t.Fatalf("expected username required error, got %v", err)
+	}
+	if _, err := store.GetUserByUsername(context.Background(), "missing"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found, got %v", err)
 	}
 }
 
@@ -464,6 +485,51 @@ func TestPasskeyCredentialRoundTrip(t *testing.T) {
 	}
 }
 
+func TestListPasskeyCredentialsAndDeleteSingle(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	putTestUser(t, store, "user-1", "alpha", now)
+	putTestUser(t, store, "user-2", "beta", now)
+
+	if err := store.PutPasskeyCredential(context.Background(), storage.PasskeyCredential{
+		CredentialID:   "cred-1",
+		UserID:         "user-1",
+		CredentialJSON: "{}",
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}); err != nil {
+		t.Fatalf("put passkey 1: %v", err)
+	}
+	if err := store.PutPasskeyCredential(context.Background(), storage.PasskeyCredential{
+		CredentialID:   "cred-2",
+		UserID:         "user-2",
+		CredentialJSON: "{}",
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}); err != nil {
+		t.Fatalf("put passkey 2: %v", err)
+	}
+
+	rows, err := store.ListPasskeyCredentials(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("list passkeys: %v", err)
+	}
+	if len(rows) != 1 || rows[0].CredentialID != "cred-1" {
+		t.Fatalf("rows = %#v", rows)
+	}
+
+	if err := store.DeletePasskeyCredential(context.Background(), "cred-1"); err != nil {
+		t.Fatalf("delete passkey: %v", err)
+	}
+	if _, err := store.GetPasskeyCredential(context.Background(), "cred-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected deleted credential, got %v", err)
+	}
+	if _, err := store.GetPasskeyCredential(context.Background(), "cred-2"); err != nil {
+		t.Fatalf("expected unrelated credential retained, got %v", err)
+	}
+}
+
 func TestPasskeySessionRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
@@ -492,6 +558,17 @@ func TestPasskeySessionRoundTrip(t *testing.T) {
 	}
 	if _, err := store.GetPasskeySession(context.Background(), "session-1"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestPasskeyDeleteValidation(t *testing.T) {
+	store := openTempStore(t)
+
+	if err := store.DeletePasskeyCredential(context.Background(), " "); err == nil || err.Error() != "Credential ID is required." {
+		t.Fatalf("expected credential id required error, got %v", err)
+	}
+	if err := store.DeletePasskeySession(context.Background(), " "); err == nil || err.Error() != "Session ID is required." {
+		t.Fatalf("expected session id required error, got %v", err)
 	}
 }
 
@@ -558,6 +635,56 @@ func TestRegistrationSessionRoundTrip(t *testing.T) {
 	}
 	if _, err := store.GetRegistrationSession(context.Background(), "reg-1"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestGetRegistrationSessionByUsername(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	input := storage.RegistrationSession{
+		ID:        "reg-1",
+		UserID:    "user-1",
+		Username:  "testuser",
+		ExpiresAt: now.Add(10 * time.Minute),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := store.PutRegistrationSession(context.Background(), input); err != nil {
+		t.Fatalf("put registration session: %v", err)
+	}
+
+	got, err := store.GetRegistrationSessionByUsername(context.Background(), "testuser")
+	if err != nil {
+		t.Fatalf("get registration session by username: %v", err)
+	}
+	if got.ID != input.ID || got.UserID != input.UserID {
+		t.Fatalf("unexpected registration session: %+v", got)
+	}
+	if _, err := store.GetRegistrationSessionByUsername(context.Background(), "missing"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found for missing username, got %v", err)
+	}
+}
+
+func TestRegistrationAndRecoverySessionValidation(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	if err := store.PutRegistrationSession(context.Background(), storage.RegistrationSession{
+		ID:        "reg-1",
+		ExpiresAt: now.Add(time.Hour),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err == nil || err.Error() != "Registration session ID, user ID, and username are required." {
+		t.Fatalf("expected registration validation error, got %v", err)
+	}
+
+	if err := store.PutRecoverySession(context.Background(), storage.RecoverySession{
+		ID:        "recovery-1",
+		ExpiresAt: now.Add(time.Hour),
+		CreatedAt: now,
+	}); err == nil || err.Error() != "Recovery session ID and user ID are required." {
+		t.Fatalf("expected recovery validation error, got %v", err)
 	}
 }
 
@@ -710,6 +837,86 @@ func TestWebSessionRoundTrip(t *testing.T) {
 	}
 	if _, err := store.GetWebSession(context.Background(), "ws-1"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected not found after expiry deletion, got %v", err)
+	}
+}
+
+func TestPutWebSessionDefaultsCreatedAtAndUpsertsRevocation(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	putTestUser(t, store, "user-1", "primary", now)
+	putTestUser(t, store, "user-2", "secondary", now)
+
+	if err := store.PutWebSession(context.Background(), storage.WebSession{
+		ID:        "ws-1",
+		UserID:    "user-1",
+		ExpiresAt: now.Add(30 * time.Minute),
+	}); err != nil {
+		t.Fatalf("put web session: %v", err)
+	}
+
+	first, err := store.GetWebSession(context.Background(), "ws-1")
+	if err != nil {
+		t.Fatalf("get initial web session: %v", err)
+	}
+	if first.CreatedAt.IsZero() {
+		t.Fatal("created_at = zero, want auto-filled timestamp")
+	}
+
+	revokedAt := now.Add(5 * time.Minute)
+	if err := store.PutWebSession(context.Background(), storage.WebSession{
+		ID:        "ws-1",
+		UserID:    "user-2",
+		CreatedAt: now,
+		ExpiresAt: now.Add(time.Hour),
+		RevokedAt: &revokedAt,
+	}); err != nil {
+		t.Fatalf("put updated web session: %v", err)
+	}
+
+	updated, err := store.GetWebSession(context.Background(), "ws-1")
+	if err != nil {
+		t.Fatalf("get updated web session: %v", err)
+	}
+	if updated.UserID != "user-2" || !updated.ExpiresAt.Equal(now.Add(time.Hour)) {
+		t.Fatalf("updated web session = %+v", updated)
+	}
+	if updated.RevokedAt == nil || !updated.RevokedAt.Equal(revokedAt) {
+		t.Fatalf("revoked_at = %v, want %v", updated.RevokedAt, revokedAt)
+	}
+}
+
+func TestWebSessionValidationAndRevocationEdges(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 23, 16, 0, 0, 0, time.UTC)
+	putTestUser(t, store, "user-1", "primary", now)
+
+	if err := store.PutWebSession(context.Background(), storage.WebSession{ID: "ws-1", UserID: "user-1"}); err == nil || err.Error() != "Expires at is required." {
+		t.Fatalf("expected expires-at validation error, got %v", err)
+	}
+	if _, err := store.GetWebSession(context.Background(), " "); err == nil || err.Error() != "Session ID is required." {
+		t.Fatalf("expected session id validation error, got %v", err)
+	}
+	if err := store.RevokeWebSession(context.Background(), "missing", now); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found revoke error, got %v", err)
+	}
+	if err := store.RevokeWebSessionsByUser(context.Background(), " ", now); err == nil || err.Error() != "User ID is required." {
+		t.Fatalf("expected user id validation error, got %v", err)
+	}
+
+	expired := now.Add(-time.Minute)
+	if err := store.PutWebSession(context.Background(), storage.WebSession{
+		ID:        "ws-expired",
+		UserID:    "user-1",
+		CreatedAt: now.Add(-time.Hour),
+		ExpiresAt: expired,
+	}); err != nil {
+		t.Fatalf("put expired web session: %v", err)
+	}
+	if err := store.DeleteExpiredWebSessions(context.Background(), time.Time{}); err != nil {
+		t.Fatalf("delete expired web sessions with zero time: %v", err)
+	}
+	if _, err := store.GetWebSession(context.Background(), "ws-expired"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected expired session deleted, got %v", err)
 	}
 }
 

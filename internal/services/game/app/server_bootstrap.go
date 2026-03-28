@@ -134,7 +134,7 @@ func openContentStore(path string) (contentBackend, error) {
 // Errors are logged but do not prevent startup. This is intentional: gap repair
 // is best-effort hardening. A repair failure (e.g., corrupt event) should not
 // block the server from serving traffic with stale-but-usable projection state.
-// The outbox worker and inline apply handle new events regardless.
+// The outbox worker continues applying new events regardless.
 func repairProjectionGaps(ctx context.Context, bundle *storageBundle, applier projection.Applier) {
 	if bundle == nil || bundle.projections == nil || bundle.events == nil {
 		return
