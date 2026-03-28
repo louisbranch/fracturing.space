@@ -1,135 +1,230 @@
 package daggerhearttools
 
-import "testing"
+import (
+	"context"
+	"encoding/json"
+	"testing"
 
-func TestResolveAttackTargetIDUsesBoardDiagnostics(t *testing.T) {
-	t.Run("single adversary infers target", func(t *testing.T) {
-		targetID, err := resolveAttackTargetID("", daggerheartCombatBoardPayload{
-			Status:      "READY",
-			Adversaries: []adversarySummary{{ID: "adv-1"}},
-		})
-		if err != nil {
-			t.Fatalf("resolveAttackTargetID: %v", err)
-		}
-		if targetID != "adv-1" {
-			t.Fatalf("target_id = %q, want adv-1", targetID)
-		}
-	})
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"google.golang.org/grpc"
+)
 
-	t.Run("no active scene returns corrective guidance", func(t *testing.T) {
-		_, err := resolveAttackTargetID("", daggerheartCombatBoardPayload{Status: "NO_ACTIVE_SCENE"})
-		if err == nil || err.Error() != "cannot infer target_id because the combat board has no active scene; use interaction_state_read or interaction_activate_scene, then retry" {
-			t.Fatalf("err = %v", err)
-		}
-	})
-
-	t.Run("multiple adversaries require explicit target", func(t *testing.T) {
-		_, err := resolveAttackTargetID("", daggerheartCombatBoardPayload{
-			Status:      "READY",
-			Adversaries: []adversarySummary{{ID: "adv-1"}, {ID: "adv-2"}},
-		})
-		if err == nil || err.Error() != "target_id is required when the combat board has multiple visible adversaries; read daggerheart_combat_board_read and specify the intended target_id" {
-			t.Fatalf("err = %v", err)
-		}
-	})
+type combatFlowTestRuntime struct {
+	stubRuntime
+	campaignID        string
+	sessionID         string
+	sceneID           string
+	snapshotClient    statev1.SnapshotServiceClient
+	sessionClient     statev1.SessionServiceClient
+	daggerheartClient pb.DaggerheartServiceClient
 }
 
-func TestInferredAttackProfiles(t *testing.T) {
-	t.Run("primary weapon inference", func(t *testing.T) {
-		profile := inferredPrimaryWeaponAttackProfile(characterSheetPayload{
-			Daggerheart: &daggerheartCharacterSheetState{
-				Equipment: &equipmentSummary{
-					PrimaryWeapon: &weaponSummary{
-						Name:       "Longsword",
-						Trait:      "Strength",
-						Range:      "MELEE",
-						DamageDice: "1d10",
-						DamageType: "PHYSICAL",
-					},
-				},
+func (r combatFlowTestRuntime) SnapshotClient() statev1.SnapshotServiceClient {
+	return r.snapshotClient
+}
+func (r combatFlowTestRuntime) SessionClient() statev1.SessionServiceClient { return r.sessionClient }
+func (r combatFlowTestRuntime) DaggerheartClient() pb.DaggerheartServiceClient {
+	return r.daggerheartClient
+}
+func (r combatFlowTestRuntime) ResolveCampaignID(explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	return r.campaignID
+}
+func (r combatFlowTestRuntime) ResolveSessionID(explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	return r.sessionID
+}
+func (r combatFlowTestRuntime) ResolveSceneID(_ context.Context, _, explicit string) (string, error) {
+	if explicit != "" {
+		return explicit, nil
+	}
+	return r.sceneID, nil
+}
+
+type fakeSnapshotClient struct {
+	statev1.SnapshotServiceClient
+	getSnapshot func(context.Context, *statev1.GetSnapshotRequest, ...grpc.CallOption) (*statev1.GetSnapshotResponse, error)
+}
+
+func (c fakeSnapshotClient) GetSnapshot(ctx context.Context, in *statev1.GetSnapshotRequest, opts ...grpc.CallOption) (*statev1.GetSnapshotResponse, error) {
+	return c.getSnapshot(ctx, in, opts...)
+}
+
+type fakeSessionClient struct {
+	statev1.SessionServiceClient
+	getSessionSpotlight func(context.Context, *statev1.GetSessionSpotlightRequest, ...grpc.CallOption) (*statev1.GetSessionSpotlightResponse, error)
+}
+
+func (c fakeSessionClient) GetSessionSpotlight(ctx context.Context, in *statev1.GetSessionSpotlightRequest, opts ...grpc.CallOption) (*statev1.GetSessionSpotlightResponse, error) {
+	return c.getSessionSpotlight(ctx, in, opts...)
+}
+
+type fakeDaggerheartToolClient struct {
+	pb.DaggerheartServiceClient
+	applyDamage                func(context.Context, *pb.DaggerheartApplyDamageRequest, ...grpc.CallOption) (*pb.DaggerheartApplyDamageResponse, error)
+	sessionAttackFlow          func(context.Context, *pb.SessionAttackFlowRequest, ...grpc.CallOption) (*pb.SessionAttackFlowResponse, error)
+	sessionAdversaryAttackFlow func(context.Context, *pb.SessionAdversaryAttackFlowRequest, ...grpc.CallOption) (*pb.SessionAdversaryAttackFlowResponse, error)
+}
+
+func (c fakeDaggerheartToolClient) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamageRequest, opts ...grpc.CallOption) (*pb.DaggerheartApplyDamageResponse, error) {
+	return c.applyDamage(ctx, in, opts...)
+}
+
+func (c fakeDaggerheartToolClient) SessionAttackFlow(ctx context.Context, in *pb.SessionAttackFlowRequest, opts ...grpc.CallOption) (*pb.SessionAttackFlowResponse, error) {
+	return c.sessionAttackFlow(ctx, in, opts...)
+}
+
+func (c fakeDaggerheartToolClient) SessionAdversaryAttackFlow(ctx context.Context, in *pb.SessionAdversaryAttackFlowRequest, opts ...grpc.CallOption) (*pb.SessionAdversaryAttackFlowResponse, error) {
+	return c.sessionAdversaryAttackFlow(ctx, in, opts...)
+}
+
+func TestAttackFlowResolveCheckpointUsesApplyDamage(t *testing.T) {
+	var applyDamageReq *pb.DaggerheartApplyDamageRequest
+	runtime := combatFlowTestRuntime{
+		campaignID: "camp-1",
+		sessionID:  "sess-1",
+		snapshotClient: fakeSnapshotClient{
+			getSnapshot: func(context.Context, *statev1.GetSnapshotRequest, ...grpc.CallOption) (*statev1.GetSnapshotResponse, error) {
+				return &statev1.GetSnapshotResponse{}, nil
 			},
-		}, "char-1")
-		if profile == nil || profile.Standard == nil {
-			t.Fatalf("profile = %#v", profile)
-		}
-		if profile.Standard.Trait != "Strength" || len(profile.Standard.DamageDice) != 1 || profile.Standard.DamageDice[0].Sides != 10 {
-			t.Fatalf("standard attack = %#v", profile.Standard)
-		}
-		if profile.Damage == nil || profile.Damage.Source != "Longsword" || profile.Damage.DamageType != "PHYSICAL" {
-			t.Fatalf("damage = %#v", profile.Damage)
-		}
-	})
-
-	t.Run("active beastform inference", func(t *testing.T) {
-		profile := inferredBeastformAttackProfile(characterSheetPayload{
-			Daggerheart: &daggerheartCharacterSheetState{
-				ClassState: &classStateSummary{
-					ActiveBeastform: &beastformSummary{
-						BeastformID: "beastform.wolf",
-						AttackTrait: "Agility",
-						AttackRange: "MELEE",
-						DamageDice:  []damageDieSpec{{Count: 2, Sides: 8}},
-						DamageType:  "PHYSICAL",
-					},
-				},
+		},
+		sessionClient: fakeSessionClient{
+			getSessionSpotlight: func(context.Context, *statev1.GetSessionSpotlightRequest, ...grpc.CallOption) (*statev1.GetSessionSpotlightResponse, error) {
+				return &statev1.GetSessionSpotlightResponse{}, nil
 			},
-		}, "char-1")
-		if profile == nil || profile.Beastform == nil {
-			t.Fatalf("profile = %#v", profile)
-		}
-		if profile.Damage == nil || profile.Damage.Source != "beastform.wolf" {
-			t.Fatalf("damage = %#v", profile.Damage)
-		}
+		},
+		daggerheartClient: fakeDaggerheartToolClient{
+			applyDamage: func(_ context.Context, in *pb.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*pb.DaggerheartApplyDamageResponse, error) {
+				applyDamageReq = in
+				return &pb.DaggerheartApplyDamageResponse{
+					CharacterId: in.GetCharacterId(),
+					State:       &pb.DaggerheartCharacterState{Hp: 4},
+				}, nil
+			},
+			sessionAttackFlow: func(context.Context, *pb.SessionAttackFlowRequest, ...grpc.CallOption) (*pb.SessionAttackFlowResponse, error) {
+				t.Fatal("unexpected SessionAttackFlow call during checkpoint resume")
+				return nil, nil
+			},
+		},
+	}
+
+	args, err := json.Marshal(map[string]any{
+		"character_id":  "char-attacker",
+		"target_id":     "char-target",
+		"checkpoint_id": "damage-roll:42:7",
+		"difficulty":    999,
+		"damage": map[string]any{
+			"damage_type": "PHYSICAL",
+			"source":      "attack",
+		},
+		"target_mitigation_decision": map[string]any{
+			"base_armor": "DECLINE",
+		},
 	})
+	if err != nil {
+		t.Fatalf("marshal args: %v", err)
+	}
+
+	result, err := AttackFlowResolve(runtime, context.Background(), args)
+	if err != nil {
+		t.Fatalf("AttackFlowResolve returned error: %v", err)
+	}
+	if applyDamageReq == nil {
+		t.Fatal("expected ApplyDamage request")
+	}
+	if applyDamageReq.GetRollSeq() != 42 {
+		t.Fatalf("roll_seq = %d, want 42", applyDamageReq.GetRollSeq())
+	}
+	if applyDamageReq.GetDamage().GetAmount() != 7 {
+		t.Fatalf("damage amount = %d, want 7", applyDamageReq.GetDamage().GetAmount())
+	}
+	if got := applyDamageReq.GetDamage().GetSourceCharacterIds(); len(got) != 1 || got[0] != "char-attacker" {
+		t.Fatalf("source_character_ids = %v, want [char-attacker]", got)
+	}
+	var decoded struct {
+		CharacterDamageApplied struct {
+			State struct {
+				HP int `json:"hp"`
+			} `json:"state"`
+		} `json:"character_damage_applied"`
+	}
+	if err := json.Unmarshal([]byte(result.Output), &decoded); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	if decoded.CharacterDamageApplied.State.HP != 4 {
+		t.Fatalf("hp = %d, want 4", decoded.CharacterDamageApplied.State.HP)
+	}
 }
 
-func TestParseDamageDiceString(t *testing.T) {
-	dice, ok := parseDamageDiceString("2d8 + d6")
-	if !ok {
-		t.Fatal("expected parse success")
+func TestAdversaryAttackFlowResolveCheckpointUsesApplyDamage(t *testing.T) {
+	var applyDamageReq *pb.DaggerheartApplyDamageRequest
+	runtime := combatFlowTestRuntime{
+		campaignID: "camp-1",
+		sessionID:  "sess-1",
+		daggerheartClient: fakeDaggerheartToolClient{
+			applyDamage: func(_ context.Context, in *pb.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*pb.DaggerheartApplyDamageResponse, error) {
+				applyDamageReq = in
+				return &pb.DaggerheartApplyDamageResponse{
+					CharacterId: in.GetCharacterId(),
+					State:       &pb.DaggerheartCharacterState{Hp: 3},
+				}, nil
+			},
+			sessionAdversaryAttackFlow: func(context.Context, *pb.SessionAdversaryAttackFlowRequest, ...grpc.CallOption) (*pb.SessionAdversaryAttackFlowResponse, error) {
+				t.Fatal("unexpected SessionAdversaryAttackFlow call during checkpoint resume")
+				return nil, nil
+			},
+		},
 	}
-	if len(dice) != 2 {
-		t.Fatalf("dice length = %d, want 2", len(dice))
-	}
-	if dice[0] != (rollDiceSpec{Count: 2, Sides: 8}) || dice[1] != (rollDiceSpec{Count: 1, Sides: 6}) {
-		t.Fatalf("dice = %#v", dice)
-	}
-}
 
-func TestMergeAttackDamageSpecFillsInferredDefaults(t *testing.T) {
-	merged := mergeAttackDamageSpec(&attackDamageSpecInput{
-		Source: "Player override",
-	}, &attackDamageSpecInput{
-		DamageType:         "PHYSICAL",
-		Source:             "Longsword",
-		SourceCharacterIDs: []string{"char-1"},
+	args, err := json.Marshal(map[string]any{
+		"adversary_id":  "adv-1",
+		"target_id":     "char-target",
+		"checkpoint_id": "damage-roll:84:5",
+		"difficulty":    999,
+		"damage": map[string]any{
+			"damage_type": "PHYSICAL",
+			"source":      "adversary attack",
+		},
+		"target_mitigation_decision": map[string]any{
+			"base_armor": "DECLINE",
+		},
 	})
-	if merged == nil {
-		t.Fatal("expected merged damage")
-	}
-	if merged.Source != "Player override" {
-		t.Fatalf("source = %q, want Player override", merged.Source)
-	}
-	if merged.DamageType != "PHYSICAL" {
-		t.Fatalf("damage_type = %q, want PHYSICAL", merged.DamageType)
-	}
-	if len(merged.SourceCharacterIDs) != 1 || merged.SourceCharacterIDs[0] != "char-1" {
-		t.Fatalf("source_character_ids = %#v", merged.SourceCharacterIDs)
-	}
-}
-
-func TestNormalizeAttackProfilesPrefersMeaningfulStandardAttack(t *testing.T) {
-	standard, beastform := normalizeAttackProfiles(&standardAttackProfileInput{
-		Trait:       "Agility",
-		DamageDice:  []rollDiceSpec{{Count: 1, Sides: 10}},
-		AttackRange: "MELEE",
-	}, &beastformAttackProfileInput{})
-	if standard == nil || beastform != nil {
-		t.Fatalf("normalized profiles = (%#v, %#v)", standard, beastform)
+	if err != nil {
+		t.Fatalf("marshal args: %v", err)
 	}
 
-	standard, beastform = normalizeAttackProfiles(&standardAttackProfileInput{}, &beastformAttackProfileInput{})
-	if standard != nil || beastform == nil {
-		t.Fatalf("zero standard should fall back to beastform: (%#v, %#v)", standard, beastform)
+	result, err := AdversaryAttackFlowResolve(runtime, context.Background(), args)
+	if err != nil {
+		t.Fatalf("AdversaryAttackFlowResolve returned error: %v", err)
+	}
+	if applyDamageReq == nil {
+		t.Fatal("expected ApplyDamage request")
+	}
+	if applyDamageReq.GetRollSeq() != 84 {
+		t.Fatalf("roll_seq = %d, want 84", applyDamageReq.GetRollSeq())
+	}
+	if applyDamageReq.GetDamage().GetAmount() != 5 {
+		t.Fatalf("damage amount = %d, want 5", applyDamageReq.GetDamage().GetAmount())
+	}
+	if got := applyDamageReq.GetDamage().GetSourceCharacterIds(); len(got) != 1 || got[0] != "adv-1" {
+		t.Fatalf("source_character_ids = %v, want [adv-1]", got)
+	}
+	var decoded struct {
+		DamageApplied struct {
+			State struct {
+				HP int `json:"hp"`
+			} `json:"state"`
+		} `json:"damage_applied"`
+	}
+	if err := json.Unmarshal([]byte(result.Output), &decoded); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	if decoded.DamageApplied.State.HP != 3 {
+		t.Fatalf("hp = %d, want 3", decoded.DamageApplied.State.HP)
 	}
 }

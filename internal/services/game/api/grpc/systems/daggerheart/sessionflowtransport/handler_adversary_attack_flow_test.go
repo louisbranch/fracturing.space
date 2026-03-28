@@ -168,3 +168,88 @@ func TestHandlerSessionAdversaryAttackFlowAddsAdversarySourceCharacter(t *testin
 		t.Fatalf("source_character_ids = %v", got)
 	}
 }
+
+func TestHandlerSessionAdversaryAttackFlowReturnsIncomingDefenseChoice(t *testing.T) {
+	handler := NewHandler(Dependencies{
+		SessionAdversaryAttackRoll: func(context.Context, *pb.SessionAdversaryAttackRollRequest) (*pb.SessionAdversaryAttackRollResponse, error) {
+			t.Fatal("unexpected adversary attack roll")
+			return nil, nil
+		},
+		ApplyAdversaryAttackOutcome: func(context.Context, *pb.DaggerheartApplyAdversaryAttackOutcomeRequest) (*pb.DaggerheartApplyAdversaryAttackOutcomeResponse, error) {
+			t.Fatal("unexpected attack outcome")
+			return nil, nil
+		},
+		SessionDamageRoll: func(context.Context, *pb.SessionDamageRollRequest) (*pb.SessionDamageRollResponse, error) {
+			t.Fatal("unexpected damage roll")
+			return nil, nil
+		},
+		ApplyDamage: func(context.Context, *pb.DaggerheartApplyDamageRequest) (*pb.DaggerheartApplyDamageResponse, error) {
+			t.Fatal("unexpected apply damage")
+			return nil, nil
+		},
+		LoadAdversary: func(context.Context, string, string, string) (projectionstore.DaggerheartAdversary, error) {
+			return projectionstore.DaggerheartAdversary{
+				AdversaryID:      "adv-1",
+				SessionID:        "sess-1",
+				AdversaryEntryID: "entry-1",
+			}, nil
+		},
+		LoadAdversaryEntry: func(context.Context, string) (contentstore.DaggerheartAdversaryEntry, error) {
+			return contentstore.DaggerheartAdversaryEntry{
+				StandardAttack: contentstore.DaggerheartAdversaryAttack{
+					DamageDice: []contentstore.DaggerheartDamageDie{{Sides: 6, Count: 1}},
+					DamageType: "physical",
+				},
+			}, nil
+		},
+		LoadCharacterProfile: func(context.Context, string, string) (projectionstore.DaggerheartCharacterProfile, error) {
+			return projectionstore.DaggerheartCharacterProfile{
+				CharacterID:     "char-1",
+				EquippedArmorID: "armor-1",
+				ArmorMax:        1,
+				Evasion:         12,
+			}, nil
+		},
+		LoadCharacterState: func(context.Context, string, string) (projectionstore.DaggerheartCharacterState, error) {
+			return projectionstore.DaggerheartCharacterState{
+				CharacterID: "char-1",
+				Hp:          6,
+				Armor:       1,
+			}, nil
+		},
+		LoadSubclass: func(context.Context, string) (contentstore.DaggerheartSubclass, error) {
+			return contentstore.DaggerheartSubclass{}, nil
+		},
+		LoadArmor: func(context.Context, string) (contentstore.DaggerheartArmor, error) {
+			return contentstore.DaggerheartArmor{
+				ID: "armor-1",
+				Rules: contentstore.DaggerheartArmorRules{
+					ShiftingAttackDisadvantage: 1,
+				},
+			}, nil
+		},
+	})
+
+	resp, err := handler.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId:           "camp-1",
+		SessionId:            "sess-1",
+		AdversaryId:          "adv-1",
+		TargetId:             "char-1",
+		RequireDefenseChoice: true,
+		Damage: &pb.DaggerheartAttackDamageSpec{
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryAttackFlow returned error: %v", err)
+	}
+	if resp.GetChoiceRequired() == nil {
+		t.Fatal("expected choice_required")
+	}
+	if got := resp.GetChoiceRequired().GetStage(); got != pb.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_INCOMING_ATTACK_DEFENSE {
+		t.Fatalf("choice stage = %v", got)
+	}
+	if got := resp.GetChoiceRequired().GetOptionCodes(); len(got) != 2 || got[0] != "armor.shifting" || got[1] != "armor.decline" {
+		t.Fatalf("choice option_codes = %v", got)
+	}
+}

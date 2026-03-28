@@ -212,11 +212,14 @@ message DaggerheartApplyDamageRequest {
   bool require_damage_roll = 5;
   string scene_id = 6;
   DaggerheartDamageArmorReaction armor_reaction = 7;
+  DaggerheartDamageMitigationDecision mitigation_decision = 8;
+  bool require_mitigation_choice = 9;
 }
 
 message DaggerheartApplyDamageResponse {
   string character_id = 1;
   DaggerheartCharacterState state = 2;
+  DaggerheartCombatChoiceRequired choice_required = 3;
 }
 
 message DaggerheartApplyAdversaryDamageRequest {
@@ -1093,6 +1096,8 @@ message SessionAttackFlowRequest {
   bool target_is_adversary = 22;
   repeated string nearby_adversary_ids = 23;
   repeated ActionRollHopeSpend hope_spends = 24;
+  DaggerheartDamageMitigationDecision target_mitigation_decision = 25;
+  bool require_defense_choice = 26;
   oneof attack_profile {
     SessionStandardAttackProfile standard_attack = 20;
     SessionBeastformAttackProfile beastform_attack = 21;
@@ -1106,6 +1111,7 @@ message SessionAttackFlowResponse {
   SessionDamageRollResponse damage_roll = 4;
   DaggerheartApplyDamageResponse damage_applied = 5;
   DaggerheartApplyAdversaryDamageResponse adversary_damage_applied = 6;
+  DaggerheartCombatChoiceRequired choice_required = 7;
 }
 
 message SessionReactionFlowRequest {
@@ -1186,6 +1192,9 @@ message SessionAdversaryAttackFlowRequest {
   repeated string target_ids = 15;
   string feature_id = 16;
   repeated string contributor_adversary_ids = 17;
+  DaggerheartIncomingAttackDefenseDecision target_defense_decision = 18;
+  DaggerheartDamageMitigationDecision target_mitigation_decision = 19;
+  bool require_defense_choice = 20;
 }
 
 message SessionAdversaryAttackFlowResponse {
@@ -1194,6 +1203,7 @@ message SessionAdversaryAttackFlowResponse {
   SessionDamageRollResponse damage_roll = 3;
   DaggerheartApplyDamageResponse damage_applied = 4;
   repeated DaggerheartApplyDamageResponse damage_applications = 5;
+  DaggerheartCombatChoiceRequired choice_required = 6;
 }
 
 enum DaggerheartAttackRange {
@@ -1215,17 +1225,60 @@ message DaggerheartIncomingAttackArmorReaction {
   }
 }
 
+message DaggerheartIncomingAttackDefenseDecision {
+  bool decline_armor_reaction = 1;
+  DaggerheartIncomingAttackArmorReaction armor_reaction = 2;
+}
+
 message DaggerheartResilientArmorReaction {
   common.v1.RngRequest rng = 1;
 }
 
 message DaggerheartImpenetrableArmorReaction {}
 
+enum DaggerheartBaseArmorDecision {
+  DAGGERHEART_BASE_ARMOR_DECISION_UNSPECIFIED = 0;
+  DAGGERHEART_BASE_ARMOR_DECISION_SPEND = 1;
+  DAGGERHEART_BASE_ARMOR_DECISION_DECLINE = 2;
+}
+
 message DaggerheartDamageArmorReaction {
   oneof reaction {
     DaggerheartResilientArmorReaction resilient = 1;
     DaggerheartImpenetrableArmorReaction impenetrable = 2;
   }
+}
+
+message DaggerheartDamageMitigationDecision {
+  DaggerheartBaseArmorDecision base_armor = 1;
+  DaggerheartDamageArmorReaction armor_reaction = 2;
+}
+
+enum DaggerheartCombatChoiceStage {
+  DAGGERHEART_COMBAT_CHOICE_STAGE_UNSPECIFIED = 0;
+  DAGGERHEART_COMBAT_CHOICE_STAGE_INCOMING_ATTACK_DEFENSE = 1;
+  DAGGERHEART_COMBAT_CHOICE_STAGE_DAMAGE_MITIGATION = 2;
+}
+
+message DaggerheartDamagePreview {
+  string severity = 1;
+  int32 marks = 2;
+  int32 hp_before = 3;
+  int32 hp_after = 4;
+  int32 stress_before = 5;
+  int32 stress_after = 6;
+  int32 armor_before = 7;
+  int32 armor_after = 8;
+  int32 armor_spent = 9;
+}
+
+message DaggerheartCombatChoiceRequired {
+  DaggerheartCombatChoiceStage stage = 1;
+  string character_id = 2;
+  repeated string option_codes = 3;
+  string reason = 4;
+  DaggerheartDamagePreview decline_preview = 5;
+  DaggerheartDamagePreview spend_base_armor_preview = 6;
 }
 
 message GroupActionSupporter {

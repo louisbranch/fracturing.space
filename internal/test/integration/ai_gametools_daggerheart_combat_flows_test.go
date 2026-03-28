@@ -66,6 +66,21 @@ func TestAIDirectSessionDaggerheartCombatFlowTools(t *testing.T) {
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, supporterOneID)
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, supporterTwoID)
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, attackerID, targetID, supporterOneID, supporterTwoID)
+	_, err = snapshotClient.PatchCharacterState(ctxWithUser, &gamev1.PatchCharacterStateRequest{
+		CampaignId:  campaignID,
+		CharacterId: targetID,
+		SystemStatePatch: &gamev1.PatchCharacterStateRequest_Daggerheart{
+			Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+				Hp:     6,
+				Hope:   2,
+				Stress: 0,
+				Armor:  1,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("patch target character state: %v", err)
+	}
 
 	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "AI Combat Flow Session")
 	sessionID := startSession.GetSession().GetId()
@@ -209,6 +224,12 @@ func TestAIDirectSessionDaggerheartCombatFlowTools(t *testing.T) {
 				"roll_mode": "REPLAY",
 			},
 			"scene_id": sceneID,
+			"target_defense_decision": map[string]any{
+				"decline_armor_reaction": true,
+			},
+			"target_mitigation_decision": map[string]any{
+				"base_armor": "DECLINE",
+			},
 		})
 		if err != nil {
 			t.Fatalf("daggerheart_adversary_attack_flow_resolve: %v", err)
@@ -243,6 +264,186 @@ func TestAIDirectSessionDaggerheartCombatFlowTools(t *testing.T) {
 		state := fetchCharacterState(t, ctxWithUser, snapshotClient, campaignID, targetID)
 		if got := int(state.GetHp()); got >= 6 {
 			t.Fatalf("expected target hp to drop below 6, got %d", got)
+		}
+	})
+
+	t.Run("adversary attack flow mitigation checkpoint resume", func(t *testing.T) {
+		_, err := snapshotClient.PatchCharacterState(ctxWithUser, &gamev1.PatchCharacterStateRequest{
+			CampaignId:  campaignID,
+			CharacterId: targetID,
+			SystemStatePatch: &gamev1.PatchCharacterStateRequest_Daggerheart{
+				Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+					Hp:     6,
+					Hope:   2,
+					Stress: 0,
+					Armor:  1,
+				},
+			},
+		})
+		if err != nil {
+			t.Fatalf("reset target state: %v", err)
+		}
+
+		result, err := directSession.CallTool(ctxWithUser, "daggerheart_adversary_attack_flow_resolve", map[string]any{
+			"adversary_id": adversaryID,
+			"target_id":    targetID,
+			"difficulty":   1,
+			"damage": map[string]any{
+				"damage_type": "PHYSICAL",
+				"source":      "adversary attack",
+			},
+			"require_damage_roll": true,
+			"attack_rng": map[string]any{
+				"seed":      uint64(21),
+				"roll_mode": "REPLAY",
+			},
+			"damage_rng": map[string]any{
+				"seed":      uint64(42),
+				"roll_mode": "REPLAY",
+			},
+			"scene_id": sceneID,
+			"target_defense_decision": map[string]any{
+				"decline_armor_reaction": true,
+			},
+		})
+		if err != nil {
+			t.Fatalf("daggerheart_adversary_attack_flow_resolve checkpoint pause: %v", err)
+		}
+		if result.IsError {
+			t.Fatalf("daggerheart_adversary_attack_flow_resolve checkpoint pause returned tool error: %s", result.Output)
+		}
+		var paused struct {
+			ChoiceRequired struct {
+				Stage        string `json:"stage"`
+				CheckpointID string `json:"checkpoint_id"`
+			} `json:"choice_required"`
+		}
+		if err := json.Unmarshal([]byte(result.Output), &paused); err != nil {
+			t.Fatalf("decode paused adversary attack flow result: %v", err)
+		}
+		if paused.ChoiceRequired.Stage != "DAGGERHEART_COMBAT_CHOICE_STAGE_DAMAGE_MITIGATION" {
+			t.Fatalf("choice stage = %q, want damage mitigation", paused.ChoiceRequired.Stage)
+		}
+		if paused.ChoiceRequired.CheckpointID == "" {
+			t.Fatalf("expected mitigation checkpoint_id, got %s", result.Output)
+		}
+
+		resumeResult, err := directSession.CallTool(ctxWithUser, "daggerheart_adversary_attack_flow_resolve", map[string]any{
+			"adversary_id":  adversaryID,
+			"checkpoint_id": paused.ChoiceRequired.CheckpointID,
+			"target_id":     targetID,
+			"scene_id":      sceneID,
+			"difficulty":    999,
+			"damage":        map[string]any{"damage_type": "PHYSICAL", "source": "adversary attack"},
+			"target_mitigation_decision": map[string]any{
+				"base_armor": "DECLINE",
+			},
+		})
+		if err != nil {
+			t.Fatalf("daggerheart_adversary_attack_flow_resolve checkpoint resume: %v", err)
+		}
+		if resumeResult.IsError {
+			t.Fatalf("daggerheart_adversary_attack_flow_resolve checkpoint resume returned tool error: %s", resumeResult.Output)
+		}
+		var resumed struct {
+			DamageApplied struct {
+				State struct {
+					HP int `json:"hp"`
+				} `json:"state"`
+			} `json:"damage_applied"`
+		}
+		if err := json.Unmarshal([]byte(resumeResult.Output), &resumed); err != nil {
+			t.Fatalf("decode resumed adversary attack flow result: %v", err)
+		}
+		if resumed.DamageApplied.State.HP >= 6 {
+			t.Fatalf("expected hp to drop after checkpoint resume, got %s", resumeResult.Output)
+		}
+	})
+
+	t.Run("incoming damage resolve mitigation choice pause and resume", func(t *testing.T) {
+		_, err := snapshotClient.PatchCharacterState(ctxWithUser, &gamev1.PatchCharacterStateRequest{
+			CampaignId:  campaignID,
+			CharacterId: targetID,
+			SystemStatePatch: &gamev1.PatchCharacterStateRequest_Daggerheart{
+				Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+					Hp:     6,
+					Hope:   2,
+					Stress: 0,
+					Armor:  1,
+				},
+			},
+		})
+		if err != nil {
+			t.Fatalf("reset target state: %v", err)
+		}
+
+		result, err := directSession.CallTool(ctxWithUser, "daggerheart_incoming_damage_resolve", map[string]any{
+			"character_id":        targetID,
+			"scene_id":            sceneID,
+			"require_damage_roll": false,
+			"damage": map[string]any{
+				"amount":      4,
+				"damage_type": "PHYSICAL",
+				"source":      "hazard",
+			},
+		})
+		if err != nil {
+			t.Fatalf("daggerheart_incoming_damage_resolve: %v", err)
+		}
+		if result.IsError {
+			t.Fatalf("daggerheart_incoming_damage_resolve returned tool error: %s", result.Output)
+		}
+		var paused struct {
+			ChoiceRequired struct {
+				Stage       string   `json:"stage"`
+				OptionCodes []string `json:"option_codes"`
+			} `json:"choice_required"`
+		}
+		if err := json.Unmarshal([]byte(result.Output), &paused); err != nil {
+			t.Fatalf("decode paused incoming damage result: %v", err)
+		}
+		if paused.ChoiceRequired.Stage != "DAGGERHEART_COMBAT_CHOICE_STAGE_DAMAGE_MITIGATION" {
+			t.Fatalf("choice stage = %q, want damage mitigation", paused.ChoiceRequired.Stage)
+		}
+		if len(paused.ChoiceRequired.OptionCodes) != 2 || paused.ChoiceRequired.OptionCodes[0] != "armor.base_slot" || paused.ChoiceRequired.OptionCodes[1] != "armor.decline" {
+			t.Fatalf("choice option_codes = %v", paused.ChoiceRequired.OptionCodes)
+		}
+
+		resumeResult, err := directSession.CallTool(ctxWithUser, "daggerheart_incoming_damage_resolve", map[string]any{
+			"character_id":        targetID,
+			"scene_id":            sceneID,
+			"require_damage_roll": false,
+			"damage": map[string]any{
+				"amount":      4,
+				"damage_type": "PHYSICAL",
+				"source":      "hazard",
+			},
+			"mitigation_decision": map[string]any{
+				"base_armor": "DECLINE",
+			},
+		})
+		if err != nil {
+			t.Fatalf("daggerheart_incoming_damage_resolve resume: %v", err)
+		}
+		if resumeResult.IsError {
+			t.Fatalf("daggerheart_incoming_damage_resolve resume returned tool error: %s", resumeResult.Output)
+		}
+		var resumed struct {
+			CharacterDamageApplied struct {
+				State struct {
+					HP    int `json:"hp"`
+					Armor int `json:"armor"`
+				} `json:"state"`
+			} `json:"character_damage_applied"`
+		}
+		if err := json.Unmarshal([]byte(resumeResult.Output), &resumed); err != nil {
+			t.Fatalf("decode resumed incoming damage result: %v", err)
+		}
+		if resumed.CharacterDamageApplied.State.HP >= 6 {
+			t.Fatalf("expected hp to drop after decline, got %s", resumeResult.Output)
+		}
+		if resumed.CharacterDamageApplied.State.Armor != 1 {
+			t.Fatalf("expected armor to remain 1 after decline, got %s", resumeResult.Output)
 		}
 	})
 

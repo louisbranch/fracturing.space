@@ -31,8 +31,9 @@ func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.Daggerheart
 		return nil, err
 	}
 	return &pb.DaggerheartApplyDamageResponse{
-		CharacterId: result.CharacterID,
-		State:       statetransport.CharacterStateToProto(result.State),
+		CharacterId:    result.CharacterID,
+		State:          statetransport.CharacterStateToProto(result.State),
+		ChoiceRequired: result.Choice,
 	}, nil
 }
 

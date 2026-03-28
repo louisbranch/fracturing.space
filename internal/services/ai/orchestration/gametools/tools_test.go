@@ -190,13 +190,36 @@ func TestProductionToolDescriptionsUseBeatBasedInteractionGuidance(t *testing.T)
 	if !interactionSchemaHasProperty(attackFlow.InputSchema, "hope_spends") {
 		t.Fatalf("daggerheart_attack_flow_resolve schema missing hope_spends: %#v", attackFlow.InputSchema)
 	}
+	if !interactionSchemaHasProperty(attackFlow.InputSchema, "target_mitigation_decision") {
+		t.Fatalf("daggerheart_attack_flow_resolve schema missing target_mitigation_decision: %#v", attackFlow.InputSchema)
+	}
+	if !interactionSchemaHasProperty(attackFlow.InputSchema, "checkpoint_id") {
+		t.Fatalf("daggerheart_attack_flow_resolve schema missing checkpoint_id: %#v", attackFlow.InputSchema)
+	}
+
+	incomingDamage, ok := byName["daggerheart_incoming_damage_resolve"]
+	if !ok {
+		t.Fatal("missing daggerheart_incoming_damage_resolve tool")
+	}
+	if !strings.Contains(incomingDamage.Description, "incoming Daggerheart damage") || !strings.Contains(incomingDamage.Description, "mitigation choice") {
+		t.Fatalf("daggerheart_incoming_damage_resolve description = %q", incomingDamage.Description)
+	}
+	if !interactionSchemaHasProperty(incomingDamage.InputSchema, "mitigation_decision") {
+		t.Fatalf("daggerheart_incoming_damage_resolve schema missing mitigation_decision: %#v", incomingDamage.InputSchema)
+	}
+	if !interactionSchemaHasProperty(incomingDamage.InputSchema, "checkpoint_id") {
+		t.Fatalf("daggerheart_incoming_damage_resolve schema missing checkpoint_id: %#v", incomingDamage.InputSchema)
+	}
 
 	adversaryAttackFlow, ok := byName["daggerheart_adversary_attack_flow_resolve"]
 	if !ok {
 		t.Fatal("missing daggerheart_adversary_attack_flow_resolve tool")
 	}
-	if !strings.Contains(adversaryAttackFlow.Description, "authoritative Daggerheart adversary attack flow") || !strings.Contains(adversaryAttackFlow.Description, "damage application") {
+	if !strings.Contains(adversaryAttackFlow.Description, "authoritative Daggerheart adversary attack flow") || !strings.Contains(adversaryAttackFlow.Description, "damage application") || !strings.Contains(adversaryAttackFlow.Description, "player-owned defense choices") {
 		t.Fatalf("daggerheart_adversary_attack_flow_resolve description = %q", adversaryAttackFlow.Description)
+	}
+	if !interactionSchemaHasProperty(adversaryAttackFlow.InputSchema, "checkpoint_id") {
+		t.Fatalf("daggerheart_adversary_attack_flow_resolve schema missing checkpoint_id: %#v", adversaryAttackFlow.InputSchema)
 	}
 
 	groupActionFlow, ok := byName["daggerheart_group_action_flow_resolve"]

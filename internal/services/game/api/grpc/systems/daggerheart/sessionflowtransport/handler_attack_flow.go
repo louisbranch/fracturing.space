@@ -356,15 +356,22 @@ func (h *Handler) SessionAttackFlow(ctx context.Context, in *pb.SessionAttackFlo
 		return response, nil
 	}
 	applyDamage, err := h.deps.ApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
-		CampaignId:        campaignID,
-		SceneId:           sceneID,
-		CharacterId:       targetID,
-		Damage:            damageReq,
-		RollSeq:           &damageRoll.RollSeq,
-		RequireDamageRoll: in.GetRequireDamageRoll(),
+		CampaignId:              campaignID,
+		SceneId:                 sceneID,
+		CharacterId:             targetID,
+		Damage:                  damageReq,
+		RollSeq:                 &damageRoll.RollSeq,
+		RequireDamageRoll:       in.GetRequireDamageRoll(),
+		MitigationDecision:      in.GetTargetMitigationDecision(),
+		RequireMitigationChoice: in.GetRequireDefenseChoice(),
 	})
 	if err != nil {
 		return nil, err
+	}
+	if applyDamage.GetChoiceRequired() != nil {
+		response.ChoiceRequired = applyDamage.GetChoiceRequired()
+		response.DamageRoll = damageRoll
+		return response, nil
 	}
 	response.DamageRoll = damageRoll
 	response.DamageApplied = applyDamage

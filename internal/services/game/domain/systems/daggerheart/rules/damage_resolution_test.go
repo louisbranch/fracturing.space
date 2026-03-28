@@ -52,6 +52,32 @@ func TestResolveDamageApplication_ArmorMitigation(t *testing.T) {
 	}
 }
 
+func TestResolveDamageApplication_DeclinedArmorMitigation(t *testing.T) {
+	application, mitigated, err := ResolveDamageApplication(
+		DamageTarget{HP: 6, Armor: 1, MajorThreshold: 5, SevereThreshold: 10},
+		DamageApplyInput{
+			Amount:       10,
+			Types:        DamageTypes{Physical: true},
+			Resistance:   ResistanceProfile{},
+			Direct:       false,
+			AllowMassive: false,
+			BaseArmor:    BaseArmorDecisionDecline,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ResolveDamageApplication() error = %v", err)
+	}
+	if mitigated {
+		t.Fatal("mitigated = true, want false when armor mitigation is declined")
+	}
+	if application.ArmorBefore != 1 || application.ArmorAfter != 1 || application.ArmorSpent != 0 {
+		t.Fatalf("armor transition = %d->%d spent=%d, want 1->1 spent=0", application.ArmorBefore, application.ArmorAfter, application.ArmorSpent)
+	}
+	if application.HPBefore != 6 || application.HPAfter != 3 {
+		t.Fatalf("hp = %d->%d, want 6->3", application.HPBefore, application.HPAfter)
+	}
+}
+
 func TestResolveDamageApplication_InvalidThresholds(t *testing.T) {
 	_, _, err := ResolveDamageApplication(
 		DamageTarget{HP: 6, Armor: 1, MajorThreshold: 10, SevereThreshold: 8},

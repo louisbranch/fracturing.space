@@ -98,15 +98,42 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 		armor = &entry
 	}
 
-	result, mitigated, err := ResolveCharacterDamage(in.Damage, profile, state, armor)
+	baseArmorDecision, armorReaction := mitigationDecisionFromProto(in.GetMitigationDecision())
+	if armorReaction == nil {
+		armorReaction = in.GetArmorReaction()
+	}
+	if in.GetRequireMitigationChoice() {
+		declineResult, _, err := ResolveCharacterDamage(in.Damage, profile, state, armor, rules.BaseArmorDecisionDecline)
+		if err != nil {
+			return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
+		}
+		spendResult, _, err := ResolveCharacterDamage(in.Damage, profile, state, armor, rules.BaseArmorDecisionSpend)
+		if err != nil {
+			return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
+		}
+		optionCodes := availableMitigationOptionCodes(in.GetDamage(), profile, state, armor, declineResult, spendResult)
+		if len(optionCodes) > 0 && !mitigationDecisionIsExplicit(in.GetMitigationDecision(), in.GetArmorReaction()) {
+			return CharacterDamageResult{
+				CharacterID: characterID,
+				Choice: damageChoiceRequired(
+					characterID,
+					"damage mitigation choice is required before applying character damage",
+					optionCodes,
+					declineResult,
+					spendResult,
+				),
+			}, nil
+		}
+	}
+	result, mitigated, err := ResolveCharacterDamage(in.Damage, profile, state, armor, baseArmorDecision)
 	if err != nil {
 		return CharacterDamageResult{}, grpcerror.HandleDomainErrorContext(ctx, err)
 	}
 	impenetrableBefore := state.ImpenetrableUsedThisShortRest
 	impenetrableAfter := impenetrableBefore
-	if armor != nil && in.GetArmorReaction() != nil {
+	if armor != nil && armorReaction != nil {
 		armorRules := rules.EffectiveArmorRules(armor)
-		switch reaction := in.GetArmorReaction().GetReaction().(type) {
+		switch reaction := armorReaction.GetReaction().(type) {
 		case *pb.DaggerheartDamageArmorReaction_Resilient:
 			_ = reaction
 			if h.deps.SeedFunc == nil {

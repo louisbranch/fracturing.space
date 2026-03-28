@@ -1438,6 +1438,21 @@ func buildIncomingAttackArmorReaction(args map[string]any, seed uint64) *daggerh
 	}
 }
 
+func buildIncomingAttackDefenseDecision(args map[string]any, seed uint64) *daggerheartv1.DaggerheartIncomingAttackDefenseDecision {
+	reaction := buildIncomingAttackArmorReaction(args, seed)
+	decline := optionalBool(args, "decline_armor_reaction", false)
+	if reaction != nil {
+		decline = false
+	}
+	if reaction == nil && !decline {
+		return nil
+	}
+	return &daggerheartv1.DaggerheartIncomingAttackDefenseDecision{
+		DeclineArmorReaction: decline,
+		ArmorReaction:        reaction,
+	}
+}
+
 func buildDamageArmorReaction(args map[string]any, seed uint64) *daggerheartv1.DaggerheartDamageArmorReaction {
 	switch strings.ToLower(strings.TrimSpace(optionalString(args, "armor_reaction", ""))) {
 	case "":
@@ -1461,6 +1476,24 @@ func buildDamageArmorReaction(args map[string]any, seed uint64) *daggerheartv1.D
 		}
 	default:
 		return nil
+	}
+}
+
+func buildDamageMitigationDecision(args map[string]any, seed uint64) *daggerheartv1.DaggerheartDamageMitigationDecision {
+	reaction := buildDamageArmorReaction(args, seed)
+	baseArmor := daggerheartv1.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_UNSPECIFIED
+	switch strings.ToLower(strings.TrimSpace(optionalString(args, "base_armor_decision", optionalString(args, "base_armor", "")))) {
+	case "spend":
+		baseArmor = daggerheartv1.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_SPEND
+	case "decline":
+		baseArmor = daggerheartv1.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_DECLINE
+	}
+	if baseArmor == daggerheartv1.DaggerheartBaseArmorDecision_DAGGERHEART_BASE_ARMOR_DECISION_UNSPECIFIED && reaction == nil {
+		return nil
+	}
+	return &daggerheartv1.DaggerheartDamageMitigationDecision{
+		BaseArmor:     baseArmor,
+		ArmorReaction: reaction,
 	}
 }
 
@@ -1491,6 +1524,36 @@ func buildDamageRequestWithSources(
 	request := buildDamageRequest(args, "", source, amount)
 	request.SourceCharacterIds = uniqueNonEmptyStrings(sourceIDs)
 	return request
+}
+
+func combatChoiceStageFromScenario(value string) daggerheartv1.DaggerheartCombatChoiceStage {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "incoming_attack_defense":
+		return daggerheartv1.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_INCOMING_ATTACK_DEFENSE
+	case "damage_mitigation":
+		return daggerheartv1.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_DAMAGE_MITIGATION
+	default:
+		return daggerheartv1.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_UNSPECIFIED
+	}
+}
+
+func (r *Runner) assertCombatChoice(args map[string]any, choice *daggerheartv1.DaggerheartCombatChoiceRequired) error {
+	expectChoice := optionalBool(args, "expect_choice_required", false) ||
+		strings.TrimSpace(optionalString(args, "expect_choice_stage", "")) != "" ||
+		len(readStringSlice(args, "expect_choice_options")) > 0
+	if !expectChoice {
+		return nil
+	}
+	if choice == nil {
+		return r.assertf("expected choice_required response")
+	}
+	if want := combatChoiceStageFromScenario(optionalString(args, "expect_choice_stage", "")); want != daggerheartv1.DaggerheartCombatChoiceStage_DAGGERHEART_COMBAT_CHOICE_STAGE_UNSPECIFIED && choice.GetStage() != want {
+		return r.assertf("choice_required stage = %s, want %s", choice.GetStage().String(), want.String())
+	}
+	if want := uniqueNonEmptyStrings(readStringSlice(args, "expect_choice_options")); len(want) > 0 && !reflect.DeepEqual(choice.GetOptionCodes(), want) {
+		return r.assertf("choice_required option_codes = %v, want %v", choice.GetOptionCodes(), want)
+	}
+	return nil
 }
 
 func (r *Runner) applyAdversaryDamage(
