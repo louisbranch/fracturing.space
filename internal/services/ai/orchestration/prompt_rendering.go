@@ -125,6 +125,7 @@ func interactionContractText(instructions PromptInstructions) string {
 		"Use interaction_record_scene_gm_interaction for standalone in-character narration when framing a fresh beat outside GM review.",
 		"Use interaction_resolve_scene_player_review when the scene is waiting on GM review.",
 		"Use interaction_session_ooc_resolve when OOC has resumed but players are still blocked pending interaction resolution.",
+		"Use interaction_conclude_session when the session is ending; it commits the final closing interaction, stores the recap, ends open scenes, and closes the session in one authoritative write.",
 		"Once interaction_open_scene_player_phase, interaction_resolve_scene_player_review opening the next player phase, or interaction_session_ooc_resolve replacing or resuming a player phase succeeds, the GM turn is complete unless OOC or GM review still needs resolution.",
 		"Use interaction_open_session_ooc, interaction_post_session_ooc, interaction_mark_ooc_ready_to_resume, interaction_clear_ooc_ready_to_resume, and interaction_session_ooc_resolve for out-of-character rules guidance, coordination, pauses, and resumptions.",
 		"Use system_reference_search and system_reference_read only when exact Daggerheart wording or procedure choice is unclear.",
@@ -179,6 +180,7 @@ func buildAuthorityText(mode InteractionTurnMode, input PromptInput) string {
 		b.WriteString("\nKeep related prose in one beat even across multiple paragraphs; split into another beat only when the interaction function or information context materially changes.")
 		b.WriteString("\nCheck character capability before accepting equipment- or feature-sensitive declarations; stance or gear alone may justify a sheet read even before a roll.")
 		b.WriteString("\nPrompt beats must ask for player-character action or commitment, not NPC dialogue or world-outcome authorship.")
+		b.WriteString("\nIf the session is ending, use interaction_conclude_session instead of chaining scene_end, session_end, or extra interaction-close tooling.")
 		b.WriteString("\nWhen handing control back to players, commit one interaction built from ordered beats first and end it with a prompt beat, then call interaction_open_scene_player_phase with explicit acting character_ids.")
 		b.WriteString("\nAfter the next player phase is open for players, return final text instead of making another GM interaction call.")
 		b.WriteString("\nDo not author separate frame text for the player handoff.")

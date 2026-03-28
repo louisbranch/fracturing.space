@@ -227,6 +227,7 @@ func buildCampaignTurnRunner(d runtimeDeps) orchestration.CampaignTurnRunner {
 	gameConn := d.gameMc.Conn()
 	dialer := gametools.NewDirectDialer(gametools.Clients{
 		Interaction: gamev1.NewInteractionServiceClient(gameConn),
+		CampaignAI:  gamev1.NewCampaignAIOrchestrationServiceClient(gameConn),
 		Scene:       gamev1.NewSceneServiceClient(gameConn),
 		Campaign:    gamev1.NewCampaignServiceClient(gameConn),
 		Participant: gamev1.NewParticipantServiceClient(gameConn),

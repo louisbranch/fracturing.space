@@ -25,6 +25,9 @@ func (s *DirectSession) readResource(ctx context.Context, uri string) (string, e
 	case strings.HasSuffix(uri, "/interaction"):
 		return s.readInteraction(ctx, uri)
 
+	case strings.HasSuffix(uri, "/recap"):
+		return s.readSessionRecap(ctx, uri)
+
 	case strings.HasSuffix(uri, "/scenes"):
 		return s.readSceneList(ctx, uri)
 

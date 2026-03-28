@@ -54,7 +54,9 @@ type campaignRegistrationDeps struct {
 	characterStore     storage.CharacterStore
 	auditStore         storage.AuditEventStore
 	sessionStore       storage.SessionStore
+	sessionRecap       storage.SessionRecapStore
 	sessionInteraction storage.SessionInteractionStore
+	sceneStore         storage.SceneStore
 	sceneInteraction   storage.SceneInteractionStore
 	systemStores       gamegrpc.SystemStores
 	systemMetadata     *bridge.MetadataRegistry
@@ -87,6 +89,7 @@ type sessionRegistrationDeps struct {
 	characterStore     storage.CharacterStore
 	auditStore         storage.AuditEventStore
 	sessionStore       storage.SessionStore
+	sessionRecap       storage.SessionRecapStore
 	sessionGateStore   storage.SessionGateStore
 	sessionSpotlight   storage.SessionSpotlightStore
 	sessionInteraction storage.SessionInteractionStore
@@ -205,7 +208,9 @@ func buildCampaignServiceDescriptors(
 		Campaign:           deps.campaignStore,
 		Participant:        deps.participantStore,
 		Session:            deps.sessionStore,
+		SessionRecap:       deps.sessionRecap,
 		SessionInteraction: deps.sessionInteraction,
+		Scene:              deps.sceneStore,
 		SceneInteraction:   deps.sceneInteraction,
 		Write:              deps.writePath,
 		Applier:            deps.applier,
@@ -291,6 +296,7 @@ func buildSessionServiceDescriptors(deps sessionRegistrationDeps) []grpcServiceD
 		Participant:        deps.participantStore,
 		Character:          deps.characterStore,
 		Session:            deps.sessionStore,
+		SessionRecap:       deps.sessionRecap,
 		SessionGate:        deps.sessionGateStore,
 		SessionSpotlight:   deps.sessionSpotlight,
 		SessionInteraction: deps.sessionInteraction,

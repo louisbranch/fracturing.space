@@ -14,6 +14,7 @@ func NewProjectionStores(config StoresProjectionConfig) ProjectionStores {
 		ClaimIndex:         config.ProjectionStore,
 		Character:          config.ProjectionStore,
 		Session:            config.ProjectionStore,
+		SessionRecap:       config.ProjectionStore,
 		SessionGate:        config.ProjectionStore,
 		SessionSpotlight:   config.ProjectionStore,
 		SessionInteraction: config.ProjectionStore,

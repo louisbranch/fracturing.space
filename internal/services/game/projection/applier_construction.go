@@ -31,6 +31,7 @@ type CharacterStores struct {
 // SessionStores groups session and session-interaction projection dependencies.
 type SessionStores struct {
 	Session            storage.SessionStore
+	SessionRecap       storage.SessionRecapStore
 	SessionGate        storage.SessionGateStore
 	SessionSpotlight   storage.SessionSpotlightStore
 	SessionInteraction storage.SessionInteractionStore
@@ -91,6 +92,7 @@ func StoreGroupsFromBundle(bundle StoreBundle) StoreGroups {
 		},
 		SessionStores: SessionStores{
 			Session:            bundle,
+			SessionRecap:       bundle,
 			SessionGate:        bundle,
 			SessionSpotlight:   bundle,
 			SessionInteraction: bundle,
@@ -178,6 +180,7 @@ func NewBoundApplier(config BoundApplierConfig) Applier {
 		ClaimIndex:         config.Stores.ClaimIndex,
 		Participant:        config.Stores.Participant,
 		Session:            config.Stores.Session,
+		SessionRecap:       config.Stores.SessionRecap,
 		SessionGate:        config.Stores.SessionGate,
 		SessionSpotlight:   config.Stores.SessionSpotlight,
 		SessionInteraction: config.Stores.SessionInteraction,

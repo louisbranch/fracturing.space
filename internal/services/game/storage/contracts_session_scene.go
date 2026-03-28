@@ -25,6 +25,14 @@ type SessionPage struct {
 	NextPageToken string
 }
 
+// SessionRecap stores the persisted recap markdown for one concluded session.
+type SessionRecap struct {
+	CampaignID string
+	SessionID  string
+	Markdown   string
+	UpdatedAt  time.Time
+}
+
 // SessionReader provides read-only access to session projections.
 type SessionReader interface {
 	// GetSession retrieves a session by campaign ID and session ID.
@@ -50,6 +58,21 @@ type SessionStore interface {
 	// EndSession marks a session as ended and clears it as active for the campaign.
 	// The boolean return value reports whether the session transitioned to ENDED.
 	EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (SessionRecord, bool, error)
+}
+
+// SessionRecapReader provides read-only access to persisted session recap
+// markdown.
+type SessionRecapReader interface {
+	// GetSessionRecap retrieves the stored recap for one session.
+	// Returns ErrNotFound if no recap exists.
+	GetSessionRecap(ctx context.Context, campaignID, sessionID string) (SessionRecap, error)
+}
+
+// SessionRecapStore owns session recap projection state.
+type SessionRecapStore interface {
+	SessionRecapReader
+	// PutSessionRecap stores or replaces the recap markdown for one session.
+	PutSessionRecap(ctx context.Context, recap SessionRecap) error
 }
 
 // SessionGate describes one gate and its resolution lifecycle within a session.

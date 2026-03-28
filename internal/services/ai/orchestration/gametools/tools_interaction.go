@@ -109,6 +109,14 @@ type interactionPostOOCInput struct {
 	Body       string `json:"body"`
 }
 
+type interactionConcludeSessionInput struct {
+	CampaignID  string `json:"campaign_id,omitempty"`
+	Conclusion  string `json:"conclusion"`
+	Summary     string `json:"summary"`
+	EndCampaign bool   `json:"end_campaign"`
+	Epilogue    string `json:"epilogue,omitempty"`
+}
+
 // --- Result types ---
 
 type interactionStateResult struct {
@@ -203,6 +211,14 @@ type interactionOOCStateResult struct {
 	InterruptedPhaseID          string                     `json:"interrupted_phase_id,omitempty"`
 	InterruptedPhaseStatus      string                     `json:"interrupted_phase_status,omitempty"`
 	ResolutionPending           bool                       `json:"resolution_pending"`
+}
+
+type interactionConcludeSessionResult struct {
+	SessionID                string   `json:"session_id,omitempty"`
+	EndedSceneIDs            []string `json:"ended_scene_ids,omitempty"`
+	CampaignCompleted        bool     `json:"campaign_completed"`
+	AITurnReadyForCompletion bool     `json:"ai_turn_ready_for_completion"`
+	NextStepHint             string   `json:"next_step_hint,omitempty"`
 }
 
 // --- Handlers ---
@@ -492,6 +508,58 @@ func (s *DirectSession) interactionPostOOC(ctx context.Context, argsJSON []byte)
 		return orchestration.ToolResult{}, fmt.Errorf("post session ooc response is missing")
 	}
 	return toolResultJSON(interactionStateFromProto(resp.GetState()))
+}
+
+func (s *DirectSession) interactionConcludeSession(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {
+	var input interactionConcludeSessionInput
+	if err := json.Unmarshal(argsJSON, &input); err != nil {
+		return orchestration.ToolResult{}, fmt.Errorf("unmarshal args: %w", err)
+	}
+	campaignID := s.resolveCampaignID(input.CampaignID)
+	if campaignID == "" {
+		return orchestration.ToolResult{}, fmt.Errorf("campaign_id is required")
+	}
+	switch {
+	case input.EndCampaign && strings.TrimSpace(input.Epilogue) == "":
+		return orchestration.ToolResult{}, fmt.Errorf("epilogue is required when end_campaign is true")
+	case !input.EndCampaign && strings.TrimSpace(input.Epilogue) != "":
+		return orchestration.ToolResult{}, fmt.Errorf("epilogue is only allowed when end_campaign is true")
+	}
+
+	callCtx, cancel := outgoingContext(ctx, s.sc)
+	defer cancel()
+	if input.EndCampaign {
+		if s.clients.Artifact == nil {
+			return orchestration.ToolResult{}, fmt.Errorf("artifact manager is not configured")
+		}
+		if _, err := s.clients.Artifact.UpsertArtifact(callCtx, campaignID, "epilogue.md", strings.TrimSpace(input.Epilogue)); err != nil {
+			return orchestration.ToolResult{}, fmt.Errorf("upsert epilogue artifact failed: %w", err)
+		}
+	}
+	if s.clients.CampaignAI == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("campaign ai orchestration client is not configured")
+	}
+	resp, err := s.clients.CampaignAI.ConcludeSession(callCtx, &statev1.ConcludeSessionRequest{
+		CampaignId:  campaignID,
+		SessionId:   s.sc.SessionID,
+		Conclusion:  input.Conclusion,
+		Summary:     input.Summary,
+		EndCampaign: input.EndCampaign,
+		Epilogue:    input.Epilogue,
+	})
+	if err != nil {
+		return orchestration.ToolResult{}, fmt.Errorf("conclude session failed: %w", err)
+	}
+	if resp == nil {
+		return orchestration.ToolResult{}, fmt.Errorf("conclude session response is missing")
+	}
+	return toolResultJSON(interactionConcludeSessionResult{
+		SessionID:                resp.GetSessionId(),
+		EndedSceneIDs:            append([]string(nil), resp.GetEndedSceneIds()...),
+		CampaignCompleted:        resp.GetCampaignCompleted(),
+		AITurnReadyForCompletion: true,
+		NextStepHint:             "The session is concluded. Return final text instead of making more game-state calls.",
+	})
 }
 
 func (s *DirectSession) interactionMarkOOCReady(ctx context.Context, argsJSON []byte) (orchestration.ToolResult, error) {

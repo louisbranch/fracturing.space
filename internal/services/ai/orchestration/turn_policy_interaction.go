@@ -8,6 +8,7 @@ import (
 const playerPhaseStartToolName = "interaction_open_scene_player_phase"
 const reviewResolveToolName = "interaction_resolve_scene_player_review"
 const interruptResolutionToolName = "interaction_session_ooc_resolve"
+const concludeSessionToolName = "interaction_conclude_session"
 
 // NewInteractionTurnPolicy returns the default turn policy for the current
 // interaction-driven AI GM runtime.
@@ -37,7 +38,7 @@ func (c *interactionTurnController) ObserveSuccessfulTool(name string, output st
 	}
 	c.successfulToolCallOrder++
 	switch name {
-	case c.commitToolName, playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName:
+	case c.commitToolName, playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName, concludeSessionToolName:
 		c.lastCommitToolOrder = c.successfulToolCallOrder
 	}
 	if ready, handoff, ok := toolResultControlState(output); ok {
@@ -69,7 +70,7 @@ func (c *interactionTurnController) PlayerHandoffRegressed() bool {
 func (c *interactionTurnController) BuildCommitReminder(text string) string {
 	var b strings.Builder
 	b.WriteString("You returned narration without making the authoritative interaction update for this turn.\n")
-	b.WriteString("Use interaction_record_scene_gm_interaction for standalone narration, interaction_resolve_scene_player_review for GM review, or interaction_session_ooc_resolve for post-OOC resolution before returning final text.\n")
+	b.WriteString("Use interaction_record_scene_gm_interaction for standalone narration, interaction_resolve_scene_player_review for GM review, interaction_session_ooc_resolve for post-OOC resolution, or interaction_conclude_session when the session is ending.\n")
 	b.WriteString("Use interaction_open_scene_player_phase when the interaction should immediately hand control to players.\n")
 	b.WriteString("Commit one structured GM interaction made of ordered beats rather than separate narration and frame artifacts.\n")
 	b.WriteString("Keep related prose in one beat unless the GM function or information context materially changes.\n")
@@ -84,8 +85,8 @@ func (c *interactionTurnController) BuildCommitReminder(text string) string {
 func (c *interactionTurnController) BuildTurnCompletionReminder(text string) string {
 	var b strings.Builder
 	b.WriteString("You already made an authoritative GM update, but the AI GM turn is not complete yet.\n")
-	b.WriteString("Return final text only after the next player phase is open for players or the session is paused for OOC.\n")
-	b.WriteString("Use interaction_open_scene_player_phase to hand control to players, interaction_resolve_scene_player_review when GM review is pending, or interaction_session_ooc_resolve when post-OOC interaction resolution is still blocking players.\n")
+	b.WriteString("Return final text only after the next player phase is open for players, the session is paused for OOC, or the session has been concluded.\n")
+	b.WriteString("Use interaction_open_scene_player_phase to hand control to players, interaction_resolve_scene_player_review when GM review is pending, interaction_session_ooc_resolve when post-OOC interaction resolution is still blocking players, or interaction_conclude_session when the session should close.\n")
 	if text != "" {
 		b.WriteString("Keep this draft narration unless you need a small correction:\n")
 		b.WriteString(text)
@@ -108,7 +109,7 @@ func (c *interactionTurnController) BuildPlayerPhaseStartReminder(text string) s
 
 func toolCommitsOrResolvesInteraction(name, configuredCommitTool string) bool {
 	switch strings.TrimSpace(name) {
-	case strings.TrimSpace(configuredCommitTool), playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName:
+	case strings.TrimSpace(configuredCommitTool), playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName, concludeSessionToolName:
 		return true
 	default:
 		return false

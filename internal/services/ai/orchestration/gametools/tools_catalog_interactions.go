@@ -151,5 +151,18 @@ func interactionToolDefinitions() []productionToolDefinition {
 			},
 			Execute: (*DirectSession).interactionClearOOCReady,
 		},
+		{
+			Tool: orchestration.Tool{
+				Name:        "interaction_conclude_session",
+				Description: "Commits the final session-closing GM interaction, stores the structured recap, ends all open scenes, ends the session, and optionally completes the campaign",
+				InputSchema: schemaObject(map[string]schemaProperty{
+					"conclusion":   {Type: "string", Description: "final fiction beats wrapping the session's story"},
+					"summary":      {Type: "string", Description: "session recap markdown with the required headings: Key Events, NPCs Met, Decisions Made, Unresolved Threads, Next Session Hooks"},
+					"end_campaign": {Type: "boolean", Description: "set true only when this session also ends the campaign"},
+					"epilogue":     {Type: "string", Description: "required when end_campaign is true; otherwise leave empty"},
+				}),
+			},
+			Execute: (*DirectSession).interactionConcludeSession,
+		},
 	}
 }

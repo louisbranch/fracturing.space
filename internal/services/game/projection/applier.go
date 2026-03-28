@@ -29,6 +29,8 @@ type Applier struct {
 	Participant storage.ParticipantStore
 	// Session writes session metadata read models.
 	Session storage.SessionStore
+	// SessionRecap writes persisted session recap markdown.
+	SessionRecap storage.SessionRecapStore
 	// SessionGate writes open/resolved gate state.
 	SessionGate storage.SessionGateStore
 	// SessionSpotlight writes session spotlight state.

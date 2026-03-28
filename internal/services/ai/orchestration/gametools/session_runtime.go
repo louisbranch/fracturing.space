@@ -27,6 +27,7 @@ type ReferenceCorpus interface {
 // Clients bundles service clients needed by the direct session.
 type Clients struct {
 	Interaction statev1.InteractionServiceClient
+	CampaignAI  statev1.CampaignAIOrchestrationServiceClient
 	Scene       statev1.SceneServiceClient
 	Campaign    statev1.CampaignServiceClient
 	Participant statev1.ParticipantServiceClient

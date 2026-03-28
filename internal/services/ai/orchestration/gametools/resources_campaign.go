@@ -244,6 +244,27 @@ func (s *DirectSession) readSessionList(ctx context.Context, uri string) (string
 	return marshalIndent(payload)
 }
 
+func (s *DirectSession) readSessionRecap(ctx context.Context, uri string) (string, error) {
+	campaignID, sessionID, err := parseSessionRecapURI(uri)
+	if err != nil {
+		return "", err
+	}
+	callCtx, cancel := outgoingContext(ctx, s.sc)
+	defer cancel()
+
+	resp, err := s.clients.Session.GetSessionRecap(callCtx, &statev1.GetSessionRecapRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("get session recap failed: %w", err)
+	}
+	if resp == nil || resp.GetRecap() == nil {
+		return "", fmt.Errorf("session recap response is missing")
+	}
+	return strings.TrimSpace(resp.GetRecap().GetMarkdown()), nil
+}
+
 type sceneListEntry struct {
 	SceneID      string   `json:"scene_id"`
 	SessionID    string   `json:"session_id"`
@@ -315,4 +336,18 @@ func (s *DirectSession) readInteraction(ctx context.Context, uri string) (string
 		return "", fmt.Errorf("get interaction state response is missing")
 	}
 	return marshalIndent(interactionStateFromProto(resp.State))
+}
+
+func parseSessionRecapURI(uri string) (campaignID string, sessionID string, err error) {
+	trimmed := strings.TrimPrefix(strings.TrimSpace(uri), "campaign://")
+	parts := strings.Split(trimmed, "/")
+	if len(parts) != 4 || parts[1] != "sessions" || parts[3] != "recap" {
+		return "", "", fmt.Errorf("invalid session recap URI: %s", uri)
+	}
+	campaignID = strings.TrimSpace(parts[0])
+	sessionID = strings.TrimSpace(parts[2])
+	if campaignID == "" || sessionID == "" {
+		return "", "", fmt.Errorf("invalid session recap URI: %s", uri)
+	}
+	return campaignID, sessionID, nil
 }

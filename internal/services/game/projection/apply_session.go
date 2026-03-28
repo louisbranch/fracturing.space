@@ -66,6 +66,26 @@ func (a Applier) applySessionEnded(ctx context.Context, evt event.Event, payload
 	})
 }
 
+func (a Applier) applySessionRecapRecorded(ctx context.Context, evt event.Event, payload session.RecapRecordedPayload) error {
+	sessionID := strings.TrimSpace(payload.SessionID.String())
+	if sessionID == "" {
+		sessionID = strings.TrimSpace(evt.EntityID)
+	}
+	if sessionID == "" {
+		return fmt.Errorf("session id is required")
+	}
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	return a.SessionRecap.PutSessionRecap(ctx, storage.SessionRecap{
+		CampaignID: string(evt.CampaignID),
+		SessionID:  sessionID,
+		Markdown:   strings.TrimSpace(payload.Markdown),
+		UpdatedAt:  updatedAt,
+	})
+}
+
 func sessionCharacterControllersToStorage(values []session.CharacterControllerAssignment) []storage.SessionCharacterController {
 	if len(values) == 0 {
 		return []storage.SessionCharacterController{}

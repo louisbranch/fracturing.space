@@ -6,6 +6,9 @@ import (
 )
 
 const (
+	commandTypeCampaignEnd                   command.Type = commandids.CampaignEnd
+	commandTypeSessionEnd                    command.Type = commandids.SessionEnd
+	commandTypeSessionRecapRecord            command.Type = commandids.SessionRecapRecord
 	commandTypeSessionSceneActivate          command.Type = commandids.SessionSceneActivate
 	commandTypeSessionCharacterControllerSet command.Type = commandids.SessionCharacterControllerSet
 	commandTypeSessionGMAuthoritySet         command.Type = commandids.SessionGMAuthoritySet
@@ -28,4 +31,5 @@ const (
 	commandTypeScenePlayerPhaseRequestRevisions command.Type = commandids.ScenePlayerPhaseRequestRevisions
 	commandTypeScenePlayerPhaseEnd              command.Type = commandids.ScenePlayerPhaseEnd
 	commandTypeSceneGMInteractionCommit         command.Type = commandids.SceneGMInteractionCommit
+	commandTypeSceneEnd                         command.Type = commandids.SceneEnd
 )

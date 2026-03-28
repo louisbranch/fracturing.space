@@ -24,6 +24,14 @@ var sessionLifecycleCommandContracts = []commandContract{
 			ActiveSession:   command.AllowedDuringActiveSession(),
 		},
 	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeRecapRecord,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateRecapRecordedPayload,
+			ActiveSession:   command.AllowedDuringActiveSession(),
+		},
+	},
 }
 
 var sessionLifecycleEventContracts = []eventProjectionContract{
@@ -49,6 +57,17 @@ var sessionLifecycleEventContracts = []eventProjectionContract{
 		emittable:  true,
 		projection: true,
 	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeRecapRecorded,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateRecapRecordedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
 }
 
 func validateStartPayload(raw json.RawMessage) error {
@@ -58,5 +77,10 @@ func validateStartPayload(raw json.RawMessage) error {
 
 func validateEndPayload(raw json.RawMessage) error {
 	var payload EndPayload
+	return json.Unmarshal(raw, &payload)
+}
+
+func validateRecapRecordedPayload(raw json.RawMessage) error {
+	var payload RecapRecordedPayload
 	return json.Unmarshal(raw, &payload)
 }

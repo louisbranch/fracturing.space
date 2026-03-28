@@ -90,6 +90,37 @@ func (a sessionApplication) GetSession(ctx context.Context, in *campaignv1.GetSe
 	return sess, nil
 }
 
+func (a sessionApplication) GetSessionRecap(ctx context.Context, in *campaignv1.GetSessionRecapRequest) (storage.SessionRecap, error) {
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return storage.SessionRecap{}, err
+	}
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return storage.SessionRecap{}, err
+	}
+
+	campaignRecord, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.SessionRecap{}, err
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
+		return storage.SessionRecap{}, err
+	}
+	if err := authz.RequireReadPolicy(ctx, a.auth, campaignRecord); err != nil {
+		return storage.SessionRecap{}, err
+	}
+	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
+		return storage.SessionRecap{}, err
+	}
+
+	recap, err := a.stores.SessionRecap.GetSessionRecap(ctx, campaignID, sessionID)
+	if err != nil {
+		return storage.SessionRecap{}, err
+	}
+	return recap, nil
+}
+
 func (a sessionApplication) GetSessionSpotlight(ctx context.Context, in *campaignv1.GetSessionSpotlightRequest) (storage.SessionSpotlight, error) {
 	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
 	if err != nil {

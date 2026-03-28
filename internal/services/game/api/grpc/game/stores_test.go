@@ -40,7 +40,7 @@ func TestStoresValidate(t *testing.T) {
 		msg := err.Error()
 		for _, name := range []string{
 			"Campaign", "Participant", "ClaimIndex",
-			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
+			"Character", "SystemStores.Daggerheart", "Session", "SessionRecap", "SessionGate",
 			"SessionSpotlight", "SessionInteraction", "Scene", "SceneCharacter",
 			"SceneGate", "SceneSpotlight", "SceneInteraction", "SceneGMInteraction",
 			"Event", "Watermarks", "Audit", "Statistics",
@@ -200,6 +200,7 @@ func validRootStoreGroups() rootStoreGroupsFixture {
 			ClaimIndex:         stubClaimIndex{},
 			Character:          gametest.NewFakeCharacterStore(),
 			Session:            gametest.NewFakeSessionStore(),
+			SessionRecap:       gametest.NewFakeSessionRecapStore(),
 			SessionGate:        &gametest.FakeSessionGateStore{},
 			SessionSpotlight:   &gametest.FakeSessionSpotlightStore{},
 			SessionInteraction: &gametest.FakeSessionInteractionStore{},
@@ -258,6 +259,7 @@ type projectionStoreStub struct {
 	storage.CharacterStore
 	storage.CampaignForkStore
 	storage.SessionStore
+	storage.SessionRecapStore
 	storage.SessionGateStore
 	storage.SessionSpotlightStore
 	storage.SessionInteractionStore

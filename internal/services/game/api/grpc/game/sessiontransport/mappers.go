@@ -28,6 +28,17 @@ func SessionToProto(sess storage.SessionRecord) *campaignv1.Session {
 	return pb
 }
 
+// SessionRecapToProto converts a session recap projection into its protobuf
+// read model.
+func SessionRecapToProto(recap storage.SessionRecap) *campaignv1.SessionRecap {
+	return &campaignv1.SessionRecap{
+		CampaignId: recap.CampaignID,
+		SessionId:  recap.SessionID,
+		Markdown:   recap.Markdown,
+		UpdatedAt:  timestamppb.New(recap.UpdatedAt),
+	}
+}
+
 // SessionStatusToProto converts a domain session status to its protobuf enum.
 func SessionStatusToProto(status session.Status) campaignv1.SessionStatus {
 	switch status {

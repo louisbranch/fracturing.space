@@ -50,6 +50,7 @@ func (s ProjectionStores) requirements() []dependencyRequirement {
 		{name: "ClaimIndex", configured: s.ClaimIndex != nil},
 		{name: "Character", configured: s.Character != nil},
 		{name: "Session", configured: s.Session != nil},
+		{name: "SessionRecap", configured: s.SessionRecap != nil},
 		{name: "SessionGate", configured: s.SessionGate != nil},
 		{name: "SessionSpotlight", configured: s.SessionSpotlight != nil},
 		{name: "SessionInteraction", configured: s.SessionInteraction != nil},

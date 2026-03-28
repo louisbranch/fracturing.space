@@ -11,6 +11,7 @@ import (
 const (
 	CommandTypeStart                  command.Type = "session.start"
 	CommandTypeEnd                    command.Type = "session.end"
+	CommandTypeRecapRecord            command.Type = "session.recap.record"
 	CommandTypeGateOpen               command.Type = "session.gate_open"
 	CommandTypeGateRespond            command.Type = "session.gate_record_response"
 	CommandTypeGateResolve            command.Type = "session.gate_resolve"
@@ -32,6 +33,7 @@ const (
 	CommandTypeAITurnClear            command.Type = "session.ai_turn.clear"
 	EventTypeStarted                  event.Type   = "session.started"
 	EventTypeEnded                    event.Type   = "session.ended"
+	EventTypeRecapRecorded            event.Type   = "session.recap_recorded"
 	EventTypeGateOpened               event.Type   = "session.gate_opened"
 	EventTypeGateResponseRecorded     event.Type   = "session.gate_response_recorded"
 	EventTypeGateResolved             event.Type   = "session.gate_resolved"
@@ -56,6 +58,7 @@ const (
 	rejectionCodeSessionNameRequired                 = "SESSION_NAME_REQUIRED"
 	rejectionCodeSessionAlreadyStarted               = "SESSION_ALREADY_STARTED"
 	rejectionCodeSessionNotStarted                   = "SESSION_NOT_STARTED"
+	rejectionCodeSessionRecapMarkdownRequired        = "SESSION_RECAP_MARKDOWN_REQUIRED"
 	rejectionCodeSessionGateIDRequired               = "SESSION_GATE_ID_REQUIRED"
 	rejectionCodeSessionGateTypeRequired             = "SESSION_GATE_TYPE_REQUIRED"
 	rejectionCodeSessionGateParticipantRequired      = "SESSION_GATE_PARTICIPANT_REQUIRED"
@@ -94,6 +97,7 @@ func RejectionCodes() []string {
 		rejectionCodeSessionNameRequired,
 		rejectionCodeSessionAlreadyStarted,
 		rejectionCodeSessionNotStarted,
+		rejectionCodeSessionRecapMarkdownRequired,
 		rejectionCodeSessionGateIDRequired,
 		rejectionCodeSessionGateTypeRequired,
 		rejectionCodeSessionGateParticipantRequired,
@@ -139,6 +143,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 	case CommandTypeEnd:
 		return decideEnd(state, cmd, now)
+
+	case CommandTypeRecapRecord:
+		return decideRecapRecord(state, cmd, now)
 
 	case CommandTypeGateOpen:
 		return decideGateOpen(state, cmd, now)

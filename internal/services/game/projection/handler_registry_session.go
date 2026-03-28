@@ -7,6 +7,7 @@ func registerSessionProjectionHandlers(r *CoreRouter) {
 	// hard envelope requirement for started/ended.
 	HandleProjection(r, session.EventTypeStarted, requirements(needsStores(storeSession, storeSessionInteraction), needsEnvelope(fieldCampaignID)), Applier.applySessionStarted)
 	HandleProjection(r, session.EventTypeEnded, requirements(needsStores(storeSession, storeSessionInteraction), needsEnvelope(fieldCampaignID)), Applier.applySessionEnded)
+	HandleProjection(r, session.EventTypeRecapRecorded, requirements(needsStores(storeSessionRecap), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionRecapRecorded)
 
 	// Gate handlers derive GateID from payload with EntityID fallback.
 	HandleProjection(r, session.EventTypeGateOpened, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateOpened)

@@ -21,6 +21,12 @@ type EndPayload struct {
 	SessionID ids.SessionID `json:"session_id"`
 }
 
+// RecapRecordedPayload captures the payload for session.recap_recorded events.
+type RecapRecordedPayload struct {
+	SessionID ids.SessionID `json:"session_id"`
+	Markdown  string        `json:"markdown"`
+}
+
 // SpotlightSetPayload captures the payload for session.spotlight_set events.
 type SpotlightSetPayload struct {
 	SpotlightType string          `json:"spotlight_type"`

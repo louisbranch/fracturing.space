@@ -403,6 +403,10 @@ func (f *fakeSessionClient) GetSession(context.Context, *gamev1.GetSessionReques
 	return nil, unimplemented("GetSession")
 }
 
+func (f *fakeSessionClient) GetSessionRecap(context.Context, *gamev1.GetSessionRecapRequest, ...grpc.CallOption) (*gamev1.GetSessionRecapResponse, error) {
+	return nil, unimplemented("GetSessionRecap")
+}
+
 func (f *fakeSessionClient) ListActiveSessionsForUser(context.Context, *gamev1.ListActiveSessionsForUserRequest, ...grpc.CallOption) (*gamev1.ListActiveSessionsForUserResponse, error) {
 	return nil, unimplemented("ListActiveSessionsForUser")
 }

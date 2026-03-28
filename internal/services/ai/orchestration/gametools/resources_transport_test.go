@@ -152,6 +152,8 @@ func (stub *characterClientStub) ResetCharacterCreationWorkflow(context.Context,
 type sessionClientStub struct {
 	listResp    *statev1.ListSessionsResponse
 	listErr     error
+	recapResp   *statev1.GetSessionRecapResponse
+	recapErr    error
 	lastRequest *statev1.ListSessionsRequest
 }
 
@@ -169,6 +171,10 @@ func (stub *sessionClientStub) ListActiveSessionsForUser(context.Context, *state
 
 func (stub *sessionClientStub) GetSession(context.Context, *statev1.GetSessionRequest, ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
 	return nil, nil
+}
+
+func (stub *sessionClientStub) GetSessionRecap(context.Context, *statev1.GetSessionRecapRequest, ...grpc.CallOption) (*statev1.GetSessionRecapResponse, error) {
+	return stub.recapResp, stub.recapErr
 }
 
 func (stub *sessionClientStub) EndSession(context.Context, *statev1.EndSessionRequest, ...grpc.CallOption) (*statev1.EndSessionResponse, error) {
