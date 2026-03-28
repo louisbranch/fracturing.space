@@ -1,6 +1,7 @@
 ---
 title: "Scenario API reference"
-nav_order: 20
+parent: "Reference"
+nav_order: 25
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-27"

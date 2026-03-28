@@ -1,6 +1,8 @@
 ---
 id: "playbook-action-roll-and-outcomes"
 title: "Action Rolls and Outcome Consequences"
+parent: "Daggerheart playbooks"
+nav_order: 1
 kind: "playbook"
 aliases: ["action roll", "duality outcome", "hope fear outcome"]
 ---

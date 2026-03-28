@@ -17,6 +17,10 @@ func loadRepoPlaybookEntries() ([]indexEntry, error) {
 	if err != nil {
 		return nil, err
 	}
+	return loadRepoPlaybookEntriesFromDir(dir)
+}
+
+func loadRepoPlaybookEntriesFromDir(dir string) ([]indexEntry, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -27,6 +31,9 @@ func loadRepoPlaybookEntries() ([]indexEntry, error) {
 	var result []indexEntry
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+			continue
+		}
+		if strings.EqualFold(entry.Name(), "index.md") {
 			continue
 		}
 		fullPath := filepath.Join(dir, entry.Name())

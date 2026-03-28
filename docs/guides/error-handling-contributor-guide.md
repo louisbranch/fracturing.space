@@ -1,5 +1,6 @@
 ---
 title: "Error handling for contributors"
+parent: "Guides"
 nav_order: 9
 status: canonical
 owner: engineering

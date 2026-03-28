@@ -1,3 +1,9 @@
+---
+title: "SQLC workflow"
+parent: "Reference"
+nav_order: 26
+---
+
 # SQLC Workflow
 
 The project uses [sqlc](https://sqlc.dev/) (v1.30.0+) to generate type-safe Go

@@ -19,7 +19,9 @@ This runs:
 - `make docs-path-check` for backtick path references.
 - `make docs-link-check` for markdown link validity.
 - `make docs-index-check` for section index coverage.
+- `make docs-nav-quality-check` for front matter, valid parent chains, and folder-backed nav enforcement.
 - `make docs-lifecycle-check` to block roadmap/phase/backlog tracker artifacts in `docs/`.
+- `make docs-web-route-check` for web route documentation consistency.
 - `make docs-architecture-budget-check` to enforce concise architecture pages (`<=150` lines for non-index pages).
 
 ## Drift spot checks (recommended)

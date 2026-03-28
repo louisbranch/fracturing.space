@@ -1,3 +1,9 @@
+---
+title: "Observability gaps"
+parent: "Platform surfaces"
+nav_order: 24
+---
+
 # Observability gaps
 
 The game service has good audit coverage for unary RPCs and OTel tracing

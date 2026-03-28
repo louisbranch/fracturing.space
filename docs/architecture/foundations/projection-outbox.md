@@ -1,3 +1,9 @@
+---
+title: "Projection apply outbox"
+parent: "Foundations"
+nav_order: 9
+---
+
 # Projection Apply Outbox
 
 The projection apply outbox is the background projection path for the game

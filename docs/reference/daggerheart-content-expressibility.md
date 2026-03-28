@@ -1,3 +1,9 @@
+---
+title: "Daggerheart content expressibility"
+parent: "Reference"
+nav_order: 23
+---
+
 # Daggerheart Content Expressibility
 
 How the Daggerheart game system's runtime primitives map to the reference

@@ -1,5 +1,6 @@
 ---
 title: "Minimal game system skeleton"
+parent: "Guides"
 nav_order: 10
 status: canonical
 owner: engineering

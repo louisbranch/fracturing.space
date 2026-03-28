@@ -1,6 +1,8 @@
 ---
 id: "playbook-combat-procedures"
 title: "Combat Procedures"
+parent: "Daggerheart playbooks"
+nav_order: 2
 kind: "playbook"
 aliases: ["attack flow", "reaction flow", "group action", "tag team", "combat procedure"]
 ---

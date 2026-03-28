@@ -1,3 +1,9 @@
+---
+title: "Rejection codes"
+parent: "Reference"
+nav_order: 24
+---
+
 # Rejection Codes Reference
 
 Command rejection codes are returned by domain deciders when a command violates

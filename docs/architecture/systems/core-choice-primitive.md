@@ -1,7 +1,7 @@
 ---
 title: "Core Choice Primitive"
-parent: "Systems"
-nav_order: 5
+parent: "System extension"
+nav_order: 2
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-03"
