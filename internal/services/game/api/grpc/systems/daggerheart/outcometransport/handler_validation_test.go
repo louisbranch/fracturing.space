@@ -6,6 +6,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 
 	validate "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
@@ -14,7 +15,7 @@ import (
 func TestValidateCampaignIDFromContext(t *testing.T) {
 	ctx := testSessionContext("", "sess-1")
 	_, err := validate.RequiredID(grpcmeta.CampaignIDFromContext(ctx), "campaign id")
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 
 	ctx = testSessionContext("camp-1", "sess-1")
 	campaignID, err := validate.RequiredID(grpcmeta.CampaignIDFromContext(ctx), "campaign id")

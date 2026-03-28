@@ -14,9 +14,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // fakeSessionStore is a test double for storage.SessionStore.
@@ -116,7 +116,7 @@ func TestSessionLockInterceptor_CreateParticipant_WithActiveSession_Blocks(t *te
 	req := &statev1.CreateParticipantRequest{CampaignId: "c1", Name: "Test"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_UpdateCampaign_WithActiveSession_Blocks(t *testing.T) {
@@ -129,7 +129,7 @@ func TestSessionLockInterceptor_UpdateCampaign_WithActiveSession_Blocks(t *testi
 	req := &statev1.UpdateCampaignRequest{CampaignId: "c1"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_CreateCharacter_WithActiveSession_Blocks(t *testing.T) {
@@ -142,7 +142,7 @@ func TestSessionLockInterceptor_CreateCharacter_WithActiveSession_Blocks(t *test
 	req := &statev1.CreateCharacterRequest{CampaignId: "c1", Name: "Hero"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_SetDefaultControl_WithActiveSession_Blocks(t *testing.T) {
@@ -155,7 +155,7 @@ func TestSessionLockInterceptor_SetDefaultControl_WithActiveSession_Blocks(t *te
 	req := &statev1.SetDefaultControlRequest{CampaignId: "c1", CharacterId: "ch1"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_ClaimCharacterControl_WithActiveSession_Blocks(t *testing.T) {
@@ -168,7 +168,7 @@ func TestSessionLockInterceptor_ClaimCharacterControl_WithActiveSession_Blocks(t
 	req := &statev1.ClaimCharacterControlRequest{CampaignId: "c1", CharacterId: "ch1"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_ReleaseCharacterControl_WithActiveSession_Blocks(t *testing.T) {
@@ -181,7 +181,7 @@ func TestSessionLockInterceptor_ReleaseCharacterControl_WithActiveSession_Blocks
 	req := &statev1.ReleaseCharacterControlRequest{CampaignId: "c1", CharacterId: "ch1"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_PatchCharacterProfile_WithActiveSession_Blocks(t *testing.T) {
@@ -194,7 +194,7 @@ func TestSessionLockInterceptor_PatchCharacterProfile_WithActiveSession_Blocks(t
 	req := &statev1.PatchCharacterProfileRequest{CampaignId: "c1", CharacterId: "ch1"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_PatchCharacterState_WithActiveSession_NotBlocked(t *testing.T) {
@@ -230,7 +230,7 @@ func TestSessionLockInterceptor_ForkCampaign_WithActiveSession_BlocksUsingSource
 	req := &statev1.ForkCampaignRequest{SourceCampaignId: "source-c1"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestSessionLockInterceptor_BlockedMethod_MissingCampaignId_ReturnsInvalidArgument(t *testing.T) {
@@ -241,8 +241,8 @@ func TestSessionLockInterceptor_BlockedMethod_MissingCampaignId_ReturnsInvalidAr
 	req := &statev1.CreateParticipantRequest{Name: "Test"} // No CampaignId
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.InvalidArgument)
-	assertStatusMessage(t, err, "campaign_id is required")
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusMessage(t, err, "campaign_id is required")
 }
 
 func TestSessionLockInterceptor_ForkCampaign_MissingSourceCampaignID_ReturnsInvalidArgument(t *testing.T) {
@@ -253,8 +253,8 @@ func TestSessionLockInterceptor_ForkCampaign_MissingSourceCampaignID_ReturnsInva
 	req := &statev1.ForkCampaignRequest{} // No SourceCampaignId
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.InvalidArgument)
-	assertStatusMessage(t, err, "source_campaign_id is required")
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusMessage(t, err, "source_campaign_id is required")
 }
 
 func TestSessionLockInterceptor_BlockedMethod_NilSessionStore_ReturnsInternal(t *testing.T) {
@@ -264,7 +264,7 @@ func TestSessionLockInterceptor_BlockedMethod_NilSessionStore_ReturnsInternal(t 
 	req := &statev1.CreateParticipantRequest{CampaignId: "c1", Name: "Test"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionLockInterceptor_BlockedMethod_SessionStoreError_ReturnsInternal(t *testing.T) {
@@ -276,7 +276,7 @@ func TestSessionLockInterceptor_BlockedMethod_SessionStoreError_ReturnsInternal(
 	req := &statev1.CreateParticipantRequest{CampaignId: "c1", Name: "Test"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionLockInterceptor_DifferentCampaigns_NotBlocked(t *testing.T) {
@@ -402,8 +402,8 @@ func TestSessionLockStreamInterceptor_BlockedMethod_FailsClosed(t *testing.T) {
 		t.Fatal("blocked streaming mutator should not reach handler")
 		return nil
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
-	assertStatusMessage(t, err, "streaming mutator /game.v1.ParticipantService/CreateParticipant is not supported by session lock enforcement")
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusMessage(t, err, "streaming mutator /game.v1.ParticipantService/CreateParticipant is not supported by session lock enforcement")
 }
 
 func TestIsBlockedMethod(t *testing.T) {
@@ -543,35 +543,5 @@ func TestValidateSessionLockPolicyCoverage_DetectsUncoveredNamespace(t *testing.
 	}
 	if !strings.Contains(err.Error(), "custom") || !strings.Contains(err.Error(), "no RPC method maps") {
 		t.Fatalf("expected namespace coverage error mentioning 'custom', got: %v", err)
-	}
-}
-
-// assertStatusCode verifies the gRPC status code for an error.
-func assertStatusCode(t *testing.T, err error, want codes.Code) {
-	t.Helper()
-
-	if err == nil {
-		t.Fatalf("expected error with code %v", want)
-	}
-	statusErr, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("expected gRPC status error, got %T", err)
-	}
-	if statusErr.Code() != want {
-		t.Fatalf("status code = %v, want %v (message: %s)", statusErr.Code(), want, statusErr.Message())
-	}
-}
-
-func assertStatusMessage(t *testing.T, err error, want string) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("expected error with message %q", want)
-	}
-	statusErr, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("expected gRPC status error, got %T", err)
-	}
-	if statusErr.Message() != want {
-		t.Fatalf("status message = %q, want %q", statusErr.Message(), want)
 	}
 }

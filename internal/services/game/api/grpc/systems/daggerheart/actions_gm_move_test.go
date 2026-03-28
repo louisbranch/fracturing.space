@@ -13,6 +13,7 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -23,7 +24,7 @@ func TestApplyGmMove_MissingStores(t *testing.T) {
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyGmMove_MissingCampaignId(t *testing.T) {
@@ -38,7 +39,7 @@ func TestApplyGmMove_MissingCampaignId(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyGmMove_MissingSessionId(t *testing.T) {
@@ -53,7 +54,7 @@ func TestApplyGmMove_MissingSessionId(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyGmMove_MissingKind(t *testing.T) {
@@ -68,7 +69,7 @@ func TestApplyGmMove_MissingKind(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyGmMove_NegativeFearSpent(t *testing.T) {
@@ -84,7 +85,7 @@ func TestApplyGmMove_NegativeFearSpent(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyGmMove_SuccessAdditionalMove(t *testing.T) {
@@ -98,7 +99,7 @@ func TestApplyGmMove_SuccessAdditionalMove(t *testing.T) {
 		FearSpent:   1,
 		SpendTarget: directAdditionalMoveRequest("camp-1", "sess-1", 1).GetSpendTarget(),
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 	if resp != nil {
 		t.Fatal("expected nil response when fear is unavailable")
 	}

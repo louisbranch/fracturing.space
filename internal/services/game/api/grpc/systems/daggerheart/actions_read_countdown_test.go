@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -14,7 +15,7 @@ func TestGetSceneCountdown_MissingStores(t *testing.T) {
 	_, err := svc.GetSceneCountdown(context.Background(), &pb.DaggerheartGetSceneCountdownRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestGetSceneCountdown_Success(t *testing.T) {

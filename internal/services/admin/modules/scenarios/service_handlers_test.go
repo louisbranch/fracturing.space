@@ -41,6 +41,9 @@ func TestScenarioServiceHandlersWithUnavailableClients(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("HandleScenarios(GET) status = %d", rec.Code)
 	}
+	if rec.Body.Len() == 0 {
+		t.Error("HandleScenarios response body is empty")
+	}
 
 	req = httptest.NewRequest(http.MethodPut, "/app/scenarios", nil)
 	rec = httptest.NewRecorder()

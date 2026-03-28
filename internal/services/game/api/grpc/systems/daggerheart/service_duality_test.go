@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -15,7 +16,7 @@ func TestDualityOutcomeRejectsNilRequest(t *testing.T) {
 	server := newTestService(42)
 
 	_, err := server.DualityOutcome(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDualityOutcomeRejectsInvalidDice(t *testing.T) {
@@ -25,7 +26,7 @@ func TestDualityOutcomeRejectsInvalidDice(t *testing.T) {
 		Hope: 0,
 		Fear: 12,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDualityOutcomeRejectsNegativeDifficulty(t *testing.T) {
@@ -37,7 +38,7 @@ func TestDualityOutcomeRejectsNegativeDifficulty(t *testing.T) {
 		Fear:       5,
 		Difficulty: &negative,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDualityOutcomeReturnsResults(t *testing.T) {
@@ -65,7 +66,7 @@ func TestDualityExplainRejectsNilRequest(t *testing.T) {
 	server := newTestService(42)
 
 	_, err := server.DualityExplain(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDualityExplainReturnsExplanation(t *testing.T) {
@@ -159,7 +160,7 @@ func TestDualityProbabilityRejectsNilRequest(t *testing.T) {
 	server := newTestService(42)
 
 	_, err := server.DualityProbability(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDualityProbabilityRejectsNegativeDifficulty(t *testing.T) {
@@ -170,7 +171,7 @@ func TestDualityProbabilityRejectsNegativeDifficulty(t *testing.T) {
 		Modifier:   1,
 		Difficulty: negative,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDualityProbabilityReturnsCounts(t *testing.T) {
@@ -190,7 +191,7 @@ func TestRulesVersionRejectsNilRequest(t *testing.T) {
 	server := newTestService(42)
 
 	_, err := server.RulesVersion(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRulesVersionReturnsMetadata(t *testing.T) {

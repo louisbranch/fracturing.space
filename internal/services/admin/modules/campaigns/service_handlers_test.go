@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -323,6 +324,14 @@ func TestCampaignServiceHandlersWithFakeClients(t *testing.T) {
 			tc.call(rec, req)
 			if rec.Code != http.StatusOK {
 				t.Fatalf("%s status = %d", tc.name, rec.Code)
+			}
+			ct := rec.Header().Get("Content-Type")
+			if ct != "" && !strings.Contains(ct, "text/html") {
+				t.Errorf("%s Content-Type = %q, want text/html", tc.name, ct)
+			}
+			body := rec.Body.String()
+			if len(body) == 0 {
+				t.Errorf("%s response body is empty", tc.name)
 			}
 		})
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
@@ -21,7 +22,7 @@ func TestCreateAgentRequiresUserID(t *testing.T) {
 		Model:         "gpt-4o-mini",
 		AuthReference: credentialAuthReferenceProto("cred-1"),
 	})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	grpcassert.StatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestCreateAgentRejectsInvalidProvider(t *testing.T) {
@@ -33,7 +34,7 @@ func TestCreateAgentRejectsInvalidProvider(t *testing.T) {
 		Model:         "gpt-4o-mini",
 		AuthReference: credentialAuthReferenceProto("cred-1"),
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListProviderModelsRejectsInvalidProvider(t *testing.T) {
@@ -43,7 +44,7 @@ func TestListProviderModelsRejectsInvalidProvider(t *testing.T) {
 		Provider:      aiv1.Provider(99),
 		AuthReference: credentialAuthReferenceProto("cred-1"),
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListAgentsIncludesAuthStateAndUsage(t *testing.T) {
@@ -99,7 +100,7 @@ func TestListAgentsIncludesAuthStateAndUsage(t *testing.T) {
 func TestListAccessibleAgentsRequiresUserID(t *testing.T) {
 	svc := newAgentHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.ListAccessibleAgents(context.Background(), &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	grpcassert.StatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestGetAccessibleAgentRequiresUserID(t *testing.T) {
@@ -107,14 +108,14 @@ func TestGetAccessibleAgentRequiresUserID(t *testing.T) {
 	_, err := svc.GetAccessibleAgent(context.Background(), &aiv1.GetAccessibleAgentRequest{
 		AgentId: "agent-1",
 	})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	grpcassert.StatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestGetAccessibleAgentRequiresAgentID(t *testing.T) {
 	svc := newAgentHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestValidateCampaignAgentBindingReturnsBoundAgent(t *testing.T) {
@@ -208,7 +209,7 @@ func TestDeleteAgentRequiresAgentID(t *testing.T) {
 	svc := newAgentHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.DeleteAgent(ctx, &aiv1.DeleteAgentRequest{AgentId: " "})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func credentialAuthReferenceProto(id string) *aiv1.AgentAuthReference {

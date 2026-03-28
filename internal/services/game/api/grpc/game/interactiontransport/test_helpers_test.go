@@ -11,9 +11,22 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// assertStatusCode verifies the gRPC status code for an error.
+func assertStatusCode(t *testing.T, err error, want codes.Code) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected error with code %v, got nil", want)
+	}
+	if _, ok := status.FromError(err); !ok {
+		err = grpcerror.HandleDomainError(err)
+	}
+	grpcassert.StatusCode(t, err, want)
+}
 
 type fakeDomainExecutor struct {
 	result engine.Result
@@ -89,24 +102,4 @@ func testWriteRuntime(t *testing.T) *domainwrite.Runtime {
 	}
 	runtime.SetIntentFilter(registry)
 	return runtime
-}
-
-// assertStatusCode verifies the gRPC status code for an error.
-func assertStatusCode(t *testing.T, err error, want codes.Code) {
-	t.Helper()
-
-	if err == nil {
-		t.Fatalf("expected error with code %v", want)
-	}
-	statusErr, ok := status.FromError(err)
-	if !ok {
-		err = grpcerror.HandleDomainError(err)
-		statusErr, ok = status.FromError(err)
-		if !ok {
-			t.Fatalf("expected gRPC status error, got %T", err)
-		}
-	}
-	if statusErr.Code() != want {
-		t.Fatalf("status code = %v, want %v (message: %s)", statusErr.Code(), want, statusErr.Message())
-	}
 }

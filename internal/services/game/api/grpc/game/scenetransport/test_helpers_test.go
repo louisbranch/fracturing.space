@@ -10,27 +10,21 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// assertStatusCode verifies the gRPC status code for an error.
 func assertStatusCode(t *testing.T, err error, want codes.Code) {
 	t.Helper()
-
 	if err == nil {
-		t.Fatalf("expected error with code %v", want)
+		t.Fatalf("expected error with code %v, got nil", want)
 	}
-	statusErr, ok := status.FromError(err)
-	if !ok {
+	if _, ok := status.FromError(err); !ok {
 		err = grpcerror.HandleDomainError(err)
-		statusErr, ok = status.FromError(err)
-		if !ok {
-			t.Fatalf("expected gRPC status error, got %T", err)
-		}
 	}
-	if statusErr.Code() != want {
-		t.Fatalf("status code = %v, want %v (message: %s)", statusErr.Code(), want, statusErr.Message())
-	}
+	grpcassert.StatusCode(t, err, want)
 }
 
 func activeCampaignStore(campaignID string) *gametest.FakeCampaignStore {

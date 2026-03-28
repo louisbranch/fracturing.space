@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -61,7 +62,7 @@ func TestListCompendiumCreatureEndpoints_NilRequests(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.InvalidArgument)
+			grpcassert.StatusCode(t, tc.fn(), codes.InvalidArgument)
 		})
 	}
 }
@@ -83,7 +84,7 @@ func TestListCompendiumCreatureEndpoints_NoStore(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.Internal)
+			grpcassert.StatusCode(t, tc.fn(), codes.Internal)
 		})
 	}
 }
@@ -102,7 +103,7 @@ func TestGetCompendiumCreatureEndpoints_NilRequests(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.InvalidArgument)
+			grpcassert.StatusCode(t, tc.fn(), codes.InvalidArgument)
 		})
 	}
 }
@@ -124,7 +125,7 @@ func TestGetCompendiumCreatureEndpoints_NoStore(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.Internal)
+			grpcassert.StatusCode(t, tc.fn(), codes.Internal)
 		})
 	}
 }
@@ -146,7 +147,7 @@ func TestGetCompendiumCreatureEndpoints_EmptyID(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.InvalidArgument)
+			grpcassert.StatusCode(t, tc.fn(), codes.InvalidArgument)
 		})
 	}
 }
@@ -174,7 +175,7 @@ func TestGetCompendiumCreatureEndpoints_NotFound(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assertStatusCode(t, tc.fn(), codes.NotFound)
+			grpcassert.StatusCode(t, tc.fn(), codes.NotFound)
 		})
 	}
 }

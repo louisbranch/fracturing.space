@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -20,7 +21,7 @@ func TestSessionGroupActionFlow_MissingStores(t *testing.T) {
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionGroupActionFlow_MissingCampaignId(t *testing.T) {
@@ -29,7 +30,7 @@ func TestSessionGroupActionFlow_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionGroupActionFlow_MissingSessionId(t *testing.T) {
@@ -38,7 +39,7 @@ func TestSessionGroupActionFlow_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionGroupActionFlow_MissingLeader(t *testing.T) {
@@ -47,7 +48,7 @@ func TestSessionGroupActionFlow_MissingLeader(t *testing.T) {
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionGroupActionFlow_MissingLeaderTrait(t *testing.T) {
@@ -56,7 +57,7 @@ func TestSessionGroupActionFlow_MissingLeaderTrait(t *testing.T) {
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionGroupActionFlow_MissingDifficulty(t *testing.T) {
@@ -65,7 +66,7 @@ func TestSessionGroupActionFlow_MissingDifficulty(t *testing.T) {
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1", LeaderTrait: "agility",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionGroupActionFlow_MissingSupporters(t *testing.T) {
@@ -74,7 +75,7 @@ func TestSessionGroupActionFlow_MissingSupporters(t *testing.T) {
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1", LeaderTrait: "agility", Difficulty: 10,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionGroupActionFlow_Success(t *testing.T) {

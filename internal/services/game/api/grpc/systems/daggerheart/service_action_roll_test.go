@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -15,7 +16,7 @@ func TestActionRollRejectsNilRequest(t *testing.T) {
 	server := newTestService(42)
 
 	_, err := server.ActionRoll(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestActionRollRejectsNegativeDifficulty(t *testing.T) {
@@ -23,7 +24,7 @@ func TestActionRollRejectsNegativeDifficulty(t *testing.T) {
 
 	negative := int32(-1)
 	_, err := server.ActionRoll(context.Background(), &pb.ActionRollRequest{Difficulty: &negative})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestActionRollWithDifficulty(t *testing.T) {
@@ -102,5 +103,5 @@ func TestActionRollSeedFailure(t *testing.T) {
 	}
 
 	_, err := server.ActionRoll(context.Background(), &pb.ActionRollRequest{})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }

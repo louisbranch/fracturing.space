@@ -7,6 +7,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -26,13 +27,13 @@ func TestStatisticsServiceGetAuthStatistics(t *testing.T) {
 	t.Run("rejects nil request", func(t *testing.T) {
 		service := NewStatisticsService(&fakeStatisticsStore{})
 		_, err := service.GetAuthStatistics(context.Background(), nil)
-		assertStatusCode(t, err, codes.InvalidArgument)
+		grpcassert.StatusCode(t, err, codes.InvalidArgument)
 	})
 
 	t.Run("rejects missing store", func(t *testing.T) {
 		service := NewStatisticsService(nil)
 		_, err := service.GetAuthStatistics(context.Background(), &authv1.GetAuthStatisticsRequest{})
-		assertStatusCode(t, err, codes.Internal)
+		grpcassert.StatusCode(t, err, codes.Internal)
 	})
 
 	t.Run("returns stats", func(t *testing.T) {

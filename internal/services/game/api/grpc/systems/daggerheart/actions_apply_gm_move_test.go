@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -26,17 +27,17 @@ func TestApplyGmMove_FearSpentExceedsAvailable(t *testing.T) {
 	svc := newActionTestService()
 	// Snapshot has 0 fear.
 	_, err := svc.ApplyGmMove(context.Background(), directAdditionalMoveRequest("camp-1", "sess-1", 10))
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyGmMove_CampaignNotFound(t *testing.T) {
 	svc := newActionTestService()
 	_, err := svc.ApplyGmMove(context.Background(), directAdditionalMoveRequest("nonexistent", "sess-1", 1))
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestApplyGmMove_SessionNotFound(t *testing.T) {
 	svc := newActionTestService()
 	_, err := svc.ApplyGmMove(context.Background(), directAdditionalMoveRequest("camp-1", "nonexistent", 1))
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }

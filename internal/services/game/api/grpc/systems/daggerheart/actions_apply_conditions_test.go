@@ -13,6 +13,7 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -217,7 +218,7 @@ func TestApplyConditions_ConflictAddRemoveSame(t *testing.T) {
 		AddConditions:      []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
 		RemoveConditionIds: []string{rules.ConditionHidden},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 // --- ApplyGmMove gap fills ---

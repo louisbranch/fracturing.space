@@ -89,6 +89,73 @@ Local verification commands also isolate command-owned temp work under
 `.tmp/test-tmp/` and remove those per-run temp roots on exit. New local test
 artifacts should not accumulate in system `/tmp` during normal runs.
 
+## Adding a coverage floor
+
+Coverage floors in `docs/reference/coverage-floors.json` prevent regression in
+tested packages. When you add meaningful tests to a package, consider adding a
+floor entry.
+
+**Measure the current baseline:**
+
+```bash
+go test ./internal/services/<path>/... -cover -count=1 -short
+```
+
+**Add the entry** to `docs/reference/coverage-floors.json`:
+
+```json
+{
+  "package": "github.com/louisbranch/fracturing.space/internal/services/<path>",
+  "floor": 73.0,
+  "description": "One-line description of what the package tests protect."
+}
+```
+
+Set the floor 2–3% below the measured value. The `allow_drop` tolerance
+(currently 0.1%) absorbs tiny fluctuations from unrelated changes.
+
+**Verify** the floor is enforced by running `make check` — the coverage lane
+will fail if the package drops below its floor.
+
+## Testing guidance for contributors
+
+### Test error paths, not just happy paths
+
+If a fake supports error injection fields (`.PutErr`, `.GetErr`, `.ListErr`,
+`.UpdateErr`, `.EnqueueErr`), add subtests that set those fields and verify the
+handler returns the expected gRPC status code. Example:
+
+```go
+func TestCreateWidget_StoreError(t *testing.T) {
+    store := fakes.NewWidgetStore()
+    store.PutErr = errors.New("db write fail")
+    svc := newTestService(store)
+
+    _, err := svc.CreateWidget(ctx, req)
+    grpcassert.StatusCode(t, err, codes.Internal)
+}
+```
+
+### Assert response content, not just status codes
+
+Handler tests should verify at least one meaningful property of the response
+body beyond the HTTP/gRPC status. For HTML handlers, check a key element or
+data attribute. For gRPC handlers, check a response field value.
+
+### Use the shared grpcassert package
+
+Import `internal/test/grpcassert` for gRPC status assertions instead of
+writing local helpers:
+
+```go
+grpcassert.StatusCode(t, err, codes.NotFound)
+grpcassert.StatusMessage(t, err, "campaign not found")
+```
+
+Game transport packages that exercise handlers returning domain errors should
+use a local `assertStatusCode` wrapper that calls
+`grpcerror.HandleDomainError` before delegating to `grpcassert.StatusCode`.
+
 ## Internal-only commands
 
 The repository still contains internal CI/plumbing targets for shard fanout and

@@ -8,12 +8,13 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
 func TestHandlerActionRollRejectsNilRequest(t *testing.T) {
 	_, err := newTestHandler(42).ActionRoll(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestHandlerActionRollReturnsDeterministicResponse(t *testing.T) {
@@ -48,5 +49,5 @@ func TestHandlerActionRollReturnsDeterministicResponse(t *testing.T) {
 func TestHandlerActionRollSeedFailure(t *testing.T) {
 	handler := NewHandler(func() (int64, error) { return 0, errors.New("boom") })
 	_, err := handler.ActionRoll(context.Background(), &pb.ActionRollRequest{})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }

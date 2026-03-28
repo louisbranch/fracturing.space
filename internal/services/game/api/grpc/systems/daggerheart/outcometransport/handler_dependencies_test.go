@@ -3,13 +3,14 @@ package outcometransport
 import (
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
 func TestHandlerRequireSessionOutcomeDependencies(t *testing.T) {
 	handler := &Handler{}
 	err := handler.requireSessionOutcomeDependencies()
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 
 	handler, _, _ = newTestHandler()
 	if err := handler.requireSessionOutcomeDependencies(); err != nil {
@@ -20,7 +21,7 @@ func TestHandlerRequireSessionOutcomeDependencies(t *testing.T) {
 func TestHandlerRequireRollOutcomeDependencies(t *testing.T) {
 	handler := &Handler{}
 	err := handler.requireRollOutcomeDependencies()
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 
 	handler, _, _ = newTestHandler()
 	if err := handler.requireRollOutcomeDependencies(); err != nil {

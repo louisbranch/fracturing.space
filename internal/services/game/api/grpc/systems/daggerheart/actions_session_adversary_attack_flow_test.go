@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -21,7 +22,7 @@ func TestSessionAdversaryAttackFlow_MissingStores(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionAdversaryAttackFlow_MissingCampaignId(t *testing.T) {
@@ -29,7 +30,7 @@ func TestSessionAdversaryAttackFlow_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
 		SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackFlow_MissingSessionId(t *testing.T) {
@@ -37,7 +38,7 @@ func TestSessionAdversaryAttackFlow_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackFlow_MissingAdversaryId(t *testing.T) {
@@ -45,7 +46,7 @@ func TestSessionAdversaryAttackFlow_MissingAdversaryId(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackFlow_MissingTargetId(t *testing.T) {
@@ -53,7 +54,7 @@ func TestSessionAdversaryAttackFlow_MissingTargetId(t *testing.T) {
 	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackFlow_MissingDamage(t *testing.T) {
@@ -64,7 +65,7 @@ func TestSessionAdversaryAttackFlow_MissingDamage(t *testing.T) {
 		AdversaryId: "adv-1",
 		TargetId:    "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackFlow_MissingDamageType(t *testing.T) {
@@ -76,7 +77,7 @@ func TestSessionAdversaryAttackFlow_MissingDamageType(t *testing.T) {
 		TargetId:    "char-1",
 		Damage:      &pb.DaggerheartAttackDamageSpec{},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryAttackFlow_Success(t *testing.T) {

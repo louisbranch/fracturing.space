@@ -12,19 +12,20 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
 func TestLookupUserByUsername_NilRequest(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.LookupUserByUsername(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestLookupUserByUsername_MissingStore(t *testing.T) {
 	svc := NewAuthService(nil, nil, nil)
 	_, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "alice"})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestLookupUserByUsername_Success(t *testing.T) {
@@ -153,7 +154,7 @@ func TestRevokeWebSession_RevokesSession(t *testing.T) {
 		t.Fatalf("revoke web session: %v", err)
 	}
 	_, err := svc.GetWebSession(context.Background(), &authv1.GetWebSessionRequest{SessionId: "ws-1"})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestListUsers_Success(t *testing.T) {
@@ -226,31 +227,31 @@ func TestCreateWebSession_RollsBackMissingUser(t *testing.T) {
 	store := openTempAuthStore(t)
 	svc := NewAuthService(store, store, nil)
 	_, err := svc.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "missing"})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestLookupUserByUsername_NotFound(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "missing"})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestCheckUsernameAvailability_NilRequest(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.CheckUsernameAvailability(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCheckUsernameAvailability_MissingStore(t *testing.T) {
 	svc := NewAuthService(nil, nil, nil)
 	_, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "alice"})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestLookupUserByUsername_EmptyUsername(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "  "})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListUsers_StoreError(t *testing.T) {
@@ -258,11 +259,11 @@ func TestListUsers_StoreError(t *testing.T) {
 	store.listErr = errors.New("boom")
 	svc := NewAuthService(store, nil, nil)
 	_, err := svc.ListUsers(context.Background(), &authv1.ListUsersRequest{})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestGetUser_NotFound(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "missing"})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -22,7 +23,7 @@ func TestSessionAttackFlow_MissingStores(t *testing.T) {
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionAttackFlow_MissingCampaignId(t *testing.T) {
@@ -31,7 +32,7 @@ func TestSessionAttackFlow_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAttackFlow_MissingSessionId(t *testing.T) {
@@ -40,7 +41,7 @@ func TestSessionAttackFlow_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAttackFlow_MissingCharacterId(t *testing.T) {
@@ -49,7 +50,7 @@ func TestSessionAttackFlow_MissingCharacterId(t *testing.T) {
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAttackFlow_MissingTrait(t *testing.T) {
@@ -70,7 +71,7 @@ func TestSessionAttackFlow_MissingTrait(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAttackFlow_MissingTargetId(t *testing.T) {
@@ -81,7 +82,7 @@ func TestSessionAttackFlow_MissingTargetId(t *testing.T) {
 		SessionId:   "sess-1",
 		CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAttackFlow_MissingDamage(t *testing.T) {
@@ -100,7 +101,7 @@ func TestSessionAttackFlow_MissingDamage(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAttackFlow_MissingDamageType(t *testing.T) {
@@ -120,7 +121,7 @@ func TestSessionAttackFlow_MissingDamageType(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAttackFlow_Success(t *testing.T) {

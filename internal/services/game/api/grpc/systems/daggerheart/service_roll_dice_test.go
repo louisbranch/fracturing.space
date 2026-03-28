@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -16,14 +17,14 @@ func TestRollDiceRejectsNilRequest(t *testing.T) {
 	server := newTestService(42)
 
 	_, err := server.RollDice(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRollDiceRejectsMissingDice(t *testing.T) {
 	server := newTestService(42)
 
 	_, err := server.RollDice(context.Background(), &pb.RollDiceRequest{})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRollDiceRejectsInvalidDiceSpec(t *testing.T) {
@@ -32,7 +33,7 @@ func TestRollDiceRejectsInvalidDiceSpec(t *testing.T) {
 	_, err := server.RollDice(context.Background(), &pb.RollDiceRequest{
 		Dice: []*pb.DiceSpec{{Sides: 0, Count: 1}},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRollDiceReturnsResults(t *testing.T) {
@@ -95,5 +96,5 @@ func TestRollDiceSeedFailure(t *testing.T) {
 	_, err := server.RollDice(context.Background(), &pb.RollDiceRequest{
 		Dice: []*pb.DiceSpec{{Sides: 6, Count: 1}},
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }

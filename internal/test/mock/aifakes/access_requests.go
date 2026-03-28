@@ -10,6 +10,9 @@ import (
 // AccessRequestStore is an in-memory access-request repository fake.
 type AccessRequestStore struct {
 	AccessRequests map[string]accessrequest.AccessRequest
+	PutErr         error
+	GetErr         error
+	ListErr        error
 }
 
 // NewAccessRequestStore creates an initialized access-request fake.
@@ -19,12 +22,18 @@ func NewAccessRequestStore() *AccessRequestStore {
 
 // PutAccessRequest stores an access request.
 func (s *AccessRequestStore) PutAccessRequest(_ context.Context, request accessrequest.AccessRequest) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	s.AccessRequests[request.ID] = request
 	return nil
 }
 
 // GetAccessRequest returns an access request by ID.
 func (s *AccessRequestStore) GetAccessRequest(_ context.Context, accessRequestID string) (accessrequest.AccessRequest, error) {
+	if s.GetErr != nil {
+		return accessrequest.AccessRequest{}, s.GetErr
+	}
 	rec, ok := s.AccessRequests[accessRequestID]
 	if !ok {
 		return accessrequest.AccessRequest{}, storage.ErrNotFound
@@ -34,6 +43,9 @@ func (s *AccessRequestStore) GetAccessRequest(_ context.Context, accessRequestID
 
 // ListAccessRequestsByRequester lists requester-owned access requests.
 func (s *AccessRequestStore) ListAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (accessrequest.Page, error) {
+	if s.ListErr != nil {
+		return accessrequest.Page{}, s.ListErr
+	}
 	items := make([]accessrequest.AccessRequest, 0)
 	for _, ar := range s.AccessRequests {
 		if ar.RequesterUserID == requesterUserID {
@@ -45,6 +57,9 @@ func (s *AccessRequestStore) ListAccessRequestsByRequester(_ context.Context, re
 
 // GetApprovedInvokeAccessByRequesterForAgent returns a matching approved invoke record.
 func (s *AccessRequestStore) GetApprovedInvokeAccessByRequesterForAgent(_ context.Context, requesterUserID string, ownerUserID string, agentID string) (accessrequest.AccessRequest, error) {
+	if s.GetErr != nil {
+		return accessrequest.AccessRequest{}, s.GetErr
+	}
 	for _, ar := range s.AccessRequests {
 		if ar.RequesterUserID != requesterUserID {
 			continue
@@ -68,6 +83,9 @@ func (s *AccessRequestStore) GetApprovedInvokeAccessByRequesterForAgent(_ contex
 
 // ListApprovedInvokeAccessRequestsByRequester returns approved invoke requests for requester.
 func (s *AccessRequestStore) ListApprovedInvokeAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (accessrequest.Page, error) {
+	if s.ListErr != nil {
+		return accessrequest.Page{}, s.ListErr
+	}
 	items := make([]accessrequest.AccessRequest, 0)
 	for _, ar := range s.AccessRequests {
 		if ar.RequesterUserID != requesterUserID {
@@ -86,6 +104,9 @@ func (s *AccessRequestStore) ListApprovedInvokeAccessRequestsByRequester(_ conte
 
 // ListAccessRequestsByOwner lists owner-owned access requests.
 func (s *AccessRequestStore) ListAccessRequestsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (accessrequest.Page, error) {
+	if s.ListErr != nil {
+		return accessrequest.Page{}, s.ListErr
+	}
 	items := make([]accessrequest.AccessRequest, 0)
 	for _, ar := range s.AccessRequests {
 		if ar.OwnerUserID == ownerUserID {

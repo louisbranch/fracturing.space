@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
@@ -19,14 +20,14 @@ func TestInvokeAgentRequiresUserID(t *testing.T) {
 		AgentId: "agent-1",
 		Input:   "Say hello",
 	})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	grpcassert.StatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestInvokeAgentRequiresRequest(t *testing.T) {
 	svc := newInvocationHandlersWithStores(t, newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestInvokeAgentRequiresAgentID(t *testing.T) {
@@ -36,7 +37,7 @@ func TestInvokeAgentRequiresAgentID(t *testing.T) {
 		AgentId: " ",
 		Input:   "Say hello",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestInvokeAgentRequiresInput(t *testing.T) {
@@ -46,7 +47,7 @@ func TestInvokeAgentRequiresInput(t *testing.T) {
 		AgentId: "agent-1",
 		Input:   " ",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestInvokeAgentTrimsRequestAndMapsResponse(t *testing.T) {

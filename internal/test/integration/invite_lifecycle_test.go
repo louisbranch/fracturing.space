@@ -69,6 +69,13 @@ func runInviteLifecycleTests(t *testing.T, fixture *suiteFixture) {
 	t.Run("decline invite", suite.testDeclineInvite)
 	t.Run("revoke invite", suite.testRevokeInvite)
 	t.Run("reject duplicate recipient", suite.testRejectDuplicateRecipient)
+	t.Run("list pending invites", suite.testListPendingInvites)
+	t.Run("claim with invalid grant", suite.testClaimWithInvalidGrant)
+	t.Run("claim already claimed invite", suite.testClaimAlreadyClaimedInvite)
+	t.Run("get invite", suite.testGetInvite)
+	t.Run("list invites with status filter", suite.testListInvitesWithStatusFilter)
+	t.Run("get public invite with enrichment", suite.testGetPublicInviteWithEnrichment)
+	t.Run("outbox events after create", suite.testOutboxEventsAfterCreate)
 }
 
 // createCampaignWithPlayerSeat creates a campaign owned by the suite owner and
@@ -423,5 +430,311 @@ func (s *inviteLifecycleSuite) testRejectDuplicateRecipient(t *testing.T) {
 	}
 	if st, ok := status.FromError(err); !ok || st.Code() != codes.FailedPrecondition {
 		t.Fatalf("expected FailedPrecondition, got %v", err)
+	}
+}
+
+func (s *inviteLifecycleSuite) testListPendingInvites(t *testing.T) {
+	campaignID, participantID := s.createCampaignWithPlayerSeat(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	// Create two invites for the campaign (one per player seat).
+	for i := 0; i < 2; i++ {
+		_, err := s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+			CampaignId:    campaignID,
+			ParticipantId: participantID,
+		})
+		if err != nil {
+			t.Fatalf("CreateInvite %d: %v", i, err)
+		}
+
+		if i < 1 {
+			ownerCtx := withUserID(ctx, s.ownerUserID)
+			resp, err := s.participant.CreateParticipant(ownerCtx, &gamev1.CreateParticipantRequest{
+				CampaignId: campaignID,
+				Name:       "Extra Seat",
+				Role:       gamev1.ParticipantRole_PLAYER,
+				Controller: gamev1.Controller_CONTROLLER_HUMAN,
+			})
+			if err != nil {
+				t.Fatalf("create extra participant: %v", err)
+			}
+			participantID = resp.GetParticipant().GetId()
+		}
+	}
+
+	listResp, err := s.invite.ListPendingInvites(ctx, &invitev1.ListPendingInvitesRequest{
+		CampaignId: campaignID,
+		PageSize:   10,
+	})
+	if err != nil {
+		t.Fatalf("ListPendingInvites: %v", err)
+	}
+	if len(listResp.GetInvites()) < 2 {
+		t.Fatalf("expected at least 2 pending invites, got %d", len(listResp.GetInvites()))
+	}
+}
+
+func (s *inviteLifecycleSuite) testClaimWithInvalidGrant(t *testing.T) {
+	campaignID, participantID := s.createCampaignWithPlayerSeat(t)
+	claimerUserID := createAuthUser(t, s.authAddr, uniqueTestUsername(t, "invite-bad-grant"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	createResp, err := s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite: %v", err)
+	}
+	inviteID := createResp.GetInvite().GetId()
+
+	// Claim with a bogus token.
+	claimCtx := withUserID(ctx, claimerUserID)
+	_, err = s.invite.ClaimInvite(claimCtx, &invitev1.ClaimInviteRequest{
+		CampaignId: campaignID,
+		InviteId:   inviteID,
+		JoinGrant:  "invalid.bogus.token",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid grant, got nil")
+	}
+	if st, ok := status.FromError(err); !ok || st.Code() != codes.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", err)
+	}
+}
+
+func (s *inviteLifecycleSuite) testClaimAlreadyClaimedInvite(t *testing.T) {
+	campaignID, participantID := s.createCampaignWithPlayerSeat(t)
+	claimer1 := createAuthUser(t, s.authAddr, uniqueTestUsername(t, "invite-claimer1"))
+	claimer2 := createAuthUser(t, s.authAddr, uniqueTestUsername(t, "invite-claimer2"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	createResp, err := s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite: %v", err)
+	}
+	inviteID := createResp.GetInvite().GetId()
+
+	// First claim succeeds.
+	token1 := joinGrantToken(t, campaignID, inviteID, claimer1, time.Now().UTC())
+	_, err = s.invite.ClaimInvite(withUserID(ctx, claimer1), &invitev1.ClaimInviteRequest{
+		CampaignId: campaignID,
+		InviteId:   inviteID,
+		JoinGrant:  token1,
+	})
+	if err != nil {
+		t.Fatalf("ClaimInvite first: %v", err)
+	}
+
+	// Second claim with different user fails — already claimed.
+	token2 := joinGrantToken(t, campaignID, inviteID, claimer2, time.Now().UTC())
+	_, err = s.invite.ClaimInvite(withUserID(ctx, claimer2), &invitev1.ClaimInviteRequest{
+		CampaignId: campaignID,
+		InviteId:   inviteID,
+		JoinGrant:  token2,
+	})
+	if err == nil {
+		t.Fatal("expected error for double claim, got nil")
+	}
+	if st, ok := status.FromError(err); !ok || st.Code() != codes.FailedPrecondition {
+		t.Fatalf("expected FailedPrecondition, got %v", err)
+	}
+}
+
+func (s *inviteLifecycleSuite) testGetInvite(t *testing.T) {
+	campaignID, participantID := s.createCampaignWithPlayerSeat(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	createResp, err := s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite: %v", err)
+	}
+	inviteID := createResp.GetInvite().GetId()
+
+	getResp, err := s.invite.GetInvite(ctx, &invitev1.GetInviteRequest{
+		InviteId: inviteID,
+	})
+	if err != nil {
+		t.Fatalf("GetInvite: %v", err)
+	}
+	if getResp.GetInvite().GetId() != inviteID {
+		t.Fatalf("GetInvite ID = %q, want %q", getResp.GetInvite().GetId(), inviteID)
+	}
+	if getResp.GetInvite().GetCampaignId() != campaignID {
+		t.Fatalf("GetInvite CampaignId = %q, want %q", getResp.GetInvite().GetCampaignId(), campaignID)
+	}
+	if getResp.GetInvite().GetStatus() != invitev1.InviteStatus_PENDING {
+		t.Fatalf("GetInvite Status = %v, want PENDING", getResp.GetInvite().GetStatus())
+	}
+}
+
+func (s *inviteLifecycleSuite) testListInvitesWithStatusFilter(t *testing.T) {
+	campaignID, participantID := s.createCampaignWithPlayerSeat(t)
+	declineUserID := createAuthUser(t, s.authAddr, uniqueTestUsername(t, "invite-filter"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	// Create and decline an invite.
+	createResp, err := s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite: %v", err)
+	}
+	_, err = s.invite.DeclineInvite(ctx, &invitev1.DeclineInviteRequest{
+		InviteId: createResp.GetInvite().GetId(),
+	})
+	if err != nil {
+		t.Fatalf("DeclineInvite: %v", err)
+	}
+
+	// Create a second seat and a pending invite.
+	ownerCtx := withUserID(ctx, s.ownerUserID)
+	seat2, err := s.participant.CreateParticipant(ownerCtx, &gamev1.CreateParticipantRequest{
+		CampaignId: campaignID,
+		Name:       "Seat 2",
+		Role:       gamev1.ParticipantRole_PLAYER,
+		Controller: gamev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("create seat 2: %v", err)
+	}
+	_, err = s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+		CampaignId:      campaignID,
+		ParticipantId:   seat2.GetParticipant().GetId(),
+		RecipientUserId: declineUserID,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite 2: %v", err)
+	}
+
+	// List with PENDING filter — should return only the second invite.
+	listResp, err := s.invite.ListInvites(ctx, &invitev1.ListInvitesRequest{
+		CampaignId: campaignID,
+		Status:     invitev1.InviteStatus_PENDING,
+		PageSize:   10,
+	})
+	if err != nil {
+		t.Fatalf("ListInvites: %v", err)
+	}
+	if len(listResp.GetInvites()) != 1 {
+		t.Fatalf("ListInvites(PENDING) = %d invites, want 1", len(listResp.GetInvites()))
+	}
+
+	// List with DECLINED filter — should return only the first.
+	listResp, err = s.invite.ListInvites(ctx, &invitev1.ListInvitesRequest{
+		CampaignId: campaignID,
+		Status:     invitev1.InviteStatus_DECLINED,
+		PageSize:   10,
+	})
+	if err != nil {
+		t.Fatalf("ListInvites(DECLINED): %v", err)
+	}
+	if len(listResp.GetInvites()) != 1 {
+		t.Fatalf("ListInvites(DECLINED) = %d invites, want 1", len(listResp.GetInvites()))
+	}
+}
+
+func (s *inviteLifecycleSuite) testGetPublicInviteWithEnrichment(t *testing.T) {
+	campaignID, participantID := s.createCampaignWithPlayerSeat(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	createResp, err := s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite: %v", err)
+	}
+	inviteID := createResp.GetInvite().GetId()
+
+	pubResp, err := s.invite.GetPublicInvite(ctx, &invitev1.GetPublicInviteRequest{
+		InviteId: inviteID,
+	})
+	if err != nil {
+		t.Fatalf("GetPublicInvite: %v", err)
+	}
+	if pubResp.GetInvite() == nil {
+		t.Fatal("GetPublicInvite invite is nil")
+	}
+	if pubResp.GetInvite().GetId() != inviteID {
+		t.Fatalf("invite ID = %q, want %q", pubResp.GetInvite().GetId(), inviteID)
+	}
+	// Campaign enrichment: the invite service should fetch campaign details.
+	if pubResp.GetCampaign() == nil {
+		t.Fatal("GetPublicInvite campaign enrichment is nil")
+	}
+	if pubResp.GetCampaign().GetId() != campaignID {
+		t.Fatalf("campaign ID = %q, want %q", pubResp.GetCampaign().GetId(), campaignID)
+	}
+	if pubResp.GetCampaign().GetName() == "" {
+		t.Fatal("campaign name is empty")
+	}
+	// Participant enrichment: the invite service should fetch participant details.
+	if pubResp.GetParticipant() == nil {
+		t.Fatal("GetPublicInvite participant enrichment is nil")
+	}
+	if pubResp.GetParticipant().GetId() != participantID {
+		t.Fatalf("participant ID = %q, want %q", pubResp.GetParticipant().GetId(), participantID)
+	}
+}
+
+func (s *inviteLifecycleSuite) testOutboxEventsAfterCreate(t *testing.T) {
+	campaignID, participantID := s.createCampaignWithPlayerSeat(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	_, err := s.invite.CreateInvite(ctx, &invitev1.CreateInviteRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite: %v", err)
+	}
+
+	// Lease outbox events — should have at least one invite.created event.
+	leaseResp, err := s.invite.LeaseIntegrationOutboxEvents(ctx, &invitev1.LeaseIntegrationOutboxEventsRequest{
+		Consumer:   "test-worker",
+		Limit:      10,
+		LeaseTtlMs: 30000,
+	})
+	if err != nil {
+		t.Fatalf("LeaseIntegrationOutboxEvents: %v", err)
+	}
+	if len(leaseResp.GetEvents()) == 0 {
+		t.Fatal("expected at least one outbox event after CreateInvite")
+	}
+
+	found := false
+	for _, evt := range leaseResp.GetEvents() {
+		if strings.Contains(evt.GetEventType(), "created") {
+			found = true
+			if evt.GetPayloadJson() == "" {
+				t.Fatal("outbox event payload is empty")
+			}
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected invite.created outbox event")
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -20,7 +21,7 @@ func TestSessionDamageRoll_MissingStores(t *testing.T) {
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionDamageRoll_MissingCampaignId(t *testing.T) {
@@ -29,7 +30,7 @@ func TestSessionDamageRoll_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		SessionId: "sess-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionDamageRoll_MissingSessionId(t *testing.T) {
@@ -38,7 +39,7 @@ func TestSessionDamageRoll_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionDamageRoll_MissingCharacterId(t *testing.T) {
@@ -47,7 +48,7 @@ func TestSessionDamageRoll_MissingCharacterId(t *testing.T) {
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionDamageRoll_MissingDice(t *testing.T) {
@@ -56,7 +57,7 @@ func TestSessionDamageRoll_MissingDice(t *testing.T) {
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionDamageRoll_RequiresDomainEngine(t *testing.T) {
@@ -67,7 +68,7 @@ func TestSessionDamageRoll_RequiresDomainEngine(t *testing.T) {
 		CharacterId: "char-1",
 		Dice:        []*pb.DiceSpec{{Sides: 6, Count: 2}},
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionDamageRoll_Success(t *testing.T) {

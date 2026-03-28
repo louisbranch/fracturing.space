@@ -8,25 +8,26 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
 func TestGetClass_NilRequest(t *testing.T) {
 	svc := newContentTestService()
 	_, err := svc.GetClass(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetClass_EmptyID(t *testing.T) {
 	svc := newContentTestService()
 	_, err := svc.GetClass(context.Background(), &pb.GetDaggerheartClassRequest{Id: ""})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetClass_NotFound(t *testing.T) {
 	svc := newContentTestService()
 	_, err := svc.GetClass(context.Background(), &pb.GetDaggerheartClassRequest{Id: "nonexistent"})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }
 
 func TestGetClass_Success(t *testing.T) {
@@ -72,7 +73,7 @@ func TestGetClass_LocaleOverride(t *testing.T) {
 func TestListClasses_NilRequest(t *testing.T) {
 	svc := newContentTestService()
 	_, err := svc.ListClasses(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListClasses_Success(t *testing.T) {
@@ -108,7 +109,7 @@ func TestListClasses_WithPagination(t *testing.T) {
 func TestGetSubclass_NilRequest(t *testing.T) {
 	svc := newContentTestService()
 	_, err := svc.GetSubclass(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetSubclass_Success(t *testing.T) {

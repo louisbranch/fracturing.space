@@ -228,6 +228,11 @@
       "description": "Campaign turn runner, prompt builder, and context source registration."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools",
+      "floor": 27.0,
+      "description": "AI gametools session shell including enum converters, URI parsers, and resource/tool handlers."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite",
       "floor": 57.0,
       "description": "SQLite persistence layer for all AI entity CRUD and pagination."
@@ -236,6 +241,81 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai",
       "floor": 75.0,
       "description": "AI gRPC transport handlers covering RPC validation and error mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/invite/api/grpc/invite",
+      "floor": 50.0,
+      "description": "Invite gRPC transport handlers covering validation, status transitions, and cross-service enrichment."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/invite/storage/sqlite",
+      "floor": 50.0,
+      "description": "Invite SQLite persistence layer covering CRUD, pagination, and outbox lifecycle."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/play/app",
+      "floor": 73.0,
+      "description": "Play service application layer including realtime rooms and launch grant flow."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/play/protocol",
+      "floor": 83.0,
+      "description": "Play protocol handlers for AI debug and Daggerheart session messages."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth",
+      "floor": 58.0,
+      "description": "Auth gRPC transport handlers including account, passkey, and session RPCs."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/oauth",
+      "floor": 79.0,
+      "description": "OAuth configuration, PKCE flow, and provider lifecycle."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/app",
+      "floor": 69.0,
+      "description": "Notifications application layer with worker runtime and email delivery."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/userhub/app",
+      "floor": 66.0,
+      "description": "UserHub application layer for user profile aggregation."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin",
+      "floor": 67.0,
+      "description": "Admin service root including auth middleware and route composition."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/campaigns",
+      "floor": 77.0,
+      "description": "Admin campaigns module with campaign/participant/session detail handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/dashboard",
+      "floor": 74.0,
+      "description": "Admin dashboard module with activity and system health endpoints."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/catalog",
+      "floor": 61.0,
+      "description": "Admin catalog module with content catalog browsing handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/scenarios",
+      "floor": 68.0,
+      "description": "Admin scenarios module with scenario execution and result handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/platform/grpc",
+      "floor": 73.0,
+      "description": "Shared gRPC platform utilities including managed connections and health polling."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog",
+      "floor": 73.0,
+      "description": "Asset catalog for avatar, system-specific, and Cloudinary path management."
     }
   ]
 }

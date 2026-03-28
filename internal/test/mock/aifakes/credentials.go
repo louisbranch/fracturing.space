@@ -10,6 +10,9 @@ import (
 // CredentialStore is an in-memory credential repository fake.
 type CredentialStore struct {
 	Credentials map[string]credential.Credential
+	PutErr      error
+	GetErr      error
+	ListErr     error
 }
 
 // NewCredentialStore creates an initialized credential fake.
@@ -19,6 +22,9 @@ func NewCredentialStore() *CredentialStore {
 
 // PutCredential stores a credential.
 func (s *CredentialStore) PutCredential(_ context.Context, c credential.Credential) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
 	for id, existing := range s.Credentials {
 		if id == c.ID {
 			continue
@@ -39,6 +45,9 @@ func (s *CredentialStore) PutCredential(_ context.Context, c credential.Credenti
 
 // GetCredential returns a credential by ID.
 func (s *CredentialStore) GetCredential(_ context.Context, credentialID string) (credential.Credential, error) {
+	if s.GetErr != nil {
+		return credential.Credential{}, s.GetErr
+	}
 	c, ok := s.Credentials[credentialID]
 	if !ok {
 		return credential.Credential{}, storage.ErrNotFound
@@ -48,6 +57,9 @@ func (s *CredentialStore) GetCredential(_ context.Context, credentialID string) 
 
 // ListCredentialsByOwner lists credentials for an owner.
 func (s *CredentialStore) ListCredentialsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (credential.Page, error) {
+	if s.ListErr != nil {
+		return credential.Page{}, s.ListErr
+	}
 	items := make([]credential.Credential, 0)
 	for _, c := range s.Credentials {
 		if c.OwnerUserID == ownerUserID {

@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -14,7 +15,7 @@ import (
 func TestUpdateAdversary_NilRequest(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.UpdateAdversary(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestUpdateAdversary_MissingCampaignID(t *testing.T) {
@@ -23,7 +24,7 @@ func TestUpdateAdversary_MissingCampaignID(t *testing.T) {
 		AdversaryId: "adv-1",
 		Notes:       wrapperspb.String("New note"),
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestUpdateAdversary_MissingAdversaryID(t *testing.T) {
@@ -32,7 +33,7 @@ func TestUpdateAdversary_MissingAdversaryID(t *testing.T) {
 		CampaignId: "camp-1",
 		Notes:      wrapperspb.String("New note"),
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestUpdateAdversary_NoFieldsProvided(t *testing.T) {
@@ -40,7 +41,7 @@ func TestUpdateAdversary_NoFieldsProvided(t *testing.T) {
 	_, err := svc.UpdateAdversary(context.Background(), &pb.DaggerheartUpdateAdversaryRequest{
 		CampaignId: "camp-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestUpdateAdversary_Success(t *testing.T) {
@@ -116,5 +117,5 @@ func TestUpdateAdversary_NotFound(t *testing.T) {
 		AdversaryId: "nonexistent",
 		Notes:       wrapperspb.String("New note"),
 	})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 }

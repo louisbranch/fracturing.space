@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -27,7 +28,7 @@ func TestRunCampaignTurnRejectsInvalidGrant(t *testing.T) {
 	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
 		SessionGrant: "bad-token",
 	})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	grpcassert.StatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestRunCampaignTurnRejectsStaleGrant(t *testing.T) {
@@ -55,7 +56,7 @@ func TestRunCampaignTurnRejectsStaleGrant(t *testing.T) {
 			AuthEpoch:     1,
 		}),
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestRunCampaignTurnMapsRunnerTimeout(t *testing.T) {
@@ -107,7 +108,7 @@ func TestRunCampaignTurnMapsRunnerTimeout(t *testing.T) {
 			AuthEpoch:     7,
 		}),
 	})
-	assertStatusCode(t, err, codes.DeadlineExceeded)
+	grpcassert.StatusCode(t, err, codes.DeadlineExceeded)
 	assertStatusReason(t, err, apperrors.CodeAIOrchestrationTimedOut)
 }
 
@@ -160,7 +161,7 @@ func TestRunCampaignTurnMapsRunnerStepLimit(t *testing.T) {
 			AuthEpoch:     7,
 		}),
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 	assertStatusReason(t, err, apperrors.CodeAIOrchestrationStepLimitExceeded)
 }
 

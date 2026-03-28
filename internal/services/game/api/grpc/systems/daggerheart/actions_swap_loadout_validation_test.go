@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -13,7 +14,7 @@ func TestSwapLoadout_MissingStores(t *testing.T) {
 	_, err := svc.SwapLoadout(context.Background(), &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId: "c1", CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSwapLoadout_MissingCampaignId(t *testing.T) {
@@ -22,7 +23,7 @@ func TestSwapLoadout_MissingCampaignId(t *testing.T) {
 	_, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSwapLoadout_MissingCharacterId(t *testing.T) {
@@ -31,7 +32,7 @@ func TestSwapLoadout_MissingCharacterId(t *testing.T) {
 	_, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSwapLoadout_MissingSessionId(t *testing.T) {
@@ -39,7 +40,7 @@ func TestSwapLoadout_MissingSessionId(t *testing.T) {
 	_, err := svc.SwapLoadout(context.Background(), &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSwapLoadout_MissingSwap(t *testing.T) {
@@ -48,7 +49,7 @@ func TestSwapLoadout_MissingSwap(t *testing.T) {
 	_, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSwapLoadout_MissingCardId(t *testing.T) {
@@ -59,7 +60,7 @@ func TestSwapLoadout_MissingCardId(t *testing.T) {
 		CharacterId: "char-1",
 		Swap:        &pb.DaggerheartLoadoutSwapRequest{},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSwapLoadout_NegativeRecallCost(t *testing.T) {
@@ -73,5 +74,5 @@ func TestSwapLoadout_NegativeRecallCost(t *testing.T) {
 			RecallCost: -1,
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }

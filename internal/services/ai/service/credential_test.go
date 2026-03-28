@@ -317,3 +317,43 @@ func TestCredentialServiceCreateMapsSealFailure(t *testing.T) {
 		t.Fatalf("ErrorKindOf(err) = %v, want %v", got, ErrKindInternal)
 	}
 }
+
+func TestCredentialServiceListReturnsInternalOnStoreError(t *testing.T) {
+	t.Parallel()
+	store := aifakes.NewCredentialStore()
+	store.ListErr = errors.New("db read fail")
+
+	svc, err := NewCredentialService(CredentialServiceConfig{
+		CredentialStore:  store,
+		ProviderRegistry: mustProviderRegistryForTests(t, nil, nil, nil, nil),
+		Sealer:           &aifakes.Sealer{},
+	})
+	if err != nil {
+		t.Fatalf("NewCredentialService: %v", err)
+	}
+
+	_, err = svc.List(context.Background(), "user-1", 10, "")
+	if got := ErrorKindOf(err); got != ErrKindInternal {
+		t.Fatalf("ErrorKindOf(err) = %v, want %v", got, ErrKindInternal)
+	}
+}
+
+func TestCredentialServiceRevokeReturnsInternalOnGetStoreError(t *testing.T) {
+	t.Parallel()
+	store := aifakes.NewCredentialStore()
+	store.GetErr = errors.New("db read fail")
+
+	svc, err := NewCredentialService(CredentialServiceConfig{
+		CredentialStore:  store,
+		ProviderRegistry: mustProviderRegistryForTests(t, nil, nil, nil, nil),
+		Sealer:           &aifakes.Sealer{},
+	})
+	if err != nil {
+		t.Fatalf("NewCredentialService: %v", err)
+	}
+
+	_, err = svc.Revoke(context.Background(), "user-1", "cred-1")
+	if got := ErrorKindOf(err); got != ErrKindInternal {
+		t.Fatalf("ErrorKindOf(err) = %v, want %v", got, ErrKindInternal)
+	}
+}

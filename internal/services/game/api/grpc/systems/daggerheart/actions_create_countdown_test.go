@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -19,7 +20,7 @@ func TestCreateSceneCountdown_MissingStores(t *testing.T) {
 	_, err := svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestCreateSceneCountdown_MissingCampaignId(t *testing.T) {
@@ -28,7 +29,7 @@ func TestCreateSceneCountdown_MissingCampaignId(t *testing.T) {
 		SessionId: "sess-1",
 		SceneId:   "scene-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateSceneCountdown_MissingSessionOrScene(t *testing.T) {
@@ -37,13 +38,13 @@ func TestCreateSceneCountdown_MissingSessionOrScene(t *testing.T) {
 		CampaignId: "camp-1",
 		SceneId:    "scene-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 
 	_, err = svc.CreateSceneCountdown(context.Background(), &pb.DaggerheartCreateSceneCountdownRequest{
 		CampaignId: "camp-1",
 		SessionId:  "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateSceneCountdown_InvalidShape(t *testing.T) {
@@ -58,7 +59,7 @@ func TestCreateSceneCountdown_InvalidShape(t *testing.T) {
 		StartingValue:     &pb.DaggerheartCreateSceneCountdownRequest_FixedStartingValue{FixedStartingValue: 0},
 		LoopBehavior:      pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE,
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateSceneCountdown_RequiresDomainEngine(t *testing.T) {
@@ -73,7 +74,7 @@ func TestCreateSceneCountdown_RequiresDomainEngine(t *testing.T) {
 		StartingValue:     &pb.DaggerheartCreateSceneCountdownRequest_FixedStartingValue{FixedStartingValue: 4},
 		LoopBehavior:      pb.DaggerheartCountdownLoopBehavior_DAGGERHEART_COUNTDOWN_LOOP_BEHAVIOR_NONE,
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestCreateSceneCountdown_Success(t *testing.T) {

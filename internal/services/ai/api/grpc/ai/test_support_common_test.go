@@ -159,20 +159,6 @@ func mustIssueAISessionGrant(t *testing.T, cfg aisessiongrant.Config, input aise
 	return token
 }
 
-func assertStatusCode(t *testing.T, err error, want codes.Code) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("expected status %v, got nil", want)
-	}
-	st, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("expected gRPC status error, got %v", err)
-	}
-	if st.Code() != want {
-		t.Fatalf("expected status %v, got %v", want, st.Code())
-	}
-}
-
 // pkceCodeChallengeS256 computes the S256 code challenge for test assertions.
 func pkceCodeChallengeS256(codeVerifier string) string {
 	sum := sha256.Sum256([]byte(codeVerifier))

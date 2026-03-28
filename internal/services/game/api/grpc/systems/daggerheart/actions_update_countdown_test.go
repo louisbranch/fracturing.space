@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -20,7 +21,7 @@ func TestAdvanceSceneCountdown_MissingStores(t *testing.T) {
 	_, err := svc.AdvanceSceneCountdown(context.Background(), &pb.DaggerheartAdvanceSceneCountdownRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestAdvanceSceneCountdown_ValidatesShape(t *testing.T) {
@@ -30,7 +31,7 @@ func TestAdvanceSceneCountdown_ValidatesShape(t *testing.T) {
 		SessionId:  "sess-1",
 		SceneId:    "scene-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestAdvanceSceneCountdown_Success(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -12,19 +13,19 @@ import (
 func TestContentStoreMissing(t *testing.T) {
 	var nilHandler *Handler
 	_, err := nilHandler.contentStore()
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 
 	handler := &Handler{}
 	_, err = handler.contentStore()
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestMapContentErr(t *testing.T) {
 	err := mapContentErr("get class", storage.ErrNotFound)
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 
 	err = mapContentErr("get class", errors.New("boom"))
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 	statusErr, ok := status.FromError(err)
 	if !ok {
 		t.Fatalf("expected grpc status error, got %T", err)

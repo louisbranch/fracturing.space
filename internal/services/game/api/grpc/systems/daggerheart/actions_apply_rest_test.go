@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -318,7 +319,7 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.NotFound)
+	grpcassert.StatusCode(t, err, codes.NotFound)
 
 	if len(eventStore.Events["camp-1"]) != 0 {
 		t.Fatalf("expected no events committed on failed rest flow, got %d", len(eventStore.Events["camp-1"]))
@@ -433,7 +434,7 @@ func TestApplyRest_RejectsSceneCountdownForCampaignCountdownFields(t *testing.T)
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
@@ -455,5 +456,5 @@ func TestApplyRest_RejectsSceneCountdownForCampaignCountdownFields(t *testing.T)
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }

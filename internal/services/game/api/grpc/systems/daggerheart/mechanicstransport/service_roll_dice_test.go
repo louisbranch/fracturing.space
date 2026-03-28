@@ -7,6 +7,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -14,7 +15,7 @@ func TestHandlerRollDice(t *testing.T) {
 	handler := newTestHandler(13)
 
 	_, err := handler.RollDice(context.Background(), &pb.RollDiceRequest{})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 
 	resp, err := handler.RollDice(context.Background(), &pb.RollDiceRequest{
 		Dice: []*pb.DiceSpec{

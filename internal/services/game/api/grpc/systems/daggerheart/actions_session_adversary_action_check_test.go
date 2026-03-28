@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -14,7 +15,7 @@ func TestSessionAdversaryActionCheck_MissingStores(t *testing.T) {
 	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestSessionAdversaryActionCheck_MissingCampaignId(t *testing.T) {
@@ -22,7 +23,7 @@ func TestSessionAdversaryActionCheck_MissingCampaignId(t *testing.T) {
 	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
 		SessionId: "sess-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryActionCheck_MissingSessionId(t *testing.T) {
@@ -30,7 +31,7 @@ func TestSessionAdversaryActionCheck_MissingSessionId(t *testing.T) {
 	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
 		CampaignId: "camp-1", AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryActionCheck_MissingAdversaryId(t *testing.T) {
@@ -38,7 +39,7 @@ func TestSessionAdversaryActionCheck_MissingAdversaryId(t *testing.T) {
 	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSessionAdversaryActionCheck_Success(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -24,7 +25,7 @@ func TestApplyAdversaryConditions_MissingStores(t *testing.T) {
 	_, err := svc.ApplyAdversaryConditions(context.Background(), &pb.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId: "c1", AdversaryId: "a1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyAdversaryConditions_MissingCampaignId(t *testing.T) {
@@ -36,7 +37,7 @@ func TestApplyAdversaryConditions_MissingCampaignId(t *testing.T) {
 			protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE),
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryConditions_MissingAdversaryId(t *testing.T) {
@@ -48,7 +49,7 @@ func TestApplyAdversaryConditions_MissingAdversaryId(t *testing.T) {
 			protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE),
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryConditions_MissingSessionId(t *testing.T) {
@@ -58,7 +59,7 @@ func TestApplyAdversaryConditions_MissingSessionId(t *testing.T) {
 		AdversaryId:   "adv-1",
 		AddConditions: []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryConditions_NoConditions(t *testing.T) {
@@ -68,7 +69,7 @@ func TestApplyAdversaryConditions_NoConditions(t *testing.T) {
 		CampaignId:  "camp-1",
 		AdversaryId: "adv-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryConditions_ConflictAddRemoveSame(t *testing.T) {
@@ -80,7 +81,7 @@ func TestApplyAdversaryConditions_ConflictAddRemoveSame(t *testing.T) {
 		AddConditions:      []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
 		RemoveConditionIds: []string{rules.ConditionVulnerable},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyAdversaryConditions_AddCondition_Success(t *testing.T) {
@@ -268,5 +269,5 @@ func TestApplyAdversaryConditions_NoChanges(t *testing.T) {
 		AdversaryId:   "adv-1",
 		AddConditions: []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
 	})
-	assertStatusCode(t, err, codes.FailedPrecondition)
+	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }

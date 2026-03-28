@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/test/grpcassert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -13,7 +14,7 @@ func TestApplyRest_MissingStores(t *testing.T) {
 	_, err := svc.ApplyRest(context.Background(), &pb.DaggerheartApplyRestRequest{
 		CampaignId: "c1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyRest_RequiresDomainEngine(t *testing.T) {
@@ -28,7 +29,7 @@ func TestApplyRest_RequiresDomainEngine(t *testing.T) {
 			},
 		},
 	})
-	assertStatusCode(t, err, codes.Internal)
+	grpcassert.StatusCode(t, err, codes.Internal)
 }
 
 func TestApplyRest_MissingCampaignId(t *testing.T) {
@@ -36,7 +37,7 @@ func TestApplyRest_MissingCampaignId(t *testing.T) {
 	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyRest_MissingSessionId(t *testing.T) {
@@ -45,7 +46,7 @@ func TestApplyRest_MissingSessionId(t *testing.T) {
 	_, err := svc.ApplyRest(context.Background(), &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyRest_MissingRest(t *testing.T) {
@@ -55,7 +56,7 @@ func TestApplyRest_MissingRest(t *testing.T) {
 	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestApplyRest_UnspecifiedRestType(t *testing.T) {
@@ -68,5 +69,5 @@ func TestApplyRest_UnspecifiedRestType(t *testing.T) {
 			RestType: pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_UNSPECIFIED,
 		},
 	})
-	assertStatusCode(t, err, codes.InvalidArgument)
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
 }
