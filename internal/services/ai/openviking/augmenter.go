@@ -97,7 +97,7 @@ func (a *PromptAugmenter) Augment(ctx context.Context, sess orchestration.Sessio
 	if a == nil || a.client == nil {
 		return orchestration.BriefContribution{}, nil
 	}
-	mirrored, err := a.syncArtifacts(ctx, sess, input.CampaignID)
+	mirrored, err := a.syncArtifacts(ctx, sess, brief, input)
 	mirroredTargets := mirroredArtifactRoots(mirrored)
 	orchestration.RecordPromptAugmentation(ctx, orchestration.PromptAugmentationDiagnostics{
 		Attempted:       true,
@@ -149,29 +149,66 @@ type mirroredArtifact struct {
 	RootURI     string
 }
 
-func (a *PromptAugmenter) syncArtifacts(ctx context.Context, sess orchestration.Session, campaignID string) ([]mirroredArtifact, error) {
+func (a *PromptAugmenter) syncArtifacts(ctx context.Context, sess orchestration.Session, brief orchestration.SessionBrief, input orchestration.PromptInput) ([]mirroredArtifact, error) {
 	type artifactSpec struct {
-		path   string
-		to     string
-		reason string
+		logicalPath string
+		to          string
+		reason      string
+		content     string
 	}
-	campaignID = strings.TrimSpace(campaignID)
+	campaignID := strings.TrimSpace(input.CampaignID)
 	if campaignID == "" {
 		return nil, fmt.Errorf("campaign ID is required")
 	}
+	storyRaw, err := optionalSessionResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/story.md", campaignID))
+	if err != nil {
+		return nil, err
+	}
+	memoryRaw := ""
+	if a.mode.MirrorsMemory() {
+		memoryRaw, err = optionalSessionResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/memory.md", campaignID))
+		if err != nil {
+			return nil, err
+		}
+	}
 	specs := []artifactSpec{}
+	if a.mode.UsesScopedRetrieval() {
+		phaseContent := strings.TrimSpace(strings.Join([]string{
+			orchestration.BuildPhaseGuide(brief.TurnMode(), input),
+			orchestration.BuildContextAccessMap(brief.TurnMode(), input),
+		}, "\n\n"))
+		if phaseContent != "" {
+			logicalPath := phaseResourceLogicalPath(brief.TurnMode())
+			specs = append(specs, artifactSpec{
+				logicalPath: logicalPath,
+				to:          campaignResourceURI(campaignID, logicalPath),
+				reason:      "campaign turn phase guide",
+				content:     phaseContent,
+			})
+		}
+		if storyIndex := strings.TrimSpace(orchestration.BuildStoryContextIndex(campaignID, storyRaw)); storyIndex != "" {
+			specs = append(specs, artifactSpec{
+				logicalPath: storyIndexLogicalPath,
+				to:          campaignResourceURI(campaignID, storyIndexLogicalPath),
+				reason:      "campaign story index",
+				content:     storyIndex,
+			})
+		}
+	}
 	if a.mode.MirrorsStory() {
 		specs = append(specs, artifactSpec{
-			path:   "story.md",
-			to:     fmt.Sprintf("viking://resources/fracturing-space/campaigns/%s/story.md", campaignID),
-			reason: "campaign story context",
+			logicalPath: rawStoryLogicalPath,
+			to:          campaignResourceURI(campaignID, rawStoryLogicalPath),
+			reason:      "campaign story context",
+			content:     storyRaw,
 		})
 	}
 	if a.mode.MirrorsMemory() {
 		specs = append(specs, artifactSpec{
-			path:   "memory.md",
-			to:     fmt.Sprintf("viking://resources/fracturing-space/campaigns/%s/memory.md", campaignID),
-			reason: "campaign GM memory context",
+			logicalPath: rawMemoryLogicalPath,
+			to:          campaignResourceURI(campaignID, rawMemoryLogicalPath),
+			reason:      "campaign GM memory context",
+			content:     memoryRaw,
 		})
 	}
 	root := filepath.Join(a.mirrorRoot, campaignID)
@@ -180,13 +217,12 @@ func (a *PromptAugmenter) syncArtifacts(ctx context.Context, sess orchestration.
 	}
 	targets := make([]mirroredArtifact, 0, len(specs))
 	for _, spec := range specs {
-		raw, err := optionalSessionResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/%s", campaignID, spec.path))
-		if err != nil {
-			return targets, err
+		localPath := filepath.Join(root, filepath.FromSlash(spec.logicalPath))
+		if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+			return targets, fmt.Errorf("create mirrored artifact parent %s: %w", spec.logicalPath, err)
 		}
-		localPath := filepath.Join(root, spec.path)
-		if err := os.WriteFile(localPath, []byte(raw), 0o600); err != nil {
-			return targets, fmt.Errorf("write mirrored artifact %s: %w", spec.path, err)
+		if err := os.WriteFile(localPath, []byte(spec.content), 0o600); err != nil {
+			return targets, fmt.Errorf("write mirrored artifact %s: %w", spec.logicalPath, err)
 		}
 		visiblePath, err := a.visiblePath(localPath)
 		if err != nil {
@@ -200,14 +236,14 @@ func (a *PromptAugmenter) syncArtifacts(ctx context.Context, sess orchestration.
 			Timeout: a.resourceTimeout,
 		})
 		if err != nil {
-			return targets, fmt.Errorf("mirror %s into openviking: %w", spec.path, err)
+			return targets, fmt.Errorf("mirror %s into openviking: %w", spec.logicalPath, err)
 		}
 		rootURI := strings.TrimSpace(result.RootURI)
 		if rootURI == "" {
 			rootURI = spec.to
 		}
 		targets = append(targets, mirroredArtifact{
-			LogicalPath: spec.path,
+			LogicalPath: spec.logicalPath,
 			RootURI:     rootURI,
 		})
 	}
@@ -259,16 +295,40 @@ func (a *PromptAugmenter) searchContexts(ctx context.Context, brief orchestratio
 	}
 
 	combined := SearchResult{}
-	if storyRoot := mirroredArtifactRoot(mirrored, "story.md"); storyRoot != "" {
+	for _, target := range []string{
+		mirroredArtifactRoot(mirrored, phaseResourceLogicalPath(brief.TurnMode())),
+		mirroredArtifactRoot(mirrored, storyIndexLogicalPath),
+	} {
+		target = strings.TrimSpace(target)
+		if target == "" {
+			continue
+		}
+		remaining := remainingSearchSlots(a.maxResults, combined.Resources)
+		if remaining == 0 {
+			break
+		}
 		resourceResult, err := a.client.Find(ctx, SearchInput{
 			Query:     query,
-			TargetURI: storyRoot,
-			Limit:     a.maxResults,
+			TargetURI: target,
+			Limit:     remaining,
 		})
 		if err != nil {
 			return SearchResult{}, err
 		}
-		combined.Resources = append(combined.Resources, resourceResult.Resources...)
+		combined.Resources = appendDistinctMatches(combined.Resources, resourceResult.Resources)
+	}
+	if len(combined.Resources) == 0 {
+		if storyRoot := mirroredArtifactRoot(mirrored, rawStoryLogicalPath); storyRoot != "" {
+			resourceResult, err := a.client.Find(ctx, SearchInput{
+				Query:     query,
+				TargetURI: storyRoot,
+				Limit:     a.maxResults,
+			})
+			if err != nil {
+				return SearchResult{}, err
+			}
+			combined.Resources = appendDistinctMatches(combined.Resources, resourceResult.Resources)
+		}
 	}
 
 	if a.mode.UsesSessionMemorySupplement() {
@@ -278,8 +338,9 @@ func (a *PromptAugmenter) searchContexts(ctx context.Context, brief orchestratio
 				return SearchResult{}, err
 			}
 		} else if memoryRoot := userMemoryRoot(session.User); memoryRoot != "" {
-			memoryResult, err := a.client.Find(ctx, SearchInput{
+			memoryResult, err := a.client.Search(ctx, SearchInput{
 				Query:     query,
+				SessionID: sessionID,
 				TargetURI: memoryRoot,
 				Limit:     a.maxResults,
 			})
@@ -293,39 +354,48 @@ func (a *PromptAugmenter) searchContexts(ctx context.Context, brief orchestratio
 }
 
 func (a *PromptAugmenter) buildRetrievedSections(ctx context.Context, result SearchResult, maxSections int) ([]orchestration.BriefSection, []orchestration.RetrievedContext) {
-	type group struct {
-		id      string
-		label   string
-		context *MatchedContext
-	}
-
-	groups := []group{
-		{id: "openviking_resource", label: "Retrieved resources", context: firstMatchedContext(result.Resources)},
-		{id: "openviking_memory", label: "Retrieved memory", context: firstMatchedContext(result.Memories)},
-	}
-	sort.SliceStable(groups, func(i, j int) bool {
-		return scoreOf(groups[i].context) > scoreOf(groups[j].context)
-	})
-
-	sections := make([]orchestration.BriefSection, 0, len(groups))
-	traces := make([]orchestration.RetrievedContext, 0, len(groups))
-	for _, item := range groups {
-		if item.context == nil {
-			continue
-		}
+	candidates := rankedMatchedContexts(result)
+	sections := make([]orchestration.BriefSection, 0, len(candidates))
+	traces := make([]orchestration.RetrievedContext, 0, len(candidates))
+	seenMatches := map[string]struct{}{}
+	seenRenderedTargets := map[string]struct{}{}
+	seenFamilies := map[string]struct{}{}
+	selectedByType := map[string]int{}
+	for _, match := range candidates {
 		if maxSections > 0 && len(sections) >= maxSections {
 			break
 		}
-		match := *item.context
-		rendered := a.renderMatchedContent(ctx, item.context)
+		uri := strings.TrimSpace(match.URI)
+		if uri == "" {
+			continue
+		}
+		if _, ok := seenMatches[uri]; ok {
+			continue
+		}
+		seenMatches[uri] = struct{}{}
+		typeKey := retrievedContextTypeKey(match.ContextType)
+		rendered := a.renderMatchedContent(ctx, &match)
 		content := strings.TrimSpace(rendered.Content)
 		if content == "" {
 			continue
 		}
+		if dedupeKey := renderedContextDedupKey(match, rendered); dedupeKey != "" {
+			if _, ok := seenRenderedTargets[dedupeKey]; ok {
+				continue
+			}
+			seenRenderedTargets[dedupeKey] = struct{}{}
+		}
+		if familyKey := logicalDocumentFamily(match, rendered); familyKey != "" {
+			if _, ok := seenFamilies[familyKey]; ok {
+				continue
+			}
+			seenFamilies[familyKey] = struct{}{}
+		}
+		selectedByType[typeKey]++
 		section := orchestration.BriefSection{
-			ID:       item.id,
+			ID:       fmt.Sprintf("openviking_%s_%d", typeKey, selectedByType[typeKey]),
 			Priority: 350,
-			Label:    item.label,
+			Label:    retrievedContextLabel(typeKey, selectedByType[typeKey]),
 			Content: strings.Join([]string{
 				fmt.Sprintf("URI: %s", strings.TrimSpace(match.URI)),
 				fmt.Sprintf("Match reason: %s", strings.TrimSpace(match.MatchReason)),
@@ -345,6 +415,67 @@ func (a *PromptAugmenter) buildRetrievedSections(ctx context.Context, result Sea
 		})
 	}
 	return sections, traces
+}
+
+// renderedContextDedupKey collapses overview/backing-file variants onto the
+// final rendered target so prompt augmentation does not pay twice for the same
+// story content.
+func renderedContextDedupKey(match MatchedContext, rendered renderedMatchedContent) string {
+	if uri := strings.TrimSpace(rendered.RenderedURI); uri != "" {
+		return uri
+	}
+	return strings.TrimSpace(match.URI)
+}
+
+func logicalDocumentFamily(match MatchedContext, rendered renderedMatchedContent) string {
+	for _, uri := range []string{strings.TrimSpace(rendered.RenderedURI), strings.TrimSpace(match.URI)} {
+		if uri == "" {
+			continue
+		}
+		switch {
+		case strings.Contains(uri, "/plan/story-index.md"),
+			strings.HasSuffix(uri, "/story.md"),
+			strings.Contains(uri, "/story.md/"):
+			return "story"
+		case strings.Contains(uri, "/phase/scene-bootstrap.md"):
+			return "phase:scene-bootstrap"
+		case strings.Contains(uri, "/phase/scene-play.md"):
+			return "phase:scene-play"
+		case strings.Contains(uri, "/phase/action-review.md"):
+			return "phase:action-review"
+		}
+	}
+	return ""
+}
+
+func rankedMatchedContexts(result SearchResult) []MatchedContext {
+	candidates := make([]MatchedContext, 0, len(result.Resources)+len(result.Memories))
+	candidates = append(candidates, result.Resources...)
+	candidates = append(candidates, result.Memories...)
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return candidates[i].Score > candidates[j].Score
+	})
+	return candidates
+}
+
+func retrievedContextTypeKey(contextType string) string {
+	switch strings.TrimSpace(contextType) {
+	case "memory":
+		return "memory"
+	default:
+		return "resource"
+	}
+}
+
+func retrievedContextLabel(typeKey string, selected int) string {
+	base := "Retrieved resource"
+	if typeKey == "memory" {
+		base = "Retrieved memory"
+	}
+	if selected <= 1 {
+		return base
+	}
+	return fmt.Sprintf("%s %d", base, selected)
 }
 
 type renderedMatchedContent struct {
@@ -425,26 +556,6 @@ func (a *PromptAugmenter) renderMatchedContent(ctx context.Context, item *Matche
 	}
 }
 
-func firstMatchedContext(items []MatchedContext) *MatchedContext {
-	if len(items) == 0 {
-		return nil
-	}
-	best := items[0]
-	for _, item := range items[1:] {
-		if item.Score > best.Score {
-			best = item
-		}
-	}
-	return &best
-}
-
-func scoreOf(item *MatchedContext) float64 {
-	if item == nil {
-		return -1
-	}
-	return item.Score
-}
-
 func (a *PromptAugmenter) visiblePath(localPath string) (string, error) {
 	if strings.TrimSpace(a.visibleMirrorRoot) == "" {
 		return localPath, nil
@@ -478,6 +589,40 @@ func mirroredArtifactRoot(items []mirroredArtifact, logicalPath string) string {
 	return ""
 }
 
+func appendDistinctMatches(existing []MatchedContext, incoming []MatchedContext) []MatchedContext {
+	if len(incoming) == 0 {
+		return existing
+	}
+	seen := make(map[string]struct{}, len(existing))
+	for _, item := range existing {
+		if uri := strings.TrimSpace(item.URI); uri != "" {
+			seen[uri] = struct{}{}
+		}
+	}
+	for _, item := range incoming {
+		uri := strings.TrimSpace(item.URI)
+		if uri == "" {
+			continue
+		}
+		if _, ok := seen[uri]; ok {
+			continue
+		}
+		seen[uri] = struct{}{}
+		existing = append(existing, item)
+	}
+	return existing
+}
+
+func remainingSearchSlots(limit int, existing []MatchedContext) int {
+	if limit <= 0 {
+		return 0
+	}
+	if len(existing) >= limit {
+		return 0
+	}
+	return limit - len(existing)
+}
+
 func userMemoryRoot(user SessionUser) string {
 	userID := strings.TrimSpace(user.UserID)
 	if userID == "" {
@@ -496,6 +641,20 @@ func backingReadURI(uri string) string {
 		return strings.TrimSpace(strings.TrimSuffix(uri, "/.overview.md"))
 	}
 	return ""
+}
+
+const (
+	rawStoryLogicalPath   = "story.md"
+	rawMemoryLogicalPath  = "memory.md"
+	storyIndexLogicalPath = "plan/story-index.md"
+)
+
+func phaseResourceLogicalPath(mode orchestration.InteractionTurnMode) string {
+	return fmt.Sprintf("phase/%s.md", orchestration.PhaseResourceName(mode))
+}
+
+func campaignResourceURI(campaignID string, logicalPath string) string {
+	return fmt.Sprintf("viking://resources/fracturing-space/campaigns/%s/%s", strings.TrimSpace(campaignID), strings.TrimSpace(logicalPath))
 }
 
 func (a *PromptAugmenter) backingTreeLeafURI(ctx context.Context, uri string) (string, string) {

@@ -1519,6 +1519,9 @@ func assertValidOpenVikingAugmentation(t *testing.T, summary openAILiveCaptureSu
 		if summary.RetrievedResourceCount > 0 && !containsPreferredRetrievedContentSource(summary.RetrievedContentSources, "backing_read", "backing_tree_read", "leaf_read") {
 			t.Fatalf("docs_aligned_supplement should render retrieved story content from file-grade reads, got sources=%v", summary.RetrievedContentSources)
 		}
+		if duplicate := firstDuplicateNormalizedItem(summary.RetrievedRenderedURIs); duplicate != "" {
+			t.Fatalf("docs_aligned_supplement should not render duplicate retrieved targets, duplicate=%q rendered_uris=%v", duplicate, summary.RetrievedRenderedURIs)
+		}
 	case "legacy":
 		if summary.InitialPromptHasStory || summary.InitialPromptHasMemory {
 			t.Fatal("legacy OpenViking mode should suppress raw story.md and memory.md from the prompt")
@@ -1583,6 +1586,21 @@ func containsPreferredRetrievedContentSource(items []string, want ...string) boo
 		}
 	}
 	return false
+}
+
+func firstDuplicateNormalizedItem(items []string) string {
+	seen := map[string]struct{}{}
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			return item
+		}
+		seen[item] = struct{}{}
+	}
+	return ""
 }
 
 func retrievedResourceCount(items []orchestration.RetrievedContext) int {

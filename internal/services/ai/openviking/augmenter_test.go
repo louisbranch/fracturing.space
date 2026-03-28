@@ -10,17 +10,18 @@ import (
 )
 
 type resourceSearchClientStub struct {
-	added      []AddResourceInput
-	finds      []SearchInput
-	searches   []SearchInput
-	result     SearchResult
-	addErr     error
-	findErr    error
-	session    SessionInfo
-	sessionErr error
-	overview   map[string]string
-	read       map[string]string
-	tree       map[string][]FilesystemEntry
+	added       []AddResourceInput
+	finds       []SearchInput
+	searches    []SearchInput
+	result      SearchResult
+	findResults map[string]SearchResult
+	addErr      error
+	findErr     error
+	session     SessionInfo
+	sessionErr  error
+	overview    map[string]string
+	read        map[string]string
+	tree        map[string][]FilesystemEntry
 }
 
 func (s *resourceSearchClientStub) AddResource(_ context.Context, input AddResourceInput) (AddResourceResult, error) {
@@ -38,6 +39,11 @@ func (s *resourceSearchClientStub) Find(_ context.Context, input SearchInput) (S
 	s.finds = append(s.finds, input)
 	if s.findErr != nil {
 		return SearchResult{}, s.findErr
+	}
+	if s.findResults != nil {
+		if result, ok := s.findResults[input.TargetURI]; ok {
+			return result, nil
+		}
 	}
 	return s.result, nil
 }
@@ -172,7 +178,7 @@ func TestPromptAugmenterMirrorsArtifactsAndReturnsRetrievedSections(t *testing.T
 	}
 }
 
-func TestBuildRetrievedSectionsLimitsToTopPerType(t *testing.T) {
+func TestBuildRetrievedSectionsSelectsTopContextsAcrossResults(t *testing.T) {
 	augmenter, err := NewPromptAugmenter(PromptAugmenterConfig{
 		Client: &resourceSearchClientStub{},
 		Mode:   ModeLegacy,
@@ -184,9 +190,10 @@ func TestBuildRetrievedSectionsLimitsToTopPerType(t *testing.T) {
 		Resources: []MatchedContext{
 			{URI: "resource-1", ContextType: "resource", Abstract: "R1", Score: 0.7, MatchReason: "a"},
 			{URI: "resource-2", ContextType: "resource", Abstract: "R2", Score: 0.9, MatchReason: "b"},
+			{URI: "resource-3", ContextType: "resource", Abstract: "R3", Score: 0.8, MatchReason: "c"},
 		},
 		Memories: []MatchedContext{
-			{URI: "memory-1", ContextType: "memory", Abstract: "M1", Score: 0.8, MatchReason: "c"},
+			{URI: "memory-1", ContextType: "memory", Abstract: "M1", Score: 0.6, MatchReason: "d"},
 		},
 	}, 2)
 
@@ -195,6 +202,132 @@ func TestBuildRetrievedSectionsLimitsToTopPerType(t *testing.T) {
 	}
 	if traces[0].URI != "resource-2" {
 		t.Fatalf("top resource URI = %q, want resource-2", traces[0].URI)
+	}
+	if traces[1].URI != "resource-3" {
+		t.Fatalf("second retrieved URI = %q, want resource-3", traces[1].URI)
+	}
+}
+
+func TestBuildRetrievedSectionsSkipsDuplicateRenderedTargetsAndUsesNextDistinctCandidate(t *testing.T) {
+	client := &resourceSearchClientStub{
+		tree: map[string][]FilesystemEntry{
+			"viking://resources/fracturing-space/campaigns/camp-1/story.md": {
+				{
+					URI:     "viking://resources/fracturing-space/campaigns/camp-1/story.md/story.md",
+					RelPath: "story.md",
+					IsDir:   false,
+				},
+			},
+		},
+		read: map[string]string{
+			"viking://resources/fracturing-space/campaigns/camp-1/story.md/story.md": "Wrapped story file content.",
+		},
+	}
+	augmenter, err := NewPromptAugmenter(PromptAugmenterConfig{
+		Client: client,
+		Mode:   ModeDocsAlignedSupplement,
+	})
+	if err != nil {
+		t.Fatalf("NewPromptAugmenter() error = %v", err)
+	}
+
+	sections, traces := augmenter.buildRetrievedSections(context.Background(), SearchResult{
+		Resources: []MatchedContext{
+			{
+				URI:         "viking://resources/fracturing-space/campaigns/camp-1/story.md/story.md",
+				ContextType: "resource",
+				Level:       2,
+				Abstract:    "Story file abstract.",
+				Score:       0.95,
+				MatchReason: "story leaf",
+			},
+			{
+				URI:         "viking://resources/fracturing-space/campaigns/camp-1/story.md/.overview.md",
+				ContextType: "resource",
+				Level:       1,
+				Abstract:    "Story overview abstract.",
+				Score:       0.90,
+				MatchReason: "story overview",
+			},
+		},
+		Memories: []MatchedContext{
+			{
+				URI:         "viking://user/default/memories/harbor-note",
+				ContextType: "memory",
+				Level:       2,
+				Abstract:    "Dockmaster Harl still knows the debt collector.",
+				Score:       0.80,
+				MatchReason: "memory fallback",
+			},
+		},
+	}, 2)
+
+	if len(sections) != 2 || len(traces) != 2 {
+		t.Fatalf("sections=%d traces=%d, want 2 each", len(sections), len(traces))
+	}
+	if traces[0].URI != "viking://resources/fracturing-space/campaigns/camp-1/story.md/story.md" {
+		t.Fatalf("first retrieved URI = %q", traces[0].URI)
+	}
+	if traces[1].URI != "viking://user/default/memories/harbor-note" {
+		t.Fatalf("second retrieved URI = %q, want memory fallback", traces[1].URI)
+	}
+	if traces[0].RenderedURI == "" || traces[0].RenderedURI == traces[1].RenderedURI {
+		t.Fatalf("rendered URIs = %#v, want distinct rendered targets", traces)
+	}
+}
+
+func TestBuildRetrievedSectionsSkipsStoryFamilySiblingAndUsesNextDistinctCandidate(t *testing.T) {
+	augmenter, err := NewPromptAugmenter(PromptAugmenterConfig{
+		Client: &resourceSearchClientStub{
+			read: map[string]string{
+				"viking://resources/fracturing-space/campaigns/camp-1/plan/story-index.md": "Story index content.",
+				"viking://resources/fracturing-space/campaigns/camp-1/story.md/story.md":   "Full story content.",
+				"viking://user/default/memories/harbor-note":                               "The dockmaster is waiting at dawn.",
+			},
+		},
+		Mode: ModeDocsAlignedSupplement,
+	})
+	if err != nil {
+		t.Fatalf("NewPromptAugmenter() error = %v", err)
+	}
+
+	sections, traces := augmenter.buildRetrievedSections(context.Background(), SearchResult{
+		Resources: []MatchedContext{
+			{
+				URI:         "viking://resources/fracturing-space/campaigns/camp-1/plan/story-index.md",
+				ContextType: "resource",
+				Level:       2,
+				Abstract:    "Story index abstract.",
+				Score:       0.95,
+				MatchReason: "story index",
+			},
+			{
+				URI:         "viking://resources/fracturing-space/campaigns/camp-1/story.md/story.md",
+				ContextType: "resource",
+				Level:       2,
+				Abstract:    "Story leaf abstract.",
+				Score:       0.90,
+				MatchReason: "story leaf",
+			},
+		},
+		Memories: []MatchedContext{{
+			URI:         "viking://user/default/memories/harbor-note",
+			ContextType: "memory",
+			Level:       2,
+			Abstract:    "Harbor memory abstract.",
+			Score:       0.80,
+			MatchReason: "memory fallback",
+		}},
+	}, 2)
+
+	if len(sections) != 2 || len(traces) != 2 {
+		t.Fatalf("sections=%d traces=%d, want 2 each", len(sections), len(traces))
+	}
+	if traces[0].URI != "viking://resources/fracturing-space/campaigns/camp-1/plan/story-index.md" {
+		t.Fatalf("first retrieved URI = %q", traces[0].URI)
+	}
+	if traces[1].URI != "viking://user/default/memories/harbor-note" {
+		t.Fatalf("second retrieved URI = %q, want memory fallback", traces[1].URI)
 	}
 }
 
@@ -208,15 +341,27 @@ func TestPromptAugmenterDocsAlignedModeMirrorsStoryOnlyAndScopesSearches(t *test
 				AgentID:   "default",
 			},
 		},
-		result: SearchResult{
-			Resources: []MatchedContext{{
-				URI:         "viking://resources/fracturing-space/campaigns/camp-1/story.md",
-				ContextType: "resource",
-				Level:       2,
-				Abstract:    "Storm warning.",
-				Score:       0.93,
-				MatchReason: "story relevance",
-			}},
+		findResults: map[string]SearchResult{
+			"viking://resources/fracturing-space/campaigns/camp-1/phase/scene-bootstrap.md": {
+				Resources: []MatchedContext{{
+					URI:         "viking://resources/fracturing-space/campaigns/camp-1/phase/scene-bootstrap.md",
+					ContextType: "resource",
+					Level:       2,
+					Abstract:    "Bootstrap guide.",
+					Score:       0.95,
+					MatchReason: "phase relevance",
+				}},
+			},
+			"viking://resources/fracturing-space/campaigns/camp-1/plan/story-index.md": {
+				Resources: []MatchedContext{{
+					URI:         "viking://resources/fracturing-space/campaigns/camp-1/plan/story-index.md",
+					ContextType: "resource",
+					Level:       2,
+					Abstract:    "Storm warning.",
+					Score:       0.93,
+					MatchReason: "story relevance",
+				}},
+			},
 		},
 	}
 	augmenter, err := NewPromptAugmenter(PromptAugmenterConfig{
@@ -232,7 +377,9 @@ func TestPromptAugmenterDocsAlignedModeMirrorsStoryOnlyAndScopesSearches(t *test
 	_, err = augmenter.Augment(context.Background(), sessionStub{resources: map[string]string{
 		"campaign://camp-1/artifacts/story.md":  "A storm gathers offshore.",
 		"campaign://camp-1/artifacts/memory.md": "## NPCs\nDockmaster Harl is suspicious.",
-	}}, orchestration.SessionBrief{}, orchestration.PromptInput{
+	}}, orchestration.SessionBrief{
+		InteractionState: &orchestration.InteractionStateSnapshot{},
+	}, orchestration.PromptInput{
 		CampaignID:    "camp-1",
 		SessionID:     "sess-1",
 		ParticipantID: "gm-1",
@@ -241,17 +388,81 @@ func TestPromptAugmenterDocsAlignedModeMirrorsStoryOnlyAndScopesSearches(t *test
 	if err != nil {
 		t.Fatalf("Augment() error = %v", err)
 	}
-	if len(client.added) != 1 || client.added[0].Path == "" || strings.HasSuffix(client.added[0].Path, "memory.md") {
+	if len(client.added) != 3 {
 		t.Fatalf("mirrored resources = %#v", client.added)
 	}
+	targets := []string{client.added[0].To, client.added[1].To, client.added[2].To}
+	if !containsString(targets, "viking://resources/fracturing-space/campaigns/camp-1/phase/scene-bootstrap.md") {
+		t.Fatalf("mirrored targets = %#v, want phase guide", targets)
+	}
+	if !containsString(targets, "viking://resources/fracturing-space/campaigns/camp-1/plan/story-index.md") {
+		t.Fatalf("mirrored targets = %#v, want story index", targets)
+	}
+	if !containsString(targets, "viking://resources/fracturing-space/campaigns/camp-1/story.md") {
+		t.Fatalf("mirrored targets = %#v, want raw story fallback source", targets)
+	}
 	if len(client.finds) != 2 {
-		t.Fatalf("finds = %#v, want 2 scoped searches", client.finds)
+		t.Fatalf("finds = %#v, want 2 scoped resource searches", client.finds)
 	}
-	if client.finds[0].TargetURI != "viking://resources/fracturing-space/campaigns/camp-1/story.md" {
-		t.Fatalf("resource target = %q", client.finds[0].TargetURI)
+	if client.finds[0].TargetURI != "viking://resources/fracturing-space/campaigns/camp-1/phase/scene-bootstrap.md" {
+		t.Fatalf("first resource target = %q", client.finds[0].TargetURI)
 	}
-	if client.finds[1].TargetURI != "viking://user/default/memories/" {
-		t.Fatalf("memory target = %q", client.finds[1].TargetURI)
+	if client.finds[1].TargetURI != "viking://resources/fracturing-space/campaigns/camp-1/plan/story-index.md" {
+		t.Fatalf("second resource target = %q", client.finds[1].TargetURI)
+	}
+	if len(client.searches) != 1 {
+		t.Fatalf("searches = %#v, want 1 session-aware memory search", client.searches)
+	}
+	if client.searches[0].SessionID != StableSessionID("camp-1", "sess-1", "gm-1") {
+		t.Fatalf("memory search session = %q", client.searches[0].SessionID)
+	}
+	if client.searches[0].TargetURI != "viking://user/default/memories/" {
+		t.Fatalf("memory target = %q", client.searches[0].TargetURI)
+	}
+}
+
+func TestPromptAugmenterDocsAlignedModeFallsBackToRawStoryWhenShallowResourcesMiss(t *testing.T) {
+	client := &resourceSearchClientStub{
+		findResults: map[string]SearchResult{
+			"viking://resources/fracturing-space/campaigns/camp-1/story.md": {
+				Resources: []MatchedContext{{
+					URI:         "viking://resources/fracturing-space/campaigns/camp-1/story.md/story.md",
+					ContextType: "resource",
+					Level:       2,
+					Abstract:    "Fallback story leaf.",
+					Score:       0.92,
+					MatchReason: "raw story fallback",
+				}},
+			},
+		},
+	}
+	augmenter, err := NewPromptAugmenter(PromptAugmenterConfig{
+		Client:          client,
+		Mode:            ModeDocsAlignedSupplement,
+		MirrorRoot:      t.TempDir(),
+		ResourceTimeout: time.Second,
+	})
+	if err != nil {
+		t.Fatalf("NewPromptAugmenter() error = %v", err)
+	}
+
+	_, err = augmenter.Augment(context.Background(), sessionStub{resources: map[string]string{
+		"campaign://camp-1/artifacts/story.md": "A storm gathers offshore.",
+	}}, orchestration.SessionBrief{
+		InteractionState: &orchestration.InteractionStateSnapshot{},
+	}, orchestration.PromptInput{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+		TurnInput:  "Open the harbor scene.",
+	})
+	if err != nil {
+		t.Fatalf("Augment() error = %v", err)
+	}
+	if len(client.finds) != 3 {
+		t.Fatalf("finds = %#v, want phase, story index, and raw story fallback", client.finds)
+	}
+	if client.finds[2].TargetURI != "viking://resources/fracturing-space/campaigns/camp-1/story.md" {
+		t.Fatalf("fallback target = %q", client.finds[2].TargetURI)
 	}
 }
 
@@ -288,6 +499,15 @@ func TestPromptAugmenterRenderMatchedContentPrefersBackingFileReadForOverviewURI
 	if rendered.Source != "backing_read" {
 		t.Fatalf("content source = %q", rendered.Source)
 	}
+}
+
+func containsString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestBackingReadURITrimsOverviewSuffix(t *testing.T) {

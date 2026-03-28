@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 15
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-23"
+last_reviewed: "2026-03-25"
 ---
 # Campaign AI Agent System
 ## Purpose
@@ -80,7 +80,6 @@ data/instructions/
 ```
 ### Composition Order
 `campaigncontext/instructionset.Loader` composes skills guidance in this order:
-
 1. `core/skills.md` — universal GM/Narrator contract
 2. `{system}/skills.md` — game-system-specific guidance (e.g. Daggerheart)
 3. `core/memory-guide.md` — memory management guidance
@@ -98,13 +97,16 @@ the final prompt from that brief plus explicit render policy. The collector is a
 `PromptRenderer` chosen by AI startup in `internal/services/ai/app`.
 The default renderer still uses `BriefAssembler` to sort prompt sections by
 priority and drop low-priority content when the token budget is tight.
+The core collector now adds a phase guide and context-access map keyed off the
+typed interaction state so the prompt always tells the agent what phase it is
+in, what it must know first, and which deeper resources exist before any
+OpenViking augmentation runs.
 ### Priority Tiers
-
 | Priority | Tier | Content |
 |----------|------|---------|
 | 100 | Critical | Skills contract, interaction state, turn input, authority |
-| 200 | Important | Campaign metadata, active scene characters, current phase |
-| 300 | Contextual | All participants, story.md, session recap, character list |
+| 200 | Important | Campaign metadata, current phase guide, context access map, active scene characters |
+| 300 | Contextual | All participants, story index or story.md, session recap, character list |
 | 400 | Supplemental | Full character profiles, reference excerpts, memory.md |
 ### Token Budgeting
 
@@ -128,12 +130,10 @@ bootstrap or interaction-state facts.
 ## Extension Points
 ### Current System-Specific Seam
 The current production game-system seam has two explicit parts:
-
 1. Daggerheart-specific prompt sources in
    `internal/services/ai/orchestration/daggerheart/`
 2. Daggerheart-specific guidance/reference files under
    `data/instructions/v1/daggerheart/`
-
 Those seams are real and production-backed today. A second game system would
 still require explicit architecture work around tool registration, reference
 corpus ownership, and composition-root wiring; contributors should not assume

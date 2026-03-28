@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -108,7 +109,7 @@ func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logge
 		client, err := openviking.New(openviking.Config{
 			BaseURL: cfg.OpenVikingBaseURL,
 			APIKey:  cfg.OpenVikingAPIKey,
-			Timeout: cfg.OpenVikingTimeout,
+			Timeout: effectiveOpenVikingHTTPTimeout(cfg),
 		})
 		if err != nil {
 			_ = store.Close()
@@ -152,6 +153,21 @@ func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logge
 		openVikingAugmenter:     openVikingAugmenter,
 		openVikingSessionSync:   openVikingSessionSync,
 	}, nil
+}
+
+// effectiveOpenVikingHTTPTimeout keeps the HTTP client alive slightly longer
+// than resource-ingest waits so waited resource syncs do not fail early at the
+// transport layer.
+func effectiveOpenVikingHTTPTimeout(cfg runtimeConfig) time.Duration {
+	timeout := cfg.OpenVikingTimeout
+	minTimeout := cfg.OpenVikingResourceSync + (5 * time.Second)
+	if timeout <= 0 {
+		return minTimeout
+	}
+	if cfg.OpenVikingResourceSync <= 0 || timeout >= minTimeout {
+		return timeout
+	}
+	return minTimeout
 }
 
 func (d runtimeDeps) close(logger *slog.Logger) {

@@ -26,15 +26,19 @@ the GM/narrator contract, mechanics policy, and turn completion.
 OpenViking currently contributes two seams:
 
 - `openviking.PromptAugmenter`: `legacy` mirrors `story.md` and `memory.md`;
-  `docs_aligned_supplement` mirrors `story.md`, keeps prompt-time `memory.md`,
-  and adds supplemental retrieval.
+  `docs_aligned_supplement` now mirrors a generated phase guide, a generated
+  `story-index.md`, the raw `story.md` tree as fallback source material, keeps
+  prompt-time `memory.md`, uses shallow-first scoped resource retrieval plus
+  session-aware memory search, and adds the top distinct rendered contexts
+  within the configured section budget.
 - `openviking.SessionSync`: called through `TurnMemorySync` to mirror completed
   turns into OpenViking sessions and trigger `commit()`. It can be disabled for
   augmentation-only evaluation.
 
 When OpenViking is enabled, `legacy` suppresses raw `story.md` and `memory.md`,
-while `docs_aligned_supplement` suppresses raw `story.md` but keeps raw
-`memory.md`.
+while `docs_aligned_supplement` suppresses raw `story.md`, keeps raw
+`memory.md`, and relies on an always-on phase guide plus story index before any
+fallback to raw story retrieval.
 
 ## Boundary Rules
 

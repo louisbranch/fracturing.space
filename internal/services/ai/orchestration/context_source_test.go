@@ -168,7 +168,7 @@ func TestCoreContextSourcesProduceExpectedSections(t *testing.T) {
 		ids[s.ID] = true
 	}
 
-	expected := []string{"current_context", "campaign", "participants", "characters", "sessions", "scenes", "memory", "interaction_state"}
+	expected := []string{"current_context", "campaign", "participants", "characters", "sessions", "scenes", "memory", "interaction_state", "phase_guide", "context_access_map"}
 	for _, id := range expected {
 		if !ids[id] {
 			t.Errorf("missing section %q", id)
@@ -183,8 +183,9 @@ func TestCoreContextSourcesWithConfigCanOmitStoryAndMemory(t *testing.T) {
 
 	reg := NewContextSourceRegistry()
 	reg.RegisterAll(CoreContextSourcesWithConfig(CoreContextSourceConfig{
-		IncludeStory:  false,
-		IncludeMemory: false,
+		IncludeStory:      false,
+		IncludeStoryIndex: true,
+		IncludeMemory:     false,
 	})...)
 
 	sections, err := reg.CollectSections(context.Background(), sess, PromptInput{
@@ -199,6 +200,9 @@ func TestCoreContextSourcesWithConfigCanOmitStoryAndMemory(t *testing.T) {
 		if section.ID == "story" || section.ID == "memory" {
 			t.Fatalf("unexpected section %q in %+v", section.ID, sections)
 		}
+	}
+	if !hasSectionID(sections, "story_index") {
+		t.Fatalf("sections = %+v, want story_index", sections)
 	}
 }
 
@@ -257,6 +261,71 @@ func TestMemoryContextSourceIncludesNonEmptyMemory(t *testing.T) {
 	if !strings.Contains(sections[0].Content, "Dark merchant") {
 		t.Fatalf("unexpected content: %q", sections[0].Content)
 	}
+}
+
+func TestInteractionStateContextSourceAddsBootstrapGuideAndAccessMap(t *testing.T) {
+	sess := &fakeSession{resources: baseSessionResources("gm-1", "")}
+
+	contribution, err := interactionStateContextSource(context.Background(), sess, PromptInput{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("interactionStateContextSource() error = %v", err)
+	}
+	if !hasSectionID(contribution.Sections, "phase_guide") {
+		t.Fatalf("sections = %+v, want phase_guide", contribution.Sections)
+	}
+	if !hasSectionID(contribution.Sections, "context_access_map") {
+		t.Fatalf("sections = %+v, want context_access_map", contribution.Sections)
+	}
+	guide := sectionContent(contribution.Sections, "phase_guide")
+	if !strings.Contains(guide, "scene-bootstrap") {
+		t.Fatalf("phase guide = %q, want bootstrap guidance", guide)
+	}
+	accessMap := sectionContent(contribution.Sections, "context_access_map")
+	if !strings.Contains(accessMap, "campaign://camp-1/artifacts/story.md") {
+		t.Fatalf("context access map = %q, want story artifact path", accessMap)
+	}
+}
+
+func TestStoryIndexContextSourceBuildsCompactIndex(t *testing.T) {
+	sess := &fakeSession{resources: map[string]string{
+		"campaign://camp-1/artifacts/story.md": "# Act I\nThe Black Lantern warns of a debt collected at dawn.\n## Harbor\nThe bells toll through the fog.",
+	}}
+
+	contribution, err := storyIndexContextSource(context.Background(), sess, PromptInput{CampaignID: "camp-1"})
+	if err != nil {
+		t.Fatalf("storyIndexContextSource() error = %v", err)
+	}
+	if len(contribution.Sections) != 1 {
+		t.Fatalf("sections = %+v, want 1 story_index section", contribution.Sections)
+	}
+	content := contribution.Sections[0].Content
+	if !strings.Contains(content, "Use this story index before reading full story.md.") {
+		t.Fatalf("story index = %q", content)
+	}
+	if !strings.Contains(content, "Act I") || !strings.Contains(content, "The Black Lantern warns of a debt collected at dawn.") {
+		t.Fatalf("story index = %q, want headings and key line", content)
+	}
+}
+
+func hasSectionID(sections []BriefSection, want string) bool {
+	for _, section := range sections {
+		if section.ID == want {
+			return true
+		}
+	}
+	return false
+}
+
+func sectionContent(sections []BriefSection, want string) string {
+	for _, section := range sections {
+		if section.ID == want {
+			return section.Content
+		}
+	}
+	return ""
 }
 
 func sourceSpanAttribute(span tracetest.SpanStub, key string) string {
