@@ -14,6 +14,7 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/openviking"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	orchdaggerheart "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/daggerheart"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
@@ -233,15 +234,58 @@ func decodeBase64Key(value string) ([]byte, error) {
 // buildPromptBuilder loads instruction files and creates a configured prompt
 // builder. Missing instruction content degrades explicitly to inline renderer
 // defaults while preserving the full context-source registry.
-func buildPromptBuilder(loader *instructionset.Loader) orchestration.PromptBuilder {
+func buildPromptBuilder(loader *instructionset.Loader, augmenter orchestration.PromptAugmenter, mode openviking.IntegrationMode) orchestration.PromptBuilder {
+	openVikingEnabled := augmenter != nil
+	policy := promptContextPolicyFor(mode, openVikingEnabled)
+	if augmenter != nil {
+		augmenter = bestEffortPromptAugmenter{inner: augmenter}
+	}
 	return orchestration.NewPromptBuilder(orchestration.PromptBuilderConfig{
-		Collector: buildPromptContextSources(),
+		Collector: promptContextPolicyRecorder{
+			inner: buildPromptContextSources(policy),
+			policy: orchestration.PromptContextPolicy{
+				IncludeStory:  policy.IncludeStory,
+				IncludeMemory: policy.IncludeMemory,
+			},
+		},
+		Augmenter: augmenter,
 		Renderer:  buildPromptRenderer(loader),
 	})
 }
 
-func buildPromptContextSources() *orchestration.ContextSourceRegistry {
-	reg := orchestration.NewCoreContextSourceRegistry()
+type promptContextPolicy struct {
+	IncludeStory  bool
+	IncludeMemory bool
+}
+
+type promptContextPolicyRecorder struct {
+	inner  orchestration.SessionBriefCollector
+	policy orchestration.PromptContextPolicy
+}
+
+func (r promptContextPolicyRecorder) CollectBrief(ctx context.Context, sess orchestration.Session, input orchestration.PromptInput) (orchestration.SessionBrief, error) {
+	orchestration.RecordPromptContextPolicy(ctx, r.policy)
+	return r.inner.CollectBrief(ctx, sess, input)
+}
+
+func promptContextPolicyFor(mode openviking.IntegrationMode, openVikingEnabled bool) promptContextPolicy {
+	includeStory := true
+	includeMemory := true
+	if openVikingEnabled {
+		includeStory = !mode.SuppressStoryPrompt()
+		includeMemory = !mode.SuppressMemoryPrompt()
+	}
+	return promptContextPolicy{
+		IncludeStory:  includeStory,
+		IncludeMemory: includeMemory,
+	}
+}
+
+func buildPromptContextSources(policy promptContextPolicy) *orchestration.ContextSourceRegistry {
+	reg := orchestration.NewCoreContextSourceRegistryWithConfig(orchestration.CoreContextSourceConfig{
+		IncludeStory:  policy.IncludeStory,
+		IncludeMemory: policy.IncludeMemory,
+	})
 	reg.RegisterAll(orchdaggerheart.ContextSources()...)
 	return reg
 }
@@ -275,6 +319,26 @@ func loadPromptInstructions(loader *instructionset.Loader) orchestration.PromptI
 	}
 
 	return instructions
+}
+
+type bestEffortPromptAugmenter struct {
+	inner orchestration.PromptAugmenter
+}
+
+func (a bestEffortPromptAugmenter) Augment(ctx context.Context, sess orchestration.Session, brief orchestration.SessionBrief, input orchestration.PromptInput) (orchestration.BriefContribution, error) {
+	if a.inner == nil {
+		return orchestration.BriefContribution{}, nil
+	}
+	contribution, err := a.inner.Augment(ctx, sess, brief, input)
+	if err != nil {
+		orchestration.RecordPromptAugmentation(ctx, orchestration.PromptAugmentationDiagnostics{
+			Degraded:          true,
+			DegradationReason: err.Error(),
+		})
+		slog.Default().Warn("openviking prompt augmentation unavailable; continuing without supplemental context", "error", err)
+		return orchestration.BriefContribution{}, nil
+	}
+	return contribution, nil
 }
 
 func closeManagedConn(mc *platformgrpc.ManagedConn, name string, logger *slog.Logger) {

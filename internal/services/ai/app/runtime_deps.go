@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/gamebridge"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/openviking"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
@@ -41,6 +42,8 @@ type runtimeDeps struct {
 	instructionLoader       *instructionset.Loader
 	gameBridge              *gamebridge.Gateway
 	gameMc                  *platformgrpc.ManagedConn
+	openVikingAugmenter     orchestration.PromptAugmenter
+	openVikingSessionSync   *openviking.SessionSync
 }
 
 func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logger, deps serverDependencies) (runtimeDeps, error) {
@@ -99,6 +102,40 @@ func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logge
 		referenceCorpus = referencecorpus.New(cfg.DaggerheartReferenceRoot)
 	}
 
+	var openVikingAugmenter orchestration.PromptAugmenter
+	var openVikingSessionSync *openviking.SessionSync
+	if cfg.OpenVikingBaseURL != "" {
+		client, err := openviking.New(openviking.Config{
+			BaseURL: cfg.OpenVikingBaseURL,
+			APIKey:  cfg.OpenVikingAPIKey,
+			Timeout: cfg.OpenVikingTimeout,
+		})
+		if err != nil {
+			_ = store.Close()
+			return runtimeDeps{}, fmt.Errorf("build openviking client: %w", err)
+		}
+		openVikingAugmenter, err = openviking.NewPromptAugmenter(openviking.PromptAugmenterConfig{
+			Client:            client,
+			Mode:              openviking.IntegrationMode(cfg.OpenVikingMode),
+			MirrorRoot:        cfg.OpenVikingMirrorRoot,
+			VisibleMirrorRoot: cfg.OpenVikingVisibleMirrorRoot,
+			MaxResults:        cfg.OpenVikingMaxResults,
+			MaxSections:       cfg.OpenVikingMaxSections,
+			ResourceTimeout:   cfg.OpenVikingResourceSync,
+		})
+		if err != nil {
+			_ = store.Close()
+			return runtimeDeps{}, fmt.Errorf("build openviking augmenter: %w", err)
+		}
+		if cfg.OpenVikingSessionSyncEnabled {
+			openVikingSessionSync, err = openviking.NewSessionSync(client, openviking.IntegrationMode(cfg.OpenVikingMode))
+			if err != nil {
+				_ = store.Close()
+				return runtimeDeps{}, fmt.Errorf("build openviking session sync: %w", err)
+			}
+		}
+	}
+
 	gameMc, gameBridge := dialGameService(ctx, cfg.GameAddr, cfg.InternalServiceAllowlist, logger, deps.newManagedConn)
 
 	return runtimeDeps{
@@ -112,6 +149,8 @@ func buildRuntimeDeps(ctx context.Context, cfg runtimeConfig, logger *slog.Logge
 		instructionLoader:       instructionLoader,
 		gameBridge:              gameBridge,
 		gameMc:                  gameMc,
+		openVikingAugmenter:     openVikingAugmenter,
+		openVikingSessionSync:   openVikingSessionSync,
 	}, nil
 }
 
@@ -182,7 +221,7 @@ func buildCampaignTurnRunner(d runtimeDeps) orchestration.CampaignTurnRunner {
 		Artifact:    d.campaignArtifactManager,
 		Reference:   d.referenceCorpus,
 	})
-	promptBuilder := buildPromptBuilder(d.instructionLoader)
+	promptBuilder := buildPromptBuilder(d.instructionLoader, d.openVikingAugmenter, openviking.IntegrationMode(d.cfg.OpenVikingMode))
 	runnerCfg := d.cfg.campaignTurnRunnerConfig(dialer)
 	runnerCfg.PromptBuilder = promptBuilder
 	runnerCfg.ToolPolicy = orchestration.NewStaticToolPolicy(gametools.ProductionToolNames())

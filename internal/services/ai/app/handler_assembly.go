@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/openviking"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	svcpkg "github.com/louisbranch/fracturing.space/internal/services/ai/service"
 )
@@ -223,11 +225,24 @@ func buildCampaignRuntimeModule(w workflowDeps) (campaignRuntimeModule, error) {
 		CampaignAuthStateReader: w.runtime.gameBridge,
 		ProviderRegistry:        w.runtime.providerRegistry,
 		CampaignTurnRunner:      w.campaignTurnRunner,
-		DebugTraceStore:         w.runtime.store,
-		DebugUpdateBroker:       w.debugUpdateBroker,
-		SessionGrantConfig:      w.runtime.cfg.SessionGrantConfig,
-		AuthMaterialResolver:    w.authMaterialResolver,
-		Logger:                  w.campaignLogger,
+		TurnMemorySync: func(ctx context.Context, input svcpkg.TurnMemorySyncInput) error {
+			if w.runtime.openVikingSessionSync == nil {
+				return nil
+			}
+			return w.runtime.openVikingSessionSync.SyncTurn(ctx, openviking.TurnSyncInput{
+				CampaignID:        input.CampaignID,
+				SessionID:         input.SessionID,
+				ParticipantID:     input.ParticipantID,
+				UserText:          input.UserText,
+				AssistantText:     input.AssistantText,
+				RetrievedContexts: input.RetrievedContexts,
+			})
+		},
+		DebugTraceStore:      w.runtime.store,
+		DebugUpdateBroker:    w.debugUpdateBroker,
+		SessionGrantConfig:   w.runtime.cfg.SessionGrantConfig,
+		AuthMaterialResolver: w.authMaterialResolver,
+		Logger:               w.campaignLogger,
 	})
 	if err != nil {
 		return campaignRuntimeModule{}, fmt.Errorf("campaign orchestration service: %w", err)

@@ -33,7 +33,12 @@ const (
 	integrationAIPromptProfileEnv       = "INTEGRATION_AI_PROMPT_PROFILE"
 	integrationAIInstructionsRootEnv    = "FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT"
 	integrationOpenAIResponsesTargetEnv = "INTEGRATION_OPENAI_RESPONSES_URL"
+	integrationOpenVikingValidAugEnv    = "INTEGRATION_OPENVIKING_REQUIRE_VALID_AUGMENTATION"
 	defaultOpenAIResponsesTargetURL     = "https://api.openai.com/v1/responses"
+	openVikingBaseURLEnv                = "FRACTURING_SPACE_AI_OPENVIKING_BASE_URL"
+	openVikingSessionSyncEnabledEnv     = "FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED"
+	openVikingResourceSyncTimeoutEnv    = "FRACTURING_SPACE_AI_OPENVIKING_RESOURCE_SYNC_TIMEOUT"
+	defaultOpenVikingLiveResourceSync   = "20s"
 )
 
 // grpcArtifactAdapter bridges a gRPC CampaignArtifactServiceClient to the
@@ -404,6 +409,27 @@ func liveOpenAIResponsesTargetURL() string {
 		return defaultOpenAIResponsesTargetURL
 	}
 	return target
+}
+
+func liveOpenVikingEnabled() bool {
+	return strings.TrimSpace(os.Getenv(openVikingBaseURLEnv)) != ""
+}
+
+func liveOpenVikingRequireValidAugmentation() bool {
+	return envEnabled(integrationOpenVikingValidAugEnv)
+}
+
+func applyOpenVikingLiveEvalDefaults(t *testing.T) {
+	t.Helper()
+	if !liveOpenVikingEnabled() {
+		return
+	}
+	if strings.TrimSpace(os.Getenv(openVikingResourceSyncTimeoutEnv)) == "" {
+		t.Setenv(openVikingResourceSyncTimeoutEnv, defaultOpenVikingLiveResourceSync)
+	}
+	if strings.TrimSpace(os.Getenv(openVikingSessionSyncEnabledEnv)) == "" {
+		t.Setenv(openVikingSessionSyncEnabledEnv, "false")
+	}
 }
 
 // requiredToolSetPresent fails fast when a live capture did not exercise the minimum GM bootstrap tool surface.

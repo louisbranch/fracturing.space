@@ -10,6 +10,7 @@ data/*
 .env.local
 .tmp/
 .config/
+docker/openviking/ov.conf
 
 .agents/plans/*.md
 .playwright-cli/

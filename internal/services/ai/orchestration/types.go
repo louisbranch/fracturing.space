@@ -52,6 +52,12 @@ type PromptBuilder interface {
 	Build(ctx context.Context, sess Session, input PromptInput) (string, error)
 }
 
+// PromptAugmenter contributes optional supplemental brief sections after the
+// authoritative session brief has been collected.
+type PromptAugmenter interface {
+	Augment(ctx context.Context, sess Session, brief SessionBrief, input PromptInput) (BriefContribution, error)
+}
+
 // SessionBriefCollector gathers the typed session brief used for one prompt.
 type SessionBriefCollector interface {
 	CollectBrief(ctx context.Context, sess Session, input PromptInput) (SessionBrief, error)
@@ -112,8 +118,10 @@ type Input struct {
 
 // Result contains the final narrated output for a campaign turn.
 type Result struct {
-	OutputText string
-	Usage      provider.Usage
+	OutputText        string
+	Usage             provider.Usage
+	RetrievedContexts []RetrievedContext
+	PromptDiagnostics PromptDiagnostics
 }
 
 // Tool mirrors the provider-facing subset of one tool definition.
@@ -170,4 +178,44 @@ type ProviderToolResult struct {
 type TraceRecorder interface {
 	RecordProviderStep(ctx context.Context, output ProviderOutput)
 	RecordToolResult(ctx context.Context, call ProviderToolCall, result ProviderToolResult)
+}
+
+// RetrievedContext captures one non-authoritative context item retrieved during
+// prompt augmentation.
+type RetrievedContext struct {
+	URI           string
+	RenderedURI   string
+	ContextType   string
+	Abstract      string
+	MatchReason   string
+	Score         float64
+	ContentSource string
+	ContentError  string
+}
+
+// PromptContextPolicy captures which optional raw artifact sections were
+// allowed into the authoritative prompt collector for one turn.
+type PromptContextPolicy struct {
+	IncludeStory  bool
+	IncludeMemory bool
+}
+
+// PromptAugmentationDiagnostics captures the best-effort OpenViking
+// augmentation state for one prompt build.
+type PromptAugmentationDiagnostics struct {
+	Attempted         bool
+	Mode              string
+	SearchAttempted   bool
+	ResourceHits      int
+	MemoryHits        int
+	MirroredTargets   []string
+	Degraded          bool
+	DegradationReason string
+}
+
+// PromptDiagnostics carries the prompt-build diagnostics that matter for live
+// OpenViking evaluation.
+type PromptDiagnostics struct {
+	ContextPolicy PromptContextPolicy
+	Augmentation  PromptAugmentationDiagnostics
 }

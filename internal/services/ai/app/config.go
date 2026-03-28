@@ -10,6 +10,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/openviking"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
@@ -23,35 +24,55 @@ type serverEnv struct {
 	GameAddr                 string `env:"FRACTURING_SPACE_GAME_ADDR"`
 	InternalServiceAllowlist string `env:"FRACTURING_SPACE_AI_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,worker,game"`
 
-	OpenAIOAuthAuthURL       string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
-	OpenAIOAuthTokenURL      string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
-	OpenAIOAuthClientID      string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID"`
-	OpenAIOAuthClientSecret  string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
-	OpenAIOAuthRedirectURI   string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
-	OpenAIResponsesURL       string        `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
-	AnthropicBaseURL         string        `env:"FRACTURING_SPACE_AI_ANTHROPIC_BASE_URL"`
-	OrchestrationTurnTimeout time.Duration `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT" envDefault:"2m"`
-	OrchestrationMaxSteps    int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS" envDefault:"8"`
-	ToolResultMaxBytes       int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES" envDefault:"32768"`
-	DaggerheartReferenceRoot string        `env:"FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT"`
-	InstructionsRoot         string        `env:"FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT"`
+	OpenAIOAuthAuthURL           string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
+	OpenAIOAuthTokenURL          string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
+	OpenAIOAuthClientID          string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID"`
+	OpenAIOAuthClientSecret      string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
+	OpenAIOAuthRedirectURI       string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
+	OpenAIResponsesURL           string        `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
+	AnthropicBaseURL             string        `env:"FRACTURING_SPACE_AI_ANTHROPIC_BASE_URL"`
+	OrchestrationTurnTimeout     time.Duration `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT" envDefault:"2m"`
+	OrchestrationMaxSteps        int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS" envDefault:"8"`
+	ToolResultMaxBytes           int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES" envDefault:"32768"`
+	DaggerheartReferenceRoot     string        `env:"FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT"`
+	InstructionsRoot             string        `env:"FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT"`
+	OpenVikingBaseURL            string        `env:"FRACTURING_SPACE_AI_OPENVIKING_BASE_URL"`
+	OpenVikingMode               string        `env:"FRACTURING_SPACE_AI_OPENVIKING_MODE" envDefault:"legacy"`
+	OpenVikingSessionSyncEnabled bool          `env:"FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED" envDefault:"true"`
+	OpenVikingAPIKey             string        `env:"FRACTURING_SPACE_AI_OPENVIKING_API_KEY"`
+	OpenVikingTimeout            time.Duration `env:"FRACTURING_SPACE_AI_OPENVIKING_TIMEOUT" envDefault:"15s"`
+	OpenVikingMirrorRoot         string        `env:"FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT"`
+	OpenVikingVisibleMirrorRoot  string        `env:"FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT"`
+	OpenVikingMaxResults         int           `env:"FRACTURING_SPACE_AI_OPENVIKING_MAX_RESULTS" envDefault:"4"`
+	OpenVikingMaxSections        int           `env:"FRACTURING_SPACE_AI_OPENVIKING_MAX_SECTIONS" envDefault:"2"`
+	OpenVikingResourceSync       time.Duration `env:"FRACTURING_SPACE_AI_OPENVIKING_RESOURCE_SYNC_TIMEOUT" envDefault:"2s"`
 }
 
 // runtimeConfig is the normalized startup configuration used by the AI runtime.
 type runtimeConfig struct {
-	DBPath                   string
-	EncryptionKey            string
-	GameAddr                 string
-	InternalServiceAllowlist map[string]struct{}
-	OpenAIOAuthConfig        *openaiprovider.OAuthConfig
-	OpenAIResponsesURL       string
-	AnthropicBaseURL         string
-	OrchestrationTurnTimeout time.Duration
-	OrchestrationMaxSteps    int
-	ToolResultMaxBytes       int
-	DaggerheartReferenceRoot string
-	InstructionsRoot         string
-	SessionGrantConfig       *aisessiongrant.Config
+	DBPath                       string
+	EncryptionKey                string
+	GameAddr                     string
+	InternalServiceAllowlist     map[string]struct{}
+	OpenAIOAuthConfig            *openaiprovider.OAuthConfig
+	OpenAIResponsesURL           string
+	AnthropicBaseURL             string
+	OrchestrationTurnTimeout     time.Duration
+	OrchestrationMaxSteps        int
+	ToolResultMaxBytes           int
+	DaggerheartReferenceRoot     string
+	InstructionsRoot             string
+	OpenVikingBaseURL            string
+	OpenVikingMode               string
+	OpenVikingSessionSyncEnabled bool
+	OpenVikingAPIKey             string
+	OpenVikingTimeout            time.Duration
+	OpenVikingMirrorRoot         string
+	OpenVikingVisibleMirrorRoot  string
+	OpenVikingMaxResults         int
+	OpenVikingMaxSections        int
+	OpenVikingResourceSync       time.Duration
+	SessionGrantConfig           *aisessiongrant.Config
 }
 
 // Validate rejects incomplete runtime configuration before server
@@ -71,6 +92,23 @@ func (cfg runtimeConfig) Validate() error {
 	}
 	if cfg.ToolResultMaxBytes <= 0 {
 		return fmt.Errorf("FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES must be positive")
+	}
+	if cfg.OpenVikingBaseURL != "" {
+		if _, err := openviking.ParseIntegrationMode(cfg.OpenVikingMode); err != nil {
+			return err
+		}
+		if cfg.OpenVikingTimeout <= 0 {
+			return fmt.Errorf("FRACTURING_SPACE_AI_OPENVIKING_TIMEOUT must be positive")
+		}
+		if cfg.OpenVikingMaxResults <= 0 {
+			return fmt.Errorf("FRACTURING_SPACE_AI_OPENVIKING_MAX_RESULTS must be positive")
+		}
+		if cfg.OpenVikingMaxSections <= 0 {
+			return fmt.Errorf("FRACTURING_SPACE_AI_OPENVIKING_MAX_SECTIONS must be positive")
+		}
+		if cfg.OpenVikingResourceSync <= 0 {
+			return fmt.Errorf("FRACTURING_SPACE_AI_OPENVIKING_RESOURCE_SYNC_TIMEOUT must be positive")
+		}
 	}
 	return nil
 }
@@ -128,19 +166,29 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 	}
 
 	cfg := runtimeConfig{
-		DBPath:                   strings.TrimSpace(srvEnv.DBPath),
-		EncryptionKey:            strings.TrimSpace(srvEnv.EncryptionKey),
-		GameAddr:                 strings.TrimSpace(srvEnv.GameAddr),
-		InternalServiceAllowlist: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
-		OpenAIOAuthConfig:        openAIOAuthConfig,
-		OpenAIResponsesURL:       strings.TrimSpace(srvEnv.OpenAIResponsesURL),
-		AnthropicBaseURL:         strings.TrimSpace(srvEnv.AnthropicBaseURL),
-		OrchestrationTurnTimeout: srvEnv.OrchestrationTurnTimeout,
-		OrchestrationMaxSteps:    srvEnv.OrchestrationMaxSteps,
-		ToolResultMaxBytes:       srvEnv.ToolResultMaxBytes,
-		DaggerheartReferenceRoot: strings.TrimSpace(srvEnv.DaggerheartReferenceRoot),
-		InstructionsRoot:         strings.TrimSpace(srvEnv.InstructionsRoot),
-		SessionGrantConfig:       sessionGrantConfig,
+		DBPath:                       strings.TrimSpace(srvEnv.DBPath),
+		EncryptionKey:                strings.TrimSpace(srvEnv.EncryptionKey),
+		GameAddr:                     strings.TrimSpace(srvEnv.GameAddr),
+		InternalServiceAllowlist:     parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
+		OpenAIOAuthConfig:            openAIOAuthConfig,
+		OpenAIResponsesURL:           strings.TrimSpace(srvEnv.OpenAIResponsesURL),
+		AnthropicBaseURL:             strings.TrimSpace(srvEnv.AnthropicBaseURL),
+		OrchestrationTurnTimeout:     srvEnv.OrchestrationTurnTimeout,
+		OrchestrationMaxSteps:        srvEnv.OrchestrationMaxSteps,
+		ToolResultMaxBytes:           srvEnv.ToolResultMaxBytes,
+		DaggerheartReferenceRoot:     strings.TrimSpace(srvEnv.DaggerheartReferenceRoot),
+		InstructionsRoot:             strings.TrimSpace(srvEnv.InstructionsRoot),
+		OpenVikingBaseURL:            strings.TrimSpace(srvEnv.OpenVikingBaseURL),
+		OpenVikingMode:               strings.TrimSpace(srvEnv.OpenVikingMode),
+		OpenVikingSessionSyncEnabled: srvEnv.OpenVikingSessionSyncEnabled,
+		OpenVikingAPIKey:             strings.TrimSpace(srvEnv.OpenVikingAPIKey),
+		OpenVikingTimeout:            srvEnv.OpenVikingTimeout,
+		OpenVikingMirrorRoot:         strings.TrimSpace(srvEnv.OpenVikingMirrorRoot),
+		OpenVikingVisibleMirrorRoot:  strings.TrimSpace(srvEnv.OpenVikingVisibleMirrorRoot),
+		OpenVikingMaxResults:         srvEnv.OpenVikingMaxResults,
+		OpenVikingMaxSections:        srvEnv.OpenVikingMaxSections,
+		OpenVikingResourceSync:       srvEnv.OpenVikingResourceSync,
+		SessionGrantConfig:           sessionGrantConfig,
 	}
 	if err := cfg.Validate(); err != nil {
 		return runtimeConfig{}, err

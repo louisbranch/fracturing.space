@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-24"
 ---
 
 # Docker Compose (Local)
@@ -39,6 +39,7 @@ make topology-check
 - Admin: `http://admin.localhost:8080`
 - Notifications gRPC (internal): `notifications:8088`
 - Worker gRPC health (internal): `worker:8089`
+- OpenViking host port when enabled: `http://127.0.0.1:1933`
 
 ## Configuration
 
@@ -56,6 +57,72 @@ Key settings:
 See [configuration](configuration.md) for the full list.
 
 For production, see [production](production.md).
+
+## Optional OpenViking Sidecar
+
+OpenViking is available as an opt-in Compose profile for local evaluation. It
+is not part of the default stack. The local evaluation path is pinned to
+`ghcr.io/volcengine/openviking:v0.2.10`.
+
+Prepare the local host paths first:
+
+```sh
+mkdir -p ~/.openviking/data
+cp docker/openviking/ov.conf.example ~/.openviking/ov.conf
+```
+
+Then edit `~/.openviking/ov.conf` and replace the placeholder OpenAI API keys.
+The tracked example now reflects the docs-aligned OpenAI profile used for the
+next evaluation phase:
+
+- embedding: `text-embedding-3-large`
+- VLM: `gpt-4o`
+
+Start only the sidecar:
+
+```sh
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile openviking up -d openviking
+```
+
+The setup exposes two useful URLs:
+
+- host-run tools and live tests: `http://127.0.0.1:1933`
+- the Compose `ai` container: `http://openviking:1934`
+
+If you want the Compose `ai` container to use OpenViking, set this in `.env`:
+
+```sh
+FRACTURING_SPACE_AI_OPENVIKING_BASE_URL=http://openviking:1934
+FRACTURING_SPACE_AI_OPENVIKING_MODE=legacy
+FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED=true
+FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT=/openviking-data/fracturing-space
+FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT=/app/data/fracturing-space
+```
+
+Use `FRACTURING_SPACE_AI_OPENVIKING_MODE=docs_aligned_supplement` when running
+the docs-aligned evaluation mode that suppresses raw `story.md` but keeps raw
+`memory.md` in the prompt.
+
+For host-run live tests, keep the sidecar URL on `http://127.0.0.1:1933` and
+set the mirror roots like this:
+
+```sh
+FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT=$HOME/.openviking/data/fracturing-space
+FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT=/app/data/fracturing-space
+```
+
+The live AI capture lane now defaults to augmentation-only evaluation when
+OpenViking is enabled: it disables session sync unless you explicitly set
+`FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED=true`, and it raises the
+resource-ingest timeout to `20s` unless you already set
+`FRACTURING_SPACE_AI_OPENVIKING_RESOURCE_SYNC_TIMEOUT`.
+
+This profile uses the repo's Python TCP forwarder so the service remains
+reachable even though upstream OpenViking defaults to listening on
+`127.0.0.1` inside the container. The Compose setup also
+places OpenViking on the non-internal `edge` network so it can reach OpenAI for
+embedding and VLM calls while still sharing the internal network with the AI
+service.
 
 ## Tools
 

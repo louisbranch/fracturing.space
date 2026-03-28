@@ -54,9 +54,11 @@ func (h *CampaignOrchestrationHandlers) RunCampaignTurn(ctx context.Context, in 
 		})
 	}
 	return &aiv1.RunCampaignTurnResponse{
-		OutputText: result.OutputText,
-		Provider:   providerToProto(string(result.Provider)),
-		Model:      result.Model,
-		Usage:      usageToProto(result.Usage),
+		OutputText:        result.OutputText,
+		Provider:          providerToProto(string(result.Provider)),
+		Model:             result.Model,
+		Usage:             usageToProto(result.Usage),
+		PromptDiagnostics: promptDiagnosticsToProto(result.PromptDiagnostics),
+		RetrievedContexts: retrievedContextsToProto(result.RetrievedContexts),
 	}, nil
 }

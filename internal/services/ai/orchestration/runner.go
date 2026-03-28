@@ -17,6 +17,63 @@ const defaultMaxSteps = 8
 const defaultTurnTimeout = 2 * time.Minute
 const defaultToolResultMaxBytes = 32 * 1024
 
+type promptBuildTrace struct {
+	retrieved   []RetrievedContext
+	diagnostics PromptDiagnostics
+}
+
+func (t *promptBuildTrace) RecordRetrievedContexts(contexts []RetrievedContext) {
+	if len(contexts) == 0 {
+		return
+	}
+	t.retrieved = append(t.retrieved, contexts...)
+}
+
+func (t *promptBuildTrace) RecordPromptContextPolicy(policy PromptContextPolicy) {
+	t.diagnostics.ContextPolicy = policy
+}
+
+func (t *promptBuildTrace) RecordPromptAugmentation(diagnostics PromptAugmentationDiagnostics) {
+	if diagnostics.Attempted {
+		t.diagnostics.Augmentation.Attempted = true
+	}
+	if mode := strings.TrimSpace(diagnostics.Mode); mode != "" {
+		t.diagnostics.Augmentation.Mode = mode
+	}
+	if diagnostics.SearchAttempted {
+		t.diagnostics.Augmentation.SearchAttempted = true
+	}
+	if diagnostics.ResourceHits > 0 || diagnostics.SearchAttempted {
+		t.diagnostics.Augmentation.ResourceHits = diagnostics.ResourceHits
+	}
+	if diagnostics.MemoryHits > 0 || diagnostics.SearchAttempted {
+		t.diagnostics.Augmentation.MemoryHits = diagnostics.MemoryHits
+	}
+	if len(diagnostics.MirroredTargets) > 0 {
+		seen := map[string]struct{}{}
+		for _, item := range t.diagnostics.Augmentation.MirroredTargets {
+			seen[item] = struct{}{}
+		}
+		for _, item := range diagnostics.MirroredTargets {
+			item = strings.TrimSpace(item)
+			if item == "" {
+				continue
+			}
+			if _, ok := seen[item]; ok {
+				continue
+			}
+			seen[item] = struct{}{}
+			t.diagnostics.Augmentation.MirroredTargets = append(t.diagnostics.Augmentation.MirroredTargets, item)
+		}
+	}
+	if diagnostics.Degraded {
+		t.diagnostics.Augmentation.Degraded = true
+	}
+	if reason := strings.TrimSpace(diagnostics.DegradationReason); reason != "" {
+		t.diagnostics.Augmentation.DegradationReason = reason
+	}
+}
+
 type runner struct {
 	dialer             Dialer
 	promptBuilder      PromptBuilder
@@ -147,6 +204,8 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		allowedToolNames[tool.Name] = struct{}{}
 	}
 	promptCtx, promptSpan := orchestrationTracer().Start(ctx, "ai.orchestration.build_prompt")
+	promptTrace := &promptBuildTrace{}
+	promptCtx = WithPromptBuildTraceRecorder(promptCtx, promptTrace)
 	prompt, err := r.promptBuilder.Build(promptCtx, sess, PromptInput{
 		CampaignID:    input.CampaignID,
 		SessionID:     input.SessionID,
@@ -252,7 +311,12 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				return Result{}, err
 			}
 			span.SetAttributes(attribute.Bool("ai.orchestration.committed_output", turnController.HasCommittedOrResolvedInteraction()))
-			return Result{OutputText: text, Usage: usage}, nil
+			return Result{
+				OutputText:        text,
+				Usage:             usage,
+				RetrievedContexts: append([]RetrievedContext(nil), promptTrace.retrieved...),
+				PromptDiagnostics: promptTrace.diagnostics,
+			}, nil
 		}
 
 		results = make([]ProviderToolResult, 0, len(step.ToolCalls))

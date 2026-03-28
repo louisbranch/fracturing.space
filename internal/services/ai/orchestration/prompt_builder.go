@@ -13,12 +13,15 @@ import (
 type PromptBuilderConfig struct {
 	// Collector gathers the typed session brief before rendering.
 	Collector SessionBriefCollector
+	// Augmenter adds optional supplemental brief sections after collection.
+	Augmenter PromptAugmenter
 	// Renderer turns one collected brief into the final prompt text.
 	Renderer PromptRenderer
 }
 
 type defaultPromptBuilder struct {
 	collector SessionBriefCollector
+	augmenter PromptAugmenter
 	renderer  PromptRenderer
 }
 
@@ -50,6 +53,7 @@ func NewPromptBuilder(cfg PromptBuilderConfig) PromptBuilder {
 	}
 	return &defaultPromptBuilder{
 		collector: collector,
+		augmenter: cfg.Augmenter,
 		renderer:  renderer,
 	}
 }
@@ -58,6 +62,15 @@ func (pb *defaultPromptBuilder) Build(ctx context.Context, sess Session, input P
 	brief, err := pb.collector.CollectBrief(ctx, sess, input)
 	if err != nil {
 		return "", fmt.Errorf("collect context sources: %w", err)
+	}
+	if pb.augmenter != nil {
+		contribution, err := pb.augmenter.Augment(ctx, sess, brief, input)
+		if err != nil {
+			return "", fmt.Errorf("augment prompt context: %w", err)
+		}
+		if err := brief.mergeContribution("prompt_augmenter", contribution); err != nil {
+			return "", fmt.Errorf("merge prompt augmentation: %w", err)
+		}
 	}
 	return pb.renderer.Render(brief, input), nil
 }

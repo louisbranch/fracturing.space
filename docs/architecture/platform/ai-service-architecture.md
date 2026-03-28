@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 16
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-23"
+last_reviewed: "2026-03-24"
 ---
 
 # AI Service Architecture
@@ -15,6 +15,7 @@ docs:
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Campaign AI agent system](campaign-ai-agent-system.md)
 - [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)
+- [OpenViking integration](openviking-integration.md)
 - [AI service contributor map](../../reference/ai-service-contributor-map.md)
 
 ## Layer Map
@@ -95,6 +96,12 @@ broader than current runtime availability, so services fail closed with
 `orchestration/` owns the generic turn runner, prompt builder, context-source
 registry, and render pipeline. The runner now depends on an explicit
 `TurnPolicy` seam for completion/reminder rules.
+
+OpenViking integration is an optional sidecar at this layer. When configured,
+the composition root wires an OpenViking-backed prompt augmenter and best-effort
+post-turn memory sync, but the AI service still owns authoritative prompt
+policy, provider orchestration, mechanics policy, and turn completion. See
+[OpenViking integration](openviking-integration.md).
 
 The context-source registry owns source naming, per-source tracing spans, and
 typed brief merge rules. The always-on collector is exposed as

@@ -5,7 +5,7 @@ nav_order: 3
 has_children: true
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-22"
+last_reviewed: "2026-03-24"
 ---
 
 # Platform surfaces
@@ -14,6 +14,7 @@ Service-boundary and transport-boundary architecture documentation.
 
 - [Campaign authorization model](campaign-authorization-model.md)
 - [AI service architecture](ai-service-architecture.md)
+- [OpenViking integration](openviking-integration.md)
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Campaign AI agent system](campaign-ai-agent-system.md)
 - [Campaign AI mechanics quality](campaign-ai-mechanics-quality.md)

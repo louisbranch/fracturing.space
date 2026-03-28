@@ -25,6 +25,7 @@ type CampaignOrchestrationService struct {
 	campaignAuthStateReader CampaignAuthStateReader
 	providerRegistry        *providercatalog.Registry
 	campaignTurnRunner      orchestration.CampaignTurnRunner
+	turnMemorySync          func(context.Context, TurnMemorySyncInput) error
 	debugTraceStore         debugtrace.Store
 	debugUpdateBroker       *CampaignDebugUpdateBroker
 	sessionGrantConfig      *aisessiongrant.Config
@@ -42,6 +43,7 @@ type CampaignOrchestrationServiceConfig struct {
 	CampaignAuthStateReader CampaignAuthStateReader
 	ProviderRegistry        *providercatalog.Registry
 	CampaignTurnRunner      orchestration.CampaignTurnRunner
+	TurnMemorySync          func(context.Context, TurnMemorySyncInput) error
 	DebugTraceStore         debugtrace.Store
 	DebugUpdateBroker       *CampaignDebugUpdateBroker
 	SessionGrantConfig      *aisessiongrant.Config
@@ -76,6 +78,7 @@ func NewCampaignOrchestrationService(cfg CampaignOrchestrationServiceConfig) (*C
 		campaignAuthStateReader: cfg.CampaignAuthStateReader,
 		providerRegistry:        cfg.ProviderRegistry,
 		campaignTurnRunner:      cfg.CampaignTurnRunner,
+		turnMemorySync:          cfg.TurnMemorySync,
 		debugTraceStore:         cfg.DebugTraceStore,
 		debugUpdateBroker:       cfg.DebugUpdateBroker,
 		sessionGrantConfig:      sessionGrantConfig,
@@ -96,10 +99,23 @@ type RunCampaignTurnInput struct {
 
 // RunCampaignTurnResult is the domain result of a campaign turn.
 type RunCampaignTurnResult struct {
-	OutputText string
-	Provider   provider.Provider
-	Model      string
-	Usage      provider.Usage
+	OutputText        string
+	Provider          provider.Provider
+	Model             string
+	Usage             provider.Usage
+	RetrievedContexts []orchestration.RetrievedContext
+	PromptDiagnostics orchestration.PromptDiagnostics
+}
+
+// TurnMemorySyncInput carries the completed turn data mirrored into
+// OpenViking-backed session memory.
+type TurnMemorySyncInput struct {
+	CampaignID        string
+	SessionID         string
+	ParticipantID     string
+	UserText          string
+	AssistantText     string
+	RetrievedContexts []orchestration.RetrievedContext
 }
 
 // RunCampaignTurn validates a game-issued session grant and executes one GM turn.
@@ -206,11 +222,25 @@ func (s *CampaignOrchestrationService) RunCampaignTurn(ctx context.Context, inpu
 	if result.OutputText == "" {
 		return RunCampaignTurnResult{}, orchestration.ErrEmptyOutput
 	}
+	if s.turnMemorySync != nil {
+		if err := s.turnMemorySync(ctx, TurnMemorySyncInput{
+			CampaignID:        claims.CampaignID,
+			SessionID:         claims.SessionID,
+			ParticipantID:     strings.TrimSpace(state.GetParticipantId()),
+			UserText:          input.Input,
+			AssistantText:     result.OutputText,
+			RetrievedContexts: result.RetrievedContexts,
+		}); err != nil && s.logger != nil {
+			s.logger.Warn("sync openviking turn memory", "campaign_id", claims.CampaignID, "session_id", claims.SessionID, "error", err)
+		}
+	}
 	return RunCampaignTurnResult{
-		OutputText: result.OutputText,
-		Provider:   agentRecord.Provider,
-		Model:      agentRecord.Model,
-		Usage:      result.Usage,
+		OutputText:        result.OutputText,
+		Provider:          agentRecord.Provider,
+		Model:             agentRecord.Model,
+		Usage:             result.Usage,
+		RetrievedContexts: append([]orchestration.RetrievedContext(nil), result.RetrievedContexts...),
+		PromptDiagnostics: result.PromptDiagnostics,
 	}, nil
 }
 

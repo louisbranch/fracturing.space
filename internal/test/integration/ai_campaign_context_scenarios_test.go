@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,10 +19,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiapp "github.com/louisbranch/fracturing.space/internal/services/ai/app"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
-	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	evalsupport "github.com/louisbranch/fracturing.space/internal/test/aieval"
+	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -124,6 +124,7 @@ type aiGMCampaignScenarioResult struct {
 	CharacterID        string
 	OwnerParticipantID string
 	AIGMParticipantID  string
+	TurnToken          string
 	RunStatus          string
 	MetricStatus       string
 	FailureKind        string
@@ -136,6 +137,8 @@ type aiGMCampaignScenarioResult struct {
 	CharacterState     *pb.DaggerheartCharacterState
 	Scenes             []*gamev1.Scene
 	ReplayTokens       map[string]string
+	RetrievedContexts  []orchestration.RetrievedContext
+	PromptDiagnostics  orchestration.PromptDiagnostics
 	Diagnostics        *aiGMScenarioDiagnostics
 }
 
@@ -374,6 +377,7 @@ var (
 
 func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec, opts aiGMCampaignScenarioOptions) aiGMCampaignScenarioResult {
 	t.Helper()
+	testkit.SetAISessionGrantEnv(t)
 	aiAddr := pickUnusedAddress(t)
 	t.Setenv("FRACTURING_SPACE_AI_ADDR", aiAddr)
 	fixture := newSuiteFixture(t)
@@ -410,15 +414,18 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 
 	gameConn := dialGRPCForIntegration(t, fixture.grpcAddr)
 	defer gameConn.Close()
+	gameInternalConn := dialGRPCWithServiceID(t, fixture.grpcAddr, serviceaddr.ServiceAI)
+	defer gameInternalConn.Close()
 	aiConn := dialGRPCForIntegration(t, aiAddr)
 	defer aiConn.Close()
-	aiInternalConn := dialGRPCWithServiceID(t, aiAddr, serviceaddr.ServiceAI)
-	defer aiInternalConn.Close()
 
 	credentialClient := aiv1.NewCredentialServiceClient(aiConn)
 	agentClient := aiv1.NewAgentServiceClient(aiConn)
+	orchestrationClient := aiv1.NewCampaignOrchestrationServiceClient(aiConn)
+	campaignDebugClient := aiv1.NewCampaignDebugServiceClient(aiConn)
 	artifactClient := aiv1.NewCampaignArtifactServiceClient(aiConn)
 	campaignClient := gamev1.NewCampaignServiceClient(gameConn)
+	campaignAIClient := gamev1.NewCampaignAIServiceClient(gameInternalConn)
 	participantClient := gamev1.NewParticipantServiceClient(gameConn)
 	characterClient := gamev1.NewCharacterServiceClient(gameConn)
 	sessionClient := gamev1.NewSessionServiceClient(gameConn)
@@ -552,38 +559,19 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 	if opts.BeforeRun != nil {
 		opts.BeforeRun(setup)
 	}
-
-	provider := openaiprovider.NewInvokeAdapter(openaiprovider.InvokeConfig{
-		ResponsesURL: strings.TrimSpace(opts.ResponsesURL),
+	grantResp, err := campaignAIClient.IssueCampaignAISessionGrant(ctxWithUser, &gamev1.IssueCampaignAISessionGrantRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
 	})
-	dialer := gametools.NewDirectDialer(gametools.Clients{
-		Interaction: gamev1.NewInteractionServiceClient(gameConn),
-		Scene:       sceneClient,
-		Campaign:    campaignClient,
-		Participant: participantClient,
-		Character:   characterClient,
-		Session:     sessionClient,
-		Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
-		Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
-		Artifact:    &grpcArtifactAdapter{client: aiv1.NewCampaignArtifactServiceClient(aiInternalConn)},
-		Reference:   &grpcReferenceAdapter{client: aiv1.NewSystemReferenceServiceClient(aiInternalConn)},
-	})
-	runner := orchestration.NewRunner(orchestration.RunnerConfig{
-		Dialer:     dialer,
-		TurnPolicy: orchestration.NewInteractionTurnPolicy(),
-		MaxSteps:   16,
-	})
-	traceRecorder := &aiGMTraceRecorder{}
-	runResp, runErr := runner.Run(context.Background(), orchestration.Input{
-		CampaignID:      campaignID,
-		SessionID:       sessionID,
-		ParticipantID:   aiGMParticipantID,
+	if err != nil {
+		t.Fatalf("issue campaign ai session grant: %v", err)
+	}
+	turnToken := fmt.Sprintf("%s-turn-%d", spec.Name, time.Now().UTC().UnixNano())
+	runResp, runErr := orchestrationClient.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
+		SessionGrant:    strings.TrimSpace(grantResp.GetGrant().GetToken()),
 		Input:           spec.Prompt,
-		Model:           strings.TrimSpace(opts.Model),
 		ReasoningEffort: strings.TrimSpace(opts.ReasoningEffort),
-		AuthToken:       strings.TrimSpace(opts.CredentialSecret),
-		Provider:        provider,
-		TraceRecorder:   traceRecorder,
+		TurnToken:       turnToken,
 	})
 
 	collectionErrors := make([]string, 0)
@@ -617,19 +605,28 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		CharacterID:        characterID,
 		OwnerParticipantID: ownerParticipantID,
 		AIGMParticipantID:  aiGMParticipantID,
-		OutputText:         strings.TrimSpace(runResp.OutputText),
+		TurnToken:          turnToken,
+		OutputText:         strings.TrimSpace(runResp.GetOutputText()),
 		MemoryContent:      memoryContent,
 		SkillsReadOnly:     skillsReadOnly,
 		InteractionState:   interactionState,
 		CharacterState:     characterState,
 		Scenes:             scenes,
 		ReplayTokens:       mapsClone(setup.ReplayTokens),
+		RetrievedContexts:  promptRetrievedContextsFromProto(runResp.GetRetrievedContexts()),
+		PromptDiagnostics:  promptDiagnosticsFromProto(runResp.GetPromptDiagnostics()),
 	}
-
 	switch {
 	case runErr != nil:
+		debugTrace := fetchCampaignDebugTraceForTurn(t, ctxWithUser, campaignDebugClient, campaignID, sessionID, turnToken)
 		result.RunStatus = evalsupport.RunStatusFailed
-		result.FailureKind, result.FailureSummary, result.FailureReason, result.MetricStatus = classifyScenarioFailure(runErr, traceRecorder)
+		result.FailureKind = "harness_error"
+		result.FailureSummary = compactDiagnosticText(runErr.Error())
+		result.FailureReason = strings.TrimSpace(runErr.Error())
+		if strings.TrimSpace(debugTrace) != "" {
+			result.FailureReason = result.FailureReason + "\ncampaign debug trace:\n" + debugTrace
+		}
+		result.MetricStatus = evalsupport.MetricStatusInvalid
 	case len(collectionErrors) > 0:
 		result.RunStatus = evalsupport.RunStatusFailed
 		result.MetricStatus = evalsupport.MetricStatusInvalid
@@ -640,8 +637,109 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		result.RunStatus = evalsupport.RunStatusPassed
 		result.MetricStatus = evalsupport.MetricStatusPass
 	}
-	result.Diagnostics = buildScenarioDiagnostics(runErr, traceRecorder, collectionErrors)
+	result.Diagnostics = buildScenarioDiagnostics(runErr, nil, collectionErrors)
 	return result
+}
+
+func promptRetrievedContextsFromProto(items []*aiv1.RetrievedContext) []orchestration.RetrievedContext {
+	if len(items) == 0 {
+		return nil
+	}
+	contexts := make([]orchestration.RetrievedContext, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		contexts = append(contexts, orchestration.RetrievedContext{
+			URI:           strings.TrimSpace(item.GetUri()),
+			RenderedURI:   strings.TrimSpace(item.GetRenderedUri()),
+			ContextType:   strings.TrimSpace(item.GetContextType()),
+			Abstract:      strings.TrimSpace(item.GetAbstract()),
+			MatchReason:   strings.TrimSpace(item.GetMatchReason()),
+			Score:         item.GetScore(),
+			ContentSource: strings.TrimSpace(item.GetContentSource()),
+			ContentError:  strings.TrimSpace(item.GetContentError()),
+		})
+	}
+	return contexts
+}
+
+func fetchCampaignDebugTraceForTurn(t *testing.T, ctx context.Context, client aiv1.CampaignDebugServiceClient, campaignID, sessionID, turnToken string) string {
+	t.Helper()
+	if client == nil {
+		return ""
+	}
+	listResp, err := client.ListCampaignDebugTurns(ctx, &aiv1.ListCampaignDebugTurnsRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
+		PageSize:   10,
+	})
+	if err != nil {
+		return fmt.Sprintf("list campaign debug turns failed: %v", err)
+	}
+	var turnID string
+	for _, item := range listResp.GetTurns() {
+		if strings.TrimSpace(item.GetTurnToken()) == strings.TrimSpace(turnToken) {
+			turnID = strings.TrimSpace(item.GetId())
+			break
+		}
+	}
+	if turnID == "" {
+		return fmt.Sprintf("campaign debug turn not found for turn_token=%q", turnToken)
+	}
+	getResp, err := client.GetCampaignDebugTurn(ctx, &aiv1.GetCampaignDebugTurnRequest{
+		CampaignId: campaignID,
+		TurnId:     turnID,
+	})
+	if err != nil {
+		return fmt.Sprintf("get campaign debug turn failed: %v", err)
+	}
+	turn := getResp.GetTurn()
+	if turn == nil {
+		return fmt.Sprintf("campaign debug turn %q missing payload", turnID)
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "turn_id=%s status=%s last_error=%s\n", turn.GetId(), turn.GetStatus().String(), strings.TrimSpace(turn.GetLastError()))
+	for _, entry := range turn.GetEntries() {
+		payload := strings.TrimSpace(entry.GetPayload())
+		if payload == "" {
+			payload = "<empty>"
+		}
+		fmt.Fprintf(
+			&b,
+			"seq=%d kind=%s tool=%s call_id=%s response_id=%s is_error=%t payload=%s\n",
+			entry.GetSequence(),
+			entry.GetKind().String(),
+			strings.TrimSpace(entry.GetToolName()),
+			strings.TrimSpace(entry.GetCallId()),
+			strings.TrimSpace(entry.GetResponseId()),
+			entry.GetIsError(),
+			payload,
+		)
+	}
+	return strings.TrimSpace(b.String())
+}
+
+func promptDiagnosticsFromProto(item *aiv1.PromptDiagnostics) orchestration.PromptDiagnostics {
+	if item == nil {
+		return orchestration.PromptDiagnostics{}
+	}
+	return orchestration.PromptDiagnostics{
+		ContextPolicy: orchestration.PromptContextPolicy{
+			IncludeStory:  item.GetContextPolicy().GetIncludeStory(),
+			IncludeMemory: item.GetContextPolicy().GetIncludeMemory(),
+		},
+		Augmentation: orchestration.PromptAugmentationDiagnostics{
+			Attempted:         item.GetAugmentation().GetAttempted(),
+			Mode:              strings.TrimSpace(item.GetAugmentation().GetMode()),
+			SearchAttempted:   item.GetAugmentation().GetSearchAttempted(),
+			ResourceHits:      int(item.GetAugmentation().GetResourceHits()),
+			MemoryHits:        int(item.GetAugmentation().GetMemoryHits()),
+			MirroredTargets:   append([]string(nil), item.GetAugmentation().GetMirroredTargets()...),
+			Degraded:          item.GetAugmentation().GetDegraded(),
+			DegradationReason: strings.TrimSpace(item.GetAugmentation().GetDegradationReason()),
+		},
+	}
 }
 
 func prepareReviewAdvanceScenario(t *testing.T, setup *aiGMCampaignScenarioSetup) {

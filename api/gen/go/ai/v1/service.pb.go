@@ -2604,6 +2604,310 @@ func (x *InvokeAgentResponse) GetUsage() *Usage {
 	return nil
 }
 
+type RetrievedContext struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uri           string                 `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	ContextType   string                 `protobuf:"bytes,2,opt,name=context_type,json=contextType,proto3" json:"context_type,omitempty"`
+	Abstract      string                 `protobuf:"bytes,3,opt,name=abstract,proto3" json:"abstract,omitempty"`
+	MatchReason   string                 `protobuf:"bytes,4,opt,name=match_reason,json=matchReason,proto3" json:"match_reason,omitempty"`
+	Score         float64                `protobuf:"fixed64,5,opt,name=score,proto3" json:"score,omitempty"`
+	RenderedUri   string                 `protobuf:"bytes,6,opt,name=rendered_uri,json=renderedUri,proto3" json:"rendered_uri,omitempty"`
+	ContentSource string                 `protobuf:"bytes,7,opt,name=content_source,json=contentSource,proto3" json:"content_source,omitempty"`
+	ContentError  string                 `protobuf:"bytes,8,opt,name=content_error,json=contentError,proto3" json:"content_error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetrievedContext) Reset() {
+	*x = RetrievedContext{}
+	mi := &file_ai_v1_service_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetrievedContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetrievedContext) ProtoMessage() {}
+
+func (x *RetrievedContext) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_v1_service_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetrievedContext.ProtoReflect.Descriptor instead.
+func (*RetrievedContext) Descriptor() ([]byte, []int) {
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *RetrievedContext) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+func (x *RetrievedContext) GetContextType() string {
+	if x != nil {
+		return x.ContextType
+	}
+	return ""
+}
+
+func (x *RetrievedContext) GetAbstract() string {
+	if x != nil {
+		return x.Abstract
+	}
+	return ""
+}
+
+func (x *RetrievedContext) GetMatchReason() string {
+	if x != nil {
+		return x.MatchReason
+	}
+	return ""
+}
+
+func (x *RetrievedContext) GetScore() float64 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *RetrievedContext) GetRenderedUri() string {
+	if x != nil {
+		return x.RenderedUri
+	}
+	return ""
+}
+
+func (x *RetrievedContext) GetContentSource() string {
+	if x != nil {
+		return x.ContentSource
+	}
+	return ""
+}
+
+func (x *RetrievedContext) GetContentError() string {
+	if x != nil {
+		return x.ContentError
+	}
+	return ""
+}
+
+type PromptContextPolicy struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IncludeStory  bool                   `protobuf:"varint,1,opt,name=include_story,json=includeStory,proto3" json:"include_story,omitempty"`
+	IncludeMemory bool                   `protobuf:"varint,2,opt,name=include_memory,json=includeMemory,proto3" json:"include_memory,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromptContextPolicy) Reset() {
+	*x = PromptContextPolicy{}
+	mi := &file_ai_v1_service_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptContextPolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptContextPolicy) ProtoMessage() {}
+
+func (x *PromptContextPolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_v1_service_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptContextPolicy.ProtoReflect.Descriptor instead.
+func (*PromptContextPolicy) Descriptor() ([]byte, []int) {
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *PromptContextPolicy) GetIncludeStory() bool {
+	if x != nil {
+		return x.IncludeStory
+	}
+	return false
+}
+
+func (x *PromptContextPolicy) GetIncludeMemory() bool {
+	if x != nil {
+		return x.IncludeMemory
+	}
+	return false
+}
+
+type PromptAugmentationDiagnostics struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Attempted         bool                   `protobuf:"varint,1,opt,name=attempted,proto3" json:"attempted,omitempty"`
+	Mode              string                 `protobuf:"bytes,2,opt,name=mode,proto3" json:"mode,omitempty"`
+	SearchAttempted   bool                   `protobuf:"varint,3,opt,name=search_attempted,json=searchAttempted,proto3" json:"search_attempted,omitempty"`
+	ResourceHits      int32                  `protobuf:"varint,4,opt,name=resource_hits,json=resourceHits,proto3" json:"resource_hits,omitempty"`
+	MemoryHits        int32                  `protobuf:"varint,5,opt,name=memory_hits,json=memoryHits,proto3" json:"memory_hits,omitempty"`
+	MirroredTargets   []string               `protobuf:"bytes,6,rep,name=mirrored_targets,json=mirroredTargets,proto3" json:"mirrored_targets,omitempty"`
+	Degraded          bool                   `protobuf:"varint,7,opt,name=degraded,proto3" json:"degraded,omitempty"`
+	DegradationReason string                 `protobuf:"bytes,8,opt,name=degradation_reason,json=degradationReason,proto3" json:"degradation_reason,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PromptAugmentationDiagnostics) Reset() {
+	*x = PromptAugmentationDiagnostics{}
+	mi := &file_ai_v1_service_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptAugmentationDiagnostics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptAugmentationDiagnostics) ProtoMessage() {}
+
+func (x *PromptAugmentationDiagnostics) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_v1_service_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptAugmentationDiagnostics.ProtoReflect.Descriptor instead.
+func (*PromptAugmentationDiagnostics) Descriptor() ([]byte, []int) {
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *PromptAugmentationDiagnostics) GetAttempted() bool {
+	if x != nil {
+		return x.Attempted
+	}
+	return false
+}
+
+func (x *PromptAugmentationDiagnostics) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *PromptAugmentationDiagnostics) GetSearchAttempted() bool {
+	if x != nil {
+		return x.SearchAttempted
+	}
+	return false
+}
+
+func (x *PromptAugmentationDiagnostics) GetResourceHits() int32 {
+	if x != nil {
+		return x.ResourceHits
+	}
+	return 0
+}
+
+func (x *PromptAugmentationDiagnostics) GetMemoryHits() int32 {
+	if x != nil {
+		return x.MemoryHits
+	}
+	return 0
+}
+
+func (x *PromptAugmentationDiagnostics) GetMirroredTargets() []string {
+	if x != nil {
+		return x.MirroredTargets
+	}
+	return nil
+}
+
+func (x *PromptAugmentationDiagnostics) GetDegraded() bool {
+	if x != nil {
+		return x.Degraded
+	}
+	return false
+}
+
+func (x *PromptAugmentationDiagnostics) GetDegradationReason() string {
+	if x != nil {
+		return x.DegradationReason
+	}
+	return ""
+}
+
+type PromptDiagnostics struct {
+	state         protoimpl.MessageState         `protogen:"open.v1"`
+	ContextPolicy *PromptContextPolicy           `protobuf:"bytes,1,opt,name=context_policy,json=contextPolicy,proto3" json:"context_policy,omitempty"`
+	Augmentation  *PromptAugmentationDiagnostics `protobuf:"bytes,2,opt,name=augmentation,proto3" json:"augmentation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromptDiagnostics) Reset() {
+	*x = PromptDiagnostics{}
+	mi := &file_ai_v1_service_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptDiagnostics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptDiagnostics) ProtoMessage() {}
+
+func (x *PromptDiagnostics) ProtoReflect() protoreflect.Message {
+	mi := &file_ai_v1_service_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptDiagnostics.ProtoReflect.Descriptor instead.
+func (*PromptDiagnostics) Descriptor() ([]byte, []int) {
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *PromptDiagnostics) GetContextPolicy() *PromptContextPolicy {
+	if x != nil {
+		return x.ContextPolicy
+	}
+	return nil
+}
+
+func (x *PromptDiagnostics) GetAugmentation() *PromptAugmentationDiagnostics {
+	if x != nil {
+		return x.Augmentation
+	}
+	return nil
+}
+
 type RunCampaignTurnRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	SessionGrant    string                 `protobuf:"bytes,1,opt,name=session_grant,json=sessionGrant,proto3" json:"session_grant,omitempty"`
@@ -2616,7 +2920,7 @@ type RunCampaignTurnRequest struct {
 
 func (x *RunCampaignTurnRequest) Reset() {
 	*x = RunCampaignTurnRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[32]
+	mi := &file_ai_v1_service_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2628,7 +2932,7 @@ func (x *RunCampaignTurnRequest) String() string {
 func (*RunCampaignTurnRequest) ProtoMessage() {}
 
 func (x *RunCampaignTurnRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[32]
+	mi := &file_ai_v1_service_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2641,7 +2945,7 @@ func (x *RunCampaignTurnRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunCampaignTurnRequest.ProtoReflect.Descriptor instead.
 func (*RunCampaignTurnRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{32}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RunCampaignTurnRequest) GetSessionGrant() string {
@@ -2673,18 +2977,20 @@ func (x *RunCampaignTurnRequest) GetTurnToken() string {
 }
 
 type RunCampaignTurnResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OutputText    string                 `protobuf:"bytes,1,opt,name=output_text,json=outputText,proto3" json:"output_text,omitempty"`
-	Provider      Provider               `protobuf:"varint,2,opt,name=provider,proto3,enum=ai.v1.Provider" json:"provider,omitempty"`
-	Model         string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
-	Usage         *Usage                 `protobuf:"bytes,4,opt,name=usage,proto3" json:"usage,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	OutputText        string                 `protobuf:"bytes,1,opt,name=output_text,json=outputText,proto3" json:"output_text,omitempty"`
+	Provider          Provider               `protobuf:"varint,2,opt,name=provider,proto3,enum=ai.v1.Provider" json:"provider,omitempty"`
+	Model             string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
+	Usage             *Usage                 `protobuf:"bytes,4,opt,name=usage,proto3" json:"usage,omitempty"`
+	PromptDiagnostics *PromptDiagnostics     `protobuf:"bytes,5,opt,name=prompt_diagnostics,json=promptDiagnostics,proto3" json:"prompt_diagnostics,omitempty"`
+	RetrievedContexts []*RetrievedContext    `protobuf:"bytes,6,rep,name=retrieved_contexts,json=retrievedContexts,proto3" json:"retrieved_contexts,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *RunCampaignTurnResponse) Reset() {
 	*x = RunCampaignTurnResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[33]
+	mi := &file_ai_v1_service_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2696,7 +3002,7 @@ func (x *RunCampaignTurnResponse) String() string {
 func (*RunCampaignTurnResponse) ProtoMessage() {}
 
 func (x *RunCampaignTurnResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[33]
+	mi := &file_ai_v1_service_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2709,7 +3015,7 @@ func (x *RunCampaignTurnResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunCampaignTurnResponse.ProtoReflect.Descriptor instead.
 func (*RunCampaignTurnResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{33}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RunCampaignTurnResponse) GetOutputText() string {
@@ -2740,6 +3046,20 @@ func (x *RunCampaignTurnResponse) GetUsage() *Usage {
 	return nil
 }
 
+func (x *RunCampaignTurnResponse) GetPromptDiagnostics() *PromptDiagnostics {
+	if x != nil {
+		return x.PromptDiagnostics
+	}
+	return nil
+}
+
+func (x *RunCampaignTurnResponse) GetRetrievedContexts() []*RetrievedContext {
+	if x != nil {
+		return x.RetrievedContexts
+	}
+	return nil
+}
+
 type CampaignDebugEntry struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Sequence         int32                  `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
@@ -2758,7 +3078,7 @@ type CampaignDebugEntry struct {
 
 func (x *CampaignDebugEntry) Reset() {
 	*x = CampaignDebugEntry{}
-	mi := &file_ai_v1_service_proto_msgTypes[34]
+	mi := &file_ai_v1_service_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2770,7 +3090,7 @@ func (x *CampaignDebugEntry) String() string {
 func (*CampaignDebugEntry) ProtoMessage() {}
 
 func (x *CampaignDebugEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[34]
+	mi := &file_ai_v1_service_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2783,7 +3103,7 @@ func (x *CampaignDebugEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampaignDebugEntry.ProtoReflect.Descriptor instead.
 func (*CampaignDebugEntry) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{34}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CampaignDebugEntry) GetSequence() int32 {
@@ -2878,7 +3198,7 @@ type CampaignDebugTurn struct {
 
 func (x *CampaignDebugTurn) Reset() {
 	*x = CampaignDebugTurn{}
-	mi := &file_ai_v1_service_proto_msgTypes[35]
+	mi := &file_ai_v1_service_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2890,7 +3210,7 @@ func (x *CampaignDebugTurn) String() string {
 func (*CampaignDebugTurn) ProtoMessage() {}
 
 func (x *CampaignDebugTurn) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[35]
+	mi := &file_ai_v1_service_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2903,7 +3223,7 @@ func (x *CampaignDebugTurn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampaignDebugTurn.ProtoReflect.Descriptor instead.
 func (*CampaignDebugTurn) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{35}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *CampaignDebugTurn) GetId() string {
@@ -3026,7 +3346,7 @@ type CampaignDebugTurnSummary struct {
 
 func (x *CampaignDebugTurnSummary) Reset() {
 	*x = CampaignDebugTurnSummary{}
-	mi := &file_ai_v1_service_proto_msgTypes[36]
+	mi := &file_ai_v1_service_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3038,7 +3358,7 @@ func (x *CampaignDebugTurnSummary) String() string {
 func (*CampaignDebugTurnSummary) ProtoMessage() {}
 
 func (x *CampaignDebugTurnSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[36]
+	mi := &file_ai_v1_service_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3051,7 +3371,7 @@ func (x *CampaignDebugTurnSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampaignDebugTurnSummary.ProtoReflect.Descriptor instead.
 func (*CampaignDebugTurnSummary) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{36}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *CampaignDebugTurnSummary) GetId() string {
@@ -3164,7 +3484,7 @@ type ListCampaignDebugTurnsRequest struct {
 
 func (x *ListCampaignDebugTurnsRequest) Reset() {
 	*x = ListCampaignDebugTurnsRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[37]
+	mi := &file_ai_v1_service_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3176,7 +3496,7 @@ func (x *ListCampaignDebugTurnsRequest) String() string {
 func (*ListCampaignDebugTurnsRequest) ProtoMessage() {}
 
 func (x *ListCampaignDebugTurnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[37]
+	mi := &file_ai_v1_service_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3189,7 +3509,7 @@ func (x *ListCampaignDebugTurnsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCampaignDebugTurnsRequest.ProtoReflect.Descriptor instead.
 func (*ListCampaignDebugTurnsRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{37}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ListCampaignDebugTurnsRequest) GetCampaignId() string {
@@ -3230,7 +3550,7 @@ type ListCampaignDebugTurnsResponse struct {
 
 func (x *ListCampaignDebugTurnsResponse) Reset() {
 	*x = ListCampaignDebugTurnsResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[38]
+	mi := &file_ai_v1_service_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3242,7 +3562,7 @@ func (x *ListCampaignDebugTurnsResponse) String() string {
 func (*ListCampaignDebugTurnsResponse) ProtoMessage() {}
 
 func (x *ListCampaignDebugTurnsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[38]
+	mi := &file_ai_v1_service_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3255,7 +3575,7 @@ func (x *ListCampaignDebugTurnsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCampaignDebugTurnsResponse.ProtoReflect.Descriptor instead.
 func (*ListCampaignDebugTurnsResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{38}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ListCampaignDebugTurnsResponse) GetTurns() []*CampaignDebugTurnSummary {
@@ -3282,7 +3602,7 @@ type GetCampaignDebugTurnRequest struct {
 
 func (x *GetCampaignDebugTurnRequest) Reset() {
 	*x = GetCampaignDebugTurnRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[39]
+	mi := &file_ai_v1_service_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3294,7 +3614,7 @@ func (x *GetCampaignDebugTurnRequest) String() string {
 func (*GetCampaignDebugTurnRequest) ProtoMessage() {}
 
 func (x *GetCampaignDebugTurnRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[39]
+	mi := &file_ai_v1_service_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3307,7 +3627,7 @@ func (x *GetCampaignDebugTurnRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCampaignDebugTurnRequest.ProtoReflect.Descriptor instead.
 func (*GetCampaignDebugTurnRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{39}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GetCampaignDebugTurnRequest) GetCampaignId() string {
@@ -3333,7 +3653,7 @@ type GetCampaignDebugTurnResponse struct {
 
 func (x *GetCampaignDebugTurnResponse) Reset() {
 	*x = GetCampaignDebugTurnResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[40]
+	mi := &file_ai_v1_service_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3345,7 +3665,7 @@ func (x *GetCampaignDebugTurnResponse) String() string {
 func (*GetCampaignDebugTurnResponse) ProtoMessage() {}
 
 func (x *GetCampaignDebugTurnResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[40]
+	mi := &file_ai_v1_service_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3358,7 +3678,7 @@ func (x *GetCampaignDebugTurnResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCampaignDebugTurnResponse.ProtoReflect.Descriptor instead.
 func (*GetCampaignDebugTurnResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{40}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *GetCampaignDebugTurnResponse) GetTurn() *CampaignDebugTurn {
@@ -3378,7 +3698,7 @@ type SubscribeCampaignDebugUpdatesRequest struct {
 
 func (x *SubscribeCampaignDebugUpdatesRequest) Reset() {
 	*x = SubscribeCampaignDebugUpdatesRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[41]
+	mi := &file_ai_v1_service_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3390,7 +3710,7 @@ func (x *SubscribeCampaignDebugUpdatesRequest) String() string {
 func (*SubscribeCampaignDebugUpdatesRequest) ProtoMessage() {}
 
 func (x *SubscribeCampaignDebugUpdatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[41]
+	mi := &file_ai_v1_service_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3403,7 +3723,7 @@ func (x *SubscribeCampaignDebugUpdatesRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use SubscribeCampaignDebugUpdatesRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeCampaignDebugUpdatesRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{41}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *SubscribeCampaignDebugUpdatesRequest) GetCampaignId() string {
@@ -3430,7 +3750,7 @@ type CampaignDebugTurnUpdate struct {
 
 func (x *CampaignDebugTurnUpdate) Reset() {
 	*x = CampaignDebugTurnUpdate{}
-	mi := &file_ai_v1_service_proto_msgTypes[42]
+	mi := &file_ai_v1_service_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3442,7 +3762,7 @@ func (x *CampaignDebugTurnUpdate) String() string {
 func (*CampaignDebugTurnUpdate) ProtoMessage() {}
 
 func (x *CampaignDebugTurnUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[42]
+	mi := &file_ai_v1_service_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3455,7 +3775,7 @@ func (x *CampaignDebugTurnUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampaignDebugTurnUpdate.ProtoReflect.Descriptor instead.
 func (*CampaignDebugTurnUpdate) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{42}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *CampaignDebugTurnUpdate) GetTurn() *CampaignDebugTurnSummary {
@@ -3486,7 +3806,7 @@ type CampaignArtifact struct {
 
 func (x *CampaignArtifact) Reset() {
 	*x = CampaignArtifact{}
-	mi := &file_ai_v1_service_proto_msgTypes[43]
+	mi := &file_ai_v1_service_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3498,7 +3818,7 @@ func (x *CampaignArtifact) String() string {
 func (*CampaignArtifact) ProtoMessage() {}
 
 func (x *CampaignArtifact) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[43]
+	mi := &file_ai_v1_service_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3511,7 +3831,7 @@ func (x *CampaignArtifact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampaignArtifact.ProtoReflect.Descriptor instead.
 func (*CampaignArtifact) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{43}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *CampaignArtifact) GetCampaignId() string {
@@ -3566,7 +3886,7 @@ type EnsureCampaignArtifactsRequest struct {
 
 func (x *EnsureCampaignArtifactsRequest) Reset() {
 	*x = EnsureCampaignArtifactsRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[44]
+	mi := &file_ai_v1_service_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3578,7 +3898,7 @@ func (x *EnsureCampaignArtifactsRequest) String() string {
 func (*EnsureCampaignArtifactsRequest) ProtoMessage() {}
 
 func (x *EnsureCampaignArtifactsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[44]
+	mi := &file_ai_v1_service_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3591,7 +3911,7 @@ func (x *EnsureCampaignArtifactsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureCampaignArtifactsRequest.ProtoReflect.Descriptor instead.
 func (*EnsureCampaignArtifactsRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{44}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *EnsureCampaignArtifactsRequest) GetCampaignId() string {
@@ -3617,7 +3937,7 @@ type EnsureCampaignArtifactsResponse struct {
 
 func (x *EnsureCampaignArtifactsResponse) Reset() {
 	*x = EnsureCampaignArtifactsResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[45]
+	mi := &file_ai_v1_service_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3629,7 +3949,7 @@ func (x *EnsureCampaignArtifactsResponse) String() string {
 func (*EnsureCampaignArtifactsResponse) ProtoMessage() {}
 
 func (x *EnsureCampaignArtifactsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[45]
+	mi := &file_ai_v1_service_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3642,7 +3962,7 @@ func (x *EnsureCampaignArtifactsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureCampaignArtifactsResponse.ProtoReflect.Descriptor instead.
 func (*EnsureCampaignArtifactsResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{45}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *EnsureCampaignArtifactsResponse) GetArtifacts() []*CampaignArtifact {
@@ -3661,7 +3981,7 @@ type ListCampaignArtifactsRequest struct {
 
 func (x *ListCampaignArtifactsRequest) Reset() {
 	*x = ListCampaignArtifactsRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[46]
+	mi := &file_ai_v1_service_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3673,7 +3993,7 @@ func (x *ListCampaignArtifactsRequest) String() string {
 func (*ListCampaignArtifactsRequest) ProtoMessage() {}
 
 func (x *ListCampaignArtifactsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[46]
+	mi := &file_ai_v1_service_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3686,7 +4006,7 @@ func (x *ListCampaignArtifactsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCampaignArtifactsRequest.ProtoReflect.Descriptor instead.
 func (*ListCampaignArtifactsRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{46}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListCampaignArtifactsRequest) GetCampaignId() string {
@@ -3705,7 +4025,7 @@ type ListCampaignArtifactsResponse struct {
 
 func (x *ListCampaignArtifactsResponse) Reset() {
 	*x = ListCampaignArtifactsResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[47]
+	mi := &file_ai_v1_service_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3717,7 +4037,7 @@ func (x *ListCampaignArtifactsResponse) String() string {
 func (*ListCampaignArtifactsResponse) ProtoMessage() {}
 
 func (x *ListCampaignArtifactsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[47]
+	mi := &file_ai_v1_service_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3730,7 +4050,7 @@ func (x *ListCampaignArtifactsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCampaignArtifactsResponse.ProtoReflect.Descriptor instead.
 func (*ListCampaignArtifactsResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{47}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ListCampaignArtifactsResponse) GetArtifacts() []*CampaignArtifact {
@@ -3750,7 +4070,7 @@ type GetCampaignArtifactRequest struct {
 
 func (x *GetCampaignArtifactRequest) Reset() {
 	*x = GetCampaignArtifactRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[48]
+	mi := &file_ai_v1_service_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3762,7 +4082,7 @@ func (x *GetCampaignArtifactRequest) String() string {
 func (*GetCampaignArtifactRequest) ProtoMessage() {}
 
 func (x *GetCampaignArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[48]
+	mi := &file_ai_v1_service_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3775,7 +4095,7 @@ func (x *GetCampaignArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCampaignArtifactRequest.ProtoReflect.Descriptor instead.
 func (*GetCampaignArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{48}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *GetCampaignArtifactRequest) GetCampaignId() string {
@@ -3801,7 +4121,7 @@ type GetCampaignArtifactResponse struct {
 
 func (x *GetCampaignArtifactResponse) Reset() {
 	*x = GetCampaignArtifactResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[49]
+	mi := &file_ai_v1_service_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3813,7 +4133,7 @@ func (x *GetCampaignArtifactResponse) String() string {
 func (*GetCampaignArtifactResponse) ProtoMessage() {}
 
 func (x *GetCampaignArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[49]
+	mi := &file_ai_v1_service_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3826,7 +4146,7 @@ func (x *GetCampaignArtifactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCampaignArtifactResponse.ProtoReflect.Descriptor instead.
 func (*GetCampaignArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{49}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetCampaignArtifactResponse) GetArtifact() *CampaignArtifact {
@@ -3847,7 +4167,7 @@ type UpsertCampaignArtifactRequest struct {
 
 func (x *UpsertCampaignArtifactRequest) Reset() {
 	*x = UpsertCampaignArtifactRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[50]
+	mi := &file_ai_v1_service_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3859,7 +4179,7 @@ func (x *UpsertCampaignArtifactRequest) String() string {
 func (*UpsertCampaignArtifactRequest) ProtoMessage() {}
 
 func (x *UpsertCampaignArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[50]
+	mi := &file_ai_v1_service_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3872,7 +4192,7 @@ func (x *UpsertCampaignArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertCampaignArtifactRequest.ProtoReflect.Descriptor instead.
 func (*UpsertCampaignArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{50}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *UpsertCampaignArtifactRequest) GetCampaignId() string {
@@ -3905,7 +4225,7 @@ type UpsertCampaignArtifactResponse struct {
 
 func (x *UpsertCampaignArtifactResponse) Reset() {
 	*x = UpsertCampaignArtifactResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[51]
+	mi := &file_ai_v1_service_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3917,7 +4237,7 @@ func (x *UpsertCampaignArtifactResponse) String() string {
 func (*UpsertCampaignArtifactResponse) ProtoMessage() {}
 
 func (x *UpsertCampaignArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[51]
+	mi := &file_ai_v1_service_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3930,7 +4250,7 @@ func (x *UpsertCampaignArtifactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertCampaignArtifactResponse.ProtoReflect.Descriptor instead.
 func (*UpsertCampaignArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{51}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *UpsertCampaignArtifactResponse) GetArtifact() *CampaignArtifact {
@@ -3955,7 +4275,7 @@ type SystemReferenceDocument struct {
 
 func (x *SystemReferenceDocument) Reset() {
 	*x = SystemReferenceDocument{}
-	mi := &file_ai_v1_service_proto_msgTypes[52]
+	mi := &file_ai_v1_service_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3967,7 +4287,7 @@ func (x *SystemReferenceDocument) String() string {
 func (*SystemReferenceDocument) ProtoMessage() {}
 
 func (x *SystemReferenceDocument) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[52]
+	mi := &file_ai_v1_service_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3980,7 +4300,7 @@ func (x *SystemReferenceDocument) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SystemReferenceDocument.ProtoReflect.Descriptor instead.
 func (*SystemReferenceDocument) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{52}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *SystemReferenceDocument) GetSystem() string {
@@ -4047,7 +4367,7 @@ type SystemReferenceDocumentSummary struct {
 
 func (x *SystemReferenceDocumentSummary) Reset() {
 	*x = SystemReferenceDocumentSummary{}
-	mi := &file_ai_v1_service_proto_msgTypes[53]
+	mi := &file_ai_v1_service_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4059,7 +4379,7 @@ func (x *SystemReferenceDocumentSummary) String() string {
 func (*SystemReferenceDocumentSummary) ProtoMessage() {}
 
 func (x *SystemReferenceDocumentSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[53]
+	mi := &file_ai_v1_service_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4072,7 +4392,7 @@ func (x *SystemReferenceDocumentSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SystemReferenceDocumentSummary.ProtoReflect.Descriptor instead.
 func (*SystemReferenceDocumentSummary) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{53}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *SystemReferenceDocumentSummary) GetSystem() string {
@@ -4135,7 +4455,7 @@ type SearchSystemReferenceRequest struct {
 
 func (x *SearchSystemReferenceRequest) Reset() {
 	*x = SearchSystemReferenceRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[54]
+	mi := &file_ai_v1_service_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4147,7 +4467,7 @@ func (x *SearchSystemReferenceRequest) String() string {
 func (*SearchSystemReferenceRequest) ProtoMessage() {}
 
 func (x *SearchSystemReferenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[54]
+	mi := &file_ai_v1_service_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4160,7 +4480,7 @@ func (x *SearchSystemReferenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchSystemReferenceRequest.ProtoReflect.Descriptor instead.
 func (*SearchSystemReferenceRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{54}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *SearchSystemReferenceRequest) GetSystem() string {
@@ -4193,7 +4513,7 @@ type SearchSystemReferenceResponse struct {
 
 func (x *SearchSystemReferenceResponse) Reset() {
 	*x = SearchSystemReferenceResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[55]
+	mi := &file_ai_v1_service_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4205,7 +4525,7 @@ func (x *SearchSystemReferenceResponse) String() string {
 func (*SearchSystemReferenceResponse) ProtoMessage() {}
 
 func (x *SearchSystemReferenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[55]
+	mi := &file_ai_v1_service_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4218,7 +4538,7 @@ func (x *SearchSystemReferenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchSystemReferenceResponse.ProtoReflect.Descriptor instead.
 func (*SearchSystemReferenceResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{55}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *SearchSystemReferenceResponse) GetResults() []*SystemReferenceDocumentSummary {
@@ -4238,7 +4558,7 @@ type ReadSystemReferenceDocumentRequest struct {
 
 func (x *ReadSystemReferenceDocumentRequest) Reset() {
 	*x = ReadSystemReferenceDocumentRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[56]
+	mi := &file_ai_v1_service_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4250,7 +4570,7 @@ func (x *ReadSystemReferenceDocumentRequest) String() string {
 func (*ReadSystemReferenceDocumentRequest) ProtoMessage() {}
 
 func (x *ReadSystemReferenceDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[56]
+	mi := &file_ai_v1_service_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4263,7 +4583,7 @@ func (x *ReadSystemReferenceDocumentRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ReadSystemReferenceDocumentRequest.ProtoReflect.Descriptor instead.
 func (*ReadSystemReferenceDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{56}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *ReadSystemReferenceDocumentRequest) GetSystem() string {
@@ -4289,7 +4609,7 @@ type ReadSystemReferenceDocumentResponse struct {
 
 func (x *ReadSystemReferenceDocumentResponse) Reset() {
 	*x = ReadSystemReferenceDocumentResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[57]
+	mi := &file_ai_v1_service_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4301,7 +4621,7 @@ func (x *ReadSystemReferenceDocumentResponse) String() string {
 func (*ReadSystemReferenceDocumentResponse) ProtoMessage() {}
 
 func (x *ReadSystemReferenceDocumentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[57]
+	mi := &file_ai_v1_service_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4314,7 +4634,7 @@ func (x *ReadSystemReferenceDocumentResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ReadSystemReferenceDocumentResponse.ProtoReflect.Descriptor instead.
 func (*ReadSystemReferenceDocumentResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{57}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ReadSystemReferenceDocumentResponse) GetDocument() *SystemReferenceDocument {
@@ -4334,7 +4654,7 @@ type StartProviderConnectRequest struct {
 
 func (x *StartProviderConnectRequest) Reset() {
 	*x = StartProviderConnectRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[58]
+	mi := &file_ai_v1_service_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4346,7 +4666,7 @@ func (x *StartProviderConnectRequest) String() string {
 func (*StartProviderConnectRequest) ProtoMessage() {}
 
 func (x *StartProviderConnectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[58]
+	mi := &file_ai_v1_service_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4359,7 +4679,7 @@ func (x *StartProviderConnectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartProviderConnectRequest.ProtoReflect.Descriptor instead.
 func (*StartProviderConnectRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{58}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *StartProviderConnectRequest) GetProvider() Provider {
@@ -4388,7 +4708,7 @@ type StartProviderConnectResponse struct {
 
 func (x *StartProviderConnectResponse) Reset() {
 	*x = StartProviderConnectResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[59]
+	mi := &file_ai_v1_service_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4400,7 +4720,7 @@ func (x *StartProviderConnectResponse) String() string {
 func (*StartProviderConnectResponse) ProtoMessage() {}
 
 func (x *StartProviderConnectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[59]
+	mi := &file_ai_v1_service_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4413,7 +4733,7 @@ func (x *StartProviderConnectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartProviderConnectResponse.ProtoReflect.Descriptor instead.
 func (*StartProviderConnectResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{59}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *StartProviderConnectResponse) GetConnectSessionId() string {
@@ -4455,7 +4775,7 @@ type FinishProviderConnectRequest struct {
 
 func (x *FinishProviderConnectRequest) Reset() {
 	*x = FinishProviderConnectRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[60]
+	mi := &file_ai_v1_service_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4467,7 +4787,7 @@ func (x *FinishProviderConnectRequest) String() string {
 func (*FinishProviderConnectRequest) ProtoMessage() {}
 
 func (x *FinishProviderConnectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[60]
+	mi := &file_ai_v1_service_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4480,7 +4800,7 @@ func (x *FinishProviderConnectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishProviderConnectRequest.ProtoReflect.Descriptor instead.
 func (*FinishProviderConnectRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{60}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *FinishProviderConnectRequest) GetConnectSessionId() string {
@@ -4513,7 +4833,7 @@ type FinishProviderConnectResponse struct {
 
 func (x *FinishProviderConnectResponse) Reset() {
 	*x = FinishProviderConnectResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[61]
+	mi := &file_ai_v1_service_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4525,7 +4845,7 @@ func (x *FinishProviderConnectResponse) String() string {
 func (*FinishProviderConnectResponse) ProtoMessage() {}
 
 func (x *FinishProviderConnectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[61]
+	mi := &file_ai_v1_service_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4538,7 +4858,7 @@ func (x *FinishProviderConnectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishProviderConnectResponse.ProtoReflect.Descriptor instead.
 func (*FinishProviderConnectResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{61}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *FinishProviderConnectResponse) GetProviderGrant() *ProviderGrant {
@@ -4560,7 +4880,7 @@ type ListProviderGrantsRequest struct {
 
 func (x *ListProviderGrantsRequest) Reset() {
 	*x = ListProviderGrantsRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[62]
+	mi := &file_ai_v1_service_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4572,7 +4892,7 @@ func (x *ListProviderGrantsRequest) String() string {
 func (*ListProviderGrantsRequest) ProtoMessage() {}
 
 func (x *ListProviderGrantsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[62]
+	mi := &file_ai_v1_service_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4585,7 +4905,7 @@ func (x *ListProviderGrantsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProviderGrantsRequest.ProtoReflect.Descriptor instead.
 func (*ListProviderGrantsRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{62}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *ListProviderGrantsRequest) GetPageSize() int32 {
@@ -4626,7 +4946,7 @@ type ListProviderGrantsResponse struct {
 
 func (x *ListProviderGrantsResponse) Reset() {
 	*x = ListProviderGrantsResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[63]
+	mi := &file_ai_v1_service_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4638,7 +4958,7 @@ func (x *ListProviderGrantsResponse) String() string {
 func (*ListProviderGrantsResponse) ProtoMessage() {}
 
 func (x *ListProviderGrantsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[63]
+	mi := &file_ai_v1_service_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4651,7 +4971,7 @@ func (x *ListProviderGrantsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProviderGrantsResponse.ProtoReflect.Descriptor instead.
 func (*ListProviderGrantsResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{63}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ListProviderGrantsResponse) GetProviderGrants() []*ProviderGrant {
@@ -4677,7 +4997,7 @@ type RevokeProviderGrantRequest struct {
 
 func (x *RevokeProviderGrantRequest) Reset() {
 	*x = RevokeProviderGrantRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[64]
+	mi := &file_ai_v1_service_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4689,7 +5009,7 @@ func (x *RevokeProviderGrantRequest) String() string {
 func (*RevokeProviderGrantRequest) ProtoMessage() {}
 
 func (x *RevokeProviderGrantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[64]
+	mi := &file_ai_v1_service_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4702,7 +5022,7 @@ func (x *RevokeProviderGrantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeProviderGrantRequest.ProtoReflect.Descriptor instead.
 func (*RevokeProviderGrantRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{64}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *RevokeProviderGrantRequest) GetProviderGrantId() string {
@@ -4721,7 +5041,7 @@ type RevokeProviderGrantResponse struct {
 
 func (x *RevokeProviderGrantResponse) Reset() {
 	*x = RevokeProviderGrantResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[65]
+	mi := &file_ai_v1_service_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4733,7 +5053,7 @@ func (x *RevokeProviderGrantResponse) String() string {
 func (*RevokeProviderGrantResponse) ProtoMessage() {}
 
 func (x *RevokeProviderGrantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[65]
+	mi := &file_ai_v1_service_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4746,7 +5066,7 @@ func (x *RevokeProviderGrantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeProviderGrantResponse.ProtoReflect.Descriptor instead.
 func (*RevokeProviderGrantResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{65}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *RevokeProviderGrantResponse) GetProviderGrant() *ProviderGrant {
@@ -4767,7 +5087,7 @@ type CreateAccessRequestRequest struct {
 
 func (x *CreateAccessRequestRequest) Reset() {
 	*x = CreateAccessRequestRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[66]
+	mi := &file_ai_v1_service_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4779,7 +5099,7 @@ func (x *CreateAccessRequestRequest) String() string {
 func (*CreateAccessRequestRequest) ProtoMessage() {}
 
 func (x *CreateAccessRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[66]
+	mi := &file_ai_v1_service_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4792,7 +5112,7 @@ func (x *CreateAccessRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccessRequestRequest.ProtoReflect.Descriptor instead.
 func (*CreateAccessRequestRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{66}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *CreateAccessRequestRequest) GetAgentId() string {
@@ -4825,7 +5145,7 @@ type CreateAccessRequestResponse struct {
 
 func (x *CreateAccessRequestResponse) Reset() {
 	*x = CreateAccessRequestResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[67]
+	mi := &file_ai_v1_service_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4837,7 +5157,7 @@ func (x *CreateAccessRequestResponse) String() string {
 func (*CreateAccessRequestResponse) ProtoMessage() {}
 
 func (x *CreateAccessRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[67]
+	mi := &file_ai_v1_service_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4850,7 +5170,7 @@ func (x *CreateAccessRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccessRequestResponse.ProtoReflect.Descriptor instead.
 func (*CreateAccessRequestResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{67}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *CreateAccessRequestResponse) GetAccessRequest() *AccessRequest {
@@ -4871,7 +5191,7 @@ type ListAccessRequestsRequest struct {
 
 func (x *ListAccessRequestsRequest) Reset() {
 	*x = ListAccessRequestsRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[68]
+	mi := &file_ai_v1_service_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4883,7 +5203,7 @@ func (x *ListAccessRequestsRequest) String() string {
 func (*ListAccessRequestsRequest) ProtoMessage() {}
 
 func (x *ListAccessRequestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[68]
+	mi := &file_ai_v1_service_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4896,7 +5216,7 @@ func (x *ListAccessRequestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccessRequestsRequest.ProtoReflect.Descriptor instead.
 func (*ListAccessRequestsRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{68}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ListAccessRequestsRequest) GetRole() AccessRequestRole {
@@ -4930,7 +5250,7 @@ type ListAccessRequestsResponse struct {
 
 func (x *ListAccessRequestsResponse) Reset() {
 	*x = ListAccessRequestsResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[69]
+	mi := &file_ai_v1_service_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4942,7 +5262,7 @@ func (x *ListAccessRequestsResponse) String() string {
 func (*ListAccessRequestsResponse) ProtoMessage() {}
 
 func (x *ListAccessRequestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[69]
+	mi := &file_ai_v1_service_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4955,7 +5275,7 @@ func (x *ListAccessRequestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccessRequestsResponse.ProtoReflect.Descriptor instead.
 func (*ListAccessRequestsResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{69}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ListAccessRequestsResponse) GetAccessRequests() []*AccessRequest {
@@ -4986,7 +5306,7 @@ type ListAuditEventsRequest struct {
 
 func (x *ListAuditEventsRequest) Reset() {
 	*x = ListAuditEventsRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[70]
+	mi := &file_ai_v1_service_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4998,7 +5318,7 @@ func (x *ListAuditEventsRequest) String() string {
 func (*ListAuditEventsRequest) ProtoMessage() {}
 
 func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[70]
+	mi := &file_ai_v1_service_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5011,7 +5331,7 @@ func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{70}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ListAuditEventsRequest) GetPageSize() int32 {
@@ -5066,7 +5386,7 @@ type ListAuditEventsResponse struct {
 
 func (x *ListAuditEventsResponse) Reset() {
 	*x = ListAuditEventsResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[71]
+	mi := &file_ai_v1_service_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5078,7 +5398,7 @@ func (x *ListAuditEventsResponse) String() string {
 func (*ListAuditEventsResponse) ProtoMessage() {}
 
 func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[71]
+	mi := &file_ai_v1_service_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5091,7 +5411,7 @@ func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{71}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ListAuditEventsResponse) GetAuditEvents() []*AuditEvent {
@@ -5119,7 +5439,7 @@ type ReviewAccessRequestRequest struct {
 
 func (x *ReviewAccessRequestRequest) Reset() {
 	*x = ReviewAccessRequestRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[72]
+	mi := &file_ai_v1_service_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5131,7 +5451,7 @@ func (x *ReviewAccessRequestRequest) String() string {
 func (*ReviewAccessRequestRequest) ProtoMessage() {}
 
 func (x *ReviewAccessRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[72]
+	mi := &file_ai_v1_service_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5144,7 +5464,7 @@ func (x *ReviewAccessRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewAccessRequestRequest.ProtoReflect.Descriptor instead.
 func (*ReviewAccessRequestRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{72}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ReviewAccessRequestRequest) GetAccessRequestId() string {
@@ -5177,7 +5497,7 @@ type ReviewAccessRequestResponse struct {
 
 func (x *ReviewAccessRequestResponse) Reset() {
 	*x = ReviewAccessRequestResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[73]
+	mi := &file_ai_v1_service_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5189,7 +5509,7 @@ func (x *ReviewAccessRequestResponse) String() string {
 func (*ReviewAccessRequestResponse) ProtoMessage() {}
 
 func (x *ReviewAccessRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[73]
+	mi := &file_ai_v1_service_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5202,7 +5522,7 @@ func (x *ReviewAccessRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewAccessRequestResponse.ProtoReflect.Descriptor instead.
 func (*ReviewAccessRequestResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{73}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ReviewAccessRequestResponse) GetAccessRequest() *AccessRequest {
@@ -5222,7 +5542,7 @@ type RevokeAccessRequestRequest struct {
 
 func (x *RevokeAccessRequestRequest) Reset() {
 	*x = RevokeAccessRequestRequest{}
-	mi := &file_ai_v1_service_proto_msgTypes[74]
+	mi := &file_ai_v1_service_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5234,7 +5554,7 @@ func (x *RevokeAccessRequestRequest) String() string {
 func (*RevokeAccessRequestRequest) ProtoMessage() {}
 
 func (x *RevokeAccessRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[74]
+	mi := &file_ai_v1_service_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5247,7 +5567,7 @@ func (x *RevokeAccessRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAccessRequestRequest.ProtoReflect.Descriptor instead.
 func (*RevokeAccessRequestRequest) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{74}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *RevokeAccessRequestRequest) GetAccessRequestId() string {
@@ -5273,7 +5593,7 @@ type RevokeAccessRequestResponse struct {
 
 func (x *RevokeAccessRequestResponse) Reset() {
 	*x = RevokeAccessRequestResponse{}
-	mi := &file_ai_v1_service_proto_msgTypes[75]
+	mi := &file_ai_v1_service_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5285,7 +5605,7 @@ func (x *RevokeAccessRequestResponse) String() string {
 func (*RevokeAccessRequestResponse) ProtoMessage() {}
 
 func (x *RevokeAccessRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ai_v1_service_proto_msgTypes[75]
+	mi := &file_ai_v1_service_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5298,7 +5618,7 @@ func (x *RevokeAccessRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAccessRequestResponse.ProtoReflect.Descriptor instead.
 func (*RevokeAccessRequestResponse) Descriptor() ([]byte, []int) {
-	return file_ai_v1_service_proto_rawDescGZIP(), []int{75}
+	return file_ai_v1_service_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *RevokeAccessRequestResponse) GetAccessRequest() *AccessRequest {
@@ -5630,27 +5950,89 @@ var file_ai_v1_service_proto_rawDesc = string([]byte{
 	0x72, 0x12, 0x14, 0x0a, 0x05, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
 	0x52, 0x05, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x12, 0x22, 0x0a, 0x05, 0x75, 0x73, 0x61, 0x67, 0x65,
 	0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x61, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x55,
-	0x73, 0x61, 0x67, 0x65, 0x52, 0x05, 0x75, 0x73, 0x61, 0x67, 0x65, 0x22, 0x9d, 0x01, 0x0a, 0x16,
-	0x52, 0x75, 0x6e, 0x43, 0x61, 0x6d, 0x70, 0x61, 0x69, 0x67, 0x6e, 0x54, 0x75, 0x72, 0x6e, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x23, 0x0a, 0x0d, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f,
-	0x6e, 0x5f, 0x67, 0x72, 0x61, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x73,
-	0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x47, 0x72, 0x61, 0x6e, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x69,
-	0x6e, 0x70, 0x75, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6e, 0x70, 0x75,
-	0x74, 0x12, 0x29, 0x0a, 0x10, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x5f, 0x65,
-	0x66, 0x66, 0x6f, 0x72, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72, 0x65, 0x61,
-	0x73, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74, 0x12, 0x1d, 0x0a, 0x0a,
-	0x74, 0x75, 0x72, 0x6e, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x09, 0x74, 0x75, 0x72, 0x6e, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0xa1, 0x01, 0x0a, 0x17,
-	0x52, 0x75, 0x6e, 0x43, 0x61, 0x6d, 0x70, 0x61, 0x69, 0x67, 0x6e, 0x54, 0x75, 0x72, 0x6e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a, 0x0b, 0x6f, 0x75, 0x74, 0x70, 0x75,
-	0x74, 0x5f, 0x74, 0x65, 0x78, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x6f, 0x75,
-	0x74, 0x70, 0x75, 0x74, 0x54, 0x65, 0x78, 0x74, 0x12, 0x2b, 0x0a, 0x08, 0x70, 0x72, 0x6f, 0x76,
-	0x69, 0x64, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0f, 0x2e, 0x61, 0x69, 0x2e,
-	0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x52, 0x08, 0x70, 0x72, 0x6f,
-	0x76, 0x69, 0x64, 0x65, 0x72, 0x12, 0x14, 0x0a, 0x05, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x12, 0x22, 0x0a, 0x05, 0x75,
-	0x73, 0x61, 0x67, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x61, 0x69, 0x2e,
-	0x76, 0x31, 0x2e, 0x55, 0x73, 0x61, 0x67, 0x65, 0x52, 0x05, 0x75, 0x73, 0x61, 0x67, 0x65, 0x22,
+	0x73, 0x61, 0x67, 0x65, 0x52, 0x05, 0x75, 0x73, 0x61, 0x67, 0x65, 0x22, 0x8b, 0x02, 0x0a, 0x10,
+	0x52, 0x65, 0x74, 0x72, 0x69, 0x65, 0x76, 0x65, 0x64, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74,
+	0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x69, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75,
+	0x72, 0x69, 0x12, 0x21, 0x0a, 0x0c, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x5f, 0x74, 0x79,
+	0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78,
+	0x74, 0x54, 0x79, 0x70, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x61, 0x62, 0x73, 0x74, 0x72, 0x61, 0x63,
+	0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x61, 0x62, 0x73, 0x74, 0x72, 0x61, 0x63,
+	0x74, 0x12, 0x21, 0x0a, 0x0c, 0x6d, 0x61, 0x74, 0x63, 0x68, 0x5f, 0x72, 0x65, 0x61, 0x73, 0x6f,
+	0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x6d, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65,
+	0x61, 0x73, 0x6f, 0x6e, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x63, 0x6f, 0x72, 0x65, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x01, 0x52, 0x05, 0x73, 0x63, 0x6f, 0x72, 0x65, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65,
+	0x6e, 0x64, 0x65, 0x72, 0x65, 0x64, 0x5f, 0x75, 0x72, 0x69, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0b, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x65, 0x64, 0x55, 0x72, 0x69, 0x12, 0x25, 0x0a,
+	0x0e, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x5f, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x18,
+	0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x53, 0x6f,
+	0x75, 0x72, 0x63, 0x65, 0x12, 0x23, 0x0a, 0x0d, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x5f,
+	0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x63, 0x6f, 0x6e,
+	0x74, 0x65, 0x6e, 0x74, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x22, 0x61, 0x0a, 0x13, 0x50, 0x72, 0x6f,
+	0x6d, 0x70, 0x74, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79,
+	0x12, 0x23, 0x0a, 0x0d, 0x69, 0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65, 0x5f, 0x73, 0x74, 0x6f, 0x72,
+	0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0c, 0x69, 0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65,
+	0x53, 0x74, 0x6f, 0x72, 0x79, 0x12, 0x25, 0x0a, 0x0e, 0x69, 0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65,
+	0x5f, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0d, 0x69,
+	0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65, 0x4d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x22, 0xb8, 0x02, 0x0a,
+	0x1d, 0x50, 0x72, 0x6f, 0x6d, 0x70, 0x74, 0x41, 0x75, 0x67, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x44, 0x69, 0x61, 0x67, 0x6e, 0x6f, 0x73, 0x74, 0x69, 0x63, 0x73, 0x12, 0x1c,
+	0x0a, 0x09, 0x61, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x08, 0x52, 0x09, 0x61, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x65, 0x64, 0x12, 0x12, 0x0a, 0x04,
+	0x6d, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6d, 0x6f, 0x64, 0x65,
+	0x12, 0x29, 0x0a, 0x10, 0x73, 0x65, 0x61, 0x72, 0x63, 0x68, 0x5f, 0x61, 0x74, 0x74, 0x65, 0x6d,
+	0x70, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0f, 0x73, 0x65, 0x61, 0x72,
+	0x63, 0x68, 0x41, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x65, 0x64, 0x12, 0x23, 0x0a, 0x0d, 0x72,
+	0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x5f, 0x68, 0x69, 0x74, 0x73, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x0c, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x48, 0x69, 0x74, 0x73,
+	0x12, 0x1f, 0x0a, 0x0b, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x5f, 0x68, 0x69, 0x74, 0x73, 0x18,
+	0x05, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x48, 0x69, 0x74,
+	0x73, 0x12, 0x29, 0x0a, 0x10, 0x6d, 0x69, 0x72, 0x72, 0x6f, 0x72, 0x65, 0x64, 0x5f, 0x74, 0x61,
+	0x72, 0x67, 0x65, 0x74, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0f, 0x6d, 0x69, 0x72,
+	0x72, 0x6f, 0x72, 0x65, 0x64, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x73, 0x12, 0x1a, 0x0a, 0x08,
+	0x64, 0x65, 0x67, 0x72, 0x61, 0x64, 0x65, 0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08,
+	0x64, 0x65, 0x67, 0x72, 0x61, 0x64, 0x65, 0x64, 0x12, 0x2d, 0x0a, 0x12, 0x64, 0x65, 0x67, 0x72,
+	0x61, 0x64, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x18, 0x08,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x11, 0x64, 0x65, 0x67, 0x72, 0x61, 0x64, 0x61, 0x74, 0x69, 0x6f,
+	0x6e, 0x52, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x22, 0xa0, 0x01, 0x0a, 0x11, 0x50, 0x72, 0x6f, 0x6d,
+	0x70, 0x74, 0x44, 0x69, 0x61, 0x67, 0x6e, 0x6f, 0x73, 0x74, 0x69, 0x63, 0x73, 0x12, 0x41, 0x0a,
+	0x0e, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x5f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x61, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72,
+	0x6f, 0x6d, 0x70, 0x74, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63,
+	0x79, 0x52, 0x0d, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79,
+	0x12, 0x48, 0x0a, 0x0c, 0x61, 0x75, 0x67, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x24, 0x2e, 0x61, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x50,
+	0x72, 0x6f, 0x6d, 0x70, 0x74, 0x41, 0x75, 0x67, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f,
+	0x6e, 0x44, 0x69, 0x61, 0x67, 0x6e, 0x6f, 0x73, 0x74, 0x69, 0x63, 0x73, 0x52, 0x0c, 0x61, 0x75,
+	0x67, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x9d, 0x01, 0x0a, 0x16, 0x52,
+	0x75, 0x6e, 0x43, 0x61, 0x6d, 0x70, 0x61, 0x69, 0x67, 0x6e, 0x54, 0x75, 0x72, 0x6e, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x23, 0x0a, 0x0d, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e,
+	0x5f, 0x67, 0x72, 0x61, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x73, 0x65,
+	0x73, 0x73, 0x69, 0x6f, 0x6e, 0x47, 0x72, 0x61, 0x6e, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6e,
+	0x70, 0x75, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6e, 0x70, 0x75, 0x74,
+	0x12, 0x29, 0x0a, 0x10, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x5f, 0x65, 0x66,
+	0x66, 0x6f, 0x72, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72, 0x65, 0x61, 0x73,
+	0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x74,
+	0x75, 0x72, 0x6e, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x09, 0x74, 0x75, 0x72, 0x6e, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0xb2, 0x02, 0x0a, 0x17, 0x52,
+	0x75, 0x6e, 0x43, 0x61, 0x6d, 0x70, 0x61, 0x69, 0x67, 0x6e, 0x54, 0x75, 0x72, 0x6e, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a, 0x0b, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74,
+	0x5f, 0x74, 0x65, 0x78, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x6f, 0x75, 0x74,
+	0x70, 0x75, 0x74, 0x54, 0x65, 0x78, 0x74, 0x12, 0x2b, 0x0a, 0x08, 0x70, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0f, 0x2e, 0x61, 0x69, 0x2e, 0x76,
+	0x31, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x52, 0x08, 0x70, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x12, 0x14, 0x0a, 0x05, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x12, 0x22, 0x0a, 0x05, 0x75, 0x73,
+	0x61, 0x67, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x61, 0x69, 0x2e, 0x76,
+	0x31, 0x2e, 0x55, 0x73, 0x61, 0x67, 0x65, 0x52, 0x05, 0x75, 0x73, 0x61, 0x67, 0x65, 0x12, 0x47,
+	0x0a, 0x12, 0x70, 0x72, 0x6f, 0x6d, 0x70, 0x74, 0x5f, 0x64, 0x69, 0x61, 0x67, 0x6e, 0x6f, 0x73,
+	0x74, 0x69, 0x63, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x61, 0x69, 0x2e,
+	0x76, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x70, 0x74, 0x44, 0x69, 0x61, 0x67, 0x6e, 0x6f, 0x73,
+	0x74, 0x69, 0x63, 0x73, 0x52, 0x11, 0x70, 0x72, 0x6f, 0x6d, 0x70, 0x74, 0x44, 0x69, 0x61, 0x67,
+	0x6e, 0x6f, 0x73, 0x74, 0x69, 0x63, 0x73, 0x12, 0x46, 0x0a, 0x12, 0x72, 0x65, 0x74, 0x72, 0x69,
+	0x65, 0x76, 0x65, 0x64, 0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x73, 0x18, 0x06, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x61, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x74, 0x72,
+	0x69, 0x65, 0x76, 0x65, 0x64, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x52, 0x11, 0x72, 0x65,
+	0x74, 0x72, 0x69, 0x65, 0x76, 0x65, 0x64, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x73, 0x22,
 	0xfb, 0x02, 0x0a, 0x12, 0x43, 0x61, 0x6d, 0x70, 0x61, 0x69, 0x67, 0x6e, 0x44, 0x65, 0x62, 0x75,
 	0x67, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x1a, 0x0a, 0x08, 0x73, 0x65, 0x71, 0x75, 0x65, 0x6e,
 	0x63, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x73, 0x65, 0x71, 0x75, 0x65, 0x6e,
@@ -6369,7 +6751,7 @@ func file_ai_v1_service_proto_rawDescGZIP() []byte {
 }
 
 var file_ai_v1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_ai_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 76)
+var file_ai_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 80)
 var file_ai_v1_service_proto_goTypes = []any{
 	(Provider)(0),                                // 0: ai.v1.Provider
 	(CredentialStatus)(0),                        // 1: ai.v1.CredentialStatus
@@ -6414,78 +6796,82 @@ var file_ai_v1_service_proto_goTypes = []any{
 	(*Usage)(nil),                                // 40: ai.v1.Usage
 	(*InvokeAgentRequest)(nil),                   // 41: ai.v1.InvokeAgentRequest
 	(*InvokeAgentResponse)(nil),                  // 42: ai.v1.InvokeAgentResponse
-	(*RunCampaignTurnRequest)(nil),               // 43: ai.v1.RunCampaignTurnRequest
-	(*RunCampaignTurnResponse)(nil),              // 44: ai.v1.RunCampaignTurnResponse
-	(*CampaignDebugEntry)(nil),                   // 45: ai.v1.CampaignDebugEntry
-	(*CampaignDebugTurn)(nil),                    // 46: ai.v1.CampaignDebugTurn
-	(*CampaignDebugTurnSummary)(nil),             // 47: ai.v1.CampaignDebugTurnSummary
-	(*ListCampaignDebugTurnsRequest)(nil),        // 48: ai.v1.ListCampaignDebugTurnsRequest
-	(*ListCampaignDebugTurnsResponse)(nil),       // 49: ai.v1.ListCampaignDebugTurnsResponse
-	(*GetCampaignDebugTurnRequest)(nil),          // 50: ai.v1.GetCampaignDebugTurnRequest
-	(*GetCampaignDebugTurnResponse)(nil),         // 51: ai.v1.GetCampaignDebugTurnResponse
-	(*SubscribeCampaignDebugUpdatesRequest)(nil), // 52: ai.v1.SubscribeCampaignDebugUpdatesRequest
-	(*CampaignDebugTurnUpdate)(nil),              // 53: ai.v1.CampaignDebugTurnUpdate
-	(*CampaignArtifact)(nil),                     // 54: ai.v1.CampaignArtifact
-	(*EnsureCampaignArtifactsRequest)(nil),       // 55: ai.v1.EnsureCampaignArtifactsRequest
-	(*EnsureCampaignArtifactsResponse)(nil),      // 56: ai.v1.EnsureCampaignArtifactsResponse
-	(*ListCampaignArtifactsRequest)(nil),         // 57: ai.v1.ListCampaignArtifactsRequest
-	(*ListCampaignArtifactsResponse)(nil),        // 58: ai.v1.ListCampaignArtifactsResponse
-	(*GetCampaignArtifactRequest)(nil),           // 59: ai.v1.GetCampaignArtifactRequest
-	(*GetCampaignArtifactResponse)(nil),          // 60: ai.v1.GetCampaignArtifactResponse
-	(*UpsertCampaignArtifactRequest)(nil),        // 61: ai.v1.UpsertCampaignArtifactRequest
-	(*UpsertCampaignArtifactResponse)(nil),       // 62: ai.v1.UpsertCampaignArtifactResponse
-	(*SystemReferenceDocument)(nil),              // 63: ai.v1.SystemReferenceDocument
-	(*SystemReferenceDocumentSummary)(nil),       // 64: ai.v1.SystemReferenceDocumentSummary
-	(*SearchSystemReferenceRequest)(nil),         // 65: ai.v1.SearchSystemReferenceRequest
-	(*SearchSystemReferenceResponse)(nil),        // 66: ai.v1.SearchSystemReferenceResponse
-	(*ReadSystemReferenceDocumentRequest)(nil),   // 67: ai.v1.ReadSystemReferenceDocumentRequest
-	(*ReadSystemReferenceDocumentResponse)(nil),  // 68: ai.v1.ReadSystemReferenceDocumentResponse
-	(*StartProviderConnectRequest)(nil),          // 69: ai.v1.StartProviderConnectRequest
-	(*StartProviderConnectResponse)(nil),         // 70: ai.v1.StartProviderConnectResponse
-	(*FinishProviderConnectRequest)(nil),         // 71: ai.v1.FinishProviderConnectRequest
-	(*FinishProviderConnectResponse)(nil),        // 72: ai.v1.FinishProviderConnectResponse
-	(*ListProviderGrantsRequest)(nil),            // 73: ai.v1.ListProviderGrantsRequest
-	(*ListProviderGrantsResponse)(nil),           // 74: ai.v1.ListProviderGrantsResponse
-	(*RevokeProviderGrantRequest)(nil),           // 75: ai.v1.RevokeProviderGrantRequest
-	(*RevokeProviderGrantResponse)(nil),          // 76: ai.v1.RevokeProviderGrantResponse
-	(*CreateAccessRequestRequest)(nil),           // 77: ai.v1.CreateAccessRequestRequest
-	(*CreateAccessRequestResponse)(nil),          // 78: ai.v1.CreateAccessRequestResponse
-	(*ListAccessRequestsRequest)(nil),            // 79: ai.v1.ListAccessRequestsRequest
-	(*ListAccessRequestsResponse)(nil),           // 80: ai.v1.ListAccessRequestsResponse
-	(*ListAuditEventsRequest)(nil),               // 81: ai.v1.ListAuditEventsRequest
-	(*ListAuditEventsResponse)(nil),              // 82: ai.v1.ListAuditEventsResponse
-	(*ReviewAccessRequestRequest)(nil),           // 83: ai.v1.ReviewAccessRequestRequest
-	(*ReviewAccessRequestResponse)(nil),          // 84: ai.v1.ReviewAccessRequestResponse
-	(*RevokeAccessRequestRequest)(nil),           // 85: ai.v1.RevokeAccessRequestRequest
-	(*RevokeAccessRequestResponse)(nil),          // 86: ai.v1.RevokeAccessRequestResponse
-	(*timestamppb.Timestamp)(nil),                // 87: google.protobuf.Timestamp
+	(*RetrievedContext)(nil),                     // 43: ai.v1.RetrievedContext
+	(*PromptContextPolicy)(nil),                  // 44: ai.v1.PromptContextPolicy
+	(*PromptAugmentationDiagnostics)(nil),        // 45: ai.v1.PromptAugmentationDiagnostics
+	(*PromptDiagnostics)(nil),                    // 46: ai.v1.PromptDiagnostics
+	(*RunCampaignTurnRequest)(nil),               // 47: ai.v1.RunCampaignTurnRequest
+	(*RunCampaignTurnResponse)(nil),              // 48: ai.v1.RunCampaignTurnResponse
+	(*CampaignDebugEntry)(nil),                   // 49: ai.v1.CampaignDebugEntry
+	(*CampaignDebugTurn)(nil),                    // 50: ai.v1.CampaignDebugTurn
+	(*CampaignDebugTurnSummary)(nil),             // 51: ai.v1.CampaignDebugTurnSummary
+	(*ListCampaignDebugTurnsRequest)(nil),        // 52: ai.v1.ListCampaignDebugTurnsRequest
+	(*ListCampaignDebugTurnsResponse)(nil),       // 53: ai.v1.ListCampaignDebugTurnsResponse
+	(*GetCampaignDebugTurnRequest)(nil),          // 54: ai.v1.GetCampaignDebugTurnRequest
+	(*GetCampaignDebugTurnResponse)(nil),         // 55: ai.v1.GetCampaignDebugTurnResponse
+	(*SubscribeCampaignDebugUpdatesRequest)(nil), // 56: ai.v1.SubscribeCampaignDebugUpdatesRequest
+	(*CampaignDebugTurnUpdate)(nil),              // 57: ai.v1.CampaignDebugTurnUpdate
+	(*CampaignArtifact)(nil),                     // 58: ai.v1.CampaignArtifact
+	(*EnsureCampaignArtifactsRequest)(nil),       // 59: ai.v1.EnsureCampaignArtifactsRequest
+	(*EnsureCampaignArtifactsResponse)(nil),      // 60: ai.v1.EnsureCampaignArtifactsResponse
+	(*ListCampaignArtifactsRequest)(nil),         // 61: ai.v1.ListCampaignArtifactsRequest
+	(*ListCampaignArtifactsResponse)(nil),        // 62: ai.v1.ListCampaignArtifactsResponse
+	(*GetCampaignArtifactRequest)(nil),           // 63: ai.v1.GetCampaignArtifactRequest
+	(*GetCampaignArtifactResponse)(nil),          // 64: ai.v1.GetCampaignArtifactResponse
+	(*UpsertCampaignArtifactRequest)(nil),        // 65: ai.v1.UpsertCampaignArtifactRequest
+	(*UpsertCampaignArtifactResponse)(nil),       // 66: ai.v1.UpsertCampaignArtifactResponse
+	(*SystemReferenceDocument)(nil),              // 67: ai.v1.SystemReferenceDocument
+	(*SystemReferenceDocumentSummary)(nil),       // 68: ai.v1.SystemReferenceDocumentSummary
+	(*SearchSystemReferenceRequest)(nil),         // 69: ai.v1.SearchSystemReferenceRequest
+	(*SearchSystemReferenceResponse)(nil),        // 70: ai.v1.SearchSystemReferenceResponse
+	(*ReadSystemReferenceDocumentRequest)(nil),   // 71: ai.v1.ReadSystemReferenceDocumentRequest
+	(*ReadSystemReferenceDocumentResponse)(nil),  // 72: ai.v1.ReadSystemReferenceDocumentResponse
+	(*StartProviderConnectRequest)(nil),          // 73: ai.v1.StartProviderConnectRequest
+	(*StartProviderConnectResponse)(nil),         // 74: ai.v1.StartProviderConnectResponse
+	(*FinishProviderConnectRequest)(nil),         // 75: ai.v1.FinishProviderConnectRequest
+	(*FinishProviderConnectResponse)(nil),        // 76: ai.v1.FinishProviderConnectResponse
+	(*ListProviderGrantsRequest)(nil),            // 77: ai.v1.ListProviderGrantsRequest
+	(*ListProviderGrantsResponse)(nil),           // 78: ai.v1.ListProviderGrantsResponse
+	(*RevokeProviderGrantRequest)(nil),           // 79: ai.v1.RevokeProviderGrantRequest
+	(*RevokeProviderGrantResponse)(nil),          // 80: ai.v1.RevokeProviderGrantResponse
+	(*CreateAccessRequestRequest)(nil),           // 81: ai.v1.CreateAccessRequestRequest
+	(*CreateAccessRequestResponse)(nil),          // 82: ai.v1.CreateAccessRequestResponse
+	(*ListAccessRequestsRequest)(nil),            // 83: ai.v1.ListAccessRequestsRequest
+	(*ListAccessRequestsResponse)(nil),           // 84: ai.v1.ListAccessRequestsResponse
+	(*ListAuditEventsRequest)(nil),               // 85: ai.v1.ListAuditEventsRequest
+	(*ListAuditEventsResponse)(nil),              // 86: ai.v1.ListAuditEventsResponse
+	(*ReviewAccessRequestRequest)(nil),           // 87: ai.v1.ReviewAccessRequestRequest
+	(*ReviewAccessRequestResponse)(nil),          // 88: ai.v1.ReviewAccessRequestResponse
+	(*RevokeAccessRequestRequest)(nil),           // 89: ai.v1.RevokeAccessRequestRequest
+	(*RevokeAccessRequestResponse)(nil),          // 90: ai.v1.RevokeAccessRequestResponse
+	(*timestamppb.Timestamp)(nil),                // 91: google.protobuf.Timestamp
 }
 var file_ai_v1_service_proto_depIdxs = []int32{
 	0,   // 0: ai.v1.Credential.provider:type_name -> ai.v1.Provider
 	1,   // 1: ai.v1.Credential.status:type_name -> ai.v1.CredentialStatus
-	87,  // 2: ai.v1.Credential.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 3: ai.v1.Credential.updated_at:type_name -> google.protobuf.Timestamp
-	87,  // 4: ai.v1.Credential.revoked_at:type_name -> google.protobuf.Timestamp
+	91,  // 2: ai.v1.Credential.created_at:type_name -> google.protobuf.Timestamp
+	91,  // 3: ai.v1.Credential.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 4: ai.v1.Credential.revoked_at:type_name -> google.protobuf.Timestamp
 	4,   // 5: ai.v1.AgentAuthReference.type:type_name -> ai.v1.AgentAuthReferenceType
 	0,   // 6: ai.v1.Agent.provider:type_name -> ai.v1.Provider
 	12,  // 7: ai.v1.Agent.auth_reference:type_name -> ai.v1.AgentAuthReference
 	2,   // 8: ai.v1.Agent.status:type_name -> ai.v1.AgentStatus
-	87,  // 9: ai.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 10: ai.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 9: ai.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
+	91,  // 10: ai.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
 	3,   // 11: ai.v1.Agent.auth_state:type_name -> ai.v1.AgentAuthState
 	0,   // 12: ai.v1.ProviderGrant.provider:type_name -> ai.v1.Provider
 	5,   // 13: ai.v1.ProviderGrant.status:type_name -> ai.v1.ProviderGrantStatus
-	87,  // 14: ai.v1.ProviderGrant.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 15: ai.v1.ProviderGrant.updated_at:type_name -> google.protobuf.Timestamp
-	87,  // 16: ai.v1.ProviderGrant.revoked_at:type_name -> google.protobuf.Timestamp
-	87,  // 17: ai.v1.ProviderGrant.expires_at:type_name -> google.protobuf.Timestamp
-	87,  // 18: ai.v1.ProviderGrant.last_refreshed_at:type_name -> google.protobuf.Timestamp
+	91,  // 14: ai.v1.ProviderGrant.created_at:type_name -> google.protobuf.Timestamp
+	91,  // 15: ai.v1.ProviderGrant.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 16: ai.v1.ProviderGrant.revoked_at:type_name -> google.protobuf.Timestamp
+	91,  // 17: ai.v1.ProviderGrant.expires_at:type_name -> google.protobuf.Timestamp
+	91,  // 18: ai.v1.ProviderGrant.last_refreshed_at:type_name -> google.protobuf.Timestamp
 	6,   // 19: ai.v1.AccessRequest.status:type_name -> ai.v1.AccessRequestStatus
-	87,  // 20: ai.v1.AccessRequest.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 21: ai.v1.AccessRequest.updated_at:type_name -> google.protobuf.Timestamp
-	87,  // 22: ai.v1.AccessRequest.reviewed_at:type_name -> google.protobuf.Timestamp
-	87,  // 23: ai.v1.AccessRequest.revoked_at:type_name -> google.protobuf.Timestamp
-	87,  // 24: ai.v1.AuditEvent.created_at:type_name -> google.protobuf.Timestamp
+	91,  // 20: ai.v1.AccessRequest.created_at:type_name -> google.protobuf.Timestamp
+	91,  // 21: ai.v1.AccessRequest.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 22: ai.v1.AccessRequest.reviewed_at:type_name -> google.protobuf.Timestamp
+	91,  // 23: ai.v1.AccessRequest.revoked_at:type_name -> google.protobuf.Timestamp
+	91,  // 24: ai.v1.AuditEvent.created_at:type_name -> google.protobuf.Timestamp
 	0,   // 25: ai.v1.CreateCredentialRequest.provider:type_name -> ai.v1.Provider
 	11,  // 26: ai.v1.CreateCredentialResponse.credential:type_name -> ai.v1.Credential
 	11,  // 27: ai.v1.ListCredentialsResponse.credentials:type_name -> ai.v1.Credential
@@ -6504,119 +6890,123 @@ var file_ai_v1_service_proto_depIdxs = []int32{
 	13,  // 40: ai.v1.UpdateAgentResponse.agent:type_name -> ai.v1.Agent
 	0,   // 41: ai.v1.InvokeAgentResponse.provider:type_name -> ai.v1.Provider
 	40,  // 42: ai.v1.InvokeAgentResponse.usage:type_name -> ai.v1.Usage
-	0,   // 43: ai.v1.RunCampaignTurnResponse.provider:type_name -> ai.v1.Provider
-	40,  // 44: ai.v1.RunCampaignTurnResponse.usage:type_name -> ai.v1.Usage
-	10,  // 45: ai.v1.CampaignDebugEntry.kind:type_name -> ai.v1.CampaignDebugEntryKind
-	87,  // 46: ai.v1.CampaignDebugEntry.created_at:type_name -> google.protobuf.Timestamp
-	40,  // 47: ai.v1.CampaignDebugEntry.usage:type_name -> ai.v1.Usage
-	0,   // 48: ai.v1.CampaignDebugTurn.provider:type_name -> ai.v1.Provider
-	9,   // 49: ai.v1.CampaignDebugTurn.status:type_name -> ai.v1.CampaignDebugTurnStatus
-	40,  // 50: ai.v1.CampaignDebugTurn.usage:type_name -> ai.v1.Usage
-	87,  // 51: ai.v1.CampaignDebugTurn.started_at:type_name -> google.protobuf.Timestamp
-	87,  // 52: ai.v1.CampaignDebugTurn.updated_at:type_name -> google.protobuf.Timestamp
-	87,  // 53: ai.v1.CampaignDebugTurn.completed_at:type_name -> google.protobuf.Timestamp
-	45,  // 54: ai.v1.CampaignDebugTurn.entries:type_name -> ai.v1.CampaignDebugEntry
-	0,   // 55: ai.v1.CampaignDebugTurnSummary.provider:type_name -> ai.v1.Provider
-	9,   // 56: ai.v1.CampaignDebugTurnSummary.status:type_name -> ai.v1.CampaignDebugTurnStatus
-	40,  // 57: ai.v1.CampaignDebugTurnSummary.usage:type_name -> ai.v1.Usage
-	87,  // 58: ai.v1.CampaignDebugTurnSummary.started_at:type_name -> google.protobuf.Timestamp
-	87,  // 59: ai.v1.CampaignDebugTurnSummary.updated_at:type_name -> google.protobuf.Timestamp
-	87,  // 60: ai.v1.CampaignDebugTurnSummary.completed_at:type_name -> google.protobuf.Timestamp
-	47,  // 61: ai.v1.ListCampaignDebugTurnsResponse.turns:type_name -> ai.v1.CampaignDebugTurnSummary
-	46,  // 62: ai.v1.GetCampaignDebugTurnResponse.turn:type_name -> ai.v1.CampaignDebugTurn
-	47,  // 63: ai.v1.CampaignDebugTurnUpdate.turn:type_name -> ai.v1.CampaignDebugTurnSummary
-	45,  // 64: ai.v1.CampaignDebugTurnUpdate.appended_entries:type_name -> ai.v1.CampaignDebugEntry
-	87,  // 65: ai.v1.CampaignArtifact.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 66: ai.v1.CampaignArtifact.updated_at:type_name -> google.protobuf.Timestamp
-	54,  // 67: ai.v1.EnsureCampaignArtifactsResponse.artifacts:type_name -> ai.v1.CampaignArtifact
-	54,  // 68: ai.v1.ListCampaignArtifactsResponse.artifacts:type_name -> ai.v1.CampaignArtifact
-	54,  // 69: ai.v1.GetCampaignArtifactResponse.artifact:type_name -> ai.v1.CampaignArtifact
-	54,  // 70: ai.v1.UpsertCampaignArtifactResponse.artifact:type_name -> ai.v1.CampaignArtifact
-	64,  // 71: ai.v1.SearchSystemReferenceResponse.results:type_name -> ai.v1.SystemReferenceDocumentSummary
-	63,  // 72: ai.v1.ReadSystemReferenceDocumentResponse.document:type_name -> ai.v1.SystemReferenceDocument
-	0,   // 73: ai.v1.StartProviderConnectRequest.provider:type_name -> ai.v1.Provider
-	87,  // 74: ai.v1.StartProviderConnectResponse.expires_at:type_name -> google.protobuf.Timestamp
-	14,  // 75: ai.v1.FinishProviderConnectResponse.provider_grant:type_name -> ai.v1.ProviderGrant
-	0,   // 76: ai.v1.ListProviderGrantsRequest.provider:type_name -> ai.v1.Provider
-	5,   // 77: ai.v1.ListProviderGrantsRequest.status:type_name -> ai.v1.ProviderGrantStatus
-	14,  // 78: ai.v1.ListProviderGrantsResponse.provider_grants:type_name -> ai.v1.ProviderGrant
-	14,  // 79: ai.v1.RevokeProviderGrantResponse.provider_grant:type_name -> ai.v1.ProviderGrant
-	15,  // 80: ai.v1.CreateAccessRequestResponse.access_request:type_name -> ai.v1.AccessRequest
-	7,   // 81: ai.v1.ListAccessRequestsRequest.role:type_name -> ai.v1.AccessRequestRole
-	15,  // 82: ai.v1.ListAccessRequestsResponse.access_requests:type_name -> ai.v1.AccessRequest
-	87,  // 83: ai.v1.ListAuditEventsRequest.created_after:type_name -> google.protobuf.Timestamp
-	87,  // 84: ai.v1.ListAuditEventsRequest.created_before:type_name -> google.protobuf.Timestamp
-	16,  // 85: ai.v1.ListAuditEventsResponse.audit_events:type_name -> ai.v1.AuditEvent
-	8,   // 86: ai.v1.ReviewAccessRequestRequest.decision:type_name -> ai.v1.AccessRequestDecision
-	15,  // 87: ai.v1.ReviewAccessRequestResponse.access_request:type_name -> ai.v1.AccessRequest
-	15,  // 88: ai.v1.RevokeAccessRequestResponse.access_request:type_name -> ai.v1.AccessRequest
-	17,  // 89: ai.v1.CredentialService.CreateCredential:input_type -> ai.v1.CreateCredentialRequest
-	19,  // 90: ai.v1.CredentialService.ListCredentials:input_type -> ai.v1.ListCredentialsRequest
-	21,  // 91: ai.v1.CredentialService.RevokeCredential:input_type -> ai.v1.RevokeCredentialRequest
-	23,  // 92: ai.v1.AgentService.CreateAgent:input_type -> ai.v1.CreateAgentRequest
-	25,  // 93: ai.v1.AgentService.ListAgents:input_type -> ai.v1.ListAgentsRequest
-	27,  // 94: ai.v1.AgentService.ListProviderModels:input_type -> ai.v1.ListProviderModelsRequest
-	30,  // 95: ai.v1.AgentService.ListAccessibleAgents:input_type -> ai.v1.ListAccessibleAgentsRequest
-	32,  // 96: ai.v1.AgentService.GetAccessibleAgent:input_type -> ai.v1.GetAccessibleAgentRequest
-	34,  // 97: ai.v1.AgentService.ValidateCampaignAgentBinding:input_type -> ai.v1.ValidateCampaignAgentBindingRequest
-	36,  // 98: ai.v1.AgentService.UpdateAgent:input_type -> ai.v1.UpdateAgentRequest
-	38,  // 99: ai.v1.AgentService.DeleteAgent:input_type -> ai.v1.DeleteAgentRequest
-	41,  // 100: ai.v1.InvocationService.InvokeAgent:input_type -> ai.v1.InvokeAgentRequest
-	43,  // 101: ai.v1.CampaignOrchestrationService.RunCampaignTurn:input_type -> ai.v1.RunCampaignTurnRequest
-	48,  // 102: ai.v1.CampaignDebugService.ListCampaignDebugTurns:input_type -> ai.v1.ListCampaignDebugTurnsRequest
-	50,  // 103: ai.v1.CampaignDebugService.GetCampaignDebugTurn:input_type -> ai.v1.GetCampaignDebugTurnRequest
-	52,  // 104: ai.v1.CampaignDebugService.SubscribeCampaignDebugUpdates:input_type -> ai.v1.SubscribeCampaignDebugUpdatesRequest
-	55,  // 105: ai.v1.CampaignArtifactService.EnsureCampaignArtifacts:input_type -> ai.v1.EnsureCampaignArtifactsRequest
-	57,  // 106: ai.v1.CampaignArtifactService.ListCampaignArtifacts:input_type -> ai.v1.ListCampaignArtifactsRequest
-	59,  // 107: ai.v1.CampaignArtifactService.GetCampaignArtifact:input_type -> ai.v1.GetCampaignArtifactRequest
-	61,  // 108: ai.v1.CampaignArtifactService.UpsertCampaignArtifact:input_type -> ai.v1.UpsertCampaignArtifactRequest
-	65,  // 109: ai.v1.SystemReferenceService.SearchSystemReference:input_type -> ai.v1.SearchSystemReferenceRequest
-	67,  // 110: ai.v1.SystemReferenceService.ReadSystemReferenceDocument:input_type -> ai.v1.ReadSystemReferenceDocumentRequest
-	69,  // 111: ai.v1.ProviderGrantService.StartProviderConnect:input_type -> ai.v1.StartProviderConnectRequest
-	71,  // 112: ai.v1.ProviderGrantService.FinishProviderConnect:input_type -> ai.v1.FinishProviderConnectRequest
-	73,  // 113: ai.v1.ProviderGrantService.ListProviderGrants:input_type -> ai.v1.ListProviderGrantsRequest
-	75,  // 114: ai.v1.ProviderGrantService.RevokeProviderGrant:input_type -> ai.v1.RevokeProviderGrantRequest
-	77,  // 115: ai.v1.AccessRequestService.CreateAccessRequest:input_type -> ai.v1.CreateAccessRequestRequest
-	79,  // 116: ai.v1.AccessRequestService.ListAccessRequests:input_type -> ai.v1.ListAccessRequestsRequest
-	81,  // 117: ai.v1.AccessRequestService.ListAuditEvents:input_type -> ai.v1.ListAuditEventsRequest
-	83,  // 118: ai.v1.AccessRequestService.ReviewAccessRequest:input_type -> ai.v1.ReviewAccessRequestRequest
-	85,  // 119: ai.v1.AccessRequestService.RevokeAccessRequest:input_type -> ai.v1.RevokeAccessRequestRequest
-	18,  // 120: ai.v1.CredentialService.CreateCredential:output_type -> ai.v1.CreateCredentialResponse
-	20,  // 121: ai.v1.CredentialService.ListCredentials:output_type -> ai.v1.ListCredentialsResponse
-	22,  // 122: ai.v1.CredentialService.RevokeCredential:output_type -> ai.v1.RevokeCredentialResponse
-	24,  // 123: ai.v1.AgentService.CreateAgent:output_type -> ai.v1.CreateAgentResponse
-	26,  // 124: ai.v1.AgentService.ListAgents:output_type -> ai.v1.ListAgentsResponse
-	29,  // 125: ai.v1.AgentService.ListProviderModels:output_type -> ai.v1.ListProviderModelsResponse
-	31,  // 126: ai.v1.AgentService.ListAccessibleAgents:output_type -> ai.v1.ListAccessibleAgentsResponse
-	33,  // 127: ai.v1.AgentService.GetAccessibleAgent:output_type -> ai.v1.GetAccessibleAgentResponse
-	35,  // 128: ai.v1.AgentService.ValidateCampaignAgentBinding:output_type -> ai.v1.ValidateCampaignAgentBindingResponse
-	37,  // 129: ai.v1.AgentService.UpdateAgent:output_type -> ai.v1.UpdateAgentResponse
-	39,  // 130: ai.v1.AgentService.DeleteAgent:output_type -> ai.v1.DeleteAgentResponse
-	42,  // 131: ai.v1.InvocationService.InvokeAgent:output_type -> ai.v1.InvokeAgentResponse
-	44,  // 132: ai.v1.CampaignOrchestrationService.RunCampaignTurn:output_type -> ai.v1.RunCampaignTurnResponse
-	49,  // 133: ai.v1.CampaignDebugService.ListCampaignDebugTurns:output_type -> ai.v1.ListCampaignDebugTurnsResponse
-	51,  // 134: ai.v1.CampaignDebugService.GetCampaignDebugTurn:output_type -> ai.v1.GetCampaignDebugTurnResponse
-	53,  // 135: ai.v1.CampaignDebugService.SubscribeCampaignDebugUpdates:output_type -> ai.v1.CampaignDebugTurnUpdate
-	56,  // 136: ai.v1.CampaignArtifactService.EnsureCampaignArtifacts:output_type -> ai.v1.EnsureCampaignArtifactsResponse
-	58,  // 137: ai.v1.CampaignArtifactService.ListCampaignArtifacts:output_type -> ai.v1.ListCampaignArtifactsResponse
-	60,  // 138: ai.v1.CampaignArtifactService.GetCampaignArtifact:output_type -> ai.v1.GetCampaignArtifactResponse
-	62,  // 139: ai.v1.CampaignArtifactService.UpsertCampaignArtifact:output_type -> ai.v1.UpsertCampaignArtifactResponse
-	66,  // 140: ai.v1.SystemReferenceService.SearchSystemReference:output_type -> ai.v1.SearchSystemReferenceResponse
-	68,  // 141: ai.v1.SystemReferenceService.ReadSystemReferenceDocument:output_type -> ai.v1.ReadSystemReferenceDocumentResponse
-	70,  // 142: ai.v1.ProviderGrantService.StartProviderConnect:output_type -> ai.v1.StartProviderConnectResponse
-	72,  // 143: ai.v1.ProviderGrantService.FinishProviderConnect:output_type -> ai.v1.FinishProviderConnectResponse
-	74,  // 144: ai.v1.ProviderGrantService.ListProviderGrants:output_type -> ai.v1.ListProviderGrantsResponse
-	76,  // 145: ai.v1.ProviderGrantService.RevokeProviderGrant:output_type -> ai.v1.RevokeProviderGrantResponse
-	78,  // 146: ai.v1.AccessRequestService.CreateAccessRequest:output_type -> ai.v1.CreateAccessRequestResponse
-	80,  // 147: ai.v1.AccessRequestService.ListAccessRequests:output_type -> ai.v1.ListAccessRequestsResponse
-	82,  // 148: ai.v1.AccessRequestService.ListAuditEvents:output_type -> ai.v1.ListAuditEventsResponse
-	84,  // 149: ai.v1.AccessRequestService.ReviewAccessRequest:output_type -> ai.v1.ReviewAccessRequestResponse
-	86,  // 150: ai.v1.AccessRequestService.RevokeAccessRequest:output_type -> ai.v1.RevokeAccessRequestResponse
-	120, // [120:151] is the sub-list for method output_type
-	89,  // [89:120] is the sub-list for method input_type
-	89,  // [89:89] is the sub-list for extension type_name
-	89,  // [89:89] is the sub-list for extension extendee
-	0,   // [0:89] is the sub-list for field type_name
+	44,  // 43: ai.v1.PromptDiagnostics.context_policy:type_name -> ai.v1.PromptContextPolicy
+	45,  // 44: ai.v1.PromptDiagnostics.augmentation:type_name -> ai.v1.PromptAugmentationDiagnostics
+	0,   // 45: ai.v1.RunCampaignTurnResponse.provider:type_name -> ai.v1.Provider
+	40,  // 46: ai.v1.RunCampaignTurnResponse.usage:type_name -> ai.v1.Usage
+	46,  // 47: ai.v1.RunCampaignTurnResponse.prompt_diagnostics:type_name -> ai.v1.PromptDiagnostics
+	43,  // 48: ai.v1.RunCampaignTurnResponse.retrieved_contexts:type_name -> ai.v1.RetrievedContext
+	10,  // 49: ai.v1.CampaignDebugEntry.kind:type_name -> ai.v1.CampaignDebugEntryKind
+	91,  // 50: ai.v1.CampaignDebugEntry.created_at:type_name -> google.protobuf.Timestamp
+	40,  // 51: ai.v1.CampaignDebugEntry.usage:type_name -> ai.v1.Usage
+	0,   // 52: ai.v1.CampaignDebugTurn.provider:type_name -> ai.v1.Provider
+	9,   // 53: ai.v1.CampaignDebugTurn.status:type_name -> ai.v1.CampaignDebugTurnStatus
+	40,  // 54: ai.v1.CampaignDebugTurn.usage:type_name -> ai.v1.Usage
+	91,  // 55: ai.v1.CampaignDebugTurn.started_at:type_name -> google.protobuf.Timestamp
+	91,  // 56: ai.v1.CampaignDebugTurn.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 57: ai.v1.CampaignDebugTurn.completed_at:type_name -> google.protobuf.Timestamp
+	49,  // 58: ai.v1.CampaignDebugTurn.entries:type_name -> ai.v1.CampaignDebugEntry
+	0,   // 59: ai.v1.CampaignDebugTurnSummary.provider:type_name -> ai.v1.Provider
+	9,   // 60: ai.v1.CampaignDebugTurnSummary.status:type_name -> ai.v1.CampaignDebugTurnStatus
+	40,  // 61: ai.v1.CampaignDebugTurnSummary.usage:type_name -> ai.v1.Usage
+	91,  // 62: ai.v1.CampaignDebugTurnSummary.started_at:type_name -> google.protobuf.Timestamp
+	91,  // 63: ai.v1.CampaignDebugTurnSummary.updated_at:type_name -> google.protobuf.Timestamp
+	91,  // 64: ai.v1.CampaignDebugTurnSummary.completed_at:type_name -> google.protobuf.Timestamp
+	51,  // 65: ai.v1.ListCampaignDebugTurnsResponse.turns:type_name -> ai.v1.CampaignDebugTurnSummary
+	50,  // 66: ai.v1.GetCampaignDebugTurnResponse.turn:type_name -> ai.v1.CampaignDebugTurn
+	51,  // 67: ai.v1.CampaignDebugTurnUpdate.turn:type_name -> ai.v1.CampaignDebugTurnSummary
+	49,  // 68: ai.v1.CampaignDebugTurnUpdate.appended_entries:type_name -> ai.v1.CampaignDebugEntry
+	91,  // 69: ai.v1.CampaignArtifact.created_at:type_name -> google.protobuf.Timestamp
+	91,  // 70: ai.v1.CampaignArtifact.updated_at:type_name -> google.protobuf.Timestamp
+	58,  // 71: ai.v1.EnsureCampaignArtifactsResponse.artifacts:type_name -> ai.v1.CampaignArtifact
+	58,  // 72: ai.v1.ListCampaignArtifactsResponse.artifacts:type_name -> ai.v1.CampaignArtifact
+	58,  // 73: ai.v1.GetCampaignArtifactResponse.artifact:type_name -> ai.v1.CampaignArtifact
+	58,  // 74: ai.v1.UpsertCampaignArtifactResponse.artifact:type_name -> ai.v1.CampaignArtifact
+	68,  // 75: ai.v1.SearchSystemReferenceResponse.results:type_name -> ai.v1.SystemReferenceDocumentSummary
+	67,  // 76: ai.v1.ReadSystemReferenceDocumentResponse.document:type_name -> ai.v1.SystemReferenceDocument
+	0,   // 77: ai.v1.StartProviderConnectRequest.provider:type_name -> ai.v1.Provider
+	91,  // 78: ai.v1.StartProviderConnectResponse.expires_at:type_name -> google.protobuf.Timestamp
+	14,  // 79: ai.v1.FinishProviderConnectResponse.provider_grant:type_name -> ai.v1.ProviderGrant
+	0,   // 80: ai.v1.ListProviderGrantsRequest.provider:type_name -> ai.v1.Provider
+	5,   // 81: ai.v1.ListProviderGrantsRequest.status:type_name -> ai.v1.ProviderGrantStatus
+	14,  // 82: ai.v1.ListProviderGrantsResponse.provider_grants:type_name -> ai.v1.ProviderGrant
+	14,  // 83: ai.v1.RevokeProviderGrantResponse.provider_grant:type_name -> ai.v1.ProviderGrant
+	15,  // 84: ai.v1.CreateAccessRequestResponse.access_request:type_name -> ai.v1.AccessRequest
+	7,   // 85: ai.v1.ListAccessRequestsRequest.role:type_name -> ai.v1.AccessRequestRole
+	15,  // 86: ai.v1.ListAccessRequestsResponse.access_requests:type_name -> ai.v1.AccessRequest
+	91,  // 87: ai.v1.ListAuditEventsRequest.created_after:type_name -> google.protobuf.Timestamp
+	91,  // 88: ai.v1.ListAuditEventsRequest.created_before:type_name -> google.protobuf.Timestamp
+	16,  // 89: ai.v1.ListAuditEventsResponse.audit_events:type_name -> ai.v1.AuditEvent
+	8,   // 90: ai.v1.ReviewAccessRequestRequest.decision:type_name -> ai.v1.AccessRequestDecision
+	15,  // 91: ai.v1.ReviewAccessRequestResponse.access_request:type_name -> ai.v1.AccessRequest
+	15,  // 92: ai.v1.RevokeAccessRequestResponse.access_request:type_name -> ai.v1.AccessRequest
+	17,  // 93: ai.v1.CredentialService.CreateCredential:input_type -> ai.v1.CreateCredentialRequest
+	19,  // 94: ai.v1.CredentialService.ListCredentials:input_type -> ai.v1.ListCredentialsRequest
+	21,  // 95: ai.v1.CredentialService.RevokeCredential:input_type -> ai.v1.RevokeCredentialRequest
+	23,  // 96: ai.v1.AgentService.CreateAgent:input_type -> ai.v1.CreateAgentRequest
+	25,  // 97: ai.v1.AgentService.ListAgents:input_type -> ai.v1.ListAgentsRequest
+	27,  // 98: ai.v1.AgentService.ListProviderModels:input_type -> ai.v1.ListProviderModelsRequest
+	30,  // 99: ai.v1.AgentService.ListAccessibleAgents:input_type -> ai.v1.ListAccessibleAgentsRequest
+	32,  // 100: ai.v1.AgentService.GetAccessibleAgent:input_type -> ai.v1.GetAccessibleAgentRequest
+	34,  // 101: ai.v1.AgentService.ValidateCampaignAgentBinding:input_type -> ai.v1.ValidateCampaignAgentBindingRequest
+	36,  // 102: ai.v1.AgentService.UpdateAgent:input_type -> ai.v1.UpdateAgentRequest
+	38,  // 103: ai.v1.AgentService.DeleteAgent:input_type -> ai.v1.DeleteAgentRequest
+	41,  // 104: ai.v1.InvocationService.InvokeAgent:input_type -> ai.v1.InvokeAgentRequest
+	47,  // 105: ai.v1.CampaignOrchestrationService.RunCampaignTurn:input_type -> ai.v1.RunCampaignTurnRequest
+	52,  // 106: ai.v1.CampaignDebugService.ListCampaignDebugTurns:input_type -> ai.v1.ListCampaignDebugTurnsRequest
+	54,  // 107: ai.v1.CampaignDebugService.GetCampaignDebugTurn:input_type -> ai.v1.GetCampaignDebugTurnRequest
+	56,  // 108: ai.v1.CampaignDebugService.SubscribeCampaignDebugUpdates:input_type -> ai.v1.SubscribeCampaignDebugUpdatesRequest
+	59,  // 109: ai.v1.CampaignArtifactService.EnsureCampaignArtifacts:input_type -> ai.v1.EnsureCampaignArtifactsRequest
+	61,  // 110: ai.v1.CampaignArtifactService.ListCampaignArtifacts:input_type -> ai.v1.ListCampaignArtifactsRequest
+	63,  // 111: ai.v1.CampaignArtifactService.GetCampaignArtifact:input_type -> ai.v1.GetCampaignArtifactRequest
+	65,  // 112: ai.v1.CampaignArtifactService.UpsertCampaignArtifact:input_type -> ai.v1.UpsertCampaignArtifactRequest
+	69,  // 113: ai.v1.SystemReferenceService.SearchSystemReference:input_type -> ai.v1.SearchSystemReferenceRequest
+	71,  // 114: ai.v1.SystemReferenceService.ReadSystemReferenceDocument:input_type -> ai.v1.ReadSystemReferenceDocumentRequest
+	73,  // 115: ai.v1.ProviderGrantService.StartProviderConnect:input_type -> ai.v1.StartProviderConnectRequest
+	75,  // 116: ai.v1.ProviderGrantService.FinishProviderConnect:input_type -> ai.v1.FinishProviderConnectRequest
+	77,  // 117: ai.v1.ProviderGrantService.ListProviderGrants:input_type -> ai.v1.ListProviderGrantsRequest
+	79,  // 118: ai.v1.ProviderGrantService.RevokeProviderGrant:input_type -> ai.v1.RevokeProviderGrantRequest
+	81,  // 119: ai.v1.AccessRequestService.CreateAccessRequest:input_type -> ai.v1.CreateAccessRequestRequest
+	83,  // 120: ai.v1.AccessRequestService.ListAccessRequests:input_type -> ai.v1.ListAccessRequestsRequest
+	85,  // 121: ai.v1.AccessRequestService.ListAuditEvents:input_type -> ai.v1.ListAuditEventsRequest
+	87,  // 122: ai.v1.AccessRequestService.ReviewAccessRequest:input_type -> ai.v1.ReviewAccessRequestRequest
+	89,  // 123: ai.v1.AccessRequestService.RevokeAccessRequest:input_type -> ai.v1.RevokeAccessRequestRequest
+	18,  // 124: ai.v1.CredentialService.CreateCredential:output_type -> ai.v1.CreateCredentialResponse
+	20,  // 125: ai.v1.CredentialService.ListCredentials:output_type -> ai.v1.ListCredentialsResponse
+	22,  // 126: ai.v1.CredentialService.RevokeCredential:output_type -> ai.v1.RevokeCredentialResponse
+	24,  // 127: ai.v1.AgentService.CreateAgent:output_type -> ai.v1.CreateAgentResponse
+	26,  // 128: ai.v1.AgentService.ListAgents:output_type -> ai.v1.ListAgentsResponse
+	29,  // 129: ai.v1.AgentService.ListProviderModels:output_type -> ai.v1.ListProviderModelsResponse
+	31,  // 130: ai.v1.AgentService.ListAccessibleAgents:output_type -> ai.v1.ListAccessibleAgentsResponse
+	33,  // 131: ai.v1.AgentService.GetAccessibleAgent:output_type -> ai.v1.GetAccessibleAgentResponse
+	35,  // 132: ai.v1.AgentService.ValidateCampaignAgentBinding:output_type -> ai.v1.ValidateCampaignAgentBindingResponse
+	37,  // 133: ai.v1.AgentService.UpdateAgent:output_type -> ai.v1.UpdateAgentResponse
+	39,  // 134: ai.v1.AgentService.DeleteAgent:output_type -> ai.v1.DeleteAgentResponse
+	42,  // 135: ai.v1.InvocationService.InvokeAgent:output_type -> ai.v1.InvokeAgentResponse
+	48,  // 136: ai.v1.CampaignOrchestrationService.RunCampaignTurn:output_type -> ai.v1.RunCampaignTurnResponse
+	53,  // 137: ai.v1.CampaignDebugService.ListCampaignDebugTurns:output_type -> ai.v1.ListCampaignDebugTurnsResponse
+	55,  // 138: ai.v1.CampaignDebugService.GetCampaignDebugTurn:output_type -> ai.v1.GetCampaignDebugTurnResponse
+	57,  // 139: ai.v1.CampaignDebugService.SubscribeCampaignDebugUpdates:output_type -> ai.v1.CampaignDebugTurnUpdate
+	60,  // 140: ai.v1.CampaignArtifactService.EnsureCampaignArtifacts:output_type -> ai.v1.EnsureCampaignArtifactsResponse
+	62,  // 141: ai.v1.CampaignArtifactService.ListCampaignArtifacts:output_type -> ai.v1.ListCampaignArtifactsResponse
+	64,  // 142: ai.v1.CampaignArtifactService.GetCampaignArtifact:output_type -> ai.v1.GetCampaignArtifactResponse
+	66,  // 143: ai.v1.CampaignArtifactService.UpsertCampaignArtifact:output_type -> ai.v1.UpsertCampaignArtifactResponse
+	70,  // 144: ai.v1.SystemReferenceService.SearchSystemReference:output_type -> ai.v1.SearchSystemReferenceResponse
+	72,  // 145: ai.v1.SystemReferenceService.ReadSystemReferenceDocument:output_type -> ai.v1.ReadSystemReferenceDocumentResponse
+	74,  // 146: ai.v1.ProviderGrantService.StartProviderConnect:output_type -> ai.v1.StartProviderConnectResponse
+	76,  // 147: ai.v1.ProviderGrantService.FinishProviderConnect:output_type -> ai.v1.FinishProviderConnectResponse
+	78,  // 148: ai.v1.ProviderGrantService.ListProviderGrants:output_type -> ai.v1.ListProviderGrantsResponse
+	80,  // 149: ai.v1.ProviderGrantService.RevokeProviderGrant:output_type -> ai.v1.RevokeProviderGrantResponse
+	82,  // 150: ai.v1.AccessRequestService.CreateAccessRequest:output_type -> ai.v1.CreateAccessRequestResponse
+	84,  // 151: ai.v1.AccessRequestService.ListAccessRequests:output_type -> ai.v1.ListAccessRequestsResponse
+	86,  // 152: ai.v1.AccessRequestService.ListAuditEvents:output_type -> ai.v1.ListAuditEventsResponse
+	88,  // 153: ai.v1.AccessRequestService.ReviewAccessRequest:output_type -> ai.v1.ReviewAccessRequestResponse
+	90,  // 154: ai.v1.AccessRequestService.RevokeAccessRequest:output_type -> ai.v1.RevokeAccessRequestResponse
+	124, // [124:155] is the sub-list for method output_type
+	93,  // [93:124] is the sub-list for method input_type
+	93,  // [93:93] is the sub-list for extension type_name
+	93,  // [93:93] is the sub-list for extension extendee
+	0,   // [0:93] is the sub-list for field type_name
 }
 
 func init() { file_ai_v1_service_proto_init() }
@@ -6630,7 +7020,7 @@ func file_ai_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ai_v1_service_proto_rawDesc), len(file_ai_v1_service_proto_rawDesc)),
 			NumEnums:      11,
-			NumMessages:   76,
+			NumMessages:   80,
 			NumExtensions: 0,
 			NumServices:   9,
 		},
