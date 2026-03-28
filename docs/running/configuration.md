@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-27"
 ---
 
 # Configuration
@@ -60,6 +60,8 @@ their baseline schemas and do not upgrade historical local DB files.
 - `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8087`.
 - `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
 - `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
+- `FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT`: optional filesystem root for the Daggerheart reference corpus. When set, `ai` loads the reference index from this path.
+- `FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT`: optional override for campaign AI instruction files. Intended for evaluation and development workflows.
 - `FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER`: issuer claim used by game to sign and AI to validate campaign AI session grants.
 - `FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE`: audience claim used by game to sign and AI to validate campaign AI session grants.
 - `FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY`: base64 HMAC key for campaign AI session grant signing/verification (must decode to at least 32 bytes).
@@ -67,6 +69,16 @@ their baseline schemas and do not upgrade historical local DB files.
 - `FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT`: overall timeout for one campaign AI orchestration run. Default: `2m`.
 - `FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS`: max provider/tool loop steps for one campaign AI turn. Default: `8`.
 - `FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES`: max bytes from one tool result fed back into the provider loop before truncation. Default: `32768`.
+- `FRACTURING_SPACE_AI_OPENVIKING_BASE_URL`: optional OpenViking sidecar base URL. When unset, OpenViking augmentation is disabled.
+- `FRACTURING_SPACE_AI_OPENVIKING_MODE`: OpenViking prompt augmentation mode. Default: `legacy`.
+- `FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED`: enable post-turn OpenViking session sync. Default: `true`.
+- `FRACTURING_SPACE_AI_OPENVIKING_API_KEY`: optional API key included on outbound OpenViking requests when the sidecar requires it.
+- `FRACTURING_SPACE_AI_OPENVIKING_TIMEOUT`: HTTP timeout for OpenViking requests. Default: `15s`.
+- `FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT`: host-visible root used by the AI service when mirroring campaign resources into OpenViking.
+- `FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT`: path OpenViking itself sees for mirrored campaign resources.
+- `FRACTURING_SPACE_AI_OPENVIKING_MAX_RESULTS`: max OpenViking retrieval results consumed for one turn. Default: `4`.
+- `FRACTURING_SPACE_AI_OPENVIKING_MAX_SECTIONS`: max distinct rendered retrieval sections included in one prompt. Default: `2`.
+- `FRACTURING_SPACE_AI_OPENVIKING_RESOURCE_SYNC_TIMEOUT`: timeout for one mirrored resource ingest. Default: `2s`.
 
 ### Notifications
 
@@ -149,6 +161,7 @@ login surface from a different origin.
 - `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server. Default: `auth:8083`.
 - `FRACTURING_SPACE_NOTIFICATIONS_ADDR`: notifications gRPC address used by the web login server. Default: `notifications:8088`.
 - `FRACTURING_SPACE_WEB_DIAL_TIMEOUT`: gRPC dial timeout for the web login server. Default: `2s`.
+- `FRACTURING_SPACE_WEB_TRUST_FORWARDED_PROTO`: trust `X-Forwarded-Proto` when resolving external scheme for redirects and cookies. Default: `false`.
 - `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`: first-party OAuth client ID used by the web server. Default: `fracturing-space`.
 - `FRACTURING_SPACE_WEB_CALLBACK_URL`: public OAuth callback URL (e.g., `http://localhost:8080/auth/callback`).
 - `FRACTURING_SPACE_WEB_AUTH_TOKEN_URL`: internal auth token endpoint for server-to-server code exchange. Defaults to `{AuthBaseURL}/token`.
@@ -183,6 +196,12 @@ Compose note:
 - `FRACTURING_SPACE_IMAGE_REGISTRY`: container registry host. Default: `ghcr.io`.
 - `FRACTURING_SPACE_IMAGE_NAMESPACE`: container namespace/org. Default: `fracturing-space`.
 - `FRACTURING_SPACE_IMAGE_TAG`: image tag used in Compose. Default: `dev`.
+
+### Production Compose only
+
+- `FRACTURING_SPACE_DAGGERHEART_REFERENCE_IMAGE`: image reference used by `daggerheart-reference-init` to seed the Daggerheart corpus volume. The image must expose the corpus under `/reference-src` with `index.json` at the root, and it must include `sh` plus `cp` because the seed container copies that tree into the shared volume at startup.
+- `FRACTURING_SPACE_OPENVIKING_OPENAI_API_KEY`: OpenAI API key rendered into the production `openviking-sidecar` config.
+- `FRACTURING_SPACE_JAEGER_BASIC_AUTH`: full Caddy directive interpolated into the public Jaeger site block (for example `basic_auth { ops <hash> }`).
 
 ## Admin Dashboard Configuration
 

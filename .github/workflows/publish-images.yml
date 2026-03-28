@@ -1,0 +1,74 @@
+name: Publish Images
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to publish"
+        required: true
+        type: string
+      image_registry:
+        description: "Container registry host"
+        required: false
+        default: "ghcr.io"
+        type: string
+      image_namespace:
+        description: "Container namespace"
+        required: false
+        default: "fracturing-space"
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Derive publish parameters
+        id: params
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            image_tag="${{ inputs.image_tag }}"
+            image_registry="${{ inputs.image_registry }}"
+            image_namespace="${{ inputs.image_namespace }}"
+          else
+            image_tag="${GITHUB_REF_NAME}"
+            image_registry="ghcr.io"
+            image_namespace="fracturing-space"
+          fi
+
+          if [ -z "${image_tag}" ]; then
+            echo "image tag must be set"
+            exit 1
+          fi
+
+          echo "image_tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+          echo "image_registry=${image_registry}" >> "${GITHUB_OUTPUT}"
+          echo "image_namespace=${image_namespace}" >> "${GITHUB_OUTPUT}"
+
+      - name: Log in to GHCR
+        if: steps.params.outputs.image_registry == 'ghcr.io'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish runtime images
+        env:
+          IMAGE_TAG: ${{ steps.params.outputs.image_tag }}
+          REGISTRY: ${{ steps.params.outputs.image_registry }}
+          NAMESPACE: ${{ steps.params.outputs.image_namespace }}
+        run: docker buildx bake --push

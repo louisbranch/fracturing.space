@@ -60,8 +60,8 @@ async page => {
 
   const signInLink = page.getByRole("link", { name: "Sign in" });
   const href = await signInLink.getAttribute("href");
-  if (href !== "/auth/login") {
-    throw new Error("Expected Sign in href to be /auth/login, got: " + href);
+  if (href !== "/login") {
+    throw new Error("Expected Sign in href to be /login, got: " + href);
   }
 
   console.log("Landing page OK");

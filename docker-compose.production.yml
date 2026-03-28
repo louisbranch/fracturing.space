@@ -1,0 +1,383 @@
+name: fracturing-space
+services:
+  init-data:
+    image: busybox:1.36
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /data /openviking-data && chown -R 65532:65532 /data /openviking-data",
+      ]
+    volumes:
+      - fracturing-space-data:/data
+      - openviking-data:/openviking-data
+
+  daggerheart-reference-init:
+    image: "${FRACTURING_SPACE_DAGGERHEART_REFERENCE_IMAGE?FRACTURING_SPACE_DAGGERHEART_REFERENCE_IMAGE must be set}"
+    command:
+      ["sh", "-c", "rm -rf /reference/* && cp -a /reference-src/. /reference/"]
+    volumes:
+      - daggerheart-reference:/reference
+
+  game:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/game:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_GAME_PORT: 8082
+      FRACTURING_SPACE_GAME_EVENTS_DB_PATH: /data/game-events.db
+      FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH: /data/game-projections.db
+      FRACTURING_SPACE_GAME_CONTENT_DB_PATH: /data/game-content.db
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: "${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY?FRACTURING_SPACE_GAME_EVENT_HMAC_KEY must be set}"
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS:-}
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID:-v1}
+      FRACTURING_SPACE_JOIN_GRANT_ISSUER: ${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}
+      FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
+      FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY: "${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY?FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY must be set}"
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  auth:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/auth:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_AUTH_DB_PATH: /data/auth.db
+      FRACTURING_SPACE_AUTH_HTTP_ADDR: 0.0.0.0:8084
+      FRACTURING_SPACE_AUTH_PORT: 8083
+      FRACTURING_SPACE_OAUTH_ISSUER: "https://auth.${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}"
+      FRACTURING_SPACE_OAUTH_LOGIN_UI_URL: "https://${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}/login"
+      FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS: "https://${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}/login"
+      FRACTURING_SPACE_OAUTH_CLIENTS: ${FRACTURING_SPACE_OAUTH_CLIENTS:-}
+      FRACTURING_SPACE_OAUTH_RESOURCE_SECRET: "${FRACTURING_SPACE_OAUTH_RESOURCE_SECRET?FRACTURING_SPACE_OAUTH_RESOURCE_SECRET must be set}"
+      FRACTURING_SPACE_JOIN_GRANT_ISSUER: ${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}
+      FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
+      FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY: "${FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY?FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY must be set}"
+      FRACTURING_SPACE_JOIN_GRANT_TTL: ${FRACTURING_SPACE_JOIN_GRANT_TTL:-5m}
+      FRACTURING_SPACE_WEBAUTHN_RP_ID: "${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}"
+      FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS: "https://${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}"
+      FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID: fracturing-space
+      FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI: "https://${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}/auth/callback"
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  social:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/social:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_SOCIAL_PORT: 8090
+      FRACTURING_SPACE_SOCIAL_DB_PATH: /data/social.db
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  discovery:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/discovery:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_DISCOVERY_PORT: 8091
+      FRACTURING_SPACE_DISCOVERY_DB_PATH: /data/discovery.db
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  openviking:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/openviking-sidecar:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    environment:
+      FRACTURING_SPACE_OPENVIKING_OPENAI_API_KEY: "${FRACTURING_SPACE_OPENVIKING_OPENAI_API_KEY?FRACTURING_SPACE_OPENVIKING_OPENAI_API_KEY must be set}"
+    volumes:
+      - openviking-data:/app/data
+    networks:
+      - internal
+      - edge
+    restart: unless-stopped
+
+  ai:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/ai:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+      daggerheart-reference-init:
+        condition: service_completed_successfully
+      openviking:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_AI_PORT: 8087
+      FRACTURING_SPACE_AI_DB_PATH: /data/ai.db
+      FRACTURING_SPACE_AI_ENCRYPTION_KEY: "${FRACTURING_SPACE_AI_ENCRYPTION_KEY?FRACTURING_SPACE_AI_ENCRYPTION_KEY must be set}"
+      FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT: /reference
+      FRACTURING_SPACE_AI_OPENVIKING_BASE_URL: http://openviking:1934
+      FRACTURING_SPACE_AI_OPENVIKING_MODE: legacy
+      FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED: "true"
+      FRACTURING_SPACE_AI_OPENVIKING_TIMEOUT: 15s
+      FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT: /openviking-data/fracturing-space
+      FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT: /app/data/fracturing-space
+      FRACTURING_SPACE_AI_OPENVIKING_MAX_RESULTS: 4
+      FRACTURING_SPACE_AI_OPENVIKING_MAX_SECTIONS: 2
+      FRACTURING_SPACE_AI_OPENVIKING_RESOURCE_SYNC_TIMEOUT: 2s
+      FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY: "${FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY?FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY must be set}"
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+      - openviking-data:/openviking-data
+      - daggerheart-reference:/reference:ro
+    networks:
+      - internal
+    restart: unless-stopped
+
+  notifications:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/notifications:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_NOTIFICATIONS_PORT: 8088
+      FRACTURING_SPACE_NOTIFICATIONS_DB_PATH: /data/notifications.db
+      FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_ENABLED: ${FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_ENABLED:-}
+      FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_ENABLED: ${FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_ENABLED:-}
+      FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL: ${FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL:-5s}
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  worker:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/worker:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      social:
+        condition: service_started
+      notifications:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_WORKER_PORT: 8089
+      FRACTURING_SPACE_WORKER_INVITE_ADDR: invite:8095
+      FRACTURING_SPACE_WORKER_SOCIAL_ADDR: social:8090
+      FRACTURING_SPACE_WORKER_DB_PATH: /data/worker.db
+      FRACTURING_SPACE_WORKER_CONSUMER: ${FRACTURING_SPACE_WORKER_CONSUMER:-worker-onboarding}
+      FRACTURING_SPACE_WORKER_POLL_INTERVAL: ${FRACTURING_SPACE_WORKER_POLL_INTERVAL:-2s}
+      FRACTURING_SPACE_WORKER_LEASE_TTL: ${FRACTURING_SPACE_WORKER_LEASE_TTL:-30s}
+      FRACTURING_SPACE_WORKER_MAX_ATTEMPTS: ${FRACTURING_SPACE_WORKER_MAX_ATTEMPTS:-8}
+      FRACTURING_SPACE_WORKER_RETRY_BACKOFF: ${FRACTURING_SPACE_WORKER_RETRY_BACKOFF:-5s}
+      FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY: ${FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY:-5m}
+      FRACTURING_SPACE_STATUS_ADDR: status:8093
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  status:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/status:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_STATUS_PORT: 8093
+      FRACTURING_SPACE_STATUS_DB_PATH: /data/status.db
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  invite:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/invite:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+      game:
+        condition: service_started
+      auth:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_INVITE_PORT: 8095
+      FRACTURING_SPACE_INVITE_DB_PATH: /data/invite.db
+      FRACTURING_SPACE_INVITE_GAME_ADDR: game:8082
+      FRACTURING_SPACE_INVITE_AUTH_ADDR: auth:8083
+      FRACTURING_SPACE_JOIN_GRANT_ISSUER: ${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}
+      FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
+      FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY: "${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY?FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY must be set}"
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  userhub:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/userhub:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      game:
+        condition: service_started
+      invite:
+        condition: service_started
+      social:
+        condition: service_started
+      notifications:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_USERHUB_PORT: 8092
+      FRACTURING_SPACE_USERHUB_GAME_ADDR: game:8082
+      FRACTURING_SPACE_USERHUB_INVITE_ADDR: invite:8095
+      FRACTURING_SPACE_USERHUB_SOCIAL_ADDR: social:8090
+      FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR: notifications:8088
+      FRACTURING_SPACE_USERHUB_STATUS_ADDR: status:8093
+      FRACTURING_SPACE_USERHUB_DIAL_TIMEOUT: ${FRACTURING_SPACE_USERHUB_DIAL_TIMEOUT:-2s}
+      FRACTURING_SPACE_USERHUB_CACHE_FRESH_TTL: ${FRACTURING_SPACE_USERHUB_CACHE_FRESH_TTL:-15s}
+      FRACTURING_SPACE_USERHUB_CACHE_STALE_TTL: ${FRACTURING_SPACE_USERHUB_CACHE_STALE_TTL:-2m}
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    networks:
+      - internal
+    restart: unless-stopped
+
+  admin:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/admin:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      - game
+      - auth
+    environment:
+      FRACTURING_SPACE_ADMIN_ADDR: 0.0.0.0:8081
+      FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL: http://auth:8084/introspect
+      FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET: "${FRACTURING_SPACE_OAUTH_RESOURCE_SECRET?FRACTURING_SPACE_OAUTH_RESOURCE_SECRET must be set}"
+      FRACTURING_SPACE_ADMIN_LOGIN_URL: "https://${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}/login"
+      FRACTURING_SPACE_STATUS_ADDR: status:8093
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    networks:
+      - internal
+    restart: unless-stopped
+
+  web:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/web:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      - auth
+      - social
+      - game
+      - invite
+      - ai
+      - notifications
+    environment:
+      FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8080
+      FRACTURING_SPACE_WEB_TRUST_FORWARDED_PROTO: "true"
+      FRACTURING_SPACE_WEB_AUTH_BASE_URL: "https://auth.${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}"
+      FRACTURING_SPACE_SOCIAL_ADDR: social:8090
+      FRACTURING_SPACE_INVITE_ADDR: invite:8095
+      FRACTURING_SPACE_NOTIFICATIONS_ADDR: notifications:8088
+      FRACTURING_SPACE_STATUS_ADDR: status:8093
+      FRACTURING_SPACE_WEB_DIAL_TIMEOUT: ${FRACTURING_SPACE_WEB_DIAL_TIMEOUT:-2s}
+      FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: fracturing-space
+      FRACTURING_SPACE_WEB_CALLBACK_URL: "https://${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}/auth/callback"
+      FRACTURING_SPACE_WEB_AUTH_TOKEN_URL: http://auth:8084/token
+      FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY: "${FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY?FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY must be set}"
+      FRACTURING_SPACE_ASSET_BASE_URL: ${FRACTURING_SPACE_ASSET_BASE_URL:-https://res.cloudinary.com/fracturing-space/image/upload}
+      FRACTURING_SPACE_ASSET_VERSION: ${FRACTURING_SPACE_ASSET_VERSION:-v1}
+      FRACTURING_SPACE_DOMAIN: "${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}"
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    networks:
+      - internal
+    restart: unless-stopped
+
+  play:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/play:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      - auth
+      - game
+    environment:
+      FRACTURING_SPACE_PLAY_HTTP_ADDR: 0.0.0.0:8094
+      FRACTURING_SPACE_PLAY_DB_PATH: /data/play.db
+      FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY: "${FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY?FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY must be set}"
+      FRACTURING_SPACE_PLAY_TRUST_FORWARDED_PROTO: "true"
+      FRACTURING_SPACE_STATUS_ADDR: status:8093
+      FRACTURING_SPACE_OTEL_ENDPOINT: http://jaeger:4318
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  caddy:
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/caddy:${FRACTURING_SPACE_IMAGE_TAG?FRACTURING_SPACE_IMAGE_TAG must be set}"
+    pull_policy: always
+    depends_on:
+      - web
+      - play
+      - auth
+      - admin
+      - jaeger
+    environment:
+      FRACTURING_SPACE_DOMAIN: "${FRACTURING_SPACE_DOMAIN?FRACTURING_SPACE_DOMAIN must be set}"
+      FRACTURING_SPACE_CADDY_AUTO_HTTPS: "on"
+      FRACTURING_SPACE_CADDY_EMAIL: ${FRACTURING_SPACE_CADDY_EMAIL:-}
+      FRACTURING_SPACE_CADDY_SITE_PREFIX: ""
+      FRACTURING_SPACE_JAEGER_BASIC_AUTH: "${FRACTURING_SPACE_JAEGER_BASIC_AUTH?FRACTURING_SPACE_JAEGER_BASIC_AUTH must be set}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - internal
+      - edge
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/jaeger:2.15.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - internal
+    restart: unless-stopped
+
+volumes:
+  fracturing-space-data:
+  openviking-data:
+  daggerheart-reference:
+  caddy-data:
+  caddy-config:
+
+networks:
+  edge:
+  internal:
+    internal: true

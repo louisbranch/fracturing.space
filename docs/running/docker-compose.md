@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-24"
+last_reviewed: "2026-03-27"
 ---
 
 # Docker Compose (Local)
@@ -57,6 +57,11 @@ Key settings:
 See [configuration](configuration.md) for the full list.
 
 For production, see [production](production.md).
+
+Production does not reuse the local Compose topology file. Remote deployment
+uses [`docker-compose.production.yml`](../../docker-compose.production.yml),
+which is image-only and relies on named volumes plus fixed container paths
+instead of local bind mounts.
 
 ## Optional OpenViking Sidecar
 
@@ -123,6 +128,10 @@ reachable even though upstream OpenViking defaults to listening on
 places OpenViking on the non-internal `edge` network so it can reach OpenAI for
 embedding and VLM calls while still sharing the internal network with the AI
 service.
+
+This host-path setup is local-only. The production deployment path replaces it
+with a repo-owned `openviking-sidecar` image plus named volumes so the remote
+server does not need `~/.openviking` or any checkout-relative mount layout.
 
 ## Tools
 
