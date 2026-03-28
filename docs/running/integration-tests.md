@@ -224,9 +224,10 @@ Behavior:
 
 - Raw live provider captures are always written under `.tmp/ai-live-captures/`
   for local inspection.
-- Each successful live capture also writes a sibling `.summary.json` file with
-  scenario, model, result class, tool names, tool-error count, reference-search
-  counts, token usage, and the related raw/markdown artifact names.
+- Each live capture, including failed runs that reached the execution path,
+  writes sibling `.summary.json` and `.diagnostics.json` artifacts with the
+  structured failure summary, quality-metric status, tool/reference counts,
+  token usage, and the related raw/markdown artifact names.
 - The committed replay fixture is updated only when
   `INTEGRATION_AI_WRITE_FIXTURE=1` is set.
 - Failed live runs do not overwrite the committed fixture.
@@ -234,6 +235,112 @@ Behavior:
 For the current checked-in Daggerheart mechanics comparison table built from
 those summaries, see
 [daggerheart-live-mechanics-matrix.md](../reference/daggerheart-live-mechanics-matrix.md).
+
+## Promptfoo evaluation lane
+
+Promptfoo now has a non-gating phase-2 evaluation lane for comparing live AI GM behavior
+across models and instruction profiles without replacing the repo-owned Go
+orchestration harness.
+
+Run the fast core comparison with:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... make ai-eval-promptfoo-core
+```
+
+Run the deeper decision matrix with:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... make ai-eval-promptfoo-decision
+```
+
+To inspect recent Promptfoo runs in the local web UI:
+
+```sh
+make ai-eval-promptfoo-view
+```
+
+If the default Promptfoo viewer port is already occupied, choose another one:
+
+```sh
+make ai-eval-promptfoo-view PROMPTFOO_VIEW_PORT=15501 PROMPTFOO_VIEW_ARGS="--no"
+```
+
+Notes:
+
+- This evaluation lane is **not** part of `make check`.
+- It uses the live AI capture lane through `cmd/aieval`, then emits
+  Promptfoo-friendly JSON for matrix comparison and report generation.
+- `make ai-eval-promptfoo-core` runs the default `core` scenario set once per
+  case for quick engineering iteration.
+- `make ai-eval-promptfoo-decision` runs the same `core` set with three repeats
+  per case for model or prompt-profile comparison.
+- The `core` set focuses on mechanics-fidelity scenarios such as Hope spend +
+  experience use, stance capability checks, narrator authority, and subdue
+  intent. The `extended` set covers playbook/reference and spotlight-board
+  lanes.
+- Use `PROMPTFOO_ARGS='...'` to pass filters or output options through to the
+  underlying `promptfoo eval`.
+- The wrapper uses `promptfoo@latest` by default. Set `PROMPTFOO_NPX_SPEC` if
+  you need to force a specific Promptfoo package version for one run.
+- Promptfoo persistence is routed to `.tmp/promptfoo-home/` by default so the
+  local database, logs, and `view` state stay in a writable repo-local path.
+  Override `PROMPTFOO_CONFIG_DIR` only when you intentionally want a different
+  Promptfoo home.
+- `make ai-eval-promptfoo-view` runs `npx promptfoo@latest view` so you can
+  inspect recent eval results, failed assertions, and per-case output details
+  in the Promptfoo UI. When Promptfoo does not persist a fresh headless eval on
+  its own, the repo wrapper synthesizes `results.json` from captured provider
+  case outputs and imports that eval into Promptfoo so the viewer still has a
+  fresh local record to open.
+- Set `PROMPTFOO_VIEW_PORT` when `15500` is already in use. Use
+  `PROMPTFOO_VIEW_ARGS="--no"` when you want the server to start without
+  attempting to open a browser.
+- Each run writes a stable artifact bundle under `.tmp/promptfoo/<run-id>/`
+  with `results.json`, `scorecard.md`, per-case provider captures under
+  `cases/`, and any captured harness logs.
+- Each Promptfoo case is isolated with a stable case id so concurrent
+  model/prompt/repeat runs do not overwrite one another's eval JSON or live
+  capture artifacts.
+- Promptfoo failures are intentionally compact in the report. Raw `go test`
+  stderr/stdout is preserved in artifact logs instead of being embedded inline
+  in the Promptfoo error field, while structured live `.diagnostics.json`
+  artifacts carry the useful failure description.
+- Promptfoo scorecards separate **quality failures** from **invalid runtime
+  runs**. Invalid runs stay visible in the report, but they do not count
+  against the model-quality pass rate.
+- Promptfoo is the comparison/reporting layer only. The live Go harness remains
+  the authoritative execution path, and replay fixtures remain the deterministic
+  regression surface.
+
+### Phase 2 status
+
+Phase 2 is complete for local operator use:
+
+- `make ai-eval-promptfoo-core`, `make ai-eval-promptfoo-decision`, and
+  `make ai-eval-promptfoo-view` are the supported command surface.
+- compact failure summaries, per-case diagnostics, and stable artifact bundles
+  under `.tmp/promptfoo/<run-id>/` are expected outputs, not optional extras.
+- Promptfoo remains non-gating and does not replace replay or live integration
+  tests.
+
+### What to do now
+
+Use the existing phase-2 surface for comparison and diagnosis instead of adding
+more Promptfoo plumbing for now:
+
+- run `make ai-eval-promptfoo-core` when a model, prompt-profile, or GM-control
+  change needs a fast comparison against the canonical scenario set
+- run `make ai-eval-promptfoo-decision` before changing the preferred GM model
+  or default instruction profile
+- inspect `.tmp/promptfoo/<run-id>/scorecard.md` first, then follow artifact
+  links into `.summary.json`, `.diagnostics.json`, raw captures, and harness
+  logs when a row needs deeper debugging
+- treat `metric_status=invalid` rows as runtime diagnostics to fix or rerun,
+  not as model-quality evidence
+
+Defer new eval ladders, critique mode, and broader vendor expansion to a later
+phase-3 effort.
 
 ## Supported verification commands
 

@@ -69,6 +69,9 @@ func runAIGMCampaignContextReplayScenario(t *testing.T, spec aiGMCampaignScenari
 			replayServer.tokens = mapsClone(setup.ReplayTokens)
 		},
 	})
+	if result.RunStatus != "passed" {
+		t.Fatalf("scenario execution failed: %s (%s)", result.FailureSummary, result.FailureReason)
+	}
 	if got := strings.TrimSpace(result.OutputText); got != replayFixtureFinalOutputText(t, replay) {
 		t.Fatalf("output_text = %q, want %q", got, replayFixtureFinalOutputText(t, replay))
 	}

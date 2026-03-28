@@ -1,0 +1,93 @@
+name: AI GM Eval
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: "Eval preset to run"
+        required: true
+        default: "core"
+        type: choice
+        options:
+          - core
+          - decision
+      scenario_set:
+        description: "Promptfoo scenario set"
+        required: true
+        default: "core"
+        type: choice
+        options:
+          - core
+          - extended
+      scenario_filter:
+        description: "Optional Promptfoo filter pattern"
+        required: false
+        default: ""
+        type: string
+      model_set:
+        description: "Optional comma-separated model override"
+        required: false
+        default: ""
+        type: string
+      prompt_set:
+        description: "Optional comma-separated prompt-profile override"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  ai-gm-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run Promptfoo AI GM eval
+        env:
+          INTEGRATION_OPENAI_API_KEY: ${{ secrets.INTEGRATION_OPENAI_API_KEY }}
+          PROMPTFOO_SCENARIO_SET: ${{ inputs.scenario_set }}
+          PROMPTFOO_MODELS: ${{ inputs.model_set }}
+          PROMPTFOO_PROMPT_PROFILES: ${{ inputs.prompt_set }}
+        run: |
+          case "${{ inputs.preset }}" in
+            core)
+              repeat_count=1
+              ;;
+            decision)
+              repeat_count=3
+              ;;
+            *)
+              echo "unsupported preset: ${{ inputs.preset }}" >&2
+              exit 1
+              ;;
+          esac
+
+          promptfoo_args=()
+          if [ -n "${{ inputs.scenario_filter }}" ]; then
+            promptfoo_args+=(--filter-pattern "${{ inputs.scenario_filter }}")
+          fi
+
+          AI_EVAL_PRESET="${{ inputs.preset }}" \
+          PROMPTFOO_REPEAT="${repeat_count}" \
+          make ai-eval-promptfoo PROMPTFOO_ARGS="${promptfoo_args[*]}"
+
+      - name: Upload Promptfoo artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptfoo-ai-gm-eval
+          path: .tmp/promptfoo
+          if-no-files-found: warn
