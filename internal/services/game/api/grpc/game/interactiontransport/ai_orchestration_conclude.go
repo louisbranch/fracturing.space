@@ -69,16 +69,8 @@ func (a AIOrchestrationApplication) ConcludeSession(
 		return ConcludeSessionResult{}, grpcerror.OptionalLookupErrorContext(ctx, err, "load conclude session target")
 	}
 	if sessionRecord.Status == session.StatusEnded {
-		if endCampaign {
-			campaignRecord, err := a.interaction.stores.Campaign.Get(ctx, campaignID)
-			if err != nil {
-				return ConcludeSessionResult{}, grpcerror.OptionalLookupErrorContext(ctx, err, "load concluded session campaign")
-			}
-			if campaignRecord.Status != campaign.StatusCompleted {
-				if err := a.executeCampaignCommand(ctx, commandTypeCampaignEnd, campaignID, "", "", "campaign", campaignID, nil, "campaign.end"); err != nil {
-					return ConcludeSessionResult{}, err
-				}
-			}
+		if err := a.ensureCampaignCompletedIfRequested(ctx, campaignID, endCampaign); err != nil {
+			return ConcludeSessionResult{}, err
 		}
 		return a.loadConcludedSessionResult(ctx, campaignID, sessionID)
 	}
@@ -136,12 +128,10 @@ func (a AIOrchestrationApplication) ConcludeSession(
 		return ConcludeSessionResult{}, err
 	}
 
-	endedSceneIDs := make([]string, 0, len(openScenes))
 	for _, openScene := range openScenes {
 		if err := a.executeCampaignSceneEnd(ctx, campaignID, activeSession.ID, openScene.SceneID, "session_concluded"); err != nil {
 			return ConcludeSessionResult{}, err
 		}
-		endedSceneIDs = append(endedSceneIDs, openScene.SceneID)
 	}
 
 	if err := a.interaction.executeSessionCommand(ctx, commandTypeSessionEnd, campaignID, activeSession.ID, session.EndPayload{
@@ -150,17 +140,11 @@ func (a AIOrchestrationApplication) ConcludeSession(
 		return ConcludeSessionResult{}, err
 	}
 
-	if endCampaign {
-		if err := a.executeCampaignCommand(ctx, commandTypeCampaignEnd, campaignID, "", "", "campaign", campaignID, nil, "campaign.end"); err != nil {
-			return ConcludeSessionResult{}, err
-		}
+	if err := a.ensureCampaignCompletedIfRequested(ctx, campaignID, endCampaign); err != nil {
+		return ConcludeSessionResult{}, err
 	}
 
-	return ConcludeSessionResult{
-		SessionID:         activeSession.ID,
-		EndedSceneIDs:     endedSceneIDs,
-		CampaignCompleted: endCampaign,
-	}, nil
+	return a.loadConcludedSessionResult(ctx, campaignID, activeSession.ID)
 }
 
 func validateSessionRecapSummary(summary string) error {
@@ -291,6 +275,29 @@ func (a AIOrchestrationApplication) executeCampaignCommand(
 		domainwrite.RequireEvents(label+" did not emit an event"),
 	)
 	return err
+}
+
+func (a AIOrchestrationApplication) ensureCampaignCompletedIfRequested(ctx context.Context, campaignID string, requested bool) error {
+	if !requested {
+		return nil
+	}
+	campaignRecord, err := a.interaction.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return grpcerror.OptionalLookupErrorContext(ctx, err, "load concluded session campaign")
+	}
+	if campaignRecord.Status != campaign.StatusCompleted {
+		if err := a.executeCampaignCommand(ctx, commandTypeCampaignEnd, campaignID, "", "", "campaign", campaignID, nil, "campaign.end"); err != nil {
+			return err
+		}
+		campaignRecord, err = a.interaction.stores.Campaign.Get(ctx, campaignID)
+		if err != nil {
+			return grpcerror.OptionalLookupErrorContext(ctx, err, "load completed campaign after conclude")
+		}
+	}
+	if campaignRecord.Status != campaign.StatusCompleted {
+		return status.Error(codes.Internal, "conclude session did not complete campaign")
+	}
+	return nil
 }
 
 func (a AIOrchestrationApplication) loadConcludedSessionResult(ctx context.Context, campaignID, sessionID string) (ConcludeSessionResult, error) {

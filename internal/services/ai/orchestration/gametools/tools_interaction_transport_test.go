@@ -24,6 +24,11 @@ type interactionTransportClientStub struct {
 	clearOOCReadyToResumeFunc    func(context.Context, *statev1.ClearOOCReadyToResumeRequest, ...grpc.CallOption) (*statev1.ClearOOCReadyToResumeResponse, error)
 }
 
+type campaignAITransportClientStub struct {
+	statev1.CampaignAIOrchestrationServiceClient
+	concludeSessionFunc func(context.Context, *statev1.ConcludeSessionRequest, ...grpc.CallOption) (*statev1.ConcludeSessionResponse, error)
+}
+
 func (s *interactionTransportClientStub) GetInteractionState(ctx context.Context, req *statev1.GetInteractionStateRequest, opts ...grpc.CallOption) (*statev1.GetInteractionStateResponse, error) {
 	if s.getInteractionStateFunc != nil {
 		return s.getInteractionStateFunc(ctx, req, opts...)
@@ -120,6 +125,13 @@ func (*interactionTransportClientStub) SetSessionCharacterController(context.Con
 
 func (*interactionTransportClientStub) RetryAIGMTurn(context.Context, *statev1.RetryAIGMTurnRequest, ...grpc.CallOption) (*statev1.RetryAIGMTurnResponse, error) {
 	return nil, nil
+}
+
+func (s *campaignAITransportClientStub) ConcludeSession(ctx context.Context, req *statev1.ConcludeSessionRequest, opts ...grpc.CallOption) (*statev1.ConcludeSessionResponse, error) {
+	if s.concludeSessionFunc != nil {
+		return s.concludeSessionFunc(ctx, req, opts...)
+	}
+	return &statev1.ConcludeSessionResponse{}, nil
 }
 
 func newInteractionTransportSession(stub *interactionTransportClientStub) *DirectSession {
@@ -459,6 +471,97 @@ func TestInteractionSessionOOCHandlers(t *testing.T) {
 		}
 		if _, err := session.interactionClearOOCReady(context.Background(), []byte(`{}`)); err != nil {
 			t.Fatalf("interactionClearOOCReady() error = %v", err)
+		}
+	})
+}
+
+func TestInteractionConcludeSession(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forwards campaign end request and persists epilogue artifact", func(t *testing.T) {
+		t.Parallel()
+
+		artifactManager := &artifactManagerTestStub{}
+		campaignAI := &campaignAITransportClientStub{
+			concludeSessionFunc: func(_ context.Context, req *statev1.ConcludeSessionRequest, _ ...grpc.CallOption) (*statev1.ConcludeSessionResponse, error) {
+				if req.GetCampaignId() != "camp-ctx" || req.GetSessionId() != "sess-ctx" {
+					t.Fatalf("request scope = %#v", req)
+				}
+				if !req.GetEndCampaign() {
+					t.Fatal("end_campaign = false, want true")
+				}
+				if req.GetEpilogue() != "The harbor rebuilds in peace." {
+					t.Fatalf("epilogue = %q", req.GetEpilogue())
+				}
+				return &statev1.ConcludeSessionResponse{
+					SessionId:         "sess-ctx",
+					EndedSceneIds:     []string{"scene-1", "scene-2"},
+					CampaignCompleted: true,
+				}, nil
+			},
+		}
+
+		session := NewDirectSession(Clients{
+			CampaignAI: campaignAI,
+			Artifact:   artifactManager,
+		}, SessionContext{
+			CampaignID:    "camp-ctx",
+			SessionID:     "sess-ctx",
+			ParticipantID: "gm-1",
+		})
+
+		result, err := session.interactionConcludeSession(context.Background(), []byte(`{
+			"conclusion":"The tide finally settles.",
+			"summary":"## Key Events\n\nThe gate held.\n\n## NPCs Met\n\nCaptain Vale.\n\n## Decisions Made\n\nThey ended the war.\n\n## Unresolved Threads\n\nWho financed the raiders?\n\n## Next Session Hooks\n\nCelebrate at dawn.",
+			"end_campaign":true,
+			"epilogue":"The harbor rebuilds in peace."
+		}`))
+		if err != nil {
+			t.Fatalf("interactionConcludeSession() error = %v", err)
+		}
+
+		payload := decodeToolOutput[interactionConcludeSessionResult](t, result.Output)
+		if !payload.CampaignCompleted {
+			t.Fatal("campaign_completed = false, want true")
+		}
+		if artifactManager.lastPath != "epilogue.md" {
+			t.Fatalf("artifact path = %q, want epilogue.md", artifactManager.lastPath)
+		}
+		if artifactManager.lastContent != "The harbor rebuilds in peace." {
+			t.Fatalf("artifact content = %q", artifactManager.lastContent)
+		}
+	})
+
+	t.Run("uses service response for campaign_completed", func(t *testing.T) {
+		t.Parallel()
+
+		session := NewDirectSession(Clients{
+			CampaignAI: &campaignAITransportClientStub{
+				concludeSessionFunc: func(_ context.Context, _ *statev1.ConcludeSessionRequest, _ ...grpc.CallOption) (*statev1.ConcludeSessionResponse, error) {
+					return &statev1.ConcludeSessionResponse{
+						SessionId:         "sess-ctx",
+						EndedSceneIds:     []string{"scene-1"},
+						CampaignCompleted: false,
+					}, nil
+				},
+			},
+		}, SessionContext{
+			CampaignID: "camp-ctx",
+			SessionID:  "sess-ctx",
+		})
+
+		result, err := session.interactionConcludeSession(context.Background(), []byte(`{
+			"conclusion":"The group camps for the night.",
+			"summary":"## Key Events\n\nThey survived.\n\n## NPCs Met\n\nCaptain Vale.\n\n## Decisions Made\n\nThey delayed the final choice.\n\n## Unresolved Threads\n\nWhat waits inland?\n\n## Next Session Hooks\n\nBegin the march.",
+			"end_campaign":false
+		}`))
+		if err != nil {
+			t.Fatalf("interactionConcludeSession() error = %v", err)
+		}
+
+		payload := decodeToolOutput[interactionConcludeSessionResult](t, result.Output)
+		if payload.CampaignCompleted {
+			t.Fatal("campaign_completed = true, want false")
 		}
 	})
 }
