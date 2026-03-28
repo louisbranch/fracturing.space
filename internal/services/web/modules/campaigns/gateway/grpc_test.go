@@ -670,9 +670,14 @@ type fakeCharacterWorkflowClient struct {
 	profilesResp    *statev1.ListCharacterProfilesResponse
 	profilesErr     error
 	lastProfilesReq *statev1.ListCharacterProfilesRequest
+	lastSheetReq    *statev1.GetCharacterSheetRequest
 	createReq       *statev1.CreateCharacterRequest
 	createResp      *statev1.CreateCharacterResponse
 	createErr       error
+	updateReq       *statev1.UpdateCharacterRequest
+	updateErr       error
+	deleteReq       *statev1.DeleteCharacterRequest
+	deleteErr       error
 	sheetResp       *statev1.GetCharacterSheetResponse
 	sheetErr        error
 	progressResp    *statev1.GetCharacterCreationProgressResponse
@@ -715,15 +720,24 @@ func (f *fakeCharacterWorkflowClient) CreateCharacter(_ context.Context, req *st
 	return &statev1.CreateCharacterResponse{Character: &statev1.Character{Id: "char-created"}}, nil
 }
 
-func (f *fakeCharacterWorkflowClient) UpdateCharacter(_ context.Context, _ *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+func (f *fakeCharacterWorkflowClient) UpdateCharacter(_ context.Context, req *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+	f.updateReq = req
+	if f.updateErr != nil {
+		return nil, f.updateErr
+	}
 	return &statev1.UpdateCharacterResponse{}, nil
 }
 
-func (f *fakeCharacterWorkflowClient) DeleteCharacter(_ context.Context, _ *statev1.DeleteCharacterRequest, _ ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error) {
+func (f *fakeCharacterWorkflowClient) DeleteCharacter(_ context.Context, req *statev1.DeleteCharacterRequest, _ ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error) {
+	f.deleteReq = req
+	if f.deleteErr != nil {
+		return nil, f.deleteErr
+	}
 	return &statev1.DeleteCharacterResponse{}, nil
 }
 
-func (f *fakeCharacterWorkflowClient) GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
+func (f *fakeCharacterWorkflowClient) GetCharacterSheet(_ context.Context, req *statev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
+	f.lastSheetReq = req
 	if f.sheetErr != nil {
 		return nil, f.sheetErr
 	}

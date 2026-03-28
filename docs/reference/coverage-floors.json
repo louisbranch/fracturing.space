@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-27T20:30:00Z",
+  "updated_at": "2026-03-28T17:31:00Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog",
@@ -34,6 +34,16 @@
       "description": "Admin dashboard module with activity and system health endpoints."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/status",
+      "floor": 93.0,
+      "description": "Admin status module with system-status page handlers, HTMX table rendering, and status view mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/users",
+      "floor": 91.0,
+      "description": "Admin users module with lookup redirects, table rendering, detail loading, and pending-invite pagination seams."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/scenarios",
       "floor": 70.4,
       "description": "Admin scenarios module with scenario execution and result handlers."
@@ -52,6 +62,11 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai",
       "floor": 76.5,
       "description": "AI gRPC transport handlers covering RPC validation and error mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/service",
+      "floor": 75.2,
+      "description": "AI application services for access requests, agent/runtime policy, provider grants, invocation, and campaign orchestration."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/ai/credential",
@@ -109,9 +124,59 @@
       "description": "Daggerheart mutation transport handlers and helper seams for command payload shaping and guard enforcement."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/conditiontransport",
+      "floor": 80.0,
+      "description": "Daggerheart condition transport handlers and mapping helpers for character and adversary condition workflows."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/countdowntransport",
+      "floor": 70.5,
+      "description": "Daggerheart countdown transport handlers for scene and campaign countdown CRUD, advance, trigger, and read flows."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/damagetransport",
+      "floor": 74.7,
+      "description": "Daggerheart damage transport handlers for character and adversary damage application, mitigation, and beastform helpers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/recoverytransport",
+      "floor": 73.0,
+      "description": "Daggerheart recovery transport handlers for rest, death-move, blaze-of-glory, and related guard logic."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport",
+      "floor": 71.0,
+      "description": "Daggerheart session-flow transport handlers for attack, reaction, group-action, and adversary-flow shaping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/sessionrolltransport",
+      "floor": 74.0,
+      "description": "Daggerheart session-roll transport handlers for action, damage, adversary, and action-check roll workflows."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/discovery/app",
       "floor": 63,
       "description": "Discovery service application layer composing catalog and reference lookup workflows."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/discovery/api/grpc/discovery",
+      "floor": 97.0,
+      "description": "Discovery gRPC transport handlers for entry validation, storage error mapping, and list pagination seams."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/discovery/storage/sqlite",
+      "floor": 89.0,
+      "description": "Discovery SQLite persistence covering guard branches, normalization helpers, source-id reconciliation, and paged entry reads."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/status/storage/sqlite",
+      "floor": 79.0,
+      "description": "Status SQLite override persistence covering open/close guards, context-aware CRUD, and ordered override reads."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/status/app",
+      "floor": 83.0,
+      "description": "Status app runtime covering env/default path loading, server lifecycle wrappers, and store-open seams."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -269,6 +334,11 @@
       "description": "Invite gRPC transport handlers covering validation, status transitions, and cross-service enrichment."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/invite/app",
+      "floor": 84.0,
+      "description": "Invite app runtime covering env/default path loading, server lifecycle wrappers, dial cleanup, and store-open seams."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/invite/storage/sqlite",
       "floor": 79.6,
       "description": "Invite SQLite persistence layer covering CRUD, pagination, and outbox lifecycle."
@@ -324,6 +394,26 @@
       "description": "Join-grant verifier used by invite claim boundary."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant",
+      "floor": 87.0,
+      "description": "Play launch grant signing, env loading, validation, and audience/base64 helper seams."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant",
+      "floor": 86.0,
+      "description": "AI session grant signing, env loading, validation, and audience/base64 helper seams."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/shared/httperrors",
+      "floor": 89.0,
+      "description": "Shared HTTP/grpc error typing, rich-message fallback, transport mapping, and HTTP status conversion."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/shared/websupport",
+      "floor": 78.0,
+      "description": "Shared web-support helpers for avatar selection, portrait fallback, and HTTP fallback port normalization."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/social/api/grpc/social",
       "floor": 63.8,
       "description": "Social gRPC transport handlers for profile, contacts, and directory lookup flows."
@@ -357,6 +447,51 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules",
       "floor": 100,
       "description": "Web registry boundary guardrails and module-set composition invariants."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app",
+      "floor": 82.9,
+      "description": "Campaigns app services for workspace reads, participant and character workflows, AI binding, and mutation authorization seams."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway",
+      "floor": 80.9,
+      "description": "Campaigns gateway gRPC adapters for campaign, character, invite, and starter request mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render",
+      "floor": 82.7,
+      "description": "Campaigns render helpers and fragments for overview, characters, participants, sessions, invites, and creation views."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow",
+      "floor": 89.3,
+      "description": "Campaign workflow app adapters and readiness-oriented browser orchestration seams."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth",
+      "floor": 72.8,
+      "description": "Public auth module composition plus recovery, login, and JSON transport contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app",
+      "floor": 77.7,
+      "description": "Public auth application services for login, recovery, and session-safe fallback behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway",
+      "floor": 83.8,
+      "description": "Public auth gRPC gateway adapters for login, recovery, and durable web-session mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings",
+      "floor": 88.2,
+      "description": "Settings module composition and transport handlers for profile, locale, security, and AI surfaces."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app",
+      "floor": 89.4,
+      "description": "Settings application services for passkeys, AI keys, agent management, and normalization seams."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx",
