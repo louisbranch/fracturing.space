@@ -21,8 +21,8 @@ func TestEventsMigrationsEmbedded(t *testing.T) {
 	}
 	sort.Strings(files)
 
-	if len(files) != 1 || files[0] != "001_events.sql" {
-		t.Fatalf("events migrations = %v, want [001_events.sql]", files)
+	if len(files) != 2 || files[0] != "001_events.sql" || files[1] != "002_projection_apply_campaign_leases.sql" {
+		t.Fatalf("events migrations = %v, want [001_events.sql 002_projection_apply_campaign_leases.sql]", files)
 	}
 }
 

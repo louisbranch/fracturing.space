@@ -11,7 +11,6 @@ import (
 )
 
 type combatFlowTestRuntime struct {
-	stubRuntime
 	campaignID        string
 	sessionID         string
 	sceneID           string
@@ -20,12 +19,16 @@ type combatFlowTestRuntime struct {
 	daggerheartClient pb.DaggerheartServiceClient
 }
 
+func (combatFlowTestRuntime) CharacterClient() statev1.CharacterServiceClient { return nil }
 func (r combatFlowTestRuntime) SnapshotClient() statev1.SnapshotServiceClient {
 	return r.snapshotClient
 }
 func (r combatFlowTestRuntime) SessionClient() statev1.SessionServiceClient { return r.sessionClient }
 func (r combatFlowTestRuntime) DaggerheartClient() pb.DaggerheartServiceClient {
 	return r.daggerheartClient
+}
+func (combatFlowTestRuntime) CallContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithCancel(ctx)
 }
 func (r combatFlowTestRuntime) ResolveCampaignID(explicit string) string {
 	if explicit != "" {

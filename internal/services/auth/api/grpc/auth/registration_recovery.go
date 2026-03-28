@@ -301,6 +301,7 @@ func (s *AuthService) BeginAccountRecovery(ctx context.Context, in *authv1.Begin
 	baseUser.RecoveryReservedUntil = &expiresAt
 	baseUser.UpdatedAt = now
 	if err := s.store.PutUser(ctx, baseUser); err != nil {
+		_ = s.passkeyStore.DeleteRecoverySession(ctx, recoverySessionID)
 		return nil, status.Errorf(codes.Internal, "Reserve recovery session: %v", err)
 	}
 	return &authv1.BeginAccountRecoveryResponse{RecoverySessionId: recoverySessionID}, nil
