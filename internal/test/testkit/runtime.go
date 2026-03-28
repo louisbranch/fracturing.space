@@ -8,6 +8,7 @@ import (
 	"time"
 
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
+	discoveryserver "github.com/louisbranch/fracturing.space/internal/services/discovery/app"
 	notificationsserver "github.com/louisbranch/fracturing.space/internal/services/notifications/app"
 	socialserver "github.com/louisbranch/fracturing.space/internal/services/social/app"
 	userhubapp "github.com/louisbranch/fracturing.space/internal/services/userhub/app"
@@ -157,6 +158,28 @@ func SetTempWorkerDBPath(t *testing.T) {
 	})
 }
 
+// SetDiscoveryDBPath points the discovery runtime database at a file inside base.
+func SetDiscoveryDBPath(t *testing.T, base string, setenv func(string, string) error) {
+	t.Helper()
+
+	if setenv == nil {
+		t.Fatal("setenv function is required")
+	}
+	if err := setenv("FRACTURING_SPACE_DISCOVERY_DB_PATH", filepath.Join(base, "discovery.db")); err != nil {
+		t.Fatalf("set discovery db path: %v", err)
+	}
+}
+
+// SetTempDiscoveryDBPath points the discovery runtime database at a per-test temp file.
+func SetTempDiscoveryDBPath(t *testing.T) {
+	t.Helper()
+
+	SetDiscoveryDBPath(t, t.TempDir(), func(key, value string) error {
+		t.Setenv(key, value)
+		return nil
+	})
+}
+
 // StartAuthServer boots the auth server for runtime tests and waits for readiness.
 func StartAuthServer(t *testing.T) (string, func()) {
 	t.Helper()
@@ -287,6 +310,41 @@ func StartUserHubServer(t *testing.T, cfg userhubapp.RuntimeConfig) (string, fun
 			}
 		case <-time.After(5 * time.Second):
 			t.Fatalf("timed out waiting for userhub server to stop")
+		}
+	}
+
+	return addr, stop
+}
+
+// StartDiscoveryServer boots the discovery server for runtime tests and waits for readiness.
+func StartDiscoveryServer(t *testing.T, gameAddr string) (string, func()) {
+	t.Helper()
+
+	t.Setenv("FRACTURING_SPACE_GAME_ADDR", gameAddr)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	srv, err := discoveryserver.NewWithAddr("127.0.0.1:0")
+	if err != nil {
+		cancel()
+		t.Fatalf("new discovery server: %v", err)
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- srv.Serve(ctx)
+	}()
+
+	addr := srv.Addr()
+	WaitForGRPCHealth(t, addr)
+	stop := func() {
+		cancel()
+		select {
+		case err := <-serveErr:
+			if err != nil {
+				t.Fatalf("discovery server error: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("timed out waiting for discovery server to stop")
 		}
 	}
 

@@ -29,6 +29,24 @@ type authServerEnv struct {
 	DBPath string `env:"FRACTURING_SPACE_AUTH_DB_PATH"`
 }
 
+type runtimeDeps struct {
+	loadEnv         func() authServerEnv
+	loadOAuthConfig func() oauth.Config
+	listen          func(network, address string) (net.Listener, error)
+	openStore       func(string) (*authsqlite.Store, error)
+	newOAuthServer  func(oauth.Config, *oauth.Store, oauth.UserStore) *oauth.Server
+	logf            func(format string, args ...any)
+}
+
+var defaultRuntimeDeps = runtimeDeps{
+	loadEnv:         loadAuthServerEnv,
+	loadOAuthConfig: oauth.LoadConfigFromEnv,
+	listen:          net.Listen,
+	openStore:       openAuthStore,
+	newOAuthServer:  oauth.NewServer,
+	logf:            log.Printf,
+}
+
 func loadAuthServerEnv() authServerEnv {
 	var cfg authServerEnv
 	_ = config.ParseEnv(&cfg)
@@ -50,6 +68,7 @@ type Server struct {
 	oauthStore   *oauth.Store
 	oauthServer  *oauth.Server
 	closeOnce    sync.Once
+	logf         func(format string, args ...any)
 }
 
 // New creates a configured auth server and binds identity transport boundaries.
@@ -57,19 +76,42 @@ type Server struct {
 // It initializes one SQLite store first so both gRPC handlers and OAuth routes
 // read and write from the same identity ledger.
 func New(port int, httpAddr string) (*Server, error) {
-	srvEnv := loadAuthServerEnv()
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	return newWithDeps(port, httpAddr, defaultRuntimeDeps)
+}
+
+func newWithDeps(port int, httpAddr string, deps runtimeDeps) (*Server, error) {
+	if deps.loadEnv == nil {
+		return nil, errors.New("auth server env loader is required")
+	}
+	if deps.loadOAuthConfig == nil {
+		return nil, errors.New("auth oauth config loader is required")
+	}
+	if deps.listen == nil {
+		return nil, errors.New("auth listener constructor is required")
+	}
+	if deps.openStore == nil {
+		return nil, errors.New("auth store opener is required")
+	}
+	if deps.newOAuthServer == nil {
+		return nil, errors.New("auth oauth server constructor is required")
+	}
+	if deps.logf == nil {
+		deps.logf = log.Printf
+	}
+
+	srvEnv := deps.loadEnv()
+	listener, err := deps.listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("Listen on port %d: %w", port, err)
 	}
-	store, err := openAuthStore(srvEnv.DBPath)
+	store, err := deps.openStore(srvEnv.DBPath)
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
 	}
 
 	oauthStore := oauth.NewStore(store.DB())
-	oauthConfig := oauth.LoadConfigFromEnv()
+	oauthConfig := deps.loadOAuthConfig()
 	if oauthConfig.Issuer == "" {
 		oauthConfig.Issuer = defaultOAuthIssuer(httpAddr)
 	}
@@ -77,14 +119,14 @@ func New(port int, httpAddr string) (*Server, error) {
 	var httpServer *http.Server
 	var oauthServer *oauth.Server
 	if strings.TrimSpace(httpAddr) != "" {
-		httpListener, err = net.Listen("tcp", httpAddr)
+		httpListener, err = deps.listen("tcp", httpAddr)
 		if err != nil {
 			_ = listener.Close()
 			_ = store.Close()
 			return nil, fmt.Errorf("Listen on HTTP address %s: %w", httpAddr, err)
 		}
 		mux := http.NewServeMux()
-		oauthServer = oauth.NewServer(oauthConfig, oauthStore, store)
+		oauthServer = deps.newOAuthServer(oauthConfig, oauthStore, store)
 		if err := oauthServer.RegisterRoutes(mux); err != nil {
 			_ = httpListener.Close()
 			_ = listener.Close()
@@ -119,6 +161,7 @@ func New(port int, httpAddr string) (*Server, error) {
 		httpServer:   httpServer,
 		oauthStore:   oauthStore,
 		oauthServer:  oauthServer,
+		logf:         deps.logf,
 	}, nil
 }
 
@@ -161,7 +204,11 @@ func (s *Server) Serve(ctx context.Context) error {
 		s.oauthServer.StartCleanup(serverCtx, 5*time.Minute)
 	}
 
-	log.Printf("auth server listening at %v", s.listener.Addr())
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
+	}
+	logf("auth server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
 	go func() {
 		serveErr <- s.grpcServer.Serve(s.listener)
@@ -169,7 +216,7 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	httpErr := make(chan error, 1)
 	if s.httpServer != nil && s.httpListener != nil {
-		log.Printf("auth HTTP server listening at %v", s.httpListener.Addr())
+		logf("auth HTTP server listening at %v", s.httpListener.Addr())
 		go func() {
 			httpErr <- s.httpServer.Serve(s.httpListener)
 		}()
@@ -238,6 +285,10 @@ func (s *Server) Close() {
 	if s == nil {
 		return
 	}
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
+	}
 
 	s.closeOnce.Do(func() {
 		if s.health != nil {
@@ -248,7 +299,7 @@ func (s *Server) Close() {
 		}
 		if s.listener != nil {
 			if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
-				log.Printf("close auth listener: %v", err)
+				logf("close auth listener: %v", err)
 			}
 		}
 		if s.httpServer != nil {
@@ -258,12 +309,12 @@ func (s *Server) Close() {
 		}
 		if s.httpListener != nil {
 			if err := s.httpListener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
-				log.Printf("close auth http listener: %v", err)
+				logf("close auth http listener: %v", err)
 			}
 		}
 		if s.store != nil {
 			if err := s.store.Close(); err != nil {
-				log.Printf("close auth store: %v", err)
+				logf("close auth store: %v", err)
 			}
 		}
 	})

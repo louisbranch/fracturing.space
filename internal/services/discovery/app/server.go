@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
@@ -24,6 +25,35 @@ import (
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
+
+type runtimeDeps struct {
+	loadEnv          func() serverEnv
+	listen           func(network, address string) (net.Listener, error)
+	openStore        func(string) (*discoverysqlite.Store, error)
+	bootstrapCatalog func(*discoverysqlite.Store) error
+	openGameConn     func(string) (*grpc.ClientConn, error)
+	buildReconciler  func(*discoverysqlite.Store, *grpc.ClientConn) func(context.Context)
+	logf             func(format string, args ...any)
+}
+
+var defaultRuntimeDeps = runtimeDeps{
+	loadEnv:          loadServerEnv,
+	listen:           net.Listen,
+	openStore:        openDiscoveryStore,
+	bootstrapCatalog: bootstrapBuiltinCatalog,
+	openGameConn:     openGameConn,
+	buildReconciler: func(store *discoverysqlite.Store, gameConn *grpc.ClientConn) func(context.Context) {
+		if gameConn == nil {
+			return nil
+		}
+		return starterReconciler(
+			store,
+			gamev1.NewCampaignServiceClient(gameConn),
+			gamev1.NewCharacterServiceClient(gameConn),
+		)
+	},
+	logf: log.Printf,
+}
 
 type serverEnv struct {
 	DBPath   string `env:"FRACTURING_SPACE_DISCOVERY_DB_PATH"`
@@ -47,6 +77,8 @@ type Server struct {
 	store      *discoverysqlite.Store
 	gameConn   *grpc.ClientConn
 	reconcile  func(context.Context)
+	closeOnce  sync.Once
+	logf       func(format string, args ...any)
 }
 
 // New creates a configured discovery server listening on the provided port.
@@ -56,23 +88,49 @@ func New(port int) (*Server, error) {
 
 // NewWithAddr creates a configured discovery server for the provided address.
 func NewWithAddr(addr string) (*Server, error) {
-	listener, err := net.Listen("tcp", addr)
+	return newWithDeps(addr, defaultRuntimeDeps)
+}
+
+func newWithDeps(addr string, deps runtimeDeps) (*Server, error) {
+	if deps.loadEnv == nil {
+		return nil, errors.New("discovery server env loader is required")
+	}
+	if deps.listen == nil {
+		return nil, errors.New("discovery listener constructor is required")
+	}
+	if deps.openStore == nil {
+		return nil, errors.New("discovery store opener is required")
+	}
+	if deps.bootstrapCatalog == nil {
+		return nil, errors.New("discovery catalog bootstrapper is required")
+	}
+	if deps.openGameConn == nil {
+		return nil, errors.New("discovery game dialer is required")
+	}
+	if deps.buildReconciler == nil {
+		return nil, errors.New("discovery reconciler builder is required")
+	}
+	if deps.logf == nil {
+		deps.logf = log.Printf
+	}
+
+	listener, err := deps.listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
 	}
 
-	env := loadServerEnv()
-	store, err := openDiscoveryStore(env.DBPath)
+	env := deps.loadEnv()
+	store, err := deps.openStore(env.DBPath)
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
 	}
-	if err := bootstrapBuiltinCatalog(store); err != nil {
+	if err := deps.bootstrapCatalog(store); err != nil {
 		_ = listener.Close()
 		_ = store.Close()
 		return nil, fmt.Errorf("bootstrap builtin catalog: %w", err)
 	}
-	gameConn, err := openGameConn(env.GameAddr)
+	gameConn, err := deps.openGameConn(env.GameAddr)
 	if err != nil {
 		_ = listener.Close()
 		_ = store.Close()
@@ -92,15 +150,11 @@ func NewWithAddr(addr string) (*Server, error) {
 		health:     healthServer,
 		store:      store,
 		gameConn:   gameConn,
+		logf:       deps.logf,
 	}
-	if gameConn != nil {
-		server.reconcile = starterReconciler(
-			store,
-			gamev1.NewCampaignServiceClient(gameConn),
-			gamev1.NewCharacterServiceClient(gameConn),
-		)
-	} else {
-		log.Printf("discovery starter reconciliation skipped: FRACTURING_SPACE_GAME_ADDR is unset")
+	server.reconcile = deps.buildReconciler(store, gameConn)
+	if gameConn == nil {
+		deps.logf("discovery starter reconciliation skipped: FRACTURING_SPACE_GAME_ADDR is unset")
 	}
 
 	return server, nil
@@ -133,7 +187,11 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 	defer s.Close()
 
-	log.Printf("discovery server listening at %v", s.listener.Addr())
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
+	}
+	logf("discovery server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
 	go func() {
 		serveErr <- s.grpcServer.Serve(s.listener)
@@ -197,25 +255,31 @@ func (s *Server) Close() {
 	if s == nil {
 		return
 	}
-	if s.health != nil {
-		s.health.Shutdown()
+	logf := s.logf
+	if logf == nil {
+		logf = log.Printf
 	}
-	if s.grpcServer != nil {
-		s.grpcServer.Stop()
-	}
-	if s.listener != nil {
-		_ = s.listener.Close()
-	}
-	if s.store != nil {
-		if err := s.store.Close(); err != nil {
-			log.Printf("close discovery store: %v", err)
+	s.closeOnce.Do(func() {
+		if s.health != nil {
+			s.health.Shutdown()
 		}
-	}
-	if s.gameConn != nil {
-		if err := s.gameConn.Close(); err != nil {
-			log.Printf("close discovery game conn: %v", err)
+		if s.grpcServer != nil {
+			s.grpcServer.Stop()
 		}
-	}
+		if s.listener != nil {
+			_ = s.listener.Close()
+		}
+		if s.store != nil {
+			if err := s.store.Close(); err != nil {
+				logf("close discovery store: %v", err)
+			}
+		}
+		if s.gameConn != nil {
+			if err := s.gameConn.Close(); err != nil {
+				logf("close discovery game conn: %v", err)
+			}
+		}
+	})
 }
 
 func openDiscoveryStore(path string) (*discoverysqlite.Store, error) {

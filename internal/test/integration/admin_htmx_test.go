@@ -14,7 +14,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/admin"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/admintest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -28,8 +28,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	adminAddr, stopAdmin := startAdminServer(ctx, t, grpcAddr)
-	defer stopAdmin()
+	adminRuntime := admintest.StartRuntime(ctx, t, grpcAddr)
 
 	userID := createAuthUser(t, authAddr, "admin-creator")
 	ctxWithUser := withUserID(ctx, userID)
@@ -48,7 +47,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	characterClient := statev1.NewCharacterServiceClient(conn)
 	participantClient := statev1.NewParticipantServiceClient(conn)
 	httpClient := &http.Client{Timeout: 5 * time.Second}
-	baseURL := "http://" + adminAddr
+	baseURL := adminRuntime.BaseURL
 
 	t.Run("campaigns table empty", func(t *testing.T) {
 		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/?fragment=rows")
@@ -897,74 +896,6 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		// Should have campaign.created and session.started events
 		assertHTMXFragmentInvariant(t, body)
 	})
-}
-
-// startAdminServer creates and starts an admin server connected to gRPC.
-func startAdminServer(ctx context.Context, t *testing.T, grpcAddr string) (string, func()) {
-	t.Helper()
-
-	httpAddr := pickUnusedAddress(t)
-	config := admin.Config{
-		HTTPAddr: httpAddr,
-		GRPCAddr: grpcAddr,
-	}
-
-	server, err := admin.NewServer(ctx, config)
-	if err != nil {
-		t.Fatalf("create admin server: %v", err)
-	}
-
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- server.ListenAndServe(ctx)
-	}()
-
-	waitForAdminHealth(t, "http://"+httpAddr)
-
-	stop := func() {
-		server.Close()
-	}
-
-	return httpAddr, stop
-}
-
-// waitForAdminHealth polls the admin server until it responds.
-func waitForAdminHealth(t *testing.T, baseURL string) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	client := &http.Client{Timeout: time.Second}
-	backoff := 100 * time.Millisecond
-
-	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/dashboard/", nil)
-		if err != nil {
-			t.Fatalf("create health request: %v", err)
-		}
-
-		resp, err := client.Do(req)
-		if err == nil {
-			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				return
-			}
-		}
-
-		select {
-		case <-ctx.Done():
-			t.Fatalf("wait for admin health: %v", ctx.Err())
-		case <-time.After(backoff):
-		}
-
-		if backoff < time.Second {
-			backoff *= 2
-			if backoff > time.Second {
-				backoff = time.Second
-			}
-		}
-	}
 }
 
 // htmxGet performs an HTTP GET with the HX-Request header set.

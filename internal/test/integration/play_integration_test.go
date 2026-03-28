@@ -15,6 +15,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/play/playtest"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"golang.org/x/net/websocket"
@@ -22,7 +23,7 @@ import (
 
 func TestPlayLaunchAndRealtimeIntegration(t *testing.T) {
 	fixture := newSuiteFixture(t)
-	playRuntime := startPlayRuntime(t, fixture.authAddr, fixture.grpcAddr)
+	playRuntime := playtest.StartRuntime(t, fixture.authAddr, fixture.grpcAddr)
 	eventClient, closeEventConn := newEventClient(t, fixture.grpcAddr)
 	defer closeEventConn()
 
@@ -30,7 +31,7 @@ func TestPlayLaunchAndRealtimeIntegration(t *testing.T) {
 	suite := fixture.newGameSuite(t, userID)
 	campaignID, sessionID := createPlayCampaignAndSession(t, suite)
 
-	grant, _, err := playlaunchgrant.Issue(playRuntime.launchGrantConfig, playlaunchgrant.IssueInput{
+	grant, _, err := playlaunchgrant.Issue(playRuntime.LaunchGrantConfig, playlaunchgrant.IssueInput{
 		GrantID:    "play-launch-" + strings.ReplaceAll(uniqueTestUsername(t, "grant"), "-", ""),
 		CampaignID: campaignID,
 		UserID:     userID,
@@ -45,7 +46,7 @@ func TestPlayLaunchAndRealtimeIntegration(t *testing.T) {
 		},
 	}
 
-	launchResp, err := httpClient.Get(playRuntime.baseURL + "/campaigns/" + campaignID + "?launch=" + url.QueryEscape(grant))
+	launchResp, err := httpClient.Get(playRuntime.BaseURL + "/campaigns/" + campaignID + "?launch=" + url.QueryEscape(grant))
 	if err != nil {
 		t.Fatalf("launch play shell: %v", err)
 	}
@@ -57,9 +58,9 @@ func TestPlayLaunchAndRealtimeIntegration(t *testing.T) {
 	if got := launchResp.Header.Get("Location"); got != "/campaigns/"+campaignID {
 		t.Fatalf("launch redirect = %q, want %q", got, "/campaigns/"+campaignID)
 	}
-	playSessionID := requireCookieValue(t, launchResp.Cookies(), "play_session")
+	playSessionID := playtest.RequireCookieValue(t, launchResp.Cookies(), "play_session")
 
-	shellReq, err := http.NewRequest(http.MethodGet, playRuntime.baseURL+"/campaigns/"+campaignID, nil)
+	shellReq, err := http.NewRequest(http.MethodGet, playRuntime.BaseURL+"/campaigns/"+campaignID, nil)
 	if err != nil {
 		t.Fatalf("build shell request: %v", err)
 	}
@@ -80,7 +81,7 @@ func TestPlayLaunchAndRealtimeIntegration(t *testing.T) {
 		t.Fatalf("shell body missing bootstrap path: %q", string(shellBody))
 	}
 
-	bootstrapReq, err := http.NewRequest(http.MethodGet, playRuntime.baseURL+"/api/campaigns/"+campaignID+"/bootstrap", nil)
+	bootstrapReq, err := http.NewRequest(http.MethodGet, playRuntime.BaseURL+"/api/campaigns/"+campaignID+"/bootstrap", nil)
 	if err != nil {
 		t.Fatalf("build bootstrap request: %v", err)
 	}
@@ -108,7 +109,7 @@ func TestPlayLaunchAndRealtimeIntegration(t *testing.T) {
 		t.Fatalf("bootstrap realtime.url = %q", bootstrap.Realtime.URL)
 	}
 
-	wsConfig, err := websocket.NewConfig(websocketURLFromHTTP(playRuntime.baseURL, "/realtime"), playRuntime.baseURL)
+	wsConfig, err := websocket.NewConfig(playtest.WebsocketURLFromHTTP(playRuntime.BaseURL, "/realtime"), playRuntime.BaseURL)
 	if err != nil {
 		t.Fatalf("build websocket config: %v", err)
 	}
@@ -158,7 +159,7 @@ func TestPlayLaunchAndRealtimeIntegration(t *testing.T) {
 		t.Fatalf("chat session_id = %q, want %q", chatEnvelope.Message.SessionID, sessionID)
 	}
 
-	historyReq, err := http.NewRequest(http.MethodGet, playRuntime.baseURL+"/api/campaigns/"+campaignID+"/chat/history", nil)
+	historyReq, err := http.NewRequest(http.MethodGet, playRuntime.BaseURL+"/api/campaigns/"+campaignID+"/chat/history", nil)
 	if err != nil {
 		t.Fatalf("build history request: %v", err)
 	}

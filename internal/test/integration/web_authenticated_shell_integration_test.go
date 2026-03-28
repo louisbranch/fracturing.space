@@ -16,8 +16,10 @@ import (
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/play/playtest"
 	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
+	"github.com/louisbranch/fracturing.space/internal/services/web/webtest"
 	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 )
 
@@ -29,15 +31,15 @@ func TestWebAuthenticatedShellIntegration(t *testing.T) {
 	inviteAddr := fixture.startInviteServer(t)
 	userhubAddr := fixture.startUserHubServer(t)
 
-	play := startPlayRuntime(t, fixture.authAddr, fixture.grpcAddr)
-	web := startWebRuntime(t, webRuntimeConfig{
-		playHTTPAddr:      strings.TrimPrefix(play.baseURL, "http://"),
-		authAddr:          fixture.authAddr,
-		socialAddr:        socialAddr,
-		gameAddr:          fixture.grpcAddr,
-		inviteAddr:        inviteAddr,
-		notificationsAddr: notificationsAddr,
-		userhubAddr:       userhubAddr,
+	play := playtest.StartRuntime(t, fixture.authAddr, fixture.grpcAddr)
+	web := webtest.StartRuntime(t, webtest.RuntimeConfig{
+		PlayHTTPAddr:      strings.TrimPrefix(play.BaseURL, "http://"),
+		AuthAddr:          fixture.authAddr,
+		SocialAddr:        socialAddr,
+		GameAddr:          fixture.grpcAddr,
+		InviteAddr:        inviteAddr,
+		NotificationsAddr: notificationsAddr,
+		UserHubAddr:       userhubAddr,
 	})
 
 	recipientUserID := createAuthUser(t, fixture.authAddr, uniqueTestUsername(t, "web-recipient"))
@@ -90,7 +92,7 @@ func TestWebAuthenticatedShellIntegration(t *testing.T) {
 		},
 	}
 
-	dashboardReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, web.baseURL+"/app/dashboard", nil)
+	dashboardReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, web.BaseURL+"/app/dashboard", nil)
 	if err != nil {
 		t.Fatalf("create dashboard request: %v", err)
 	}
@@ -125,7 +127,7 @@ func TestWebAuthenticatedShellIntegration(t *testing.T) {
 		}
 	}
 
-	launchReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, web.baseURL+"/app/campaigns/"+url.PathEscape(activeCampaignID)+"/game", nil)
+	launchReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, web.BaseURL+"/app/campaigns/"+url.PathEscape(activeCampaignID)+"/game", nil)
 	if err != nil {
 		t.Fatalf("create web launch request: %v", err)
 	}
@@ -153,7 +155,7 @@ func TestWebAuthenticatedShellIntegration(t *testing.T) {
 	if got, want := parsedLaunchURL.Scheme, "http"; got != want {
 		t.Fatalf("web launch scheme = %q, want %q", got, want)
 	}
-	if got, want := parsedLaunchURL.Host, strings.TrimPrefix(play.baseURL, "http://"); got != want {
+	if got, want := parsedLaunchURL.Host, strings.TrimPrefix(play.BaseURL, "http://"); got != want {
 		t.Fatalf("web launch host = %q, want %q", got, want)
 	}
 	if got, want := parsedLaunchURL.Path, "/campaigns/"+activeCampaignID; got != want {
@@ -176,9 +178,9 @@ func TestWebAuthenticatedShellIntegration(t *testing.T) {
 		t.Fatalf("play launch location = %q, want %q", got, want)
 	}
 
-	playSessionID := requireCookieValue(t, playLaunchResp.Cookies(), "play_session")
+	playSessionID := playtest.RequireCookieValue(t, playLaunchResp.Cookies(), "play_session")
 
-	playShellReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, play.baseURL+"/campaigns/"+url.PathEscape(activeCampaignID), nil)
+	playShellReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, play.BaseURL+"/campaigns/"+url.PathEscape(activeCampaignID), nil)
 	if err != nil {
 		t.Fatalf("create play shell request: %v", err)
 	}
@@ -203,7 +205,7 @@ func TestWebAuthenticatedShellIntegration(t *testing.T) {
 		t.Fatalf("play shell body missing bootstrap url for campaign %q", activeCampaignID)
 	}
 
-	bootstrapReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, play.baseURL+"/api/campaigns/"+url.PathEscape(activeCampaignID)+"/bootstrap", nil)
+	bootstrapReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, play.BaseURL+"/api/campaigns/"+url.PathEscape(activeCampaignID)+"/bootstrap", nil)
 	if err != nil {
 		t.Fatalf("create play bootstrap request: %v", err)
 	}
