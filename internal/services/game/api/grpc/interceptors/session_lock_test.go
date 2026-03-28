@@ -145,45 +145,6 @@ func TestSessionLockInterceptor_CreateCharacter_WithActiveSession_Blocks(t *test
 	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
 }
 
-func TestSessionLockInterceptor_SetDefaultControl_WithActiveSession_Blocks(t *testing.T) {
-	sessionStore := newFakeSessionStore()
-	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
-
-	interceptor := SessionLockInterceptor(sessionStore)
-	info := serverInfo(statev1.CharacterService_SetDefaultControl_FullMethodName)
-	req := &statev1.SetDefaultControlRequest{CampaignId: "c1", CharacterId: "ch1"}
-
-	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
-}
-
-func TestSessionLockInterceptor_ClaimCharacterControl_WithActiveSession_Blocks(t *testing.T) {
-	sessionStore := newFakeSessionStore()
-	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
-
-	interceptor := SessionLockInterceptor(sessionStore)
-	info := serverInfo(statev1.CharacterService_ClaimCharacterControl_FullMethodName)
-	req := &statev1.ClaimCharacterControlRequest{CampaignId: "c1", CharacterId: "ch1"}
-
-	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
-}
-
-func TestSessionLockInterceptor_ReleaseCharacterControl_WithActiveSession_Blocks(t *testing.T) {
-	sessionStore := newFakeSessionStore()
-	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
-
-	interceptor := SessionLockInterceptor(sessionStore)
-	info := serverInfo(statev1.CharacterService_ReleaseCharacterControl_FullMethodName)
-	req := &statev1.ReleaseCharacterControlRequest{CampaignId: "c1", CharacterId: "ch1"}
-
-	_, err := interceptor(context.Background(), req, info, fakeHandler)
-	grpcassert.StatusCode(t, err, codes.FailedPrecondition)
-}
-
 func TestSessionLockInterceptor_PatchCharacterProfile_WithActiveSession_Blocks(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
@@ -425,9 +386,6 @@ func TestIsBlockedMethod(t *testing.T) {
 		{statev1.CharacterService_CreateCharacter_FullMethodName, true},
 		{statev1.CharacterService_UpdateCharacter_FullMethodName, true},
 		{statev1.CharacterService_DeleteCharacter_FullMethodName, true},
-		{statev1.CharacterService_SetDefaultControl_FullMethodName, true},
-		{statev1.CharacterService_ClaimCharacterControl_FullMethodName, true},
-		{statev1.CharacterService_ReleaseCharacterControl_FullMethodName, true},
 		{statev1.CharacterService_PatchCharacterProfile_FullMethodName, true},
 		{statev1.CharacterService_ApplyCharacterCreationStep_FullMethodName, true},
 		{statev1.CharacterService_ApplyCharacterCreationWorkflow_FullMethodName, true},

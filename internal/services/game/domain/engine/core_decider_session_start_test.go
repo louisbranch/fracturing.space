@@ -36,9 +36,9 @@ func TestCoreDeciderSessionStart_DraftCampaignEmitsActivationAndSessionStart(t *
 			},
 			Characters: map[ids.CharacterID]character.State{
 				"char-1": {
-					CharacterID:   "char-1",
-					Created:       true,
-					ParticipantID: "player-1",
+					CharacterID:        "char-1",
+					Created:            true,
+					OwnerParticipantID: "player-1",
 				},
 			},
 		},
@@ -84,17 +84,6 @@ func TestCoreDeciderSessionStart_ReadinessFailureRejected(t *testing.T) {
 					Joined:        true,
 					Role:          participant.RoleGM,
 				},
-				"player-1": {
-					ParticipantID: "player-1",
-					Joined:        true,
-					Role:          participant.RolePlayer,
-				},
-			},
-			Characters: map[ids.CharacterID]character.State{
-				"char-1": {
-					CharacterID: "char-1",
-					Created:     true,
-				},
 			},
 		},
 		command.Command{
@@ -113,11 +102,11 @@ func TestCoreDeciderSessionStart_ReadinessFailureRejected(t *testing.T) {
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != readiness.RejectionCodeSessionReadinessCharacterControllerRequired {
+	if decision.Rejections[0].Code != readiness.RejectionCodeSessionReadinessPlayerRequired {
 		t.Fatalf(
 			"rejection code = %s, want %s",
 			decision.Rejections[0].Code,
-			readiness.RejectionCodeSessionReadinessCharacterControllerRequired,
+			readiness.RejectionCodeSessionReadinessPlayerRequired,
 		)
 	}
 }
@@ -141,9 +130,9 @@ func TestCoreDeciderSessionStart_ActiveSessionBoundaryRejected(t *testing.T) {
 			},
 			Characters: map[ids.CharacterID]character.State{
 				"char-1": {
-					CharacterID:   "char-1",
-					Created:       true,
-					ParticipantID: "player-1",
+					CharacterID:        "char-1",
+					Created:            true,
+					OwnerParticipantID: "player-1",
 				},
 			},
 		},
@@ -198,9 +187,9 @@ func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessProvider(t *testing
 			},
 			Characters: map[ids.CharacterID]character.State{
 				"char-1": {
-					CharacterID:   "char-1",
-					Created:       true,
-					ParticipantID: "player-1",
+					CharacterID:        "char-1",
+					Created:            true,
+					OwnerParticipantID: "player-1",
 				},
 			},
 			Systems: map[module.Key]any{

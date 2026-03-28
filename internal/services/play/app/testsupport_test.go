@@ -541,11 +541,11 @@ func enrichedCharacterResponse() *gamev1.ListCharactersResponse {
 	return &gamev1.ListCharactersResponse{
 		Characters: []*gamev1.Character{
 			{
-				Id:            "char-1",
-				CampaignId:    "c1",
-				Name:          "Lark",
-				Kind:          gamev1.CharacterKind_PC,
-				ParticipantId: &wrapperspb.StringValue{Value: "p1"},
+				Id:                 "char-1",
+				CampaignId:         "c1",
+				Name:               "Lark",
+				Kind:               gamev1.CharacterKind_PC,
+				OwnerParticipantId: &wrapperspb.StringValue{Value: "p1"},
 			},
 		},
 	}

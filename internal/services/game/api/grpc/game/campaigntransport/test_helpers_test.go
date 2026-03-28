@@ -338,9 +338,9 @@ func newReadinessServiceFixture(config readinessServiceFixtureConfig) (*Campaign
 
 	stores.character.Characters["c1"] = map[string]storage.CharacterRecord{
 		"char-1": {
-			ID:            "char-1",
-			CampaignID:    "c1",
-			ParticipantID: "player-1",
+			ID:                 "char-1",
+			CampaignID:         "c1",
+			OwnerParticipantID: "player-1",
 		},
 	}
 	metadata, modules := mustTestSystemRegistries()

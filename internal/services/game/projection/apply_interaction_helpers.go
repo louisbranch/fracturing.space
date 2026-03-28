@@ -23,6 +23,7 @@ func loadSessionInteraction(ctx context.Context, store storage.SessionInteractio
 	return storage.SessionInteraction{
 		CampaignID:                  campaignID,
 		SessionID:                   sessionID,
+		CharacterControllers:        []storage.SessionCharacterController{},
 		AITurn:                      storage.SessionAITurn{Status: session.AITurnStatusIdle},
 		OOCPosts:                    []storage.SessionOOCPost{},
 		ReadyToResumeParticipantIDs: []string{},
@@ -132,4 +133,17 @@ func deleteString(values []string, target string) []string {
 		}
 	}
 	return filtered
+}
+
+func upsertSessionCharacterController(
+	values []storage.SessionCharacterController,
+	updated storage.SessionCharacterController,
+) []storage.SessionCharacterController {
+	for i := range values {
+		if values[i].CharacterID == updated.CharacterID {
+			values[i] = updated
+			return values
+		}
+	}
+	return append(values, updated)
 }

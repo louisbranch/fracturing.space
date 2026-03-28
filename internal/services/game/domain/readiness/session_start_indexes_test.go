@@ -66,14 +66,14 @@ func TestActiveCharactersByID_IsDeterministicAndFiltersInactive(t *testing.T) {
 	indexed := activeCharactersByID(aggregate.State{
 		Characters: map[ids.CharacterID]character.State{
 			"char-z": {
-				CharacterID:   "char-z",
-				Created:       true,
-				ParticipantID: "player-z",
+				CharacterID:        "char-z",
+				Created:            true,
+				OwnerParticipantID: "player-z",
 			},
 			"char-a": {
-				CharacterID:   "char-a",
-				Created:       true,
-				ParticipantID: "player-a",
+				CharacterID:        "char-a",
+				Created:            true,
+				OwnerParticipantID: "player-a",
 			},
 			"char-deleted": {
 				CharacterID: "char-deleted",
@@ -89,8 +89,8 @@ func TestActiveCharactersByID_IsDeterministicAndFiltersInactive(t *testing.T) {
 	if strings.Join(indexed.ids, ",") != "char-a,char-z" {
 		t.Fatalf("character ids = %v, want [char-a char-z]", indexed.ids)
 	}
-	if indexed.byID["char-a"].ParticipantID != "player-a" {
-		t.Fatalf("char-a participant = %q, want %q", indexed.byID["char-a"].ParticipantID, "player-a")
+	if indexed.byID["char-a"].OwnerParticipantID != "player-a" {
+		t.Fatalf("char-a owner = %q, want %q", indexed.byID["char-a"].OwnerParticipantID, "player-a")
 	}
 	if _, ok := indexed.byID["char-deleted"]; ok {
 		t.Fatal("expected deleted character to be excluded")
@@ -113,9 +113,9 @@ func TestEvaluateSessionStart_SystemReadinessMessageFormatting(t *testing.T) {
 		},
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
-				CharacterID:   "char-1",
-				Created:       true,
-				ParticipantID: "player-1",
+				CharacterID:        "char-1",
+				Created:            true,
+				OwnerParticipantID: "player-1",
 			},
 		},
 	}

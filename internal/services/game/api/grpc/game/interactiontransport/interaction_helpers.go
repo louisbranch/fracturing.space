@@ -72,6 +72,7 @@ func (a interactionApplication) loadActiveSessionInteraction(ctx context.Context
 		interaction = storage.SessionInteraction{
 			CampaignID:                  campaignID,
 			SessionID:                   activeSession.ID,
+			CharacterControllers:        []storage.SessionCharacterController{},
 			AITurn:                      storage.SessionAITurn{Status: session.AITurnStatusIdle},
 			OOCPosts:                    []storage.SessionOOCPost{},
 			ReadyToResumeParticipantIDs: []string{},
@@ -236,7 +237,12 @@ func interactionCharacterIDsToStrings(values []ids.CharacterID) []string {
 	return result
 }
 
-func (a interactionApplication) loadSceneState(ctx context.Context, campaignID string, sceneRecord storage.SceneRecord) (*campaignv1.InteractionScene, storage.SceneInteraction, error) {
+func (a interactionApplication) loadSceneState(
+	ctx context.Context,
+	campaignID string,
+	sceneRecord storage.SceneRecord,
+	sessionInteraction storage.SessionInteraction,
+) (*campaignv1.InteractionScene, storage.SceneInteraction, error) {
 	sceneCharacters, err := a.stores.SceneCharacter.ListSceneCharacters(ctx, campaignID, sceneRecord.SceneID)
 	if err != nil {
 		return nil, storage.SceneInteraction{}, grpcerror.Internal("list scene characters", err)
@@ -250,10 +256,12 @@ func (a interactionApplication) loadSceneState(ctx context.Context, campaignID s
 		if err != nil {
 			continue
 		}
+		controllerParticipantID := effectiveSessionCharacterController(sessionInteraction, characterRecord)
 		characters = append(characters, &campaignv1.InteractionCharacter{
-			CharacterId:        characterRecord.ID,
-			Name:               characterRecord.Name,
-			OwnerParticipantId: characterRecord.OwnerParticipantID,
+			CharacterId:             characterRecord.ID,
+			Name:                    characterRecord.Name,
+			OwnerParticipantId:      characterRecord.OwnerParticipantID,
+			ControllerParticipantId: controllerParticipantID,
 		})
 	}
 	sort.SliceStable(characters, func(i, j int) bool {
@@ -443,6 +451,7 @@ func (a interactionApplication) resolveActingSet(
 	ctx context.Context,
 	campaignID string,
 	sceneRecord storage.SceneRecord,
+	sessionInteraction storage.SessionInteraction,
 	requestedCharacterIDs []string,
 ) ([]ids.CharacterID, []ids.ParticipantID, error) {
 	if len(requestedCharacterIDs) == 0 {
@@ -472,14 +481,14 @@ func (a interactionApplication) resolveActingSet(
 		if err != nil {
 			return nil, nil, err
 		}
-		ownerParticipantID := strings.TrimSpace(characterRecord.OwnerParticipantID)
-		if ownerParticipantID == "" {
-			return nil, nil, status.Error(codes.FailedPrecondition, "acting character has no owner participant")
+		controllerParticipantID := strings.TrimSpace(effectiveSessionCharacterController(sessionInteraction, characterRecord))
+		if controllerParticipantID == "" {
+			return nil, nil, status.Error(codes.FailedPrecondition, "acting character has no session controller")
 		}
 		actingCharacterIDs = append(actingCharacterIDs, ids.CharacterID(characterID))
-		if _, ok := seenParticipants[ownerParticipantID]; !ok {
-			seenParticipants[ownerParticipantID] = struct{}{}
-			actingParticipants = append(actingParticipants, ids.ParticipantID(ownerParticipantID))
+		if _, ok := seenParticipants[controllerParticipantID]; !ok {
+			seenParticipants[controllerParticipantID] = struct{}{}
+			actingParticipants = append(actingParticipants, ids.ParticipantID(controllerParticipantID))
 		}
 	}
 	if len(actingCharacterIDs) == 0 || len(actingParticipants) == 0 {
@@ -492,6 +501,7 @@ func (a interactionApplication) resolveParticipantPostCharacters(
 	ctx context.Context,
 	campaignID string,
 	sceneRecord storage.SceneRecord,
+	sessionInteraction storage.SessionInteraction,
 	participantID string,
 	requestedCharacterIDs []string,
 	actingCharacterIDs []string,
@@ -525,8 +535,8 @@ func (a interactionApplication) resolveParticipantPostCharacters(
 		if err != nil {
 			return nil, err
 		}
-		if strings.TrimSpace(characterRecord.OwnerParticipantID) != participantID {
-			return nil, status.Error(codes.PermissionDenied, "participant does not own the requested character")
+		if strings.TrimSpace(effectiveSessionCharacterController(sessionInteraction, characterRecord)) != participantID {
+			return nil, status.Error(codes.PermissionDenied, "participant does not control the requested character")
 		}
 		characterIDs = append(characterIDs, ids.CharacterID(characterID))
 	}
@@ -540,6 +550,7 @@ func (a interactionApplication) resolveRevisionRequests(
 	ctx context.Context,
 	campaignID string,
 	sceneRecord storage.SceneRecord,
+	sessionInteraction storage.SessionInteraction,
 	sceneInteraction storage.SceneInteraction,
 	requests []*campaignv1.ScenePlayerRevisionRequest,
 ) ([]scene.PlayerPhaseRevisionRequest, error) {
@@ -596,8 +607,8 @@ func (a interactionApplication) resolveRevisionRequests(
 			if err != nil {
 				return nil, err
 			}
-			if strings.TrimSpace(characterRecord.OwnerParticipantID) != participantID {
-				return nil, status.Error(codes.PermissionDenied, "revision character does not belong to the targeted participant")
+			if strings.TrimSpace(effectiveSessionCharacterController(sessionInteraction, characterRecord)) != participantID {
+				return nil, status.Error(codes.PermissionDenied, "revision character is not controlled by the targeted participant")
 			}
 			characterIDs = append(characterIDs, ids.CharacterID(characterID))
 		}
@@ -608,6 +619,19 @@ func (a interactionApplication) resolveRevisionRequests(
 		})
 	}
 	return revisions, nil
+}
+
+func effectiveSessionCharacterController(sessionInteraction storage.SessionInteraction, characterRecord storage.CharacterRecord) string {
+	characterID := strings.TrimSpace(characterRecord.ID)
+	if characterID != "" {
+		for _, assignment := range sessionInteraction.CharacterControllers {
+			if strings.TrimSpace(assignment.CharacterID) != characterID {
+				continue
+			}
+			return strings.TrimSpace(assignment.ParticipantID)
+		}
+	}
+	return strings.TrimSpace(characterRecord.OwnerParticipantID)
 }
 
 func (a interactionApplication) executeSessionCommand(ctx context.Context, commandType command.Type, campaignID, sessionID string, payload any, label string) error {

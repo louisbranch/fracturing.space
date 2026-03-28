@@ -262,16 +262,10 @@ func createRecipientActiveCampaign(t *testing.T, suite *integrationSuite) (campa
 		t.Fatal("recipient character id is empty")
 	}
 
-	setCharacterController(t, ctx, suite.character, campaignID, characterID, participantID)
+	setCharacterOwner(t, ctx, suite.character, campaignID, characterID, participantID)
 	ensureDaggerheartCreationReadiness(t, ctx, suite.character, campaignID, characterID)
 
-	sessionResp, err := suite.session.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Dashboard Session",
-	})
-	if err != nil {
-		t.Fatalf("start recipient session: %v", err)
-	}
+	sessionResp := startSessionWithDefaultControllers(t, ctx, suite.session, suite.character, campaignID, "Dashboard Session")
 
 	sessionID = sessionResp.GetSession().GetId()
 	if sessionID == "" {

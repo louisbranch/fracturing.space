@@ -520,7 +520,7 @@ func buildCharacterSheetPayload(resp *statev1.GetCharacterSheetResponse) charact
 			CampaignID:         character.GetCampaignId(),
 			Name:               character.GetName(),
 			Kind:               characterKindToString(character.GetKind()),
-			OwnerParticipantID: strings.TrimSpace(character.GetParticipantId().GetValue()),
+			OwnerParticipantID: strings.TrimSpace(character.GetOwnerParticipantId().GetValue()),
 			Pronouns:           sharedpronouns.FromProto(character.GetPronouns()),
 			Aliases:            cloneStrings(character.GetAliases()),
 			Notes:              character.GetNotes(),

@@ -179,19 +179,9 @@ func TestStableMutationRoutesReturnParseErrorFlashKeys(t *testing.T) {
 			wantKey: "error.web.message.failed_to_parse_character_update_form",
 		},
 		{
-			name:    "character controller parse error",
-			path:    routepath.AppCampaignCharacterControl("c1", "char-1"),
-			wantKey: "error.web.message.failed_to_parse_character_controller_form",
-		},
-		{
-			name:    "character claim parse error",
-			path:    routepath.AppCampaignCharacterControlClaim("c1", "char-1"),
-			wantKey: "error.web.message.failed_to_parse_character_controller_form",
-		},
-		{
-			name:    "character release parse error",
-			path:    routepath.AppCampaignCharacterControlRelease("c1", "char-1"),
-			wantKey: "error.web.message.failed_to_parse_character_controller_form",
+			name:    "character owner parse error",
+			path:    routepath.AppCampaignCharacterOwner("c1", "char-1"),
+			wantKey: "error.web.message.failed_to_parse_character_owner_form",
 		},
 		{
 			name:    "character delete parse error",
@@ -409,25 +399,11 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			wantFlashKey: "web.campaigns.notice_character_updated",
 		},
 		{
-			name:         "character controller update",
-			path:         routepath.AppCampaignCharacterControl("c1", "char-1"),
+			name:         "character owner update",
+			path:         routepath.AppCampaignCharacterOwner("c1", "char-1"),
 			body:         "participant_id=p-manager",
 			wantLocation: routepath.AppCampaignCharacter("c1", "char-1"),
-			wantFlashKey: "web.campaigns.notice_character_controller_updated",
-		},
-		{
-			name:         "character claim",
-			path:         routepath.AppCampaignCharacterControlClaim("c1", "char-1"),
-			body:         "",
-			wantLocation: routepath.AppCampaignCharacter("c1", "char-1"),
-			wantFlashKey: "web.campaigns.notice_character_control_claimed",
-		},
-		{
-			name:         "character release",
-			path:         routepath.AppCampaignCharacterControlRelease("c1", "char-1"),
-			body:         "",
-			wantLocation: routepath.AppCampaignCharacter("c1", "char-1"),
-			wantFlashKey: "web.campaigns.notice_character_control_released",
+			wantFlashKey: "web.campaigns.notice_character_owner_updated",
 		},
 		{
 			name:         "character delete",

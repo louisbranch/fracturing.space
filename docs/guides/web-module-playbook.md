@@ -161,12 +161,12 @@ app/gateway seam stops being cohesive:
 - if one editor or mutation surface stops fitting the surrounding ownership
   seam, split it into a dedicated capability service instead of splitting the
   read and write halves across unrelated services,
-- if one same-noun capability still mixes list/detail reads, control-state
+- if one same-noun capability still mixes list/detail reads, ownership-state
   decisions, and destructive writes after that first split, separate read,
-  control, and mutation services so transport and tests trace one interaction
+  ownership, and mutation services so transport and tests trace one interaction
   mode at a time,
 - carry that same split through gateway contracts and dependency bundles. If
-  character CRUD and character-control routes are separate app services, do not
+  character CRUD and character-ownership routes are separate app services, do not
   keep one shared character-mutation gateway or one shared mutation dep bundle
   underneath them,
 - apply the same rule to participant-style governance seams too. If one
@@ -370,7 +370,7 @@ app/gateway seam stops being cohesive:
   an unevaluated decision; do not approximate mutation permissions from
   participant-list fallback logic.
 - Do not keep long-lived deferred mutation scaffolds. If a mutation contract is
-  not implemented (for example participant update or character control), remove
+  not implemented (for example participant update or character ownership), remove
   transport/app stubs instead of preserving placeholder routes.
 
 ## Security Defaults

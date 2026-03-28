@@ -15,6 +15,9 @@ type State struct {
 	SessionID ids.SessionID
 	// Name is a human-facing label for the running session.
 	Name string
+	// CharacterControllers stores the current session-scoped character controller
+	// assignments keyed by character ID.
+	CharacterControllers map[ids.CharacterID]ids.ParticipantID
 	// GateOpen blocks non-allowed commands while adjudication is paused.
 	GateOpen bool
 	// GateID identifies the active gate when GateOpen is true.

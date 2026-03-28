@@ -107,7 +107,7 @@ type testGatewayBundle interface {
 	campaignapp.CampaignCatalogMutationGateway
 	campaignapp.CampaignConfigurationMutationGateway
 	campaignapp.CampaignAutomationMutationGateway
-	campaignapp.CampaignCharacterControlMutationGateway
+	campaignapp.CampaignCharacterOwnershipMutationGateway
 	campaignapp.CampaignCharacterMutationGateway
 	campaignapp.CampaignParticipantMutationGateway
 	campaignapp.CampaignSessionMutationGateway
@@ -175,7 +175,7 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 				Read:               gateway,
 				BatchAuthorization: gateway,
 			},
-			Control: campaignapp.CharacterControlServiceConfig{
+			Ownership: campaignapp.CharacterOwnershipServiceConfig{
 				Read:         gateway,
 				Mutation:     gateway,
 				Participants: gateway,
@@ -192,9 +192,14 @@ func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
 			Authorization: authorization,
 		},
 		Sessions: sessionServiceConfig{
+			Characters: campaignapp.CharacterReadServiceConfig{
+				Read:               gateway,
+				BatchAuthorization: gateway,
+			},
 			Mutation: campaignapp.SessionMutationServiceConfig{
 				Mutation: gateway,
 			},
+			Participants:  participantRead,
 			Authorization: authorization,
 		},
 		Invites: inviteServiceConfig{
@@ -277,9 +282,9 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 				Read:               campaigngateway.NewCharacterReadGateway(deps.Characters.Read, assetBaseURL),
 				BatchAuthorization: campaigngateway.NewBatchAuthorizationGateway(deps.Characters.Authorization),
 			},
-			Control: campaignapp.CharacterControlServiceConfig{
+			Ownership: campaignapp.CharacterOwnershipServiceConfig{
 				Read:         campaigngateway.NewCharacterReadGateway(deps.Characters.Read, assetBaseURL),
-				Mutation:     campaigngateway.NewCharacterControlMutationGateway(deps.Characters.Control),
+				Mutation:     campaigngateway.NewCharacterOwnershipMutationGateway(deps.Characters.Ownership),
 				Participants: campaigngateway.NewParticipantReadGateway(deps.Characters.Participants, assetBaseURL),
 				Sessions:     campaigngateway.NewSessionReadGateway(deps.Characters.Sessions),
 			},
@@ -294,9 +299,14 @@ func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseU
 			Authorization: campaigngateway.NewAuthorizationGateway(deps.Characters.Authorization),
 		},
 		Sessions: sessionServiceConfig{
+			Characters: campaignapp.CharacterReadServiceConfig{
+				Read:               campaigngateway.NewCharacterReadGateway(deps.Characters.Read, assetBaseURL),
+				BatchAuthorization: campaigngateway.NewBatchAuthorizationGateway(deps.Characters.Authorization),
+			},
 			Mutation: campaignapp.SessionMutationServiceConfig{
 				Mutation: campaigngateway.NewSessionMutationGateway(deps.Sessions.Mutation),
 			},
+			Participants:  participantRead,
 			Authorization: authorization,
 		},
 		Invites: inviteServiceConfig{

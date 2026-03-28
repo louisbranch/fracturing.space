@@ -328,7 +328,7 @@ func ensureSessionStartReadiness(
 			continue
 		}
 		seenCharacters[characterID] = struct{}{}
-		setCharacterController(t, ctx, characterClient, campaignID, characterID, ownerParticipantID)
+		setCharacterOwner(t, ctx, characterClient, campaignID, characterID, ownerParticipantID)
 	}
 
 	characters := listAllCharactersForReadiness(t, ctx, characterClient, campaignID)
@@ -341,10 +341,10 @@ func ensureSessionStartReadiness(
 		if characterID == "" {
 			continue
 		}
-		if strings.TrimSpace(ch.GetParticipantId().GetValue()) != "" {
+		if strings.TrimSpace(ch.GetOwnerParticipantId().GetValue()) != "" {
 			continue
 		}
-		setCharacterController(t, ctx, characterClient, campaignID, characterID, fallbackController)
+		setCharacterOwner(t, ctx, characterClient, campaignID, characterID, fallbackController)
 	}
 
 	characters = listAllCharactersForReadiness(t, ctx, characterClient, campaignID)
@@ -362,7 +362,7 @@ func ensureSessionStartReadiness(
 	}
 	characters = listAllCharactersForReadiness(t, ctx, characterClient, campaignID)
 	for _, ch := range characters {
-		pid := strings.TrimSpace(ch.GetParticipantId().GetValue())
+		pid := strings.TrimSpace(ch.GetOwnerParticipantId().GetValue())
 		if _, ok := playerCharacterCounts[pid]; ok {
 			playerCharacterCounts[pid]++
 		}
@@ -387,7 +387,7 @@ func ensureSessionStartReadiness(
 		if characterID == "" {
 			t.Fatal("create readiness character returned empty id")
 		}
-		setCharacterController(t, ctx, characterClient, campaignID, characterID, pid)
+		setCharacterOwner(t, ctx, characterClient, campaignID, characterID, pid)
 		ensureDaggerheartCreationReadiness(t, ctx, characterClient, campaignID, characterID)
 	}
 
@@ -461,7 +461,55 @@ func listAllCharactersForReadiness(
 	return characters
 }
 
-func setCharacterController(
+func listCharacterControllersForStart(
+	t *testing.T,
+	ctx context.Context,
+	characterClient statev1.CharacterServiceClient,
+	campaignID string,
+) []*statev1.SessionCharacterControllerAssignment {
+	t.Helper()
+
+	characters := listAllCharactersForReadiness(t, ctx, characterClient, campaignID)
+	assignments := make([]*statev1.SessionCharacterControllerAssignment, 0, len(characters))
+	for _, character := range characters {
+		if character == nil {
+			continue
+		}
+		characterID := strings.TrimSpace(character.GetId())
+		participantID := strings.TrimSpace(character.GetOwnerParticipantId().GetValue())
+		if characterID == "" || participantID == "" {
+			continue
+		}
+		assignments = append(assignments, &statev1.SessionCharacterControllerAssignment{
+			CharacterId:   characterID,
+			ParticipantId: participantID,
+		})
+	}
+	return assignments
+}
+
+func startSessionWithDefaultControllers(
+	t *testing.T,
+	ctx context.Context,
+	sessionClient statev1.SessionServiceClient,
+	characterClient statev1.CharacterServiceClient,
+	campaignID string,
+	name string,
+) *statev1.StartSessionResponse {
+	t.Helper()
+
+	resp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		CampaignId:           campaignID,
+		Name:                 name,
+		CharacterControllers: listCharacterControllersForStart(t, ctx, characterClient, campaignID),
+	})
+	if err != nil {
+		t.Fatalf("start session: %v", err)
+	}
+	return resp
+}
+
+func setCharacterOwner(
 	t *testing.T,
 	ctx context.Context,
 	characterClient statev1.CharacterServiceClient,
@@ -471,13 +519,13 @@ func setCharacterController(
 ) {
 	t.Helper()
 
-	_, err := characterClient.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-		CampaignId:    campaignID,
-		CharacterId:   strings.TrimSpace(characterID),
-		ParticipantId: wrapperspb.String(strings.TrimSpace(participantID)),
+	_, err := characterClient.UpdateCharacter(ctx, &statev1.UpdateCharacterRequest{
+		CampaignId:         campaignID,
+		CharacterId:        strings.TrimSpace(characterID),
+		OwnerParticipantId: wrapperspb.String(strings.TrimSpace(participantID)),
 	})
 	if err != nil {
-		t.Fatalf("set default control for %s: %v", characterID, err)
+		t.Fatalf("set character owner for %s: %v", characterID, err)
 	}
 }
 

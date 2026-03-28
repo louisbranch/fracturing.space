@@ -58,8 +58,8 @@ type characterIndex struct {
 }
 
 type aggregateCharacterState struct {
-	ParticipantID string
-	Name          string
+	OwnerParticipantID string
+	Name               string
 }
 
 func activeCharactersByID(state aggregate.State) characterIndex {
@@ -80,8 +80,8 @@ func activeCharactersByID(state aggregate.State) characterIndex {
 			continue
 		}
 		indexed.byID[characterID] = aggregateCharacterState{
-			ParticipantID: string(characterState.ParticipantID),
-			Name:          characterState.Name,
+			OwnerParticipantID: string(characterState.OwnerParticipantID),
+			Name:               characterState.Name,
 		}
 		indexed.ids = append(indexed.ids, characterID)
 	}

@@ -54,8 +54,8 @@ templ charactersFragment(view CharactersPageView, loc webtemplates.Localizer) {
 									<dd data-campaign-character-kind={ campaignCharacterKindLabel(loc, character.Kind) }>{ campaignCharacterKindLabel(loc, character.Kind) }</dd>
 								</div>
 								<div class="flex gap-2">
-									<dt class="opacity-70">{ webtemplates.T(loc, "game.participants.field_controller") }:</dt>
-									<dd data-campaign-character-controller={ campaignParticipantControllerLabel(loc, character.Controller) }>{ campaignParticipantControllerLabel(loc, character.Controller) }</dd>
+									<dt class="opacity-70">{ webtemplates.T(loc, "game.characters.field_owner") }:</dt>
+									<dd data-campaign-character-owner={ character.Owner }>{ character.Owner }</dd>
 								</div>
 								<div class="flex gap-2">
 									<dt class="opacity-70">{ webtemplates.T(loc, "web.settings.user_profile.field_pronouns") }:</dt>
@@ -151,57 +151,35 @@ templ characterDetailFragment(view CharacterDetailPageView, loc webtemplates.Loc
 					</dl>
 				</div>
 			</div>
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2" data-campaign-character-control-layout="true">
-				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-character-control-card="true">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2" data-campaign-character-ownership-layout="true">
+				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-character-ownership-card="true">
 					<div class="card-body gap-4">
 						<div class="flex flex-wrap items-start justify-between gap-3">
 							<div class="space-y-1 text-sm">
-								<div class="opacity-70">{ webtemplates.T(loc, "game.participants.field_controller") }</div>
-								<div class="font-medium" data-campaign-character-control-current-controller={ campaignParticipantControllerLabel(loc, view.Character.Controller) }>{ campaignParticipantControllerLabel(loc, view.Character.Controller) }</div>
+								<div class="opacity-70">{ webtemplates.T(loc, "game.characters.field_owner") }</div>
+								<div class="font-medium" data-campaign-character-current-owner={ view.Character.Owner }>{ view.Character.Owner }</div>
 							</div>
-							if view.CharacterControl.CanSelfClaim {
-								<form method="post" action={ routepath.AppCampaignCharacterControlClaim(view.CampaignID, view.CharacterID) } data-campaign-character-claim-form="true">
-									if campaignActionsLocked(view.ActionsLocked) {
-										<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
-											<button class="btn btn-primary btn-sm" type="submit" disabled data-campaign-character-claim-disabled="true">{ webtemplates.T(loc, "game.characters.control.action_claim") }</button>
-										</div>
-									} else {
-										<button class="btn btn-primary btn-sm" type="submit">{ webtemplates.T(loc, "game.characters.control.action_claim") }</button>
-									}
-								</form>
-							}
-							if view.CharacterControl.CanSelfRelease {
-								<form method="post" action={ routepath.AppCampaignCharacterControlRelease(view.CampaignID, view.CharacterID) } data-campaign-character-release-form="true">
-									if campaignActionsLocked(view.ActionsLocked) {
-										<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
-											<button class="btn btn-outline btn-sm" type="submit" disabled data-campaign-character-release-disabled="true">{ webtemplates.T(loc, "game.characters.control.action_release") }</button>
-										</div>
-									} else {
-										<button class="btn btn-outline btn-sm" type="submit">{ webtemplates.T(loc, "game.characters.control.action_release") }</button>
-									}
-								</form>
-							}
 						</div>
 					</div>
 				</div>
-				if view.CharacterControl.CanManageControl {
-					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-character-control-manager-card="true">
+				if view.CharacterOwnership.CanManageOwnership {
+					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-character-ownership-manager-card="true">
 						<div class="card-body gap-4">
-							<div class="text-sm opacity-70">{ webtemplates.T(loc, "game.characters.control.field_manager_override") }</div>
-							<form method="post" action={ routepath.AppCampaignCharacterControl(view.CampaignID, view.CharacterID) } class="flex flex-wrap items-center gap-3" data-campaign-character-controller-form="true">
+							<div class="text-sm opacity-70">{ webtemplates.T(loc, "game.characters.field_owner") }</div>
+							<form method="post" action={ routepath.AppCampaignCharacterOwner(view.CampaignID, view.CharacterID) } class="flex flex-wrap items-center gap-3" data-campaign-character-owner-form="true">
 								<div class="form-control min-w-0 flex-1">
-										<select class="select select-bordered w-full" name="participant_id" disabled?={ campaignActionsLocked(view.ActionsLocked) } data-campaign-character-controller-select="true">
-										for _, option := range view.CharacterControl.Options {
-											<option value={ option.ParticipantID } selected?={ option.Selected }>{ campaignCharacterControlOptionLabel(loc, option) }</option>
+										<select class="select select-bordered w-full" name="participant_id" disabled?={ campaignActionsLocked(view.ActionsLocked) } data-campaign-character-owner-select="true">
+										for _, option := range view.CharacterOwnership.Options {
+											<option value={ option.ParticipantID } selected?={ option.Selected }>{ campaignCharacterOwnershipOptionLabel(loc, option) }</option>
 										}
 									</select>
 								</div>
 								if campaignActionsLocked(view.ActionsLocked) {
 									<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
-										<button class="btn btn-outline btn-sm" type="submit" disabled data-campaign-character-controller-submit-disabled="true">{ webtemplates.T(loc, "game.characters.submit_set_controller") }</button>
+										<button class="btn btn-outline btn-sm" type="submit" disabled data-campaign-character-owner-submit-disabled="true">{ webtemplates.T(loc, "game.characters.submit_set_owner") }</button>
 									</div>
 								} else {
-									<button class="btn btn-outline btn-sm" type="submit">{ webtemplates.T(loc, "game.characters.submit_set_controller") }</button>
+									<button class="btn btn-outline btn-sm" type="submit">{ webtemplates.T(loc, "game.characters.submit_set_owner") }</button>
 								}
 							</form>
 						</div>

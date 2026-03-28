@@ -34,8 +34,8 @@ func applyParticipantProfileSnapshot(
 	)
 }
 
-// syncControlledCharacterAvatars delegates to the shared handler implementation.
-func syncControlledCharacterAvatars(
+// syncOwnedCharacterAvatars delegates to the shared handler implementation.
+func syncOwnedCharacterAvatars(
 	ctx context.Context,
 	write domainwrite.WritePath,
 	applier projection.Applier,
@@ -48,7 +48,7 @@ func syncControlledCharacterAvatars(
 	actorID string,
 	actorType command.ActorType,
 ) {
-	handler.SyncControlledCharacterAvatars(
+	handler.SyncOwnedCharacterAvatars(
 		ctx, write, applier,
 		participantStore, characterStore,
 		campaignID, participantID,

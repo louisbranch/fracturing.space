@@ -40,10 +40,10 @@ type characterReadService struct {
 	auth               authorizationSupport
 }
 
-// characterControlService owns character-control detail state and control mutations.
-type characterControlService struct {
+// characterOwnershipService owns character-owner detail state and ownership mutations.
+type characterOwnershipService struct {
 	read         CampaignCharacterReadGateway
-	mutation     CampaignCharacterControlMutationGateway
+	mutation     CampaignCharacterOwnershipMutationGateway
 	participants CampaignParticipantReadGateway
 	sessions     CampaignSessionReadGateway
 	auth         authorizationSupport
@@ -128,14 +128,14 @@ func NewCharacterReadService(config CharacterReadServiceConfig, authorization Au
 	}, nil
 }
 
-// NewCharacterControlService constructs the character-control service surface
+// NewCharacterOwnershipService constructs the character-owner service surface
 // from explicit gateway seams. Returns an error when required dependencies are
 // absent.
-func NewCharacterControlService(config CharacterControlServiceConfig, authorization AuthorizationGateway) (CampaignCharacterControlService, error) {
+func NewCharacterOwnershipService(config CharacterOwnershipServiceConfig, authorization AuthorizationGateway) (CampaignCharacterOwnershipService, error) {
 	if config.Read == nil || config.Mutation == nil || config.Participants == nil || config.Sessions == nil || authorization == nil {
-		return nil, errors.New("character control service: missing required dependencies")
+		return nil, errors.New("character ownership service: missing required dependencies")
 	}
-	return characterControlService{
+	return characterOwnershipService{
 		read:         config.Read,
 		mutation:     config.Mutation,
 		participants: config.Participants,

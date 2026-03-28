@@ -174,27 +174,6 @@ func (f fakeWebCharacterClient) DeleteCharacter(context.Context, *statev1.Delete
 	return &statev1.DeleteCharacterResponse{}, nil
 }
 
-func (f fakeWebCharacterClient) SetDefaultControl(context.Context, *statev1.SetDefaultControlRequest, ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return &statev1.SetDefaultControlResponse{}, nil
-}
-
-func (f fakeWebCharacterClient) ClaimCharacterControl(context.Context, *statev1.ClaimCharacterControlRequest, ...grpc.CallOption) (*statev1.ClaimCharacterControlResponse, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return &statev1.ClaimCharacterControlResponse{}, nil
-}
-
-func (f fakeWebCharacterClient) ReleaseCharacterControl(context.Context, *statev1.ReleaseCharacterControlRequest, ...grpc.CallOption) (*statev1.ReleaseCharacterControlResponse, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return &statev1.ReleaseCharacterControlResponse{}, nil
-}
-
 func (f fakeWebCharacterClient) GetCharacterSheet(_ context.Context, req *statev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
 	if f.err != nil {
 		return nil, f.err

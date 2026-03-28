@@ -343,8 +343,8 @@ func TestGetDashboardIncludesCampaignStartNudgesForCurrentUser(t *testing.T) {
 		readinessByCampaign: map[string]CampaignReadiness{
 			"camp-older": {
 				Blockers: []CampaignReadinessBlocker{{
-					Code:                "PLAYER_CHARACTER_REQUIRED",
-					Message:             "Create a character",
+					Code:                "CHARACTER_SYSTEM_REQUIRED",
+					Message:             "Complete a character",
 					ResponsibleUserIDs:  []string{"user-1"},
 					ActionKind:          CampaignStartNudgeActionCreateCharacter,
 					TargetParticipantID: "part-1",
@@ -353,8 +353,8 @@ func TestGetDashboardIncludesCampaignStartNudgesForCurrentUser(t *testing.T) {
 			"camp-newer": {
 				Blockers: []CampaignReadinessBlocker{
 					{
-						Code:               "PLAYER_CHARACTER_REQUIRED",
-						Message:            "Someone else should act",
+						Code:               "CHARACTER_SYSTEM_REQUIRED",
+						Message:            "Someone else should complete a character",
 						ResponsibleUserIDs: []string{"user-2"},
 						ActionKind:         CampaignStartNudgeActionCreateCharacter,
 					},

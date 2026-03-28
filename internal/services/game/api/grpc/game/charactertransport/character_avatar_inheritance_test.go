@@ -22,7 +22,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestCreateCharacter_InheritsControllerAvatarWhenAutoAssigned(t *testing.T) {
+func TestCreateCharacter_InheritsOwnerAvatarWhenAutoAssigned(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 
@@ -87,8 +87,8 @@ func TestCreateCharacter_InheritsControllerAvatarWhenAutoAssigned(t *testing.T) 
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode create payload: %v", err)
 	}
-	if payload.ParticipantID != "part-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "part-1")
+	if payload.OwnerParticipantID != "part-1" {
+		t.Fatalf("owner_participant_id = %q, want %q", payload.OwnerParticipantID, "part-1")
 	}
 	if payload.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
 		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
@@ -101,7 +101,7 @@ func TestCreateCharacter_InheritsControllerAvatarWhenAutoAssigned(t *testing.T) 
 	}
 }
 
-func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.T) {
+func TestCreateCharacter_ExplicitIdentityOverridesOwnerSnapshot(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 
@@ -133,13 +133,13 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 			event.ActorTypeParticipant,
 			"part-1",
 			character.CreatePayload{
-				CharacterID:   "char-456",
-				Name:          "Hero",
-				Kind:          "pc",
-				AvatarSetID:   assetcatalog.AvatarSetPeopleV1,
-				AvatarAssetID: "010",
-				ParticipantID: "part-1",
-				Pronouns:      "she/her",
+				CharacterID:        "char-456",
+				Name:               "Hero",
+				Kind:               "pc",
+				AvatarSetID:        assetcatalog.AvatarSetPeopleV1,
+				AvatarAssetID:      "010",
+				OwnerParticipantID: "part-1",
+				Pronouns:           "she/her",
 			},
 		),
 	}
@@ -171,8 +171,8 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode create payload: %v", err)
 	}
-	if payload.ParticipantID != "part-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "part-1")
+	if payload.OwnerParticipantID != "part-1" {
+		t.Fatalf("owner_participant_id = %q, want %q", payload.OwnerParticipantID, "part-1")
 	}
 	if payload.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
 		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
@@ -185,7 +185,7 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 	}
 }
 
-func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t *testing.T) {
+func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritOwnerPronouns(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 
@@ -217,13 +217,13 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 			event.ActorTypeParticipant,
 			"part-1",
 			character.CreatePayload{
-				CharacterID:   "char-789",
-				Name:          "Hero",
-				Kind:          "pc",
-				AvatarSetID:   assetcatalog.AvatarSetPeopleV1,
-				AvatarAssetID: "007",
-				ParticipantID: "part-1",
-				Pronouns:      "",
+				CharacterID:        "char-789",
+				Name:               "Hero",
+				Kind:               "pc",
+				AvatarSetID:        assetcatalog.AvatarSetPeopleV1,
+				AvatarAssetID:      "007",
+				OwnerParticipantID: "part-1",
+				Pronouns:           "",
 			},
 		),
 	}
@@ -257,8 +257,8 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode create payload: %v", err)
 	}
-	if payload.ParticipantID != "part-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "part-1")
+	if payload.OwnerParticipantID != "part-1" {
+		t.Fatalf("owner_participant_id = %q, want %q", payload.OwnerParticipantID, "part-1")
 	}
 	if payload.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
 		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetPeopleV1)

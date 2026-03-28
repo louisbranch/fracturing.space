@@ -240,13 +240,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
 		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
-		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       "Dashboard Test Session",
-		})
-		if err != nil {
-			t.Fatalf("start session: %v", err)
-		}
+		_ = startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Dashboard Test Session")
 		status, body := htmxGet(t, httpClient, baseURL+"/app/dashboard/?fragment=rows")
 
 		if status != http.StatusOK {
@@ -335,13 +329,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
 		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
-		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       "Test Session Alpha",
-		})
-		if err != nil {
-			t.Fatalf("start session: %v", err)
-		}
+		_ = startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Test Session Alpha")
 		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions?fragment=rows")
 
 		if status != http.StatusOK {
@@ -368,13 +356,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
 		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
-		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       "Detail Session Test",
-		})
-		if err != nil {
-			t.Fatalf("start session: %v", err)
-		}
+		sessionResp := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Detail Session Test")
 		sessionID := sessionResp.Session.Id
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID+"/sessions/"+sessionID, nil)
@@ -418,13 +400,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		campaignID := createResp.Campaign.Id
 		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
 		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
-		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       "HTMX Session Detail",
-		})
-		if err != nil {
-			t.Fatalf("start session: %v", err)
-		}
+		sessionResp := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "HTMX Session Detail")
 		sessionID := sessionResp.Session.Id
 
 		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions/"+sessionID)
@@ -454,13 +430,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
 		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
-		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       "Events Test Session",
-		})
-		if err != nil {
-			t.Fatalf("start session: %v", err)
-		}
+		sessionResp := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Events Test Session")
 		sessionID := sessionResp.Session.Id
 
 		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions/"+sessionID+"/events")
@@ -880,13 +850,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
 		// Start a session to generate events
-		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       "Event Generation Session",
-		})
-		if err != nil {
-			t.Fatalf("start session: %v", err)
-		}
+		_ = startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Event Generation Session")
 		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/events?fragment=rows")
 
 		if status != http.StatusOK {

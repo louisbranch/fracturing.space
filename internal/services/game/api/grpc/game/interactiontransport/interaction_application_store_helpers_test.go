@@ -319,7 +319,7 @@ func TestInteractionApplicationLoadSceneStateSortsCharactersAndDefaultsInteracti
 		SessionID:   "sess-1",
 		Name:        "Bridge",
 		Description: "A rope bridge.",
-	})
+	}, storage.SessionInteraction{})
 	if err != nil {
 		t.Fatalf("loadSceneState error = %v", err)
 	}
@@ -357,7 +357,7 @@ func TestInteractionApplicationLoadSceneStateDefaultsMissingGMInteractionStore(t
 		SessionID:   "sess-1",
 		Name:        "Bridge",
 		Description: "A rope bridge.",
-	})
+	}, storage.SessionInteraction{})
 	if err != nil {
 		t.Fatalf("loadSceneState error = %v", err)
 	}
@@ -438,7 +438,13 @@ func TestInteractionApplicationResolveActingSet(t *testing.T) {
 		},
 	}
 
-	gotCharacters, gotParticipants, err := app.resolveActingSet(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, []string{"char-1", " ", "char-2", "char-3"})
+	gotCharacters, gotParticipants, err := app.resolveActingSet(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		[]string{"char-1", " ", "char-2", "char-3"},
+	)
 	if err != nil {
 		t.Fatalf("resolveActingSet error = %v", err)
 	}
@@ -446,7 +452,13 @@ func TestInteractionApplicationResolveActingSet(t *testing.T) {
 		t.Fatalf("acting characters=%#v participants=%#v", gotCharacters, gotParticipants)
 	}
 
-	_, _, err = app.resolveActingSet(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, []string{"missing"})
+	_, _, err = app.resolveActingSet(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		[]string{"missing"},
+	)
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("missing character code = %v, want failed precondition", status.Code(err))
 	}
@@ -473,7 +485,15 @@ func TestInteractionApplicationResolveParticipantPostCharacters(t *testing.T) {
 		},
 	}
 
-	got, err := app.resolveParticipantPostCharacters(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, "p1", []string{"char-1"}, []string{"char-1", "char-2"})
+	got, err := app.resolveParticipantPostCharacters(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		"p1",
+		[]string{"char-1"},
+		[]string{"char-1", "char-2"},
+	)
 	if err != nil {
 		t.Fatalf("resolveParticipantPostCharacters error = %v", err)
 	}
@@ -481,22 +501,54 @@ func TestInteractionApplicationResolveParticipantPostCharacters(t *testing.T) {
 		t.Fatalf("character ids = %#v", got)
 	}
 
-	_, err = app.resolveParticipantPostCharacters(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, "p1", []string{"char-2"}, []string{"char-1", "char-2"})
+	_, err = app.resolveParticipantPostCharacters(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		"p1",
+		[]string{"char-2"},
+		[]string{"char-1", "char-2"},
+	)
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("ownership code = %v, want permission denied", status.Code(err))
 	}
 
-	_, err = app.resolveParticipantPostCharacters(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, "p1", []string{"missing"}, []string{"char-1", "char-2"})
+	_, err = app.resolveParticipantPostCharacters(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		"p1",
+		[]string{"missing"},
+		[]string{"char-1", "char-2"},
+	)
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("in-scene code = %v, want failed precondition", status.Code(err))
 	}
 
-	_, err = app.resolveParticipantPostCharacters(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, "p1", []string{"char-1"}, []string{"char-2"})
+	_, err = app.resolveParticipantPostCharacters(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		"p1",
+		[]string{"char-1"},
+		[]string{"char-2"},
+	)
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("acting set code = %v, want permission denied", status.Code(err))
 	}
 
-	_, err = app.resolveParticipantPostCharacters(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, "p1", nil, []string{"char-1"})
+	_, err = app.resolveParticipantPostCharacters(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		"p1",
+		nil,
+		[]string{"char-1"},
+	)
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("empty ids code = %v, want invalid argument", status.Code(err))
 	}
@@ -523,14 +575,21 @@ func TestInteractionApplicationResolveRevisionRequestsRejectsForeignCharacter(t 
 		},
 	}
 
-	_, err := app.resolveRevisionRequests(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, storage.SceneInteraction{
-		ActingCharacterIDs:   []string{"char-1", "char-2"},
-		ActingParticipantIDs: []string{"p1", "p2"},
-	}, []*statev1.ScenePlayerRevisionRequest{{
-		ParticipantId: "p1",
-		Reason:        "Fix the spell choice.",
-		CharacterIds:  []string{"char-2"},
-	}})
+	_, err := app.resolveRevisionRequests(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		storage.SceneInteraction{
+			ActingCharacterIDs:   []string{"char-1", "char-2"},
+			ActingParticipantIDs: []string{"p1", "p2"},
+		},
+		[]*statev1.ScenePlayerRevisionRequest{{
+			ParticipantId: "p1",
+			Reason:        "Fix the spell choice.",
+			CharacterIds:  []string{"char-2"},
+		}},
+	)
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("foreign character code = %v, want permission denied", status.Code(err))
 	}
@@ -555,14 +614,21 @@ func TestInteractionApplicationResolveRevisionRequestsRequiresReason(t *testing.
 		},
 	}
 
-	_, err := app.resolveRevisionRequests(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, storage.SceneInteraction{
-		ActingCharacterIDs:   []string{"char-1"},
-		ActingParticipantIDs: []string{"p1"},
-	}, []*statev1.ScenePlayerRevisionRequest{{
-		ParticipantId: "p1",
-		Reason:        " ",
-		CharacterIds:  []string{"char-1"},
-	}})
+	_, err := app.resolveRevisionRequests(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		storage.SceneInteraction{
+			ActingCharacterIDs:   []string{"char-1"},
+			ActingParticipantIDs: []string{"p1"},
+		},
+		[]*statev1.ScenePlayerRevisionRequest{{
+			ParticipantId: "p1",
+			Reason:        " ",
+			CharacterIds:  []string{"char-1"},
+		}},
+	)
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("blank reason code = %v, want invalid argument", status.Code(err))
 	}
@@ -621,7 +687,7 @@ func TestInteractionApplicationLoadSceneStateReturnsStoredInteraction(t *testing
 		CampaignID: "camp-1",
 		SceneID:    "scene-1",
 		SessionID:  "sess-1",
-	})
+	}, storage.SessionInteraction{})
 	if err != nil {
 		t.Fatalf("loadSceneState error = %v", err)
 	}
@@ -649,7 +715,13 @@ func TestInteractionApplicationResolveActingSetRejectsOwnerlessCharacter(t *test
 		},
 	}
 
-	_, _, err := app.resolveActingSet(context.Background(), "camp-1", storage.SceneRecord{SceneID: "scene-1"}, []string{"char-1"})
+	_, _, err := app.resolveActingSet(
+		context.Background(),
+		"camp-1",
+		storage.SceneRecord{SceneID: "scene-1"},
+		storage.SessionInteraction{},
+		[]string{"char-1"},
+	)
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("code = %v, want failed precondition", status.Code(err))
 	}

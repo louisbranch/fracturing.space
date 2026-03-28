@@ -59,7 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_participant_claims_participant ON participant_cla
 CREATE TABLE IF NOT EXISTS characters (
     campaign_id TEXT NOT NULL,
     id TEXT NOT NULL,
-    controller_participant_id TEXT,
+    owner_participant_id TEXT NOT NULL DEFAULT '',
     name TEXT NOT NULL,
     kind TEXT NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
@@ -376,12 +376,6 @@ ALTER TABLE projection_watermarks
 ADD COLUMN expected_next_seq INTEGER NOT NULL DEFAULT 0;
 
 
-ALTER TABLE characters ADD COLUMN owner_participant_id TEXT NOT NULL DEFAULT '';
-
-UPDATE characters
-SET owner_participant_id = COALESCE(controller_participant_id, '')
-WHERE owner_participant_id = '';
-
 ALTER TABLE campaigns ADD COLUMN ai_agent_id TEXT NOT NULL DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_campaigns_ai_agent_id ON campaigns(ai_agent_id);
@@ -594,6 +588,7 @@ CREATE TABLE session_interactions (
     session_id TEXT NOT NULL,
     active_scene_id TEXT NOT NULL DEFAULT '',
     gm_authority_participant_id TEXT NOT NULL DEFAULT '',
+    character_controllers_json BLOB,
     ooc_opened INTEGER NOT NULL DEFAULT 0,
     ooc_requested_by_participant_id TEXT NOT NULL DEFAULT '',
     ooc_reason TEXT NOT NULL DEFAULT '',

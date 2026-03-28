@@ -94,14 +94,8 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	if got := AppCampaignCharacterEdit("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/edit" {
 		t.Fatalf("AppCampaignCharacterEdit() = %q", got)
 	}
-	if got := AppCampaignCharacterControl("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/control" {
-		t.Fatalf("AppCampaignCharacterControl() = %q", got)
-	}
-	if got := AppCampaignCharacterControlClaim("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/control/claim" {
-		t.Fatalf("AppCampaignCharacterControlClaim() = %q", got)
-	}
-	if got := AppCampaignCharacterControlRelease("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/control/release" {
-		t.Fatalf("AppCampaignCharacterControlRelease() = %q", got)
+	if got := AppCampaignCharacterOwner("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/owner" {
+		t.Fatalf("AppCampaignCharacterOwner() = %q", got)
 	}
 	if got := AppCampaignCharacterDelete("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/delete" {
 		t.Fatalf("AppCampaignCharacterDelete() = %q", got)
@@ -168,14 +162,8 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	if AppCampaignCharacterEditPattern != "/app/campaigns/{campaignID}/characters/{characterID}/edit" {
 		t.Fatalf("AppCampaignCharacterEditPattern = %q", AppCampaignCharacterEditPattern)
 	}
-	if AppCampaignCharacterControlPattern != "/app/campaigns/{campaignID}/characters/{characterID}/control" {
-		t.Fatalf("AppCampaignCharacterControlPattern = %q", AppCampaignCharacterControlPattern)
-	}
-	if AppCampaignCharacterControlClaimPattern != "/app/campaigns/{campaignID}/characters/{characterID}/control/claim" {
-		t.Fatalf("AppCampaignCharacterControlClaimPattern = %q", AppCampaignCharacterControlClaimPattern)
-	}
-	if AppCampaignCharacterControlReleasePattern != "/app/campaigns/{campaignID}/characters/{characterID}/control/release" {
-		t.Fatalf("AppCampaignCharacterControlReleasePattern = %q", AppCampaignCharacterControlReleasePattern)
+	if AppCampaignCharacterOwnerPattern != "/app/campaigns/{campaignID}/characters/{characterID}/owner" {
+		t.Fatalf("AppCampaignCharacterOwnerPattern = %q", AppCampaignCharacterOwnerPattern)
 	}
 	if AppCampaignCharacterDeletePattern != "/app/campaigns/{campaignID}/characters/{characterID}/delete" {
 		t.Fatalf("AppCampaignCharacterDeletePattern = %q", AppCampaignCharacterDeletePattern)
@@ -271,14 +259,8 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	if got := AppCampaignCharacterEdit("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/edit" {
 		t.Fatalf("AppCampaignCharacterEdit() escaped = %q", got)
 	}
-	if got := AppCampaignCharacterControl("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/control" {
-		t.Fatalf("AppCampaignCharacterControl() escaped = %q", got)
-	}
-	if got := AppCampaignCharacterControlClaim("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/control/claim" {
-		t.Fatalf("AppCampaignCharacterControlClaim() escaped = %q", got)
-	}
-	if got := AppCampaignCharacterControlRelease("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/control/release" {
-		t.Fatalf("AppCampaignCharacterControlRelease() escaped = %q", got)
+	if got := AppCampaignCharacterOwner("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/owner" {
+		t.Fatalf("AppCampaignCharacterOwner() escaped = %q", got)
 	}
 	if got := AppCampaignCharacterDelete("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/delete" {
 		t.Fatalf("AppCampaignCharacterDelete() escaped = %q", got)

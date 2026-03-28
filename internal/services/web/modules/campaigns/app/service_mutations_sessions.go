@@ -22,7 +22,17 @@ func (s sessionMutationService) startSession(ctx context.Context, campaignID str
 	if err := s.auth.requirePolicy(ctx, campaignID, policyManageSession); err != nil {
 		return err
 	}
-	return s.mutation.StartSession(ctx, campaignID, StartSessionInput{Name: strings.TrimSpace(input.Name)})
+	assignments := make([]SessionCharacterControllerAssignment, 0, len(input.CharacterControllers))
+	for _, assignment := range input.CharacterControllers {
+		assignments = append(assignments, SessionCharacterControllerAssignment{
+			CharacterID:   strings.TrimSpace(assignment.CharacterID),
+			ParticipantID: strings.TrimSpace(assignment.ParticipantID),
+		})
+	}
+	return s.mutation.StartSession(ctx, campaignID, StartSessionInput{
+		Name:                 strings.TrimSpace(input.Name),
+		CharacterControllers: assignments,
+	})
 }
 
 // endSession applies this package workflow transition.

@@ -6,7 +6,6 @@ import "github.com/louisbranch/fracturing.space/internal/services/game/domain/id
 type CreatePayload struct {
 	CharacterID        ids.CharacterID   `json:"character_id"`
 	OwnerParticipantID ids.ParticipantID `json:"owner_participant_id,omitempty"`
-	ParticipantID      ids.ParticipantID `json:"participant_id,omitempty"`
 	Name               string            `json:"name"`
 	Kind               string            `json:"kind"`
 	Notes              string            `json:"notes,omitempty"`

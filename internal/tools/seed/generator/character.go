@@ -10,7 +10,7 @@ import (
 
 // createCharacters creates the specified number of characters for a campaign.
 // Characters are assigned as PCs to participants when available, with remaining as NPCs.
-// All characters receive a participant controller assignment (players first, then GM).
+// Ownership is assigned players first, then GM/fallback participants.
 func (g *Generator) createCharacters(ctx context.Context, campaignID string, count int, participants []*statev1.Participant) ([]*statev1.Character, error) {
 	if count < 1 {
 		return nil, nil
@@ -61,25 +61,28 @@ func (g *Generator) createCharacters(ctx context.Context, campaignID string, cou
 		character := resp.Character
 		characters = append(characters, character)
 
-		// Assign a controller (players first, then GM)
-		var controllerParticipant *statev1.Participant
+		// Assign an owner (players first, then GM).
+		var ownerParticipant *statev1.Participant
 		if i < len(playerParticipants) {
-			controllerParticipant = playerParticipants[i]
+			ownerParticipant = playerParticipants[i]
 		} else if gmParticipant != nil {
-			controllerParticipant = gmParticipant
+			ownerParticipant = gmParticipant
 		} else if fallbackParticipant != nil {
-			controllerParticipant = fallbackParticipant
+			ownerParticipant = fallbackParticipant
 		}
-		if controllerParticipant == nil {
-			return nil, fmt.Errorf("no participants available to assign controller for character %s", character.Id)
+		if ownerParticipant == nil {
+			return nil, fmt.Errorf("no participants available to assign owner for character %s", character.Id)
 		}
-		_, err = g.characters.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-			CampaignId:    campaignID,
-			CharacterId:   character.Id,
-			ParticipantId: wrapperspb.String(controllerParticipant.Id),
+		updateResp, err := g.characters.UpdateCharacter(ctx, &statev1.UpdateCharacterRequest{
+			CampaignId:         campaignID,
+			CharacterId:        character.Id,
+			OwnerParticipantId: wrapperspb.String(ownerParticipant.Id),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("SetDefaultControl for character %s: %w", character.Id, err)
+			return nil, fmt.Errorf("UpdateCharacter(owner) for character %s: %w", character.Id, err)
+		}
+		if updateResp.GetCharacter() != nil {
+			characters[len(characters)-1] = updateResp.GetCharacter()
 		}
 	}
 

@@ -14,7 +14,8 @@ type SessionsPageView struct {
 // SessionCreatePageView carries session-create page state.
 type SessionCreatePageView struct {
 	CampaignDetailBaseView
-	SessionReadiness SessionReadinessView
+	SessionReadiness     SessionReadinessView
+	CharacterControllers []SessionCreateCharacterControllerView
 }
 
 // SessionDetailPageView carries session-detail page state only.
@@ -60,4 +61,21 @@ type SessionReadinessBlockerView struct {
 type SessionReadinessView struct {
 	Ready    bool
 	Blockers []SessionReadinessBlockerView
+}
+
+// SessionCreateCharacterControllerView carries one character controller choice
+// for the session-start page.
+type SessionCreateCharacterControllerView struct {
+	CharacterID string
+	Name        string
+	Owner       string
+	Options     []SessionCreateControllerOptionView
+}
+
+// SessionCreateControllerOptionView carries one controller dropdown option for
+// the session-start page.
+type SessionCreateControllerOptionView struct {
+	ParticipantID string
+	Label         string
+	Selected      bool
 }

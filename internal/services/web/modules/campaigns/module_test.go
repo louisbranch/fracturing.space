@@ -506,7 +506,7 @@ func TestGRPCGatewayMutationConstructorsReturnNilWhenDependenciesMissing(t *test
 		gotNil bool
 	}{
 		{name: "start session", gotNil: campaigngateway.NewSessionMutationGateway(campaigngateway.SessionMutationDeps{}) == nil},
-		{name: "character control", gotNil: campaigngateway.NewCharacterControlMutationGateway(campaigngateway.CharacterControlMutationDeps{}) == nil},
+		{name: "character ownership", gotNil: campaigngateway.NewCharacterOwnershipMutationGateway(campaigngateway.CharacterOwnershipMutationDeps{}) == nil},
 		{name: "create character", gotNil: campaigngateway.NewCharacterMutationGateway(campaigngateway.CharacterMutationDeps{}) == nil},
 		{name: "create participant", gotNil: campaigngateway.NewParticipantMutationGateway(campaigngateway.ParticipantMutationDeps{}) == nil},
 		{name: "create invite", gotNil: campaigngateway.NewInviteMutationGateway(campaigngateway.InviteMutationDeps{}) == nil},
@@ -756,9 +756,7 @@ type fakeGateway struct {
 	createCharacterErr                error
 	createdCharacterID                string
 	deleteCharacterErr                error
-	setCharacterControllerErr         error
-	claimCharacterControlErr          error
-	releaseCharacterControlErr        error
+	setCharacterOwnerErr              error
 	updateCampaignErr                 error
 	updateCampaignAIBindingErr        error
 	createParticipantErr              error
@@ -1040,14 +1038,8 @@ func (fakeGateway) UpdateCharacter(context.Context, string, string, campaignapp.
 func (f fakeGateway) DeleteCharacter(context.Context, string, string) error {
 	return f.deleteCharacterErr
 }
-func (f fakeGateway) SetCharacterController(context.Context, string, string, string) error {
-	return f.setCharacterControllerErr
-}
-func (f fakeGateway) ClaimCharacterControl(context.Context, string, string) error {
-	return f.claimCharacterControlErr
-}
-func (f fakeGateway) ReleaseCharacterControl(context.Context, string, string) error {
-	return f.releaseCharacterControlErr
+func (f fakeGateway) SetCharacterOwner(context.Context, string, string, string) error {
+	return f.setCharacterOwnerErr
 }
 func (f fakeGateway) UpdateParticipant(context.Context, string, campaignapp.UpdateParticipantInput) error {
 	return f.updateParticipantErr
@@ -1395,11 +1387,11 @@ func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPC
 	if deps.Characters.Read.DaggerheartContent == nil {
 		deps.Characters.Read.DaggerheartContent = stubDaggerheartContentClient{}
 	}
-	if deps.Characters.Control.Character == nil {
-		deps.Characters.Control.Character = stubCharacterMutationClient{}
+	if deps.Characters.Ownership.Character == nil {
+		deps.Characters.Ownership.Character = stubCharacterMutationClient{}
 	}
 	if deps.Characters.Mutation.Character == nil {
-		deps.Characters.Mutation.Character = deps.Characters.Control.Character
+		deps.Characters.Mutation.Character = deps.Characters.Ownership.Character
 	}
 	if deps.Characters.Participants.Participant == nil {
 		deps.Characters.Participants.Participant = deps.Participants.Read.Participant

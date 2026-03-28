@@ -95,6 +95,10 @@ func ParticipantOwnsActiveCharacters(ctx context.Context, characters storage.Cha
 
 // ParticipantControlsActiveCharacters reports whether participantID currently
 // controls at least one active character in projection-backed read state.
+//
+// Session-scoped controller assignments no longer live on CharacterStore. The
+// active-session transport layer evaluates controller ownership where the
+// active session interaction state is available.
 func ParticipantControlsActiveCharacters(ctx context.Context, characters storage.CharacterStore, campaignID, participantID string) (bool, error) {
 	if characters == nil {
 		return false, status.Error(codes.Internal, "character store is not configured")
@@ -104,11 +108,7 @@ func ParticipantControlsActiveCharacters(ctx context.Context, characters storage
 		return false, status.Error(codes.InvalidArgument, "participant id is required")
 	}
 
-	controlledCharacters, err := characters.ListCharactersByControllerParticipant(ctx, campaignID, participantID)
-	if err != nil {
-		return false, grpcerror.Internal("list characters by controller participant", err)
-	}
-	return len(controlledCharacters) > 0, nil
+	return false, nil
 }
 
 // ResolveCharacterMutationOwnerParticipantIDFromStore resolves the owner

@@ -67,14 +67,14 @@ func characterDetailView(
 	campaignID string,
 	characterID string,
 	character campaignapp.CampaignCharacter,
-	control campaignapp.CampaignCharacterControl,
+	ownership campaignapp.CampaignCharacterOwnership,
 	creationEnabled bool,
 	creation campaignrender.CampaignCharacterCreationView,
 ) campaignrender.CharacterDetailPageView {
 	view := campaignrender.CharacterDetailPageView{CampaignDetailBaseView: page.BaseDetailView(campaignID)}
 	view.CharacterID = strings.TrimSpace(characterID)
 	view.Character = mapCharacterView(character)
-	view.CharacterControl = mapCharacterControlView(control)
+	view.CharacterOwnership = mapCharacterOwnershipView(ownership)
 	view.CharacterCreationEnabled = creationEnabled
 	if creationEnabled {
 		view.CharacterCreation = creation
@@ -123,18 +123,18 @@ func mapCharactersView(items []campaignapp.CampaignCharacter) []campaignrender.C
 // mapCharacterView projects one app character into render state.
 func mapCharacterView(c campaignapp.CampaignCharacter) campaignrender.CharacterView {
 	return campaignrender.CharacterView{
-		ID:                      c.ID,
-		Name:                    c.Name,
-		Kind:                    c.Kind,
-		Controller:              c.Controller,
-		ControllerParticipantID: c.ControllerParticipantID,
-		Pronouns:                c.Pronouns,
-		Aliases:                 append([]string(nil), c.Aliases...),
-		AvatarURL:               c.AvatarURL,
-		OwnedByViewer:           c.OwnedByViewer,
-		CanEdit:                 c.CanEdit,
-		EditReasonCode:          c.EditReasonCode,
-		Daggerheart:             mapCharacterDaggerheartSummaryView(c.Daggerheart),
+		ID:                 c.ID,
+		Name:               c.Name,
+		Kind:               c.Kind,
+		Owner:              c.Owner,
+		OwnerParticipantID: c.OwnerParticipantID,
+		Pronouns:           c.Pronouns,
+		Aliases:            append([]string(nil), c.Aliases...),
+		AvatarURL:          c.AvatarURL,
+		OwnedByViewer:      c.OwnedByViewer,
+		CanEdit:            c.CanEdit,
+		EditReasonCode:     c.EditReasonCode,
+		Daggerheart:        mapCharacterDaggerheartSummaryView(c.Daggerheart),
 	}
 }
 
@@ -162,21 +162,19 @@ func mapCharacterEditorView(editor campaignapp.CampaignCharacterEditor) campaign
 	}
 }
 
-// mapCharacterControlView projects control options into render-owned card state.
-func mapCharacterControlView(control campaignapp.CampaignCharacterControl) campaignrender.CharacterControlView {
-	options := make([]campaignrender.CharacterControlOptionView, 0, len(control.Options))
-	for _, option := range control.Options {
-		options = append(options, campaignrender.CharacterControlOptionView{
+// mapCharacterOwnershipView projects ownership options into render-owned card state.
+func mapCharacterOwnershipView(ownership campaignapp.CampaignCharacterOwnership) campaignrender.CharacterOwnershipView {
+	options := make([]campaignrender.CharacterOwnershipOptionView, 0, len(ownership.Options))
+	for _, option := range ownership.Options {
+		options = append(options, campaignrender.CharacterOwnershipOptionView{
 			ParticipantID: option.ParticipantID,
 			Label:         option.Label,
 			Selected:      option.Selected,
 		})
 	}
-	return campaignrender.CharacterControlView{
-		CurrentParticipantName: control.CurrentParticipantName,
-		CanSelfClaim:           control.CanSelfClaim,
-		CanSelfRelease:         control.CanSelfRelease,
-		CanManageControl:       control.CanManageControl,
-		Options:                options,
+	return campaignrender.CharacterOwnershipView{
+		CurrentOwnerName:   ownership.CurrentOwnerName,
+		CanManageOwnership: ownership.CanManageOwnership,
+		Options:            options,
 	}
 }

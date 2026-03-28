@@ -155,8 +155,8 @@ func TestRenderHelperNormalizationContracts(t *testing.T) {
 	}); got != "2" {
 		t.Fatalf("campaignCharacterDaggerheartLevelAttr() = %q", got)
 	}
-	if got := campaignCharacterControlOptionLabel(loc, CharacterControlOptionView{}); got != "Unassigned" {
-		t.Fatalf("campaignCharacterControlOptionLabel() = %q", got)
+	if got := campaignCharacterOwnershipOptionLabel(loc, CharacterOwnershipOptionView{}); got != "Unassigned" {
+		t.Fatalf("campaignCharacterOwnershipOptionLabel() = %q", got)
 	}
 	if got := campaignCharacterDisplayName(loc, CharacterView{}); got != "Character" {
 		t.Fatalf("campaignCharacterDisplayName() = %q", got)

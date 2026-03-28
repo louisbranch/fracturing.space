@@ -153,34 +153,34 @@ func TestEnumConversions(t *testing.T) {
 
 }
 
-func TestCharacterToProtoParticipantID(t *testing.T) {
+func TestCharacterToProtoOwnerParticipantID(t *testing.T) {
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	updated := created.Add(time.Hour)
 
 	withParticipant := charactertransport.CharacterToProto(storage.CharacterRecord{
-		ID:            "char-1",
-		CampaignID:    "camp-1",
-		Name:          "Hero",
-		Kind:          character.KindPC,
-		ParticipantID: "part-1",
-		CreatedAt:     created,
-		UpdatedAt:     updated,
+		ID:                 "char-1",
+		CampaignID:         "camp-1",
+		Name:               "Hero",
+		Kind:               character.KindPC,
+		OwnerParticipantID: "part-1",
+		CreatedAt:          created,
+		UpdatedAt:          updated,
 	})
-	if withParticipant.GetParticipantId().GetValue() != "part-1" {
-		t.Fatal("expected participant id wrapper to be set")
+	if withParticipant.GetOwnerParticipantId().GetValue() != "part-1" {
+		t.Fatal("expected owner participant id wrapper to be set")
 	}
 
 	noParticipant := charactertransport.CharacterToProto(storage.CharacterRecord{
-		ID:            "char-2",
-		CampaignID:    "camp-1",
-		Name:          "NPC",
-		Kind:          character.KindNPC,
-		ParticipantID: "  ",
-		CreatedAt:     created,
-		UpdatedAt:     updated,
+		ID:                 "char-2",
+		CampaignID:         "camp-1",
+		Name:               "NPC",
+		Kind:               character.KindNPC,
+		OwnerParticipantID: "  ",
+		CreatedAt:          created,
+		UpdatedAt:          updated,
 	})
-	if noParticipant.GetParticipantId() != nil {
-		t.Fatal("expected participant id wrapper to be nil")
+	if noParticipant.GetOwnerParticipantId() != nil {
+		t.Fatal("expected owner participant id wrapper to be nil")
 	}
 }
 

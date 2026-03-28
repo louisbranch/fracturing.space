@@ -15,6 +15,7 @@ func TestSessionInteractionPayloadValidatorsAcceptAndRejectJSON(t *testing.T) {
 	}{
 		{name: "active scene set", validate: func(raw []byte) error { return validateSceneActivatedPayload(json.RawMessage(raw)) }, valid: `{"active_scene_id":"scene-1"}`},
 		{name: "gm authority set", validate: func(raw []byte) error { return validateGMAuthoritySetPayload(json.RawMessage(raw)) }, valid: `{"participant_id":"gm-1"}`},
+		{name: "character controller set", validate: func(raw []byte) error { return validateCharacterControllerSetPayload(json.RawMessage(raw)) }, valid: `{"character_id":"char-1","participant_id":"player-1"}`},
 		{name: "ooc paused", validate: func(raw []byte) error { return validateOOCOpenedPayload(json.RawMessage(raw)) }, valid: `{"reason":"rules"}`},
 		{name: "ooc posted", validate: func(raw []byte) error { return validateOOCPostedPayload(json.RawMessage(raw)) }, valid: `{"post_id":"ooc-1","participant_id":"p1","body":"question"}`},
 		{name: "ooc ready marked", validate: func(raw []byte) error { return validateOOCReadyMarkedPayload(json.RawMessage(raw)) }, valid: `{"participant_id":"p1"}`},

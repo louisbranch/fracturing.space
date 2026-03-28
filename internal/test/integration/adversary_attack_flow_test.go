@@ -59,13 +59,7 @@ func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, target)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, target)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Adversary Attack Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Adversary Attack Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

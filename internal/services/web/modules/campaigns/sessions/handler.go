@@ -19,23 +19,39 @@ import (
 
 // ServiceConfig groups session lifecycle app config.
 type ServiceConfig struct {
+	Characters    campaignapp.CharacterReadServiceConfig
 	Mutation      campaignapp.SessionMutationServiceConfig
+	Participants  campaignapp.ParticipantReadServiceConfig
 	Authorization campaignapp.AuthorizationGateway
 }
 
 // HandlerServices groups session lifecycle behavior.
 type HandlerServices struct {
-	mutation campaignapp.CampaignSessionMutationService
+	characters   campaignapp.CampaignCharacterReadService
+	mutation     campaignapp.CampaignSessionMutationService
+	participants campaignapp.CampaignParticipantReadService
 }
 
 // NewHandlerServices keeps session transport dependencies owned by the session
 // surface instead of the campaigns root constructor.
 func NewHandlerServices(config ServiceConfig) (HandlerServices, error) {
+	characters, err := campaignapp.NewCharacterReadService(config.Characters, config.Authorization)
+	if err != nil {
+		return HandlerServices{}, fmt.Errorf("session-character-reads: %w", err)
+	}
 	mutation, err := campaignapp.NewSessionMutationService(config.Mutation, config.Authorization)
 	if err != nil {
 		return HandlerServices{}, fmt.Errorf("session-mutation: %w", err)
 	}
-	return HandlerServices{mutation: mutation}, nil
+	participants, err := campaignapp.NewParticipantReadService(config.Participants, config.Authorization)
+	if err != nil {
+		return HandlerServices{}, fmt.Errorf("session-participant-reads: %w", err)
+	}
+	return HandlerServices{
+		characters:   characters,
+		mutation:     mutation,
+		participants: participants,
+	}, nil
 }
 
 // Handler owns session detail/lifecycle plus play-launch routes.
@@ -81,7 +97,22 @@ func (h Handler) HandleSessionCreatePage(w http.ResponseWriter, r *http.Request,
 		h.WriteError(w, r, err)
 		return
 	}
-	view := sessionCreateView(page, campaignID, readiness)
+	readContext := campaignapp.CharacterReadContext{
+		System:       page.Workspace.System,
+		Locale:       page.Locale,
+		ViewerUserID: h.RequestUserID(r),
+	}
+	characters, err := h.sessions.characters.CampaignCharacters(ctx, campaignID, readContext)
+	if err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	participants, err := h.sessions.participants.CampaignParticipants(ctx, campaignID)
+	if err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	view := sessionCreateView(page, campaignID, readiness, characters, participants)
 	h.WriteCampaignDetailPage(
 		w,
 		r,

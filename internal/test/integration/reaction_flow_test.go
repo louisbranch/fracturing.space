@@ -58,13 +58,7 @@ func TestDaggerheartReactionFlow(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, reactor)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, reactor)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Reaction Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Reaction Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

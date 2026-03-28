@@ -180,6 +180,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		session.CommandTypeSpotlightClear:            sessionRoute,
 		session.CommandTypeSceneActivate:             sessionRoute,
 		session.CommandTypeGMAuthoritySet:            sessionRoute,
+		session.CommandTypeCharacterControllerSet:    sessionRoute,
 		session.CommandTypeOOCOpen:                   sessionRoute,
 		session.CommandTypeOOCPost:                   sessionRoute,
 		session.CommandTypeOOCReadyMark:              sessionRoute,

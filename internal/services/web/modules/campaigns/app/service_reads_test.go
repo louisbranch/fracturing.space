@@ -687,18 +687,18 @@ func TestCampaignCharactersSortByName(t *testing.T) {
 
 	svc := newService(&campaignGatewayStub{campaignCharacters: []CampaignCharacter{
 		{
-			ID:         "ch-z",
-			Name:       "  Zara  ",
-			Kind:       "npc",
-			Controller: "Moss",
-			AvatarURL:  "/static/avatars/zara.png",
+			ID:        "ch-z",
+			Name:      "  Zara  ",
+			Kind:      "npc",
+			Owner:     "Moss",
+			AvatarURL: "/static/avatars/zara.png",
 		},
 		{
-			ID:         "ch-a",
-			Name:       "Aria",
-			Kind:       "pc",
-			Controller: "Ariadne",
-			AvatarURL:  "/static/avatars/aria.png",
+			ID:        "ch-a",
+			Name:      "Aria",
+			Kind:      "pc",
+			Owner:     "Ariadne",
+			AvatarURL: "/static/avatars/aria.png",
 		},
 	}})
 
@@ -712,8 +712,8 @@ func TestCampaignCharactersSortByName(t *testing.T) {
 	if characters[0].Name != "Aria" || characters[1].Name != "Zara" {
 		t.Fatalf("character order = [%s, %s], want [Aria, Zara]", characters[0].Name, characters[1].Name)
 	}
-	if characters[0].Kind != "pc" || characters[0].Controller != "Ariadne" {
-		t.Fatalf("character metadata = %#v, want kind/controller labels", characters[0])
+	if characters[0].Kind != "pc" || characters[0].Owner != "Ariadne" {
+		t.Fatalf("character metadata = %#v, want kind/owner labels", characters[0])
 	}
 }
 
@@ -722,8 +722,8 @@ func TestCampaignCharactersHydratesEditabilityFromBatchAuthorization(t *testing.
 
 	gateway := &campaignGatewayStub{
 		campaignCharacters: []CampaignCharacter{
-			{ID: "ch-z", Name: "Zara", Kind: "npc", Controller: "Moss"},
-			{ID: "ch-a", Name: "Aria", Kind: "pc", Controller: "Ariadne"},
+			{ID: "ch-z", Name: "Zara", Kind: "npc", Owner: "Moss"},
+			{ID: "ch-a", Name: "Aria", Kind: "pc", Owner: "Ariadne"},
 		},
 		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
@@ -775,8 +775,8 @@ func TestCampaignCharactersHydratesEditabilityForDuplicateCharacterIDs(t *testin
 
 	gateway := &campaignGatewayStub{
 		campaignCharacters: []CampaignCharacter{
-			{ID: "ch-a", Name: "Aria", Kind: "pc", Controller: "Ariadne"},
-			{ID: "ch-a", Name: "Aria Clone", Kind: "pc", Controller: "Ariadne"},
+			{ID: "ch-a", Name: "Aria", Kind: "pc", Owner: "Ariadne"},
+			{ID: "ch-a", Name: "Aria Clone", Kind: "pc", Owner: "Ariadne"},
 		},
 		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
@@ -811,7 +811,7 @@ func TestCampaignCharactersFailClosedWhenBatchAuthorizationErrors(t *testing.T) 
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
-		campaignCharacters: []CampaignCharacter{{ID: "ch-a", Name: "Aria", Kind: "pc", Controller: "Ariadne"}},
+		campaignCharacters: []CampaignCharacter{{ID: "ch-a", Name: "Aria", Kind: "pc", Owner: "Ariadne"}},
 		batchAuthorizationErr: apperrors.E(
 			apperrors.KindUnavailable,
 			"authorization unavailable",
@@ -959,7 +959,7 @@ func TestCampaignSessionReadinessEmptyCampaignIDReturnsReady(t *testing.T) {
 	}
 }
 
-func TestCampaignCharacterControlResolvesViewerActionsAndManagerOptions(t *testing.T) {
+func TestCampaignCharacterOwnershipResolvesManagerOptions(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
@@ -968,33 +968,27 @@ func TestCampaignCharacterControlResolvesViewerActionsAndManagerOptions(t *testi
 			{ID: "p-2", UserID: "user-2", Name: "Moss", CampaignAccess: "member"},
 		},
 		campaignCharacters: []CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Controller: "Unassigned",
+			ID:    "char-1",
+			Name:  "Aria",
+			Owner: "Unassigned",
 		}},
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 	})
 
-	control, err := svc.campaignCharacterControl(context.Background(), "c1", "char-1", "user-1", CharacterReadContext{})
+	ownership, err := svc.campaignCharacterOwnership(context.Background(), "c1", "char-1", CharacterReadContext{})
 	if err != nil {
-		t.Fatalf("campaignCharacterControl() error = %v", err)
+		t.Fatalf("campaignCharacterOwnership() error = %v", err)
 	}
-	if !control.CanSelfClaim {
-		t.Fatalf("CanSelfClaim = false, want true")
+	if !ownership.CanManageOwnership {
+		t.Fatalf("CanManageOwnership = false, want true")
 	}
-	if control.CanSelfRelease {
-		t.Fatalf("CanSelfRelease = true, want false")
+	if ownership.CurrentOwnerName != "Unassigned" {
+		t.Fatalf("CurrentOwnerName = %q, want %q", ownership.CurrentOwnerName, "Unassigned")
 	}
-	if !control.CanManageControl {
-		t.Fatalf("CanManageControl = false, want true")
+	if len(ownership.Options) != 3 {
+		t.Fatalf("len(ownership.Options) = %d, want 3", len(ownership.Options))
 	}
-	if control.CurrentParticipantName != "Ariadne" {
-		t.Fatalf("CurrentParticipantName = %q, want %q", control.CurrentParticipantName, "Ariadne")
-	}
-	if len(control.Options) != 3 {
-		t.Fatalf("len(control.Options) = %d, want 3", len(control.Options))
-	}
-	if control.Options[0].ParticipantID != "" || !control.Options[0].Selected {
-		t.Fatalf("control.Options[0] = %+v, want selected unassigned option", control.Options[0])
+	if ownership.Options[0].ParticipantID != "" || !ownership.Options[0].Selected {
+		t.Fatalf("ownership.Options[0] = %+v, want selected unassigned option", ownership.Options[0])
 	}
 }

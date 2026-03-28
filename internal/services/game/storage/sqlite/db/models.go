@@ -55,19 +55,18 @@ type CampaignActiveSession struct {
 }
 
 type Character struct {
-	CampaignID              string         `json:"campaign_id"`
-	ID                      string         `json:"id"`
-	ControllerParticipantID sql.NullString `json:"controller_participant_id"`
-	Name                    string         `json:"name"`
-	Kind                    string         `json:"kind"`
-	Notes                   string         `json:"notes"`
-	Pronouns                string         `json:"pronouns"`
-	AliasesJson             string         `json:"aliases_json"`
-	CreatedAt               int64          `json:"created_at"`
-	UpdatedAt               int64          `json:"updated_at"`
-	AvatarSetID             string         `json:"avatar_set_id"`
-	AvatarAssetID           string         `json:"avatar_asset_id"`
-	OwnerParticipantID      string         `json:"owner_participant_id"`
+	CampaignID         string `json:"campaign_id"`
+	ID                 string `json:"id"`
+	OwnerParticipantID string `json:"owner_participant_id"`
+	Name               string `json:"name"`
+	Kind               string `json:"kind"`
+	Notes              string `json:"notes"`
+	Pronouns           string `json:"pronouns"`
+	AliasesJson        string `json:"aliases_json"`
+	CreatedAt          int64  `json:"created_at"`
+	UpdatedAt          int64  `json:"updated_at"`
+	AvatarSetID        string `json:"avatar_set_id"`
+	AvatarAssetID      string `json:"avatar_asset_id"`
 }
 
 type DaggerheartAdversary struct {
@@ -630,6 +629,7 @@ type SessionInteraction struct {
 	SessionID                   string `json:"session_id"`
 	ActiveSceneID               string `json:"active_scene_id"`
 	GmAuthorityParticipantID    string `json:"gm_authority_participant_id"`
+	CharacterControllersJson    []byte `json:"character_controllers_json"`
 	OocOpened                   int64  `json:"ooc_opened"`
 	OocRequestedByParticipantID string `json:"ooc_requested_by_participant_id"`
 	OocReason                   string `json:"ooc_reason"`

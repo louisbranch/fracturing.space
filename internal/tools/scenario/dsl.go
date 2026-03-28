@@ -991,8 +991,8 @@ func participantCharacter(state *lua.State) int {
 	if _, ok := data["kind"]; !ok {
 		data["kind"] = "PC"
 	}
-	if _, ok := data["control"]; !ok {
-		data["control"] = "participant"
+	if _, ok := data["owner"]; !ok {
+		data["owner"] = "participant"
 	}
 	data["participant"] = handle.name
 	appendStep(handle.scenario, "character", data)

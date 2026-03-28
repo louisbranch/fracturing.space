@@ -4,6 +4,7 @@ package game.v1;
 
 import "common/v1/locale.proto";
 import "game/v1/participant.proto";
+import "game/v1/session.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
@@ -43,6 +44,8 @@ service InteractionService {
   rpc ResolveSessionOOC(ResolveSessionOOCRequest) returns (ResolveSessionOOCResponse);
   // Sets which GM participant currently owns the next GM decision for the active session.
   rpc SetSessionGMAuthority(SetSessionGMAuthorityRequest) returns (SetSessionGMAuthorityResponse);
+  // Reassigns one character controller within the active session.
+  rpc SetSessionCharacterController(SetSessionCharacterControllerRequest) returns (SetSessionCharacterControllerResponse);
   // Re-queues the current failed AI GM turn when the session is still eligible.
   rpc RetryAIGMTurn(RetryAIGMTurnRequest) returns (RetryAIGMTurnResponse);
 }
@@ -72,6 +75,7 @@ message InteractionCharacter {
   string character_id = 1;
   string name = 2;
   string owner_participant_id = 3;
+  string controller_participant_id = 4;
 }
 
 enum GMInteractionBeatType {
@@ -255,6 +259,7 @@ message InteractionState {
   string gm_authority_participant_id = 9;
   AITurnState ai_turn = 10;
   InteractionControlState control = 11;
+  repeated SessionCharacterControllerAssignment character_controllers = 12;
 }
 
 message GetInteractionStateRequest {
@@ -433,6 +438,16 @@ message SetSessionGMAuthorityRequest {
 }
 
 message SetSessionGMAuthorityResponse {
+  InteractionState state = 1;
+}
+
+message SetSessionCharacterControllerRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string participant_id = 3;
+}
+
+message SetSessionCharacterControllerResponse {
   InteractionState state = 1;
 }
 

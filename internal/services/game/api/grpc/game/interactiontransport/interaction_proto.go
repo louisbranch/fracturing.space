@@ -39,6 +39,25 @@ func sessionInteractionToProto(interaction storage.SessionInteraction) *campaign
 	}
 }
 
+func sessionCharacterControllersToProto(interaction storage.SessionInteraction) []*campaignv1.SessionCharacterControllerAssignment {
+	assignments := make([]*campaignv1.SessionCharacterControllerAssignment, 0, len(interaction.CharacterControllers))
+	for _, assignment := range interaction.CharacterControllers {
+		characterID := strings.TrimSpace(assignment.CharacterID)
+		participantID := strings.TrimSpace(assignment.ParticipantID)
+		if characterID == "" || participantID == "" {
+			continue
+		}
+		assignments = append(assignments, &campaignv1.SessionCharacterControllerAssignment{
+			CharacterId:   characterID,
+			ParticipantId: participantID,
+		})
+	}
+	sort.SliceStable(assignments, func(i, j int) bool {
+		return assignments[i].GetCharacterId() < assignments[j].GetCharacterId()
+	})
+	return assignments
+}
+
 func aiTurnToProto(turn storage.SessionAITurn) *campaignv1.AITurnState {
 	return &campaignv1.AITurnState{
 		Status:             aiTurnStatusToProto(turn.Status),

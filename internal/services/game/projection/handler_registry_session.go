@@ -19,6 +19,7 @@ func registerSessionProjectionHandlers(r *CoreRouter) {
 
 	HandleProjection(r, session.EventTypeSceneActivated, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionSceneActivate)
 	HandleProjection(r, session.EventTypeGMAuthoritySet, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGMAuthoritySet)
+	HandleProjection(r, session.EventTypeCharacterControllerSet, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionCharacterControllerSet)
 	HandleProjection(r, session.EventTypeOOCOpened, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCOpened)
 	HandleProjection(r, session.EventTypeOOCPosted, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCPosted)
 	HandleProjection(r, session.EventTypeOOCReadyMarked, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCReadyMarked)

@@ -132,10 +132,10 @@ func TestApplyCharacterUpdated(t *testing.T) {
 	applier := Applier{Character: charStore, Campaign: cStore}
 
 	payload := testevent.CharacterUpdatedPayload{Fields: map[string]any{
-		"name":           "New Name",
-		"kind":           "NPC",
-		"notes":          "Some notes",
-		"participant_id": "part-1",
+		"name":                 "New Name",
+		"kind":                 "NPC",
+		"notes":                "Some notes",
+		"owner_participant_id": "part-1",
 	}}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 18, 0, 0, 0, time.UTC)
@@ -157,8 +157,8 @@ func TestApplyCharacterUpdated(t *testing.T) {
 	if updated.Notes != "Some notes" {
 		t.Fatalf("Notes = %q, want %q", updated.Notes, "Some notes")
 	}
-	if updated.ParticipantID != "part-1" {
-		t.Fatalf("ParticipantID = %q, want %q", updated.ParticipantID, "part-1")
+	if updated.OwnerParticipantID != "part-1" {
+		t.Fatalf("OwnerParticipantID = %q, want %q", updated.OwnerParticipantID, "part-1")
 	}
 }
 
@@ -447,7 +447,7 @@ func TestApplyCharacterUpdated_InvalidNotesType(t *testing.T) {
 	}
 }
 
-func TestApplyCharacterUpdated_InvalidParticipantIDType(t *testing.T) {
+func TestApplyCharacterUpdated_InvalidOwnerParticipantIDType(t *testing.T) {
 	ctx := context.Background()
 	charStore := newFakeCharacterStore()
 	charStore.characters["camp-1:char-1"] = storage.CharacterRecord{ID: "char-1", CampaignID: "camp-1"}
@@ -455,10 +455,10 @@ func TestApplyCharacterUpdated_InvalidParticipantIDType(t *testing.T) {
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
 	applier := Applier{Character: charStore, Campaign: campaignStore}
 
-	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"participant_id": 42}})
+	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"owner_participant_id": 42}})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
-		t.Fatal("expected error for invalid participant_id type")
+		t.Fatal("expected error for invalid owner_participant_id type")
 	}
 }
 

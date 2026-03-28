@@ -40,19 +40,18 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 	}
 
 	return s.q.PutCharacter(ctx, db.PutCharacterParams{
-		CampaignID:              c.CampaignID,
-		ID:                      c.ID,
-		OwnerParticipantID:      c.OwnerParticipantID,
-		ControllerParticipantID: sqliteutil.ToNullString(c.ParticipantID),
-		Name:                    c.Name,
-		Kind:                    enumToStorage(c.Kind),
-		Notes:                   c.Notes,
-		AvatarSetID:             c.AvatarSetID,
-		AvatarAssetID:           c.AvatarAssetID,
-		Pronouns:                c.Pronouns,
-		AliasesJson:             string(aliasesJSON),
-		CreatedAt:               sqliteutil.ToMillis(c.CreatedAt),
-		UpdatedAt:               sqliteutil.ToMillis(c.UpdatedAt),
+		CampaignID:         c.CampaignID,
+		ID:                 c.ID,
+		OwnerParticipantID: c.OwnerParticipantID,
+		Name:               c.Name,
+		Kind:               enumToStorage(c.Kind),
+		Notes:              c.Notes,
+		AvatarSetID:        c.AvatarSetID,
+		AvatarAssetID:      c.AvatarAssetID,
+		Pronouns:           c.Pronouns,
+		AliasesJson:        string(aliasesJSON),
+		CreatedAt:          sqliteutil.ToMillis(c.CreatedAt),
+		UpdatedAt:          sqliteutil.ToMillis(c.UpdatedAt),
 	})
 }
 
@@ -137,69 +136,6 @@ func (s *Store) ListCharactersByOwnerParticipant(ctx context.Context, campaignID
 		}
 		characters = append(characters, characterRecord)
 	}
-	return characters, nil
-}
-
-// ListCharactersByControllerParticipant returns all character records
-// controlled by one participant.
-func (s *Store) ListCharactersByControllerParticipant(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return nil, fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(campaignID) == "" {
-		return nil, fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(participantID) == "" {
-		return nil, fmt.Errorf("participant id is required")
-	}
-
-	rows, err := s.projectionQueryable().QueryContext(
-		ctx,
-		`SELECT campaign_id, id, controller_participant_id, name, kind, notes, pronouns, aliases_json, created_at, updated_at, avatar_set_id, avatar_asset_id, owner_participant_id
-FROM characters
-WHERE campaign_id = ? AND controller_participant_id = ?
-ORDER BY id`,
-		campaignID,
-		participantID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list controlled characters: %w", err)
-	}
-	defer rows.Close()
-
-	characters := make([]storage.CharacterRecord, 0)
-	for rows.Next() {
-		var row db.Character
-		if err := rows.Scan(
-			&row.CampaignID,
-			&row.ID,
-			&row.ControllerParticipantID,
-			&row.Name,
-			&row.Kind,
-			&row.Notes,
-			&row.Pronouns,
-			&row.AliasesJson,
-			&row.CreatedAt,
-			&row.UpdatedAt,
-			&row.AvatarSetID,
-			&row.AvatarAssetID,
-			&row.OwnerParticipantID,
-		); err != nil {
-			return nil, fmt.Errorf("scan controlled character: %w", err)
-		}
-		characterRecord, err := dbCharacterToDomain(row)
-		if err != nil {
-			return nil, err
-		}
-		characters = append(characters, characterRecord)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate controlled characters: %w", err)
-	}
-
 	return characters, nil
 }
 

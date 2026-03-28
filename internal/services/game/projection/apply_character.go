@@ -45,7 +45,6 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, pay
 		Notes:              strings.TrimSpace(payload.Notes),
 		AvatarSetID:        strings.TrimSpace(payload.AvatarSetID),
 		AvatarAssetID:      strings.TrimSpace(payload.AvatarAssetID),
-		ParticipantID:      strings.TrimSpace(payload.ParticipantID.String()),
 		Pronouns:           strings.TrimSpace(payload.Pronouns),
 		Aliases:            normalizeProjectionAliases(payload.Aliases),
 		CreatedAt:          createdAt,
@@ -101,8 +100,6 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event, pay
 			updated.Kind = kind
 		case "notes":
 			updated.Notes = strings.TrimSpace(value)
-		case "participant_id":
-			updated.ParticipantID = strings.TrimSpace(value)
 		case "owner_participant_id":
 			updated.OwnerParticipantID = strings.TrimSpace(value)
 		case "avatar_set_id":

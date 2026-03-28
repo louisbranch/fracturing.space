@@ -68,3 +68,40 @@ func decideGMAuthoritySet(state State, cmd command.Command, now func() time.Time
 	evt.SessionID = cmd.SessionID
 	return command.Accept(evt)
 }
+
+// decideCharacterControllerSet records one session-scoped controller assignment.
+func decideCharacterControllerSet(state State, cmd command.Command, now func() time.Time) command.Decision {
+	var payload CharacterControllerSetPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+	}
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	if characterID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeSessionCharacterRequired,
+			Message: "character id is required",
+		})
+	}
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
+	if participantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeSessionCharacterControllerRequired,
+			Message: "character controller participant id is required",
+		})
+	}
+	if state.CharacterControllers != nil && state.CharacterControllers[ids.CharacterID(characterID)] == ids.ParticipantID(participantID) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeSessionCharacterControllerUnchanged,
+			Message: "character controller participant is already set",
+		})
+	}
+	normalized := CharacterControllerSetPayload{
+		SessionID:     ids.SessionID(cmd.SessionID),
+		CharacterID:   ids.CharacterID(characterID),
+		ParticipantID: ids.ParticipantID(participantID),
+	}
+	payloadJSON, _ := json.Marshal(normalized)
+	evt := command.NewEvent(cmd, EventTypeCharacterControllerSet, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
+	evt.SessionID = cmd.SessionID
+	return command.Accept(evt)
+}

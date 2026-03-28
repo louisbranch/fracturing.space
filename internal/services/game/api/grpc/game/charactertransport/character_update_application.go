@@ -94,19 +94,34 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		fields["aliases"] = string(aliasesJSON)
 	}
 	transferOwnershipRequested := false
+	targetOwnerParticipantID := ""
 	if ownerParticipantID := in.GetOwnerParticipantId(); ownerParticipantID != nil {
 		trimmed := strings.TrimSpace(ownerParticipantID.GetValue())
-		if trimmed == "" {
-			return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "owner_participant_id must not be empty")
-		}
-		if c.stores.Participant == nil {
-			return storage.CharacterRecord{}, status.Error(codes.Internal, "participant store is not configured")
-		}
-		if _, err := c.stores.Participant.GetParticipant(ctx, campaignID, trimmed); err != nil {
-			return storage.CharacterRecord{}, err
+		if trimmed != "" {
+			if c.stores.Participant == nil {
+				return storage.CharacterRecord{}, status.Error(codes.Internal, "participant store is not configured")
+			}
+			if _, err := c.stores.Participant.GetParticipant(ctx, campaignID, trimmed); err != nil {
+				return storage.CharacterRecord{}, err
+			}
 		}
 		fields["owner_participant_id"] = trimmed
 		transferOwnershipRequested = true
+		targetOwnerParticipantID = trimmed
+	}
+	if transferOwnershipRequested {
+		_, avatarSetExplicit := fields["avatar_set_id"]
+		_, avatarAssetExplicit := fields["avatar_asset_id"]
+		if !avatarSetExplicit && !avatarAssetExplicit {
+			identitySnapshot, err := c.resolveCharacterIdentitySnapshot(ctx, campaignID, targetOwnerParticipantID)
+			if err != nil {
+				return storage.CharacterRecord{}, err
+			}
+			fields["avatar_set_id"] = identitySnapshot.avatarSetID
+			fields["avatar_asset_id"] = identitySnapshot.avatarAssetID
+			ch.AvatarSetID = identitySnapshot.avatarSetID
+			ch.AvatarAssetID = identitySnapshot.avatarAssetID
+		}
 	}
 	if len(fields) == 0 {
 		return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")

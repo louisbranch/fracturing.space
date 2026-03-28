@@ -897,18 +897,18 @@ func TestParseController(t *testing.T) {
 	}
 }
 
-func TestParseControl(t *testing.T) {
-	for _, val := range []string{"participant", "gm", "none"} {
-		got, err := parseControl(val)
+func TestParseOwnership(t *testing.T) {
+	for _, val := range []string{"participant", "unassigned"} {
+		got, err := parseOwnership(val)
 		if err != nil || got != val {
-			t.Fatalf("parseControl(%q) = %q, err=%v", val, got, err)
+			t.Fatalf("parseOwnership(%q) = %q, err=%v", val, got, err)
 		}
 	}
-	got, err := parseControl("")
+	got, err := parseOwnership("")
 	if err != nil || got != "" {
 		t.Fatal("expected empty for empty")
 	}
-	_, err = parseControl("bad")
+	_, err = parseOwnership("bad")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2149,20 +2149,9 @@ func TestResolveOutcomeSeed(t *testing.T) {
 	}
 }
 
-func TestFirstPlayerWithoutCharacter(t *testing.T) {
-	got := firstPlayerWithoutCharacter([]string{"player-1", "player-2"}, map[string]int{"player-1": 1, "player-2": 0})
-	if got != "player-2" {
-		t.Fatalf("participant = %q, want %q", got, "player-2")
-	}
-	if got := firstPlayerWithoutCharacter([]string{"player-1"}, map[string]int{"player-1": 2}); got != "" {
-		t.Fatalf("participant = %q, want empty", got)
-	}
-}
-
-func TestEnsureSessionStartReadinessCreatesMissingParticipantAndCharacter(t *testing.T) {
+func TestEnsureSessionStartReadinessCreatesMissingParticipantOnly(t *testing.T) {
 	var createdParticipants []*gamev1.CreateParticipantRequest
-	var createdCharacters []*gamev1.CreateCharacterRequest
-	var setControlRequests []*gamev1.SetDefaultControlRequest
+	var updateRequests []*gamev1.UpdateCharacterRequest
 	var appliedWorkflows []*gamev1.ApplyCharacterCreationWorkflowRequest
 
 	r := newTestRunner(scenarioEnv{
@@ -2179,13 +2168,9 @@ func TestEnsureSessionStartReadinessCreatesMissingParticipantAndCharacter(t *tes
 			listCharacters: func(context.Context, *gamev1.ListCharactersRequest, ...grpc.CallOption) (*gamev1.ListCharactersResponse, error) {
 				return &gamev1.ListCharactersResponse{}, nil
 			},
-			create: func(_ context.Context, req *gamev1.CreateCharacterRequest, _ ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
-				createdCharacters = append(createdCharacters, req)
-				return &gamev1.CreateCharacterResponse{Character: &gamev1.Character{Id: "char-1"}}, nil
-			},
-			setDefaultControl: func(_ context.Context, req *gamev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
-				setControlRequests = append(setControlRequests, req)
-				return &gamev1.SetDefaultControlResponse{}, nil
+			update: func(_ context.Context, req *gamev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error) {
+				updateRequests = append(updateRequests, req)
+				return &gamev1.UpdateCharacterResponse{}, nil
 			},
 			applyWorkflow: func(_ context.Context, req *gamev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
 				appliedWorkflows = append(appliedWorkflows, req)
@@ -2225,19 +2210,16 @@ func TestEnsureSessionStartReadinessCreatesMissingParticipantAndCharacter(t *tes
 	if len(createdParticipants) != 1 {
 		t.Fatalf("created participants = %d, want 1", len(createdParticipants))
 	}
-	if len(createdCharacters) != 1 {
-		t.Fatalf("created characters = %d, want 1", len(createdCharacters))
+	if len(updateRequests) != 0 {
+		t.Fatalf("update ownership calls = %d, want 0", len(updateRequests))
 	}
-	if len(setControlRequests) != 1 || setControlRequests[0].GetParticipantId().GetValue() != "player-1" {
-		t.Fatalf("set default control = %+v, want participant player-1", setControlRequests)
-	}
-	if len(appliedWorkflows) != 1 || appliedWorkflows[0].GetCharacterId() != "char-1" {
-		t.Fatalf("applied workflows = %+v, want readiness workflow for char-1", appliedWorkflows)
+	if len(appliedWorkflows) != 0 {
+		t.Fatalf("applied workflows = %d, want 0", len(appliedWorkflows))
 	}
 }
 
-func TestEnsureSessionStartReadinessAssignsUnownedCharacterToPlayer(t *testing.T) {
-	var setControlRequests []*gamev1.SetDefaultControlRequest
+func TestEnsureSessionStartReadinessLeavesUnownedCharacterUnchanged(t *testing.T) {
+	var updateRequests []*gamev1.UpdateCharacterRequest
 
 	r := newTestRunner(scenarioEnv{
 		participantClient: &fakeParticipantClient{
@@ -2257,9 +2239,9 @@ func TestEnsureSessionStartReadinessAssignsUnownedCharacterToPlayer(t *testing.T
 					},
 				}, nil
 			},
-			setDefaultControl: func(_ context.Context, req *gamev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
-				setControlRequests = append(setControlRequests, req)
-				return &gamev1.SetDefaultControlResponse{}, nil
+			update: func(_ context.Context, req *gamev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error) {
+				updateRequests = append(updateRequests, req)
+				return &gamev1.UpdateCharacterResponse{}, nil
 			},
 		},
 	})
@@ -2271,11 +2253,8 @@ func TestEnsureSessionStartReadinessAssignsUnownedCharacterToPlayer(t *testing.T
 	if err := r.ensureSessionStartReadiness(context.Background(), state); err != nil {
 		t.Fatalf("ensureSessionStartReadiness: %v", err)
 	}
-	if len(setControlRequests) != 1 {
-		t.Fatalf("set default control calls = %d, want 1", len(setControlRequests))
-	}
-	if setControlRequests[0].GetCharacterId() != "char-1" || setControlRequests[0].GetParticipantId().GetValue() != "player-1" {
-		t.Fatalf("set control request = %+v, want char-1 -> player-1", setControlRequests[0])
+	if len(updateRequests) != 0 {
+		t.Fatalf("update ownership calls = %d, want 0", len(updateRequests))
 	}
 }
 

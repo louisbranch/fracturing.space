@@ -60,10 +60,6 @@ AI-mode invariants (`gm_mode` `ai` or `hybrid`):
 - `SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED`
 - `SESSION_READINESS_GM_REQUIRED`
 - `SESSION_READINESS_PLAYER_REQUIRED`
-- `SESSION_READINESS_PLAYER_CHARACTER_REQUIRED`
-  metadata: `participant_name`, `participant_id`
-- `SESSION_READINESS_CHARACTER_CONTROLLER_REQUIRED`
-  metadata: `character_name`, `character_id`
 - `SESSION_READINESS_CHARACTER_SYSTEM_REQUIRED`
   metadata: `character_name`, `character_id`, optional `reason`
 

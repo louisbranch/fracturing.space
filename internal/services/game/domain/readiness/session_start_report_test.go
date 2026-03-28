@@ -46,7 +46,7 @@ func TestEvaluateSessionStartReport_IncludesBoundaryAndCoreBlockersInOrder(t *te
 	}
 }
 
-func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testing.T) {
+func TestEvaluateSessionStartReport_CollectsCharacterSystemBlockers(t *testing.T) {
 	report := EvaluateSessionStartReport(
 		aggregate.State{
 			Participants: map[ids.ParticipantID]participant.State{
@@ -60,18 +60,12 @@ func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testin
 					Joined:        true,
 					Role:          participant.RolePlayer,
 				},
-				"player-2": {
-					ParticipantID: "player-2",
-					Joined:        true,
-					Name:          "Player Two",
-					Role:          participant.RolePlayer,
-				},
 			},
 			Characters: map[ids.CharacterID]character.State{
 				"char-b": {
-					CharacterID:   "char-b",
-					Created:       true,
-					ParticipantID: "player-1",
+					CharacterID:        "char-b",
+					Created:            true,
+					OwnerParticipantID: "player-1",
 				},
 				"char-a": {
 					CharacterID: "char-a",
@@ -95,47 +89,30 @@ func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testin
 		gotCodes = append(gotCodes, blocker.Code)
 	}
 	wantCodes := []string{
-		RejectionCodeSessionReadinessCharacterControllerRequired,
 		RejectionCodeSessionReadinessCharacterSystemRequired,
 		RejectionCodeSessionReadinessCharacterSystemRequired,
-		RejectionCodeSessionReadinessPlayerCharacterRequired,
 	}
 	if strings.Join(gotCodes, ",") != strings.Join(wantCodes, ",") {
 		t.Fatalf("blocker codes = %v, want %v", gotCodes, wantCodes)
 	}
 
-	if report.Blockers[0].Metadata["character_id"] != "char-a" {
-		t.Fatalf("first blocker character_id = %q, want %q", report.Blockers[0].Metadata["character_id"], "char-a")
-	}
 	if report.Blockers[0].Metadata["character_name"] != "Aria" {
-		t.Fatalf("first blocker character_name = %q, want %q", report.Blockers[0].Metadata["character_name"], "Aria")
+		t.Fatalf("system blocker character_name = %q, want %q", report.Blockers[0].Metadata["character_name"], "Aria")
 	}
 	if !strings.Contains(report.Blockers[0].Message, "Aria") {
-		t.Fatalf("first blocker message = %q, want character name", report.Blockers[0].Message)
+		t.Fatalf("system blocker message = %q, want character name", report.Blockers[0].Message)
 	}
 	if strings.Contains(report.Blockers[0].Message, "char-a") {
-		t.Fatalf("first blocker message = %q, did not expect character id when name is present", report.Blockers[0].Message)
+		t.Fatalf("system blocker message = %q, did not expect character id when name is present", report.Blockers[0].Message)
 	}
-	if report.Blockers[1].Metadata["character_name"] != "Aria" {
-		t.Fatalf("system blocker character_name = %q, want %q", report.Blockers[1].Metadata["character_name"], "Aria")
+	if report.Blockers[1].Metadata["character_name"] != "" {
+		t.Fatalf("system blocker character_name = %q, want empty", report.Blockers[1].Metadata["character_name"])
 	}
-	if !strings.Contains(report.Blockers[1].Message, "Aria") {
-		t.Fatalf("system blocker message = %q, want character name", report.Blockers[1].Message)
+	if strings.Contains(report.Blockers[1].Message, "Aria") {
+		t.Fatalf("system blocker message = %q, did not expect character name fallback", report.Blockers[1].Message)
 	}
-	if strings.Contains(report.Blockers[1].Message, "char-a") {
-		t.Fatalf("system blocker message = %q, did not expect character id when name is present", report.Blockers[1].Message)
-	}
-	if report.Blockers[3].Metadata["participant_id"] != "player-2" {
-		t.Fatalf("player blocker participant_id = %q, want %q", report.Blockers[3].Metadata["participant_id"], "player-2")
-	}
-	if report.Blockers[3].Metadata["participant_name"] != "Player Two" {
-		t.Fatalf("player blocker participant_name = %q, want %q", report.Blockers[3].Metadata["participant_name"], "Player Two")
-	}
-	if !strings.Contains(report.Blockers[3].Message, "Player Two") {
-		t.Fatalf("player blocker message = %q, want participant name", report.Blockers[3].Message)
-	}
-	if strings.Contains(report.Blockers[3].Message, "player-2") {
-		t.Fatalf("player blocker message = %q, did not expect participant id when name is present", report.Blockers[3].Message)
+	if !strings.Contains(report.Blockers[1].Message, "char-b") {
+		t.Fatalf("system blocker message = %q, want fallback character id", report.Blockers[1].Message)
 	}
 }
 

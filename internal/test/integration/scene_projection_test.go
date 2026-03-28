@@ -62,13 +62,7 @@ func TestSceneProjectionLifecycle(t *testing.T) {
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, char1ID, char2ID)
 
 	// Start session.
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Scene Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Scene Session")
 	sessionID := startSession.GetSession().GetId()
 
 	// --- Create scene with initial characters ---

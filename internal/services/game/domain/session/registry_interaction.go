@@ -34,6 +34,18 @@ var sessionInteractionCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
+			Type:            CommandTypeCharacterControllerSet,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateCharacterControllerSetPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeSession,
+				AllowWhenOpen: true,
+			},
+			ActiveSession: command.AllowedDuringActiveSession(),
+		},
+	},
+	{
+		definition: command.Definition{
 			Type:            CommandTypeOOCOpen,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateOOCOpenedPayload,
@@ -179,6 +191,17 @@ var sessionInteractionEventContracts = []eventProjectionContract{
 	},
 	{
 		definition: event.Definition{
+			Type:            EventTypeCharacterControllerSet,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateCharacterControllerSetPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
 			Type:            EventTypeOOCOpened,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
@@ -296,6 +319,11 @@ func validateSceneActivatedPayload(raw json.RawMessage) error {
 
 func validateGMAuthoritySetPayload(raw json.RawMessage) error {
 	var payload GMAuthoritySetPayload
+	return json.Unmarshal(raw, &payload)
+}
+
+func validateCharacterControllerSetPayload(raw json.RawMessage) error {
+	var payload CharacterControllerSetPayload
 	return json.Unmarshal(raw, &payload)
 }
 

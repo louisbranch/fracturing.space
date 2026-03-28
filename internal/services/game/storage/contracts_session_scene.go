@@ -139,10 +139,17 @@ type SessionAITurn struct {
 	LastError          string
 }
 
+// SessionCharacterController captures one session-scoped controller assignment.
+type SessionCharacterController struct {
+	CharacterID   string
+	ParticipantID string
+}
+
 // SessionInteraction captures authoritative session-level interaction state.
 type SessionInteraction struct {
 	CampaignID                  string
 	SessionID                   string
+	CharacterControllers        []SessionCharacterController
 	ActiveSceneID               string
 	GMAuthorityParticipantID    string
 	OOCPaused                   bool

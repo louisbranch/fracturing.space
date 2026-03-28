@@ -248,6 +248,21 @@ func (s *InteractionService) SetSessionGMAuthority(ctx context.Context, in *camp
 	return &campaignv1.SetSessionGMAuthorityResponse{State: state}, nil
 }
 
+func (s *InteractionService) SetSessionCharacterController(ctx context.Context, in *campaignv1.SetSessionCharacterControllerRequest) (*campaignv1.SetSessionCharacterControllerResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "set session character controller request is required")
+	}
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+	state, err := s.app.SetSessionCharacterController(ctx, campaignID, in)
+	if err != nil {
+		return nil, err
+	}
+	return &campaignv1.SetSessionCharacterControllerResponse{State: state}, nil
+}
+
 func (s *InteractionService) RetryAIGMTurn(ctx context.Context, in *campaignv1.RetryAIGMTurnRequest) (*campaignv1.RetryAIGMTurnResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "retry ai gm turn request is required")

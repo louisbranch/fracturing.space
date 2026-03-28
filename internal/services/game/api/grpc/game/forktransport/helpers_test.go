@@ -53,7 +53,7 @@ func TestShouldCopyForkEvent(t *testing.T) {
 			name:             "character_updated_copy_when_participants_enabled",
 			eventType:        event.Type("character.updated"),
 			copyParticipants: true,
-			payload:          []byte(`{"fields":{"participant_id":"p1"}}`),
+			payload:          []byte(`{"fields":{"owner_participant_id":"p1"}}`),
 			wantCopy:         true,
 		},
 		{
@@ -64,24 +64,24 @@ func TestShouldCopyForkEvent(t *testing.T) {
 			wantCopy:         true,
 		},
 		{
-			name:             "character_updated_only_participant_id_field",
+			name:             "character_updated_only_owner_participant_id_field",
 			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
-			payload:          []byte(`{"fields":{"participant_id":"p1"}}`),
+			payload:          []byte(`{"fields":{"owner_participant_id":"p1"}}`),
 			wantCopy:         false,
 		},
 		{
-			name:             "character_updated_participant_id_plus_others",
+			name:             "character_updated_owner_participant_id_plus_others",
 			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
-			payload:          []byte(`{"fields":{"participant_id":"p1","name":"Hero"}}`),
+			payload:          []byte(`{"fields":{"owner_participant_id":"p1","name":"Hero"}}`),
 			wantCopy:         true,
 		},
 		{
-			name:             "character_updated_empty_participant_id",
+			name:             "character_updated_empty_owner_participant_id",
 			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
-			payload:          []byte(`{"fields":{"participant_id":""}}`),
+			payload:          []byte(`{"fields":{"owner_participant_id":""}}`),
 			wantCopy:         true,
 		},
 		{
@@ -132,7 +132,7 @@ func TestForkEventForCampaign(t *testing.T) {
 		EntityID:   "old-camp",
 		Type:       event.Type("campaign.updated"),
 	}
-	forked := forkEventForCampaign(evt, "new-camp")
+	forked := forkEventForCampaign(evt, "new-camp", true)
 
 	if forked.CampaignID != "new-camp" {
 		t.Fatalf("CampaignID = %q, want %q", forked.CampaignID, "new-camp")
@@ -154,7 +154,7 @@ func TestForkEventForCampaign(t *testing.T) {
 		EntityType: "character",
 		EntityID:   "char-1",
 	}
-	forked2 := forkEventForCampaign(evt2, "new-camp")
+	forked2 := forkEventForCampaign(evt2, "new-camp", true)
 	if forked2.EntityID != "char-1" {
 		t.Fatalf("EntityID = %q, want %q (non-campaign entity should stay)", forked2.EntityID, "char-1")
 	}

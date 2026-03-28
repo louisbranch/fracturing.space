@@ -65,13 +65,30 @@ func (g sessionMutationGateway) StartSession(ctx context.Context, campaignID str
 	}
 
 	_, err := g.mutation.Session.StartSession(ctx, &statev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       strings.TrimSpace(input.Name),
+		CampaignId:           campaignID,
+		Name:                 strings.TrimSpace(input.Name),
+		CharacterControllers: mapSessionCharacterControllers(input.CharacterControllers),
 	})
 	if err != nil {
 		return mapSessionMutationError(err, "error.web.message.failed_to_start_session", "failed to start session")
 	}
 	return nil
+}
+
+// mapSessionCharacterControllers keeps the web app's session-start selections aligned
+// with the transport contract expected by the game session service.
+func mapSessionCharacterControllers(items []campaignapp.SessionCharacterControllerAssignment) []*statev1.SessionCharacterControllerAssignment {
+	if len(items) == 0 {
+		return nil
+	}
+	assignments := make([]*statev1.SessionCharacterControllerAssignment, 0, len(items))
+	for _, item := range items {
+		assignments = append(assignments, &statev1.SessionCharacterControllerAssignment{
+			CharacterId:   strings.TrimSpace(item.CharacterID),
+			ParticipantId: strings.TrimSpace(item.ParticipantID),
+		})
+	}
+	return assignments
 }
 
 // EndSession applies this package workflow transition.

@@ -238,17 +238,11 @@ func createPlayCampaignAndSession(t *testing.T, suite *integrationSuite) (campai
 		t.Fatal("play character id is empty")
 	}
 
-	setCharacterController(t, ctx, suite.character, campaignID, characterID, ownerParticipantID)
+	setCharacterOwner(t, ctx, suite.character, campaignID, characterID, ownerParticipantID)
 	ensureDaggerheartCreationReadiness(t, ctx, suite.character, campaignID, characterID)
 	ensureSessionStartReadiness(t, ctx, suite.participant, suite.character, campaignID, ownerParticipantID, characterID)
 
-	sessionResp, err := suite.session.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Play Integration Session",
-	})
-	if err != nil {
-		t.Fatalf("start play session: %v", err)
-	}
+	sessionResp := startSessionWithDefaultControllers(t, ctx, suite.session, suite.character, campaignID, "Play Integration Session")
 
 	sessionID = sessionResp.GetSession().GetId()
 	if sessionID == "" {

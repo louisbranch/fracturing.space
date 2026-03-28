@@ -63,38 +63,20 @@ func (r *characterReads) CampaignCharacterEditor(context.Context, string, string
 	return r.editor, nil
 }
 
-type characterControl struct {
-	control                campaignapp.CampaignCharacterControl
-	lastSetCampaignID      string
-	lastSetCharacterID     string
-	lastSetParticipantID   string
-	lastClaimCampaignID    string
-	lastClaimCharacterID   string
-	lastClaimUserID        string
-	lastReleaseCampaignID  string
-	lastReleaseCharacterID string
-	lastReleaseUserID      string
+type characterOwnership struct {
+	ownership            campaignapp.CampaignCharacterOwnership
+	lastSetCampaignID    string
+	lastSetCharacterID   string
+	lastSetParticipantID string
 }
 
-func (c *characterControl) CampaignCharacterControl(context.Context, string, string, string, campaignapp.CharacterReadContext) (campaignapp.CampaignCharacterControl, error) {
-	return c.control, nil
+func (c *characterOwnership) CampaignCharacterOwnership(context.Context, string, string, campaignapp.CharacterReadContext) (campaignapp.CampaignCharacterOwnership, error) {
+	return c.ownership, nil
 }
-func (c *characterControl) SetCharacterController(_ context.Context, campaignID, characterID, participantID string) error {
+func (c *characterOwnership) SetCharacterOwner(_ context.Context, campaignID, characterID, participantID string) error {
 	c.lastSetCampaignID = campaignID
 	c.lastSetCharacterID = characterID
 	c.lastSetParticipantID = participantID
-	return nil
-}
-func (c *characterControl) ClaimCharacterControl(_ context.Context, campaignID, characterID, userID string) error {
-	c.lastClaimCampaignID = campaignID
-	c.lastClaimCharacterID = characterID
-	c.lastClaimUserID = userID
-	return nil
-}
-func (c *characterControl) ReleaseCharacterControl(_ context.Context, campaignID, characterID, userID string) error {
-	c.lastReleaseCampaignID = campaignID
-	c.lastReleaseCharacterID = characterID
-	c.lastReleaseUserID = userID
 	return nil
 }
 
@@ -173,7 +155,7 @@ func (characterWorkflow) ParseStepInput(form url.Values, _ int32) (*campaignwork
 	}, nil
 }
 
-func newCharacterHandler(t *testing.T, system string) (Handler, *characterMutation, *characterControl, *characterCreationApp) {
+func newCharacterHandler(t *testing.T, system string) (Handler, *characterMutation, *characterOwnership, *characterCreationApp) {
 	t.Helper()
 
 	if system == "" {
@@ -202,7 +184,7 @@ func newCharacterHandler(t *testing.T, system string) (Handler, *characterMutati
 		ID:            "char-1",
 		Name:          "Aria",
 		Kind:          "pc",
-		Controller:    "human",
+		Owner:         "Ariadne",
 		Pronouns:      "she/her",
 		OwnedByViewer: true,
 		CanEdit:       true,
@@ -220,13 +202,11 @@ func newCharacterHandler(t *testing.T, system string) (Handler, *characterMutati
 		character: character,
 		editor:    campaignapp.CampaignCharacterEditor{Character: character},
 	}
-	control := &characterControl{
-		control: campaignapp.CampaignCharacterControl{
-			CurrentParticipantName: "Ariadne",
-			CanSelfClaim:           true,
-			CanSelfRelease:         true,
-			CanManageControl:       true,
-			Options: []campaignapp.CampaignCharacterControlOption{
+	ownership := &characterOwnership{
+		ownership: campaignapp.CampaignCharacterOwnership{
+			CurrentOwnerName:   "Ariadne",
+			CanManageOwnership: true,
+			Options: []campaignapp.CampaignCharacterOwnershipOption{
 				{ParticipantID: "part-1", Label: "Ariadne", Selected: true},
 			},
 		},
@@ -255,11 +235,11 @@ func newCharacterHandler(t *testing.T, system string) (Handler, *characterMutati
 
 	return NewHandler(detailHandler, HandlerServices{
 		reads:            reads,
-		control:          control,
+		ownership:        ownership,
 		mutation:         mutation,
 		creationPages:    campaignworkflow.NewPageService(creationApp, registry),
 		creationMutation: campaignworkflow.NewMutationService(creationApp, registry),
-	}), mutation, control, creationApp
+	}), mutation, ownership, creationApp
 }
 
 func TestHandleCharactersRendersOwnedCharactersPage(t *testing.T) {
@@ -366,7 +346,7 @@ func TestHandleCharacterDetailRendersOwnedDetailAndWorkflowCard(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`data-campaign-character-detail-id="char-1"`,
-		`data-campaign-character-control-card="true"`,
+		`data-campaign-character-ownership-card="true"`,
 		`data-character-creation-workflow="true"`,
 		`data-character-creation-link="true"`,
 	} {
@@ -423,15 +403,15 @@ func TestHandleCharacterUpdateRedirectsAndForwardsInput(t *testing.T) {
 	}
 }
 
-func TestHandleCharacterControlSetRedirectsAndForwardsParticipant(t *testing.T) {
+func TestHandleCharacterOwnerSetRedirectsAndForwardsParticipant(t *testing.T) {
 	t.Parallel()
 
-	h, _, control, _ := newCharacterHandler(t, "Daggerheart")
-	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterControl("camp-1", "char-1"), strings.NewReader("participant_id=part-9"))
+	h, _, ownership, _ := newCharacterHandler(t, "Daggerheart")
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterOwner("camp-1", "char-1"), strings.NewReader("participant_id=part-9"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
 
-	h.HandleCharacterControlSet(rr, req, "camp-1", "char-1")
+	h.HandleCharacterOwnerSet(rr, req, "camp-1", "char-1")
 
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
@@ -439,50 +419,8 @@ func TestHandleCharacterControlSetRedirectsAndForwardsParticipant(t *testing.T) 
 	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("camp-1", "char-1") {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("camp-1", "char-1"))
 	}
-	if control.lastSetCampaignID != "camp-1" || control.lastSetCharacterID != "char-1" || control.lastSetParticipantID != "part-9" {
-		t.Fatalf("set control = %#v", control)
-	}
-}
-
-func TestHandleCharacterControlClaimRedirectsAndUsesViewer(t *testing.T) {
-	t.Parallel()
-
-	h, _, control, _ := newCharacterHandler(t, "Daggerheart")
-	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterControlClaim("camp-1", "char-1"), strings.NewReader("claim=true"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	rr := httptest.NewRecorder()
-
-	h.HandleCharacterControlClaim(rr, req, "camp-1", "char-1")
-
-	if rr.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
-	}
-	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("camp-1", "char-1") {
-		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("camp-1", "char-1"))
-	}
-	if control.lastClaimCampaignID != "camp-1" || control.lastClaimCharacterID != "char-1" || control.lastClaimUserID != "user-1" {
-		t.Fatalf("claim = %#v", control)
-	}
-}
-
-func TestHandleCharacterControlReleaseRedirectsAndUsesViewer(t *testing.T) {
-	t.Parallel()
-
-	h, _, control, _ := newCharacterHandler(t, "Daggerheart")
-	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterControlRelease("camp-1", "char-1"), strings.NewReader("release=true"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	rr := httptest.NewRecorder()
-
-	h.HandleCharacterControlRelease(rr, req, "camp-1", "char-1")
-
-	if rr.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
-	}
-	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("camp-1", "char-1") {
-		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("camp-1", "char-1"))
-	}
-	if control.lastReleaseCampaignID != "camp-1" || control.lastReleaseCharacterID != "char-1" || control.lastReleaseUserID != "user-1" {
-		t.Fatalf("release = %#v", control)
+	if ownership.lastSetCampaignID != "camp-1" || ownership.lastSetCharacterID != "char-1" || ownership.lastSetParticipantID != "part-9" {
+		t.Fatalf("set ownership = %#v", ownership)
 	}
 }
 

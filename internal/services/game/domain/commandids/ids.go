@@ -27,6 +27,7 @@ const (
 	SessionSpotlightSet            command.Type = "session.spotlight_set"
 	SessionSpotlightClear          command.Type = "session.spotlight_clear"
 	SessionSceneActivate           command.Type = "session.scene.activate"
+	SessionCharacterControllerSet  command.Type = "session.character_controller.set"
 	SessionGMAuthoritySet          command.Type = "session.gm_authority.set"
 	SessionOOCOpen                 command.Type = "session.ooc.open"
 	SessionOOCPost                 command.Type = "session.ooc.post"

@@ -614,7 +614,7 @@ func (s *CharacterStore) ListCharactersByControllerParticipant(_ context.Context
 		if !strings.HasPrefix(key, campaignID+":") {
 			continue
 		}
-		if record.ParticipantID == participantID {
+		if record.OwnerParticipantID == participantID {
 			result = append(result, record)
 		}
 	}

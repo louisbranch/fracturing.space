@@ -27,6 +27,7 @@ func newFoldRouter() *fold.CoreFoldRouter[State] {
 	r.Handle(EventTypeSpotlightCleared, foldSpotlightCleared)
 	r.Handle(EventTypeSceneActivated, foldSceneActivated)
 	r.Handle(EventTypeGMAuthoritySet, foldGMAuthoritySet)
+	r.Handle(EventTypeCharacterControllerSet, foldCharacterControllerSet)
 	r.Handle(EventTypeOOCOpened, foldOOCOpened)
 	r.Handle(EventTypeOOCPosted, foldOOCPosted)
 	r.Handle(EventTypeOOCReadyMarked, foldOOCReadyMarked)
@@ -64,12 +65,20 @@ func foldStarted(state State, evt event.Event) (State, error) {
 	}
 	state.SessionID = ids.SessionID(payload.SessionID)
 	state.Name = payload.SessionName
+	state.CharacterControllers = make(map[ids.CharacterID]ids.ParticipantID, len(payload.CharacterControllers))
+	for _, assignment := range payload.CharacterControllers {
+		if assignment.CharacterID == "" || assignment.ParticipantID == "" {
+			continue
+		}
+		state.CharacterControllers[assignment.CharacterID] = assignment.ParticipantID
+	}
 	return state, nil
 }
 
 func foldEnded(state State, evt event.Event) (State, error) {
 	state.Ended = true
 	state.Started = false
+	state.CharacterControllers = nil
 	state.ActiveSceneID = ""
 	state.GMAuthorityParticipantID = ""
 	state.OOCPaused = false
@@ -159,6 +168,18 @@ func foldGMAuthoritySet(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 	}
 	state.GMAuthorityParticipantID = ids.ParticipantID(payload.ParticipantID)
+	return state, nil
+}
+
+func foldCharacterControllerSet(state State, evt event.Event) (State, error) {
+	var payload CharacterControllerSetPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+	}
+	if state.CharacterControllers == nil {
+		state.CharacterControllers = make(map[ids.CharacterID]ids.ParticipantID)
+	}
+	state.CharacterControllers[payload.CharacterID] = payload.ParticipantID
 	return state, nil
 }
 

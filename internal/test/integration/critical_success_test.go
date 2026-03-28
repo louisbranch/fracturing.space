@@ -77,13 +77,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 		t.Fatalf("patch character state: %v", err)
 	}
 
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Critical Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Critical Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}
@@ -180,13 +174,7 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, target)
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, attacker, target)
 
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Critical Attack Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Critical Attack Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

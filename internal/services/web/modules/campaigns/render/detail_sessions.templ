@@ -81,17 +81,70 @@ templ sessionCreateFragment(view SessionCreatePageView, loc webtemplates.Localiz
 						</div>
 					</div>
 				}
-				<form method="post" action={ routepath.AppCampaignSessionCreate(view.CampaignID) } class="space-y-4" data-campaign-session-create-form="true">
+				<form method="post" action={ routepath.AppCampaignSessionCreate(view.CampaignID) } class="space-y-4" data-campaign-session-create-form="true" data-session-readiness-ready={ campaignSessionStartReady(view.SessionReadiness) }>
 					<div class="form-control w-full">
 						<label class="label">
 							<span class="label-text">{ webtemplates.T(loc, "game.sessions.field_name") }</span>
 						</label>
 						<input type="text" name="name" placeholder={ webtemplates.T(loc, "game.sessions.placeholder_name") } class="input input-bordered w-full"/>
 					</div>
+					if len(view.CharacterControllers) > 0 {
+						<div class="space-y-3" data-campaign-session-controller-list="true">
+							<div class="text-sm opacity-70">{ webtemplates.T(loc, "game.sessions.field_controllers") }</div>
+							for _, character := range view.CharacterControllers {
+								<div class="rounded-box border border-base-300 p-3 space-y-2" data-campaign-session-controller-character-id={ character.CharacterID }>
+									<input type="hidden" name="character_controller_character_id" value={ character.CharacterID }/>
+									<div class="flex flex-wrap items-center justify-between gap-3">
+										<div>
+											<div class="font-medium">{ character.Name }</div>
+											<div class="text-xs opacity-70">{ webtemplates.T(loc, "game.characters.field_owner") }: { character.Owner }</div>
+										</div>
+										<div class="form-control min-w-56">
+											<select class="select select-bordered w-full" name="character_controller_participant_id" data-campaign-session-controller-select="true">
+												for _, option := range character.Options {
+													<option value={ option.ParticipantID } selected?={ option.Selected }>{ campaignSessionControllerOptionLabel(loc, option) }</option>
+												}
+											</select>
+										</div>
+									</div>
+								</div>
+							}
+						</div>
+					}
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit" disabled?={ !campaignSessionStartReady(view.SessionReadiness) } data-campaign-session-create-submit-disabled={ !campaignSessionStartReady(view.SessionReadiness) }>{ webtemplates.T(loc, "game.sessions.start") }</button>
+						<button class="btn btn-primary" type="submit" disabled?={ !campaignSessionStartReady(view.SessionReadiness) || !sessionCreateHasCompleteControllerAssignments(view) } data-campaign-session-create-submit-disabled={ !campaignSessionStartReady(view.SessionReadiness) || !sessionCreateHasCompleteControllerAssignments(view) } data-campaign-session-create-submit="true">{ webtemplates.T(loc, "game.sessions.start") }</button>
 					</div>
 				</form>
+				<script>
+					(function() {
+						var script = document.currentScript;
+						var form = script ? script.previousElementSibling : null;
+						if (!form) return;
+						var submitButton = form.querySelector('[data-campaign-session-create-submit="true"]');
+						var selects = form.querySelectorAll('[data-campaign-session-controller-select="true"]');
+						if (!submitButton || !selects.length) return;
+						var readinessReady = form.dataset.sessionReadinessReady === 'true';
+
+						function updateSubmit() {
+							if (!readinessReady) {
+								submitButton.disabled = true;
+								return;
+							}
+							var complete = true;
+							selects.forEach(function(select) {
+								if (select.value.trim() === '') {
+									complete = false;
+								}
+							});
+							submitButton.disabled = !complete;
+						}
+
+						selects.forEach(function(select) {
+							select.addEventListener('change', updateSubmit);
+						});
+						updateSubmit();
+					})();
+				</script>
 			</div>
 		</div>
 	</section>

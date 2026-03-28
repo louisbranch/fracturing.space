@@ -24,11 +24,9 @@ type CampaignAutomationMutationGateway interface {
 	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
 }
 
-// CampaignCharacterControlMutationGateway applies character-controller mutations for the web service.
-type CampaignCharacterControlMutationGateway interface {
-	SetCharacterController(context.Context, string, string, string) error
-	ClaimCharacterControl(context.Context, string, string) error
-	ReleaseCharacterControl(context.Context, string, string) error
+// CampaignCharacterOwnershipMutationGateway applies character-owner mutations for the web service.
+type CampaignCharacterOwnershipMutationGateway interface {
+	SetCharacterOwner(context.Context, string, string, string) error
 }
 
 // CampaignCharacterMutationGateway applies character create/update/delete mutations for the web service.

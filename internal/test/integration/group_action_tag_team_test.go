@@ -63,13 +63,7 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, supporterTwo)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, leader, supporterOne, supporterTwo)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Group Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Group Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}
@@ -158,13 +152,7 @@ func TestDaggerheartTagTeamFlow(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, second)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, first, second)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Tag Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Tag Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

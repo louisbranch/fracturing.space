@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 )
 
 // createSessions creates the specified number of sessions for a campaign.
 // All but the last session are ended.
-func (g *Generator) createSessions(ctx context.Context, campaignID string, count int, cfg PresetConfig) error {
+func (g *Generator) createSessions(ctx context.Context, campaignID string, count int, cfg PresetConfig, characters []*statev1.Character) error {
 	if count < 1 {
 		return nil
 	}
@@ -20,8 +21,9 @@ func (g *Generator) createSessions(ctx context.Context, campaignID string, count
 		sessionName := g.wb.SessionName(seq)
 
 		resp, err := g.sessions.StartSession(ctx, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       sessionName,
+			CampaignId:           campaignID,
+			Name:                 sessionName,
+			CharacterControllers: characterControllersFromOwners(characters),
 		})
 		if err != nil {
 			return fmt.Errorf("StartSession %d: %w", seq, err)
@@ -45,6 +47,25 @@ func (g *Generator) createSessions(ctx context.Context, campaignID string, count
 	}
 
 	return nil
+}
+
+func characterControllersFromOwners(characters []*statev1.Character) []*statev1.SessionCharacterControllerAssignment {
+	assignments := make([]*statev1.SessionCharacterControllerAssignment, 0, len(characters))
+	for _, character := range characters {
+		if character == nil {
+			continue
+		}
+		characterID := strings.TrimSpace(character.GetId())
+		participantID := strings.TrimSpace(character.GetOwnerParticipantId().GetValue())
+		if characterID == "" || participantID == "" {
+			continue
+		}
+		assignments = append(assignments, &statev1.SessionCharacterControllerAssignment{
+			CharacterId:   characterID,
+			ParticipantId: participantID,
+		})
+	}
+	return assignments
 }
 
 // addSessionEvents adds the specified number of events to a session.

@@ -330,10 +330,10 @@ func (a playApplication) enrichedDataForCampaign(ctx context.Context, campaignID
 	participants := a.listAllParticipants(ctx, campaignID)
 	characters := a.listAllCharacters(ctx, campaignID)
 
-	// Associate characters with participants via participant_id.
+	// Associate characters with participants via persistent owner_participant_id.
 	charsByParticipant := map[string][]string{}
 	for _, c := range characters {
-		pid := strings.TrimSpace(c.GetParticipantId().GetValue())
+		pid := strings.TrimSpace(c.GetOwnerParticipantId().GetValue())
 		if pid != "" {
 			charsByParticipant[pid] = append(charsByParticipant[pid], strings.TrimSpace(c.GetId()))
 		}

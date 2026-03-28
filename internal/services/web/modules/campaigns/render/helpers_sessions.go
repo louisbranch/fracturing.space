@@ -31,6 +31,36 @@ func campaignSessionStartReady(readiness SessionReadinessView) bool {
 	return readiness.Ready
 }
 
+// sessionCreateHasCompleteControllerAssignments reports whether every
+// character row currently has a selected controller.
+func sessionCreateHasCompleteControllerAssignments(view SessionCreatePageView) bool {
+	for _, character := range view.CharacterControllers {
+		hasSelection := false
+		for _, option := range character.Options {
+			if option.Selected && strings.TrimSpace(option.ParticipantID) != "" {
+				hasSelection = true
+				break
+			}
+		}
+		if !hasSelection {
+			return false
+		}
+	}
+	return true
+}
+
+// campaignSessionControllerOptionLabel keeps session-start controller labels stable.
+func campaignSessionControllerOptionLabel(loc webtemplates.Localizer, option SessionCreateControllerOptionView) string {
+	if strings.TrimSpace(option.ParticipantID) == "" {
+		return webtemplates.T(loc, "game.participants.value_unassigned")
+	}
+	label := strings.TrimSpace(option.Label)
+	if label == "" {
+		return strings.TrimSpace(option.ParticipantID)
+	}
+	return label
+}
+
 // campaignSessionByID resolves the selected session without forcing handlers to pre-split the view.
 func campaignSessionByID(_ webtemplates.Localizer, sessionID string, sessions []SessionView) SessionView {
 	sessionID = strings.TrimSpace(sessionID)

@@ -105,14 +105,14 @@ func TestCampaignHelpersFormatters(t *testing.T) {
 		t.Fatalf("formatCharacterController(no participant) = %q", got)
 	}
 	if got := formatCharacterController(
-		&statev1.Character{ParticipantId: wrapperspb.String("p-1")},
+		&statev1.Character{OwnerParticipantId: wrapperspb.String("p-1")},
 		map[string]string{"p-1": "Alice"},
 		loc,
 	); got != "Alice" {
 		t.Fatalf("formatCharacterController(found) = %q", got)
 	}
 	if got := formatCharacterController(
-		&statev1.Character{ParticipantId: wrapperspb.String("p-x")},
+		&statev1.Character{OwnerParticipantId: wrapperspb.String("p-x")},
 		map[string]string{},
 		loc,
 	); got != loc.Sprintf("label.unknown") {
@@ -176,11 +176,11 @@ func TestCampaignHelpersBuilders(t *testing.T) {
 
 	charRows := buildCharacterRows([]*statev1.Character{
 		{
-			Id:            "char-1",
-			CampaignId:    "camp-1",
-			Name:          "Hero",
-			Kind:          statev1.CharacterKind_PC,
-			ParticipantId: wrapperspb.String("p-1"),
+			Id:                 "char-1",
+			CampaignId:         "camp-1",
+			Name:               "Hero",
+			Kind:               statev1.CharacterKind_PC,
+			OwnerParticipantId: wrapperspb.String("p-1"),
 		},
 	}, map[string]string{"p-1": "Alice"}, loc)
 	if len(charRows) != 1 || charRows[0].Controller != "Alice" {

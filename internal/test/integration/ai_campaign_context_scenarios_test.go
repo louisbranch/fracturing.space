@@ -509,13 +509,7 @@ func runAIGMCampaignContextScenario(t *testing.T, spec aiGMCampaignScenarioSpec,
 		extraCharacterIDs[name] = id
 	}
 
-	startResp, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Opening Night",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startResp := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Opening Night")
 	sessionID := startResp.GetSession().GetId()
 
 	setup := aiGMCampaignScenarioSetup{

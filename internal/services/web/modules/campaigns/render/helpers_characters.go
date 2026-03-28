@@ -57,8 +57,8 @@ func campaignCharacterDaggerheartLevelAttr(character CharacterView) string {
 	return strconv.FormatInt(int64(character.Daggerheart.Level), 10)
 }
 
-// campaignCharacterControlOptionLabel keeps controller reassignment labels stable.
-func campaignCharacterControlOptionLabel(loc webtemplates.Localizer, option CharacterControlOptionView) string {
+// campaignCharacterOwnershipOptionLabel keeps owner reassignment labels stable.
+func campaignCharacterOwnershipOptionLabel(loc webtemplates.Localizer, option CharacterOwnershipOptionView) string {
 	if strings.TrimSpace(option.ParticipantID) == "" {
 		return webtemplates.T(loc, "game.participants.value_unassigned")
 	}

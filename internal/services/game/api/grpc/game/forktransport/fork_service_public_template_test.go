@@ -121,7 +121,6 @@ func TestForkCampaign_AllowsPublicStarterTemplateForkAndReassignsOwnerSeat(t *te
 		PayloadJSON: mustJSON(t, character.CreatePayload{
 			CharacterID:        "char-1",
 			OwnerParticipantID: "owner-seat",
-			ParticipantID:      "owner-seat",
 			Name:               "Ser Rowan",
 			Kind:               "PC",
 		}),
@@ -256,10 +255,6 @@ func TestForkCampaign_AllowsPublicStarterTemplateForkAndReassignsOwnerSeat(t *te
 	if forkedCharacter.OwnerParticipantID != "owner-seat" {
 		t.Fatalf("owner_participant_id = %q, want %q", forkedCharacter.OwnerParticipantID, "owner-seat")
 	}
-	if forkedCharacter.ParticipantID != "owner-seat" {
-		t.Fatalf("participant_id = %q, want %q", forkedCharacter.ParticipantID, "owner-seat")
-	}
-
 	if socialClient.GetUserProfileCalls != 1 {
 		t.Fatalf("GetUserProfile calls = %d, want 1", socialClient.GetUserProfileCalls)
 	}
@@ -398,7 +393,6 @@ func TestForkCampaign_PublicSeatClaimResyncsControlledCharacterAvatar(t *testing
 		PayloadJSON: mustJSON(t, character.CreatePayload{
 			CharacterID:        "char-1",
 			OwnerParticipantID: "owner-seat",
-			ParticipantID:      "owner-seat",
 			Name:               "Ser Rowan",
 			Kind:               "PC",
 			AvatarSetID:        "template-set",

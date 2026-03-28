@@ -12,13 +12,13 @@ import (
 func TestBuildCharacterSheetPayloadIncludesCapabilitiesAndState(t *testing.T) {
 	payload := buildCharacterSheetPayload(&statev1.GetCharacterSheetResponse{
 		Character: &statev1.Character{
-			Id:            "char-1",
-			CampaignId:    "camp-1",
-			Name:          "Aria",
-			Kind:          statev1.CharacterKind_PC,
-			ParticipantId: wrapperspb.String("player-1"),
-			Aliases:       []string{"The Lantern"},
-			Notes:         "Keeps the harbor oath.",
+			Id:                 "char-1",
+			CampaignId:         "camp-1",
+			Name:               "Aria",
+			Kind:               statev1.CharacterKind_PC,
+			OwnerParticipantId: wrapperspb.String("player-1"),
+			Aliases:            []string{"The Lantern"},
+			Notes:              "Keeps the harbor oath.",
 		},
 		Profile: &statev1.CharacterProfile{
 			SystemProfile: &statev1.CharacterProfile_Daggerheart{

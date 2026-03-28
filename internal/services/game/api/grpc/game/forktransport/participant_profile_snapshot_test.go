@@ -30,7 +30,7 @@ func TestApplyParticipantProfileSnapshot_AvatarlessSnapshotSkipsCharacterSync(t 
 	}
 	characterStore := gametest.NewFakeCharacterStore()
 	characterStore.Characters["camp-1"] = map[string]storage.CharacterRecord{
-		"char-1": {ID: "char-1", CampaignID: "camp-1", ParticipantID: "seat-1"},
+		"char-1": {ID: "char-1", CampaignID: "camp-1", OwnerParticipantID: "seat-1"},
 	}
 
 	applyParticipantProfileSnapshot(
@@ -72,7 +72,7 @@ func TestApplyParticipantProfileSnapshot_AvatarlessSnapshotSkipsCharacterSync(t 
 	}
 }
 
-func TestSyncControlledCharacterAvatars_UpdatesOnlyMismatchedCharacters(t *testing.T) {
+func TestSyncOwnedCharacterAvatars_UpdatesOnlyMismatchedCharacters(t *testing.T) {
 	domain := &fakeDomainEngine{}
 
 	participantStore := gametest.NewFakeParticipantStore()
@@ -87,29 +87,29 @@ func TestSyncControlledCharacterAvatars_UpdatesOnlyMismatchedCharacters(t *testi
 	characterStore := gametest.NewFakeCharacterStore()
 	characterStore.Characters["camp-1"] = map[string]storage.CharacterRecord{
 		"char-same": {
-			ID:            "char-same",
-			CampaignID:    "camp-1",
-			ParticipantID: "seat-1",
-			AvatarSetID:   "avatar-set-1",
-			AvatarAssetID: "avatar-asset-1",
+			ID:                 "char-same",
+			CampaignID:         "camp-1",
+			OwnerParticipantID: "seat-1",
+			AvatarSetID:        "avatar-set-1",
+			AvatarAssetID:      "avatar-asset-1",
 		},
 		"char-stale": {
-			ID:            "char-stale",
-			CampaignID:    "camp-1",
-			ParticipantID: "seat-1",
-			AvatarSetID:   "old-set",
-			AvatarAssetID: "old-asset",
+			ID:                 "char-stale",
+			CampaignID:         "camp-1",
+			OwnerParticipantID: "seat-1",
+			AvatarSetID:        "old-set",
+			AvatarAssetID:      "old-asset",
 		},
 		"char-other": {
-			ID:            "char-other",
-			CampaignID:    "camp-1",
-			ParticipantID: "seat-2",
-			AvatarSetID:   "old-set",
-			AvatarAssetID: "old-asset",
+			ID:                 "char-other",
+			CampaignID:         "camp-1",
+			OwnerParticipantID: "seat-2",
+			AvatarSetID:        "old-set",
+			AvatarAssetID:      "old-asset",
 		},
 	}
 
-	syncControlledCharacterAvatars(
+	syncOwnedCharacterAvatars(
 		context.Background(),
 		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
@@ -145,13 +145,13 @@ func TestSyncControlledCharacterAvatars_UpdatesOnlyMismatchedCharacters(t *testi
 	}
 }
 
-func TestSyncControlledCharacterAvatars_SkipsWhenParticipantLookupFails(t *testing.T) {
+func TestSyncOwnedCharacterAvatars_SkipsWhenParticipantLookupFails(t *testing.T) {
 	domain := &fakeDomainEngine{}
 
 	participantStore := gametest.NewFakeParticipantStore()
 	participantStore.GetErr = errors.New("boom")
 
-	syncControlledCharacterAvatars(
+	syncOwnedCharacterAvatars(
 		context.Background(),
 		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
@@ -193,7 +193,7 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenParticipantUpdate
 	}
 	characterStore := gametest.NewFakeCharacterStore()
 	characterStore.Characters["camp-1"] = map[string]storage.CharacterRecord{
-		"char-1": {ID: "char-1", CampaignID: "camp-1", ParticipantID: "seat-1", AvatarSetID: "old-set", AvatarAssetID: "old-asset"},
+		"char-1": {ID: "char-1", CampaignID: "camp-1", OwnerParticipantID: "seat-1", AvatarSetID: "old-set", AvatarAssetID: "old-asset"},
 	}
 
 	applyParticipantProfileSnapshot(
@@ -224,7 +224,7 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenParticipantUpdate
 	}
 }
 
-func TestSyncControlledCharacterAvatars_SkipsWhenCharacterListFails(t *testing.T) {
+func TestSyncOwnedCharacterAvatars_SkipsWhenCharacterListFails(t *testing.T) {
 	domain := &fakeDomainEngine{}
 
 	participantStore := gametest.NewFakeParticipantStore()
@@ -239,7 +239,7 @@ func TestSyncControlledCharacterAvatars_SkipsWhenCharacterListFails(t *testing.T
 	characterStore := gametest.NewFakeCharacterStore()
 	characterStore.ListErr = errors.New("boom")
 
-	syncControlledCharacterAvatars(
+	syncOwnedCharacterAvatars(
 		context.Background(),
 		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},
@@ -258,10 +258,10 @@ func TestSyncControlledCharacterAvatars_SkipsWhenCharacterListFails(t *testing.T
 	}
 }
 
-func TestSyncControlledCharacterAvatars_SkipsWhenStoresMissing(t *testing.T) {
+func TestSyncOwnedCharacterAvatars_SkipsWhenStoresMissing(t *testing.T) {
 	domain := &fakeDomainEngine{}
 
-	syncControlledCharacterAvatars(
+	syncOwnedCharacterAvatars(
 		context.Background(),
 		domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		projection.Applier{},

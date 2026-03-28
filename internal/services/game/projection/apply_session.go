@@ -35,6 +35,7 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event, paylo
 	return a.SessionInteraction.PutSessionInteraction(ctx, storage.SessionInteraction{
 		CampaignID:                  string(evt.CampaignID),
 		SessionID:                   sessionID,
+		CharacterControllers:        sessionCharacterControllersToStorage(payload.CharacterControllers),
 		ReadyToResumeParticipantIDs: []string{},
 		UpdatedAt:                   startedAt,
 	})
@@ -59,9 +60,29 @@ func (a Applier) applySessionEnded(ctx context.Context, evt event.Event, payload
 	return a.SessionInteraction.PutSessionInteraction(ctx, storage.SessionInteraction{
 		CampaignID:                  string(evt.CampaignID),
 		SessionID:                   sessionID,
+		CharacterControllers:        []storage.SessionCharacterController{},
 		ReadyToResumeParticipantIDs: []string{},
 		UpdatedAt:                   endedAt,
 	})
+}
+
+func sessionCharacterControllersToStorage(values []session.CharacterControllerAssignment) []storage.SessionCharacterController {
+	if len(values) == 0 {
+		return []storage.SessionCharacterController{}
+	}
+	result := make([]storage.SessionCharacterController, 0, len(values))
+	for _, value := range values {
+		characterID := strings.TrimSpace(value.CharacterID.String())
+		participantID := strings.TrimSpace(value.ParticipantID.String())
+		if characterID == "" || participantID == "" {
+			continue
+		}
+		result = append(result, storage.SessionCharacterController{
+			CharacterID:   characterID,
+			ParticipantID: participantID,
+		})
+	}
+	return result
 }
 
 func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, payload session.GateOpenedPayload) error {

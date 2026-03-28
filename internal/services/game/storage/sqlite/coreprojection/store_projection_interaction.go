@@ -33,6 +33,10 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 	if err != nil {
 		return fmt.Errorf("encode session ooc posts: %w", err)
 	}
+	characterControllersJSON, err := json.Marshal(interaction.CharacterControllers)
+	if err != nil {
+		return fmt.Errorf("encode session character controllers: %w", err)
+	}
 	readyJSON, err := json.Marshal(interaction.ReadyToResumeParticipantIDs)
 	if err != nil {
 		return fmt.Errorf("encode ready to resume: %w", err)
@@ -41,16 +45,18 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 	_, err = s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO session_interactions (
 			campaign_id, session_id, active_scene_id, gm_authority_participant_id,
+			character_controllers_json,
 			ooc_opened, ooc_requested_by_participant_id, ooc_reason,
 			ooc_interrupted_scene_id, ooc_interrupted_phase_id, ooc_interrupted_phase_status,
 			ooc_resolution_pending, ooc_posts_json, ready_to_resume_json,
 			ai_turn_status, ai_turn_token, ai_turn_owner_participant_id,
 			ai_turn_source_event_type, ai_turn_source_scene_id, ai_turn_source_phase_id, ai_turn_last_error,
 			updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (campaign_id, session_id) DO UPDATE SET
 			active_scene_id = excluded.active_scene_id,
 			gm_authority_participant_id = excluded.gm_authority_participant_id,
+			character_controllers_json = excluded.character_controllers_json,
 			ooc_opened = excluded.ooc_opened,
 			ooc_requested_by_participant_id = excluded.ooc_requested_by_participant_id,
 			ooc_reason = excluded.ooc_reason,
@@ -72,6 +78,7 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 		interaction.SessionID,
 		interaction.ActiveSceneID,
 		interaction.GMAuthorityParticipantID,
+		characterControllersJSON,
 		boolToInt(interaction.OOCPaused),
 		interaction.OOCRequestedByParticipantID,
 		interaction.OOCReason,
@@ -114,6 +121,7 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 	var (
 		activeSceneID               string
 		gmAuthorityParticipantID    string
+		characterControllersJSON    []byte
 		oocPaused                   int64
 		oocRequestedByParticipantID string
 		oocReason                   string
@@ -133,7 +141,7 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 		updatedAt                   int64
 	)
 	err := s.projectionQueryable().QueryRowContext(ctx,
-		`SELECT active_scene_id, gm_authority_participant_id, ooc_opened,
+		`SELECT active_scene_id, gm_authority_participant_id, character_controllers_json, ooc_opened,
 		        ooc_requested_by_participant_id, ooc_reason, ooc_interrupted_scene_id,
 		        ooc_interrupted_phase_id, ooc_interrupted_phase_status, ooc_resolution_pending,
 		        ooc_posts_json, ready_to_resume_json,
@@ -146,6 +154,7 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 	).Scan(
 		&activeSceneID,
 		&gmAuthorityParticipantID,
+		&characterControllersJSON,
 		&oocPaused,
 		&oocRequestedByParticipantID,
 		&oocReason,
@@ -177,6 +186,12 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 			return storage.SessionInteraction{}, fmt.Errorf("decode session ooc posts: %w", err)
 		}
 	}
+	var characterControllers []storage.SessionCharacterController
+	if len(characterControllersJSON) != 0 {
+		if err := json.Unmarshal(characterControllersJSON, &characterControllers); err != nil {
+			return storage.SessionInteraction{}, fmt.Errorf("decode session character controllers: %w", err)
+		}
+	}
 	var ready []string
 	if len(readyJSON) != 0 {
 		if err := json.Unmarshal(readyJSON, &ready); err != nil {
@@ -186,6 +201,7 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 	return storage.SessionInteraction{
 		CampaignID:                  campaignID,
 		SessionID:                   sessionID,
+		CharacterControllers:        characterControllers,
 		ActiveSceneID:               activeSceneID,
 		GMAuthorityParticipantID:    gmAuthorityParticipantID,
 		OOCPaused:                   intToBool(oocPaused),

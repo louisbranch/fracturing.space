@@ -80,13 +80,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 		t.Fatal("expected non-empty character id")
 	}
 	participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
-	startResp, err := sessionClient.StartSession(participantCtx, &statev1.StartSessionRequest{
-		CampaignId: createResp.Campaign.Id,
-		Name:       "Session 1",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startResp := startSessionWithDefaultControllers(t, participantCtx, sessionClient, characterClient, createResp.Campaign.Id, "Session 1")
 	if startResp == nil || startResp.Session == nil || startResp.Session.Id == "" {
 		t.Fatal("expected session response")
 	}

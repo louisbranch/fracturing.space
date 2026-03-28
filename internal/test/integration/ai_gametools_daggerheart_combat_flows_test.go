@@ -67,13 +67,7 @@ func TestAIDirectSessionDaggerheartCombatFlowTools(t *testing.T) {
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, supporterTwoID)
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, attackerID, targetID, supporterOneID, supporterTwoID)
 
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "AI Combat Flow Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "AI Combat Flow Session")
 	sessionID := startSession.GetSession().GetId()
 
 	createSceneResp, err := sceneClient.CreateScene(ctxWithUser, &gamev1.CreateSceneRequest{

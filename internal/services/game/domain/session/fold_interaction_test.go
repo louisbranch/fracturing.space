@@ -18,6 +18,7 @@ func TestFold_SessionInteractionLifecycle(t *testing.T) {
 	}{
 		{typ: EventTypeSceneActivated, payload: SceneActivatedPayload{ActiveSceneID: "scene-1"}},
 		{typ: EventTypeGMAuthoritySet, payload: GMAuthoritySetPayload{ParticipantID: "gm-1"}},
+		{typ: EventTypeCharacterControllerSet, payload: CharacterControllerSetPayload{CharacterID: "char-1", ParticipantID: "player-1"}},
 		{typ: EventTypeOOCOpened, payload: OOCOpenedPayload{
 			Reason:                   "rules",
 			RequestedByParticipantID: "gm-1",
@@ -59,6 +60,9 @@ func TestFold_SessionInteractionLifecycle(t *testing.T) {
 	if state.GMAuthorityParticipantID != ids.ParticipantID("gm-1") {
 		t.Fatalf("gm authority = %q", state.GMAuthorityParticipantID)
 	}
+	if got := state.CharacterControllers[ids.CharacterID("char-1")]; got != ids.ParticipantID("player-1") {
+		t.Fatalf("character controller = %q, want %q", got, ids.ParticipantID("player-1"))
+	}
 	if state.OOCPaused {
 		t.Fatal("ooc paused = true, want false after resume")
 	}
@@ -80,6 +84,7 @@ func TestFold_SessionInteractionInvalidPayloadsReturnErrors(t *testing.T) {
 	for _, evtType := range []event.Type{
 		EventTypeSceneActivated,
 		EventTypeGMAuthoritySet,
+		EventTypeCharacterControllerSet,
 		EventTypeOOCOpened,
 		EventTypeOOCReadyMarked,
 		EventTypeOOCReadyCleared,

@@ -13,7 +13,7 @@ type testGatewayBundle interface {
 	CampaignCatalogMutationGateway
 	CampaignConfigurationMutationGateway
 	CampaignAutomationMutationGateway
-	CampaignCharacterControlMutationGateway
+	CampaignCharacterOwnershipMutationGateway
 	CampaignCharacterMutationGateway
 	CampaignParticipantMutationGateway
 	CampaignSessionMutationGateway
@@ -34,7 +34,7 @@ type testServiceBundle struct {
 	automationReadService
 	automationMutationService
 	characterReadService
-	characterControlService
+	characterOwnershipService
 	characterMutationService
 	sessionReadService
 	sessionMutationService
@@ -86,7 +86,7 @@ func newService(gateway testGatewayBundle) testServiceBundle {
 			batchAuthorization: gateway,
 			auth:               auth,
 		},
-		characterControlService: characterControlService{
+		characterOwnershipService: characterOwnershipService{
 			read:         gateway,
 			mutation:     gateway,
 			participants: gateway,

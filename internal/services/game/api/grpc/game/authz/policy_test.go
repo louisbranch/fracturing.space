@@ -137,13 +137,7 @@ func (s *testCharacterStore) ListCharactersByOwnerParticipant(_ context.Context,
 }
 
 func (s *testCharacterStore) ListCharactersByControllerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
-	var result []storage.CharacterRecord
-	for _, c := range s.characters[campaignID] {
-		if c.ParticipantID == participantID {
-			result = append(result, c)
-		}
-	}
-	return result, nil
+	return nil, nil
 }
 
 func TestRequirePolicyMissingActor(t *testing.T) {

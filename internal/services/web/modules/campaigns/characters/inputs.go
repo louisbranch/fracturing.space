@@ -33,8 +33,8 @@ func parseUpdateCharacterInput(form url.Values) campaignapp.UpdateCharacterInput
 	}
 }
 
-// parseSetCharacterControllerInput reads the selected participant controller.
-func parseSetCharacterControllerInput(form url.Values) string {
+// parseSetCharacterOwnerInput reads the selected participant owner.
+func parseSetCharacterOwnerInput(form url.Values) string {
 	return strings.TrimSpace(form.Get("participant_id"))
 }
 

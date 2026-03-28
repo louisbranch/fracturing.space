@@ -19,6 +19,11 @@ message Session {
   int64 version = 8;
 }
 
+message SessionCharacterControllerAssignment {
+  string character_id = 1;
+  string participant_id = 2;
+}
+
 message SessionGate {
   string id = 1;
   string campaign_id = 2;
@@ -125,6 +130,10 @@ message StartSessionRequest {
   // Optional free-form name for the session.
   // Blank values default to a localized "Session {count}" server-side.
   string name = 2;
+
+  // Required controller assignments for every non-deleted character in the
+  // campaign. Ownership-derived defaults are chosen client-side.
+  repeated SessionCharacterControllerAssignment character_controllers = 3;
 }
 
 message StartSessionResponse {

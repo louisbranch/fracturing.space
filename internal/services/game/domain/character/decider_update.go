@@ -62,17 +62,8 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 			normalizedFields[key] = kind
 		case "notes":
 			normalizedFields[key] = strings.TrimSpace(value)
-		case "participant_id":
-			normalizedFields[key] = strings.TrimSpace(value)
 		case "owner_participant_id":
-			trimmed := strings.TrimSpace(value)
-			if trimmed == "" {
-				return command.Reject(command.Rejection{
-					Code:    rejectionCodeCharacterOwnerParticipantID,
-					Message: "owner participant id is required",
-				})
-			}
-			normalizedFields[key] = trimmed
+			normalizedFields[key] = strings.TrimSpace(value)
 		case "avatar_set_id":
 		case "avatar_asset_id":
 		case "pronouns":

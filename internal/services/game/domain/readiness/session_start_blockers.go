@@ -8,7 +8,7 @@ import (
 )
 
 func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness CharacterSystemReadiness) []Blocker {
-	blockers := make([]Blocker, 0, 6)
+	blockers := make([]Blocker, 0, 4)
 	activeParticipants := activeParticipantsByID(state)
 
 	if isAIGMMode(state.Campaign.GmMode) && strings.TrimSpace(state.Campaign.AIAgentID) == "" {
@@ -46,27 +46,8 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 	}
 
 	activeCharacters := activeCharactersByID(state)
-	playerCharacterCounts := make(map[string]int, len(activeParticipants.playerIDs))
-	for _, playerID := range activeParticipants.playerIDs {
-		playerCharacterCounts[playerID] = 0
-	}
-
 	for _, characterID := range activeCharacters.ids {
 		characterState := activeCharacters.byID[characterID]
-		controllerParticipantID := strings.TrimSpace(characterState.ParticipantID)
-		if controllerParticipantID == "" {
-			characterLabel, metadata := readinessCharacterLabelAndMetadata(characterID, characterState.Name)
-			blockers = append(blockers, newBlocker(
-				RejectionCodeSessionReadinessCharacterControllerRequired,
-				fmt.Sprintf("campaign readiness requires character %s to have a controller", characterLabel),
-				metadata,
-			))
-		}
-
-		if _, ok := playerCharacterCounts[controllerParticipantID]; ok {
-			playerCharacterCounts[controllerParticipantID]++
-		}
-
 		if systemReadiness == nil {
 			continue
 		}
@@ -83,31 +64,7 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 			RejectionCodeSessionReadinessCharacterSystemRequired,
 			systemReadinessMessage(characterLabel, reason),
 			metadata,
-			completeCharacterAction(activeParticipants, controllerParticipantID, characterID),
-		))
-	}
-
-	for _, playerID := range activeParticipants.playerIDs {
-		if playerCharacterCounts[playerID] > 0 {
-			continue
-		}
-		playerState := activeParticipants.byID[playerID]
-		playerName := strings.TrimSpace(playerState.Name)
-		playerLabel := playerName
-		if playerLabel == "" {
-			playerLabel = playerID
-		}
-		metadata := map[string]string{
-			"participant_id": playerID,
-		}
-		if playerName != "" {
-			metadata["participant_name"] = playerName
-		}
-		blockers = append(blockers, newActionableBlocker(
-			RejectionCodeSessionReadinessPlayerCharacterRequired,
-			fmt.Sprintf("campaign readiness requires player participant %s to control at least one character", playerLabel),
-			metadata,
-			createCharacterAction(activeParticipants, playerID),
+			completeCharacterAction(activeParticipants, strings.TrimSpace(characterState.OwnerParticipantID), characterID),
 		))
 	}
 

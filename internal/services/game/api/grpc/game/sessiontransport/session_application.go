@@ -40,6 +40,7 @@ type sessionApplication struct {
 type sessionApplicationStores struct {
 	Campaign         storage.CampaignStore
 	Participant      storage.ParticipantStore
+	Character        storage.CharacterStore
 	Session          storage.SessionStore
 	SessionGate      storage.SessionGateStore
 	SessionSpotlight storage.SessionSpotlightStore
@@ -62,6 +63,7 @@ func newSessionApplicationFromDeps(deps Deps, clock func() time.Time, idGenerato
 		stores: sessionApplicationStores{
 			Campaign:         deps.Campaign,
 			Participant:      deps.Participant,
+			Character:        deps.Character,
 			Session:          deps.Session,
 			SessionGate:      deps.SessionGate,
 			SessionSpotlight: deps.SessionSpotlight,

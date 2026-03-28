@@ -1,17 +1,15 @@
 package routepath
 
 const (
-	AppCampaignCharactersPattern              = CampaignsPrefix + "{campaignID}/characters"
-	AppCampaignCharacterPattern               = CampaignsPrefix + "{campaignID}/characters/{characterID}"
-	AppCampaignCharacterEditPattern           = CampaignsPrefix + "{campaignID}/characters/{characterID}/edit"
-	AppCampaignCharacterControlPattern        = CampaignsPrefix + "{campaignID}/characters/{characterID}/control"
-	AppCampaignCharacterControlClaimPattern   = CampaignsPrefix + "{campaignID}/characters/{characterID}/control/claim"
-	AppCampaignCharacterControlReleasePattern = CampaignsPrefix + "{campaignID}/characters/{characterID}/control/release"
-	AppCampaignCharacterDeletePattern         = CampaignsPrefix + "{campaignID}/characters/{characterID}/delete"
-	AppCampaignCharacterCreatePattern         = CampaignsPrefix + "{campaignID}/characters/create"
-	AppCampaignCharacterCreationPattern       = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation"
-	AppCampaignCharacterCreationStepPattern   = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation/step"
-	AppCampaignCharacterCreationResetPattern  = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation/reset"
+	AppCampaignCharactersPattern             = CampaignsPrefix + "{campaignID}/characters"
+	AppCampaignCharacterPattern              = CampaignsPrefix + "{campaignID}/characters/{characterID}"
+	AppCampaignCharacterEditPattern          = CampaignsPrefix + "{campaignID}/characters/{characterID}/edit"
+	AppCampaignCharacterOwnerPattern         = CampaignsPrefix + "{campaignID}/characters/{characterID}/owner"
+	AppCampaignCharacterDeletePattern        = CampaignsPrefix + "{campaignID}/characters/{characterID}/delete"
+	AppCampaignCharacterCreatePattern        = CampaignsPrefix + "{campaignID}/characters/create"
+	AppCampaignCharacterCreationPattern      = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation"
+	AppCampaignCharacterCreationStepPattern  = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation/step"
+	AppCampaignCharacterCreationResetPattern = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation/reset"
 )
 
 // AppCampaignCharacters returns the campaign characters route.
@@ -29,19 +27,9 @@ func AppCampaignCharacterEdit(campaignID string, characterID string) string {
 	return AppCampaignCharacter(campaignID, characterID) + "/edit"
 }
 
-// AppCampaignCharacterControl returns the character controller-set route.
-func AppCampaignCharacterControl(campaignID string, characterID string) string {
-	return AppCampaignCharacter(campaignID, characterID) + "/control"
-}
-
-// AppCampaignCharacterControlClaim returns the self-claim control route.
-func AppCampaignCharacterControlClaim(campaignID string, characterID string) string {
-	return AppCampaignCharacterControl(campaignID, characterID) + "/claim"
-}
-
-// AppCampaignCharacterControlRelease returns the self-release control route.
-func AppCampaignCharacterControlRelease(campaignID string, characterID string) string {
-	return AppCampaignCharacterControl(campaignID, characterID) + "/release"
+// AppCampaignCharacterOwner returns the character owner-set route.
+func AppCampaignCharacterOwner(campaignID string, characterID string) string {
+	return AppCampaignCharacter(campaignID, characterID) + "/owner"
 }
 
 // AppCampaignCharacterDelete returns the character-delete route.

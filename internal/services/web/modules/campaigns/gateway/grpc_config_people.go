@@ -24,9 +24,9 @@ type CharacterMutationDeps struct {
 	Character CharacterMutationClient
 }
 
-// CharacterControlMutationDeps keeps character-control mutation dependencies
+// CharacterOwnershipMutationDeps keeps character-owner mutation dependencies
 // explicit.
-type CharacterControlMutationDeps struct {
+type CharacterOwnershipMutationDeps struct {
 	Character CharacterMutationClient
 }
 
@@ -62,9 +62,9 @@ type characterMutationGateway struct {
 	mutation CharacterMutationDeps
 }
 
-// characterControlMutationGateway maps character controller mutations only.
-type characterControlMutationGateway struct {
-	mutation CharacterControlMutationDeps
+// characterOwnershipMutationGateway maps character-owner mutations only.
+type characterOwnershipMutationGateway struct {
+	mutation CharacterOwnershipMutationDeps
 }
 
 // automationReadGateway maps campaign automation editor reads.
@@ -119,13 +119,13 @@ func NewCharacterMutationGateway(mutationDeps CharacterMutationDeps) campaignapp
 	return characterMutationGateway{mutation: mutationDeps}
 }
 
-// NewCharacterControlMutationGateway builds the character-control mutation
+// NewCharacterOwnershipMutationGateway builds the character-owner mutation
 // adapter from explicit dependencies.
-func NewCharacterControlMutationGateway(mutationDeps CharacterControlMutationDeps) campaignapp.CampaignCharacterControlMutationGateway {
+func NewCharacterOwnershipMutationGateway(mutationDeps CharacterOwnershipMutationDeps) campaignapp.CampaignCharacterOwnershipMutationGateway {
 	if mutationDeps.Character == nil {
 		return nil
 	}
-	return characterControlMutationGateway{mutation: mutationDeps}
+	return characterOwnershipMutationGateway{mutation: mutationDeps}
 }
 
 // NewAutomationReadGateway builds the automation read adapter from explicit

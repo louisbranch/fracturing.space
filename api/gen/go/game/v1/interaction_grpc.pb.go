@@ -20,22 +20,23 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InteractionService_GetInteractionState_FullMethodName       = "/game.v1.InteractionService/GetInteractionState"
-	InteractionService_ActivateScene_FullMethodName             = "/game.v1.InteractionService/ActivateScene"
-	InteractionService_OpenScenePlayerPhase_FullMethodName      = "/game.v1.InteractionService/OpenScenePlayerPhase"
-	InteractionService_SubmitScenePlayerAction_FullMethodName   = "/game.v1.InteractionService/SubmitScenePlayerAction"
-	InteractionService_YieldScenePlayerPhase_FullMethodName     = "/game.v1.InteractionService/YieldScenePlayerPhase"
-	InteractionService_WithdrawScenePlayerYield_FullMethodName  = "/game.v1.InteractionService/WithdrawScenePlayerYield"
-	InteractionService_InterruptScenePlayerPhase_FullMethodName = "/game.v1.InteractionService/InterruptScenePlayerPhase"
-	InteractionService_RecordSceneGMInteraction_FullMethodName  = "/game.v1.InteractionService/RecordSceneGMInteraction"
-	InteractionService_ResolveScenePlayerReview_FullMethodName  = "/game.v1.InteractionService/ResolveScenePlayerReview"
-	InteractionService_OpenSessionOOC_FullMethodName            = "/game.v1.InteractionService/OpenSessionOOC"
-	InteractionService_PostSessionOOC_FullMethodName            = "/game.v1.InteractionService/PostSessionOOC"
-	InteractionService_MarkOOCReadyToResume_FullMethodName      = "/game.v1.InteractionService/MarkOOCReadyToResume"
-	InteractionService_ClearOOCReadyToResume_FullMethodName     = "/game.v1.InteractionService/ClearOOCReadyToResume"
-	InteractionService_ResolveSessionOOC_FullMethodName         = "/game.v1.InteractionService/ResolveSessionOOC"
-	InteractionService_SetSessionGMAuthority_FullMethodName     = "/game.v1.InteractionService/SetSessionGMAuthority"
-	InteractionService_RetryAIGMTurn_FullMethodName             = "/game.v1.InteractionService/RetryAIGMTurn"
+	InteractionService_GetInteractionState_FullMethodName           = "/game.v1.InteractionService/GetInteractionState"
+	InteractionService_ActivateScene_FullMethodName                 = "/game.v1.InteractionService/ActivateScene"
+	InteractionService_OpenScenePlayerPhase_FullMethodName          = "/game.v1.InteractionService/OpenScenePlayerPhase"
+	InteractionService_SubmitScenePlayerAction_FullMethodName       = "/game.v1.InteractionService/SubmitScenePlayerAction"
+	InteractionService_YieldScenePlayerPhase_FullMethodName         = "/game.v1.InteractionService/YieldScenePlayerPhase"
+	InteractionService_WithdrawScenePlayerYield_FullMethodName      = "/game.v1.InteractionService/WithdrawScenePlayerYield"
+	InteractionService_InterruptScenePlayerPhase_FullMethodName     = "/game.v1.InteractionService/InterruptScenePlayerPhase"
+	InteractionService_RecordSceneGMInteraction_FullMethodName      = "/game.v1.InteractionService/RecordSceneGMInteraction"
+	InteractionService_ResolveScenePlayerReview_FullMethodName      = "/game.v1.InteractionService/ResolveScenePlayerReview"
+	InteractionService_OpenSessionOOC_FullMethodName                = "/game.v1.InteractionService/OpenSessionOOC"
+	InteractionService_PostSessionOOC_FullMethodName                = "/game.v1.InteractionService/PostSessionOOC"
+	InteractionService_MarkOOCReadyToResume_FullMethodName          = "/game.v1.InteractionService/MarkOOCReadyToResume"
+	InteractionService_ClearOOCReadyToResume_FullMethodName         = "/game.v1.InteractionService/ClearOOCReadyToResume"
+	InteractionService_ResolveSessionOOC_FullMethodName             = "/game.v1.InteractionService/ResolveSessionOOC"
+	InteractionService_SetSessionGMAuthority_FullMethodName         = "/game.v1.InteractionService/SetSessionGMAuthority"
+	InteractionService_SetSessionCharacterController_FullMethodName = "/game.v1.InteractionService/SetSessionCharacterController"
+	InteractionService_RetryAIGMTurn_FullMethodName                 = "/game.v1.InteractionService/RetryAIGMTurn"
 )
 
 // InteractionServiceClient is the client API for InteractionService service.
@@ -77,6 +78,8 @@ type InteractionServiceClient interface {
 	ResolveSessionOOC(ctx context.Context, in *ResolveSessionOOCRequest, opts ...grpc.CallOption) (*ResolveSessionOOCResponse, error)
 	// Sets which GM participant currently owns the next GM decision for the active session.
 	SetSessionGMAuthority(ctx context.Context, in *SetSessionGMAuthorityRequest, opts ...grpc.CallOption) (*SetSessionGMAuthorityResponse, error)
+	// Reassigns one character controller within the active session.
+	SetSessionCharacterController(ctx context.Context, in *SetSessionCharacterControllerRequest, opts ...grpc.CallOption) (*SetSessionCharacterControllerResponse, error)
 	// Re-queues the current failed AI GM turn when the session is still eligible.
 	RetryAIGMTurn(ctx context.Context, in *RetryAIGMTurnRequest, opts ...grpc.CallOption) (*RetryAIGMTurnResponse, error)
 }
@@ -239,6 +242,16 @@ func (c *interactionServiceClient) SetSessionGMAuthority(ctx context.Context, in
 	return out, nil
 }
 
+func (c *interactionServiceClient) SetSessionCharacterController(ctx context.Context, in *SetSessionCharacterControllerRequest, opts ...grpc.CallOption) (*SetSessionCharacterControllerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetSessionCharacterControllerResponse)
+	err := c.cc.Invoke(ctx, InteractionService_SetSessionCharacterController_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *interactionServiceClient) RetryAIGMTurn(ctx context.Context, in *RetryAIGMTurnRequest, opts ...grpc.CallOption) (*RetryAIGMTurnResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RetryAIGMTurnResponse)
@@ -288,6 +301,8 @@ type InteractionServiceServer interface {
 	ResolveSessionOOC(context.Context, *ResolveSessionOOCRequest) (*ResolveSessionOOCResponse, error)
 	// Sets which GM participant currently owns the next GM decision for the active session.
 	SetSessionGMAuthority(context.Context, *SetSessionGMAuthorityRequest) (*SetSessionGMAuthorityResponse, error)
+	// Reassigns one character controller within the active session.
+	SetSessionCharacterController(context.Context, *SetSessionCharacterControllerRequest) (*SetSessionCharacterControllerResponse, error)
 	// Re-queues the current failed AI GM turn when the session is still eligible.
 	RetryAIGMTurn(context.Context, *RetryAIGMTurnRequest) (*RetryAIGMTurnResponse, error)
 	mustEmbedUnimplementedInteractionServiceServer()
@@ -344,6 +359,9 @@ func (UnimplementedInteractionServiceServer) ResolveSessionOOC(context.Context, 
 }
 func (UnimplementedInteractionServiceServer) SetSessionGMAuthority(context.Context, *SetSessionGMAuthorityRequest) (*SetSessionGMAuthorityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetSessionGMAuthority not implemented")
+}
+func (UnimplementedInteractionServiceServer) SetSessionCharacterController(context.Context, *SetSessionCharacterControllerRequest) (*SetSessionCharacterControllerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetSessionCharacterController not implemented")
 }
 func (UnimplementedInteractionServiceServer) RetryAIGMTurn(context.Context, *RetryAIGMTurnRequest) (*RetryAIGMTurnResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RetryAIGMTurn not implemented")
@@ -639,6 +657,24 @@ func _InteractionService_SetSessionGMAuthority_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InteractionService_SetSessionCharacterController_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetSessionCharacterControllerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InteractionServiceServer).SetSessionCharacterController(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InteractionService_SetSessionCharacterController_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InteractionServiceServer).SetSessionCharacterController(ctx, req.(*SetSessionCharacterControllerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _InteractionService_RetryAIGMTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RetryAIGMTurnRequest)
 	if err := dec(in); err != nil {
@@ -723,6 +759,10 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetSessionGMAuthority",
 			Handler:    _InteractionService_SetSessionGMAuthority_Handler,
+		},
+		{
+			MethodName: "SetSessionCharacterController",
+			Handler:    _InteractionService_SetSessionCharacterController_Handler,
 		},
 		{
 			MethodName: "RetryAIGMTurn",

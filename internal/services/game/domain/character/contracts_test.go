@@ -121,7 +121,6 @@ func TestFold_ReturnsErrorForUnknownEventType(t *testing.T) {
 		Name:               "Aria",
 		Kind:               "pc",
 		OwnerParticipantID: "p-owner",
-		ParticipantID:      "p-controller",
 		Aliases:            []string{"alias-1"},
 	}
 
