@@ -27,6 +27,7 @@ type ProjectionStores struct {
 	ClaimIndex         storage.ClaimIndexStore
 	Character          storage.CharacterStore
 	Session            storage.SessionStore
+	SessionRecap       storage.SessionRecapStore
 	SessionGate        storage.SessionGateStore
 	SessionSpotlight   storage.SessionSpotlightStore
 	SessionInteraction storage.SessionInteractionStore

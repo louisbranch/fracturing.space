@@ -33,6 +33,7 @@ const (
 	storeCampaignFork
 	storeParticipant
 	storeSession
+	storeSessionRecap
 	storeSessionGate
 	storeSessionSpotlight
 	storeSessionInteraction
@@ -125,6 +126,7 @@ var storeChecks = []storeCheck{
 	{storeCampaignFork, "campaign fork", func(a Applier) bool { return a.CampaignFork == nil }},
 	{storeParticipant, "participant", func(a Applier) bool { return a.Participant == nil }},
 	{storeSession, "session", func(a Applier) bool { return a.Session == nil }},
+	{storeSessionRecap, "session recap", func(a Applier) bool { return a.SessionRecap == nil }},
 	{storeSessionGate, "session gate", func(a Applier) bool { return a.SessionGate == nil }},
 	{storeSessionSpotlight, "session spotlight", func(a Applier) bool { return a.SessionSpotlight == nil }},
 	{storeSessionInteraction, "session interaction", func(a Applier) bool { return a.SessionInteraction == nil }},

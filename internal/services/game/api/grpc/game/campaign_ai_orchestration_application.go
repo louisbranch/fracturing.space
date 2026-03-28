@@ -12,7 +12,9 @@ type CampaignAIOrchestrationDeps struct {
 	Campaign           storage.CampaignStore
 	Participant        storage.ParticipantStore
 	Session            storage.SessionStore
+	SessionRecap       storage.SessionRecapStore
 	SessionInteraction storage.SessionInteractionStore
+	Scene              storage.SceneStore
 	SceneInteraction   storage.SceneInteractionStore
 	Write              WritePath
 	Applier            projection.Applier
@@ -35,7 +37,9 @@ func newCampaignAIOrchestrationApplicationWithDependencies(
 		Campaign:           deps.Campaign,
 		Participant:        deps.Participant,
 		Session:            deps.Session,
+		SessionRecap:       deps.SessionRecap,
 		SessionInteraction: deps.SessionInteraction,
+		Scene:              deps.Scene,
 		SceneInteraction:   deps.SceneInteraction,
 		Write:              deps.Write,
 		Applier:            deps.Applier,

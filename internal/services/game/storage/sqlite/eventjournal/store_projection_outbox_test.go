@@ -478,40 +478,84 @@ func TestProcessProjectionApplyOutboxDifferentCampaignsCanProgressIndependently(
 	}
 
 	now := baseNow.Add(time.Minute)
-	type processedEvent struct {
-		campaignID string
+	// Make campaign A due slightly earlier so the first worker deterministically
+	// claims and holds that lease while the second worker proves campaign B can
+	// still progress independently.
+	if _, err := raw.DB().ExecContext(
+		context.Background(),
+		`UPDATE projection_apply_outbox SET next_attempt_at = ? WHERE campaign_id = ?`,
+		now.Add(-2*time.Second).UnixMilli(),
+		"camp-outbox-independent-a",
+	); err != nil {
+		t.Fatalf("prepare campaign A due time: %v", err)
 	}
-	results := make(chan processedEvent, 2)
+	if _, err := raw.DB().ExecContext(
+		context.Background(),
+		`UPDATE projection_apply_outbox SET next_attempt_at = ? WHERE campaign_id = ?`,
+		now.Add(-time.Second).UnixMilli(),
+		"camp-outbox-independent-b",
+	); err != nil {
+		t.Fatalf("prepare campaign B due time: %v", err)
+	}
 
-	run := func(outbox *sqliteprojectionapplyoutbox.Store) {
-		processed, err := outbox.ProcessProjectionApplyOutbox(
+	results := make(chan string, 2)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		processed, err := first.ProcessProjectionApplyOutbox(
 			context.Background(),
 			now,
 			1,
 			func(_ context.Context, evt event.Event) error {
-				results <- processedEvent{campaignID: string(evt.CampaignID)}
+				if evt.CampaignID != ids.CampaignID("camp-outbox-independent-a") {
+					t.Errorf("first worker campaign = %s, want camp-outbox-independent-a", evt.CampaignID)
+				}
+				results <- string(evt.CampaignID)
+				close(started)
+				<-release
 				return nil
 			},
 		)
 		if err != nil {
-			t.Errorf("process outbox: %v", err)
+			t.Errorf("first worker process outbox: %v", err)
 			return
 		}
 		if processed != 1 {
-			t.Errorf("processed = %d, want 1", processed)
+			t.Errorf("first worker processed = %d, want 1", processed)
 		}
+	}()
+
+	<-started
+
+	secondProcessed, err := second.ProcessProjectionApplyOutbox(
+		context.Background(),
+		now,
+		1,
+		func(_ context.Context, evt event.Event) error {
+			if evt.CampaignID != ids.CampaignID("camp-outbox-independent-b") {
+				t.Fatalf("second worker campaign = %s, want camp-outbox-independent-b", evt.CampaignID)
+			}
+			results <- string(evt.CampaignID)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("second worker process outbox: %v", err)
+	}
+	if secondProcessed != 1 {
+		t.Fatalf("second worker processed = %d, want 1", secondProcessed)
 	}
 
-	done := make(chan struct{}, 2)
-	go func() { defer func() { done <- struct{}{} }(); run(first) }()
-	go func() { defer func() { done <- struct{}{} }(); run(second) }()
-	<-done
+	close(release)
 	<-done
 	close(results)
 
 	seen := map[string]int{}
-	for result := range results {
-		seen[result.campaignID]++
+	for campaignID := range results {
+		seen[campaignID]++
 	}
 	if len(seen) != 2 || seen["camp-outbox-independent-a"] != 1 || seen["camp-outbox-independent-b"] != 1 {
 		t.Fatalf("seen campaigns = %+v, want one event per campaign", seen)

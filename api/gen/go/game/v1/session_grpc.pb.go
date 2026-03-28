@@ -24,6 +24,7 @@ const (
 	SessionService_ListSessions_FullMethodName              = "/game.v1.SessionService/ListSessions"
 	SessionService_ListActiveSessionsForUser_FullMethodName = "/game.v1.SessionService/ListActiveSessionsForUser"
 	SessionService_GetSession_FullMethodName                = "/game.v1.SessionService/GetSession"
+	SessionService_GetSessionRecap_FullMethodName           = "/game.v1.SessionService/GetSessionRecap"
 	SessionService_EndSession_FullMethodName                = "/game.v1.SessionService/EndSession"
 	SessionService_OpenSessionGate_FullMethodName           = "/game.v1.SessionService/OpenSessionGate"
 	SessionService_ResolveSessionGate_FullMethodName        = "/game.v1.SessionService/ResolveSessionGate"
@@ -48,6 +49,8 @@ type SessionServiceClient interface {
 	ListActiveSessionsForUser(ctx context.Context, in *ListActiveSessionsForUserRequest, opts ...grpc.CallOption) (*ListActiveSessionsForUserResponse, error)
 	// Get a session by campaign ID and session ID.
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error)
+	// Get the stored recap markdown for one session.
+	GetSessionRecap(ctx context.Context, in *GetSessionRecapRequest, opts ...grpc.CallOption) (*GetSessionRecapResponse, error)
 	// End a session by campaign ID and session ID.
 	EndSession(ctx context.Context, in *EndSessionRequest, opts ...grpc.CallOption) (*EndSessionResponse, error)
 	// Open a gate that blocks action events until resolved.
@@ -106,6 +109,16 @@ func (c *sessionServiceClient) GetSession(ctx context.Context, in *GetSessionReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetSessionResponse)
 	err := c.cc.Invoke(ctx, SessionService_GetSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionServiceClient) GetSessionRecap(ctx context.Context, in *GetSessionRecapRequest, opts ...grpc.CallOption) (*GetSessionRecapResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSessionRecapResponse)
+	err := c.cc.Invoke(ctx, SessionService_GetSessionRecap_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +210,8 @@ type SessionServiceServer interface {
 	ListActiveSessionsForUser(context.Context, *ListActiveSessionsForUserRequest) (*ListActiveSessionsForUserResponse, error)
 	// Get a session by campaign ID and session ID.
 	GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error)
+	// Get the stored recap markdown for one session.
+	GetSessionRecap(context.Context, *GetSessionRecapRequest) (*GetSessionRecapResponse, error)
 	// End a session by campaign ID and session ID.
 	EndSession(context.Context, *EndSessionRequest) (*EndSessionResponse, error)
 	// Open a gate that blocks action events until resolved.
@@ -232,6 +247,9 @@ func (UnimplementedSessionServiceServer) ListActiveSessionsForUser(context.Conte
 }
 func (UnimplementedSessionServiceServer) GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSession not implemented")
+}
+func (UnimplementedSessionServiceServer) GetSessionRecap(context.Context, *GetSessionRecapRequest) (*GetSessionRecapResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSessionRecap not implemented")
 }
 func (UnimplementedSessionServiceServer) EndSession(context.Context, *EndSessionRequest) (*EndSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EndSession not implemented")
@@ -343,6 +361,24 @@ func _SessionService_GetSession_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SessionServiceServer).GetSession(ctx, req.(*GetSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionService_GetSessionRecap_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSessionRecapRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServiceServer).GetSessionRecap(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionService_GetSessionRecap_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServiceServer).GetSessionRecap(ctx, req.(*GetSessionRecapRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -495,6 +531,10 @@ var SessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSession",
 			Handler:    _SessionService_GetSession_Handler,
+		},
+		{
+			MethodName: "GetSessionRecap",
+			Handler:    _SessionService_GetSessionRecap_Handler,
 		},
 		{
 			MethodName: "EndSession",

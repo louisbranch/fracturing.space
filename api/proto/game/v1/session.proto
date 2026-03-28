@@ -66,6 +66,13 @@ message SessionSpotlight {
   string updated_by_actor_id = 7;
 }
 
+message SessionRecap {
+  string campaign_id = 1;
+  string session_id = 2;
+  string markdown = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
 enum SessionStatus {
   SESSION_STATUS_UNSPECIFIED = 0;
   SESSION_ACTIVE = 1;
@@ -99,6 +106,9 @@ service SessionService {
 
   // Get a session by campaign ID and session ID.
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+
+  // Get the stored recap markdown for one session.
+  rpc GetSessionRecap(GetSessionRecapRequest) returns (GetSessionRecapResponse);
 
   // End a session by campaign ID and session ID.
   rpc EndSession(EndSessionRequest) returns (EndSessionResponse);
@@ -186,6 +196,15 @@ message GetSessionRequest {
 
 message GetSessionResponse {
   Session session = 1;
+}
+
+message GetSessionRecapRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+}
+
+message GetSessionRecapResponse {
+  SessionRecap recap = 1;
 }
 
 message EndSessionRequest {

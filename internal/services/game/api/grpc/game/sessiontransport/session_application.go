@@ -17,6 +17,7 @@ type Deps struct {
 	Participant        storage.ParticipantStore
 	Character          storage.CharacterStore
 	Session            storage.SessionStore
+	SessionRecap       storage.SessionRecapStore
 	SessionGate        storage.SessionGateStore
 	SessionSpotlight   storage.SessionSpotlightStore
 	SessionInteraction storage.SessionInteractionStore
@@ -42,6 +43,7 @@ type sessionApplicationStores struct {
 	Participant      storage.ParticipantStore
 	Character        storage.CharacterStore
 	Session          storage.SessionStore
+	SessionRecap     storage.SessionRecapStore
 	SessionGate      storage.SessionGateStore
 	SessionSpotlight storage.SessionSpotlightStore
 }
@@ -65,6 +67,7 @@ func newSessionApplicationFromDeps(deps Deps, clock func() time.Time, idGenerato
 			Participant:      deps.Participant,
 			Character:        deps.Character,
 			Session:          deps.Session,
+			SessionRecap:     deps.SessionRecap,
 			SessionGate:      deps.SessionGate,
 			SessionSpotlight: deps.SessionSpotlight,
 		},

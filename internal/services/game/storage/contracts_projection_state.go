@@ -98,6 +98,7 @@ type CampaignReadStores interface {
 // session lifecycle, gate, spotlight, and interaction workflows.
 type SessionReadStores interface {
 	SessionStore
+	SessionRecapStore
 	SessionGateStore
 	SessionSpotlightStore
 	SessionInteractionStore

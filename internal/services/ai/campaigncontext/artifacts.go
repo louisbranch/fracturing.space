@@ -23,6 +23,8 @@ const (
 	StoryArtifactPath = "story.md"
 	// MemoryArtifactPath is the AI's durable GM working memory.
 	MemoryArtifactPath = "memory.md"
+	// EpilogueArtifactPath is the canonical campaign-ending epilogue document.
+	EpilogueArtifactPath = "epilogue.md"
 )
 
 var workingArtifactSlugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
@@ -185,7 +187,7 @@ func NormalizeArtifactPath(path string) (string, error) {
 		return "", fmt.Errorf("artifact path %q is not allowed", path)
 	}
 	switch cleaned {
-	case SkillsArtifactPath, StoryArtifactPath, MemoryArtifactPath:
+	case SkillsArtifactPath, StoryArtifactPath, MemoryArtifactPath, EpilogueArtifactPath:
 		return cleaned, nil
 	}
 	if !strings.HasPrefix(cleaned, "working/") || !strings.HasSuffix(cleaned, ".md") {
@@ -268,6 +270,7 @@ You are the AI GM for this campaign. You are responsible for both narration and 
 - Use interaction_record_scene_gm_interaction only for standalone in-character narration when framing a fresh beat outside GM review.
 - In GM review, use interaction_resolve_scene_player_review to commit narration and either open the next player phase or request revisions.
 - After OOC resume when players are still blocked, use interaction_session_ooc_resolve to resume or replace the interrupted interaction.
+- When the session is ending, use interaction_conclude_session instead of chaining scene_end or session lifecycle tooling manually.
 - When handing control back to players outside GM review, commit authoritative GM narration first, then call interaction_open_scene_player_phase with explicit acting character IDs.
 - Never leave the interaction in silent GM control after players yield; the turn must end in a player phase or OOC.
 - Use interaction_ooc_* tools for rules clarifications, pacing, consent checks, and other out-of-character coordination.

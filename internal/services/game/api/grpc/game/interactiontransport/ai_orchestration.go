@@ -119,11 +119,15 @@ func (a AIOrchestrationApplication) FailAIGMTurn(ctx context.Context, campaignID
 
 // CompleteAIGMTurn clears the running AI turn on success.
 func (a AIOrchestrationApplication) CompleteAIGMTurn(ctx context.Context, campaignID, sessionID, turnToken string) (*campaignv1.AITurnState, error) {
+	sessionRecord, err := a.interaction.stores.Session.GetSession(ctx, campaignID, sessionID)
+	if err != nil {
+		return nil, grpcerror.Internal("load ai turn completion session", err)
+	}
 	sessionInteraction, err := a.interaction.stores.SessionInteraction.GetSessionInteraction(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, grpcerror.Internal("load ai turn completion interaction state", err)
 	}
-	if !sessionInteraction.OOCPaused {
+	if sessionRecord.Status != session.StatusEnded && !sessionInteraction.OOCPaused {
 		if sessionInteraction.OOCResolutionPending {
 			return nil, status.Error(codes.FailedPrecondition, "ai gm turn must resolve the post-ooc interaction before completion")
 		}

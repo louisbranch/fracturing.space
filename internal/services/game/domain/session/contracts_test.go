@@ -13,6 +13,7 @@ func TestFoldHandledTypes_ReturnsSessionEventContract(t *testing.T) {
 	want := []event.Type{
 		EventTypeStarted,
 		EventTypeEnded,
+		EventTypeRecapRecorded,
 		EventTypeGateOpened,
 		EventTypeGateResponseRecorded,
 		EventTypeGateResolved,
@@ -53,6 +54,7 @@ func TestDeciderHandledCommands_ReturnsSessionCommandContract(t *testing.T) {
 	want := []command.Type{
 		CommandTypeStart,
 		CommandTypeEnd,
+		CommandTypeRecapRecord,
 		CommandTypeGateOpen,
 		CommandTypeGateRespond,
 		CommandTypeGateResolve,

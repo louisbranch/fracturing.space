@@ -628,6 +628,17 @@ CREATE TABLE scene_interactions (
 CREATE INDEX idx_session_interactions_active_scene ON session_interactions(campaign_id, active_scene_id);
 CREATE INDEX idx_scene_interactions_session ON scene_interactions(campaign_id, session_id);
 
+-- +migrate Up
+
+CREATE TABLE IF NOT EXISTS session_recaps (
+    campaign_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    markdown TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, session_id),
+    FOREIGN KEY (campaign_id, session_id) REFERENCES sessions(campaign_id, id) ON DELETE CASCADE
+);
+
 CREATE TABLE scene_gm_interactions (
     campaign_id TEXT NOT NULL,
     scene_id TEXT NOT NULL,

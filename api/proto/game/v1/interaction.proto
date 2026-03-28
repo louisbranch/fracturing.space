@@ -58,6 +58,7 @@ service CampaignAIOrchestrationService {
   rpc StartAIGMTurn(StartAIGMTurnRequest) returns (StartAIGMTurnResponse);
   rpc FailAIGMTurn(FailAIGMTurnRequest) returns (FailAIGMTurnResponse);
   rpc CompleteAIGMTurn(CompleteAIGMTurnRequest) returns (CompleteAIGMTurnResponse);
+  rpc ConcludeSession(ConcludeSessionRequest) returns (ConcludeSessionResponse);
 }
 
 message InteractionViewer {
@@ -500,4 +501,19 @@ message CompleteAIGMTurnRequest {
 
 message CompleteAIGMTurnResponse {
   AITurnState ai_turn = 1;
+}
+
+message ConcludeSessionRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string conclusion = 3;
+  string summary = 4;
+  bool end_campaign = 5;
+  string epilogue = 6;
+}
+
+message ConcludeSessionResponse {
+  string session_id = 1;
+  repeated string ended_scene_ids = 2;
+  bool campaign_completed = 3;
 }

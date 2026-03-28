@@ -43,6 +43,22 @@ func (s *fakeSessionStore) ListSessions(context.Context, string, int, string) (s
 	return storage.SessionPage{}, nil
 }
 
+type fakeSessionRecapStore struct {
+	last storage.SessionRecap
+}
+
+func (s *fakeSessionRecapStore) PutSessionRecap(_ context.Context, recap storage.SessionRecap) error {
+	s.last = recap
+	return nil
+}
+
+func (s *fakeSessionRecapStore) GetSessionRecap(context.Context, string, string) (storage.SessionRecap, error) {
+	if strings.TrimSpace(s.last.SessionID) == "" {
+		return storage.SessionRecap{}, storage.ErrNotFound
+	}
+	return s.last, nil
+}
+
 type fakeClaimIndexStore struct {
 	claims    map[string]storage.ParticipantClaim
 	deleted   []string

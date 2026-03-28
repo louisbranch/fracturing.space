@@ -33,6 +33,7 @@ func CoreContextSourcesWithConfig(cfg CoreContextSourceConfig) []ContextSource {
 		ContextSourceFunc(campaignContextSource),
 		ContextSourceFunc(participantsContextSource),
 		ContextSourceFunc(charactersContextSource),
+		ContextSourceFunc(latestSessionRecapContextSource),
 		ContextSourceFunc(sessionsContextSource),
 		ContextSourceFunc(scenesContextSource),
 		ContextSourceFunc(currentContextSource),
@@ -130,6 +131,53 @@ func sessionsContextSource(ctx context.Context, sess Session, input PromptInput)
 		Priority: 300,
 		Label:    "Sessions",
 		Content:  sessions,
+	}), nil
+}
+
+func latestSessionRecapContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
+	sessionsRaw, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions", input.CampaignID))
+	if err != nil {
+		return BriefContribution{}, fmt.Errorf("read sessions for recap: %w", err)
+	}
+	var payload struct {
+		Sessions []struct {
+			ID      string `json:"id"`
+			Status  string `json:"status"`
+			EndedAt string `json:"ended_at"`
+		} `json:"sessions"`
+	}
+	if err := json.Unmarshal([]byte(sessionsRaw), &payload); err != nil {
+		return BriefContribution{}, fmt.Errorf("decode sessions for recap: %w", err)
+	}
+	var latest struct {
+		ID      string
+		EndedAt string
+	}
+	for _, session := range payload.Sessions {
+		if !strings.EqualFold(strings.TrimSpace(session.Status), "ENDED") || strings.TrimSpace(session.EndedAt) == "" {
+			continue
+		}
+		if latest.ID == "" || strings.TrimSpace(session.EndedAt) > latest.EndedAt {
+			latest.ID = strings.TrimSpace(session.ID)
+			latest.EndedAt = strings.TrimSpace(session.EndedAt)
+		}
+	}
+	if latest.ID == "" {
+		return BriefContribution{}, nil
+	}
+	recap, err := readOptionalResource(ctx, sess, fmt.Sprintf("campaign://%s/sessions/%s/recap", input.CampaignID, latest.ID))
+	if err != nil {
+		return BriefContribution{}, fmt.Errorf("read latest session recap: %w", err)
+	}
+	recap = strings.TrimSpace(recap)
+	if recap == "" {
+		return BriefContribution{}, nil
+	}
+	return SectionContribution(BriefSection{
+		ID:       "latest_session_recap",
+		Priority: 300,
+		Label:    "Session recap",
+		Content:  recap,
 	}), nil
 }
 

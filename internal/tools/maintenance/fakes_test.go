@@ -324,12 +324,20 @@ func (f *fakeProjectionStore) PutSession(context.Context, storage.SessionRecord)
 	return fmt.Errorf("not implemented")
 }
 
+func (f *fakeProjectionStore) PutSessionRecap(context.Context, storage.SessionRecap) error {
+	return fmt.Errorf("not implemented")
+}
+
 func (f *fakeProjectionStore) EndSession(context.Context, string, string, time.Time) (storage.SessionRecord, bool, error) {
 	return storage.SessionRecord{}, false, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) GetSession(context.Context, string, string) (storage.SessionRecord, error) {
 	return storage.SessionRecord{}, fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) GetSessionRecap(context.Context, string, string) (storage.SessionRecap, error) {
+	return storage.SessionRecap{}, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) GetActiveSession(context.Context, string) (storage.SessionRecord, error) {

@@ -29,6 +29,7 @@ type Deps struct {
 	Character          storage.CharacterStore
 	Event              storage.EventHistoryStore
 	Session            storage.SessionStore
+	SessionRecap       storage.SessionRecapStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore
 	SceneCharacter     storage.SceneCharacterStore
@@ -54,6 +55,7 @@ type interactionApplicationStores struct {
 	Character          storage.CharacterStore
 	Event              storage.EventHistoryStore
 	Session            storage.SessionStore
+	SessionRecap       storage.SessionRecapStore
 	SessionInteraction storage.SessionInteractionStore
 	Scene              storage.SceneStore
 	SceneCharacter     storage.SceneCharacterStore
@@ -73,6 +75,7 @@ func newInteractionApplicationWithDependencies(
 			Character:          deps.Character,
 			Event:              deps.Event,
 			Session:            deps.Session,
+			SessionRecap:       deps.SessionRecap,
 			SessionInteraction: deps.SessionInteraction,
 			Scene:              deps.Scene,
 			SceneCharacter:     deps.SceneCharacter,

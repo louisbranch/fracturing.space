@@ -192,6 +192,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		session.CommandTypeAITurnStart:               sessionRoute,
 		session.CommandTypeAITurnFail:                sessionRoute,
 		session.CommandTypeAITurnClear:               sessionRoute,
+		session.CommandTypeRecapRecord:               sessionRoute,
 		participant.CommandTypeJoin:                  participantRoute,
 		participant.CommandTypeUpdate:                participantRoute,
 		participant.CommandTypeLeave:                 participantRoute,

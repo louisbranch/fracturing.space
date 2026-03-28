@@ -36,6 +36,7 @@ intentionally omitted here.
 - `interaction_open_scene_player_phase`
 - `interaction_resolve_scene_player_review`
 - `interaction_record_scene_gm_interaction`
+- `interaction_conclude_session`
 - `interaction_session_ooc_resolve`
 - `interaction_open_session_ooc`
 - `interaction_post_session_ooc`

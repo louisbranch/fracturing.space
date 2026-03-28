@@ -120,3 +120,34 @@ func (s *CampaignAIOrchestrationService) CompleteAIGMTurn(ctx context.Context, i
 	}
 	return &campaignv1.CompleteAIGMTurnResponse{AiTurn: turn}, nil
 }
+
+func (s *CampaignAIOrchestrationService) ConcludeSession(ctx context.Context, in *campaignv1.ConcludeSessionRequest) (*campaignv1.ConcludeSessionResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "conclude session request is required")
+	}
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.app.ConcludeSession(
+		ctx,
+		campaignID,
+		sessionID,
+		in.GetConclusion(),
+		in.GetSummary(),
+		in.GetEndCampaign(),
+		in.GetEpilogue(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &campaignv1.ConcludeSessionResponse{
+		SessionId:         result.SessionID,
+		EndedSceneIds:     append([]string(nil), result.EndedSceneIDs...),
+		CampaignCompleted: result.CampaignCompleted,
+	}, nil
+}

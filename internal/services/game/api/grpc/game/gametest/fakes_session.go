@@ -10,6 +10,7 @@ import (
 
 var (
 	_ storage.SessionGateStore        = (*FakeSessionGateStore)(nil)
+	_ storage.SessionRecapStore       = (*FakeSessionRecapStore)(nil)
 	_ storage.SessionStore            = (*FakeSessionStore)(nil)
 	_ storage.SessionSpotlightStore   = (*FakeSessionSpotlightStore)(nil)
 	_ storage.SessionInteractionStore = (*FakeSessionInteractionStore)(nil)
@@ -72,6 +73,13 @@ type FakeSessionStore struct {
 	ListErr       error
 }
 
+// FakeSessionRecapStore is a test double for storage.SessionRecapStore.
+type FakeSessionRecapStore struct {
+	Recaps map[string]storage.SessionRecap
+	PutErr error
+	GetErr error
+}
+
 // FakeSessionSpotlightStore is a test double for storage.SessionSpotlightStore.
 type FakeSessionSpotlightStore struct {
 	Spotlights map[string]map[string]storage.SessionSpotlight
@@ -85,6 +93,36 @@ func NewFakeSessionSpotlightStore() *FakeSessionSpotlightStore {
 	return &FakeSessionSpotlightStore{
 		Spotlights: make(map[string]map[string]storage.SessionSpotlight),
 	}
+}
+
+// NewFakeSessionRecapStore returns a ready-to-use session recap store fake.
+func NewFakeSessionRecapStore() *FakeSessionRecapStore {
+	return &FakeSessionRecapStore{Recaps: make(map[string]storage.SessionRecap)}
+}
+
+func (s *FakeSessionRecapStore) PutSessionRecap(_ context.Context, recap storage.SessionRecap) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
+	if s.Recaps == nil {
+		s.Recaps = make(map[string]storage.SessionRecap)
+	}
+	s.Recaps[recap.CampaignID+":"+recap.SessionID] = recap
+	return nil
+}
+
+func (s *FakeSessionRecapStore) GetSessionRecap(_ context.Context, campaignID, sessionID string) (storage.SessionRecap, error) {
+	if s.GetErr != nil {
+		return storage.SessionRecap{}, s.GetErr
+	}
+	if s == nil || s.Recaps == nil {
+		return storage.SessionRecap{}, storage.ErrNotFound
+	}
+	recap, ok := s.Recaps[campaignID+":"+sessionID]
+	if !ok {
+		return storage.SessionRecap{}, storage.ErrNotFound
+	}
+	return recap, nil
 }
 
 func (s *FakeSessionSpotlightStore) PutSessionSpotlight(_ context.Context, spotlight storage.SessionSpotlight) error {

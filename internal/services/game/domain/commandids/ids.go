@@ -20,6 +20,7 @@ const (
 	StoryNoteAdd                   command.Type = "story.note.add"
 	SessionStart                   command.Type = "session.start"
 	SessionEnd                     command.Type = "session.end"
+	SessionRecapRecord             command.Type = "session.recap.record"
 	SessionGateOpen                command.Type = "session.gate_open"
 	SessionGateRespond             command.Type = "session.gate_record_response"
 	SessionGateResolve             command.Type = "session.gate_resolve"

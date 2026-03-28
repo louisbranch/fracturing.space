@@ -778,6 +778,7 @@ const (
 	CampaignAIOrchestrationService_StartAIGMTurn_FullMethodName    = "/game.v1.CampaignAIOrchestrationService/StartAIGMTurn"
 	CampaignAIOrchestrationService_FailAIGMTurn_FullMethodName     = "/game.v1.CampaignAIOrchestrationService/FailAIGMTurn"
 	CampaignAIOrchestrationService_CompleteAIGMTurn_FullMethodName = "/game.v1.CampaignAIOrchestrationService/CompleteAIGMTurn"
+	CampaignAIOrchestrationService_ConcludeSession_FullMethodName  = "/game.v1.CampaignAIOrchestrationService/ConcludeSession"
 )
 
 // CampaignAIOrchestrationServiceClient is the client API for CampaignAIOrchestrationService service.
@@ -792,6 +793,7 @@ type CampaignAIOrchestrationServiceClient interface {
 	StartAIGMTurn(ctx context.Context, in *StartAIGMTurnRequest, opts ...grpc.CallOption) (*StartAIGMTurnResponse, error)
 	FailAIGMTurn(ctx context.Context, in *FailAIGMTurnRequest, opts ...grpc.CallOption) (*FailAIGMTurnResponse, error)
 	CompleteAIGMTurn(ctx context.Context, in *CompleteAIGMTurnRequest, opts ...grpc.CallOption) (*CompleteAIGMTurnResponse, error)
+	ConcludeSession(ctx context.Context, in *ConcludeSessionRequest, opts ...grpc.CallOption) (*ConcludeSessionResponse, error)
 }
 
 type campaignAIOrchestrationServiceClient struct {
@@ -842,6 +844,16 @@ func (c *campaignAIOrchestrationServiceClient) CompleteAIGMTurn(ctx context.Cont
 	return out, nil
 }
 
+func (c *campaignAIOrchestrationServiceClient) ConcludeSession(ctx context.Context, in *ConcludeSessionRequest, opts ...grpc.CallOption) (*ConcludeSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConcludeSessionResponse)
+	err := c.cc.Invoke(ctx, CampaignAIOrchestrationService_ConcludeSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CampaignAIOrchestrationServiceServer is the server API for CampaignAIOrchestrationService service.
 // All implementations must embed UnimplementedCampaignAIOrchestrationServiceServer
 // for forward compatibility.
@@ -854,6 +866,7 @@ type CampaignAIOrchestrationServiceServer interface {
 	StartAIGMTurn(context.Context, *StartAIGMTurnRequest) (*StartAIGMTurnResponse, error)
 	FailAIGMTurn(context.Context, *FailAIGMTurnRequest) (*FailAIGMTurnResponse, error)
 	CompleteAIGMTurn(context.Context, *CompleteAIGMTurnRequest) (*CompleteAIGMTurnResponse, error)
+	ConcludeSession(context.Context, *ConcludeSessionRequest) (*ConcludeSessionResponse, error)
 	mustEmbedUnimplementedCampaignAIOrchestrationServiceServer()
 }
 
@@ -875,6 +888,9 @@ func (UnimplementedCampaignAIOrchestrationServiceServer) FailAIGMTurn(context.Co
 }
 func (UnimplementedCampaignAIOrchestrationServiceServer) CompleteAIGMTurn(context.Context, *CompleteAIGMTurnRequest) (*CompleteAIGMTurnResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CompleteAIGMTurn not implemented")
+}
+func (UnimplementedCampaignAIOrchestrationServiceServer) ConcludeSession(context.Context, *ConcludeSessionRequest) (*ConcludeSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConcludeSession not implemented")
 }
 func (UnimplementedCampaignAIOrchestrationServiceServer) mustEmbedUnimplementedCampaignAIOrchestrationServiceServer() {
 }
@@ -970,6 +986,24 @@ func _CampaignAIOrchestrationService_CompleteAIGMTurn_Handler(srv interface{}, c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CampaignAIOrchestrationService_ConcludeSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConcludeSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignAIOrchestrationServiceServer).ConcludeSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignAIOrchestrationService_ConcludeSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignAIOrchestrationServiceServer).ConcludeSession(ctx, req.(*ConcludeSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CampaignAIOrchestrationService_ServiceDesc is the grpc.ServiceDesc for CampaignAIOrchestrationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -992,6 +1026,10 @@ var CampaignAIOrchestrationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CompleteAIGMTurn",
 			Handler:    _CampaignAIOrchestrationService_CompleteAIGMTurn_Handler,
+		},
+		{
+			MethodName: "ConcludeSession",
+			Handler:    _CampaignAIOrchestrationService_ConcludeSession_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -71,6 +71,20 @@ func (s *SessionService) GetSession(ctx context.Context, in *campaignv1.GetSessi
 	}, nil
 }
 
+// GetSessionRecap returns the stored recap markdown for one session.
+func (s *SessionService) GetSessionRecap(ctx context.Context, in *campaignv1.GetSessionRecapRequest) (*campaignv1.GetSessionRecapResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "get session recap request is required")
+	}
+	recap, err := newSessionApplication(s).GetSessionRecap(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &campaignv1.GetSessionRecapResponse{
+		Recap: SessionRecapToProto(recap),
+	}, nil
+}
+
 // EndSession ends a session by campaign ID and session ID.
 func (s *SessionService) EndSession(ctx context.Context, in *campaignv1.EndSessionRequest) (*campaignv1.EndSessionResponse, error) {
 	if in == nil {

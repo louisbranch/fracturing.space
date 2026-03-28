@@ -19,6 +19,7 @@ func newFoldRouter() *fold.CoreFoldRouter[State] {
 	r := fold.NewCoreFoldRouter[State]()
 	r.Handle(EventTypeStarted, foldStarted)
 	r.Handle(EventTypeEnded, foldEnded)
+	r.Handle(EventTypeRecapRecorded, foldRecapRecorded)
 	r.Handle(EventTypeGateOpened, foldGateOpened)
 	r.Handle(EventTypeGateResponseRecorded, foldGateResponseRecorded)
 	r.Handle(EventTypeGateResolved, foldGateClosed)
@@ -103,6 +104,12 @@ func foldEnded(state State, evt event.Event) (State, error) {
 	if payload.SessionID != "" {
 		state.SessionID = ids.SessionID(payload.SessionID)
 	}
+	return state, nil
+}
+
+// foldRecapRecorded is a no-op for command-state replay: recap persistence is a
+// projection concern and does not alter session write-model decisions.
+func foldRecapRecorded(state State, _ event.Event) (State, error) {
 	return state, nil
 }
 
