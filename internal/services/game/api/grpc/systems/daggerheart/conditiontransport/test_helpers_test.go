@@ -16,9 +16,13 @@ import (
 
 type testCampaignStore struct {
 	record storage.CampaignRecord
+	err    error
 }
 
 func (s testCampaignStore) Get(context.Context, string) (storage.CampaignRecord, error) {
+	if s.err != nil {
+		return storage.CampaignRecord{}, s.err
+	}
 	return s.record, nil
 }
 
@@ -43,9 +47,13 @@ func (s testDaggerheartStore) GetDaggerheartAdversary(context.Context, string, s
 
 type testEventStore struct {
 	event event.Event
+	err   error
 }
 
 func (s testEventStore) GetEventBySeq(context.Context, string, uint64) (event.Event, error) {
+	if s.err != nil {
+		return event.Event{}, s.err
+	}
 	return s.event, nil
 }
 

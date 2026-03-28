@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -48,8 +50,12 @@ type campaignLease struct {
 }
 
 const (
-	deadLetterThreshold = 8
-	processingLease     = 2 * time.Minute
+	deadLetterThreshold  = 8
+	processingLease      = 2 * time.Minute
+	contentionRetryBase  = 2 * time.Millisecond
+	contentionRetryMax   = 20 * time.Millisecond
+	contentionRetryCap   = 4
+	claimCandidateFanout = 8
 )
 
 // Bind creates a projection-apply outbox backend bound to the provided event DB.
@@ -280,159 +286,171 @@ func (s *Store) scheduleRetry(
 }
 
 func (s *Store) claimDueCampaigns(ctx context.Context, now time.Time, limit int) ([]campaignLease, error) {
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("begin campaign claim tx: %w", err)
-	}
-	defer tx.Rollback()
+	return withBusyRetry(ctx, func() ([]campaignLease, error) {
+		candidateLimit := claimCandidateLimit(limit)
+		tx, err := s.sqlDB.BeginTx(ctx, nil)
+		if err != nil {
+			return nil, fmt.Errorf("begin campaign claim tx: %w", err)
+		}
+		defer tx.Rollback()
 
-	staleBefore := now.Add(-processingLease)
-	rows, err := tx.QueryContext(
-		ctx,
-		`SELECT o.campaign_id
-		 FROM projection_apply_outbox o
-		 WHERE o.seq = (
-			 SELECT MIN(seq)
-			 FROM projection_apply_outbox
-			 WHERE campaign_id = o.campaign_id
-		 )
-		 AND (
-			 (o.status IN ('pending', 'failed') AND o.next_attempt_at <= ?)
-			 OR (o.status = 'processing' AND o.updated_at <= ?)
+		staleBefore := now.Add(-processingLease)
+		rows, err := tx.QueryContext(
+			ctx,
+			`SELECT o.campaign_id
+			 FROM projection_apply_outbox o
+			 WHERE o.seq = (
+				 SELECT MIN(seq)
+				 FROM projection_apply_outbox
+				 WHERE campaign_id = o.campaign_id
+			 )
+			 AND (
+				 (o.status IN ('pending', 'failed') AND o.next_attempt_at <= ?)
+				 OR (o.status = 'processing' AND o.updated_at <= ?)
 		 )
 		 ORDER BY o.next_attempt_at, o.seq
 		 LIMIT ?`,
-		sqliteutil.ToMillis(now),
-		sqliteutil.ToMillis(staleBefore),
-		limit,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list due outbox campaigns: %w", err)
-	}
-	defer rows.Close()
-
-	candidates := make([]campaignLease, 0, limit)
-	for rows.Next() {
-		var candidate campaignLease
-		if err := rows.Scan(&candidate.CampaignID); err != nil {
-			return nil, fmt.Errorf("scan due outbox campaign: %w", err)
-		}
-		candidates = append(candidates, candidate)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate due outbox campaigns: %w", err)
-	}
-
-	claimed := make([]campaignLease, 0, len(candidates))
-	for _, candidate := range candidates {
-		result, err := tx.ExecContext(
-			ctx,
-			`INSERT INTO projection_apply_campaign_leases (campaign_id, owner_id, lease_expires_at, updated_at)
-			 VALUES (?, ?, ?, ?)
-			 ON CONFLICT(campaign_id) DO UPDATE
-			 SET owner_id = excluded.owner_id,
-			     lease_expires_at = excluded.lease_expires_at,
-			     updated_at = excluded.updated_at
-			 WHERE projection_apply_campaign_leases.lease_expires_at <= ?`,
-			candidate.CampaignID,
-			s.ownerID,
-			sqliteutil.ToMillis(now.Add(processingLease)),
 			sqliteutil.ToMillis(now),
 			sqliteutil.ToMillis(staleBefore),
+			candidateLimit,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("claim campaign lease %s: %w", candidate.CampaignID, err)
+			return nil, fmt.Errorf("list due outbox campaigns: %w", err)
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return nil, fmt.Errorf("claim campaign lease rows affected %s: %w", candidate.CampaignID, err)
-		}
-		if affected == 1 {
-			claimed = append(claimed, candidate)
-		}
-	}
+		defer rows.Close()
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit campaign claim tx: %w", err)
-	}
-	return claimed, nil
+		candidates := make([]campaignLease, 0, candidateLimit)
+		for rows.Next() {
+			var candidate campaignLease
+			if err := rows.Scan(&candidate.CampaignID); err != nil {
+				return nil, fmt.Errorf("scan due outbox campaign: %w", err)
+			}
+			candidates = append(candidates, candidate)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("iterate due outbox campaigns: %w", err)
+		}
+
+		claimed := make([]campaignLease, 0, len(candidates))
+		for _, candidate := range candidates {
+			if len(claimed) >= limit {
+				break
+			}
+			result, err := tx.ExecContext(
+				ctx,
+				`INSERT INTO projection_apply_campaign_leases (campaign_id, owner_id, lease_expires_at, updated_at)
+				 VALUES (?, ?, ?, ?)
+				 ON CONFLICT(campaign_id) DO UPDATE
+				 SET owner_id = excluded.owner_id,
+				     lease_expires_at = excluded.lease_expires_at,
+				     updated_at = excluded.updated_at
+				 WHERE projection_apply_campaign_leases.lease_expires_at <= ?`,
+				candidate.CampaignID,
+				s.ownerID,
+				sqliteutil.ToMillis(now.Add(processingLease)),
+				sqliteutil.ToMillis(now),
+				sqliteutil.ToMillis(staleBefore),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("claim campaign lease %s: %w", candidate.CampaignID, err)
+			}
+			affected, err := result.RowsAffected()
+			if err != nil {
+				return nil, fmt.Errorf("claim campaign lease rows affected %s: %w", candidate.CampaignID, err)
+			}
+			if affected == 1 {
+				claimed = append(claimed, candidate)
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			return nil, fmt.Errorf("commit campaign claim tx: %w", err)
+		}
+		return claimed, nil
+	})
 }
 
 func (s *Store) claimDueRows(ctx context.Context, now time.Time, limit int) ([]row, error) {
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("begin outbox claim tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	staleBefore := now.Add(-processingLease)
-	rows, err := tx.QueryContext(
-		ctx,
-		`SELECT campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
-		 FROM projection_apply_outbox
-		 WHERE (
-			 status IN ('pending', 'failed') AND next_attempt_at <= ?
-		 ) OR (
-			 status = 'processing' AND updated_at <= ?
-		 )
-		 ORDER BY next_attempt_at, seq
-		 LIMIT ?`,
-		sqliteutil.ToMillis(now),
-		sqliteutil.ToMillis(staleBefore),
-		limit,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list due outbox rows: %w", err)
-	}
-	defer rows.Close()
-
-	candidates := make([]row, 0, limit)
-	for rows.Next() {
-		candidate, err := scanRow(rows)
+	return withBusyRetry(ctx, func() ([]row, error) {
+		candidateLimit := claimCandidateLimit(limit)
+		tx, err := s.sqlDB.BeginTx(ctx, nil)
 		if err != nil {
-			return nil, fmt.Errorf("scan due outbox row: %w", err)
+			return nil, fmt.Errorf("begin outbox claim tx: %w", err)
 		}
-		candidates = append(candidates, candidate)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate due outbox rows: %w", err)
-	}
+		defer tx.Rollback()
 
-	claimed := make([]row, 0, len(candidates))
-	for _, candidate := range candidates {
-		result, err := tx.ExecContext(
+		staleBefore := now.Add(-processingLease)
+		rows, err := tx.QueryContext(
 			ctx,
-			`UPDATE projection_apply_outbox
-			 SET status = 'processing', updated_at = ?
-			 WHERE campaign_id = ? AND seq = ?
-			   AND (
-			   	(status IN ('pending', 'failed') AND next_attempt_at <= ?)
-			   	OR (status = 'processing' AND updated_at <= ?)
-			   )`,
-			sqliteutil.ToMillis(now),
-			candidate.CampaignID,
-			int64(candidate.Seq),
+			`SELECT campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
+			 FROM projection_apply_outbox
+			 WHERE (
+				 status IN ('pending', 'failed') AND next_attempt_at <= ?
+			 ) OR (
+				 status = 'processing' AND updated_at <= ?
+			 )
+			 ORDER BY next_attempt_at, seq
+			 LIMIT ?`,
 			sqliteutil.ToMillis(now),
 			sqliteutil.ToMillis(staleBefore),
+			candidateLimit,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("claim outbox row %s/%d: %w", candidate.CampaignID, candidate.Seq, err)
+			return nil, fmt.Errorf("list due outbox rows: %w", err)
 		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return nil, fmt.Errorf("claim outbox row rows affected %s/%d: %w", candidate.CampaignID, candidate.Seq, err)
-		}
-		if affected == 1 {
-			candidate.Status = "processing"
-			candidate.UpdatedAt = now
-			claimed = append(claimed, candidate)
-		}
-	}
+		defer rows.Close()
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit outbox claim tx: %w", err)
-	}
-	return claimed, nil
+		candidates := make([]row, 0, candidateLimit)
+		for rows.Next() {
+			candidate, err := scanRow(rows)
+			if err != nil {
+				return nil, fmt.Errorf("scan due outbox row: %w", err)
+			}
+			candidates = append(candidates, candidate)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("iterate due outbox rows: %w", err)
+		}
+
+		claimed := make([]row, 0, len(candidates))
+		for _, candidate := range candidates {
+			if len(claimed) >= limit {
+				break
+			}
+			result, err := tx.ExecContext(
+				ctx,
+				`UPDATE projection_apply_outbox
+				 SET status = 'processing', updated_at = ?
+				 WHERE campaign_id = ? AND seq = ?
+				   AND (
+				    (status IN ('pending', 'failed') AND next_attempt_at <= ?)
+				    OR (status = 'processing' AND updated_at <= ?)
+				   )`,
+				sqliteutil.ToMillis(now),
+				candidate.CampaignID,
+				int64(candidate.Seq),
+				sqliteutil.ToMillis(now),
+				sqliteutil.ToMillis(staleBefore),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("claim outbox row %s/%d: %w", candidate.CampaignID, candidate.Seq, err)
+			}
+			affected, err := result.RowsAffected()
+			if err != nil {
+				return nil, fmt.Errorf("claim outbox row rows affected %s/%d: %w", candidate.CampaignID, candidate.Seq, err)
+			}
+			if affected == 1 {
+				candidate.Status = "processing"
+				candidate.UpdatedAt = now
+				claimed = append(claimed, candidate)
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			return nil, fmt.Errorf("commit outbox claim tx: %w", err)
+		}
+		return claimed, nil
+	})
 }
 
 func scanRow(scanner interface{ Scan(...any) error }) (row, error) {
@@ -460,124 +478,139 @@ func scanRow(scanner interface{ Scan(...any) error }) (row, error) {
 }
 
 func (s *Store) claimNextRowForCampaign(ctx context.Context, campaignID string, now time.Time) (row, bool, error) {
-	staleBefore := now.Add(-processingLease)
-	var (
-		next        row
-		seq         int64
-		nextAttempt int64
-		updatedAt   int64
-	)
-	err := s.sqlDB.QueryRowContext(
-		ctx,
-		`SELECT campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
-		 FROM projection_apply_outbox
-		 WHERE campaign_id = ?
-		 ORDER BY seq
-		 LIMIT 1`,
-		campaignID,
-	).Scan(
-		&next.CampaignID,
-		&seq,
-		&next.EventType,
-		&next.Status,
-		&next.AttemptCount,
-		&nextAttempt,
-		&updatedAt,
-	)
-	if err == sql.ErrNoRows {
-		return row{}, false, nil
-	}
-	if err != nil {
-		return row{}, false, fmt.Errorf("load next outbox row for campaign %s: %w", campaignID, err)
-	}
-	next.Seq = uint64(seq)
-	next.NextAttempt = sqliteutil.FromMillis(nextAttempt)
-	next.UpdatedAt = sqliteutil.FromMillis(updatedAt)
-
-	switch next.Status {
-	case "dead":
-		return row{}, false, nil
-	case "pending", "failed":
-		if next.NextAttempt.After(now) {
-			return row{}, false, nil
-		}
-	case "processing":
-		if next.UpdatedAt.After(staleBefore) {
-			return row{}, false, nil
-		}
-	default:
-		return row{}, false, fmt.Errorf("invalid projection apply outbox status %q for %s/%d", next.Status, next.CampaignID, next.Seq)
+	type claimResult struct {
+		row   row
+		ready bool
 	}
 
-	result, err := s.sqlDB.ExecContext(
-		ctx,
-		`UPDATE projection_apply_outbox
-		 SET status = 'processing', updated_at = ?
-		 WHERE campaign_id = ? AND seq = ?
-		   AND (
-		   	(status IN ('pending', 'failed') AND next_attempt_at <= ?)
-		   	OR (status = 'processing' AND updated_at <= ?)
-		   )`,
-		sqliteutil.ToMillis(now),
-		next.CampaignID,
-		int64(next.Seq),
-		sqliteutil.ToMillis(now),
-		sqliteutil.ToMillis(staleBefore),
-	)
+	result, err := withBusyRetry(ctx, func() (claimResult, error) {
+		staleBefore := now.Add(-processingLease)
+		var (
+			next        row
+			seq         int64
+			nextAttempt int64
+			updatedAt   int64
+		)
+		err := s.sqlDB.QueryRowContext(
+			ctx,
+			`SELECT campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
+			 FROM projection_apply_outbox
+			 WHERE campaign_id = ?
+			 ORDER BY seq
+			 LIMIT 1`,
+			campaignID,
+		).Scan(
+			&next.CampaignID,
+			&seq,
+			&next.EventType,
+			&next.Status,
+			&next.AttemptCount,
+			&nextAttempt,
+			&updatedAt,
+		)
+		if err == sql.ErrNoRows {
+			return claimResult{}, nil
+		}
+		if err != nil {
+			return claimResult{}, fmt.Errorf("load next outbox row for campaign %s: %w", campaignID, err)
+		}
+		next.Seq = uint64(seq)
+		next.NextAttempt = sqliteutil.FromMillis(nextAttempt)
+		next.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+
+		switch next.Status {
+		case "dead":
+			return claimResult{}, nil
+		case "pending", "failed":
+			if next.NextAttempt.After(now) {
+				return claimResult{}, nil
+			}
+		case "processing":
+			if next.UpdatedAt.After(staleBefore) {
+				return claimResult{}, nil
+			}
+		default:
+			return claimResult{}, fmt.Errorf("invalid projection apply outbox status %q for %s/%d", next.Status, next.CampaignID, next.Seq)
+		}
+
+		result, err := s.sqlDB.ExecContext(
+			ctx,
+			`UPDATE projection_apply_outbox
+			 SET status = 'processing', updated_at = ?
+			 WHERE campaign_id = ? AND seq = ?
+			   AND (
+			    (status IN ('pending', 'failed') AND next_attempt_at <= ?)
+			    OR (status = 'processing' AND updated_at <= ?)
+			   )`,
+			sqliteutil.ToMillis(now),
+			next.CampaignID,
+			int64(next.Seq),
+			sqliteutil.ToMillis(now),
+			sqliteutil.ToMillis(staleBefore),
+		)
+		if err != nil {
+			return claimResult{}, fmt.Errorf("claim next outbox row for campaign %s/%d: %w", next.CampaignID, next.Seq, err)
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return claimResult{}, fmt.Errorf("claim next outbox row rows affected %s/%d: %w", next.CampaignID, next.Seq, err)
+		}
+		if affected != 1 {
+			return claimResult{}, nil
+		}
+		next.Status = "processing"
+		next.UpdatedAt = now
+		return claimResult{row: next, ready: true}, nil
+	})
 	if err != nil {
-		return row{}, false, fmt.Errorf("claim next outbox row for campaign %s/%d: %w", next.CampaignID, next.Seq, err)
+		return row{}, false, err
 	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return row{}, false, fmt.Errorf("claim next outbox row rows affected %s/%d: %w", next.CampaignID, next.Seq, err)
-	}
-	if affected != 1 {
-		return row{}, false, nil
-	}
-	next.Status = "processing"
-	next.UpdatedAt = now
-	return next, true, nil
+	return result.row, result.ready, nil
 }
 
 func (s *Store) renewCampaignLease(ctx context.Context, campaignID string, now time.Time) error {
-	result, err := s.sqlDB.ExecContext(
-		ctx,
-		`UPDATE projection_apply_campaign_leases
-		 SET lease_expires_at = ?, updated_at = ?
-		 WHERE campaign_id = ? AND owner_id = ?`,
-		sqliteutil.ToMillis(now.Add(processingLease)),
-		sqliteutil.ToMillis(now),
-		campaignID,
-		s.ownerID,
-	)
-	if err != nil {
-		return fmt.Errorf("renew campaign lease %s: %w", campaignID, err)
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("renew campaign lease rows affected %s: %w", campaignID, err)
-	}
-	if affected != 1 {
-		return fmt.Errorf("renew campaign lease %s: expected 1 row updated, got %d", campaignID, affected)
-	}
-	return nil
+	return withBusyRetry0(ctx, func() error {
+		result, err := s.sqlDB.ExecContext(
+			ctx,
+			`UPDATE projection_apply_campaign_leases
+			 SET lease_expires_at = ?, updated_at = ?
+			 WHERE campaign_id = ? AND owner_id = ?`,
+			sqliteutil.ToMillis(now.Add(processingLease)),
+			sqliteutil.ToMillis(now),
+			campaignID,
+			s.ownerID,
+		)
+		if err != nil {
+			return fmt.Errorf("renew campaign lease %s: %w", campaignID, err)
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("renew campaign lease rows affected %s: %w", campaignID, err)
+		}
+		if affected != 1 {
+			return fmt.Errorf("renew campaign lease %s: expected 1 row updated, got %d", campaignID, affected)
+		}
+		return nil
+	})
 }
 
 func (s *Store) releaseCampaignLease(ctx context.Context, campaignID string) error {
 	if s == nil || s.sqlDB == nil {
 		return nil
 	}
-	_, err := s.sqlDB.ExecContext(
-		ctx,
-		`DELETE FROM projection_apply_campaign_leases
-		 WHERE campaign_id = ? AND owner_id = ?`,
-		campaignID,
-		s.ownerID,
-	)
-	if err != nil {
-		return fmt.Errorf("release campaign lease %s: %w", campaignID, err)
-	}
-	return nil
+	return withBusyRetry0(ctx, func() error {
+		_, err := s.sqlDB.ExecContext(
+			ctx,
+			`DELETE FROM projection_apply_campaign_leases
+			 WHERE campaign_id = ? AND owner_id = ?`,
+			campaignID,
+			s.ownerID,
+		)
+		if err != nil {
+			return fmt.Errorf("release campaign lease %s: %w", campaignID, err)
+		}
+		return nil
+	})
 }
 
 func (s *Store) markShadowRetry(ctx context.Context, row row, now time.Time, attempt int, nextAttempt time.Time) error {
@@ -596,47 +629,45 @@ func (s *Store) markRetry(ctx context.Context, row row, now time.Time, attempt i
 			"last_error", lastError,
 		)
 	}
-	result, err := s.sqlDB.ExecContext(
-		ctx,
-		`UPDATE projection_apply_outbox
-		 SET status = ?,
-		     attempt_count = ?,
-		     next_attempt_at = ?,
-		     last_error = ?,
-		     updated_at = ?
-		 WHERE campaign_id = ? AND seq = ? AND status = 'processing'`,
-		status,
-		attempt,
-		sqliteutil.ToMillis(nextAttempt),
-		lastError,
-		sqliteutil.ToMillis(now),
-		row.CampaignID,
-		int64(row.Seq),
-	)
-	if err != nil {
-		return fmt.Errorf("mark outbox retry for row %s/%d: %w", row.CampaignID, row.Seq, err)
-	}
-	if err := ensureSingleRow(result, row, "mark outbox retry for row", "updated"); err != nil {
-		return err
-	}
-	return nil
+	return withBusyRetry0(ctx, func() error {
+		result, err := s.sqlDB.ExecContext(
+			ctx,
+			`UPDATE projection_apply_outbox
+			 SET status = ?,
+			     attempt_count = ?,
+			     next_attempt_at = ?,
+			     last_error = ?,
+			     updated_at = ?
+			 WHERE campaign_id = ? AND seq = ? AND status = 'processing'`,
+			status,
+			attempt,
+			sqliteutil.ToMillis(nextAttempt),
+			lastError,
+			sqliteutil.ToMillis(now),
+			row.CampaignID,
+			int64(row.Seq),
+		)
+		if err != nil {
+			return fmt.Errorf("mark outbox retry for row %s/%d: %w", row.CampaignID, row.Seq, err)
+		}
+		return ensureSingleRow(result, row, "mark outbox retry for row", "updated")
+	})
 }
 
 func (s *Store) completeRow(ctx context.Context, row row) error {
-	result, err := s.sqlDB.ExecContext(
-		ctx,
-		`DELETE FROM projection_apply_outbox
-		 WHERE campaign_id = ? AND seq = ? AND status = 'processing'`,
-		row.CampaignID,
-		int64(row.Seq),
-	)
-	if err != nil {
-		return fmt.Errorf("complete outbox row %s/%d: %w", row.CampaignID, row.Seq, err)
-	}
-	if err := ensureSingleRow(result, row, "complete outbox row", "deleted"); err != nil {
-		return err
-	}
-	return nil
+	return withBusyRetry0(ctx, func() error {
+		result, err := s.sqlDB.ExecContext(
+			ctx,
+			`DELETE FROM projection_apply_outbox
+			 WHERE campaign_id = ? AND seq = ? AND status = 'processing'`,
+			row.CampaignID,
+			int64(row.Seq),
+		)
+		if err != nil {
+			return fmt.Errorf("complete outbox row %s/%d: %w", row.CampaignID, row.Seq, err)
+		}
+		return ensureSingleRow(result, row, "complete outbox row", "deleted")
+	})
 }
 
 func ensureSingleRow(result sql.Result, row row, operation, verb string) error {
@@ -659,6 +690,60 @@ func retryBackoff(attempt int) time.Duration {
 		return 5 * time.Minute
 	}
 	return backoff
+}
+
+func claimCandidateLimit(limit int) int {
+	if limit <= 1 {
+		return claimCandidateFanout
+	}
+	return limit * claimCandidateFanout
+}
+
+func withBusyRetry0(ctx context.Context, op func() error) error {
+	_, err := withBusyRetry(ctx, func() (struct{}, error) {
+		return struct{}{}, op()
+	})
+	return err
+}
+
+func withBusyRetry[T any](ctx context.Context, op func() (T, error)) (T, error) {
+	var zero T
+	delay := contentionRetryBase
+	for attempt := 1; attempt <= contentionRetryCap; attempt++ {
+		value, err := op()
+		if err == nil {
+			return value, nil
+		}
+		if !sqliteconn.IsBusyOrLockedError(err) || attempt == contentionRetryCap {
+			return zero, err
+		}
+		if err := sleepContext(ctx, delay+jitterDelay()); err != nil {
+			return zero, err
+		}
+		delay *= 2
+		if delay > contentionRetryMax {
+			delay = contentionRetryMax
+		}
+	}
+	return zero, fmt.Errorf("sqlite busy retry budget exhausted")
+}
+
+func jitterDelay() time.Duration {
+	return time.Duration(rand.IntN(int(contentionRetryBase)))
+}
+
+func sleepContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 // GetProjectionApplyOutboxSummary returns queue depth by status and the oldest
