@@ -7,28 +7,58 @@ import (
 	"strings"
 )
 
+// CoreContextSourceConfig controls which optional core prompt sections are
+// always-on during campaign-turn prompt assembly.
+type CoreContextSourceConfig struct {
+	IncludeStory  bool
+	IncludeMemory bool
+}
+
 // CoreContextSources returns the standard context sources for campaign turns.
 // These read authoritative game state from the session and produce brief
 // sections at the appropriate priority tiers.
 func CoreContextSources() []ContextSource {
-	return []ContextSource{
+	return CoreContextSourcesWithConfig(CoreContextSourceConfig{
+		IncludeStory:  true,
+		IncludeMemory: true,
+	})
+}
+
+// CoreContextSourcesWithConfig returns the standard context sources for
+// campaign turns with explicit control over optional artifact sections.
+func CoreContextSourcesWithConfig(cfg CoreContextSourceConfig) []ContextSource {
+	sources := []ContextSource{
 		ContextSourceFunc(campaignContextSource),
 		ContextSourceFunc(participantsContextSource),
 		ContextSourceFunc(charactersContextSource),
 		ContextSourceFunc(sessionsContextSource),
 		ContextSourceFunc(scenesContextSource),
-		ContextSourceFunc(storyContextSource),
-		ContextSourceFunc(memoryContextSource),
 		ContextSourceFunc(currentContextSource),
 		ContextSourceFunc(interactionStateContextSource),
 	}
+	if cfg.IncludeStory {
+		sources = append(sources, ContextSourceFunc(storyContextSource))
+	}
+	if cfg.IncludeMemory {
+		sources = append(sources, ContextSourceFunc(memoryContextSource))
+	}
+	return sources
 }
 
 // NewCoreContextSourceRegistry builds the always-on collector used by prompt
 // builders before any game-system-specific sources are appended.
 func NewCoreContextSourceRegistry() *ContextSourceRegistry {
+	return NewCoreContextSourceRegistryWithConfig(CoreContextSourceConfig{
+		IncludeStory:  true,
+		IncludeMemory: true,
+	})
+}
+
+// NewCoreContextSourceRegistryWithConfig builds the always-on collector used by
+// prompt builders before any game-system-specific sources are appended.
+func NewCoreContextSourceRegistryWithConfig(cfg CoreContextSourceConfig) *ContextSourceRegistry {
 	reg := NewContextSourceRegistry()
-	reg.RegisterAll(CoreContextSources()...)
+	reg.RegisterAll(CoreContextSourcesWithConfig(cfg)...)
 	return reg
 }
 

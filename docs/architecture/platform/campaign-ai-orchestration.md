@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-23"
+last_reviewed: "2026-03-24"
 ---
 
 # Campaign AI Orchestration
@@ -13,6 +13,9 @@ last_reviewed: "2026-03-23"
 
 Define the boundary for campaign-scoped AI GM control across game authority,
 provider-backed AI execution, and committed interaction writes.
+
+For the optional OpenViking sidecar used for prompt augmentation and post-turn
+memory sync, see [OpenViking integration](openviking-integration.md).
 
 ## Responsibilities
 
@@ -92,6 +95,12 @@ than order-dependent.
 The always-on prompt collector comes from
 `orchestration.NewCoreContextSourceRegistry()`. The composition root then adds
 Daggerheart-specific context sources from `orchestration/daggerheart/`.
+
+When OpenViking is enabled, it augments this prompt path non-authoritatively by
+retrieving compact narrative and memory context, and the AI service suppresses
+always-on direct injection of `story.md` and `memory.md`. OpenViking does not
+currently own tool policy, turn completion, or authoritative mechanics reads
+and writes.
 
 Campaign-context ownership is split cleanly:
 

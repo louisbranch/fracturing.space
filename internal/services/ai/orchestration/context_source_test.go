@@ -176,6 +176,32 @@ func TestCoreContextSourcesProduceExpectedSections(t *testing.T) {
 	}
 }
 
+func TestCoreContextSourcesWithConfigCanOmitStoryAndMemory(t *testing.T) {
+	sess := &fakeSession{resources: baseSessionResources("gm-1", "scene-1")}
+	sess.resources["campaign://camp-1/artifacts/story.md"] = "Old harbor rumors."
+	sess.resources["campaign://camp-1/artifacts/memory.md"] = "## NPCs\nDockmaster."
+
+	reg := NewContextSourceRegistry()
+	reg.RegisterAll(CoreContextSourcesWithConfig(CoreContextSourceConfig{
+		IncludeStory:  false,
+		IncludeMemory: false,
+	})...)
+
+	sections, err := reg.CollectSections(context.Background(), sess, PromptInput{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("CollectSections() error = %v", err)
+	}
+
+	for _, section := range sections {
+		if section.ID == "story" || section.ID == "memory" {
+			t.Fatalf("unexpected section %q in %+v", section.ID, sections)
+		}
+	}
+}
+
 func TestInteractionStateContextSourceRejectsMalformedState(t *testing.T) {
 	sess := &fakeSession{resources: map[string]string{
 		"campaign://camp-1/interaction": "{not json",

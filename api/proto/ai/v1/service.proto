@@ -326,6 +326,38 @@ message InvokeAgentResponse {
   Usage usage = 4;
 }
 
+message RetrievedContext {
+  string uri = 1;
+  string context_type = 2;
+  string abstract = 3;
+  string match_reason = 4;
+  double score = 5;
+  string rendered_uri = 6;
+  string content_source = 7;
+  string content_error = 8;
+}
+
+message PromptContextPolicy {
+  bool include_story = 1;
+  bool include_memory = 2;
+}
+
+message PromptAugmentationDiagnostics {
+  bool attempted = 1;
+  string mode = 2;
+  bool search_attempted = 3;
+  int32 resource_hits = 4;
+  int32 memory_hits = 5;
+  repeated string mirrored_targets = 6;
+  bool degraded = 7;
+  string degradation_reason = 8;
+}
+
+message PromptDiagnostics {
+  PromptContextPolicy context_policy = 1;
+  PromptAugmentationDiagnostics augmentation = 2;
+}
+
 message RunCampaignTurnRequest {
   string session_grant = 1;
   string input = 2;
@@ -338,6 +370,8 @@ message RunCampaignTurnResponse {
   Provider provider = 2;
   string model = 3;
   Usage usage = 4;
+  PromptDiagnostics prompt_diagnostics = 5;
+  repeated RetrievedContext retrieved_contexts = 6;
 }
 
 enum CampaignDebugTurnStatus {

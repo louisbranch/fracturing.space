@@ -149,17 +149,24 @@ func TestCampaignOrchestrationServiceRunCampaignTurn(t *testing.T) {
 		},
 	}
 	traceStore := newDebugTraceStoreStub()
+	var synced TurnMemorySyncInput
+	syncCalls := 0
 	svc, err := NewCampaignOrchestrationService(CampaignOrchestrationServiceConfig{
 		AgentStore:              agentStore,
 		CampaignAuthStateReader: &campaignAuthStateReaderStub{authState: matchingCampaignAIAuthState()},
 		ProviderRegistry:        mustProviderRegistryForTests(t, nil, nil, nil, map[provider.Provider]orchestration.Provider{provider.OpenAI: providerAdapterStub{}}),
 		CampaignTurnRunner:      runner,
-		DebugTraceStore:         traceStore,
-		DebugUpdateBroker:       NewCampaignDebugUpdateBroker(),
-		SessionGrantConfig:      &grantConfig,
-		AuthMaterialResolver:    authMaterialResolver,
-		Clock:                   func() time.Time { return now },
-		IDGenerator:             func() (string, error) { return "turn-1", nil },
+		TurnMemorySync: func(_ context.Context, input TurnMemorySyncInput) error {
+			syncCalls++
+			synced = input
+			return nil
+		},
+		DebugTraceStore:      traceStore,
+		DebugUpdateBroker:    NewCampaignDebugUpdateBroker(),
+		SessionGrantConfig:   &grantConfig,
+		AuthMaterialResolver: authMaterialResolver,
+		Clock:                func() time.Time { return now },
+		IDGenerator:          func() (string, error) { return "turn-1", nil },
 	})
 	if err != nil {
 		t.Fatalf("NewCampaignOrchestrationService: %v", err)
@@ -185,6 +192,12 @@ func TestCampaignOrchestrationServiceRunCampaignTurn(t *testing.T) {
 	}
 	if turn := traceStore.turns["turn-1"]; turn.Status != debugtrace.StatusSucceeded || turn.TurnToken != "turn-token-1" || turn.Provider != provider.OpenAI {
 		t.Fatalf("trace turn = %#v", turn)
+	}
+	if syncCalls != 1 {
+		t.Fatalf("sync calls = %d, want 1", syncCalls)
+	}
+	if synced.CampaignID != "campaign-1" || synced.SessionID != "session-1" || synced.UserText != "Start the scene." || synced.AssistantText != "The harbor wakes." {
+		t.Fatalf("synced input = %#v", synced)
 	}
 }
 
@@ -423,6 +436,77 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 				t.Fatalf("ErrorKindOf(err) = %v, want %v (err=%v)", got, tt.wantKind, err)
 			}
 		})
+	}
+}
+
+func TestCampaignOrchestrationServiceIgnoresTurnMemorySyncFailure(t *testing.T) {
+	t.Parallel()
+
+	now := time.Unix(1711111111, 0).UTC()
+	grantConfig := aisessiongrant.Config{
+		Issuer:   "fracturing-space-game",
+		Audience: "fracturing-space-ai",
+		HMACKey:  []byte("12345678901234567890123456789012"),
+		TTL:      5 * time.Minute,
+		Now:      func() time.Time { return now },
+	}
+	sessionGrant, _, err := aisessiongrant.Issue(grantConfig, aisessiongrant.IssueInput{
+		GrantID:       "grant-1",
+		CampaignID:    "campaign-1",
+		SessionID:     "session-1",
+		ParticipantID: "participant-1",
+		AuthEpoch:     7,
+	})
+	if err != nil {
+		t.Fatalf("Issue session grant: %v", err)
+	}
+
+	credentialStore := aifakes.NewCredentialStore()
+	credentialStore.Credentials["cred-1"] = credential.Credential{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         provider.OpenAI,
+		Label:            "primary",
+		SecretCiphertext: "enc:token-1",
+		Status:           credential.StatusActive,
+	}
+	agentStore := aifakes.NewAgentStore()
+	agentStore.Agents["agent-1"] = agent.Agent{
+		ID:            "agent-1",
+		OwnerUserID:   "user-1",
+		Label:         "gm-runtime",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-5.4",
+		AuthReference: agent.CredentialAuthReference("cred-1"),
+		Status:        agent.StatusActive,
+	}
+	svc, err := NewCampaignOrchestrationService(CampaignOrchestrationServiceConfig{
+		AgentStore:              agentStore,
+		CampaignAuthStateReader: &campaignAuthStateReaderStub{authState: matchingCampaignAIAuthState()},
+		ProviderRegistry:        mustProviderRegistryForTests(t, nil, nil, nil, map[provider.Provider]orchestration.Provider{provider.OpenAI: providerAdapterStub{}}),
+		CampaignTurnRunner:      &campaignTurnRunnerStub{result: orchestration.Result{OutputText: "ok"}},
+		TurnMemorySync: func(context.Context, TurnMemorySyncInput) error {
+			return errors.New("sync failed")
+		},
+		SessionGrantConfig: &grantConfig,
+		AuthMaterialResolver: NewAuthMaterialResolver(AuthMaterialResolverConfig{
+			CredentialStore: credentialStore,
+			Sealer:          &aifakes.Sealer{},
+		}),
+	})
+	if err != nil {
+		t.Fatalf("NewCampaignOrchestrationService: %v", err)
+	}
+
+	result, err := svc.RunCampaignTurn(context.Background(), RunCampaignTurnInput{
+		SessionGrant: sessionGrant,
+		Input:        "Start the scene.",
+	})
+	if err != nil {
+		t.Fatalf("RunCampaignTurn() error = %v", err)
+	}
+	if result.OutputText != "ok" {
+		t.Fatalf("result = %#v", result)
 	}
 }
 

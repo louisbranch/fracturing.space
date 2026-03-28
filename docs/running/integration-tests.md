@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 7
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-24"
+last_reviewed: "2026-03-25"
 ---
 
 # Integration Tests
@@ -214,8 +214,9 @@ go test -tags='integration liveai' ./internal/test/integration \
 
 Optional environment variables:
 
-- `INTEGRATION_AI_MODEL`: model name to use; defaults to `gpt-5.4`
-- `INTEGRATION_AI_REASONING_EFFORT`: Responses API reasoning effort; defaults to `medium`
+- `INTEGRATION_AI_MODEL`: model name to use; defaults to `gpt-5-mini`
+- `INTEGRATION_AI_REASONING_EFFORT`: Responses API reasoning effort; when unset,
+  the live lane leaves the provider default in place
 - `INTEGRATION_OPENAI_RESPONSES_URL`: alternate OpenAI-compatible Responses URL
 - `INTEGRATION_AI_WRITE_FIXTURE=1`: allow the test to overwrite the committed
   replay fixture after a successful live run
@@ -235,6 +236,198 @@ Behavior:
 For the current checked-in Daggerheart mechanics comparison table built from
 those summaries, see
 [daggerheart-live-mechanics-matrix.md](../reference/daggerheart-live-mechanics-matrix.md).
+
+### OpenViking Evaluation Status
+
+The first retrieval-before-prompt evaluation phase is now complete enough to
+guide the next integration step. These results use the pinned OpenViking
+`v0.2.10` sidecar, `docs_aligned_supplement`, and the latest validated
+`gpt-5.4-mini` runs from March 25, 2026.
+
+| Lane | Baseline input tokens | OpenViking input tokens | Result | Notes |
+| --- | ---: | ---: | --- | --- |
+| `Bootstrap` | 85,954 | 67,475 | `clean_pass` -> `clean_pass` | Valid retrieval and clear prompt-load reduction |
+| `MechanicsReview` | 55,822 | 55,736 | `clean_pass` -> `clean_pass` | Effective parity after backing-file story rendering |
+| `ReactionReview` | 69,096 | 56,388 | `clean_pass` -> `clean_pass` | Positive after repair; candidate still duplicated one memory update |
+| `CapabilityLookup` | 64,799 | 65,128 | `clean_pass` -> `clean_pass` | Clean but not a win; candidate drifted to artifact get/upsert behavior |
+
+Current outcome: `Hold / limited-adoption leaning positive`.
+
+- `Bootstrap` is a real OpenViking win.
+- `MechanicsReview` and `ReactionReview` are acceptable after retrieval-path
+  repair.
+- `CapabilityLookup` is still unresolved, so this phase is not a clean
+  `Proceed`.
+
+Do not rerun the broad live matrix by default. The current next steps are:
+
+- investigate `CapabilityLookup` token drift and artifact behavior before
+  spending on more retrieval-first lane comparisons
+- continue the separate session-memory runtime track
+- only after those are resolved, decide whether to expand lanes or default-enable
+  `docs_aligned_supplement`
+
+When you do need to reproduce a lane, keep the comparison shape identical:
+
+- `INTEGRATION_AI_MODEL`
+- `INTEGRATION_AI_REASONING_EFFORT`
+- `INTEGRATION_OPENAI_RESPONSES_URL`
+- scenario prompt and fixture state
+- fixture-write behavior: leave `INTEGRATION_AI_WRITE_FIXTURE` unset
+
+The live lane still defaults to an augmentation-only OpenViking evaluation
+when the sidecar is enabled:
+
+- `FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED` defaults to `false`
+  inside the live capture harness unless explicitly set
+- `FRACTURING_SPACE_AI_OPENVIKING_RESOURCE_SYNC_TIMEOUT` defaults to `20s`
+  inside the live capture harness unless explicitly set
+
+Set `INTEGRATION_OPENVIKING_REQUIRE_VALID_AUGMENTATION=1` for candidate runs.
+That makes the test fail fast unless:
+
+- augmentation was attempted
+- augmentation did not degrade
+- retrieval search actually ran
+- at least one OpenViking resource or memory context was retrieved
+
+Use `docs_aligned_supplement` as the only evaluation candidate mode. Keep
+`legacy` available only for local debugging.
+
+Direct resource smoke:
+
+```sh
+FRACTURING_SPACE_AI_OPENVIKING_BASE_URL=http://127.0.0.1:1933 \
+FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT=$HOME/.openviking/data/fracturing-space \
+FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT=/app/data/fracturing-space \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestOpenVikingResourceSearchLive -count=1
+```
+
+`Bootstrap` baseline:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureBootstrap \
+  -count=1
+```
+
+`Bootstrap` candidate:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+INTEGRATION_OPENVIKING_REQUIRE_VALID_AUGMENTATION=1 \
+FRACTURING_SPACE_AI_OPENVIKING_BASE_URL=http://127.0.0.1:1933 \
+FRACTURING_SPACE_AI_OPENVIKING_MODE=docs_aligned_supplement \
+FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT=$HOME/.openviking/data/fracturing-space \
+FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT=/app/data/fracturing-space \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureBootstrap \
+  -count=1
+```
+
+To reproduce the current retrieval-first evidence, use the same baseline then
+candidate pattern for `Bootstrap`, `MechanicsReview`, `ReactionReview`, and
+`CapabilityLookup`:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureMechanicsReview \
+  -count=1
+
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureReactionReview \
+  -count=1
+
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureCapabilityLookup \
+  -count=1
+
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+INTEGRATION_OPENVIKING_REQUIRE_VALID_AUGMENTATION=1 \
+FRACTURING_SPACE_AI_OPENVIKING_BASE_URL=http://127.0.0.1:1933 \
+FRACTURING_SPACE_AI_OPENVIKING_MODE=docs_aligned_supplement \
+FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT=$HOME/.openviking/data/fracturing-space \
+FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT=/app/data/fracturing-space \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureMechanicsReview \
+  -count=1
+
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+INTEGRATION_OPENVIKING_REQUIRE_VALID_AUGMENTATION=1 \
+FRACTURING_SPACE_AI_OPENVIKING_BASE_URL=http://127.0.0.1:1933 \
+FRACTURING_SPACE_AI_OPENVIKING_MODE=docs_aligned_supplement \
+FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT=$HOME/.openviking/data/fracturing-space \
+FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT=/app/data/fracturing-space \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureReactionReview \
+  -count=1
+
+INTEGRATION_OPENAI_API_KEY=... \
+INTEGRATION_AI_MODEL=gpt-5-mini \
+INTEGRATION_OPENVIKING_REQUIRE_VALID_AUGMENTATION=1 \
+FRACTURING_SPACE_AI_OPENVIKING_BASE_URL=http://127.0.0.1:1933 \
+FRACTURING_SPACE_AI_OPENVIKING_MODE=docs_aligned_supplement \
+FRACTURING_SPACE_AI_OPENVIKING_MIRROR_ROOT=$HOME/.openviking/data/fracturing-space \
+FRACTURING_SPACE_AI_OPENVIKING_VISIBLE_MIRROR_ROOT=/app/data/fracturing-space \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureCapabilityLookup \
+  -count=1
+```
+
+Use these summary fields for lane comparison:
+
+- `result_class`
+- `tool_error_count`
+- `openviking_enabled`
+- `openviking_mode`
+- `initial_prompt_has_story_md`
+- `initial_prompt_has_memory_md`
+- `retrieved_resource_count`
+- `retrieved_memory_count`
+- `retrieved_rendered_uris`
+- `retrieved_content_sources`
+- `input_tokens`
+- `output_tokens`
+- `reasoning_tokens`
+- `total_tokens`
+
+If a new candidate run degrades before retrieval or returns zero retrieved
+contexts, stop there and fix the OpenViking path before spending on more
+scenarios.
+
+### Direct OpenViking session-memory check
+
+The live GM lane is intentionally running augmentation-first right now, so
+session memory remains a separate seam check rather than part of the first
+paid adoption gate.
+
+```sh
+FRACTURING_SPACE_AI_OPENVIKING_BASE_URL=http://127.0.0.1:1933 \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestOpenVikingSessionMemoryLive -count=1
+```
+
+Treat that check as sidecar-seam evidence only:
+
+- it proves session create/message append/commit/search against OpenViking
+- it does not prove the AI-service runtime session-sync path is ready for
+  default use
+- runtime session sync and session-memory retrieval inside campaign turns are
+  the next integration track after the retrieval-before-prompt work
+- do not use a passing seam check as evidence that OpenViking memory should
+  already replace curated recap or prompt-time memory artifacts
 
 ## Promptfoo evaluation lane
 

@@ -1,0 +1,26 @@
+{
+  "embedding": {
+    "dense": {
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "replace-with-your-openai-api-key",
+      "provider": "openai",
+      "dimension": 3072,
+      "model": "text-embedding-3-large"
+    }
+  },
+  "vlm": {
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "replace-with-your-openai-api-key",
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "storage": {
+    "workspace": "/app/data",
+    "agfs": {
+      "backend": "local"
+    },
+    "vectordb": {
+      "backend": "local"
+    }
+  }
+}

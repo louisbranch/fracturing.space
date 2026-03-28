@@ -129,6 +129,38 @@ func (f *fakePromptRenderer) Render(brief SessionBrief, input PromptInput) strin
 	return f.prompt
 }
 
+type fakePromptAugmenter struct {
+	contribution BriefContribution
+	err          error
+	inputs       []PromptInput
+}
+
+func (f *fakePromptAugmenter) Augment(_ context.Context, _ Session, _ SessionBrief, input PromptInput) (BriefContribution, error) {
+	f.inputs = append(f.inputs, input)
+	if f.err != nil {
+		return BriefContribution{}, f.err
+	}
+	return f.contribution, nil
+}
+
+type promptTraceRecorderStub struct {
+	contexts     []RetrievedContext
+	policy       PromptContextPolicy
+	augmentation PromptAugmentationDiagnostics
+}
+
+func (s *promptTraceRecorderStub) RecordRetrievedContexts(contexts []RetrievedContext) {
+	s.contexts = append(s.contexts, contexts...)
+}
+
+func (s *promptTraceRecorderStub) RecordPromptContextPolicy(policy PromptContextPolicy) {
+	s.policy = policy
+}
+
+func (s *promptTraceRecorderStub) RecordPromptAugmentation(diagnostics PromptAugmentationDiagnostics) {
+	s.augmentation = diagnostics
+}
+
 func TestPromptBuilderDelegatesToCollectorAndRenderer(t *testing.T) {
 	collector := &fakeBriefCollector{
 		brief: SessionBrief{
@@ -191,6 +223,82 @@ func TestPromptBuilderMergesContextSourceSections(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Extra context from a game system.") {
 		t.Fatalf("prompt missing context source section")
+	}
+}
+
+func TestPromptBuilderAppliesAugmenterContribution(t *testing.T) {
+	collector := &fakeBriefCollector{
+		brief: SessionBrief{
+			Sections: []BriefSection{{ID: "campaign", Content: "Campaign data"}},
+		},
+	}
+	renderer := &fakePromptRenderer{prompt: "Rendered prompt"}
+	augmenter := &fakePromptAugmenter{
+		contribution: SectionContribution(BriefSection{
+			ID:      "retrieved_memory",
+			Label:   "Retrieved memory",
+			Content: "Harbor bells matter tonight.",
+		}),
+	}
+	builder := NewPromptBuilder(PromptBuilderConfig{
+		Collector: collector,
+		Augmenter: augmenter,
+		Renderer:  renderer,
+	})
+
+	if _, err := builder.Build(context.Background(), &fakeSession{}, PromptInput{CampaignID: "camp-1"}); err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if len(augmenter.inputs) != 1 {
+		t.Fatalf("augmenter inputs = %d, want 1", len(augmenter.inputs))
+	}
+	if len(renderer.briefs) != 1 || len(renderer.briefs[0].Sections) != 2 {
+		t.Fatalf("renderer briefs = %#v", renderer.briefs)
+	}
+	if renderer.briefs[0].Sections[1].ID != "retrieved_memory" {
+		t.Fatalf("merged section ID = %q", renderer.briefs[0].Sections[1].ID)
+	}
+}
+
+func TestRecordRetrievedContextsWritesToContextRecorder(t *testing.T) {
+	recorder := &promptTraceRecorderStub{}
+	ctx := WithPromptBuildTraceRecorder(context.Background(), recorder)
+
+	RecordRetrievedContexts(ctx, []RetrievedContext{{
+		URI:         "viking://resources/campaign/story.md",
+		ContextType: "resource",
+		Abstract:    "A storm is approaching.",
+	}})
+
+	if len(recorder.contexts) != 1 {
+		t.Fatalf("recorded contexts = %d, want 1", len(recorder.contexts))
+	}
+	if recorder.contexts[0].URI != "viking://resources/campaign/story.md" {
+		t.Fatalf("recorded URI = %q", recorder.contexts[0].URI)
+	}
+}
+
+func TestRecordPromptDiagnosticsWriteToContextRecorder(t *testing.T) {
+	recorder := &promptTraceRecorderStub{}
+	ctx := WithPromptBuildTraceRecorder(context.Background(), recorder)
+
+	RecordPromptContextPolicy(ctx, PromptContextPolicy{IncludeStory: false, IncludeMemory: true})
+	RecordPromptAugmentation(ctx, PromptAugmentationDiagnostics{
+		Attempted:       true,
+		Mode:            "docs_aligned_supplement",
+		SearchAttempted: true,
+		ResourceHits:    1,
+		MirroredTargets: []string{"viking://resources/fracturing-space/campaigns/camp-1/story.md"},
+	})
+
+	if recorder.policy.IncludeStory {
+		t.Fatal("expected story prompt suppression to be recorded")
+	}
+	if !recorder.policy.IncludeMemory {
+		t.Fatal("expected memory prompt inclusion to be recorded")
+	}
+	if !recorder.augmentation.Attempted || recorder.augmentation.Mode != "docs_aligned_supplement" {
+		t.Fatalf("augmentation = %#v", recorder.augmentation)
 	}
 }
 

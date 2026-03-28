@@ -11,10 +11,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/openviking"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"google.golang.org/grpc"
@@ -214,7 +216,7 @@ func TestAISessionGrantConfigFromEnvBuildsConfigWhenComplete(t *testing.T) {
 }
 
 func TestBuildPromptBuilderReturnsExplicitBuilderWithoutLoader(t *testing.T) {
-	builder := buildPromptBuilder(nil)
+	builder := buildPromptBuilder(nil, nil, openviking.ModeLegacy)
 	if builder == nil {
 		t.Fatal("expected explicit degraded prompt builder")
 	}
@@ -231,6 +233,95 @@ func TestBuildPromptBuilderReturnsExplicitBuilderWithoutLoader(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Daggerheart active character capabilities") {
 		t.Fatalf("prompt missing active character capabilities content: %q", prompt)
+	}
+}
+
+func TestBuildPromptContextSourcesOmitsStoryAndMemoryWhenOpenVikingEnabled(t *testing.T) {
+	reg := buildPromptContextSources(promptContextPolicyFor(openviking.ModeLegacy, true))
+	if reg == nil {
+		t.Fatal("expected context source registry")
+	}
+	resources := promptTestResources("scene-1")
+	resources["campaign://camp-1/artifacts/story.md"] = "Long harbor backstory."
+	resources["campaign://camp-1/artifacts/memory.md"] = "## NPCs\nDockmaster."
+	sections, err := reg.CollectSections(context.Background(), promptTestSession{resources: resources}, orchestration.PromptInput{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("CollectSections() error = %v", err)
+	}
+	for _, section := range sections {
+		if section.ID == "story" || section.ID == "memory" {
+			t.Fatalf("unexpected section %q", section.ID)
+		}
+	}
+}
+
+func TestBuildPromptContextSourcesKeepsMemoryWhenDocsAlignedModeIsEnabled(t *testing.T) {
+	reg := buildPromptContextSources(promptContextPolicyFor(openviking.ModeDocsAlignedSupplement, true))
+	if reg == nil {
+		t.Fatal("expected context source registry")
+	}
+	resources := promptTestResources("scene-1")
+	resources["campaign://camp-1/artifacts/story.md"] = "Long harbor backstory."
+	resources["campaign://camp-1/artifacts/memory.md"] = "## NPCs\nDockmaster."
+	sections, err := reg.CollectSections(context.Background(), promptTestSession{resources: resources}, orchestration.PromptInput{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("CollectSections() error = %v", err)
+	}
+	foundMemory := false
+	for _, section := range sections {
+		if section.ID == "story" {
+			t.Fatalf("unexpected story section in docs-aligned mode")
+		}
+		if section.ID == "memory" {
+			foundMemory = true
+		}
+	}
+	if !foundMemory {
+		t.Fatal("expected memory section to remain in docs-aligned mode")
+	}
+}
+
+func TestBuildPromptBuilderTreatsAugmentationErrorsAsBestEffort(t *testing.T) {
+	builder := buildPromptBuilder(nil, promptAugmenterFunc(func(context.Context, orchestration.Session, orchestration.SessionBrief, orchestration.PromptInput) (orchestration.BriefContribution, error) {
+		return orchestration.BriefContribution{}, errors.New("openviking down")
+	}), openviking.ModeLegacy)
+
+	prompt, err := builder.Build(context.Background(), promptTestSession{resources: promptTestResources("scene-1")}, orchestration.PromptInput{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if !strings.Contains(prompt, "Daggerheart duality rules") {
+		t.Fatalf("prompt missing fallback context after augmentation failure: %q", prompt)
+	}
+}
+
+func TestRuntimeConfigValidateRejectsInvalidOpenVikingSettings(t *testing.T) {
+	cfg := runtimeConfig{
+		DBPath:                   "data/ai.db",
+		EncryptionKey:            base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")),
+		GameAddr:                 "127.0.0.1:1",
+		InternalServiceAllowlist: map[string]struct{}{"ai": {}},
+		OrchestrationTurnTimeout: time.Minute,
+		OrchestrationMaxSteps:    8,
+		ToolResultMaxBytes:       1024,
+		OpenVikingBaseURL:        "http://127.0.0.1:1933",
+		OpenVikingMode:           string(openviking.ModeLegacy),
+		OpenVikingTimeout:        time.Second,
+		OpenVikingMaxResults:     0,
+		OpenVikingMaxSections:    2,
+		OpenVikingResourceSync:   time.Second,
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected invalid openviking config error")
 	}
 }
 
@@ -263,6 +354,29 @@ func TestBuildRuntimeDepsWithoutGameAddrBuildsDegradedGateway(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "worker"))
 	if deps.gameBridge == nil || !deps.gameBridge.IsAllowedInternalServiceCaller(ctx) {
 		t.Fatal("expected degraded gateway to preserve internal-service allowlist")
+	}
+}
+
+func TestBuildRuntimeDepsCanDisableOpenVikingSessionSync(t *testing.T) {
+	logger := newDiscardLogger()
+	cfg := testRuntimeConfig(t)
+	cfg.OpenVikingBaseURL = "http://127.0.0.1:1933"
+	cfg.OpenVikingMode = string(openviking.ModeDocsAlignedSupplement)
+	cfg.OpenVikingSessionSyncEnabled = false
+
+	deps, err := buildRuntimeDeps(context.Background(), cfg, logger, defaultServerDependencies())
+	if err != nil {
+		t.Fatalf("buildRuntimeDeps() error = %v", err)
+	}
+	t.Cleanup(func() {
+		deps.close(logger)
+	})
+
+	if deps.openVikingAugmenter == nil {
+		t.Fatal("expected openviking augmenter to be built")
+	}
+	if deps.openVikingSessionSync != nil {
+		t.Fatal("expected openviking session sync to remain disabled")
 	}
 }
 
@@ -378,6 +492,12 @@ func (s promptTestSession) ReadResource(_ context.Context, uri string) (string, 
 }
 
 func (s promptTestSession) Close() error { return nil }
+
+type promptAugmenterFunc func(context.Context, orchestration.Session, orchestration.SessionBrief, orchestration.PromptInput) (orchestration.BriefContribution, error)
+
+func (f promptAugmenterFunc) Augment(ctx context.Context, sess orchestration.Session, brief orchestration.SessionBrief, input orchestration.PromptInput) (orchestration.BriefContribution, error) {
+	return f(ctx, sess, brief, input)
+}
 
 func promptTestResources(activeSceneID string) map[string]string {
 	return map[string]string{

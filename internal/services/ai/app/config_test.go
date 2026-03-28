@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/ai/openviking"
 )
 
 func TestLoadRuntimeConfigFromEnvRequiresEncryptionKey(t *testing.T) {
@@ -60,5 +62,34 @@ func TestLoadRuntimeConfigFromEnvLoadsOrchestrationDefaults(t *testing.T) {
 	}
 	if cfg.ToolResultMaxBytes != 32768 {
 		t.Fatalf("ToolResultMaxBytes = %d", cfg.ToolResultMaxBytes)
+	}
+}
+
+func TestLoadRuntimeConfigFromEnvLoadsOpenVikingMode(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	t.Setenv("FRACTURING_SPACE_AI_OPENVIKING_BASE_URL", "http://127.0.0.1:1933")
+	t.Setenv("FRACTURING_SPACE_AI_OPENVIKING_MODE", string(openviking.ModeDocsAlignedSupplement))
+	t.Setenv("FRACTURING_SPACE_AI_OPENVIKING_SESSION_SYNC_ENABLED", "false")
+
+	cfg, err := loadRuntimeConfigFromEnv()
+	if err != nil {
+		t.Fatalf("loadRuntimeConfigFromEnv() error = %v", err)
+	}
+	if cfg.OpenVikingMode != string(openviking.ModeDocsAlignedSupplement) {
+		t.Fatalf("OpenVikingMode = %q", cfg.OpenVikingMode)
+	}
+	if cfg.OpenVikingSessionSyncEnabled {
+		t.Fatal("expected OpenViking session sync to be disabled")
+	}
+}
+
+func TestLoadRuntimeConfigFromEnvRejectsInvalidOpenVikingMode(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	t.Setenv("FRACTURING_SPACE_AI_OPENVIKING_BASE_URL", "http://127.0.0.1:1933")
+	t.Setenv("FRACTURING_SPACE_AI_OPENVIKING_MODE", "nope")
+
+	_, err := loadRuntimeConfigFromEnv()
+	if err == nil || !strings.Contains(err.Error(), "unsupported openviking mode") {
+		t.Fatalf("loadRuntimeConfigFromEnv() error = %v", err)
 	}
 }

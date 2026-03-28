@@ -13,6 +13,7 @@ import (
 	"os"
 	pathpkg "path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -20,6 +21,7 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	evalsupport "github.com/louisbranch/fracturing.space/internal/test/aieval"
 )
 
@@ -48,6 +50,17 @@ type openAILiveCaptureSummary struct {
 	Scenario                   string                 `json:"scenario"`
 	Model                      string                 `json:"model"`
 	ReasoningEffort            string                 `json:"reasoning_effort,omitempty"`
+	OpenVikingEnabled          bool                   `json:"openviking_enabled"`
+	OpenVikingMode             string                 `json:"openviking_mode,omitempty"`
+	OpenVikingEmbeddingModel   string                 `json:"openviking_embedding_model,omitempty"`
+	OpenVikingVLMModel         string                 `json:"openviking_vlm_model,omitempty"`
+	PromptContextIncludeStory  bool                   `json:"prompt_context_include_story"`
+	PromptContextIncludeMemory bool                   `json:"prompt_context_include_memory"`
+	AugmentationAttempted      bool                   `json:"openviking_augmentation_attempted"`
+	AugmentationSearchTried    bool                   `json:"openviking_search_attempted"`
+	AugmentationDegraded       bool                   `json:"openviking_augmentation_degraded"`
+	AugmentationError          string                 `json:"openviking_augmentation_error,omitempty"`
+	MirroredTargets            []string               `json:"openviking_mirrored_targets,omitempty"`
 	RunStatus                  string                 `json:"run_status,omitempty"`
 	MetricStatus               string                 `json:"metric_status,omitempty"`
 	FailureKind                string                 `json:"failure_kind,omitempty"`
@@ -59,6 +72,13 @@ type openAILiveCaptureSummary struct {
 	ReferenceSearchCount       int                    `json:"reference_search_count"`
 	ReferenceReadCount         int                    `json:"reference_read_count"`
 	UnexpectedReferenceLookups int                    `json:"unexpected_reference_lookup_count"`
+	InitialPromptHasStory      bool                   `json:"initial_prompt_has_story_md"`
+	InitialPromptHasMemory     bool                   `json:"initial_prompt_has_memory_md"`
+	RetrievedContextURIs       []string               `json:"retrieved_context_uris,omitempty"`
+	RetrievedRenderedURIs      []string               `json:"retrieved_rendered_uris,omitempty"`
+	RetrievedContentSources    []string               `json:"retrieved_content_sources,omitempty"`
+	RetrievedResourceCount     int                    `json:"retrieved_resource_count"`
+	RetrievedMemoryCount       int                    `json:"retrieved_memory_count"`
 	InputTokens                int32                  `json:"input_tokens"`
 	OutputTokens               int32                  `json:"output_tokens"`
 	ReasoningTokens            int32                  `json:"reasoning_tokens"`
@@ -84,6 +104,89 @@ func liveToolCounts(steps []openAIReplayStep) (toolNames []string, referenceSear
 		}
 	}
 	return toolNames, referenceSearches, referenceReads
+}
+
+func inspectInitialPrompt(prompt string) livePromptInspection {
+	inspection := livePromptInspection{
+		HasStory:  strings.Contains(prompt, "story.md:"),
+		HasMemory: strings.Contains(prompt, "memory.md:"),
+	}
+	seen := map[string]struct{}{}
+	for _, match := range retrievedContextLineRE.FindAllStringSubmatch(prompt, -1) {
+		if len(match) < 2 {
+			continue
+		}
+		uri := strings.TrimSpace(match[1])
+		if uri == "" {
+			continue
+		}
+		if _, ok := seen[uri]; ok {
+			continue
+		}
+		seen[uri] = struct{}{}
+		inspection.RetrievedURIs = append(inspection.RetrievedURIs, uri)
+		switch {
+		case strings.Contains(uri, "/memories/"):
+			inspection.RetrievedMemory++
+		case strings.HasPrefix(uri, "viking://resources/"):
+			inspection.RetrievedResource++
+		}
+	}
+	return inspection
+}
+
+func initialPromptContainsForLiveCapture(spec aiGMCampaignScenarioSpec) []string {
+	expected := append([]string(nil), spec.PromptContains...)
+	if strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AI_OPENVIKING_BASE_URL")) == "" {
+		return expected
+	}
+	mode := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AI_OPENVIKING_MODE"))
+	if mode != "docs_aligned_supplement" {
+		return expected
+	}
+	filtered := make([]string, 0, len(expected))
+	for _, item := range expected {
+		if item == "story.md:" || item == spec.StorySeed {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
+}
+
+func liveOpenVikingConfigFingerprint() openVikingLiveConfigFingerprint {
+	baseURL := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AI_OPENVIKING_BASE_URL"))
+	if baseURL == "" {
+		return openVikingLiveConfigFingerprint{}
+	}
+	fingerprint := openVikingLiveConfigFingerprint{
+		Enabled: true,
+		Mode:    strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AI_OPENVIKING_MODE")),
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fingerprint
+	}
+	payload, err := os.ReadFile(filepath.Join(homeDir, ".openviking", "ov.conf"))
+	if err != nil {
+		return fingerprint
+	}
+	var cfg struct {
+		Embedding struct {
+			Dense struct {
+				Model string `json:"model"`
+			} `json:"dense"`
+		} `json:"embedding"`
+		VLM struct {
+			Model string `json:"model"`
+		} `json:"vlm"`
+	}
+	if err := json.Unmarshal(payload, &cfg); err != nil {
+		return fingerprint
+	}
+	fingerprint.EmbeddingModel = strings.TrimSpace(cfg.Embedding.Dense.Model)
+	fingerprint.VLMModel = strings.TrimSpace(cfg.VLM.Model)
+	return fingerprint
 }
 
 func liveToolErrorCount(debug []string) int {
@@ -153,13 +256,31 @@ type openAILiveRecorder struct {
 	model     string
 	scenario  aiGMCampaignScenarioSpec
 
-	mu           sync.Mutex
-	firstErr     error
-	initialTools []string
-	steps        []openAIReplayStep
-	rawCapture   openAILiveCapture
-	requestDebug []string
+	mu            sync.Mutex
+	firstErr      error
+	initialPrompt string
+	initialTools  []string
+	steps         []openAIReplayStep
+	rawCapture    openAILiveCapture
+	requestDebug  []string
 }
+
+type openVikingLiveConfigFingerprint struct {
+	Enabled        bool
+	Mode           string
+	EmbeddingModel string
+	VLMModel       string
+}
+
+type livePromptInspection struct {
+	HasStory          bool
+	HasMemory         bool
+	RetrievedURIs     []string
+	RetrievedResource int
+	RetrievedMemory   int
+}
+
+var retrievedContextLineRE = regexp.MustCompile(`(?m)^URI:\s*(\S+)\s*$`)
 
 func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
 	runAIGMCampaignContextLiveCaptureScenario(t, aiGMBootstrapScenario)
@@ -248,6 +369,7 @@ func runAIGMCampaignContextLiveCaptureScenario(t *testing.T, spec aiGMCampaignSc
 	if apiKey == "" {
 		t.Skipf("%s is required", integrationOpenAIAPIKeyEnv)
 	}
+	applyOpenVikingLiveEvalDefaults(t)
 	model := liveAIModel()
 	reasoningEffort := liveAIReasoningEffort()
 	recorder := &openAILiveRecorder{
@@ -292,8 +414,12 @@ func runAIGMCampaignContextLiveCaptureScenario(t *testing.T, spec aiGMCampaignSc
 	reportPath := writeOpenAILiveCaptureReport(t, artifactStem, capturedAt, spec.Name, recorder, result, diagnosticsPath)
 	t.Logf("quality report written to %s", reportPath)
 	fixture := recorder.ReplayFixture(result.ReplayTokens)
-	summaryPath := writeOpenAILiveCaptureSummary(t, artifactStem, capturedAt, spec.Name, recorder, result, rawPath, reportPath, diagnosticsPath)
+	summary := buildOpenAILiveCaptureSummary(t, spec.Name, recorder, result, rawPath, reportPath, diagnosticsPath)
+	summaryPath := writeOpenAILiveCaptureSummary(t, artifactStem, capturedAt, summary)
 	t.Logf("capture summary written to %s", summaryPath)
+	if liveOpenVikingRequireValidAugmentation() {
+		assertValidOpenVikingAugmentation(t, summary)
+	}
 	if evalPath := writePromptfooEvalOutputIfRequested(t, spec, recorder, result, fixture, rawPath, reportPath, summaryPath, diagnosticsPath); evalPath != "" {
 		t.Logf("promptfoo eval output written to %s", evalPath)
 	}
@@ -347,7 +473,7 @@ func runAIGMCampaignContextLiveCaptureScenario(t *testing.T, spec aiGMCampaignSc
 var aiGMCapabilityLookupScenario = aiGMCampaignScenarioSpec{
 	Name:        "ai_gm_campaign_context_capability_lookup_live",
 	FixtureFile: "ai_gm_campaign_context_capability_lookup_live_replay.json",
-	Prompt:      "Before creating the opening scene, call character_sheet_read for the player character. Use that sheet to anchor the opening beat around one real capability from their traits, equipment, class features, subclass features, or domain cards, then update memory.md with the capability you foregrounded.",
+	Prompt:      "Before creating the opening scene, call character_sheet_read for the player character. Use that sheet to anchor the opening beat around one real capability from their traits, equipment, class features, subclass features, or domain cards, then update memory.md with the capability you foregrounded. Do not call any Daggerheart mechanics resolution tool, system_reference_search/read, or campaign_memory_section_read in this lane.",
 	StorySeed:   aiGMBootstrapStorySeed,
 	MemorySeed:  aiGMBootstrapMemorySeed,
 	RequiredToolSet: []string{
@@ -355,7 +481,29 @@ var aiGMCapabilityLookupScenario = aiGMCampaignScenarioSpec{
 		"scene_create",
 		"interaction_open_scene_player_phase",
 	},
-	Assert: aiGMBootstrapScenario.Assert,
+	ForbiddenTools: []string{
+		"campaign_memory_section_read",
+		"system_reference_search",
+		"system_reference_read",
+		"daggerheart_action_roll_resolve",
+		"daggerheart_attack_flow_resolve",
+		"daggerheart_reaction_flow_resolve",
+		"daggerheart_group_action_flow_resolve",
+		"daggerheart_tag_team_flow_resolve",
+		"interaction_resolve_scene_player_review",
+	},
+	MaxToolErrors:   maxToolErrors(0),
+	ReferenceLimits: &aiGMReferenceLimits{MaxSearches: 0, MaxReads: 0},
+	Assert:          aiGMBootstrapScenario.Assert,
+	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
+		t.Helper()
+		calls := flattenReplayToolCalls(fixture)
+		assertReplayToolOrder(t, calls,
+			"character_sheet_read",
+			"scene_create",
+			"interaction_open_scene_player_phase",
+		)
+	},
 }
 
 var aiGMMechanicsReviewScenario = aiGMCampaignScenarioSpec{
@@ -439,7 +587,7 @@ var aiGMAttackReviewScenario = aiGMCampaignScenarioSpec{
 var aiGMReactionReviewScenario = aiGMCampaignScenarioSpec{
 	Name:        "ai_gm_campaign_context_reaction_review_live",
 	FixtureFile: "ai_gm_campaign_context_reaction_review_live_replay.json",
-	Prompt:      "The scene is waiting on GM review. First call character_sheet_read for the acting character. Use daggerheart_reaction_flow_resolve to adjudicate that character's defensive reaction in the active scene, grounded in one real capability from the sheet. Then use interaction_resolve_scene_player_review to open the next player-facing beat and update memory.md with the capability and reaction result you used.",
+	Prompt:      "The scene is waiting on GM review. First call character_sheet_read for the acting character. Use daggerheart_reaction_flow_resolve exactly once to adjudicate that character's defensive reaction in the active scene, grounded in one real capability from the sheet. Do not set replace_hope_with_armor in this lane. Do not read memory.md before resolving the reaction. Then use interaction_resolve_scene_player_review exactly once to open the next player-facing beat and update memory.md with the capability and reaction result you used.",
 	StorySeed:   aiGMReviewAdvanceStorySeed,
 	MemorySeed:  aiGMReviewAdvanceMemorySeed,
 	RequiredToolSet: []string{
@@ -447,8 +595,27 @@ var aiGMReactionReviewScenario = aiGMCampaignScenarioSpec{
 		"daggerheart_reaction_flow_resolve",
 		"interaction_resolve_scene_player_review",
 	},
-	Prepare: prepareReactionReviewScenario,
-	Assert:  assertReviewTurnReopenedWithPrompt,
+	ForbiddenTools: []string{
+		"campaign_memory_section_read",
+	},
+	MaxToolErrors: maxToolErrors(0),
+	Prepare:       prepareReactionReviewScenario,
+	Assert:        assertReviewTurnReopenedWithPrompt,
+	AssertFixture: func(t *testing.T, fixture openAIReplayFixture) {
+		t.Helper()
+		calls := flattenReplayToolCalls(fixture)
+		assertReplayToolOrder(t, calls,
+			"character_sheet_read",
+			"daggerheart_reaction_flow_resolve",
+			"interaction_resolve_scene_player_review",
+		)
+		if replayToolCallCount(calls, "daggerheart_reaction_flow_resolve") != 1 {
+			t.Fatalf("daggerheart_reaction_flow_resolve calls = %d, want 1", replayToolCallCount(calls, "daggerheart_reaction_flow_resolve"))
+		}
+		if replayToolCallCount(calls, "interaction_resolve_scene_player_review") != 1 {
+			t.Fatalf("interaction_resolve_scene_player_review calls = %d, want 1", replayToolCallCount(calls, "interaction_resolve_scene_player_review"))
+		}
+	},
 }
 
 var aiGMPlaybookAttackReviewScenario = aiGMCampaignScenarioSpec{
@@ -933,7 +1100,8 @@ func (r *openAILiveRecorder) recordExchange(method, requestURL string, requestBo
 		return
 	}
 	if len(r.steps) == 0 {
-		_, toolNames := extractPromptAndToolNames(requestPayload)
+		prompt, toolNames := extractPromptAndToolNames(requestPayload)
+		r.initialPrompt = prompt
 		r.initialTools = append([]string(nil), toolNames...)
 	}
 	r.captureCallOutputs(requestPayload)
@@ -1003,7 +1171,7 @@ func (r *openAILiveRecorder) ReplayFixture(tokens map[string]string) openAIRepla
 			Scenario:        r.scenario.Name,
 			Source:          "live_capture",
 		},
-		InitialPromptContains: append([]string(nil), r.scenario.PromptContains...),
+		InitialPromptContains: initialPromptContainsForLiveCapture(r.scenario),
 		InitialToolNames:      append([]string(nil), r.initialTools...),
 		Steps:                 append([]openAIReplayStep(nil), r.steps...),
 	}
@@ -1107,6 +1275,9 @@ func writeOpenAILiveCaptureReport(t *testing.T, artifactStem string, capturedAt 
 
 	usage := aggregateLiveCaptureUsage(recorder.rawCapture)
 	model := recorder.model
+	fingerprint := liveOpenVikingConfigFingerprint()
+	promptInspection := inspectInitialPrompt(recorder.initialPrompt)
+	diagnostics := result.PromptDiagnostics
 
 	// Extract narrative fields from recorded steps.
 	var sceneName, sceneDesc, gmNarration, playerPromptBeat, memoryContent string
@@ -1162,6 +1333,45 @@ func writeOpenAILiveCaptureReport(t *testing.T, artifactStem string, capturedAt 
 		fmt.Fprintf(&b, "\n")
 	}
 
+	fmt.Fprintf(&b, "## OpenViking\n\n")
+	fmt.Fprintf(&b, "- **Enabled:** %t\n", fingerprint.Enabled)
+	if fingerprint.Enabled {
+		fmt.Fprintf(&b, "- **Mode:** %s\n", strings.TrimSpace(fingerprint.Mode))
+		fmt.Fprintf(&b, "- **Embedding Model:** %s\n", strings.TrimSpace(fingerprint.EmbeddingModel))
+		fmt.Fprintf(&b, "- **VLM Model:** %s\n", strings.TrimSpace(fingerprint.VLMModel))
+	}
+	fmt.Fprintf(&b, "- **Prompt Collector Includes Raw `story.md`:** %t\n", diagnostics.ContextPolicy.IncludeStory)
+	fmt.Fprintf(&b, "- **Prompt Collector Includes Raw `memory.md`:** %t\n", diagnostics.ContextPolicy.IncludeMemory)
+	fmt.Fprintf(&b, "- **Augmentation Attempted:** %t\n", diagnostics.Augmentation.Attempted)
+	fmt.Fprintf(&b, "- **Search Attempted:** %t\n", diagnostics.Augmentation.SearchAttempted)
+	fmt.Fprintf(&b, "- **Augmentation Degraded:** %t\n", diagnostics.Augmentation.Degraded)
+	if reason := strings.TrimSpace(diagnostics.Augmentation.DegradationReason); reason != "" {
+		fmt.Fprintf(&b, "- **Degradation Reason:** %s\n", reason)
+	}
+	if len(diagnostics.Augmentation.MirroredTargets) > 0 {
+		fmt.Fprintf(&b, "- **Mirrored Targets:** %s\n", strings.Join(diagnostics.Augmentation.MirroredTargets, ", "))
+	}
+	fmt.Fprintf(&b, "- **Raw `story.md` In Prompt:** %t\n", promptInspection.HasStory)
+	fmt.Fprintf(&b, "- **Raw `memory.md` In Prompt:** %t\n", promptInspection.HasMemory)
+	fmt.Fprintf(&b, "- **Retrieved Resource Count:** %d\n", retrievedResourceCount(result.RetrievedContexts))
+	fmt.Fprintf(&b, "- **Retrieved Memory Count:** %d\n", retrievedMemoryCount(result.RetrievedContexts))
+	if len(result.RetrievedContexts) > 0 {
+		fmt.Fprintf(&b, "\n### Retrieved Context URIs\n\n")
+		for _, item := range result.RetrievedContexts {
+			fmt.Fprintf(&b, "- `%s` (%s)\n", item.URI, item.ContextType)
+			if renderedURI := strings.TrimSpace(item.RenderedURI); renderedURI != "" {
+				fmt.Fprintf(&b, "  rendered: `%s`\n", renderedURI)
+			}
+			if source := strings.TrimSpace(item.ContentSource); source != "" {
+				fmt.Fprintf(&b, "  source: `%s`\n", source)
+			}
+			if renderErr := strings.TrimSpace(item.ContentError); renderErr != "" {
+				fmt.Fprintf(&b, "  error: `%s`\n", renderErr)
+			}
+		}
+	}
+	fmt.Fprintf(&b, "\n")
+
 	fmt.Fprintf(&b, "## Token Usage\n\n")
 	fmt.Fprintf(&b, "| Metric | Tokens |\n")
 	fmt.Fprintf(&b, "|--------|-------:|\n")
@@ -1204,7 +1414,7 @@ func writeOpenAILiveCaptureReport(t *testing.T, artifactStem string, capturedAt 
 	return path
 }
 
-func writeOpenAILiveCaptureSummary(t *testing.T, artifactStem string, capturedAt string, scenarioName string, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult, rawPath, reportPath, diagnosticsPath string) string {
+func buildOpenAILiveCaptureSummary(t *testing.T, scenarioName string, recorder *openAILiveRecorder, result aiGMCampaignScenarioResult, rawPath, reportPath, diagnosticsPath string) openAILiveCaptureSummary {
 	t.Helper()
 	recorder.mu.Lock()
 	defer recorder.mu.Unlock()
@@ -1216,11 +1426,24 @@ func writeOpenAILiveCaptureSummary(t *testing.T, artifactStem string, capturedAt
 	if toolErrors > 0 {
 		resultClass = liveCaptureResultPassWithToolError
 	}
-	summary := openAILiveCaptureSummary{
+	fingerprint := liveOpenVikingConfigFingerprint()
+	promptInspection := inspectInitialPrompt(recorder.initialPrompt)
+	return openAILiveCaptureSummary{
 		CaseID:                     strings.TrimSpace(os.Getenv(integrationAIEvalCaseIDEnv)),
 		Scenario:                   scenarioName,
 		Model:                      recorder.model,
 		ReasoningEffort:            recorder.rawCapture.Metadata.ReasoningEffort,
+		OpenVikingEnabled:          fingerprint.Enabled,
+		OpenVikingMode:             fingerprint.Mode,
+		OpenVikingEmbeddingModel:   fingerprint.EmbeddingModel,
+		OpenVikingVLMModel:         fingerprint.VLMModel,
+		PromptContextIncludeStory:  result.PromptDiagnostics.ContextPolicy.IncludeStory,
+		PromptContextIncludeMemory: result.PromptDiagnostics.ContextPolicy.IncludeMemory,
+		AugmentationAttempted:      result.PromptDiagnostics.Augmentation.Attempted,
+		AugmentationSearchTried:    result.PromptDiagnostics.Augmentation.SearchAttempted,
+		AugmentationDegraded:       result.PromptDiagnostics.Augmentation.Degraded,
+		AugmentationError:          result.PromptDiagnostics.Augmentation.DegradationReason,
+		MirroredTargets:            append([]string(nil), result.PromptDiagnostics.Augmentation.MirroredTargets...),
 		RunStatus:                  result.RunStatus,
 		MetricStatus:               result.MetricStatus,
 		FailureKind:                result.FailureKind,
@@ -1232,6 +1455,13 @@ func writeOpenAILiveCaptureSummary(t *testing.T, artifactStem string, capturedAt
 		ReferenceSearchCount:       referenceSearches,
 		ReferenceReadCount:         referenceReads,
 		UnexpectedReferenceLookups: unexpectedReferenceLookupCount(recorder.scenario, referenceSearches, referenceReads),
+		InitialPromptHasStory:      promptInspection.HasStory,
+		InitialPromptHasMemory:     promptInspection.HasMemory,
+		RetrievedContextURIs:       retrievedContextURIs(result.RetrievedContexts),
+		RetrievedRenderedURIs:      retrievedRenderedURIs(result.RetrievedContexts),
+		RetrievedContentSources:    retrievedContentSources(result.RetrievedContexts),
+		RetrievedResourceCount:     retrievedResourceCount(result.RetrievedContexts),
+		RetrievedMemoryCount:       retrievedMemoryCount(result.RetrievedContexts),
 		InputTokens:                usage.InputTokens,
 		OutputTokens:               usage.OutputTokens,
 		ReasoningTokens:            usage.ReasoningTokens,
@@ -1242,6 +1472,10 @@ func writeOpenAILiveCaptureSummary(t *testing.T, artifactStem string, capturedAt
 		GeneratedAtUTC:             time.Now().UTC().Format(time.RFC3339),
 		ActiveSceneID:              activeSceneID(result.InteractionState),
 	}
+}
+
+func writeOpenAILiveCaptureSummary(t *testing.T, artifactStem, capturedAt string, summary openAILiveCaptureSummary) string {
+	t.Helper()
 
 	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
 	filename := fmt.Sprintf("%s-%s.summary.json", artifactStem, capturedAt)
@@ -1255,6 +1489,120 @@ func writeOpenAILiveCaptureSummary(t *testing.T, artifactStem string, capturedAt
 		t.Fatalf("write live capture summary: %v", err)
 	}
 	return path
+}
+
+func assertValidOpenVikingAugmentation(t *testing.T, summary openAILiveCaptureSummary) {
+	t.Helper()
+	if !summary.OpenVikingEnabled {
+		t.Fatal("valid OpenViking augmentation requested, but OpenViking is disabled")
+	}
+	if !summary.AugmentationAttempted {
+		t.Fatal("expected OpenViking augmentation attempt")
+	}
+	if summary.AugmentationDegraded {
+		t.Fatalf("expected non-degraded OpenViking augmentation, got %q", summary.AugmentationError)
+	}
+	if !summary.AugmentationSearchTried {
+		t.Fatal("expected OpenViking retrieval search to run")
+	}
+	if summary.RetrievedResourceCount+summary.RetrievedMemoryCount <= 0 {
+		t.Fatal("expected at least one retrieved OpenViking context")
+	}
+	switch strings.TrimSpace(summary.OpenVikingMode) {
+	case "docs_aligned_supplement":
+		if summary.InitialPromptHasStory {
+			t.Fatal("docs_aligned_supplement should suppress raw story.md from the prompt")
+		}
+		if !summary.InitialPromptHasMemory {
+			t.Fatal("docs_aligned_supplement should keep raw memory.md in the prompt")
+		}
+		if summary.RetrievedResourceCount > 0 && !containsPreferredRetrievedContentSource(summary.RetrievedContentSources, "backing_read", "backing_tree_read", "leaf_read") {
+			t.Fatalf("docs_aligned_supplement should render retrieved story content from file-grade reads, got sources=%v", summary.RetrievedContentSources)
+		}
+	case "legacy":
+		if summary.InitialPromptHasStory || summary.InitialPromptHasMemory {
+			t.Fatal("legacy OpenViking mode should suppress raw story.md and memory.md from the prompt")
+		}
+	}
+}
+
+func retrievedContextURIs(items []orchestration.RetrievedContext) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	uris := make([]string, 0, len(items))
+	for _, item := range items {
+		if uri := strings.TrimSpace(item.URI); uri != "" {
+			uris = append(uris, uri)
+		}
+	}
+	return uris
+}
+
+func retrievedRenderedURIs(items []orchestration.RetrievedContext) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	uris := make([]string, 0, len(items))
+	for _, item := range items {
+		if uri := strings.TrimSpace(item.RenderedURI); uri != "" {
+			uris = append(uris, uri)
+		}
+	}
+	return uris
+}
+
+func retrievedContentSources(items []orchestration.RetrievedContext) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	sources := make([]string, 0, len(items))
+	for _, item := range items {
+		if source := strings.TrimSpace(item.ContentSource); source != "" {
+			sources = append(sources, source)
+		}
+	}
+	return sources
+}
+
+func containsPreferredRetrievedContentSource(items []string, want ...string) bool {
+	if len(items) == 0 || len(want) == 0 {
+		return false
+	}
+	allowed := map[string]struct{}{}
+	for _, item := range want {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		allowed[item] = struct{}{}
+	}
+	for _, item := range items {
+		if _, ok := allowed[strings.TrimSpace(item)]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func retrievedResourceCount(items []orchestration.RetrievedContext) int {
+	count := 0
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item.ContextType), "resource") || strings.HasPrefix(strings.TrimSpace(item.URI), "viking://resources/") {
+			count++
+		}
+	}
+	return count
+}
+
+func retrievedMemoryCount(items []orchestration.RetrievedContext) int {
+	count := 0
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item.ContextType), "memory") || strings.Contains(strings.TrimSpace(item.URI), "/memories/") {
+			count++
+		}
+	}
+	return count
 }
 
 func writeOpenAILiveCaptureDiagnostics(t *testing.T, artifactStem string, capturedAt string, diagnostics *aiGMScenarioDiagnostics) string {

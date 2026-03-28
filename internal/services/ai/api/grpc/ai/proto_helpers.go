@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
@@ -71,6 +72,61 @@ func usageToProto(value provider.Usage) *aiv1.Usage {
 		OutputTokens:    value.OutputTokens,
 		ReasoningTokens: value.ReasoningTokens,
 		TotalTokens:     value.TotalTokens,
+	}
+}
+
+func retrievedContextToProto(value orchestration.RetrievedContext) *aiv1.RetrievedContext {
+	return &aiv1.RetrievedContext{
+		Uri:           value.URI,
+		RenderedUri:   value.RenderedURI,
+		ContextType:   value.ContextType,
+		Abstract:      value.Abstract,
+		MatchReason:   value.MatchReason,
+		Score:         value.Score,
+		ContentSource: value.ContentSource,
+		ContentError:  value.ContentError,
+	}
+}
+
+func retrievedContextsToProto(values []orchestration.RetrievedContext) []*aiv1.RetrievedContext {
+	if len(values) == 0 {
+		return nil
+	}
+	items := make([]*aiv1.RetrievedContext, 0, len(values))
+	for _, item := range values {
+		items = append(items, retrievedContextToProto(item))
+	}
+	return items
+}
+
+func promptDiagnosticsToProto(value orchestration.PromptDiagnostics) *aiv1.PromptDiagnostics {
+	if !value.ContextPolicy.IncludeStory &&
+		!value.ContextPolicy.IncludeMemory &&
+		!value.Augmentation.Attempted &&
+		value.Augmentation.Mode == "" &&
+		!value.Augmentation.SearchAttempted &&
+		value.Augmentation.ResourceHits == 0 &&
+		value.Augmentation.MemoryHits == 0 &&
+		len(value.Augmentation.MirroredTargets) == 0 &&
+		!value.Augmentation.Degraded &&
+		value.Augmentation.DegradationReason == "" {
+		return nil
+	}
+	return &aiv1.PromptDiagnostics{
+		ContextPolicy: &aiv1.PromptContextPolicy{
+			IncludeStory:  value.ContextPolicy.IncludeStory,
+			IncludeMemory: value.ContextPolicy.IncludeMemory,
+		},
+		Augmentation: &aiv1.PromptAugmentationDiagnostics{
+			Attempted:         value.Augmentation.Attempted,
+			Mode:              value.Augmentation.Mode,
+			SearchAttempted:   value.Augmentation.SearchAttempted,
+			ResourceHits:      int32(value.Augmentation.ResourceHits),
+			MemoryHits:        int32(value.Augmentation.MemoryHits),
+			MirroredTargets:   append([]string(nil), value.Augmentation.MirroredTargets...),
+			Degraded:          value.Augmentation.Degraded,
+			DegradationReason: value.Augmentation.DegradationReason,
+		},
 	}
 }
 
