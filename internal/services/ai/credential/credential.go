@@ -1,8 +1,9 @@
 // Package credential models BYO LLM provider credentials for AI operations.
 //
 // Credentials are validated here as domain objects and encrypted by higher
-// layers before persistence, so callers can reason in plain terms without
-// leaking plaintext secrets.
+// layers before persistence. The domain vocabulary intentionally spans two
+// phases: create-time plaintext input and persisted ciphertext state. Plaintext
+// belongs only to create/reseal flows; stored reads should carry ciphertext.
 package credential
 
 import (
@@ -36,7 +37,8 @@ var (
 	ErrEmptySecret = errors.New("secret is required")
 )
 
-// Credential is the phase 1 domain model for a BYO provider credential.
+// Credential is the domain model for a BYO provider credential across create
+// and persisted lifecycle phases.
 type Credential struct {
 	ID          string
 	OwnerUserID string

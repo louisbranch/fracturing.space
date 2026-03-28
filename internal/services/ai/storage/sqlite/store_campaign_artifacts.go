@@ -7,11 +7,12 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaignartifact"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // PutCampaignArtifact persists one campaign-scoped GM artifact snapshot.
-func (s *Store) PutCampaignArtifact(ctx context.Context, record storage.CampaignArtifactRecord) error {
+func (s *Store) PutCampaignArtifact(ctx context.Context, record campaignartifact.Artifact) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -48,18 +49,18 @@ ON CONFLICT(campaign_id, path) DO UPDATE SET
 }
 
 // GetCampaignArtifact fetches one campaign artifact by path.
-func (s *Store) GetCampaignArtifact(ctx context.Context, campaignID string, path string) (storage.CampaignArtifactRecord, error) {
+func (s *Store) GetCampaignArtifact(ctx context.Context, campaignID string, path string) (campaignartifact.Artifact, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.CampaignArtifactRecord{}, err
+		return campaignartifact.Artifact{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.CampaignArtifactRecord{}, fmt.Errorf("storage is not configured")
+		return campaignartifact.Artifact{}, fmt.Errorf("storage is not configured")
 	}
 	if campaignID == "" {
-		return storage.CampaignArtifactRecord{}, fmt.Errorf("campaign id is required")
+		return campaignartifact.Artifact{}, fmt.Errorf("campaign id is required")
 	}
 	if path == "" {
-		return storage.CampaignArtifactRecord{}, fmt.Errorf("artifact path is required")
+		return campaignartifact.Artifact{}, fmt.Errorf("artifact path is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -69,7 +70,7 @@ WHERE campaign_id = ? AND path = ?
 `, campaignID, path)
 
 	var (
-		record    storage.CampaignArtifactRecord
+		record    campaignartifact.Artifact
 		createdAt int64
 		updatedAt int64
 	)
@@ -82,9 +83,9 @@ WHERE campaign_id = ? AND path = ?
 		&updatedAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.CampaignArtifactRecord{}, storage.ErrNotFound
+			return campaignartifact.Artifact{}, storage.ErrNotFound
 		}
-		return storage.CampaignArtifactRecord{}, fmt.Errorf("get campaign artifact: %w", err)
+		return campaignartifact.Artifact{}, fmt.Errorf("get campaign artifact: %w", err)
 	}
 	record.CreatedAt = sqliteutil.FromMillis(createdAt)
 	record.UpdatedAt = sqliteutil.FromMillis(updatedAt)
@@ -92,7 +93,7 @@ WHERE campaign_id = ? AND path = ?
 }
 
 // ListCampaignArtifacts returns all persisted artifacts for one campaign.
-func (s *Store) ListCampaignArtifacts(ctx context.Context, campaignID string) ([]storage.CampaignArtifactRecord, error) {
+func (s *Store) ListCampaignArtifacts(ctx context.Context, campaignID string) ([]campaignartifact.Artifact, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -114,10 +115,10 @@ ORDER BY path
 	}
 	defer rows.Close()
 
-	records := make([]storage.CampaignArtifactRecord, 0, 4)
+	records := make([]campaignartifact.Artifact, 0, 4)
 	for rows.Next() {
 		var (
-			record    storage.CampaignArtifactRecord
+			record    campaignartifact.Artifact
 			createdAt int64
 			updatedAt int64
 		)

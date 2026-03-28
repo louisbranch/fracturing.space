@@ -76,25 +76,25 @@ func TestNormalizeCreateInput(t *testing.T) {
 	}
 }
 
-func TestAuthReferenceFromIDs(t *testing.T) {
-	ref, err := AuthReferenceFromIDs(" cred-1 ", "", true)
+func TestNormalizeAuthReference(t *testing.T) {
+	ref, err := NormalizeAuthReference(CredentialAuthReference(" cred-1 "), true)
 	if err != nil {
-		t.Fatalf("AuthReferenceFromIDs credential: %v", err)
+		t.Fatalf("NormalizeAuthReference credential: %v", err)
 	}
 	if ref != CredentialAuthReference("cred-1") {
 		t.Fatalf("credential ref = %+v, want %+v", ref, CredentialAuthReference("cred-1"))
 	}
 
-	ref, err = AuthReferenceFromIDs("", " grant-1 ", true)
+	ref, err = NormalizeAuthReference(ProviderGrantAuthReference(" grant-1 "), true)
 	if err != nil {
-		t.Fatalf("AuthReferenceFromIDs provider grant: %v", err)
+		t.Fatalf("NormalizeAuthReference provider grant: %v", err)
 	}
 	if ref != ProviderGrantAuthReference("grant-1") {
 		t.Fatalf("provider grant ref = %+v, want %+v", ref, ProviderGrantAuthReference("grant-1"))
 	}
 
-	if _, err := AuthReferenceFromIDs("cred-1", "grant-1", true); !errors.Is(err, ErrMultipleAuthReferences) {
-		t.Fatalf("AuthReferenceFromIDs mixed error = %v, want %v", err, ErrMultipleAuthReferences)
+	if _, err := NormalizeAuthReference(AuthReference{Kind: AuthReferenceKindCredential}, true); !errors.Is(err, ErrMissingAuthReference) {
+		t.Fatalf("NormalizeAuthReference missing id error = %v, want %v", err, ErrMissingAuthReference)
 	}
 }
 

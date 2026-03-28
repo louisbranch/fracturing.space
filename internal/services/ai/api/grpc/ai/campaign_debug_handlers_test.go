@@ -120,10 +120,10 @@ func TestCampaignDebugHandlersListAndGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCampaignDebugService: %v", err)
 	}
-	authz := &fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}}
+	authz := &fakeCampaignAuthorizer{allowed: true}
 	handlers, err := NewCampaignDebugHandlers(CampaignDebugHandlersConfig{
 		CampaignDebugService: debugService,
-		AuthorizationClient:  authz,
+		CampaignAuthorizer:   authz,
 	})
 	if err != nil {
 		t.Fatalf("NewCampaignDebugHandlers: %v", err)
@@ -143,8 +143,8 @@ func TestCampaignDebugHandlersListAndGet(t *testing.T) {
 	if got := listResp.GetTurns()[0].GetUsage().GetTotalTokens(); got != 15 {
 		t.Fatalf("list usage total = %d, want 15", got)
 	}
-	if authz.lastReq == nil || authz.lastReq.GetAction() != gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ {
-		t.Fatalf("authorization request = %#v", authz.lastReq)
+	if authz.lastAction != gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ {
+		t.Fatalf("authorization action = %v", authz.lastAction)
 	}
 
 	getResp, err := handlers.GetCampaignDebugTurn(ctx, &aiv1.GetCampaignDebugTurnRequest{
@@ -173,10 +173,10 @@ func TestCampaignDebugHandlersSubscribe(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCampaignDebugService: %v", err)
 	}
-	authz := &fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}}
+	authz := &fakeCampaignAuthorizer{allowed: true}
 	handlers, err := NewCampaignDebugHandlers(CampaignDebugHandlersConfig{
 		CampaignDebugService: debugService,
-		AuthorizationClient:  authz,
+		CampaignAuthorizer:   authz,
 	})
 	if err != nil {
 		t.Fatalf("NewCampaignDebugHandlers: %v", err)
@@ -246,10 +246,10 @@ func TestCampaignDebugHandlersValidationAndErrorMapping(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewCampaignDebugService: %v", err)
 	}
-	authz := &fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}}
+	authz := &fakeCampaignAuthorizer{allowed: true}
 	handlers, err := NewCampaignDebugHandlers(CampaignDebugHandlersConfig{
 		CampaignDebugService: debugService,
-		AuthorizationClient:  authz,
+		CampaignAuthorizer:   authz,
 	})
 	if err != nil {
 		t.Fatalf("NewCampaignDebugHandlers: %v", err)

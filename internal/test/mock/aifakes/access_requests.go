@@ -10,10 +10,6 @@ import (
 // AccessRequestStore is an in-memory access-request repository fake.
 type AccessRequestStore struct {
 	AccessRequests map[string]accessrequest.AccessRequest
-
-	ListAccessRequestsByRequesterErr   error
-	ListAccessRequestsByRequesterCalls int
-	GetApprovedInvokeAccessCalls       int
 }
 
 // NewAccessRequestStore creates an initialized access-request fake.
@@ -38,10 +34,6 @@ func (s *AccessRequestStore) GetAccessRequest(_ context.Context, accessRequestID
 
 // ListAccessRequestsByRequester lists requester-owned access requests.
 func (s *AccessRequestStore) ListAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (accessrequest.Page, error) {
-	s.ListAccessRequestsByRequesterCalls++
-	if s.ListAccessRequestsByRequesterErr != nil {
-		return accessrequest.Page{}, s.ListAccessRequestsByRequesterErr
-	}
 	items := make([]accessrequest.AccessRequest, 0)
 	for _, ar := range s.AccessRequests {
 		if ar.RequesterUserID == requesterUserID {
@@ -53,7 +45,6 @@ func (s *AccessRequestStore) ListAccessRequestsByRequester(_ context.Context, re
 
 // GetApprovedInvokeAccessByRequesterForAgent returns a matching approved invoke record.
 func (s *AccessRequestStore) GetApprovedInvokeAccessByRequesterForAgent(_ context.Context, requesterUserID string, ownerUserID string, agentID string) (accessrequest.AccessRequest, error) {
-	s.GetApprovedInvokeAccessCalls++
 	for _, ar := range s.AccessRequests {
 		if ar.RequesterUserID != requesterUserID {
 			continue
@@ -132,8 +123,9 @@ func (s *AccessRequestStore) RevokeAccessRequest(_ context.Context, revoked acce
 		return storage.ErrConflict
 	}
 	existing.Status = revoked.Status
-	existing.ReviewerUserID = revoked.ReviewerUserID
-	existing.ReviewNote = revoked.ReviewNote
+	existing.RevokerUserID = revoked.RevokerUserID
+	existing.RevokeNote = revoked.RevokeNote
+	existing.RevokedAt = revoked.RevokedAt
 	existing.UpdatedAt = revoked.UpdatedAt
 	s.AccessRequests[revoked.ID] = existing
 	return nil

@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -15,7 +15,7 @@ import (
 type AccessRequestService struct {
 	agentStore         storage.AgentStore
 	accessRequestStore storage.AccessRequestStore
-	auditEventStore    storage.AuditEventStore
+	auditEventStore    auditevent.Store
 	clock              Clock
 	idGenerator        IDGenerator
 }
@@ -24,7 +24,7 @@ type AccessRequestService struct {
 type AccessRequestServiceConfig struct {
 	AgentStore         storage.AgentStore
 	AccessRequestStore storage.AccessRequestStore
-	AuditEventStore    storage.AuditEventStore
+	AuditEventStore    auditevent.Store
 	Clock              Clock
 	IDGenerator        IDGenerator
 }
@@ -90,8 +90,8 @@ func (s *AccessRequestService) Create(ctx context.Context, input CreateAccessReq
 	if err := s.accessRequestStore.PutAccessRequest(ctx, created); err != nil {
 		return accessrequest.AccessRequest{}, Wrapf(ErrKindInternal, err, "put access request")
 	}
-	if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
-		EventName:       "access_request.created",
+	if err := s.putAuditEvent(ctx, auditevent.Event{
+		EventName:       auditevent.NameAccessRequestCreated,
 		ActorUserID:     input.RequesterUserID,
 		OwnerUserID:     created.OwnerUserID,
 		RequesterUserID: created.RequesterUserID,
@@ -142,14 +142,14 @@ type ListAuditEventsInput struct {
 	OwnerUserID string
 	PageSize    int
 	PageToken   string
-	Filter      storage.AuditEventFilter
+	Filter      auditevent.Filter
 }
 
 // ListAuditEvents returns a page of audit events scoped to the given owner.
-func (s *AccessRequestService) ListAuditEvents(ctx context.Context, input ListAuditEventsInput) (storage.AuditEventPage, error) {
+func (s *AccessRequestService) ListAuditEvents(ctx context.Context, input ListAuditEventsInput) (auditevent.Page, error) {
 	page, err := s.auditEventStore.ListAuditEventsByOwner(ctx, input.OwnerUserID, input.PageSize, input.PageToken, input.Filter)
 	if err != nil {
-		return storage.AuditEventPage{}, Wrapf(ErrKindInternal, err, "list audit events")
+		return auditevent.Page{}, Wrapf(ErrKindInternal, err, "list audit events")
 	}
 	return page, nil
 }
@@ -190,7 +190,7 @@ func (s *AccessRequestService) Review(ctx context.Context, input ReviewAccessReq
 		if errors.Is(err, accessrequest.ErrNotPending) {
 			return accessrequest.AccessRequest{}, Errorf(ErrKindFailedPrecondition, "access request is already reviewed")
 		}
-		if errors.Is(err, accessrequest.ErrReviewerNotOwner) {
+		if errors.Is(err, accessrequest.ErrRevokerNotOwner) {
 			return accessrequest.AccessRequest{}, Errorf(ErrKindNotFound, "access request not found")
 		}
 		return accessrequest.AccessRequest{}, Errorf(ErrKindInvalidArgument, "%s", err)
@@ -209,8 +209,8 @@ func (s *AccessRequestService) Review(ctx context.Context, input ReviewAccessReq
 		return accessrequest.AccessRequest{}, Wrapf(ErrKindInternal, err, "review access request")
 	}
 
-	if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
-		EventName:       "access_request.reviewed",
+	if err := s.putAuditEvent(ctx, auditevent.Event{
+		EventName:       auditevent.NameAccessRequestReviewed,
 		ActorUserID:     input.OwnerUserID,
 		OwnerUserID:     reviewed.OwnerUserID,
 		RequesterUserID: reviewed.RequesterUserID,
@@ -274,8 +274,8 @@ func (s *AccessRequestService) Revoke(ctx context.Context, input RevokeAccessReq
 		return accessrequest.AccessRequest{}, Wrapf(ErrKindInternal, err, "revoke access request")
 	}
 
-	if err := s.putAuditEvent(ctx, storage.AuditEventRecord{
-		EventName:       "access_request.revoked",
+	if err := s.putAuditEvent(ctx, auditevent.Event{
+		EventName:       auditevent.NameAccessRequestRevoked,
 		ActorUserID:     input.OwnerUserID,
 		OwnerUserID:     revoked.OwnerUserID,
 		RequesterUserID: revoked.RequesterUserID,
@@ -291,19 +291,7 @@ func (s *AccessRequestService) Revoke(ctx context.Context, input RevokeAccessReq
 }
 
 // putAuditEvent persists one audit event record.
-func (s *AccessRequestService) putAuditEvent(ctx context.Context, record storage.AuditEventRecord) error {
+func (s *AccessRequestService) putAuditEvent(ctx context.Context, record auditevent.Event) error {
 	record.CreatedAt = record.CreatedAt.UTC()
 	return s.auditEventStore.PutAuditEvent(ctx, record)
-}
-
-// SetClock is a test helper to override the clock. Unexported in production;
-// tests in the same package can use it. For cross-package tests, pass Clock
-// via the config.
-func (s *AccessRequestService) SetClock(clock func() time.Time) {
-	s.clock = clock
-}
-
-// SetIDGenerator is a test helper to override the ID generator.
-func (s *AccessRequestService) SetIDGenerator(gen func() (string, error)) {
-	s.idGenerator = gen
 }

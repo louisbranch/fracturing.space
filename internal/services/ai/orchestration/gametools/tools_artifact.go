@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaignartifact"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // --- Input types ---
@@ -109,7 +109,7 @@ func (s *DirectSession) artifactUpsert(ctx context.Context, argsJSON []byte) (or
 	return toolResultJSON(artifactFromRecord(record, true))
 }
 
-func artifactFromRecord(r storage.CampaignArtifactRecord, includeContent bool) artifactResult {
+func artifactFromRecord(r campaignartifact.Artifact, includeContent bool) artifactResult {
 	result := artifactResult{
 		CampaignID: r.CampaignID,
 		Path:       r.Path,

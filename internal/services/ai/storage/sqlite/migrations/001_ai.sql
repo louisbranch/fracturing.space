@@ -20,15 +20,16 @@ CREATE TABLE ai_agents (
     label TEXT NOT NULL,
     provider TEXT NOT NULL,
     model TEXT NOT NULL,
-    credential_id TEXT NOT NULL,
+    auth_reference_type TEXT NOT NULL,
+    auth_reference_id TEXT NOT NULL,
     status TEXT NOT NULL,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
-    provider_grant_id TEXT NOT NULL DEFAULT ''
-, instructions TEXT NOT NULL DEFAULT '');
+    instructions TEXT NOT NULL DEFAULT ''
+);
 CREATE INDEX ai_agents_owner_id_idx ON ai_agents(owner_user_id, id);
 CREATE UNIQUE INDEX ai_agents_owner_label_idx ON ai_agents(owner_user_id, lower(trim(label)));
-CREATE INDEX ai_agents_owner_provider_grant_id_idx ON ai_agents(owner_user_id, provider_grant_id);
+CREATE INDEX ai_agents_owner_auth_reference_idx ON ai_agents(owner_user_id, auth_reference_type, auth_reference_id);
 CREATE TABLE ai_provider_grants (
     id TEXT PRIMARY KEY,
     owner_user_id TEXT NOT NULL,
@@ -69,9 +70,12 @@ CREATE TABLE ai_access_requests (
     status TEXT NOT NULL,
     reviewer_user_id TEXT NOT NULL,
     review_note TEXT NOT NULL,
+    revoker_user_id TEXT NOT NULL,
+    revoke_note TEXT NOT NULL,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
-    reviewed_at INTEGER
+    reviewed_at INTEGER,
+    revoked_at INTEGER
 );
 CREATE INDEX ai_access_requests_requester_id_idx ON ai_access_requests(requester_user_id, id);
 CREATE INDEX ai_access_requests_owner_id_idx ON ai_access_requests(owner_user_id, id);

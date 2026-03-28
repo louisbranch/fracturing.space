@@ -183,8 +183,17 @@ func TestRevokeAccessRequest(t *testing.T) {
 	if got.ReviewerUserID != "user-2" {
 		t.Fatalf("reviewer_user_id = %q, want %q", got.ReviewerUserID, "user-2")
 	}
-	if got.ReviewNote != "access removed" {
-		t.Fatalf("review_note = %q, want %q", got.ReviewNote, "access removed")
+	if got.ReviewNote != "approved earlier" {
+		t.Fatalf("review_note = %q, want %q", got.ReviewNote, "approved earlier")
+	}
+	if got.RevokerUserID != "user-2" {
+		t.Fatalf("revoker_user_id = %q, want %q", got.RevokerUserID, "user-2")
+	}
+	if got.RevokeNote != "access removed" {
+		t.Fatalf("revoke_note = %q, want %q", got.RevokeNote, "access removed")
+	}
+	if got.RevokedAt == nil || !got.RevokedAt.Equal(nowTime) {
+		t.Fatalf("revoked_at = %v, want %v", got.RevokedAt, nowTime)
 	}
 	if !got.UpdatedAt.Equal(nowTime) {
 		t.Fatalf("updated_at = %v, want %v", got.UpdatedAt, nowTime)
@@ -202,8 +211,8 @@ func TestRevokeAccessRequest(t *testing.T) {
 		ID:            "request-1",
 		RevokerUserID: "user-3",
 	}, func() time.Time { return nowTime })
-	if !errors.Is(err, ErrReviewerNotOwner) {
-		t.Fatalf("non-owner Revoke() error = %v, want %v", err, ErrReviewerNotOwner)
+	if !errors.Is(err, ErrRevokerNotOwner) {
+		t.Fatalf("non-owner Revoke() error = %v, want %v", err, ErrRevokerNotOwner)
 	}
 }
 

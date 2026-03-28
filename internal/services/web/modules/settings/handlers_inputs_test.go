@@ -50,11 +50,12 @@ func TestParseLocaleInputTrimsWhitespace(t *testing.T) {
 func TestParseAIKeyCreateInputTrimsWhitespace(t *testing.T) {
 	t.Parallel()
 
-	label, secret := parseAIKeyCreateInput(url.Values{
-		"label":  {"  Primary  "},
-		"secret": {"  sk-test  "},
+	input := parseAIKeyCreateInput(url.Values{
+		"label":    {"  Primary  "},
+		"provider": {"  anthropic  "},
+		"secret":   {"  sk-test  "},
 	})
-	if label != "Primary" || secret != "sk-test" {
-		t.Fatalf("label/secret = %q/%q, want %q/%q", label, secret, "Primary", "sk-test")
+	if input.Label != "Primary" || input.Provider != "anthropic" || input.Secret != "sk-test" {
+		t.Fatalf("input = %+v", input)
 	}
 }

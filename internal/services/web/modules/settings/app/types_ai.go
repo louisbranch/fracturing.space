@@ -25,8 +25,14 @@ type SettingsAICredentialOption struct {
 
 // SettingsAIModelOption stores one provider-backed model option for agent creation.
 type SettingsAIModelOption struct {
-	ID      string
-	OwnedBy string
+	ID string
+}
+
+// CreateAIKeyInput stores validated AI key creation input.
+type CreateAIKeyInput struct {
+	Label    string
+	Provider string
+	Secret   string
 }
 
 // SettingsAIAgent stores an agent row displayed in the AI agents page.

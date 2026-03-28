@@ -2,15 +2,15 @@
 title: "Campaign AI Agent System"
 parent: "Platform surfaces"
 nav_order: 15
-status: draft
+status: canonical
 owner: engineering
-last_reviewed: "2026-03-22"
+last_reviewed: "2026-03-23"
 ---
 # Campaign AI Agent System
 ## Purpose
 Define how the AI agent behaves as a Game Master and Narrator during campaign turns:
-role separation, instruction composition, context assembly, and extension points for
-new game systems.
+role separation, instruction composition, context assembly, and the current
+Daggerheart-first extension seams.
 This document extends [Campaign AI Orchestration](campaign-ai-orchestration.md) with
 the **behavioral** layer: what the agent is taught, how context is budgeted, and how
 contributors add game-system-specific intelligence.
@@ -75,7 +75,8 @@ data/instructions/
     daggerheart/
       skills.md           # Daggerheart-specific GM guidance
       reference-guide.md  # Reference lookup patterns
-    # Future: dnd5e/, vampire/, etc.
+    # Additional systems remain future architecture work; this is not yet a
+    # generic multi-system runtime contract.
 ```
 ### Composition Order
 `campaigncontext/instructionset.Loader` composes skills guidance in this order:
@@ -111,29 +112,32 @@ Token estimation uses a byte heuristic (~4 chars per token). Required sections a
 dropped. Non-required sections are dropped lowest-priority-first when the assembled
 brief exceeds the budget.
 ### ContextSource Interface
-Game systems contribute prompt sections via the `ContextSource` interface:
+The generic orchestration collector accepts `ContextSource` values:
 ```go
 type ContextSource interface {
     Collect(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error)
 }
 ```
 Core sources (campaign metadata, characters, scenes, interaction state) are
-always present. System-specific sources (for example Daggerheart rules and
-reference context) are registered into the same collector registry at the
-composition root.
+always present. Today the system-specific sources are Daggerheart-owned and live
+in `internal/services/ai/orchestration/daggerheart/`; the composition root
+registers those sources into the same collector registry.
 The important invariant is that prompt rendering consumes the typed
 `SessionBrief`; it no longer re-parses already rendered prompt text to recover
 bootstrap or interaction-state facts.
 ## Extension Points
-### Adding a Game System
-1. Create `data/instructions/v1/{system}/skills.md` with system-specific GM
-   guidance.
-2. Create `data/instructions/v1/{system}/reference-guide.md` with reference
-   lookup patterns.
-3. Implement `ContextSource` values for system-specific prompt sections.
-4. Register those sources in the AI composition root.
-5. Register the game system in the broader platform manifest when the rest of
-   the platform needs to discover it.
+### Current System-Specific Seam
+The current production game-system seam has two explicit parts:
+
+1. Daggerheart-specific prompt sources in
+   `internal/services/ai/orchestration/daggerheart/`
+2. Daggerheart-specific guidance/reference files under
+   `data/instructions/v1/daggerheart/`
+
+Those seams are real and production-backed today. A second game system would
+still require explicit architecture work around tool registration, reference
+corpus ownership, and composition-root wiring; contributors should not assume
+that dropping in a new `{system}` folder is enough.
 ### Modifying Agent Behavior
 Edit the markdown instruction files under `data/instructions/v1/`. Changes
 take effect on the next turn without recompilation when using

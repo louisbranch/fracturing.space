@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
 )
 
 // AuditEventStore is an in-memory audit-event repository fake.
 type AuditEventStore struct {
-	AuditEvents     []storage.AuditEventRecord
+	AuditEvents     []auditevent.Event
 	AuditEventNames []string
 }
 
@@ -24,21 +24,21 @@ func NewAuditEventStore() *AuditEventStore {
 }
 
 // PutAuditEvent appends an audit event record.
-func (s *AuditEventStore) PutAuditEvent(_ context.Context, record storage.AuditEventRecord) error {
+func (s *AuditEventStore) PutAuditEvent(_ context.Context, record auditevent.Event) error {
 	if strings.TrimSpace(record.ID) == "" {
 		record.ID = fmt.Sprintf("%d", len(s.AuditEvents)+1)
 	}
 	s.AuditEvents = append(s.AuditEvents, record)
-	s.AuditEventNames = append(s.AuditEventNames, record.EventName)
+	s.AuditEventNames = append(s.AuditEventNames, string(record.EventName))
 	return nil
 }
 
 // ListAuditEventsByOwner returns paginated audit events matching the filter.
-func (s *AuditEventStore) ListAuditEventsByOwner(_ context.Context, ownerUserID string, pageSize int, pageToken string, filter storage.AuditEventFilter) (storage.AuditEventPage, error) {
+func (s *AuditEventStore) ListAuditEventsByOwner(_ context.Context, ownerUserID string, pageSize int, pageToken string, filter auditevent.Filter) (auditevent.Page, error) {
 	if pageSize <= 0 {
-		return storage.AuditEventPage{}, errors.New("page size must be greater than zero")
+		return auditevent.Page{}, errors.New("page size must be greater than zero")
 	}
-	eventName := strings.TrimSpace(filter.EventName)
+	eventName := strings.TrimSpace(string(filter.EventName))
 	agentID := strings.TrimSpace(filter.AgentID)
 	var (
 		createdAfter  *time.Time
@@ -52,12 +52,12 @@ func (s *AuditEventStore) ListAuditEventsByOwner(_ context.Context, ownerUserID 
 		timestamp := filter.CreatedBefore.UTC()
 		createdBefore = &timestamp
 	}
-	items := make([]storage.AuditEventRecord, 0, len(s.AuditEvents))
+	items := make([]auditevent.Event, 0, len(s.AuditEvents))
 	for _, rec := range s.AuditEvents {
 		if rec.OwnerUserID != ownerUserID {
 			continue
 		}
-		if eventName != "" && rec.EventName != eventName {
+		if eventName != "" && string(rec.EventName) != eventName {
 			continue
 		}
 		if agentID != "" && rec.AgentID != agentID {
@@ -86,7 +86,7 @@ func (s *AuditEventStore) ListAuditEventsByOwner(_ context.Context, ownerUserID 
 		}
 	}
 	if start >= len(items) {
-		return storage.AuditEventPage{AuditEvents: []storage.AuditEventRecord{}}, nil
+		return auditevent.Page{AuditEvents: []auditevent.Event{}}, nil
 	}
 
 	end := start + pageSize
@@ -96,7 +96,7 @@ func (s *AuditEventStore) ListAuditEventsByOwner(_ context.Context, ownerUserID 
 	} else {
 		end = len(items)
 	}
-	return storage.AuditEventPage{
+	return auditevent.Page{
 		AuditEvents:   items[start:end],
 		NextPageToken: nextPageToken,
 	}, nil

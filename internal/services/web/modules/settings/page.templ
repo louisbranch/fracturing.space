@@ -28,6 +28,11 @@ type SettingsAIKeysForm struct {
 	ErrorMessage string
 }
 
+type SettingsAIProviderOption struct {
+	ID    string
+	Label string
+}
+
 type SettingsAIKeyRow struct {
 	ID        string
 	Label     string
@@ -51,8 +56,7 @@ type SettingsAICredentialOption struct {
 }
 
 type SettingsAIModelOption struct {
-	ID      string
-	OwnedBy string
+	ID string
 }
 
 type SettingsAIAgentRow struct {
@@ -88,9 +92,16 @@ func settingsLocaleValue(form SettingsLocaleForm) string {
 func settingsAIKeyProviderLabel(form SettingsAIKeysForm) string {
 	provider := strings.TrimSpace(form.Provider)
 	if provider == "" {
-		return "OpenAI"
+		return "openai"
 	}
-	return provider
+	return strings.ToLower(provider)
+}
+
+func settingsAIProviderOptions() []SettingsAIProviderOption {
+	return []SettingsAIProviderOption{
+		{ID: "openai", Label: "OpenAI"},
+		{ID: "anthropic", Label: "Anthropic"},
+	}
 }
 
 func settingsAIAgentsCredentialSelected(form SettingsAIAgentsForm, credentialID string) bool {
@@ -289,7 +300,15 @@ templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, l
 						<label class="label">
 							<span class="label-text">{ webtemplates.T(loc, "web.settings.ai_keys.field_provider") }</span>
 						</label>
-						<input class="input input-bordered w-full" type="text" value={ settingsAIKeyProviderLabel(form) } disabled/>
+						<select class="select select-bordered w-full" name="provider" required>
+							for _, option := range settingsAIProviderOptions() {
+								if settingsAIKeyProviderLabel(form) == option.ID {
+									<option value={ option.ID } selected>{ option.Label }</option>
+								} else {
+									<option value={ option.ID }>{ option.Label }</option>
+								}
+							}
+						</select>
 					</div>
 					<div class="form-control">
 						<label class="label">

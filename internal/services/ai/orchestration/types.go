@@ -20,6 +20,7 @@ const DefaultCommitToolName = "interaction_record_scene_gm_interaction"
 type RunnerConfig struct {
 	Dialer             Dialer
 	PromptBuilder      PromptBuilder
+	TurnPolicy         TurnPolicy
 	ToolPolicy         ToolPolicy
 	MaxSteps           int
 	TurnTimeout        time.Duration
@@ -27,6 +28,23 @@ type RunnerConfig struct {
 	// CommitToolName identifies which tool call signals a committed narration.
 	// Defaults to DefaultCommitToolName when empty.
 	CommitToolName string
+}
+
+// TurnPolicy owns turn-completion tracking and reminder policy for one
+// orchestration run.
+type TurnPolicy interface {
+	Controller(commitToolName string) TurnController
+}
+
+// TurnController tracks per-run control-flow state for final text eligibility.
+type TurnController interface {
+	ObserveSuccessfulTool(name string, output string)
+	HasCommittedOrResolvedInteraction() bool
+	ReadyForCompletion() bool
+	PlayerHandoffRegressed() bool
+	BuildCommitReminder(text string) string
+	BuildTurnCompletionReminder(text string) string
+	BuildPlayerPhaseStartReminder(text string) string
 }
 
 // PromptBuilder assembles the prompt for one campaign turn.
@@ -80,16 +98,16 @@ type PromptInput struct {
 
 // Input contains all data required to run one campaign turn.
 type Input struct {
-	CampaignID       string
-	SessionID        string
-	ParticipantID    string
-	Input            string
-	Model            string
-	ReasoningEffort  string
-	Instructions     string
-	CredentialSecret string
-	Provider         Provider
-	TraceRecorder    TraceRecorder
+	CampaignID      string
+	SessionID       string
+	ParticipantID   string
+	Input           string
+	Model           string
+	ReasoningEffort string
+	Instructions    string
+	AuthToken       string
+	Provider        Provider
+	TraceRecorder   TraceRecorder
 }
 
 // Result contains the final narrated output for a campaign turn.
@@ -114,15 +132,15 @@ type ToolResult struct {
 // ProviderInput contains provider input for either the initial prompt or a
 // follow-up batch of tool outputs.
 type ProviderInput struct {
-	Model            string
-	ReasoningEffort  string
-	Instructions     string
-	Prompt           string
-	FollowUpPrompt   string
-	CredentialSecret string
-	Tools            []Tool
-	ConversationID   string
-	Results          []ProviderToolResult
+	Model           string
+	ReasoningEffort string
+	Instructions    string
+	Prompt          string
+	FollowUpPrompt  string
+	AuthToken       string
+	Tools           []Tool
+	ConversationID  string
+	Results         []ProviderToolResult
 }
 
 // ProviderOutput contains either tool calls or final model output.

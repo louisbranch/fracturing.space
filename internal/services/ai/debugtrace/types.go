@@ -1,6 +1,7 @@
 package debugtrace
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -96,4 +97,13 @@ type Entry struct {
 type Page struct {
 	Turns         []Turn
 	NextPageToken string
+}
+
+// Store persists campaign/session-scoped AI GM turn traces.
+type Store interface {
+	PutCampaignDebugTurn(ctx context.Context, turn Turn) error
+	PutCampaignDebugTurnEntry(ctx context.Context, entry Entry) error
+	ListCampaignDebugTurns(ctx context.Context, campaignID string, sessionID string, pageSize int, pageToken string) (Page, error)
+	GetCampaignDebugTurn(ctx context.Context, campaignID string, turnID string) (Turn, error)
+	ListCampaignDebugTurnEntries(ctx context.Context, turnID string) ([]Entry, error)
 }

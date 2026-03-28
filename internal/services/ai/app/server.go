@@ -9,31 +9,17 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
-	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
-	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	orchdaggerheart "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
-	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
-	svcpkg "github.com/louisbranch/fracturing.space/internal/services/ai/service"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
-	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 var (
@@ -78,91 +64,24 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
 	}
 
-	store, err := openAIStore(cfg.DBPath)
-	if err != nil {
-		_ = listener.Close()
-		return nil, err
-	}
-
-	encryptionKey := strings.TrimSpace(cfg.EncryptionKey)
-	if encryptionKey == "" {
-		_ = listener.Close()
-		_ = store.Close()
-		// Refuse startup when key material is missing so secrets are never stored
-		// without encryption.
-		return nil, errors.New("FRACTURING_SPACE_AI_ENCRYPTION_KEY is required")
-	}
-	keyBytes, err := decodeBase64Key(encryptionKey)
-	if err != nil {
-		_ = listener.Close()
-		_ = store.Close()
-		return nil, fmt.Errorf("decode encryption key: %w", err)
-	}
-
-	sealer, err := secret.NewAESGCMSealer(keyBytes)
-	if err != nil {
-		_ = listener.Close()
-		_ = store.Close()
-		return nil, fmt.Errorf("build secret sealer: %w", err)
-	}
-
 	grpcServer := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(serviceIdentityValidationUnaryInterceptor(cfg.InternalServiceAllowlist)),
 		grpc.ChainStreamInterceptor(serviceIdentityValidationStreamInterceptor(cfg.InternalServiceAllowlist)),
 	)
-	providerOAuthAdapters := map[provider.Provider]provider.OAuthAdapter{
-		provider.OpenAI: newDefaultOpenAIOAuthAdapter(),
-	}
-	if cfg.OpenAIOAuthConfig != nil {
-		providerOAuthAdapters[provider.OpenAI] = openaiprovider.NewOAuthAdapter(*cfg.OpenAIOAuthConfig)
-	}
-	openAIAdapter := openaiprovider.NewInvokeAdapter(openaiprovider.InvokeConfig{
-		ResponsesURL: cfg.OpenAIResponsesURL,
-	})
-	providerInvocationAdapters := map[provider.Provider]provider.InvocationAdapter{
-		provider.OpenAI: openAIAdapter,
-	}
-	providerToolAdapters := map[provider.Provider]orchestration.Provider{
-		provider.OpenAI: openAIAdapter,
-	}
-	providerModelAdapters := map[provider.Provider]provider.ModelAdapter{
-		provider.OpenAI: openAIAdapter,
-	}
-	instructionLoader := instructionset.New(cfg.InstructionsRoot)
-	campaignArtifactManager := campaigncontext.NewManager(campaigncontext.ManagerConfig{
-		Store:         store,
-		SkillsLoader:  instructionLoader,
-		DefaultSystem: campaigncontext.DaggerheartSystem,
-	})
-	var referenceCorpus *referencecorpus.Corpus
-	if strings.TrimSpace(cfg.DaggerheartReferenceRoot) != "" {
-		referenceCorpus = referencecorpus.New(cfg.DaggerheartReferenceRoot)
-	}
-	systemReferenceHandlers := aiservice.NewSystemReferenceHandlers(referenceCorpus)
 
 	logger := slog.Default().With("service", "ai")
 
-	gameMc, gameClients := dialGameService(ctx, cfg.GameAddr, logger)
-	handlers, err := buildHandlers(handlerDeps{
-		store:                      store,
-		sealer:                     sealer,
-		cfg:                        cfg,
-		providerOAuthAdapters:      providerOAuthAdapters,
-		providerInvocationAdapters: providerInvocationAdapters,
-		providerToolAdapters:       providerToolAdapters,
-		providerModelAdapters:      providerModelAdapters,
-		campaignArtifactManager:    campaignArtifactManager,
-		referenceCorpus:            referenceCorpus,
-		systemReferenceHandlers:    systemReferenceHandlers,
-		instructionLoader:          instructionLoader,
-		gameClients:                gameClients,
-		gameMc:                     gameMc,
-	})
+	deps, err := buildRuntimeDeps(ctx, cfg, logger)
 	if err != nil {
 		_ = listener.Close()
-		_ = store.Close()
-		closeManagedConn(gameMc, "game", logger)
+		return nil, err
+	}
+
+	handlers, err := buildHandlers(deps)
+	if err != nil {
+		_ = listener.Close()
+		deps.close(logger)
 		return nil, fmt.Errorf("build handlers: %w", err)
 	}
 
@@ -173,269 +92,10 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		listener:   listener,
 		grpcServer: grpcServer,
 		health:     healthServer,
-		store:      store,
-		gameMc:     gameMc,
+		store:      deps.store,
+		gameMc:     deps.gameMc,
 		logger:     logger,
 	}, nil
-}
-
-// gameServiceClients groups optional game service gRPC clients that are nil
-// when the game service is unavailable.
-type gameServiceClients struct {
-	campaignAI    gamev1.CampaignAIServiceClient
-	authorization gamev1.AuthorizationServiceClient
-}
-
-func dialGameService(ctx context.Context, gameAddr string, logger *slog.Logger) (*platformgrpc.ManagedConn, gameServiceClients) {
-	gameAddr = strings.TrimSpace(gameAddr)
-	if gameAddr == "" {
-		return nil, gameServiceClients{}
-	}
-	mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
-		Name: "game",
-		Addr: gameAddr,
-		Mode: platformgrpc.ModeOptional,
-		Logf: slogPrintf(logger),
-		DialOpts: append(
-			platformgrpc.LenientDialOptions(),
-			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
-			grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceAI)),
-		),
-	})
-	if err != nil {
-		logger.Warn("game managed conn unavailable; agent usage guard disabled", "error", err)
-		return nil, gameServiceClients{}
-	}
-	return mc, gameServiceClients{
-		campaignAI:    gamev1.NewCampaignAIServiceClient(mc.Conn()),
-		authorization: gamev1.NewAuthorizationServiceClient(mc.Conn()),
-	}
-}
-
-// handlerDeps groups runtime dependencies for handler construction.
-type handlerDeps struct {
-	store                      *aisqlite.Store
-	sealer                     secret.Sealer
-	cfg                        runtimeConfig
-	providerOAuthAdapters      map[provider.Provider]provider.OAuthAdapter
-	providerInvocationAdapters map[provider.Provider]provider.InvocationAdapter
-	providerToolAdapters       map[provider.Provider]orchestration.Provider
-	providerModelAdapters      map[provider.Provider]provider.ModelAdapter
-	campaignArtifactManager    *campaigncontext.Manager
-	referenceCorpus            *referencecorpus.Corpus
-	systemReferenceHandlers    *aiservice.SystemReferenceHandlers
-	instructionLoader          *instructionset.Loader
-	gameClients                gameServiceClients
-	gameMc                     *platformgrpc.ManagedConn
-}
-
-// serviceHandlers collects all constructed gRPC service implementations.
-type serviceHandlers struct {
-	credentials           *aiservice.CredentialHandlers
-	agents                *aiservice.AgentHandlers
-	invocations           *aiservice.InvocationHandlers
-	campaignOrchestration *aiservice.CampaignOrchestrationHandlers
-	campaignDebug         *aiservice.CampaignDebugHandlers
-	campaignArtifacts     *aiservice.CampaignArtifactHandlers
-	systemReferences      *aiservice.SystemReferenceHandlers
-	providerGrants        *aiservice.ProviderGrantHandlers
-	accessRequests        *aiservice.AccessRequestHandlers
-}
-
-func buildHandlers(d handlerDeps) (serviceHandlers, error) {
-	debugUpdateBroker := svcpkg.NewCampaignDebugUpdateBroker()
-	usageGuard := svcpkg.NewUsageGuard(d.store, d.gameClients.campaignAI)
-	credentialService, err := svcpkg.NewCredentialService(svcpkg.CredentialServiceConfig{
-		CredentialStore: d.store,
-		Sealer:          d.sealer,
-		UsageGuard:      usageGuard,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("credential service: %w", err)
-	}
-	credentialHandlers, err := aiservice.NewCredentialHandlers(aiservice.CredentialHandlersConfig{
-		CredentialService: credentialService,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("credential handlers: %w", err)
-	}
-	campaignArtifactHandlers, err := aiservice.NewCampaignArtifactHandlers(aiservice.CampaignArtifactHandlersConfig{
-		Manager:                  d.campaignArtifactManager,
-		AuthorizationClient:      d.gameClients.authorization,
-		InternalServiceAllowlist: d.cfg.InternalServiceAllowlist,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("campaign artifact handlers: %w", err)
-	}
-	providerGrantService, err := svcpkg.NewProviderGrantService(svcpkg.ProviderGrantServiceConfig{
-		ProviderGrantStore:    d.store,
-		ConnectSessionStore:   d.store,
-		Sealer:                d.sealer,
-		ProviderOAuthAdapters: d.providerOAuthAdapters,
-		UsageGuard:            usageGuard,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("provider grant service: %w", err)
-	}
-	providerGrantHandlers, err := aiservice.NewProviderGrantHandlers(aiservice.ProviderGrantHandlersConfig{
-		ProviderGrantService: providerGrantService,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("provider grant handlers: %w", err)
-	}
-	accessRequestService, err := svcpkg.NewAccessRequestService(svcpkg.AccessRequestServiceConfig{
-		AgentStore:         d.store,
-		AccessRequestStore: d.store,
-		AuditEventStore:    d.store,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("access request service: %w", err)
-	}
-	accessRequestHandlers, err := aiservice.NewAccessRequestHandlers(aiservice.AccessRequestHandlersConfig{
-		AccessRequestService: accessRequestService,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("access request handlers: %w", err)
-	}
-	authTokenResolver := svcpkg.NewAuthTokenResolver(svcpkg.AuthTokenResolverConfig{
-		CredentialStore:       d.store,
-		ProviderGrantStore:    d.store,
-		ProviderOAuthAdapters: d.providerOAuthAdapters,
-		Sealer:                d.sealer,
-	})
-	accessibleAgentResolver := svcpkg.NewAccessibleAgentResolver(d.store, d.store)
-
-	agentService, err := svcpkg.NewAgentService(svcpkg.AgentServiceConfig{
-		CredentialStore:         d.store,
-		AgentStore:              d.store,
-		ProviderGrantStore:      d.store,
-		AccessRequestStore:      d.store,
-		ProviderModelAdapters:   d.providerModelAdapters,
-		AuthTokenResolver:       authTokenResolver,
-		AccessibleAgentResolver: accessibleAgentResolver,
-		UsageGuard:              usageGuard,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("agent service: %w", err)
-	}
-	agentHandlers, err := aiservice.NewAgentHandlers(aiservice.AgentHandlersConfig{
-		AgentService: agentService,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("agent handlers: %w", err)
-	}
-
-	invocationService, err := svcpkg.NewInvocationService(svcpkg.InvocationServiceConfig{
-		AgentStore:                 d.store,
-		AuditEventStore:            d.store,
-		AccessibleAgentResolver:    accessibleAgentResolver,
-		AuthTokenResolver:          authTokenResolver,
-		ProviderInvocationAdapters: d.providerInvocationAdapters,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("invocation service: %w", err)
-	}
-	invocationHandlers, err := aiservice.NewInvocationHandlers(aiservice.InvocationHandlersConfig{
-		InvocationService: invocationService,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("invocation handlers: %w", err)
-	}
-
-	var campaignTurnRunner orchestration.CampaignTurnRunner
-	if d.gameMc != nil {
-		gameConn := d.gameMc.Conn()
-		dialer := gametools.NewDirectDialer(gametools.Clients{
-			Interaction: gamev1.NewInteractionServiceClient(gameConn),
-			Scene:       gamev1.NewSceneServiceClient(gameConn),
-			Campaign:    gamev1.NewCampaignServiceClient(gameConn),
-			Participant: gamev1.NewParticipantServiceClient(gameConn),
-			Character:   gamev1.NewCharacterServiceClient(gameConn),
-			Session:     gamev1.NewSessionServiceClient(gameConn),
-			Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
-			Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
-			Artifact:    d.campaignArtifactManager,
-			Reference:   d.referenceCorpus,
-		})
-		promptBuilder := buildPromptBuilder(d.instructionLoader)
-		runnerCfg := d.cfg.campaignTurnRunnerConfig(dialer)
-		runnerCfg.PromptBuilder = promptBuilder
-		runnerCfg.ToolPolicy = orchestration.NewStaticToolPolicy(gametools.ProductionToolNames())
-		campaignTurnRunner = orchestration.NewRunner(runnerCfg)
-	}
-
-	campaignOrchestrationService, err := svcpkg.NewCampaignOrchestrationService(svcpkg.CampaignOrchestrationServiceConfig{
-		AgentStore:              d.store,
-		CampaignArtifactManager: d.campaignArtifactManager,
-		GameCampaignAIClient:    d.gameClients.campaignAI,
-		ProviderToolAdapters:    d.providerToolAdapters,
-		CampaignTurnRunner:      campaignTurnRunner,
-		DebugTraceStore:         d.store,
-		DebugUpdateBroker:       debugUpdateBroker,
-		SessionGrantConfig:      d.cfg.SessionGrantConfig,
-		AuthTokenResolver:       authTokenResolver,
-		Logger:                  slog.Default().With("service", "ai", "component", "campaign_debug"),
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("campaign orchestration service: %w", err)
-	}
-	campaignOrchestrationHandlers, err := aiservice.NewCampaignOrchestrationHandlers(aiservice.CampaignOrchestrationHandlersConfig{
-		CampaignOrchestrationService: campaignOrchestrationService,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("campaign orchestration handlers: %w", err)
-	}
-	campaignDebugService, err := svcpkg.NewCampaignDebugService(svcpkg.CampaignDebugServiceConfig{
-		DebugTraceStore: d.store,
-		UpdateBroker:    debugUpdateBroker,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("campaign debug service: %w", err)
-	}
-	campaignDebugHandlers, err := aiservice.NewCampaignDebugHandlers(aiservice.CampaignDebugHandlersConfig{
-		CampaignDebugService:     campaignDebugService,
-		AuthorizationClient:      d.gameClients.authorization,
-		InternalServiceAllowlist: d.cfg.InternalServiceAllowlist,
-	})
-	if err != nil {
-		return serviceHandlers{}, fmt.Errorf("campaign debug handlers: %w", err)
-	}
-
-	return serviceHandlers{
-		credentials:           credentialHandlers,
-		agents:                agentHandlers,
-		invocations:           invocationHandlers,
-		campaignOrchestration: campaignOrchestrationHandlers,
-		campaignDebug:         campaignDebugHandlers,
-		campaignArtifacts:     campaignArtifactHandlers,
-		systemReferences:      d.systemReferenceHandlers,
-		providerGrants:        providerGrantHandlers,
-		accessRequests:        accessRequestHandlers,
-	}, nil
-}
-
-func registerServices(grpcServer *grpc.Server, healthServer *health.Server, h serviceHandlers) {
-	aiv1.RegisterCredentialServiceServer(grpcServer, h.credentials)
-	aiv1.RegisterAgentServiceServer(grpcServer, h.agents)
-	aiv1.RegisterInvocationServiceServer(grpcServer, h.invocations)
-	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, h.campaignOrchestration)
-	aiv1.RegisterCampaignDebugServiceServer(grpcServer, h.campaignDebug)
-	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, h.campaignArtifacts)
-	aiv1.RegisterSystemReferenceServiceServer(grpcServer, h.systemReferences)
-	aiv1.RegisterProviderGrantServiceServer(grpcServer, h.providerGrants)
-	aiv1.RegisterAccessRequestServiceServer(grpcServer, h.accessRequests)
-	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
-
-	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.CredentialService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.AgentService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.InvocationService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.CampaignOrchestrationService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.CampaignDebugService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.CampaignArtifactService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.SystemReferenceService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.ProviderGrantService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("ai.v1.AccessRequestService", grpc_health_v1.HealthCheckResponse_SERVING)
 }
 
 // Addr returns the listener address for the AI server.
@@ -558,13 +218,8 @@ func buildPromptBuilder(loader *instructionset.Loader) orchestration.PromptBuild
 }
 
 func buildPromptContextSources() *orchestration.ContextSourceRegistry {
-	reg := orchestration.NewContextSourceRegistry()
-	for _, src := range orchestration.CoreContextSources() {
-		reg.Register(src)
-	}
-	for _, src := range orchdaggerheart.ContextSources() {
-		reg.Register(src)
-	}
+	reg := orchestration.NewCoreContextSourceRegistry()
+	reg.RegisterAll(orchdaggerheart.ContextSources()...)
 	return reg
 }
 

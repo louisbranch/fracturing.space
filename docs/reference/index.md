@@ -2,7 +2,7 @@
 title: "Reference"
 nav_order: 5
 has_children: true
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-23"
 ---
 
 # Reference
@@ -13,7 +13,6 @@ Exact runtime and contributor-facing contracts.
 
 - AI orchestration tools: [ai-tools.md](ai-tools.md)
 - AI orchestration resources: [ai-resources.md](ai-resources.md)
-- AI model comparison: [ai-model-comparison.md](ai-model-comparison.md)
 - Daggerheart live mechanics matrix: [daggerheart-live-mechanics-matrix.md](daggerheart-live-mechanics-matrix.md)
 
 ## Additional references

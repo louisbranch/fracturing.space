@@ -8,7 +8,9 @@ import (
 
 const tracerName = "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 
-var tracer = otel.Tracer(tracerName)
+func orchestrationTracer() trace.Tracer {
+	return otel.Tracer(tracerName)
+}
 
 func recordSpanError(span trace.Span, err error) {
 	if span == nil || err == nil {

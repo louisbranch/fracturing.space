@@ -67,6 +67,46 @@ func TestListCredentialsByOwner(t *testing.T) {
 	}
 }
 
+func TestListCredentialsByOwnerPagination(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 15, 22, 50, 0, 0, time.UTC)
+
+	for _, c := range []credential.Credential{
+		{ID: "cred-1", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "A", SecretCiphertext: "enc:1", Status: credential.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "cred-2", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "B", SecretCiphertext: "enc:2", Status: credential.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "cred-3", OwnerUserID: "user-1", Provider: provider.OpenAI, Label: "C", SecretCiphertext: "enc:3", Status: credential.StatusActive, CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := store.PutCredential(context.Background(), c); err != nil {
+			t.Fatalf("put credential %s: %v", c.ID, err)
+		}
+	}
+
+	first, err := store.ListCredentialsByOwner(context.Background(), "user-1", 2, "")
+	if err != nil {
+		t.Fatalf("list first credential page: %v", err)
+	}
+	if len(first.Credentials) != 2 {
+		t.Fatalf("first page len = %d, want 2", len(first.Credentials))
+	}
+	if first.NextPageToken != "cred-2" {
+		t.Fatalf("first next page token = %q, want %q", first.NextPageToken, "cred-2")
+	}
+
+	second, err := store.ListCredentialsByOwner(context.Background(), "user-1", 2, first.NextPageToken)
+	if err != nil {
+		t.Fatalf("list second credential page: %v", err)
+	}
+	if len(second.Credentials) != 1 {
+		t.Fatalf("second page len = %d, want 1", len(second.Credentials))
+	}
+	if second.Credentials[0].ID != "cred-3" {
+		t.Fatalf("second page id = %q, want %q", second.Credentials[0].ID, "cred-3")
+	}
+	if second.NextPageToken != "" {
+		t.Fatalf("second next page token = %q, want empty", second.NextPageToken)
+	}
+}
+
 func TestPutCredentialUpsertPersistsRevocationLifecycle(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 15, 22, 45, 0, 0, time.UTC)

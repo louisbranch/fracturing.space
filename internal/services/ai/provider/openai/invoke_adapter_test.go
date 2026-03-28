@@ -28,9 +28,9 @@ func TestInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
 	}}
 
 	_, err := adapter.Invoke(context.Background(), provider.InvokeInput{
-		Model:            "gpt-4o-mini",
-		Input:            "Say hello",
-		CredentialSecret: "sk-1",
+		Model:     "gpt-4o-mini",
+		Input:     "Say hello",
+		AuthToken: "sk-1",
 	})
 	if err == nil || !strings.Contains(err.Error(), "unexpected EOF") {
 		t.Fatalf("error = %v, want read error", err)
@@ -74,9 +74,9 @@ func TestInvokeAdapterInvokeValidation(t *testing.T) {
 		input provider.InvokeInput
 		want  string
 	}{
-		{name: "missing credential secret", input: provider.InvokeInput{Model: "gpt-4o-mini", Input: "hello"}, want: "credential secret is required"},
-		{name: "missing model", input: provider.InvokeInput{Input: "hello", CredentialSecret: "sk-1"}, want: "model is required"},
-		{name: "missing input", input: provider.InvokeInput{Model: "gpt-4o-mini", CredentialSecret: "sk-1"}, want: "input is required"},
+		{name: "missing auth token", input: provider.InvokeInput{Model: "gpt-4o-mini", Input: "hello"}, want: "auth token is required"},
+		{name: "missing model", input: provider.InvokeInput{Input: "hello", AuthToken: "sk-1"}, want: "model is required"},
+		{name: "missing input", input: provider.InvokeInput{Model: "gpt-4o-mini", AuthToken: "sk-1"}, want: "input is required"},
 	}
 
 	adapter := &InvokeAdapter{cfg: InvokeConfig{
@@ -110,9 +110,9 @@ func TestInvokeAdapterInvokeProviderError(t *testing.T) {
 	}}
 
 	_, err := adapter.Invoke(context.Background(), provider.InvokeInput{
-		Model:            "gpt-4o-mini",
-		Input:            "Say hello",
-		CredentialSecret: "sk-1",
+		Model:     "gpt-4o-mini",
+		Input:     "Say hello",
+		AuthToken: "sk-1",
 	})
 	if err == nil || !strings.Contains(err.Error(), "invoke request failed") || !strings.Contains(err.Error(), "unexpected EOF") {
 		t.Fatalf("error = %v, want provider error", err)
@@ -142,9 +142,9 @@ func TestInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 			}}
 
 			if _, err := adapter.Invoke(context.Background(), provider.InvokeInput{
-				Model:            "gpt-4o-mini",
-				Input:            "Say hello",
-				CredentialSecret: "sk-1",
+				Model:     "gpt-4o-mini",
+				Input:     "Say hello",
+				AuthToken: "sk-1",
 			}); err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("error = %v, want %q", err, tt.want)
 			}
@@ -211,11 +211,11 @@ func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 		ResponsesURL: server.URL + "/v1/responses",
 	})
 	got, err := adapter.Invoke(context.Background(), provider.InvokeInput{
-		Model:            "gpt-4o-mini",
-		Input:            "Say hello",
-		Instructions:     "Stay in character.",
-		ReasoningEffort:  "low",
-		CredentialSecret: "sk-1",
+		Model:           "gpt-4o-mini",
+		Input:           "Say hello",
+		Instructions:    "Stay in character.",
+		ReasoningEffort: "low",
+		AuthToken:       "sk-1",
 	})
 	if err != nil {
 		t.Fatalf("invoke: %v", err)
@@ -227,7 +227,7 @@ func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 		t.Fatalf("usage = %#v", got.Usage)
 	}
 
-	models, err := adapter.ListModels(context.Background(), provider.ListModelsInput{CredentialSecret: "sk-1"})
+	models, err := adapter.ListModels(context.Background(), provider.ListModelsInput{AuthToken: "sk-1"})
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
@@ -236,9 +236,6 @@ func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 	}
 	if models[0].ID != "gpt-4o-mini" || models[1].ID != "gpt-4o" {
 		t.Fatalf("models = %#v, want gpt-4o-mini and gpt-4o", models)
-	}
-	if models[0].Created != 1 || models[1].Created != 1 {
-		t.Fatalf("created values = %#v, want provider-created timestamps preserved", models)
 	}
 }
 
@@ -252,10 +249,10 @@ func TestInvokeAdapterListModelsValidationAndError(t *testing.T) {
 		},
 	}}
 
-	if _, err := adapter.ListModels(context.Background(), provider.ListModelsInput{}); err == nil || !strings.Contains(err.Error(), "credential secret is required") {
-		t.Fatalf("error = %v, want missing credential secret", err)
+	if _, err := adapter.ListModels(context.Background(), provider.ListModelsInput{}); err == nil || !strings.Contains(err.Error(), "auth token is required") {
+		t.Fatalf("error = %v, want missing auth token", err)
 	}
-	if _, err := adapter.ListModels(context.Background(), provider.ListModelsInput{CredentialSecret: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
+	if _, err := adapter.ListModels(context.Background(), provider.ListModelsInput{AuthToken: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
 		t.Fatalf("error = %v, want list models provider error", err)
 	}
 }
@@ -326,9 +323,9 @@ func TestInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 		HTTPClient:   server.Client(),
 	}}
 	res, err := adapter.Run(context.Background(), orchestration.ProviderInput{
-		Model:            "gpt-4.1-mini",
-		Prompt:           "Start the scene.",
-		CredentialSecret: "sk-1",
+		Model:     "gpt-4.1-mini",
+		Prompt:    "Start the scene.",
+		AuthToken: "sk-1",
 		Tools: []orchestration.Tool{
 			{Name: "duality_rules_version", Description: "Describe the ruleset", InputSchema: map[string]any{"type": "object"}},
 			{
@@ -401,10 +398,10 @@ func TestInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
 		HTTPClient:   server.Client(),
 	}}
 	res, err := adapter.Run(context.Background(), orchestration.ProviderInput{
-		Model:            "gpt-5.4",
-		ReasoningEffort:  "medium",
-		Prompt:           "Start the scene.",
-		CredentialSecret: "sk-1",
+		Model:           "gpt-5.4",
+		ReasoningEffort: "medium",
+		Prompt:          "Start the scene.",
+		AuthToken:       "sk-1",
 	})
 	if err != nil {
 		t.Fatalf("run: %v", err)

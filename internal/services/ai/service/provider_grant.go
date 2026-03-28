@@ -12,7 +12,10 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providercatalog"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providerconnect"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provideroauth"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
@@ -20,14 +23,21 @@ import (
 // CodeVerifierGenerator returns a PKCE code verifier string.
 type CodeVerifierGenerator = func() (string, error)
 
+// ProviderConnectFinisher atomically persists provider grant creation and
+// connect-session completion after OAuth exchange succeeds.
+type ProviderConnectFinisher interface {
+	FinishProviderConnect(ctx context.Context, grant providergrant.ProviderGrant, completedSession providerconnect.Session) error
+}
+
 // ProviderGrantService handles provider-grant lifecycle operations including
 // the OAuth connect handshake, listing, and revocation.
 type ProviderGrantService struct {
 	providerGrantStore    storage.ProviderGrantStore
-	connectSessionStore   storage.ProviderConnectSessionStore
+	connectSessionStore   providerconnect.Store
+	connectFinisher       ProviderConnectFinisher
 	sealer                secret.Sealer
-	providerOAuthAdapters map[provider.Provider]provider.OAuthAdapter
-	usageGuard            *UsageGuard
+	providerRegistry      *providercatalog.Registry
+	usagePolicy           *UsagePolicy
 	clock                 Clock
 	idGenerator           IDGenerator
 	codeVerifierGenerator CodeVerifierGenerator
@@ -36,10 +46,11 @@ type ProviderGrantService struct {
 // ProviderGrantServiceConfig declares dependencies for the provider grant service.
 type ProviderGrantServiceConfig struct {
 	ProviderGrantStore    storage.ProviderGrantStore
-	ConnectSessionStore   storage.ProviderConnectSessionStore
+	ConnectSessionStore   providerconnect.Store
+	ConnectFinisher       ProviderConnectFinisher
 	Sealer                secret.Sealer
-	ProviderOAuthAdapters map[provider.Provider]provider.OAuthAdapter
-	UsageGuard            *UsageGuard
+	ProviderRegistry      *providercatalog.Registry
+	UsagePolicy           *UsagePolicy
 	Clock                 Clock
 	IDGenerator           IDGenerator
 	CodeVerifierGenerator CodeVerifierGenerator
@@ -53,8 +64,14 @@ func NewProviderGrantService(cfg ProviderGrantServiceConfig) (*ProviderGrantServ
 	if cfg.ConnectSessionStore == nil {
 		return nil, fmt.Errorf("ai: NewProviderGrantService: connect session store is required")
 	}
+	if cfg.ConnectFinisher == nil {
+		return nil, fmt.Errorf("ai: NewProviderGrantService: connect finisher is required")
+	}
 	if cfg.Sealer == nil {
 		return nil, fmt.Errorf("ai: NewProviderGrantService: sealer is required")
+	}
+	if err := RequireProviderRegistry(cfg.ProviderRegistry, "NewProviderGrantService"); err != nil {
+		return nil, err
 	}
 	cvg := cfg.CodeVerifierGenerator
 	if cvg == nil {
@@ -63,9 +80,10 @@ func NewProviderGrantService(cfg ProviderGrantServiceConfig) (*ProviderGrantServ
 	return &ProviderGrantService{
 		providerGrantStore:    cfg.ProviderGrantStore,
 		connectSessionStore:   cfg.ConnectSessionStore,
+		connectFinisher:       cfg.ConnectFinisher,
 		sealer:                cfg.Sealer,
-		providerOAuthAdapters: copyOAuthAdapters(cfg.ProviderOAuthAdapters),
-		usageGuard:            cfg.UsageGuard,
+		providerRegistry:      cfg.ProviderRegistry,
+		usagePolicy:           cfg.UsagePolicy,
 		clock:                 withDefaultClock(cfg.Clock),
 		idGenerator:           withDefaultIDGenerator(cfg.IDGenerator),
 		codeVerifierGenerator: cvg,
@@ -113,30 +131,31 @@ func (s *ProviderGrantService) StartConnect(ctx context.Context, input StartConn
 
 	now := s.clock().UTC()
 	expiresAt := now.Add(10 * time.Minute)
-	record := storage.ProviderConnectSessionRecord{
+	session, err := providerconnect.CreatePending(providerconnect.CreateInput{
 		ID:                     sessionID,
 		OwnerUserID:            input.OwnerUserID,
-		Provider:               string(input.Provider),
-		Status:                 "pending",
-		RequestedScopes:        providergrant.NormalizeScopes(input.RequestedScopes),
+		Provider:               input.Provider,
+		RequestedScopes:        input.RequestedScopes,
 		StateHash:              hashState(state),
 		CodeVerifierCiphertext: codeVerifierCiphertext,
 		CreatedAt:              now,
-		UpdatedAt:              now,
 		ExpiresAt:              expiresAt,
+	})
+	if err != nil {
+		return StartConnectOutput{}, Errorf(ErrKindInvalidArgument, "%s", err)
 	}
-	if err := s.connectSessionStore.PutProviderConnectSession(ctx, record); err != nil {
+	if err := s.connectSessionStore.PutProviderConnectSession(ctx, session); err != nil {
 		return StartConnectOutput{}, Wrapf(ErrKindInternal, err, "put provider connect session")
 	}
 
-	adapter, ok := s.providerOAuthAdapters[input.Provider]
+	adapter, ok := s.providerRegistry.OAuthAdapter(input.Provider)
 	if !ok || adapter == nil {
 		return StartConnectOutput{}, Errorf(ErrKindFailedPrecondition, "provider oauth adapter is unavailable")
 	}
-	authorizationURL, err := adapter.BuildAuthorizationURL(provider.AuthorizationURLInput{
+	authorizationURL, err := adapter.BuildAuthorizationURL(provideroauth.AuthorizationURLInput{
 		State:           state,
 		CodeChallenge:   codeChallenge,
-		RequestedScopes: record.RequestedScopes,
+		RequestedScopes: session.RequestedScopes,
 	})
 	if err != nil {
 		return StartConnectOutput{}, Wrapf(ErrKindInternal, err, "build authorization url")
@@ -180,7 +199,7 @@ func (s *ProviderGrantService) FinishConnect(ctx context.Context, input FinishCo
 	if session.OwnerUserID != input.OwnerUserID {
 		return providergrant.ProviderGrant{}, Errorf(ErrKindNotFound, "connect session not found")
 	}
-	if !strings.EqualFold(session.Status, "pending") {
+	if session.Status != providerconnect.StatusPending {
 		return providergrant.ProviderGrant{}, Errorf(ErrKindFailedPrecondition, "connect session is no longer pending")
 	}
 	if s.clock().UTC().After(session.ExpiresAt) {
@@ -190,11 +209,8 @@ func (s *ProviderGrantService) FinishConnect(ctx context.Context, input FinishCo
 		return providergrant.ProviderGrant{}, Errorf(ErrKindFailedPrecondition, "state mismatch")
 	}
 
-	providerID := normalizeProviderString(session.Provider)
-	if providerID != provider.OpenAI {
-		return providergrant.ProviderGrant{}, Errorf(ErrKindFailedPrecondition, "provider is unavailable")
-	}
-	adapter, ok := s.providerOAuthAdapters[providerID]
+	providerID := session.Provider
+	adapter, ok := s.providerRegistry.OAuthAdapter(providerID)
 	if !ok || adapter == nil {
 		return providergrant.ProviderGrant{}, Errorf(ErrKindFailedPrecondition, "provider oauth adapter is unavailable")
 	}
@@ -202,17 +218,18 @@ func (s *ProviderGrantService) FinishConnect(ctx context.Context, input FinishCo
 	if err != nil {
 		return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "open code verifier")
 	}
-	exchanged, err := adapter.ExchangeAuthorizationCode(ctx, provider.AuthorizationCodeInput{
+	exchanged, err := adapter.ExchangeAuthorizationCode(ctx, provideroauth.AuthorizationCodeInput{
 		AuthorizationCode: input.AuthorizationCode,
 		CodeVerifier:      codeVerifier,
 	})
 	if err != nil {
 		return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "exchange authorization code")
 	}
-	if exchanged.TokenPlaintext == "" {
-		return providergrant.ProviderGrant{}, Errorf(ErrKindInternal, "provider returned empty token payload")
+	tokenPlaintext, err := provideroauth.EncodeTokenPayload(exchanged.TokenPayload)
+	if err != nil {
+		return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "encode provider token payload")
 	}
-	tokenCiphertext, err := s.sealer.Seal(exchanged.TokenPlaintext)
+	tokenCiphertext, err := s.sealer.Seal(tokenPlaintext)
 	if err != nil {
 		return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "seal provider token")
 	}
@@ -222,23 +239,22 @@ func (s *ProviderGrantService) FinishConnect(ctx context.Context, input FinishCo
 		Provider:         providerID,
 		GrantedScopes:    session.RequestedScopes,
 		TokenCiphertext:  tokenCiphertext,
-		RefreshSupported: exchanged.RefreshSupported,
+		RefreshSupported: strings.TrimSpace(exchanged.TokenPayload.RefreshToken) != "",
 		ExpiresAt:        exchanged.ExpiresAt,
 	}, s.clock, s.idGenerator)
 	if err != nil {
 		return providergrant.ProviderGrant{}, Errorf(ErrKindInvalidArgument, "%s", err)
 	}
 
-	if err := s.providerGrantStore.PutProviderGrant(ctx, created); err != nil {
-		return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "put provider grant")
+	completedSession, err := providerconnect.Complete(session, s.clock().UTC())
+	if err != nil {
+		return providergrant.ProviderGrant{}, Errorf(ErrKindFailedPrecondition, "%s", err)
 	}
-
-	completedAt := s.clock().UTC()
-	if err := s.connectSessionStore.CompleteProviderConnectSession(ctx, input.OwnerUserID, input.ConnectSessionID, completedAt); err != nil {
+	if err := s.connectFinisher.FinishProviderConnect(ctx, created, completedSession); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return providergrant.ProviderGrant{}, Errorf(ErrKindNotFound, "connect session not found")
 		}
-		return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "complete connect session")
+		return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "finish provider connect")
 	}
 	return created, nil
 }
@@ -258,8 +274,8 @@ func (s *ProviderGrantService) Revoke(ctx context.Context, ownerUserID, provider
 	if providerGrantID == "" {
 		return providergrant.ProviderGrant{}, Errorf(ErrKindInvalidArgument, "provider_grant_id is required")
 	}
-	if s.usageGuard != nil {
-		if err := s.usageGuard.EnsureProviderGrantNotBoundToActiveCampaigns(ctx, ownerUserID, providerGrantID); err != nil {
+	if s.usagePolicy != nil {
+		if err := s.usagePolicy.EnsureProviderGrantNotBoundToActiveCampaigns(ctx, ownerUserID, providerGrantID); err != nil {
 			return providergrant.ProviderGrant{}, err
 		}
 	}
@@ -275,20 +291,21 @@ func (s *ProviderGrantService) Revoke(ctx context.Context, ownerUserID, provider
 		return providergrant.ProviderGrant{}, Errorf(ErrKindNotFound, "provider grant not found")
 	}
 
-	if adapter, ok := s.providerOAuthAdapters[grant.Provider]; ok && adapter != nil {
-		tokenPlaintext, err := s.sealer.Open(grant.TokenCiphertext)
-		if err != nil {
-			return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "open provider token")
-		}
-		tokenForRevoke, err := providergrant.RevokeTokenFromPayload(tokenPlaintext)
-		if err != nil {
-			return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "derive provider revoke token")
-		}
-		if err := adapter.RevokeToken(ctx, provider.RevokeTokenInput{Token: tokenForRevoke}); err != nil {
-			return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "revoke provider token")
+	if adapter, ok := s.providerRegistry.OAuthAdapter(grant.Provider); ok && adapter != nil {
+		if revoker, ok := adapter.(provideroauth.TokenRevoker); ok && revoker != nil {
+			tokenPlaintext, err := s.sealer.Open(grant.TokenCiphertext)
+			if err != nil {
+				return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "open provider token")
+			}
+			tokenForRevoke, err := provideroauth.RevokeTokenFromPayload(tokenPlaintext)
+			if err != nil {
+				return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "derive provider revoke token")
+			}
+			if err := revoker.RevokeToken(ctx, provideroauth.RevokeTokenInput{Token: tokenForRevoke}); err != nil {
+				return providergrant.ProviderGrant{}, Wrapf(ErrKindInternal, err, "revoke provider token")
+			}
 		}
 	}
-
 	revoked, err := providergrant.Revoke(grant, s.clock)
 	if err != nil {
 		return providergrant.ProviderGrant{}, Errorf(ErrKindFailedPrecondition, "%s", err)
@@ -336,26 +353,4 @@ func isValidPKCECodeVerifier(value string) bool {
 func hashState(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])
-}
-
-// normalizeProviderString converts a raw provider string to a typed provider,
-// returning empty on failure.
-func normalizeProviderString(value string) provider.Provider {
-	normalized, err := provider.Normalize(value)
-	if err != nil {
-		return ""
-	}
-	return normalized
-}
-
-// copyOAuthAdapters returns a defensive copy of the adapter map.
-func copyOAuthAdapters(adapters map[provider.Provider]provider.OAuthAdapter) map[provider.Provider]provider.OAuthAdapter {
-	if adapters == nil {
-		return nil
-	}
-	copied := make(map[provider.Provider]provider.OAuthAdapter, len(adapters))
-	for k, v := range adapters {
-		copied[k] = v
-	}
-	return copied
 }

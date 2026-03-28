@@ -38,11 +38,11 @@ func NewInvokeAdapter(cfg InvokeConfig) *InvokeAdapter {
 }
 
 func (a *InvokeAdapter) Invoke(ctx context.Context, input provider.InvokeInput) (provider.InvokeResult, error) {
-	credentialSecret := strings.TrimSpace(input.CredentialSecret)
+	authToken := strings.TrimSpace(input.AuthToken)
 	model := strings.TrimSpace(input.Model)
 	prompt := strings.TrimSpace(input.Input)
-	if credentialSecret == "" {
-		return provider.InvokeResult{}, fmt.Errorf("credential secret is required")
+	if authToken == "" {
+		return provider.InvokeResult{}, fmt.Errorf("auth token is required")
 	}
 	if model == "" {
 		return provider.InvokeResult{}, fmt.Errorf("model is required")
@@ -55,10 +55,10 @@ func (a *InvokeAdapter) Invoke(ctx context.Context, input provider.InvokeInput) 
 
 // Run executes one OpenAI Responses API step with native tool calling.
 func (a *InvokeAdapter) Run(ctx context.Context, input orchestration.ProviderInput) (orchestration.ProviderOutput, error) {
-	credentialSecret := strings.TrimSpace(input.CredentialSecret)
+	authToken := strings.TrimSpace(input.AuthToken)
 	model := strings.TrimSpace(input.Model)
-	if credentialSecret == "" {
-		return orchestration.ProviderOutput{}, fmt.Errorf("credential secret is required")
+	if authToken == "" {
+		return orchestration.ProviderOutput{}, fmt.Errorf("auth token is required")
 	}
 	if model == "" {
 		return orchestration.ProviderOutput{}, fmt.Errorf("model is required")
@@ -126,7 +126,7 @@ func (a *InvokeAdapter) Run(ctx context.Context, input orchestration.ProviderInp
 		}}
 	}
 
-	payload, err := a.responsesRequest(ctx, body, credentialSecret)
+	payload, err := a.responsesRequest(ctx, body, authToken)
 	if err != nil {
 		return orchestration.ProviderOutput{}, err
 	}

@@ -16,13 +16,11 @@ import (
 const defaultMaxSteps = 8
 const defaultTurnTimeout = 2 * time.Minute
 const defaultToolResultMaxBytes = 32 * 1024
-const playerPhaseStartToolName = "interaction_open_scene_player_phase"
-const reviewResolveToolName = "interaction_resolve_scene_player_review"
-const interruptResolutionToolName = "interaction_session_ooc_resolve"
 
 type runner struct {
 	dialer             Dialer
 	promptBuilder      PromptBuilder
+	turnPolicy         TurnPolicy
 	toolPolicy         ToolPolicy
 	max                int
 	turnTimeout        time.Duration
@@ -49,6 +47,10 @@ func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 	if promptBuilder == nil {
 		promptBuilder = newDegradedPromptBuilder()
 	}
+	turnPolicy := cfg.TurnPolicy
+	if turnPolicy == nil {
+		turnPolicy = NewInteractionTurnPolicy()
+	}
 	toolPolicy := cfg.ToolPolicy
 	if toolPolicy == nil {
 		toolPolicy = AllowAllToolPolicy()
@@ -60,6 +62,7 @@ func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 	return &runner{
 		dialer:             cfg.Dialer,
 		promptBuilder:      promptBuilder,
+		turnPolicy:         turnPolicy,
 		toolPolicy:         toolPolicy,
 		max:                maxSteps,
 		turnTimeout:        turnTimeout,
@@ -70,7 +73,7 @@ func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 
 // Run executes one provider turn.
 func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
-	ctx, span := tracer.Start(ctx, "ai.orchestration.run")
+	ctx, span := orchestrationTracer().Start(ctx, "ai.orchestration.run")
 	defer span.End()
 	if r == nil || r.dialer == nil {
 		err := errRunnerUnavailable()
@@ -97,8 +100,8 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		recordSpanError(span, err)
 		return Result{}, err
 	}
-	if input.CredentialSecret == "" {
-		err := errInvalidInput("credential secret is required")
+	if input.AuthToken == "" {
+		err := errInvalidInput("auth token is required")
 		recordSpanError(span, err)
 		return Result{}, err
 	}
@@ -143,7 +146,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	for _, tool := range allowedTools {
 		allowedToolNames[tool.Name] = struct{}{}
 	}
-	promptCtx, promptSpan := tracer.Start(ctx, "ai.orchestration.build_prompt")
+	promptCtx, promptSpan := orchestrationTracer().Start(ctx, "ai.orchestration.build_prompt")
 	prompt, err := r.promptBuilder.Build(promptCtx, sess, PromptInput{
 		CampaignID:    input.CampaignID,
 		SessionID:     input.SessionID,
@@ -161,35 +164,31 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	promptSpan.End()
 
 	var convo string
-	committedOrResolved := false
-	readyForCompletion := false
+	turnController := r.turnPolicy.Controller(r.commitToolName)
 	var results []ProviderToolResult
 	commitReminderUsed := false
 	completionReminderUsed := false
 	playerPhaseReminderUsed := false
 	var followUpPrompt string
 	var usage provider.Usage
-	lastCommitToolOrder := 0
-	lastPlayerHandoffToolOrder := 0
-	toolOrder := 0
 
 	for i := 0; i < r.max; i++ {
-		stepCtx, stepSpan := tracer.Start(ctx, "ai.orchestration.provider_step")
+		stepCtx, stepSpan := orchestrationTracer().Start(ctx, "ai.orchestration.provider_step")
 		stepSpan.SetAttributes(
 			attribute.Int("ai.orchestration.step_index", i+1),
 			attribute.Bool("ai.orchestration.has_followup_prompt", followUpPrompt != ""),
 			attribute.Int("ai.orchestration.result_count", len(results)),
 		)
 		step, err := input.Provider.Run(stepCtx, ProviderInput{
-			Model:            input.Model,
-			ReasoningEffort:  input.ReasoningEffort,
-			Instructions:     input.Instructions,
-			Prompt:           prompt,
-			FollowUpPrompt:   followUpPrompt,
-			CredentialSecret: input.CredentialSecret,
-			Tools:            allowedTools,
-			ConversationID:   convo,
-			Results:          results,
+			Model:           input.Model,
+			ReasoningEffort: input.ReasoningEffort,
+			Instructions:    input.Instructions,
+			Prompt:          prompt,
+			FollowUpPrompt:  followUpPrompt,
+			AuthToken:       input.AuthToken,
+			Tools:           allowedTools,
+			ConversationID:  convo,
+			Results:         results,
 		})
 		if err != nil {
 			err = errExecution(fmt.Errorf("invoke provider: %w", err))
@@ -217,22 +216,22 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				recordSpanError(span, err)
 				return Result{}, err
 			}
-			if !committedOrResolved {
+			if !turnController.HasCommittedOrResolvedInteraction() {
 				if !commitReminderUsed && i+1 < r.max {
 					commitReminderUsed = true
 					results = nil
-					followUpPrompt = buildCommitReminder(text)
+					followUpPrompt = turnController.BuildCommitReminder(text)
 					span.AddEvent("ai.orchestration.commit_reminder_requested")
 					continue
 				}
 				recordSpanError(span, ErrNarrationNotCommitted)
 				return Result{}, ErrNarrationNotCommitted
 			}
-			if !readyForCompletion {
+			if !turnController.ReadyForCompletion() {
 				if !completionReminderUsed && i+1 < r.max {
 					completionReminderUsed = true
 					results = nil
-					followUpPrompt = buildTurnCompletionReminder(text)
+					followUpPrompt = turnController.BuildTurnCompletionReminder(text)
 					span.AddEvent("ai.orchestration.turn_completion_reminder_requested")
 					continue
 				}
@@ -240,11 +239,11 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				recordSpanError(span, err)
 				return Result{}, err
 			}
-			if lastCommitToolOrder > 0 && lastPlayerHandoffToolOrder > 0 && lastCommitToolOrder > lastPlayerHandoffToolOrder {
+			if turnController.PlayerHandoffRegressed() {
 				if !playerPhaseReminderUsed && i+1 < r.max {
 					playerPhaseReminderUsed = true
 					results = nil
-					followUpPrompt = buildPlayerPhaseStartReminder(text)
+					followUpPrompt = turnController.BuildPlayerPhaseStartReminder(text)
 					span.AddEvent("ai.orchestration.player_phase_restart_requested")
 					continue
 				}
@@ -252,7 +251,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				recordSpanError(span, err)
 				return Result{}, err
 			}
-			span.SetAttributes(attribute.Bool("ai.orchestration.committed_output", committedOrResolved))
+			span.SetAttributes(attribute.Bool("ai.orchestration.committed_output", turnController.HasCommittedOrResolvedInteraction()))
 			return Result{OutputText: text, Usage: usage}, nil
 		}
 
@@ -297,22 +296,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				continue
 			}
 			if !res.IsError {
-				if toolCommitsOrResolvesInteraction(strings.TrimSpace(call.Name), r.commitToolName) {
-					committedOrResolved = true
-				}
-				toolOrder++
-				switch strings.TrimSpace(call.Name) {
-				case strings.TrimSpace(r.commitToolName), playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName:
-					lastCommitToolOrder = toolOrder
-				}
-				if ready, handoff, ok := toolResultControlState(res.Output); ok {
-					readyForCompletion = ready
-					if handoff {
-						lastPlayerHandoffToolOrder = toolOrder
-					}
-				} else if toolHandsControlBackToPlayers(strings.TrimSpace(call.Name)) {
-					lastPlayerHandoffToolOrder = toolOrder
-				}
+				turnController.ObserveSuccessfulTool(call.Name, res.Output)
 			}
 			outputText, truncated := truncateToolResultOutput(res.Output, r.toolResultMaxBytes)
 			result := ProviderToolResult{
@@ -337,64 +321,6 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 
 	recordSpanError(span, ErrStepLimit)
 	return Result{}, ErrStepLimit
-}
-
-func buildCommitReminder(text string) string {
-	var b strings.Builder
-	b.WriteString("You returned narration without making the authoritative interaction update for this turn.\n")
-	b.WriteString("Use interaction_record_scene_gm_interaction for standalone narration, interaction_resolve_scene_player_review for GM review, or interaction_session_ooc_resolve for post-OOC resolution before returning final text.\n")
-	b.WriteString("Use interaction_open_scene_player_phase when the interaction should immediately hand control to players.\n")
-	b.WriteString("Commit one structured GM interaction made of ordered beats rather than separate narration and frame artifacts.\n")
-	b.WriteString("Keep related prose in one beat unless the GM function or information context materially changes.\n")
-	b.WriteString("If there is no active scene, create one with scene_create (which activates by default) or activate an existing scene.\n")
-	if text != "" {
-		b.WriteString("Use this draft narration as the commit text unless you need a small correction:\n")
-		b.WriteString(text)
-	}
-	return b.String()
-}
-
-func buildTurnCompletionReminder(text string) string {
-	var b strings.Builder
-	b.WriteString("You already made an authoritative GM update, but the AI GM turn is not complete yet.\n")
-	b.WriteString("Return final text only after the next player phase is open for players or the session is paused for OOC.\n")
-	b.WriteString("Use interaction_open_scene_player_phase to hand control to players, interaction_resolve_scene_player_review when GM review is pending, or interaction_session_ooc_resolve when post-OOC interaction resolution is still blocking players.\n")
-	if text != "" {
-		b.WriteString("Keep this draft narration unless you need a small correction:\n")
-		b.WriteString(text)
-	}
-	return b.String()
-}
-
-func buildPlayerPhaseStartReminder(text string) string {
-	text = strings.TrimSpace(text)
-	var b strings.Builder
-	b.WriteString("You committed GM narration after opening a player phase, which leaves the interaction without an active player handoff.\n")
-	b.WriteString("If players should act next, call interaction_open_scene_player_phase now with the acting character_ids and the structured interaction whose final prompt beat hands control to players.\n")
-	b.WriteString("The beat-based interaction must be committed before the player phase is opened.\n")
-	if text != "" {
-		b.WriteString("Keep this final narration unless you need a small correction:\n")
-		b.WriteString(text)
-	}
-	return b.String()
-}
-
-func toolCommitsOrResolvesInteraction(name, configuredCommitTool string) bool {
-	switch strings.TrimSpace(name) {
-	case strings.TrimSpace(configuredCommitTool), playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName:
-		return true
-	default:
-		return false
-	}
-}
-
-func toolHandsControlBackToPlayers(name string) bool {
-	switch strings.TrimSpace(name) {
-	case playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName:
-		return true
-	default:
-		return false
-	}
 }
 
 func truncateToolResultOutput(text string, maxBytes int) (string, bool) {
@@ -422,38 +348,4 @@ func decodeArgs(raw string) (any, error) {
 		return nil, err
 	}
 	return value, nil
-}
-
-type toolResultControlHints struct {
-	AITurnReadyForCompletion *bool `json:"ai_turn_ready_for_completion,omitempty"`
-	PlayerPhase              struct {
-		PhaseID              string   `json:"phase_id,omitempty"`
-		Status               string   `json:"status,omitempty"`
-		ActingParticipantIDs []string `json:"acting_participant_ids,omitempty"`
-	} `json:"player_phase"`
-	OOC struct {
-		Open              bool `json:"open"`
-		ResolutionPending bool `json:"resolution_pending"`
-	} `json:"ooc"`
-}
-
-func toolResultControlState(output string) (ready bool, handoff bool, ok bool) {
-	var hints toolResultControlHints
-	if err := json.Unmarshal([]byte(output), &hints); err != nil {
-		return false, false, false
-	}
-	if hints.AITurnReadyForCompletion != nil {
-		ready = *hints.AITurnReadyForCompletion
-	} else {
-		ready = hints.OOC.Open && !hints.OOC.ResolutionPending
-		if !ready {
-			ready = strings.EqualFold(strings.TrimSpace(hints.PlayerPhase.Status), "players") &&
-				strings.TrimSpace(hints.PlayerPhase.PhaseID) != "" &&
-				len(hints.PlayerPhase.ActingParticipantIDs) > 0
-		}
-	}
-	handoff = strings.EqualFold(strings.TrimSpace(hints.PlayerPhase.Status), "players") &&
-		strings.TrimSpace(hints.PlayerPhase.PhaseID) != "" &&
-		len(hints.PlayerPhase.ActingParticipantIDs) > 0
-	return ready, handoff, true
 }

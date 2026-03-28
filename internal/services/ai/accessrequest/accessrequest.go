@@ -60,12 +60,16 @@ var (
 	ErrRequesterIsOwner = errors.New("requester cannot request access to own agent")
 	// ErrEmptyReviewerUserID indicates reviewer user ID is required.
 	ErrEmptyReviewerUserID = errors.New("reviewer user id is required")
+	// ErrEmptyRevokerUserID indicates revoker user ID is required.
+	ErrEmptyRevokerUserID = errors.New("revoker user id is required")
 	// ErrInvalidDecision indicates review decision must be approve/deny.
 	ErrInvalidDecision = errors.New("decision is invalid")
 	// ErrNotPending indicates reviewed requests are immutable.
 	ErrNotPending = errors.New("access request is not pending")
 	// ErrReviewerNotOwner indicates only owners may review requests.
 	ErrReviewerNotOwner = errors.New("reviewer must match owner")
+	// ErrRevokerNotOwner indicates only owners may revoke approved requests.
+	ErrRevokerNotOwner = errors.New("revoker must match owner")
 	// ErrNotApproved indicates only approved requests may be revoked.
 	ErrNotApproved = errors.New("access request is not approved")
 )
@@ -89,12 +93,18 @@ type AccessRequest struct {
 
 	Status Status
 
+	// Review metadata is populated only for owner approval/denial.
 	ReviewerUserID string
 	ReviewNote     string
+	ReviewedAt     *time.Time
 
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	ReviewedAt *time.Time
+	// Revoke metadata is populated only when previously approved access is removed.
+	RevokerUserID string
+	RevokeNote    string
+	RevokedAt     *time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // CreateInput contains requester-provided fields for request creation.
@@ -248,7 +258,7 @@ func NormalizeRevokeInput(input RevokeInput) (RevokeInput, error) {
 
 	input.RevokerUserID = strings.TrimSpace(input.RevokerUserID)
 	if input.RevokerUserID == "" {
-		return RevokeInput{}, ErrEmptyReviewerUserID
+		return RevokeInput{}, ErrEmptyRevokerUserID
 	}
 	input.RevokeNote = strings.TrimSpace(input.RevokeNote)
 	return input, nil
@@ -272,13 +282,14 @@ func Revoke(request AccessRequest, input RevokeInput, now func() time.Time) (Acc
 		return AccessRequest{}, ErrNotApproved
 	}
 	if request.OwnerUserID != normalized.RevokerUserID {
-		return AccessRequest{}, ErrReviewerNotOwner
+		return AccessRequest{}, ErrRevokerNotOwner
 	}
 
 	revokedAt := now().UTC()
 	request.Status = StatusRevoked
-	request.ReviewerUserID = normalized.RevokerUserID
-	request.ReviewNote = normalized.RevokeNote
+	request.RevokerUserID = normalized.RevokerUserID
+	request.RevokeNote = normalized.RevokeNote
+	request.RevokedAt = &revokedAt
 	request.UpdatedAt = revokedAt
 	return request, nil
 }

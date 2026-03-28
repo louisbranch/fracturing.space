@@ -48,7 +48,7 @@ func (a *InvokeAdapter) invokeResponsesAPI(ctx context.Context, input provider.I
 	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
 		requestPayload["instructions"] = instructions
 	}
-	payload, err := a.responsesRequest(ctx, requestPayload, input.CredentialSecret)
+	payload, err := a.responsesRequest(ctx, requestPayload, input.AuthToken)
 	if err != nil {
 		return provider.InvokeResult{}, err
 	}
@@ -75,7 +75,7 @@ func (a *InvokeAdapter) invokeResponsesAPI(ctx context.Context, input provider.I
 	}, nil
 }
 
-func (a *InvokeAdapter) responsesRequest(ctx context.Context, body map[string]any, secret string) (openAIResponsesPayload, error) {
+func (a *InvokeAdapter) responsesRequest(ctx context.Context, body map[string]any, authToken string) (openAIResponsesPayload, error) {
 	requestBody, err := json.Marshal(body)
 	if err != nil {
 		return openAIResponsesPayload{}, fmt.Errorf("marshal invoke request: %w", err)
@@ -85,7 +85,7 @@ func (a *InvokeAdapter) responsesRequest(ctx context.Context, body map[string]an
 		return openAIResponsesPayload{}, fmt.Errorf("build invoke request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(secret))
+	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(authToken))
 
 	res, err := a.cfg.HTTPClient.Do(req)
 	if err != nil {

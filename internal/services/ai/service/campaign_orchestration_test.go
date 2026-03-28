@@ -14,7 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/aifakes"
-	gogrpc "google.golang.org/grpc"
 )
 
 type campaignTurnRunnerStub struct {
@@ -37,20 +36,12 @@ func (providerAdapterStub) Run(context.Context, orchestration.ProviderInput) (or
 	return orchestration.ProviderOutput{}, nil
 }
 
-type campaignAIAuthStateClientStub struct {
+type campaignAuthStateReaderStub struct {
 	authState *gamev1.GetCampaignAIAuthStateResponse
 	authErr   error
 }
 
-func (s *campaignAIAuthStateClientStub) IssueCampaignAISessionGrant(context.Context, *gamev1.IssueCampaignAISessionGrantRequest, ...gogrpc.CallOption) (*gamev1.IssueCampaignAISessionGrantResponse, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (s *campaignAIAuthStateClientStub) GetCampaignAIBindingUsage(context.Context, *gamev1.GetCampaignAIBindingUsageRequest, ...gogrpc.CallOption) (*gamev1.GetCampaignAIBindingUsageResponse, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (s *campaignAIAuthStateClientStub) GetCampaignAIAuthState(context.Context, *gamev1.GetCampaignAIAuthStateRequest, ...gogrpc.CallOption) (*gamev1.GetCampaignAIAuthStateResponse, error) {
+func (s *campaignAuthStateReaderStub) CampaignAuthState(context.Context, string) (*gamev1.GetCampaignAIAuthStateResponse, error) {
 	if s.authErr != nil {
 		return nil, s.authErr
 	}
@@ -66,7 +57,7 @@ func TestNewCampaignOrchestrationServiceValidationAndCopy(t *testing.T) {
 	if _, err := NewCampaignOrchestrationService(CampaignOrchestrationServiceConfig{
 		AgentStore: aifakes.NewAgentStore(),
 	}); err == nil {
-		t.Fatal("expected missing auth token resolver error")
+		t.Fatal("expected missing auth material resolver error")
 	}
 
 	grantCfg := aisessiongrant.Config{
@@ -78,11 +69,13 @@ func TestNewCampaignOrchestrationServiceValidationAndCopy(t *testing.T) {
 	}
 	grantCfgPtr := &grantCfg
 	svc, err := NewCampaignOrchestrationService(CampaignOrchestrationServiceConfig{
-		AgentStore:        aifakes.NewAgentStore(),
-		AuthTokenResolver: NewAuthTokenResolver(AuthTokenResolverConfig{}),
-		ProviderToolAdapters: map[provider.Provider]orchestration.Provider{
+		AgentStore: aifakes.NewAgentStore(),
+		AuthMaterialResolver: NewAuthMaterialResolver(AuthMaterialResolverConfig{
+			ProviderGrantRuntime: NewProviderGrantRuntime(ProviderGrantRuntimeConfig{}),
+		}),
+		ProviderRegistry: mustProviderRegistryForTests(t, nil, nil, nil, map[provider.Provider]orchestration.Provider{
 			provider.OpenAI: providerAdapterStub{},
-		},
+		}),
 		SessionGrantConfig: grantCfgPtr,
 	})
 	if err != nil {
@@ -129,7 +122,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurn(t *testing.T) {
 		SecretCiphertext: "enc:token-1",
 		Status:           credential.StatusActive,
 	}
-	authTokenResolver := NewAuthTokenResolver(AuthTokenResolverConfig{
+	authMaterialResolver := NewAuthMaterialResolver(AuthMaterialResolverConfig{
 		CredentialStore: credentialStore,
 		Sealer:          &aifakes.Sealer{},
 	})
@@ -157,16 +150,16 @@ func TestCampaignOrchestrationServiceRunCampaignTurn(t *testing.T) {
 	}
 	traceStore := newDebugTraceStoreStub()
 	svc, err := NewCampaignOrchestrationService(CampaignOrchestrationServiceConfig{
-		AgentStore:           agentStore,
-		GameCampaignAIClient: &campaignAIAuthStateClientStub{authState: matchingCampaignAIAuthState()},
-		ProviderToolAdapters: map[provider.Provider]orchestration.Provider{provider.OpenAI: providerAdapterStub{}},
-		CampaignTurnRunner:   runner,
-		DebugTraceStore:      traceStore,
-		DebugUpdateBroker:    NewCampaignDebugUpdateBroker(),
-		SessionGrantConfig:   &grantConfig,
-		AuthTokenResolver:    authTokenResolver,
-		Clock:                func() time.Time { return now },
-		IDGenerator:          func() (string, error) { return "turn-1", nil },
+		AgentStore:              agentStore,
+		CampaignAuthStateReader: &campaignAuthStateReaderStub{authState: matchingCampaignAIAuthState()},
+		ProviderRegistry:        mustProviderRegistryForTests(t, nil, nil, nil, map[provider.Provider]orchestration.Provider{provider.OpenAI: providerAdapterStub{}}),
+		CampaignTurnRunner:      runner,
+		DebugTraceStore:         traceStore,
+		DebugUpdateBroker:       NewCampaignDebugUpdateBroker(),
+		SessionGrantConfig:      &grantConfig,
+		AuthMaterialResolver:    authMaterialResolver,
+		Clock:                   func() time.Time { return now },
+		IDGenerator:             func() (string, error) { return "turn-1", nil },
 	})
 	if err != nil {
 		t.Fatalf("NewCampaignOrchestrationService: %v", err)
@@ -187,7 +180,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurn(t *testing.T) {
 	if runner.lastInput.CampaignID != "campaign-1" || runner.lastInput.SessionID != "session-1" || runner.lastInput.ParticipantID != "participant-1" {
 		t.Fatalf("runner input IDs = %#v", runner.lastInput)
 	}
-	if runner.lastInput.CredentialSecret != "token-1" || runner.lastInput.Input != "Start the scene." || runner.lastInput.TraceRecorder == nil {
+	if runner.lastInput.AuthToken != "token-1" || runner.lastInput.Input != "Start the scene." || runner.lastInput.TraceRecorder == nil {
 		t.Fatalf("runner input = %#v", runner.lastInput)
 	}
 	if turn := traceStore.turns["turn-1"]; turn.Status != debugtrace.StatusSucceeded || turn.TurnToken != "turn-token-1" || turn.Provider != provider.OpenAI {
@@ -251,7 +244,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 		SecretCiphertext: "enc:token-1",
 		Status:           credential.StatusActive,
 	}
-	baseAuthResolver := NewAuthTokenResolver(AuthTokenResolverConfig{
+	baseAuthResolver := NewAuthMaterialResolver(AuthMaterialResolverConfig{
 		CredentialStore: baseCredentialStore,
 		Sealer:          &aifakes.Sealer{},
 	})
@@ -261,14 +254,14 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 
 	newService := func() *CampaignOrchestrationService {
 		svc, svcErr := NewCampaignOrchestrationService(CampaignOrchestrationServiceConfig{
-			AgentStore:           baseAgentStore,
-			GameCampaignAIClient: &campaignAIAuthStateClientStub{authState: matchingCampaignAIAuthState()},
-			ProviderToolAdapters: map[provider.Provider]orchestration.Provider{provider.OpenAI: providerAdapterStub{}},
-			CampaignTurnRunner:   baseRunner,
-			SessionGrantConfig:   &validGrantConfig,
-			AuthTokenResolver:    baseAuthResolver,
-			Clock:                func() time.Time { return now },
-			IDGenerator:          func() (string, error) { return "turn-1", nil },
+			AgentStore:              baseAgentStore,
+			CampaignAuthStateReader: &campaignAuthStateReaderStub{authState: matchingCampaignAIAuthState()},
+			ProviderRegistry:        mustProviderRegistryForTests(t, nil, nil, nil, map[provider.Provider]orchestration.Provider{provider.OpenAI: providerAdapterStub{}}),
+			CampaignTurnRunner:      baseRunner,
+			SessionGrantConfig:      &validGrantConfig,
+			AuthMaterialResolver:    baseAuthResolver,
+			Clock:                   func() time.Time { return now },
+			IDGenerator:             func() (string, error) { return "turn-1", nil },
 		})
 		if svcErr != nil {
 			t.Fatalf("NewCampaignOrchestrationService: %v", svcErr)
@@ -303,7 +296,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 		{
 			name: "missing auth state client",
 			mutate: func(s *CampaignOrchestrationService) {
-				s.gameCampaignAIClient = nil
+				s.campaignAuthStateReader = nil
 			},
 			input:    RunCampaignTurnInput{SessionGrant: validGrant},
 			wantKind: ErrKindFailedPrecondition,
@@ -326,7 +319,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 		{
 			name: "stale auth state",
 			mutate: func(s *CampaignOrchestrationService) {
-				s.gameCampaignAIClient = &campaignAIAuthStateClientStub{authState: &gamev1.GetCampaignAIAuthStateResponse{
+				s.campaignAuthStateReader = &campaignAuthStateReaderStub{authState: &gamev1.GetCampaignAIAuthStateResponse{
 					CampaignId:      "campaign-1",
 					ActiveSessionId: "session-2",
 					ParticipantId:   "participant-1",
@@ -340,7 +333,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 		{
 			name: "missing agent id",
 			mutate: func(s *CampaignOrchestrationService) {
-				s.gameCampaignAIClient = &campaignAIAuthStateClientStub{authState: &gamev1.GetCampaignAIAuthStateResponse{
+				s.campaignAuthStateReader = &campaignAuthStateReaderStub{authState: &gamev1.GetCampaignAIAuthStateResponse{
 					CampaignId:      "campaign-1",
 					ActiveSessionId: "session-1",
 					ParticipantId:   "participant-1",
@@ -379,7 +372,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 		{
 			name: "missing provider adapter",
 			mutate: func(s *CampaignOrchestrationService) {
-				s.providerToolAdapters = map[provider.Provider]orchestration.Provider{}
+				s.providerRegistry = mustProviderRegistryForTests(t, nil, nil, nil, nil)
 			},
 			input:    RunCampaignTurnInput{SessionGrant: validGrant},
 			wantKind: ErrKindFailedPrecondition,
@@ -387,7 +380,7 @@ func TestCampaignOrchestrationServiceRunCampaignTurnValidationAndFailures(t *tes
 		{
 			name: "credential unavailable",
 			mutate: func(s *CampaignOrchestrationService) {
-				s.authTokenResolver = NewAuthTokenResolver(AuthTokenResolverConfig{
+				s.authMaterialResolver = NewAuthMaterialResolver(AuthMaterialResolverConfig{
 					CredentialStore: aifakes.NewCredentialStore(),
 					Sealer:          &aifakes.Sealer{},
 				})

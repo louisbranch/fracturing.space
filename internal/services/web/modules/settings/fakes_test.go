@@ -31,8 +31,7 @@ type fakeGateway struct {
 
 	lastSavedProfile         settingsapp.SettingsProfile
 	lastSavedLocale          string
-	lastCreatedLabel         string
-	lastCreatedSecret        string
+	lastCreatedKey           settingsapp.CreateAIKeyInput
 	lastCreatedAgent         settingsapp.CreateAIAgentInput
 	lastDeletedAgentID       string
 	lastSelectedCredentialID string
@@ -74,8 +73,7 @@ func newPopulatedFakeGateway() *fakeGateway {
 			Provider: "OpenAI",
 		}},
 		models: []settingsapp.SettingsAIModelOption{{
-			ID:      "gpt-4o-mini",
-			OwnedBy: "openai",
+			ID: "gpt-4o-mini",
 		}},
 		agents: []settingsapp.SettingsAIAgent{{
 			ID:                  "agent-1",
@@ -158,10 +156,9 @@ func (f *fakeGateway) ListAIKeys(_ context.Context, userID string) ([]settingsap
 	return f.keys, nil
 }
 
-func (f *fakeGateway) CreateAIKey(_ context.Context, userID string, label string, secret string) error {
+func (f *fakeGateway) CreateAIKey(_ context.Context, userID string, input settingsapp.CreateAIKeyInput) error {
 	f.lastRequestedUserID = userID
-	f.lastCreatedLabel = label
-	f.lastCreatedSecret = secret
+	f.lastCreatedKey = input
 	return f.createAIKeyErr
 }
 

@@ -138,7 +138,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(notificationListAriaLabel(loc))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 105, Col: 95}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 105, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -156,7 +156,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "game.notifications.empty"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 109, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 109, Col: 84}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -174,7 +174,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(notificationItemTitle(NotificationListItemView{Title: view.Selected.Title}, loc))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 116, Col: 111}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 116, Col: 111}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -192,7 +192,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(notificationItemMeta(NotificationListItemView{SourceLabel: view.Selected.SourceLabel, CreatedLabel: view.Selected.CreatedLabel}))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 118, Col: 195}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 118, Col: 195}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -210,7 +210,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(notificationItemBody(NotificationListItemView{Body: view.Selected.Body}, loc))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 121, Col: 134}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 121, Col: 134}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -233,7 +233,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fact.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 126, Col: 79}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 126, Col: 79}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {
@@ -246,7 +246,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fact.Value)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 127, Col: 52}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 127, Col: 52}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 					if templ_7745c5c3_Err != nil {
@@ -276,7 +276,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 						var templ_7745c5c3_Var9 templ.SafeURL
 						templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(action.URL)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 136, Col: 48}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 136, Col: 48}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 						if templ_7745c5c3_Err != nil {
@@ -298,7 +298,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 						var templ_7745c5c3_Var11 string
 						templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var10).String())
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 1, Col: 0}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 1, Col: 0}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 						if templ_7745c5c3_Err != nil {
@@ -311,7 +311,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 						var templ_7745c5c3_Var12 string
 						templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(action.Label)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 137, Col: 88}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 137, Col: 88}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 						if templ_7745c5c3_Err != nil {
@@ -334,7 +334,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 						var templ_7745c5c3_Var14 string
 						templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var13).String())
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 1, Col: 0}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 1, Col: 0}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 						if templ_7745c5c3_Err != nil {
@@ -347,7 +347,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 						var templ_7745c5c3_Var15 templ.SafeURL
 						templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(action.URL)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 140, Col: 71}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 140, Col: 71}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 						if templ_7745c5c3_Err != nil {
@@ -360,7 +360,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 						var templ_7745c5c3_Var16 string
 						templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(action.Label)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 140, Col: 88}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 140, Col: 88}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 						if templ_7745c5c3_Err != nil {
@@ -389,7 +389,7 @@ func NotificationsFragment(view NotificationsPageView, loc webtemplates.Localize
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(webtemplates.T(loc, "game.notifications.no_selection"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/page.templ`, Line: 150, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/notifications/page.templ`, Line: 150, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {

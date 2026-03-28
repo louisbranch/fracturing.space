@@ -10,8 +10,10 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/gamebridge"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providercatalog"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
@@ -20,13 +22,13 @@ import (
 type CampaignOrchestrationService struct {
 	agentStore              storage.AgentStore
 	campaignArtifactManager *campaigncontext.Manager
-	gameCampaignAIClient    gamev1.CampaignAIServiceClient
-	providerToolAdapters    map[provider.Provider]orchestration.Provider
+	campaignAuthStateReader CampaignAuthStateReader
+	providerRegistry        *providercatalog.Registry
 	campaignTurnRunner      orchestration.CampaignTurnRunner
-	debugTraceStore         storage.DebugTraceStore
+	debugTraceStore         debugtrace.Store
 	debugUpdateBroker       *CampaignDebugUpdateBroker
 	sessionGrantConfig      *aisessiongrant.Config
-	authTokenResolver       *AuthTokenResolver
+	authMaterialResolver    *AuthMaterialResolver
 	clock                   Clock
 	idGenerator             IDGenerator
 	logger                  *slog.Logger
@@ -37,13 +39,13 @@ type CampaignOrchestrationService struct {
 type CampaignOrchestrationServiceConfig struct {
 	AgentStore              storage.AgentStore
 	CampaignArtifactManager *campaigncontext.Manager
-	GameCampaignAIClient    gamev1.CampaignAIServiceClient
-	ProviderToolAdapters    map[provider.Provider]orchestration.Provider
+	CampaignAuthStateReader CampaignAuthStateReader
+	ProviderRegistry        *providercatalog.Registry
 	CampaignTurnRunner      orchestration.CampaignTurnRunner
-	DebugTraceStore         storage.DebugTraceStore
+	DebugTraceStore         debugtrace.Store
 	DebugUpdateBroker       *CampaignDebugUpdateBroker
 	SessionGrantConfig      *aisessiongrant.Config
-	AuthTokenResolver       *AuthTokenResolver
+	AuthMaterialResolver    *AuthMaterialResolver
 	Clock                   Clock
 	IDGenerator             IDGenerator
 	Logger                  *slog.Logger
@@ -55,13 +57,11 @@ func NewCampaignOrchestrationService(cfg CampaignOrchestrationServiceConfig) (*C
 	if cfg.AgentStore == nil {
 		return nil, fmt.Errorf("ai: NewCampaignOrchestrationService: agent store is required")
 	}
-	if cfg.AuthTokenResolver == nil {
-		return nil, fmt.Errorf("ai: NewCampaignOrchestrationService: auth token resolver is required")
+	if err := RequireAuthMaterialResolver(cfg.AuthMaterialResolver, "NewCampaignOrchestrationService"); err != nil {
+		return nil, err
 	}
-
-	providerToolAdapters := make(map[provider.Provider]orchestration.Provider, len(cfg.ProviderToolAdapters))
-	for k, v := range cfg.ProviderToolAdapters {
-		providerToolAdapters[k] = v
+	if err := RequireProviderRegistry(cfg.ProviderRegistry, "NewCampaignOrchestrationService"); err != nil {
+		return nil, err
 	}
 
 	var sessionGrantConfig *aisessiongrant.Config
@@ -73,13 +73,13 @@ func NewCampaignOrchestrationService(cfg CampaignOrchestrationServiceConfig) (*C
 	return &CampaignOrchestrationService{
 		agentStore:              cfg.AgentStore,
 		campaignArtifactManager: cfg.CampaignArtifactManager,
-		gameCampaignAIClient:    cfg.GameCampaignAIClient,
-		providerToolAdapters:    providerToolAdapters,
+		campaignAuthStateReader: cfg.CampaignAuthStateReader,
+		providerRegistry:        cfg.ProviderRegistry,
 		campaignTurnRunner:      cfg.CampaignTurnRunner,
 		debugTraceStore:         cfg.DebugTraceStore,
 		debugUpdateBroker:       cfg.DebugUpdateBroker,
 		sessionGrantConfig:      sessionGrantConfig,
-		authTokenResolver:       cfg.AuthTokenResolver,
+		authMaterialResolver:    cfg.AuthMaterialResolver,
 		clock:                   withDefaultClock(cfg.Clock),
 		idGenerator:             withDefaultIDGenerator(cfg.IDGenerator),
 		logger:                  cfg.Logger,
@@ -111,7 +111,7 @@ func (s *CampaignOrchestrationService) RunCampaignTurn(ctx context.Context, inpu
 	if s.sessionGrantConfig == nil {
 		return RunCampaignTurnResult{}, Errorf(ErrKindFailedPrecondition, "ai session grant validation is unavailable")
 	}
-	if s.gameCampaignAIClient == nil {
+	if s.campaignAuthStateReader == nil {
 		return RunCampaignTurnResult{}, Errorf(ErrKindFailedPrecondition, "campaign ai auth state client is unavailable")
 	}
 	if input.SessionGrant == "" {
@@ -130,10 +130,11 @@ func (s *CampaignOrchestrationService) RunCampaignTurn(ctx context.Context, inpu
 		}
 	}
 
-	state, err := s.gameCampaignAIClient.GetCampaignAIAuthState(ctx, &gamev1.GetCampaignAIAuthStateRequest{
-		CampaignId: claims.CampaignID,
-	})
+	state, err := s.campaignAuthStateReader.CampaignAuthState(ctx, claims.CampaignID)
 	if err != nil {
+		if errors.Is(err, gamebridge.ErrCampaignAuthStateUnavailable) {
+			return RunCampaignTurnResult{}, Errorf(ErrKindFailedPrecondition, "campaign ai auth state client is unavailable")
+		}
 		return RunCampaignTurnResult{}, Wrapf(ErrKindInternal, err, "get campaign ai auth state")
 	}
 	if staleGrant(claims, state) {
@@ -161,12 +162,12 @@ func (s *CampaignOrchestrationService) RunCampaignTurn(ctx context.Context, inpu
 		}
 	}
 
-	adapter, ok := s.providerToolAdapters[agentRecord.Provider]
+	adapter, ok := s.providerRegistry.ToolAdapter(agentRecord.Provider)
 	if !ok || adapter == nil {
 		return RunCampaignTurnResult{}, Errorf(ErrKindFailedPrecondition, "campaign ai provider adapter is unavailable")
 	}
 
-	token, err := s.authTokenResolver.ResolveAgentInvokeToken(ctx, agentRecord.OwnerUserID, agentRecord)
+	token, err := s.authMaterialResolver.ResolveAgentInvokeToken(ctx, agentRecord.OwnerUserID, agentRecord)
 	if err != nil {
 		return RunCampaignTurnResult{}, err
 	}
@@ -184,16 +185,16 @@ func (s *CampaignOrchestrationService) RunCampaignTurn(ctx context.Context, inpu
 	})
 
 	result, err := s.campaignTurnRunner.Run(ctx, orchestration.Input{
-		CampaignID:       claims.CampaignID,
-		SessionID:        claims.SessionID,
-		ParticipantID:    strings.TrimSpace(state.GetParticipantId()),
-		Input:            input.Input,
-		Model:            agentRecord.Model,
-		ReasoningEffort:  input.ReasoningEffort,
-		Instructions:     agentRecord.Instructions,
-		CredentialSecret: token,
-		Provider:         adapter,
-		TraceRecorder:    traceRecorder,
+		CampaignID:      claims.CampaignID,
+		SessionID:       claims.SessionID,
+		ParticipantID:   strings.TrimSpace(state.GetParticipantId()),
+		Input:           input.Input,
+		Model:           agentRecord.Model,
+		ReasoningEffort: input.ReasoningEffort,
+		Instructions:    agentRecord.Instructions,
+		AuthToken:       token,
+		Provider:        adapter,
+		TraceRecorder:   traceRecorder,
 	})
 	if traceRecorder != nil {
 		traceRecorder.Finish(ctx, err)

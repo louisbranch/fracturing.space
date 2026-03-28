@@ -15,8 +15,8 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaignartifact"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
-	aistorage "github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -37,36 +37,36 @@ type grpcArtifactAdapter struct {
 	client aiv1.CampaignArtifactServiceClient
 }
 
-func (a *grpcArtifactAdapter) ListArtifacts(ctx context.Context, campaignID string) ([]aistorage.CampaignArtifactRecord, error) {
+func (a *grpcArtifactAdapter) ListArtifacts(ctx context.Context, campaignID string) ([]campaignartifact.Artifact, error) {
 	resp, err := a.client.ListCampaignArtifacts(ctx, &aiv1.ListCampaignArtifactsRequest{CampaignId: campaignID})
 	if err != nil {
 		return nil, err
 	}
-	out := make([]aistorage.CampaignArtifactRecord, len(resp.GetArtifacts()))
+	out := make([]campaignartifact.Artifact, len(resp.GetArtifacts()))
 	for i, art := range resp.GetArtifacts() {
 		out[i] = artifactProtoToRecord(art)
 	}
 	return out, nil
 }
 
-func (a *grpcArtifactAdapter) GetArtifact(ctx context.Context, campaignID, path string) (aistorage.CampaignArtifactRecord, error) {
+func (a *grpcArtifactAdapter) GetArtifact(ctx context.Context, campaignID, path string) (campaignartifact.Artifact, error) {
 	resp, err := a.client.GetCampaignArtifact(ctx, &aiv1.GetCampaignArtifactRequest{CampaignId: campaignID, Path: path})
 	if err != nil {
-		return aistorage.CampaignArtifactRecord{}, err
+		return campaignartifact.Artifact{}, err
 	}
 	return artifactProtoToRecord(resp.GetArtifact()), nil
 }
 
-func (a *grpcArtifactAdapter) UpsertArtifact(ctx context.Context, campaignID, path, content string) (aistorage.CampaignArtifactRecord, error) {
+func (a *grpcArtifactAdapter) UpsertArtifact(ctx context.Context, campaignID, path, content string) (campaignartifact.Artifact, error) {
 	resp, err := a.client.UpsertCampaignArtifact(ctx, &aiv1.UpsertCampaignArtifactRequest{CampaignId: campaignID, Path: path, Content: content})
 	if err != nil {
-		return aistorage.CampaignArtifactRecord{}, err
+		return campaignartifact.Artifact{}, err
 	}
 	return artifactProtoToRecord(resp.GetArtifact()), nil
 }
 
-func artifactProtoToRecord(art *aiv1.CampaignArtifact) aistorage.CampaignArtifactRecord {
-	r := aistorage.CampaignArtifactRecord{
+func artifactProtoToRecord(art *aiv1.CampaignArtifact) campaignartifact.Artifact {
+	r := campaignartifact.Artifact{
 		CampaignID: art.GetCampaignId(),
 		Path:       art.GetPath(),
 		Content:    art.GetContent(),

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
 )
 
@@ -18,9 +17,8 @@ type CampaignDebugHandlers struct {
 
 // CampaignDebugHandlersConfig declares the dependencies for campaign debug RPCs.
 type CampaignDebugHandlersConfig struct {
-	CampaignDebugService     *service.CampaignDebugService
-	AuthorizationClient      gamev1.AuthorizationServiceClient
-	InternalServiceAllowlist map[string]struct{}
+	CampaignDebugService *service.CampaignDebugService
+	CampaignAuthorizer   CampaignAccessAuthorizer
 }
 
 // NewCampaignDebugHandlers builds a campaign-debug RPC server from the read service.
@@ -30,6 +28,6 @@ func NewCampaignDebugHandlers(cfg CampaignDebugHandlersConfig) (*CampaignDebugHa
 	}
 	return &CampaignDebugHandlers{
 		svc:                      cfg.CampaignDebugService,
-		campaignContextValidator: newCampaignContextValidator(cfg.AuthorizationClient, cfg.InternalServiceAllowlist),
+		campaignContextValidator: newCampaignContextValidator(cfg.CampaignAuthorizer),
 	}, nil
 }

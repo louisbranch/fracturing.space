@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

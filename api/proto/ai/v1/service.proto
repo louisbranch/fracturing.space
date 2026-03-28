@@ -9,6 +9,7 @@ option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1;ai
 enum Provider {
   PROVIDER_UNSPECIFIED = 0;
   PROVIDER_OPENAI = 1;
+  PROVIDER_ANTHROPIC = 2;
 }
 
 enum CredentialStatus {
@@ -27,6 +28,12 @@ enum AgentAuthState {
   AGENT_AUTH_STATE_READY = 1;
   AGENT_AUTH_STATE_AUTH_REFERENCE_REVOKED = 2;
   AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE = 3;
+}
+
+enum AgentAuthReferenceType {
+  AGENT_AUTH_REFERENCE_TYPE_UNSPECIFIED = 0;
+  AGENT_AUTH_REFERENCE_TYPE_CREDENTIAL = 1;
+  AGENT_AUTH_REFERENCE_TYPE_PROVIDER_GRANT = 2;
 }
 
 enum ProviderGrantStatus {
@@ -68,20 +75,24 @@ message Credential {
   google.protobuf.Timestamp revoked_at = 8;
 }
 
+message AgentAuthReference {
+  AgentAuthReferenceType type = 1;
+  string id = 2;
+}
+
 message Agent {
   string id = 1;
   string owner_user_id = 2;
   string label = 3;
   Provider provider = 4;
   string model = 5;
-  string credential_id = 6;
+  AgentAuthReference auth_reference = 6;
   AgentStatus status = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
-  string provider_grant_id = 10;
-  AgentAuthState auth_state = 11;
-  string instructions = 12;
-  int32 active_campaign_count = 13;
+  AgentAuthState auth_state = 10;
+  string instructions = 11;
+  int32 active_campaign_count = 12;
 }
 
 message ProviderGrant {
@@ -112,6 +123,9 @@ message AccessRequest {
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
   google.protobuf.Timestamp reviewed_at = 12;
+  string revoker_user_id = 13;
+  string revoke_note = 14;
+  google.protobuf.Timestamp revoked_at = 15;
 }
 
 message AuditEvent {
@@ -216,9 +230,8 @@ message CreateAgentRequest {
   string label = 1;
   Provider provider = 2;
   string model = 3;
-  string credential_id = 4;
-  string provider_grant_id = 5;
-  string instructions = 7;
+  AgentAuthReference auth_reference = 4;
+  string instructions = 5;
 }
 
 message CreateAgentResponse {
@@ -237,13 +250,11 @@ message ListAgentsResponse {
 
 message ListProviderModelsRequest {
   Provider provider = 1;
-  string credential_id = 2;
-  string provider_grant_id = 3;
+  AgentAuthReference auth_reference = 2;
 }
 
 message ProviderModel {
   string id = 1;
-  string owned_by = 2;
 }
 
 message ListProviderModelsResponse {
@@ -281,9 +292,8 @@ message UpdateAgentRequest {
   string agent_id = 1;
   string label = 2;
   string model = 3;
-  string credential_id = 4;
-  string provider_grant_id = 5;
-  string instructions = 6;
+  AgentAuthReference auth_reference = 4;
+  string instructions = 5;
 }
 
 message UpdateAgentResponse {

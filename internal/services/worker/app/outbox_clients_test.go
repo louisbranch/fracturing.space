@@ -7,8 +7,8 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"

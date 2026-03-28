@@ -6,7 +6,6 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/aifakes"
 	"google.golang.org/grpc/metadata"
@@ -21,7 +20,7 @@ func TestCampaignArtifactHandlersRoundTrip(t *testing.T) {
 				return time.Date(2026, 3, 14, 1, 32, 0, 0, time.UTC)
 			},
 		}),
-		AuthorizationClient: &fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}},
+		CampaignAuthorizer: &fakeCampaignAuthorizer{allowed: true},
 	})
 	if err != nil {
 		t.Fatalf("NewCampaignArtifactHandlers: %v", err)

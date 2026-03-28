@@ -36,8 +36,12 @@ func parseLocaleInput(form url.Values) string {
 }
 
 // parseAIKeyCreateInput maps create-key form values.
-func parseAIKeyCreateInput(form url.Values) (label string, secret string) {
-	return strings.TrimSpace(form.Get("label")), strings.TrimSpace(form.Get("secret"))
+func parseAIKeyCreateInput(form url.Values) settingsapp.CreateAIKeyInput {
+	return settingsapp.CreateAIKeyInput{
+		Label:    strings.TrimSpace(form.Get("label")),
+		Provider: strings.TrimSpace(form.Get("provider")),
+		Secret:   strings.TrimSpace(form.Get("secret")),
+	}
 }
 
 // parseAIAgentCredentialSelectionInput maps the selected credential query value.

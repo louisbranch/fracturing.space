@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 )
 
 func TestHandlerSessionActionRollSuccess(t *testing.T) {

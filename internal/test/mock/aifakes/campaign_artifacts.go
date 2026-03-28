@@ -5,17 +5,18 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaignartifact"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
 // CampaignArtifactStore is an in-memory campaign-artifact repository fake.
 type CampaignArtifactStore struct {
-	CampaignArtifacts map[string]storage.CampaignArtifactRecord
+	CampaignArtifacts map[string]campaignartifact.Artifact
 }
 
 // NewCampaignArtifactStore creates an initialized campaign-artifact fake.
 func NewCampaignArtifactStore() *CampaignArtifactStore {
-	return &CampaignArtifactStore{CampaignArtifacts: make(map[string]storage.CampaignArtifactRecord)}
+	return &CampaignArtifactStore{CampaignArtifacts: make(map[string]campaignartifact.Artifact)}
 }
 
 func campaignArtifactKey(campaignID, path string) string {
@@ -23,26 +24,26 @@ func campaignArtifactKey(campaignID, path string) string {
 }
 
 // PutCampaignArtifact stores one campaign-scoped GM artifact snapshot.
-func (s *CampaignArtifactStore) PutCampaignArtifact(_ context.Context, record storage.CampaignArtifactRecord) error {
+func (s *CampaignArtifactStore) PutCampaignArtifact(_ context.Context, record campaignartifact.Artifact) error {
 	if s.CampaignArtifacts == nil {
-		s.CampaignArtifacts = make(map[string]storage.CampaignArtifactRecord)
+		s.CampaignArtifacts = make(map[string]campaignartifact.Artifact)
 	}
 	s.CampaignArtifacts[campaignArtifactKey(record.CampaignID, record.Path)] = record
 	return nil
 }
 
 // GetCampaignArtifact returns one campaign artifact by campaign and path.
-func (s *CampaignArtifactStore) GetCampaignArtifact(_ context.Context, campaignID string, path string) (storage.CampaignArtifactRecord, error) {
+func (s *CampaignArtifactStore) GetCampaignArtifact(_ context.Context, campaignID string, path string) (campaignartifact.Artifact, error) {
 	record, ok := s.CampaignArtifacts[campaignArtifactKey(campaignID, path)]
 	if !ok {
-		return storage.CampaignArtifactRecord{}, storage.ErrNotFound
+		return campaignartifact.Artifact{}, storage.ErrNotFound
 	}
 	return record, nil
 }
 
 // ListCampaignArtifacts returns all artifacts for one campaign ordered by path.
-func (s *CampaignArtifactStore) ListCampaignArtifacts(_ context.Context, campaignID string) ([]storage.CampaignArtifactRecord, error) {
-	records := make([]storage.CampaignArtifactRecord, 0)
+func (s *CampaignArtifactStore) ListCampaignArtifacts(_ context.Context, campaignID string) ([]campaignartifact.Artifact, error) {
+	records := make([]campaignartifact.Artifact, 0)
 	for _, record := range s.CampaignArtifacts {
 		if strings.TrimSpace(record.CampaignID) == strings.TrimSpace(campaignID) {
 			records = append(records, record)

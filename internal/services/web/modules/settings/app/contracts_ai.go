@@ -5,7 +5,7 @@ import "context"
 // AIKeyGateway loads and mutates AI credential settings.
 type AIKeyGateway interface {
 	ListAIKeys(context.Context, string) ([]SettingsAIKey, error)
-	CreateAIKey(context.Context, string, string, string) error
+	CreateAIKey(context.Context, string, CreateAIKeyInput) error
 	RevokeAIKey(context.Context, string, string) error
 }
 
@@ -27,7 +27,7 @@ type AIGateway interface {
 // AIKeyService exposes AI credential orchestration used by transport handlers.
 type AIKeyService interface {
 	ListAIKeys(context.Context, string) ([]SettingsAIKey, error)
-	CreateAIKey(context.Context, string, string, string) error
+	CreateAIKey(context.Context, string, CreateAIKeyInput) error
 	RevokeAIKey(context.Context, string, string) error
 }
 

@@ -11,7 +11,7 @@ import (
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

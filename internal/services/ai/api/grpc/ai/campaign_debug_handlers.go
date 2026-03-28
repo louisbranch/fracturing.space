@@ -2,20 +2,17 @@ package ai
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ListCampaignDebugTurns returns newest-first debug turn summaries for one session.
 func (h *CampaignDebugHandlers) ListCampaignDebugTurns(ctx context.Context, in *aiv1.ListCampaignDebugTurnsRequest) (*aiv1.ListCampaignDebugTurnsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list campaign debug turns request is required")
+	if err := requireUnaryRequest(in, "list campaign debug turns request is required"); err != nil {
+		return nil, err
 	}
 	if err := h.campaignContextValidator.validateCampaignContext(ctx, in.GetCampaignId(), gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
 		return nil, err
@@ -27,11 +24,7 @@ func (h *CampaignDebugHandlers) ListCampaignDebugTurns(ctx context.Context, in *
 		PageToken:  strings.TrimSpace(in.GetPageToken()),
 	})
 	if err != nil {
-		var svcErr *service.Error
-		if errors.As(err, &svcErr) {
-			return nil, serviceErrorToStatus(err)
-		}
-		return nil, status.Errorf(codes.Internal, "list campaign debug turns: %v", err)
+		return nil, transportErrorToStatus(err, transportErrorConfig{Operation: "list campaign debug turns"})
 	}
 	resp := &aiv1.ListCampaignDebugTurnsResponse{
 		Turns:         make([]*aiv1.CampaignDebugTurnSummary, 0, len(page.Turns)),
@@ -45,8 +38,8 @@ func (h *CampaignDebugHandlers) ListCampaignDebugTurns(ctx context.Context, in *
 
 // GetCampaignDebugTurn returns one turn plus its ordered trace entries.
 func (h *CampaignDebugHandlers) GetCampaignDebugTurn(ctx context.Context, in *aiv1.GetCampaignDebugTurnRequest) (*aiv1.GetCampaignDebugTurnResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "get campaign debug turn request is required")
+	if err := requireUnaryRequest(in, "get campaign debug turn request is required"); err != nil {
+		return nil, err
 	}
 	if err := h.campaignContextValidator.validateCampaignContext(ctx, in.GetCampaignId(), gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
 		return nil, err
@@ -56,11 +49,7 @@ func (h *CampaignDebugHandlers) GetCampaignDebugTurn(ctx context.Context, in *ai
 		TurnID:     strings.TrimSpace(in.GetTurnId()),
 	})
 	if err != nil {
-		var svcErr *service.Error
-		if errors.As(err, &svcErr) {
-			return nil, serviceErrorToStatus(err)
-		}
-		return nil, status.Errorf(codes.Internal, "get campaign debug turn: %v", err)
+		return nil, transportErrorToStatus(err, transportErrorConfig{Operation: "get campaign debug turn"})
 	}
 	return &aiv1.GetCampaignDebugTurnResponse{
 		Turn: campaignDebugTurnToProto(result.Turn, result.Entries),
@@ -69,8 +58,8 @@ func (h *CampaignDebugHandlers) GetCampaignDebugTurn(ctx context.Context, in *ai
 
 // SubscribeCampaignDebugUpdates streams future-only debug turn updates for one session.
 func (h *CampaignDebugHandlers) SubscribeCampaignDebugUpdates(in *aiv1.SubscribeCampaignDebugUpdatesRequest, stream aiv1.CampaignDebugService_SubscribeCampaignDebugUpdatesServer) error {
-	if in == nil {
-		return status.Error(codes.InvalidArgument, "subscribe campaign debug updates request is required")
+	if err := requireUnaryRequest(in, "subscribe campaign debug updates request is required"); err != nil {
+		return err
 	}
 	ctx := stream.Context()
 	if err := h.campaignContextValidator.validateCampaignContext(ctx, in.GetCampaignId(), gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
@@ -84,11 +73,7 @@ func (h *CampaignDebugHandlers) SubscribeCampaignDebugUpdates(in *aiv1.Subscribe
 		defer unsubscribe()
 	}
 	if err != nil {
-		var svcErr *service.Error
-		if errors.As(err, &svcErr) {
-			return serviceErrorToStatus(err)
-		}
-		return status.Errorf(codes.Internal, "subscribe campaign debug updates: %v", err)
+		return transportErrorToStatus(err, transportErrorConfig{Operation: "subscribe campaign debug updates"})
 	}
 	for {
 		select {

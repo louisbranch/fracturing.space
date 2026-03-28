@@ -2,14 +2,16 @@
 title: "AI orchestration tools"
 parent: "Reference"
 nav_order: 2
-last_reviewed: "2026-03-18"
+last_reviewed: "2026-03-23"
 ---
 
 # AI orchestration tools
 
 GM-safe tools available during campaign-turn orchestration.
 
-Broader bootstrap or dev-only registrations are intentionally omitted here.
+This page describes the current centrally curated production profile. It is
+Daggerheart-first today; broader bootstrap or dev-only registrations are
+intentionally omitted here.
 
 ## Campaign context
 
@@ -67,6 +69,9 @@ surface is not part of the runtime contract described here.
 For implementation, inspect:
 
 - `internal/services/ai/orchestration/gametools/tools.go`
+- `internal/services/ai/orchestration/gametools/tools_catalog_*.go`
+- `internal/services/ai/orchestration/daggerhearttools/` for extracted Daggerheart dice/mechanics execution
 - `internal/services/ai/orchestration/tool_policy.go`
-- `internal/services/ai/orchestration/gametools/tools.go`
 - `internal/services/ai/orchestration/gametools/`
+- `internal/services/ai/orchestration/daggerheart/` when the tool change also
+  needs always-on Daggerheart prompt context

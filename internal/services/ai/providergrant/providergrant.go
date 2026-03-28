@@ -12,6 +12,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provideroauth"
 )
 
 // Page is a paginated result of provider grants.
@@ -110,26 +111,7 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 
 // NormalizeScopes deduplicates and trims a scope list, preserving insertion order.
 func NormalizeScopes(in []string) []string {
-	if len(in) == 0 {
-		return nil
-	}
-	seen := make(map[string]struct{}, len(in))
-	out := make([]string, 0, len(in))
-	for _, value := range in {
-		scope := strings.TrimSpace(value)
-		if scope == "" {
-			continue
-		}
-		if _, ok := seen[scope]; ok {
-			continue
-		}
-		seen[scope] = struct{}{}
-		out = append(out, scope)
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
+	return provideroauth.NormalizeScopes(in)
 }
 
 // Create constructs a normalized active provider grant with generated ID.

@@ -3,12 +3,10 @@ package storage
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/debugtrace"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 )
 
@@ -17,71 +15,6 @@ var ErrNotFound = errors.New("record not found")
 
 // ErrConflict indicates a requested state transition is invalid.
 var ErrConflict = errors.New("record conflict")
-
-// AuditEventRecord stores one append-only AI audit event.
-type AuditEventRecord struct {
-	ID string
-
-	EventName string
-
-	ActorUserID string
-
-	OwnerUserID     string
-	RequesterUserID string
-	AgentID         string
-	AccessRequestID string
-
-	Outcome string
-
-	CreatedAt time.Time
-}
-
-// AuditEventPage is a paged set of audit events.
-type AuditEventPage struct {
-	AuditEvents   []AuditEventRecord
-	NextPageToken string
-}
-
-// CampaignArtifactRecord stores one campaign-scoped GM working artifact.
-type CampaignArtifactRecord struct {
-	CampaignID string
-	Path       string
-	Content    string
-	ReadOnly   bool
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-}
-
-// AuditEventFilter narrows owner-scoped audit event listing.
-//
-// Security note: owner scope is mandatory and enforced separately; these fields
-// are optional in-memory constraints that must never broaden tenant visibility.
-type AuditEventFilter struct {
-	EventName string
-	AgentID   string
-
-	CreatedAfter  *time.Time
-	CreatedBefore *time.Time
-}
-
-// ProviderConnectSessionRecord stores one provider OAuth connect handshake.
-type ProviderConnectSessionRecord struct {
-	ID              string
-	OwnerUserID     string
-	Provider        string
-	Status          string
-	RequestedScopes []string
-
-	// StateHash stores a non-reversible hash of the outbound OAuth state token.
-	StateHash string
-	// CodeVerifierCiphertext stores encrypted PKCE verifier material.
-	CodeVerifierCiphertext string
-
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	ExpiresAt   time.Time
-	CompletedAt *time.Time
-}
 
 // CredentialStore persists credential records.
 type CredentialStore interface {
@@ -108,13 +41,6 @@ type ProviderGrantStore interface {
 	ListProviderGrantsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter providergrant.Filter) (providergrant.Page, error)
 }
 
-// ProviderConnectSessionStore persists connect-session records.
-type ProviderConnectSessionStore interface {
-	PutProviderConnectSession(ctx context.Context, record ProviderConnectSessionRecord) error
-	GetProviderConnectSession(ctx context.Context, connectSessionID string) (ProviderConnectSessionRecord, error)
-	CompleteProviderConnectSession(ctx context.Context, ownerUserID string, connectSessionID string, completedAt time.Time) error
-}
-
 // AccessRequestStore persists agent access-request records.
 type AccessRequestStore interface {
 	PutAccessRequest(ctx context.Context, request accessrequest.AccessRequest) error
@@ -137,40 +63,4 @@ type AccessRequestStore interface {
 	// RevokeAccessRequest applies an owner revocation for one approved
 	// request. Same CAS pattern as ReviewAccessRequest.
 	RevokeAccessRequest(ctx context.Context, revoked accessrequest.AccessRequest) error
-}
-
-// AuditEventStore persists append-only AI audit events.
-type AuditEventStore interface {
-	PutAuditEvent(ctx context.Context, record AuditEventRecord) error
-	ListAuditEventsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter AuditEventFilter) (AuditEventPage, error)
-}
-
-// CampaignArtifactStore persists campaign-scoped GM working artifacts.
-type CampaignArtifactStore interface {
-	PutCampaignArtifact(ctx context.Context, record CampaignArtifactRecord) error
-	GetCampaignArtifact(ctx context.Context, campaignID string, path string) (CampaignArtifactRecord, error)
-	ListCampaignArtifacts(ctx context.Context, campaignID string) ([]CampaignArtifactRecord, error)
-}
-
-// DebugTraceStore persists campaign/session-scoped AI GM turn traces.
-type DebugTraceStore interface {
-	PutCampaignDebugTurn(ctx context.Context, turn debugtrace.Turn) error
-	PutCampaignDebugTurnEntry(ctx context.Context, entry debugtrace.Entry) error
-	ListCampaignDebugTurns(ctx context.Context, campaignID string, sessionID string, pageSize int, pageToken string) (debugtrace.Page, error)
-	GetCampaignDebugTurn(ctx context.Context, campaignID string, turnID string) (debugtrace.Turn, error)
-	ListCampaignDebugTurnEntries(ctx context.Context, turnID string) ([]debugtrace.Entry, error)
-}
-
-// Store embeds all AI storage interfaces so composition roots and integration
-// tests can accept a single concrete store instead of enumerating every
-// sub-interface. Handler-level code should continue accepting narrow interfaces.
-type Store interface {
-	AgentStore
-	CredentialStore
-	ProviderGrantStore
-	ProviderConnectSessionStore
-	AccessRequestStore
-	AuditEventStore
-	CampaignArtifactStore
-	DebugTraceStore
 }

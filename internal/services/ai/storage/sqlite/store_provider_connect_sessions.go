@@ -5,47 +5,47 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providerconnect"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
-func (s *Store) PutProviderConnectSession(ctx context.Context, record storage.ProviderConnectSessionRecord) error {
+func (s *Store) PutProviderConnectSession(ctx context.Context, session providerconnect.Session) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if record.ID == "" {
+	if session.ID == "" {
 		return fmt.Errorf("connect session id is required")
 	}
-	if record.OwnerUserID == "" {
+	if session.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	if record.Provider == "" {
+	if session.Provider == "" {
 		return fmt.Errorf("provider is required")
 	}
-	if record.Status == "" {
+	if session.Status == "" {
 		return fmt.Errorf("status is required")
 	}
-	if record.StateHash == "" {
+	if session.StateHash == "" {
 		return fmt.Errorf("state hash is required")
 	}
-	if record.CodeVerifierCiphertext == "" {
+	if session.CodeVerifierCiphertext == "" {
 		return fmt.Errorf("code verifier ciphertext is required")
 	}
-	if record.ExpiresAt.IsZero() {
+	if session.ExpiresAt.IsZero() {
 		return fmt.Errorf("expires at is required")
 	}
-	scopesJSON, err := encodeScopes(record.RequestedScopes)
+	scopesJSON, err := encodeScopes(session.RequestedScopes)
 	if err != nil {
 		return err
 	}
 	var completedAt sql.NullInt64
-	if record.CompletedAt != nil {
-		completedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.CompletedAt), Valid: true}
+	if session.CompletedAt != nil {
+		completedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*session.CompletedAt), Valid: true}
 	}
 
 	_, err = s.sqlDB.ExecContext(ctx, `
@@ -63,16 +63,16 @@ ON CONFLICT(id) DO UPDATE SET
 	expires_at = excluded.expires_at,
 	completed_at = excluded.completed_at
 `,
-		record.ID,
-		record.OwnerUserID,
-		record.Provider,
-		record.Status,
+		session.ID,
+		session.OwnerUserID,
+		session.Provider,
+		session.Status,
 		scopesJSON,
-		record.StateHash,
-		record.CodeVerifierCiphertext,
-		sqliteutil.ToMillis(record.CreatedAt),
-		sqliteutil.ToMillis(record.UpdatedAt),
-		sqliteutil.ToMillis(record.ExpiresAt),
+		session.StateHash,
+		session.CodeVerifierCiphertext,
+		sqliteutil.ToMillis(session.CreatedAt),
+		sqliteutil.ToMillis(session.UpdatedAt),
+		sqliteutil.ToMillis(session.ExpiresAt),
 		completedAt,
 	)
 	if err != nil {
@@ -82,15 +82,15 @@ ON CONFLICT(id) DO UPDATE SET
 }
 
 // GetProviderConnectSession fetches one provider connect session by ID.
-func (s *Store) GetProviderConnectSession(ctx context.Context, connectSessionID string) (storage.ProviderConnectSessionRecord, error) {
+func (s *Store) GetProviderConnectSession(ctx context.Context, connectSessionID string) (providerconnect.Session, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.ProviderConnectSessionRecord{}, err
+		return providerconnect.Session{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.ProviderConnectSessionRecord{}, fmt.Errorf("storage is not configured")
+		return providerconnect.Session{}, fmt.Errorf("storage is not configured")
 	}
 	if connectSessionID == "" {
-		return storage.ProviderConnectSessionRecord{}, fmt.Errorf("connect session id is required")
+		return providerconnect.Session{}, fmt.Errorf("connect session id is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -102,34 +102,45 @@ WHERE id = ?
 	rec, err := scanProviderConnectSession(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.ProviderConnectSessionRecord{}, storage.ErrNotFound
+			return providerconnect.Session{}, storage.ErrNotFound
 		}
-		return storage.ProviderConnectSessionRecord{}, fmt.Errorf("get provider connect session: %w", err)
+		return providerconnect.Session{}, fmt.Errorf("get provider connect session: %w", err)
 	}
 	return rec, nil
 }
 
 // CompleteProviderConnectSession marks one connect session as completed.
-func (s *Store) CompleteProviderConnectSession(ctx context.Context, ownerUserID string, connectSessionID string, completedAt time.Time) error {
+func (s *Store) CompleteProviderConnectSession(ctx context.Context, session providerconnect.Session) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if ownerUserID == "" {
+	if err := completeProviderConnectSession(ctx, s.sqlDB, session); err != nil {
+		return err
+	}
+	return nil
+}
+
+func completeProviderConnectSession(ctx context.Context, execer sqlExecer, session providerconnect.Session) error {
+	if session.OwnerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	if connectSessionID == "" {
+	if session.ID == "" {
 		return fmt.Errorf("connect session id is required")
 	}
-
-	updatedAt := completedAt.UTC()
-	res, err := s.sqlDB.ExecContext(ctx, `
+	if session.Status != providerconnect.StatusCompleted {
+		return fmt.Errorf("connect session must be completed")
+	}
+	if session.CompletedAt == nil {
+		return fmt.Errorf("completed at is required")
+	}
+	res, err := execer.ExecContext(ctx, `
 UPDATE ai_provider_connect_sessions
 SET status = 'completed', updated_at = ?, completed_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'pending'
-`, sqliteutil.ToMillis(updatedAt), sqliteutil.ToMillis(completedAt.UTC()), ownerUserID, connectSessionID)
+`, sqliteutil.ToMillis(session.UpdatedAt), sqliteutil.ToMillis(session.CompletedAt.UTC()), session.OwnerUserID, session.ID)
 	if err != nil {
 		return fmt.Errorf("complete provider connect session: %w", err)
 	}

@@ -37,9 +37,7 @@ func TestContextSourcesProduceExpectedSections(t *testing.T) {
 	}}
 
 	reg := orchestration.NewContextSourceRegistry()
-	for _, src := range dh.ContextSources() {
-		reg.Register(src)
-	}
+	reg.RegisterAll(dh.ContextSources()...)
 
 	sections, err := reg.CollectSections(context.Background(), sess, orchestration.PromptInput{
 		CampaignID: "camp-1",

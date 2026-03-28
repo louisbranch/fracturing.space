@@ -13,8 +13,10 @@ import (
 type Provider string
 
 const (
-	// OpenAI is the only supported AI provider in the current runtime.
+	// OpenAI is the OpenAI provider identity.
 	OpenAI Provider = "openai"
+	// Anthropic is the Anthropic provider identity.
+	Anthropic Provider = "anthropic"
 )
 
 // ErrInvalid indicates a provider value is missing or unsupported.
@@ -25,6 +27,8 @@ func Normalize(raw string) (Provider, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case string(OpenAI):
 		return OpenAI, nil
+	case string(Anthropic):
+		return Anthropic, nil
 	default:
 		return "", ErrInvalid
 	}

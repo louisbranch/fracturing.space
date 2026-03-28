@@ -6,20 +6,37 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/service"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// AccessRequestHandlers serves access-request and audit-event RPCs as thin
+// transport wrappers over the access-request service.
+type AccessRequestHandlers struct {
+	aiv1.UnimplementedAccessRequestServiceServer
+	svc *service.AccessRequestService
+}
+
+// AccessRequestHandlersConfig declares the dependencies for access-request RPCs.
+type AccessRequestHandlersConfig struct {
+	AccessRequestService *service.AccessRequestService
+}
+
+// NewAccessRequestHandlers builds an access-request RPC server from a service.
+func NewAccessRequestHandlers(cfg AccessRequestHandlersConfig) (*AccessRequestHandlers, error) {
+	if cfg.AccessRequestService == nil {
+		return nil, fmt.Errorf("ai: NewAccessRequestHandlers: access request service is required")
+	}
+	return &AccessRequestHandlers{svc: cfg.AccessRequestService}, nil
+}
+
 // CreateAccessRequest creates a pending access request for an agent.
 func (h *AccessRequestHandlers) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccessRequestRequest) (*aiv1.CreateAccessRequestResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "create access request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "create access request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	record, err := h.svc.Create(ctx, service.CreateAccessRequestInput{
@@ -36,12 +53,9 @@ func (h *AccessRequestHandlers) CreateAccessRequest(ctx context.Context, in *aiv
 
 // ListAccessRequests returns one role-scoped page of access requests.
 func (h *AccessRequestHandlers) ListAccessRequests(ctx context.Context, in *aiv1.ListAccessRequestsRequest) (*aiv1.ListAccessRequestsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list access requests request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "list access requests request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	role, err := listAccessRequestRoleFromProto(in.GetRole())
@@ -66,12 +80,9 @@ func (h *AccessRequestHandlers) ListAccessRequests(ctx context.Context, in *aiv1
 
 // ListAuditEvents returns one owner-scoped page of AI audit events.
 func (h *AccessRequestHandlers) ListAuditEvents(ctx context.Context, in *aiv1.ListAuditEventsRequest) (*aiv1.ListAuditEventsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list audit events request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "list audit events request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	filter, err := listAuditEventFilterFromRequest(in)
@@ -101,12 +112,9 @@ func (h *AccessRequestHandlers) ListAuditEvents(ctx context.Context, in *aiv1.Li
 
 // ReviewAccessRequest applies one owner decision to a pending access request.
 func (h *AccessRequestHandlers) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccessRequestRequest) (*aiv1.ReviewAccessRequestResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "review access request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "review access request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	decision, err := accessRequestDecisionFromProto(in.GetDecision())
@@ -128,12 +136,9 @@ func (h *AccessRequestHandlers) ReviewAccessRequest(ctx context.Context, in *aiv
 
 // RevokeAccessRequest removes delegated access for one approved request.
 func (h *AccessRequestHandlers) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccessRequestRequest) (*aiv1.RevokeAccessRequestResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "revoke access request is required")
-	}
-	userID := userIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	userID, err := requireUserScopedUnaryRequest(ctx, in, "revoke access request is required")
+	if err != nil {
+		return nil, err
 	}
 
 	record, err := h.svc.Revoke(ctx, service.RevokeAccessRequestInput{
@@ -159,27 +164,27 @@ func listAccessRequestRoleFromProto(role aiv1.AccessRequestRole) (service.ListAc
 	}
 }
 
-func listAuditEventFilterFromRequest(in *aiv1.ListAuditEventsRequest) (storage.AuditEventFilter, error) {
-	filter := storage.AuditEventFilter{
-		EventName: strings.TrimSpace(in.GetEventName()),
+func listAuditEventFilterFromRequest(in *aiv1.ListAuditEventsRequest) (auditevent.Filter, error) {
+	filter := auditevent.Filter{
+		EventName: auditevent.Name(strings.TrimSpace(in.GetEventName())),
 		AgentID:   strings.TrimSpace(in.GetAgentId()),
 	}
 	if in.GetCreatedAfter() != nil {
 		if err := in.GetCreatedAfter().CheckValid(); err != nil {
-			return storage.AuditEventFilter{}, fmt.Errorf("created_after is invalid")
+			return auditevent.Filter{}, fmt.Errorf("created_after is invalid")
 		}
 		createdAfter := in.GetCreatedAfter().AsTime().UTC()
 		filter.CreatedAfter = &createdAfter
 	}
 	if in.GetCreatedBefore() != nil {
 		if err := in.GetCreatedBefore().CheckValid(); err != nil {
-			return storage.AuditEventFilter{}, fmt.Errorf("created_before is invalid")
+			return auditevent.Filter{}, fmt.Errorf("created_before is invalid")
 		}
 		createdBefore := in.GetCreatedBefore().AsTime().UTC()
 		filter.CreatedBefore = &createdBefore
 	}
 	if filter.CreatedAfter != nil && filter.CreatedBefore != nil && filter.CreatedAfter.After(*filter.CreatedBefore) {
-		return storage.AuditEventFilter{}, fmt.Errorf("created_after must be before or equal to created_before")
+		return auditevent.Filter{}, fmt.Errorf("created_after must be before or equal to created_before")
 	}
 	return filter, nil
 }

@@ -11,11 +11,11 @@ import (
 )
 
 func (a *InvokeAdapter) ListModels(ctx context.Context, input provider.ListModelsInput) ([]provider.Model, error) {
-	credentialSecret := strings.TrimSpace(input.CredentialSecret)
-	if credentialSecret == "" {
-		return nil, fmt.Errorf("credential secret is required")
+	authToken := strings.TrimSpace(input.AuthToken)
+	if authToken == "" {
+		return nil, fmt.Errorf("auth token is required")
 	}
-	openAIProvider, err := a.providerClient(credentialSecret)
+	openAIProvider, err := a.providerClient(authToken)
 	if err != nil {
 		return nil, err
 	}
@@ -29,18 +29,14 @@ func (a *InvokeAdapter) ListModels(ctx context.Context, input provider.ListModel
 		if modelID == "" {
 			continue
 		}
-		models = append(models, provider.Model{
-			ID:      modelID,
-			OwnedBy: strings.TrimSpace(model.OwnedBy),
-			Created: model.Created,
-		})
+		models = append(models, provider.Model{ID: modelID})
 	}
 	return models, nil
 }
 
-func (a *InvokeAdapter) providerClient(credentialSecret string) (*anyllmopenai.Provider, error) {
+func (a *InvokeAdapter) providerClient(authToken string) (*anyllmopenai.Provider, error) {
 	opts := []anyllm.Option{
-		anyllm.WithAPIKey(credentialSecret),
+		anyllm.WithAPIKey(authToken),
 		anyllm.WithHTTPClient(a.cfg.HTTPClient),
 	}
 	baseURL := strings.TrimSpace(a.cfg.BaseURL)

@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
 )
 
 func TestPutAuditEvent(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 2, 30, 0, 0, time.UTC)
 
-	err := store.PutAuditEvent(context.Background(), storage.AuditEventRecord{
-		EventName:       "access_request.created",
+	err := store.PutAuditEvent(context.Background(), auditevent.Event{
+		EventName:       auditevent.NameAccessRequestCreated,
 		ActorUserID:     "",
 		OwnerUserID:     "owner-1",
 		RequesterUserID: "requester-1",
@@ -26,8 +26,8 @@ func TestPutAuditEvent(t *testing.T) {
 		t.Fatal("expected validation error for empty actor_user_id")
 	}
 
-	if err := store.PutAuditEvent(context.Background(), storage.AuditEventRecord{
-		EventName:       "access_request.created",
+	if err := store.PutAuditEvent(context.Background(), auditevent.Event{
+		EventName:       auditevent.NameAccessRequestCreated,
 		ActorUserID:     "requester-1",
 		OwnerUserID:     "owner-1",
 		RequesterUserID: "requester-1",
@@ -39,49 +39,40 @@ func TestPutAuditEvent(t *testing.T) {
 		t.Fatalf("put audit event: %v", err)
 	}
 
-	var (
-		eventName       string
-		actorUserID     string
-		ownerUserID     string
-		requesterUserID string
-		agentID         string
-		accessRequestID string
-		outcome         string
-		createdAt       int64
-	)
-	row := store.DB().QueryRowContext(context.Background(), `
-SELECT event_name, actor_user_id, owner_user_id, requester_user_id, agent_id, access_request_id, outcome, created_at
-FROM ai_audit_events
-WHERE actor_user_id = ?
-ORDER BY id DESC
-LIMIT 1
-`, "requester-1")
-	if err := row.Scan(&eventName, &actorUserID, &ownerUserID, &requesterUserID, &agentID, &accessRequestID, &outcome, &createdAt); err != nil {
-		t.Fatalf("scan audit row: %v", err)
+	page, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 10, "", auditevent.Filter{})
+	if err != nil {
+		t.Fatalf("list audit events by owner: %v", err)
 	}
-	if eventName != "access_request.created" {
-		t.Fatalf("event_name = %q, want %q", eventName, "access_request.created")
+	if len(page.AuditEvents) != 1 {
+		t.Fatalf("audit event count = %d, want 1", len(page.AuditEvents))
 	}
-	if actorUserID != "requester-1" {
-		t.Fatalf("actor_user_id = %q, want %q", actorUserID, "requester-1")
+	got := page.AuditEvents[0]
+	if got.EventName != auditevent.NameAccessRequestCreated {
+		t.Fatalf("event_name = %q, want %q", got.EventName, auditevent.NameAccessRequestCreated)
 	}
-	if ownerUserID != "owner-1" {
-		t.Fatalf("owner_user_id = %q, want %q", ownerUserID, "owner-1")
+	if got.ActorUserID != "requester-1" {
+		t.Fatalf("actor_user_id = %q, want %q", got.ActorUserID, "requester-1")
 	}
-	if requesterUserID != "requester-1" {
-		t.Fatalf("requester_user_id = %q, want %q", requesterUserID, "requester-1")
+	if got.OwnerUserID != "owner-1" {
+		t.Fatalf("owner_user_id = %q, want %q", got.OwnerUserID, "owner-1")
 	}
-	if agentID != "agent-1" {
-		t.Fatalf("agent_id = %q, want %q", agentID, "agent-1")
+	if got.RequesterUserID != "requester-1" {
+		t.Fatalf("requester_user_id = %q, want %q", got.RequesterUserID, "requester-1")
 	}
-	if accessRequestID != "request-1" {
-		t.Fatalf("access_request_id = %q, want %q", accessRequestID, "request-1")
+	if got.AgentID != "agent-1" {
+		t.Fatalf("agent_id = %q, want %q", got.AgentID, "agent-1")
 	}
-	if outcome != "pending" {
-		t.Fatalf("outcome = %q, want %q", outcome, "pending")
+	if got.AccessRequestID != "request-1" {
+		t.Fatalf("access_request_id = %q, want %q", got.AccessRequestID, "request-1")
 	}
-	if createdAt != now.UnixMilli() {
-		t.Fatalf("created_at = %d, want %d", createdAt, now.UnixMilli())
+	if got.Outcome != "pending" {
+		t.Fatalf("outcome = %q, want %q", got.Outcome, "pending")
+	}
+	if !got.CreatedAt.Equal(now) {
+		t.Fatalf("created_at = %s, want %s", got.CreatedAt.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano))
+	}
+	if got.ID == "" {
+		t.Fatal("expected persisted audit event id")
 	}
 }
 
@@ -89,11 +80,11 @@ func TestListAuditEventsByOwner(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 3, 15, 0, 0, time.UTC)
 
-	records := []storage.AuditEventRecord{
-		{EventName: "access_request.created", ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
-		{EventName: "access_request.reviewed", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
-		{EventName: "access_request.created", ActorUserID: "user-2", OwnerUserID: "owner-2", RequesterUserID: "user-2", AgentID: "agent-2", AccessRequestID: "request-2", Outcome: "pending", CreatedAt: now},
-		{EventName: "access_request.revoked", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "revoked", CreatedAt: now.Add(2 * time.Minute)},
+	records := []auditevent.Event{
+		{EventName: auditevent.NameAccessRequestCreated, ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
+		{EventName: auditevent.NameAccessRequestReviewed, ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
+		{EventName: auditevent.NameAccessRequestCreated, ActorUserID: "user-2", OwnerUserID: "owner-2", RequesterUserID: "user-2", AgentID: "agent-2", AccessRequestID: "request-2", Outcome: "pending", CreatedAt: now},
+		{EventName: auditevent.NameAccessRequestRevoked, ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "revoked", CreatedAt: now.Add(2 * time.Minute)},
 	}
 	for _, record := range records {
 		if err := store.PutAuditEvent(context.Background(), record); err != nil {
@@ -101,7 +92,7 @@ func TestListAuditEventsByOwner(t *testing.T) {
 		}
 	}
 
-	first, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 2, "", storage.AuditEventFilter{})
+	first, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 2, "", auditevent.Filter{})
 	if err != nil {
 		t.Fatalf("list first page: %v", err)
 	}
@@ -115,7 +106,7 @@ func TestListAuditEventsByOwner(t *testing.T) {
 		t.Fatalf("unexpected owner ids: %+v", first.AuditEvents)
 	}
 
-	second, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 2, first.NextPageToken, storage.AuditEventFilter{})
+	second, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 2, first.NextPageToken, auditevent.Filter{})
 	if err != nil {
 		t.Fatalf("list second page: %v", err)
 	}
@@ -133,9 +124,9 @@ func TestListAuditEventsByOwner(t *testing.T) {
 func TestListAuditEventsByOwnerWithFilters(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 4, 0, 0, 0, time.UTC)
-	records := []storage.AuditEventRecord{
+	records := []auditevent.Event{
 		{
-			EventName:       "access_request.created",
+			EventName:       auditevent.NameAccessRequestCreated,
 			ActorUserID:     "requester-1",
 			OwnerUserID:     "owner-1",
 			RequesterUserID: "requester-1",
@@ -145,7 +136,7 @@ func TestListAuditEventsByOwnerWithFilters(t *testing.T) {
 			CreatedAt:       now,
 		},
 		{
-			EventName:       "access_request.reviewed",
+			EventName:       auditevent.NameAccessRequestReviewed,
 			ActorUserID:     "owner-1",
 			OwnerUserID:     "owner-1",
 			RequesterUserID: "requester-1",
@@ -155,7 +146,7 @@ func TestListAuditEventsByOwnerWithFilters(t *testing.T) {
 			CreatedAt:       now.Add(2 * time.Minute),
 		},
 		{
-			EventName:       "access_request.reviewed",
+			EventName:       auditevent.NameAccessRequestReviewed,
 			ActorUserID:     "owner-1",
 			OwnerUserID:     "owner-1",
 			RequesterUserID: "requester-2",
@@ -165,7 +156,7 @@ func TestListAuditEventsByOwnerWithFilters(t *testing.T) {
 			CreatedAt:       now.Add(4 * time.Minute),
 		},
 		{
-			EventName:       "access_request.reviewed",
+			EventName:       auditevent.NameAccessRequestReviewed,
 			ActorUserID:     "owner-2",
 			OwnerUserID:     "owner-2",
 			RequesterUserID: "requester-3",
@@ -181,8 +172,8 @@ func TestListAuditEventsByOwnerWithFilters(t *testing.T) {
 		}
 	}
 
-	eventNameOnly, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 10, "", storage.AuditEventFilter{
-		EventName: "access_request.reviewed",
+	eventNameOnly, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 10, "", auditevent.Filter{
+		EventName: auditevent.NameAccessRequestReviewed,
 	})
 	if err != nil {
 		t.Fatalf("list by event name: %v", err)
@@ -191,12 +182,12 @@ func TestListAuditEventsByOwnerWithFilters(t *testing.T) {
 		t.Fatalf("event name len = %d, want 2", len(eventNameOnly.AuditEvents))
 	}
 	for _, event := range eventNameOnly.AuditEvents {
-		if event.EventName != "access_request.reviewed" {
-			t.Fatalf("event_name = %q, want %q", event.EventName, "access_request.reviewed")
+		if event.EventName != auditevent.NameAccessRequestReviewed {
+			t.Fatalf("event_name = %q, want %q", event.EventName, auditevent.NameAccessRequestReviewed)
 		}
 	}
 
-	agentOnly, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 10, "", storage.AuditEventFilter{
+	agentOnly, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 10, "", auditevent.Filter{
 		AgentID: "agent-2",
 	})
 	if err != nil {
@@ -211,7 +202,7 @@ func TestListAuditEventsByOwnerWithFilters(t *testing.T) {
 
 	createdAfter := now.Add(time.Minute)
 	createdBefore := now.Add(3 * time.Minute)
-	timeWindow, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 10, "", storage.AuditEventFilter{
+	timeWindow, err := store.ListAuditEventsByOwner(context.Background(), "owner-1", 10, "", auditevent.Filter{
 		CreatedAfter:  &createdAfter,
 		CreatedBefore: &createdBefore,
 	})

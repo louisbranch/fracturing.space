@@ -6,7 +6,7 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/auditevent"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -21,10 +21,10 @@ func TestListAuditEventsRequiresUserID(t *testing.T) {
 func TestListAuditEventsOwnerScoped(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 10, 0, 0, time.UTC)
-	store.AuditEvents = []storage.AuditEventRecord{
-		{ID: "1", EventName: "access_request.created", ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
-		{ID: "2", EventName: "access_request.reviewed", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
-		{ID: "3", EventName: "access_request.created", ActorUserID: "user-2", OwnerUserID: "owner-2", RequesterUserID: "user-2", AgentID: "agent-2", AccessRequestID: "request-2", Outcome: "pending", CreatedAt: now},
+	store.AuditEvents = []auditevent.Event{
+		{ID: "1", EventName: auditevent.NameAccessRequestCreated, ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
+		{ID: "2", EventName: auditevent.NameAccessRequestReviewed, ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
+		{ID: "3", EventName: auditevent.NameAccessRequestCreated, ActorUserID: "user-2", OwnerUserID: "owner-2", RequesterUserID: "user-2", AgentID: "agent-2", AccessRequestID: "request-2", Outcome: "pending", CreatedAt: now},
 	}
 
 	th := newAccessRequestHandlersWithStores(t, store, store, store)
@@ -47,10 +47,10 @@ func TestListAuditEventsOwnerScoped(t *testing.T) {
 func TestListAuditEventsPaginates(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 10, 0, 0, time.UTC)
-	store.AuditEvents = []storage.AuditEventRecord{
-		{ID: "1", EventName: "access_request.created", ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
-		{ID: "2", EventName: "access_request.reviewed", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
-		{ID: "3", EventName: "access_request.revoked", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "revoked", CreatedAt: now.Add(2 * time.Minute)},
+	store.AuditEvents = []auditevent.Event{
+		{ID: "1", EventName: auditevent.NameAccessRequestCreated, ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
+		{ID: "2", EventName: auditevent.NameAccessRequestReviewed, ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
+		{ID: "3", EventName: auditevent.NameAccessRequestRevoked, ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "revoked", CreatedAt: now.Add(2 * time.Minute)},
 	}
 
 	th := newAccessRequestHandlersWithStores(t, store, store, store)
@@ -88,9 +88,9 @@ func TestListAuditEventsPaginates(t *testing.T) {
 func TestListAuditEventsFiltersByEventName(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	store.AuditEvents = []storage.AuditEventRecord{
-		{ID: "1", EventName: "access_request.created", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
-		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(time.Minute)},
+	store.AuditEvents = []auditevent.Event{
+		{ID: "1", EventName: auditevent.NameAccessRequestCreated, OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
+		{ID: "2", EventName: auditevent.NameAccessRequestReviewed, OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(time.Minute)},
 	}
 
 	th := newAccessRequestHandlersWithStores(t, store, store, store)
@@ -113,9 +113,9 @@ func TestListAuditEventsFiltersByEventName(t *testing.T) {
 func TestListAuditEventsFiltersByAgentID(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	store.AuditEvents = []storage.AuditEventRecord{
-		{ID: "1", EventName: "access_request.created", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
-		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-2", CreatedAt: now.Add(time.Minute)},
+	store.AuditEvents = []auditevent.Event{
+		{ID: "1", EventName: auditevent.NameAccessRequestCreated, OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
+		{ID: "2", EventName: auditevent.NameAccessRequestReviewed, OwnerUserID: "owner-1", AgentID: "agent-2", CreatedAt: now.Add(time.Minute)},
 	}
 
 	th := newAccessRequestHandlersWithStores(t, store, store, store)
@@ -138,10 +138,10 @@ func TestListAuditEventsFiltersByAgentID(t *testing.T) {
 func TestListAuditEventsFiltersByTimeWindow(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	store.AuditEvents = []storage.AuditEventRecord{
-		{ID: "1", EventName: "access_request.created", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
-		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(2 * time.Minute)},
-		{ID: "3", EventName: "access_request.revoked", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(4 * time.Minute)},
+	store.AuditEvents = []auditevent.Event{
+		{ID: "1", EventName: auditevent.NameAccessRequestCreated, OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
+		{ID: "2", EventName: auditevent.NameAccessRequestReviewed, OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(2 * time.Minute)},
+		{ID: "3", EventName: auditevent.NameAccessRequestRevoked, OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(4 * time.Minute)},
 	}
 
 	th := newAccessRequestHandlersWithStores(t, store, store, store)

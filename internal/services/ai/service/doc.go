@@ -6,11 +6,16 @@
 // coordinate storage and cross-service calls, and return domain outputs.
 //
 // Supporting infrastructure:
-//   - AuthTokenResolver resolves agent auth references to live provider tokens
-//     (credential decryption or provider-grant refresh).
+//   - AuthMaterialResolver resolves invoke-time auth material for credentials
+//     and auth references.
+//   - ProviderGrantRuntime owns invoke-time provider-grant refresh policy and
+//     lifecycle-state persistence.
 //   - AccessibleAgentResolver determines whether a user may invoke an agent
 //     (ownership or approved access request).
-//   - UsageGuard prevents mutations to resources bound to active campaigns.
+//   - AgentBindingUsageReader reads active campaign counts for one agent.
+//   - AuthReferenceUsageReader maps credential/provider-grant usage through
+//     owned agents plus active campaign bindings.
+//   - UsagePolicy prevents mutations to resources bound to active campaigns.
 //   - Error/ErrorKind provides typed service errors that the transport layer
 //     maps to gRPC status codes.
 //

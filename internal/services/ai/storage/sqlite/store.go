@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -13,8 +14,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providerconnect"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite/migrations"
 	msqlite "modernc.org/sqlite"
 	sqlite3lib "modernc.org/sqlite/lib"
@@ -46,14 +47,6 @@ func decodeScopes(value string) ([]string, error) {
 // Store provides SQLite-backed persistence for AI records.
 type Store struct {
 	sqlDB *sql.DB
-}
-
-// DB returns the underlying sql.DB instance.
-func (s *Store) DB() *sql.DB {
-	if s == nil {
-		return nil
-	}
-	return s.sqlDB
 }
 
 // Open opens a SQLite store at the provided path.
@@ -116,6 +109,10 @@ type scanner interface {
 	Scan(dest ...any) error
 }
 
+type sqlExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
 func scanProviderGrant(s scanner) (providergrant.ProviderGrant, error) {
 	var (
 		id, ownerUserID, providerRaw string
@@ -168,9 +165,9 @@ func scanProviderGrant(s scanner) (providergrant.ProviderGrant, error) {
 	return grant, nil
 }
 
-func scanProviderConnectSession(s scanner) (storage.ProviderConnectSessionRecord, error) {
+func scanProviderConnectSession(s scanner) (providerconnect.Session, error) {
 	var (
-		rec                storage.ProviderConnectSessionRecord
+		rec                providerconnect.Session
 		requestedScopesRaw string
 		createdAt          int64
 		updatedAt          int64
@@ -190,11 +187,11 @@ func scanProviderConnectSession(s scanner) (storage.ProviderConnectSessionRecord
 		&expiresAt,
 		&completedAt,
 	); err != nil {
-		return storage.ProviderConnectSessionRecord{}, err
+		return providerconnect.Session{}, err
 	}
 	scopes, err := decodeScopes(requestedScopesRaw)
 	if err != nil {
-		return storage.ProviderConnectSessionRecord{}, err
+		return providerconnect.Session{}, err
 	}
 	rec.RequestedScopes = scopes
 	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
@@ -212,14 +209,16 @@ func scanAccessRequest(s scanner) (accessrequest.AccessRequest, error) {
 		id, requesterUserID, ownerUserID, agentID string
 		scopeRaw, requestNote, statusRaw          string
 		reviewerUserID, reviewNote                string
+		revokerUserID, revokeNote                 string
 		createdAt, updatedAt                      int64
 		reviewedAt                                sql.NullInt64
+		revokedAt                                 sql.NullInt64
 	)
 	if err := s.Scan(
 		&id, &requesterUserID, &ownerUserID, &agentID,
 		&scopeRaw, &requestNote, &statusRaw,
-		&reviewerUserID, &reviewNote,
-		&createdAt, &updatedAt, &reviewedAt,
+		&reviewerUserID, &reviewNote, &revokerUserID, &revokeNote,
+		&createdAt, &updatedAt, &reviewedAt, &revokedAt,
 	); err != nil {
 		return accessrequest.AccessRequest{}, err
 	}
@@ -233,12 +232,18 @@ func scanAccessRequest(s scanner) (accessrequest.AccessRequest, error) {
 		Status:          accessrequest.ParseStatus(statusRaw),
 		ReviewerUserID:  reviewerUserID,
 		ReviewNote:      reviewNote,
+		RevokerUserID:   revokerUserID,
+		RevokeNote:      revokeNote,
 		CreatedAt:       sqliteutil.FromMillis(createdAt),
 		UpdatedAt:       sqliteutil.FromMillis(updatedAt),
 	}
 	if reviewedAt.Valid {
 		value := sqliteutil.FromMillis(reviewedAt.Int64)
 		ar.ReviewedAt = &value
+	}
+	if revokedAt.Valid {
+		value := sqliteutil.FromMillis(revokedAt.Int64)
+		ar.RevokedAt = &value
 	}
 	return ar, nil
 }

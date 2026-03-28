@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
@@ -28,6 +29,7 @@ type serverEnv struct {
 	OpenAIOAuthClientSecret  string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
 	OpenAIOAuthRedirectURI   string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
 	OpenAIResponsesURL       string        `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
+	AnthropicBaseURL         string        `env:"FRACTURING_SPACE_AI_ANTHROPIC_BASE_URL"`
 	OrchestrationTurnTimeout time.Duration `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT" envDefault:"2m"`
 	OrchestrationMaxSteps    int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS" envDefault:"8"`
 	ToolResultMaxBytes       int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES" envDefault:"32768"`
@@ -43,6 +45,7 @@ type runtimeConfig struct {
 	InternalServiceAllowlist map[string]struct{}
 	OpenAIOAuthConfig        *openaiprovider.OAuthConfig
 	OpenAIResponsesURL       string
+	AnthropicBaseURL         string
 	OrchestrationTurnTimeout time.Duration
 	OrchestrationMaxSteps    int
 	ToolResultMaxBytes       int
@@ -57,11 +60,8 @@ func (cfg runtimeConfig) Validate() error {
 	if strings.TrimSpace(cfg.DBPath) == "" {
 		return fmt.Errorf("FRACTURING_SPACE_AI_DB_PATH is required")
 	}
-	if strings.TrimSpace(cfg.EncryptionKey) == "" {
-		return fmt.Errorf("FRACTURING_SPACE_AI_ENCRYPTION_KEY is required")
-	}
-	if _, err := decodeBase64Key(cfg.EncryptionKey); err != nil {
-		return fmt.Errorf("decode encryption key: %w", err)
+	if _, err := cfg.encryptionKeyBytes(); err != nil {
+		return err
 	}
 	if cfg.OrchestrationTurnTimeout <= 0 {
 		return fmt.Errorf("FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT must be positive")
@@ -73,6 +73,30 @@ func (cfg runtimeConfig) Validate() error {
 		return fmt.Errorf("FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES must be positive")
 	}
 	return nil
+}
+
+func (cfg runtimeConfig) encryptionKeyBytes() ([]byte, error) {
+	encryptionKey := strings.TrimSpace(cfg.EncryptionKey)
+	if encryptionKey == "" {
+		return nil, fmt.Errorf("FRACTURING_SPACE_AI_ENCRYPTION_KEY is required")
+	}
+	keyBytes, err := decodeBase64Key(encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("decode encryption key: %w", err)
+	}
+	return keyBytes, nil
+}
+
+func (cfg runtimeConfig) buildSealer() (secret.Sealer, error) {
+	keyBytes, err := cfg.encryptionKeyBytes()
+	if err != nil {
+		return nil, err
+	}
+	sealer, err := secret.NewAESGCMSealer(keyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("build secret sealer: %w", err)
+	}
+	return sealer, nil
 }
 
 func loadServerEnv() (serverEnv, error) {
@@ -110,6 +134,7 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		InternalServiceAllowlist: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
 		OpenAIOAuthConfig:        openAIOAuthConfig,
 		OpenAIResponsesURL:       strings.TrimSpace(srvEnv.OpenAIResponsesURL),
+		AnthropicBaseURL:         strings.TrimSpace(srvEnv.AnthropicBaseURL),
 		OrchestrationTurnTimeout: srvEnv.OrchestrationTurnTimeout,
 		OrchestrationMaxSteps:    srvEnv.OrchestrationMaxSteps,
 		ToolResultMaxBytes:       srvEnv.ToolResultMaxBytes,
@@ -126,6 +151,7 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 func (cfg runtimeConfig) campaignTurnRunnerConfig(dialer orchestration.Dialer) orchestration.RunnerConfig {
 	return orchestration.RunnerConfig{
 		Dialer:             dialer,
+		TurnPolicy:         orchestration.NewInteractionTurnPolicy(),
 		MaxSteps:           cfg.OrchestrationMaxSteps,
 		TurnTimeout:        cfg.OrchestrationTurnTimeout,
 		ToolResultMaxBytes: cfg.ToolResultMaxBytes,

@@ -77,6 +77,46 @@ func TestListProviderGrantsByOwner(t *testing.T) {
 	}
 }
 
+func TestListProviderGrantsByOwnerPagination(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 15, 23, 30, 0, 0, time.UTC)
+
+	for _, grant := range []providergrant.ProviderGrant{
+		{ID: "grant-1", OwnerUserID: "user-1", Provider: provider.OpenAI, GrantedScopes: []string{"responses.read"}, TokenCiphertext: "enc:1", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "grant-2", OwnerUserID: "user-1", Provider: provider.OpenAI, GrantedScopes: []string{"responses.write"}, TokenCiphertext: "enc:2", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
+		{ID: "grant-3", OwnerUserID: "user-1", Provider: provider.OpenAI, GrantedScopes: []string{"responses.manage"}, TokenCiphertext: "enc:3", Status: providergrant.StatusActive, CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := store.PutProviderGrant(context.Background(), grant); err != nil {
+			t.Fatalf("put provider grant %s: %v", grant.ID, err)
+		}
+	}
+
+	first, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 2, "", providergrant.Filter{})
+	if err != nil {
+		t.Fatalf("list first provider grant page: %v", err)
+	}
+	if len(first.ProviderGrants) != 2 {
+		t.Fatalf("first page len = %d, want 2", len(first.ProviderGrants))
+	}
+	if first.NextPageToken != "grant-2" {
+		t.Fatalf("first next page token = %q, want %q", first.NextPageToken, "grant-2")
+	}
+
+	second, err := store.ListProviderGrantsByOwner(context.Background(), "user-1", 2, first.NextPageToken, providergrant.Filter{})
+	if err != nil {
+		t.Fatalf("list second provider grant page: %v", err)
+	}
+	if len(second.ProviderGrants) != 1 {
+		t.Fatalf("second page len = %d, want 1", len(second.ProviderGrants))
+	}
+	if second.ProviderGrants[0].ID != "grant-3" {
+		t.Fatalf("second page id = %q, want %q", second.ProviderGrants[0].ID, "grant-3")
+	}
+	if second.NextPageToken != "" {
+		t.Fatalf("second next page token = %q, want empty", second.NextPageToken)
+	}
+}
+
 func TestListProviderGrantsByOwnerWithFilters(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 16, 2, 1, 0, 0, time.UTC)
