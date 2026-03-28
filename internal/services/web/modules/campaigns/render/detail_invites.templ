@@ -10,68 +10,20 @@ templ invitesFragment(view InvitesPageView, loc webtemplates.Localizer) {
 		<div class="space-y-4">
 			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-invites-header="true">
 				<div class="card-body">
-					<h2 class="card-title">{ webtemplates.T(loc, "game.campaign_invites.heading") }</h2>
-				</div>
-			</div>
-			if view.CanManageInvites {
-				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-invite-create-entry="true">
-					<div class="card-body">
-						if campaignActionsLocked(view.ActionsLocked) {
-							<div class="grid gap-3 md:grid-cols-2" data-campaign-invite-create-locked="true">
-								<label class="form-control">
-									<span class="label-text">{ webtemplates.T(loc, "game.campaign_invites.field_participant") }</span>
-									<select class="select select-bordered w-full" name="participant_id" disabled data-campaign-invite-create-participant-select="true" data-campaign-invite-create-participant-disabled="true">
-										if len(view.InviteSeatOptions) == 0 {
-											<option value="">{ webtemplates.T(loc, "game.campaign_invites.placeholder_participant") }</option>
-										} else {
-											<option value="">{ webtemplates.T(loc, "game.campaign_invites.placeholder_participant") }</option>
-											for _, option := range view.InviteSeatOptions {
-												<option value={ option.ParticipantID } data-campaign-invite-create-option-id={ option.ParticipantID }>{ option.Label }</option>
-											}
-										}
-									</select>
-								</label>
-								<label class="form-control">
-									<span class="label-text">{ webtemplates.T(loc, "game.campaign_invites.field_recipient_username") }</span>
-									<input type="text" name="username" placeholder={ webtemplates.T(loc, "game.campaign_invites.placeholder_recipient_username") } class="input input-bordered" disabled data-campaign-invite-create-recipient-disabled="true"/>
-								</label>
-								if len(view.InviteSeatOptions) == 0 {
-									<p class="text-sm opacity-70 md:col-span-2" data-campaign-invite-create-empty="true">{ webtemplates.T(loc, "game.campaign_invites.empty_targets") }</p>
-								}
-								<div class="md:col-span-2 card-actions justify-end">
-									<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
-										<button class="btn btn-primary" type="button" disabled data-campaign-invite-create-disabled="true">{ webtemplates.T(loc, "game.campaign_invites.submit_create") }</button>
-									</div>
+					<div class="flex items-center justify-between gap-3">
+						<h2 class="card-title">{ webtemplates.T(loc, "game.campaign_invites.heading") }</h2>
+						if view.CanManageInvites {
+							if campaignActionsLocked(view.ActionsLocked) {
+								<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-invite-create-disabled="true">{ webtemplates.T(loc, "game.campaign_invites.submit_create") }</button>
 								</div>
-							</div>
-						} else {
-							<form method="post" action={ routepath.AppCampaignInviteCreate(view.CampaignID) } class="grid gap-3 md:grid-cols-2" data-campaign-invite-create-form="true" data-campaign-invite-search-path={ routepath.AppCampaignInviteSearch(view.CampaignID) } data-campaign-invite-search-error="Unable to search users right now.">
-								<label class="form-control">
-									<span class="label-text">{ webtemplates.T(loc, "game.campaign_invites.field_participant") }</span>
-									<select class="select select-bordered w-full" name="participant_id" required disabled?={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-participant-select="true" data-campaign-invite-create-participant-disabled={ len(view.InviteSeatOptions) == 0 }>
-										<option value="">{ webtemplates.T(loc, "game.campaign_invites.placeholder_participant") }</option>
-										for _, option := range view.InviteSeatOptions {
-											<option value={ option.ParticipantID } data-campaign-invite-create-option-id={ option.ParticipantID }>{ option.Label }</option>
-										}
-									</select>
-								</label>
-								<label class="form-control">
-									<span class="label-text">{ webtemplates.T(loc, "game.campaign_invites.field_recipient_username") }</span>
-									<input type="text" name="username" placeholder={ webtemplates.T(loc, "game.campaign_invites.placeholder_recipient_username") } class="input input-bordered" autocomplete="off" data-campaign-invite-search-input="true"/>
-								</label>
-								<div class="md:col-span-2 grid gap-2" hidden data-campaign-invite-search-results="true"></div>
-								<p class="text-sm opacity-70 md:col-span-2" hidden data-campaign-invite-search-empty="true">No users found.</p>
-								if len(view.InviteSeatOptions) == 0 {
-									<p class="text-sm opacity-70 md:col-span-2" data-campaign-invite-create-empty="true">{ webtemplates.T(loc, "game.campaign_invites.empty_targets") }</p>
-								}
-								<div class="md:col-span-2 card-actions justify-end">
-									<button class="btn btn-primary" type="submit" disabled?={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-disabled={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-submit="true">{ webtemplates.T(loc, "game.campaign_invites.submit_create") }</button>
-								</div>
-							</form>
+							} else {
+								<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignInviteCreate(view.CampaignID) } data-campaign-invite-create-link="true">{ webtemplates.T(loc, "game.campaign_invites.submit_create") }</a>
+							}
 						}
 					</div>
 				</div>
-			}
+			</div>
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				if len(view.Invites) == 0 {
 					<p data-campaign-invites-empty="true">{ webtemplates.T(loc, "game.campaign_invites.empty") }</p>
@@ -116,7 +68,58 @@ templ invitesFragment(view InvitesPageView, loc webtemplates.Localizer) {
 			</div>
 		</div>
 	</section>
-	if view.CanManageInvites && !campaignActionsLocked(view.ActionsLocked) {
+}
+
+templ inviteCreateFragment(view InviteCreatePageView, loc webtemplates.Localizer) {
+	<section id="campaign-invite-create" class="space-y-4" data-campaign-invite-create-page="true">
+		<div class="card bg-base-100 border border-base-300 shadow-sm">
+			<div class="card-body gap-4 p-4">
+				<h2 class="card-title">{ webtemplates.T(loc, "game.campaign_invites.submit_create") }</h2>
+				<form method="post" action={ routepath.AppCampaignInviteCreate(view.CampaignID) } class="space-y-4" data-campaign-invite-create-form="true" data-campaign-invite-search-path={ routepath.AppCampaignInviteSearch(view.CampaignID) } data-campaign-invite-search-error="Unable to search users right now.">
+					<div class="grid gap-4 md:grid-cols-2">
+						<label class="form-control">
+							<span class="label-text">{ webtemplates.T(loc, "game.campaign_invites.field_participant") }</span>
+							<select class="select select-bordered w-full" name="participant_id" required disabled?={ !campaignInviteCreateReady(view) } data-campaign-invite-create-participant-select="true" data-campaign-invite-create-participant-disabled={ !campaignInviteCreateReady(view) }>
+								<option value="">{ webtemplates.T(loc, "game.campaign_invites.placeholder_participant") }</option>
+								for _, option := range view.InviteSeatOptions {
+									<option value={ option.ParticipantID } data-campaign-invite-create-option-id={ option.ParticipantID }>{ option.Label }</option>
+								}
+							</select>
+						</label>
+						<label class="form-control">
+							<span class="label-text">{ webtemplates.T(loc, "game.campaign_invites.field_recipient_username") }</span>
+							<input
+								type="text"
+								name="username"
+								placeholder={ webtemplates.T(loc, "game.campaign_invites.placeholder_recipient_username") }
+								class="input input-bordered"
+								autocomplete="off"
+								spellcheck="false"
+								aria-autocomplete="list"
+								disabled?={ !campaignInviteCreateReady(view) }
+								data-campaign-invite-search-input="true"
+								data-campaign-invite-create-recipient-disabled={ !campaignInviteCreateReady(view) }/>
+						</label>
+					</div>
+					<div class="grid max-h-80 gap-2 overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow-sm" hidden data-campaign-invite-search-results="true"></div>
+					<p class="text-sm opacity-70" hidden data-campaign-invite-search-empty="true">No users found.</p>
+					if len(view.InviteSeatOptions) == 0 {
+						<p class="text-sm opacity-70" data-campaign-invite-create-empty="true">{ webtemplates.T(loc, "game.campaign_invites.empty_targets") }</p>
+					}
+					<div class="card-actions justify-end">
+						if campaignActionsLocked(view.ActionsLocked) {
+							<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+								<button class="btn btn-primary" type="submit" disabled data-campaign-invite-create-disabled="true">{ webtemplates.T(loc, "game.campaign_invites.submit_create") }</button>
+							</div>
+						} else {
+							<button class="btn btn-primary" type="submit" disabled?={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-disabled={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-submit="true">{ webtemplates.T(loc, "game.campaign_invites.submit_create") }</button>
+						}
+					</div>
+				</form>
+			</div>
+		</div>
+	</section>
+	if campaignInviteCreateReady(view) {
 		<script defer src="/static/username-input.js"></script>
 	}
 }

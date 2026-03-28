@@ -415,18 +415,76 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 		`data-campaign-invite-status="Pending"`,
 		`data-campaign-invite-public-url="true"`,
 		`value="http://example.com/invite/inv-1"`,
-		`data-campaign-invite-create-form="true"`,
-		`data-campaign-invite-create-submit="true"`,
-		`data-campaign-invite-create-participant-select="true"`,
-		`data-campaign-invite-create-option-id="p-eligible"`,
-		`>Aria</option>`,
+		`data-campaign-invite-create-link="true"`,
 		`data-campaign-invite-revoke-form="true"`,
 		`data-campaign-invite-revoke-submit="true"`,
-		`<script defer src="/static/username-input.js"></script>`,
 		`class="menu-active" href="/app/campaigns/c1/invites"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing invite marker %q: %q", marker, body)
+		}
+	}
+	// Invariant: the list page must not render create-form internals after the cutover.
+	for _, marker := range []string{
+		`data-campaign-invite-create-option-id="p-bound"`,
+		`data-campaign-invite-create-option-id="p-ai"`,
+		`data-campaign-invite-create-option-id="p1"`,
+		`data-campaign-invite-create-form="true"`,
+		`<script defer src="/static/username-input.js"></script>`,
+		`>user-2<`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body should not render invite create-page marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignInviteCreateRouteRendersOwnedCreatePage(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{
+			{ID: "p-eligible", Name: "Aria", Controller: "Human"},
+			{ID: "p-bound", Name: "Bound Seat", Controller: "Human", UserID: "user-9"},
+			{ID: "p-ai", Name: "Oracle", Controller: "AI"},
+			{ID: "p1", Name: "Pending Seat", Controller: "Human"},
+		},
+		invites: []campaignapp.CampaignInvite{{
+			ID:                "inv-1",
+			ParticipantID:     "p1",
+			ParticipantName:   "Pending Seat",
+			RecipientUserID:   "user-2",
+			RecipientUsername: "river",
+			HasRecipient:      true,
+			Status:            "Pending",
+		}},
+	}, modulehandlertest.NewBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInviteCreate("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-invite-create-page="true"`,
+		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-create-participant-select="true"`,
+		`data-campaign-invite-create-option-id="p-eligible"`,
+		`>Aria</option>`,
+		`data-campaign-invite-search-input="true"`,
+		`data-campaign-invite-create-submit="true"`,
+		`<script defer src="/static/username-input.js"></script>`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing invite create-page marker %q: %q", marker, body)
 		}
 	}
 	// Invariant: the selector must exclude bound, AI, and already-pending seats.
@@ -434,8 +492,6 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 		`data-campaign-invite-create-option-id="p-bound"`,
 		`data-campaign-invite-create-option-id="p-ai"`,
 		`data-campaign-invite-create-option-id="p1"`,
-		`name="participant_id" required placeholder=`,
-		`>user-2<`,
 	} {
 		if strings.Contains(body, marker) {
 			t.Fatalf("body should not render ineligible invite selector marker %q: %q", marker, body)
@@ -485,7 +541,7 @@ func TestMountCampaignInvitesRouteHidesManageControlsWithoutInvitePermission(t *
 		t.Fatalf("body should hide invites menu item without permission: %q", body)
 	}
 	for _, marker := range []string{
-		`data-campaign-invite-create-entry="true"`,
+		`data-campaign-invite-create-link="true"`,
 		`data-campaign-invite-create-form="true"`,
 		`data-campaign-invite-revoke-form="true"`,
 		`data-campaign-invite-create-disabled="true"`,
@@ -585,8 +641,6 @@ func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *te
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`data-campaign-invite-create-entry="true"`,
-		`data-campaign-invite-create-participant-select="true"`,
 		`data-campaign-invite-create-disabled="true"`,
 		`data-campaign-invite-revoke-disabled="true"`,
 	} {
@@ -595,6 +649,7 @@ func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *te
 		}
 	}
 	for _, marker := range []string{
+		`data-campaign-invite-create-link="true"`,
 		`data-campaign-invite-create-form="true"`,
 		`data-campaign-invite-revoke-form="true"`,
 	} {
@@ -608,7 +663,65 @@ func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *te
 	}
 }
 
-func TestMountCampaignInvitesRouteDisablesCreateWhenNoEligibleSeats(t *testing.T) {
+func TestMountCampaignInviteCreateRouteDisablesFormWhileActionsLocked(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{{
+			ID:         "p-open",
+			Name:       "Aria",
+			Controller: "Human",
+		}},
+		invites: []campaignapp.CampaignInvite{{
+			ID:              "inv-1",
+			ParticipantID:   "p1",
+			RecipientUserID: "user-2",
+			Status:          "Pending",
+		}},
+		sessions: []campaignapp.CampaignSession{{
+			ID:        "s1",
+			Name:      "First Light",
+			Status:    "Active",
+			StartedAt: "2026-02-01 20:00 UTC",
+		}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    true,
+			ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL",
+		},
+	}, modulehandlertest.NewBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInviteCreate("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-invite-create-page="true"`,
+		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-create-participant-disabled="true"`,
+		`data-campaign-invite-create-recipient-disabled="true"`,
+		`data-campaign-invite-create-disabled="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing locked invite create-page marker %q: %q", marker, body)
+		}
+	}
+	// Invariant: locked create pages must not load the client-side picker script.
+	if strings.Contains(body, `<script defer src="/static/username-input.js"></script>`) {
+		t.Fatalf("body should not render invite mutation script while locked: %q", body)
+	}
+}
+
+func TestMountCampaignInviteCreateRouteDisablesCreateWhenNoEligibleSeats(t *testing.T) {
 	t.Parallel()
 
 	m := New(configWithGateway(fakeGateway{
@@ -635,7 +748,7 @@ func TestMountCampaignInvitesRouteDisablesCreateWhenNoEligibleSeats(t *testing.T
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInviteCreate("c1"), nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -643,8 +756,10 @@ func TestMountCampaignInvitesRouteDisablesCreateWhenNoEligibleSeats(t *testing.T
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
+		`data-campaign-invite-create-page="true"`,
 		`data-campaign-invite-create-form="true"`,
 		`data-campaign-invite-create-participant-disabled="true"`,
+		`data-campaign-invite-create-recipient-disabled="true"`,
 		`data-campaign-invite-create-empty="true"`,
 		`data-campaign-invite-create-disabled="true"`,
 	} {
@@ -655,6 +770,10 @@ func TestMountCampaignInvitesRouteDisablesCreateWhenNoEligibleSeats(t *testing.T
 	// Invariant: no eligible seat means no selectable invite target options.
 	if strings.Contains(body, `data-campaign-invite-create-option-id=`) {
 		t.Fatalf("body should not render selectable invite target options when none are eligible: %q", body)
+	}
+	// Invariant: disabled create pages must not load the live picker script.
+	if strings.Contains(body, `<script defer src="/static/username-input.js"></script>`) {
+		t.Fatalf("body should not render invite mutation script without eligible seats: %q", body)
 	}
 }
 

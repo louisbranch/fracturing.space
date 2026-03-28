@@ -19,14 +19,10 @@ import (
 func invitesView(
 	page *campaigndetail.PageContext,
 	campaignID string,
-	participants []campaignapp.CampaignParticipant,
 	invites []campaignapp.CampaignInvite,
 	r *http.Request,
 ) campaignrender.InvitesPageView {
 	view := campaignrender.InvitesPageView{CampaignDetailBaseView: page.BaseDetailView(campaignID)}
-	if view.CanManageInvites {
-		view.InviteSeatOptions = mapInviteSeatOptions(participants, invites)
-	}
 	view.Invites = mapInvitesView(invites, r)
 	return view
 }
@@ -35,6 +31,27 @@ func invitesView(
 func invitesBreadcrumbs(page *campaigndetail.PageContext) []sharedtemplates.BreadcrumbItem {
 	return []sharedtemplates.BreadcrumbItem{
 		{Label: webtemplates.T(page.Loc, "game.campaign_invites.title")},
+	}
+}
+
+// inviteCreateView builds the invite-create page view from participant and
+// invite state.
+func inviteCreateView(
+	page *campaigndetail.PageContext,
+	campaignID string,
+	participants []campaignapp.CampaignParticipant,
+	invites []campaignapp.CampaignInvite,
+) campaignrender.InviteCreatePageView {
+	view := campaignrender.InviteCreatePageView{CampaignDetailBaseView: page.BaseDetailView(campaignID)}
+	view.InviteSeatOptions = mapInviteSeatOptions(participants, invites)
+	return view
+}
+
+// inviteCreateBreadcrumbs returns breadcrumbs for the invite-create page.
+func inviteCreateBreadcrumbs(page *campaigndetail.PageContext, campaignID string) []sharedtemplates.BreadcrumbItem {
+	return []sharedtemplates.BreadcrumbItem{
+		{Label: webtemplates.T(page.Loc, "game.campaign_invites.title"), URL: routepath.AppCampaignInvites(campaignID)},
+		{Label: webtemplates.T(page.Loc, "game.campaign_invites.submit_create")},
 	}
 }
 

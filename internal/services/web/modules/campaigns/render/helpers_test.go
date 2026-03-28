@@ -102,6 +102,12 @@ func TestSharedHelperLabelsAndAttrs(t *testing.T) {
 	if !campaignSessionStartReady(SessionReadinessView{Ready: true}) {
 		t.Fatal("campaignSessionStartReady() = false")
 	}
+	if !campaignInviteCreateReady(InviteCreatePageView{InviteSeatOptions: []InviteSeatOptionView{{ParticipantID: "p-1", Label: "Rook"}}}) {
+		t.Fatal("campaignInviteCreateReady(interactive) = false")
+	}
+	if campaignInviteCreateReady(InviteCreatePageView{CampaignDetailBaseView: CampaignDetailBaseView{ActionsLocked: true}, InviteSeatOptions: []InviteSeatOptionView{{ParticipantID: "p-1", Label: "Rook"}}}) {
+		t.Fatal("campaignInviteCreateReady(locked) = true")
+	}
 }
 
 func TestRenderHelperNormalizationContracts(t *testing.T) {

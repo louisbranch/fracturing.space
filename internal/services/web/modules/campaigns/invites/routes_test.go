@@ -32,7 +32,8 @@ func TestInviteViewsInputsAndRoutes(t *testing.T) {
 		Workspace:        campaignapp.CampaignWorkspace{ID: "camp-1", Name: "Starfall"},
 		CanManageInvites: true,
 		Loc: testLocalizer{
-			"game.campaign_invites.title": "Invites",
+			"game.campaign_invites.title":         "Invites",
+			"game.campaign_invites.submit_create": "Create Invite",
 		},
 	}
 	req := httptest.NewRequest(http.MethodGet, "https://example.com"+routepath.AppCampaignInvites("camp-1"), nil)
@@ -42,12 +43,19 @@ func TestInviteViewsInputsAndRoutes(t *testing.T) {
 		{ID: "part-2", Name: "Taro", Controller: "human"},
 	}
 
-	view := invitesView(page, "camp-1", participants, invites, req)
-	if len(view.Invites) != 1 || view.Invites[0].PublicURL == "" || len(view.InviteSeatOptions) != 1 {
+	view := invitesView(page, "camp-1", invites, req)
+	if len(view.Invites) != 1 || view.Invites[0].PublicURL == "" {
 		t.Fatalf("invitesView() = %#v", view)
 	}
 	if got := invitesBreadcrumbs(page); len(got) != 1 || got[0].Label != "Invites" {
 		t.Fatalf("invitesBreadcrumbs() = %#v", got)
+	}
+	createView := inviteCreateView(page, "camp-1", participants, invites)
+	if len(createView.InviteSeatOptions) != 1 || createView.InviteSeatOptions[0].ParticipantID != "part-2" {
+		t.Fatalf("inviteCreateView() = %#v", createView)
+	}
+	if got := inviteCreateBreadcrumbs(page, "camp-1"); len(got) != 2 || got[1].Label != "Create Invite" {
+		t.Fatalf("inviteCreateBreadcrumbs() = %#v", got)
 	}
 	if got := mapInvitesView(invites, req); len(got) != 1 || got[0].PublicURL != "https://example.com"+routepath.PublicInvite("inv-1") {
 		t.Fatalf("mapInvitesView() = %#v", got)
@@ -89,6 +97,7 @@ func TestInviteViewsInputsAndRoutes(t *testing.T) {
 		path   string
 	}{
 		{method: http.MethodGet, path: routepath.AppCampaignInvites("camp-1")},
+		{method: http.MethodGet, path: routepath.AppCampaignInviteCreate("camp-1")},
 		{method: http.MethodPost, path: routepath.AppCampaignInviteSearch("camp-1")},
 		{method: http.MethodPost, path: routepath.AppCampaignInviteCreate("camp-1")},
 		{method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("camp-1")},
