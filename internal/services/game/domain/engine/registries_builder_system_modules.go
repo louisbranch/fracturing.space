@@ -134,6 +134,9 @@ func moduleVersionLabel(mod module.Module) string {
 	return id + "@" + version
 }
 
+// moduleIsNil reports whether mod is nil, including typed nils. reflect is
+// required because a typed nil (e.g. (*MyModule)(nil)) passes the mod != nil
+// check. reflect.ValueOf detects the underlying nil pointer.
 func moduleIsNil(mod module.Module) bool {
 	if mod == nil {
 		return true

@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"strings"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	invitev1 "github.com/louisbranch/fracturing.space/api/gen/go/invite/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
@@ -176,45 +174,20 @@ func sessionIDFromRequest(req any) string {
 }
 
 func classifyMethodKind(fullMethod string) string {
-	switch fullMethod {
-	case campaignv1.CampaignService_ListCampaigns_FullMethodName,
-		campaignv1.CampaignService_GetCampaign_FullMethodName,
-		campaignv1.CampaignService_GetCampaignSessionReadiness_FullMethodName,
-		campaignv1.ParticipantService_ListParticipants_FullMethodName,
-		campaignv1.ParticipantService_GetParticipant_FullMethodName,
-		campaignv1.CharacterService_ListCharacters_FullMethodName,
-		campaignv1.CharacterService_ListCharacterProfiles_FullMethodName,
-		campaignv1.CharacterService_GetCharacterSheet_FullMethodName,
-		campaignv1.CharacterService_GetCharacterCreationProgress_FullMethodName,
-		campaignv1.SessionService_ListSessions_FullMethodName,
-		campaignv1.SessionService_ListActiveSessionsForUser_FullMethodName,
-		campaignv1.SessionService_GetSession_FullMethodName,
-		campaignv1.SessionService_GetSessionSpotlight_FullMethodName,
-		campaignv1.SceneService_GetScene_FullMethodName,
-		campaignv1.SceneService_ListScenes_FullMethodName,
-		campaignv1.SnapshotService_GetSnapshot_FullMethodName,
-		campaignv1.EventService_ListEvents_FullMethodName,
-		campaignv1.EventService_ListTimelineEntries_FullMethodName,
-		campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName,
-		campaignv1.ForkService_GetLineage_FullMethodName,
-		campaignv1.ForkService_ListForks_FullMethodName,
-		campaignv1.InteractionService_GetInteractionState_FullMethodName,
-		campaignv1.CampaignAIService_GetCampaignAIBindingUsage_FullMethodName,
-		campaignv1.CampaignAIService_GetCampaignAIAuthState_FullMethodName,
-		invitev1.InviteService_GetInvite_FullMethodName,
-		invitev1.InviteService_GetPublicInvite_FullMethodName,
-		invitev1.InviteService_ListInvites_FullMethodName,
-		invitev1.InviteService_ListPendingInvites_FullMethodName,
-		invitev1.InviteService_ListPendingInvitesForUser_FullMethodName,
-		campaignv1.SystemService_ListGameSystems_FullMethodName,
-		campaignv1.SystemService_GetGameSystem_FullMethodName,
-		campaignv1.StatisticsService_GetGameStatistics_FullMethodName,
-		campaignv1.AuthorizationService_Can_FullMethodName,
-		campaignv1.AuthorizationService_BatchCan_FullMethodName:
-		return "read"
-	default:
+	// Extract method name from "/package.Service/MethodName"
+	idx := strings.LastIndex(fullMethod, "/")
+	if idx < 0 {
 		return "write"
 	}
+	method := fullMethod[idx+1:]
+	if strings.HasPrefix(method, "Get") ||
+		strings.HasPrefix(method, "List") ||
+		strings.HasPrefix(method, "Subscribe") ||
+		method == "Can" ||
+		method == "BatchCan" {
+		return "read"
+	}
+	return "write"
 }
 
 func severityForGRPCCode(code codes.Code) audit.Severity {

@@ -10,12 +10,12 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/runtimekit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -86,10 +86,10 @@ func TestSetCampaignAIBindingSuccess(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			handler.CommandTypeCampaignAIBind: {
+			commandids.CampaignAIBind: {
 				Decision: command.Accept(event.Event{
 					CampaignID:  "c1",
-					Type:        handler.EventTypeCampaignAIBound,
+					Type:        campaign.EventTypeAIBound,
 					Timestamp:   now,
 					ActorType:   event.ActorTypeParticipant,
 					EntityType:  "campaign",
@@ -97,10 +97,10 @@ func TestSetCampaignAIBindingSuccess(t *testing.T) {
 					PayloadJSON: mustJSON(t, campaign.AIBindPayload{AIAgentID: "agent-7"}),
 				}),
 			},
-			handler.CommandTypeCampaignAIAuthRotate: {
+			commandids.CampaignAIAuthRotate: {
 				Decision: command.Accept(event.Event{
 					CampaignID:  "c1",
-					Type:        handler.EventTypeCampaignAIAuthRotated,
+					Type:        campaign.EventTypeAIAuthRotated,
 					Timestamp:   now,
 					ActorType:   event.ActorTypeParticipant,
 					EntityType:  "campaign",
@@ -150,11 +150,11 @@ func TestSetCampaignAIBindingSuccess(t *testing.T) {
 	if domain.calls != 2 {
 		t.Fatalf("domain calls = %d, want %d", domain.calls, 2)
 	}
-	if domain.commands[0].Type != handler.CommandTypeCampaignAIBind {
-		t.Fatalf("first command type = %q, want %q", domain.commands[0].Type, handler.CommandTypeCampaignAIBind)
+	if domain.commands[0].Type != commandids.CampaignAIBind {
+		t.Fatalf("first command type = %q, want %q", domain.commands[0].Type, commandids.CampaignAIBind)
 	}
-	if domain.commands[1].Type != handler.CommandTypeCampaignAIAuthRotate {
-		t.Fatalf("second command type = %q, want %q", domain.commands[1].Type, handler.CommandTypeCampaignAIAuthRotate)
+	if domain.commands[1].Type != commandids.CampaignAIAuthRotate {
+		t.Fatalf("second command type = %q, want %q", domain.commands[1].Type, commandids.CampaignAIAuthRotate)
 	}
 }
 
@@ -171,7 +171,7 @@ func TestSetCampaignAIBindingRequiresConfiguredAIClient(t *testing.T) {
 	}
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.SetCampaignAIBinding(requestctx.WithParticipantID("owner-1"), &statev1.SetCampaignAIBindingRequest{
+	_, err := svc.SetCampaignAIBinding(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.SetCampaignAIBindingRequest{
 		CampaignId: "c1",
 		AiAgentId:  "agent-7",
 	})
@@ -196,10 +196,10 @@ func TestClearCampaignAIBindingSuccess(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			handler.CommandTypeCampaignAIUnbind: {
+			commandids.CampaignAIUnbind: {
 				Decision: command.Accept(event.Event{
 					CampaignID:  "c1",
-					Type:        handler.EventTypeCampaignAIUnbound,
+					Type:        campaign.EventTypeAIUnbound,
 					Timestamp:   now,
 					ActorType:   event.ActorTypeParticipant,
 					EntityType:  "campaign",
@@ -207,10 +207,10 @@ func TestClearCampaignAIBindingSuccess(t *testing.T) {
 					PayloadJSON: mustJSON(t, campaign.AIUnbindPayload{}),
 				}),
 			},
-			handler.CommandTypeCampaignAIAuthRotate: {
+			commandids.CampaignAIAuthRotate: {
 				Decision: command.Accept(event.Event{
 					CampaignID:  "c1",
-					Type:        handler.EventTypeCampaignAIAuthRotated,
+					Type:        campaign.EventTypeAIAuthRotated,
 					Timestamp:   now,
 					ActorType:   event.ActorTypeParticipant,
 					EntityType:  "campaign",
@@ -260,7 +260,7 @@ func TestRequireCampaignOwnerRequiresOwnerUserIdentity(t *testing.T) {
 			},
 		}
 
-		_, err := requireCampaignOwner(requestctx.WithParticipantID("manager-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
+		_, err := requireCampaignOwner(requestctx.WithParticipantID(context.Background(), "manager-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
 		assertStatusCode(t, err, codes.PermissionDenied)
 	})
 
@@ -274,7 +274,7 @@ func TestRequireCampaignOwnerRequiresOwnerUserIdentity(t *testing.T) {
 			},
 		}
 
-		_, err := requireCampaignOwner(requestctx.WithParticipantID("owner-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
+		_, err := requireCampaignOwner(requestctx.WithParticipantID(context.Background(), "owner-1"), authz.PolicyDeps{Participant: participants}, campaignRecord)
 		assertStatusCode(t, err, codes.PermissionDenied)
 	})
 }
@@ -289,10 +289,10 @@ func TestNewClearCampaignAIBindingFuncClearsStoredBinding(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			handler.CommandTypeCampaignAIUnbind: {
+			commandids.CampaignAIUnbind: {
 				Decision: command.Accept(event.Event{
 					CampaignID:  "c1",
-					Type:        handler.EventTypeCampaignAIUnbound,
+					Type:        campaign.EventTypeAIUnbound,
 					Timestamp:   now,
 					ActorType:   event.ActorTypeParticipant,
 					EntityType:  "campaign",
@@ -300,10 +300,10 @@ func TestNewClearCampaignAIBindingFuncClearsStoredBinding(t *testing.T) {
 					PayloadJSON: mustJSON(t, campaign.AIUnbindPayload{}),
 				}),
 			},
-			handler.CommandTypeCampaignAIAuthRotate: {
+			commandids.CampaignAIAuthRotate: {
 				Decision: command.Accept(event.Event{
 					CampaignID:  "c1",
-					Type:        handler.EventTypeCampaignAIAuthRotated,
+					Type:        campaign.EventTypeAIAuthRotated,
 					Timestamp:   now,
 					ActorType:   event.ActorTypeParticipant,
 					EntityType:  "campaign",

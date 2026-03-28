@@ -6,6 +6,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -131,7 +132,7 @@ func TestEnumConversions(t *testing.T) {
 	if GameSystemToProto("unknown") != commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
 		t.Fatal("unknown game system mismatch")
 	}
-	if timestampOrNil(nil) != nil {
+	if handler.TimestampOrNil(nil) != nil {
 		t.Fatal("nil timestamp should stay nil")
 	}
 }

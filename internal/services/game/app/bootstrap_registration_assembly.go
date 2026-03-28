@@ -74,6 +74,7 @@ func buildRegistrationAssemblies(sources registrationAssemblySources) registrati
 			sceneStore:         sources.domainState.projectionStores.Scene,
 			sceneCharacter:     sources.domainState.projectionStores.SceneCharacter,
 			sceneInteraction:   sources.domainState.projectionStores.SceneInteraction,
+			sceneGMInteraction: sources.domainState.projectionStores.SceneGMInteraction,
 			campaignForkStore:  sources.domainState.projectionStores.CampaignFork,
 			eventHistoryStore:  sources.domainState.infrastructureStores.Event,
 			eventJournal:       sources.domainState.infrastructureStores.Event,

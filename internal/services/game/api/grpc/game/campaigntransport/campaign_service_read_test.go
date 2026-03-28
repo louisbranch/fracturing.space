@@ -115,7 +115,7 @@ func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
 
 	svc := NewCampaignService(ts.build())
 
-	resp, err := svc.ListCampaigns(requestctx.WithParticipantID("participant-1"), &statev1.ListCampaignsRequest{})
+	resp, err := svc.ListCampaigns(requestctx.WithParticipantID(context.Background(), "participant-1"), &statev1.ListCampaignsRequest{})
 	if err != nil {
 		t.Fatalf("ListCampaigns returned error: %v", err)
 	}
@@ -353,7 +353,7 @@ func TestGetCampaign_DeniesNonMember(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.TestCampaignRecordWithStatusAndCreatedAt(campaign.StatusDraft, now)
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.GetCampaign(requestctx.WithParticipantID("outsider-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
+	_, err := svc.GetCampaign(requestctx.WithParticipantID(context.Background(), "outsider-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
@@ -367,7 +367,7 @@ func TestGetCampaign_Success(t *testing.T) {
 
 	svc := NewCampaignService(ts.build())
 
-	resp, err := svc.GetCampaign(requestctx.WithParticipantID("participant-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.GetCampaign(requestctx.WithParticipantID(context.Background(), "participant-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetCampaign returned error: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
 	}
 
 	svc := NewCampaignService(ts.build())
-	resp, err := svc.GetCampaign(requestctx.WithUserID("user-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.GetCampaign(requestctx.WithUserID(context.Background(), "user-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetCampaign returned error: %v", err)
 	}

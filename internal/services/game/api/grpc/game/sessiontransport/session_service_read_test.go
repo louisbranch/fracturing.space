@@ -54,7 +54,7 @@ func TestListSessions_EmptyList(t *testing.T) {
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
 	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
-	resp, err := svc.ListSessions(requestctx.WithParticipantID("manager-1"), &statev1.ListSessionsRequest{CampaignId: "c1"})
+	resp, err := svc.ListSessions(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ListSessionsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListSessions returned error: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestListSessions_WithSessions(t *testing.T) {
 	}
 
 	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
-	resp, err := svc.ListSessions(requestctx.WithParticipantID("manager-1"), &statev1.ListSessionsRequest{CampaignId: "c1"})
+	resp, err := svc.ListSessions(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ListSessionsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListSessions returned error: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestGetSession_SessionNotFound(t *testing.T) {
 	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
 	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
-	_, err := svc.GetSession(requestctx.WithParticipantID("manager-1"), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	_, err := svc.GetSession(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
@@ -149,7 +149,7 @@ func TestGetSession_Success(t *testing.T) {
 	}
 
 	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
-	resp, err := svc.GetSession(requestctx.WithParticipantID("manager-1"), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	resp, err := svc.GetSession(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("GetSession returned error: %v", err)
 	}

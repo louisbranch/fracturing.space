@@ -26,6 +26,6 @@ func decideFork(state State, cmd command.Command, now func() time.Time) command.
 	payload.ParentCampaignID = ids.CampaignID(strings.TrimSpace(payload.ParentCampaignID.String()))
 	payload.OriginCampaignID = ids.CampaignID(strings.TrimSpace(payload.OriginCampaignID.String()))
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeForked, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeForked, "campaign", string(cmd.CampaignID), payloadJSON, command.RequireNowFunc(now)().UTC())
 	return command.Accept(evt)
 }

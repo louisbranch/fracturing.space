@@ -46,8 +46,8 @@ type ProjectionApplyOutboxEntry struct {
 type ProjectionApplyOutboxInspector interface {
 	// GetProjectionApplyOutboxSummary returns aggregate queue-depth statistics.
 	GetProjectionApplyOutboxSummary(ctx context.Context) (ProjectionApplyOutboxSummary, error)
-	// ListProjectionApplyOutboxRows returns outbox rows for a campaign, up to limit.
-	ListProjectionApplyOutboxRows(ctx context.Context, campaignID string, limit int) ([]ProjectionApplyOutboxEntry, error)
+	// ListProjectionApplyOutboxRows returns outbox rows optionally filtered by status, up to limit.
+	ListProjectionApplyOutboxRows(ctx context.Context, status string, limit int) ([]ProjectionApplyOutboxEntry, error)
 }
 
 // ProjectionApplyOutboxRequeuer transitions dead queue rows back to pending.

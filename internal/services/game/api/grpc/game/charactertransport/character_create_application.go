@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
@@ -120,7 +122,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCharacterCreate,
+			Type:         commandids.CharacterCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

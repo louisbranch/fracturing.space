@@ -39,7 +39,7 @@ func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	_, err := svc.RestoreCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -49,7 +49,7 @@ func TestRestoreCampaign_RequiresDomainEngine(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.ArchivedCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	_, err := svc.RestoreCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -74,7 +74,7 @@ func TestRestoreCampaign_Success(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("campaign-123"))
 
-	resp, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.RestoreCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("RestoreCampaign returned error: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	_, err := svc.RestoreCampaign(requestctx.WithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	_, err := svc.RestoreCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("RestoreCampaign returned error: %v", err)
 	}

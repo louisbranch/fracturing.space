@@ -1,6 +1,3 @@
-// Package handler provides shared handler utilities used across entity-scoped
-// transport subpackages: domain write helpers, pagination, mappers, actor
-// resolution, social profile loading, and other cross-cutting handler concerns.
 package handler
 
 import (

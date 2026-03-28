@@ -3,8 +3,8 @@
   "locales": [
     {
       "locale": "en-US",
-      "base_keys": 1376,
-      "translated": 1376,
+      "base_keys": 1377,
+      "translated": 1377,
       "missing": 0,
       "extra": 0,
       "completion": 100,
@@ -27,8 +27,8 @@
         },
         {
           "namespace": "errors",
-          "base_keys": 157,
-          "translated": 157,
+          "base_keys": 158,
+          "translated": 158,
           "missing": 0,
           "extra": 0,
           "completion": 100
@@ -63,8 +63,8 @@
     },
     {
       "locale": "pt-BR",
-      "base_keys": 1376,
-      "translated": 1376,
+      "base_keys": 1377,
+      "translated": 1377,
       "missing": 0,
       "extra": 0,
       "completion": 100,
@@ -87,8 +87,8 @@
         },
         {
           "namespace": "errors",
-          "base_keys": 157,
-          "translated": 157,
+          "base_keys": 158,
+          "translated": 158,
           "missing": 0,
           "extra": 0,
           "completion": 100

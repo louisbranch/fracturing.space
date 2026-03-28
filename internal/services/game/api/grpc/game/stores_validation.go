@@ -66,6 +66,7 @@ func (s ProjectionStores) requirements() []dependencyRequirement {
 func (s InfrastructureStores) requirements() []dependencyRequirement {
 	return []dependencyRequirement{
 		{name: "Event", configured: s.Event != nil},
+		{name: "Watermarks", configured: s.Watermarks != nil},
 		{name: "Audit", configured: s.Audit != nil},
 		{name: "Statistics", configured: s.Statistics != nil},
 		{name: "Snapshot", configured: s.Snapshot != nil},

@@ -30,9 +30,11 @@ type ReplayCheckInput struct {
 	EntityID   string
 }
 
-// SystemCommandInput describes one Daggerheart system command emitted by the
-// shared workflow runtime.
-type SystemCommandInput struct {
+// CommandInput is the unified struct for all Daggerheart command inputs that
+// flow through the shared workflow write and runtime paths. Domain, core, and
+// system callers use the same shape; fields that do not apply to a particular
+// call site are left at their zero value.
+type CommandInput struct {
 	CampaignID      string
 	CommandType     command.Type
 	SessionID       string
@@ -46,6 +48,9 @@ type SystemCommandInput struct {
 	MissingEventMsg string
 	ApplyErrMessage string
 }
+
+// SystemCommandInput is a type alias kept for call-site compatibility.
+type SystemCommandInput = CommandInput
 
 // Dependencies groups the exact collaborators needed by the shared workflow
 // runtime support.

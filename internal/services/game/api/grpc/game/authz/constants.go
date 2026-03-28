@@ -1,5 +1,3 @@
-// Package authz provides authorization policy enforcement, evaluator, and
-// telemetry shared across entity-scoped transport subpackages.
 package authz
 
 import (

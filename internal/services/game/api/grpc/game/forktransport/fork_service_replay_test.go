@@ -1,6 +1,7 @@
 package forktransport
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -30,7 +31,7 @@ import (
 )
 
 func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
-	ctx := requestctx.WithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride(context.Background(), "fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -273,7 +274,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 }
 
 func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *testing.T) {
-	ctx := requestctx.WithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride(context.Background(), "fork-test")
 	now := time.Date(2025, 2, 3, 11, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -392,7 +393,7 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 }
 
 func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
-	ctx := requestctx.WithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride(context.Background(), "fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -633,7 +634,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 }
 
 func TestForkCampaign_UsesDomainEngine(t *testing.T) {
-	ctx := requestctx.WithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride(context.Background(), "fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -741,7 +742,7 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 }
 
 func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
-	ctx := requestctx.WithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride(context.Background(), "fork-test")
 	now := time.Date(2025, 2, 2, 9, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()

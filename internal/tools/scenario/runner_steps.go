@@ -7,7 +7,10 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/coreevent"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -466,7 +469,7 @@ func (r *Runner) runParticipantStep(ctx context.Context, state *scenarioState, s
 	}
 	state.participants[name] = response.GetParticipant().GetId()
 	r.logf("participant created: name=%s id=%s role=%s controller=%s", name, state.participants[name], roleValue.String(), controllerValue.String())
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeParticipantJoined)
+	return r.requireEventTypesAfterSeq(ctx, state, before, participant.EventTypeJoined)
 }
 
 func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -537,7 +540,7 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 	}
 	state.ownerParticipantID = response.GetOwnerParticipant().GetId()
 	r.logf("campaign created: id=%s owner_participant=%s", state.campaignID, state.ownerParticipantID)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeCampaignCreated)
+	return r.requireEventTypesAfterSeq(ctx, state, before, campaign.EventTypeCreated)
 }
 
 func (r *Runner) runStartSessionStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -576,7 +579,7 @@ func (r *Runner) runStartSessionStep(ctx context.Context, state *scenarioState, 
 	state.sessionID = response.GetSession().GetId()
 	state.sessionImplicit = false
 	r.logf("session started: id=%s name=%s", state.sessionID, name)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSessionStarted)
+	return r.requireEventTypesAfterSeq(ctx, state, before, session.EventTypeStarted)
 }
 
 func (r *Runner) runEndSessionStep(ctx context.Context, state *scenarioState) error {
@@ -594,7 +597,7 @@ func (r *Runner) runEndSessionStep(ctx context.Context, state *scenarioState) er
 	if err != nil {
 		return fmt.Errorf("end session: %w", err)
 	}
-	if err := r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSessionEnded); err != nil {
+	if err := r.requireEventTypesAfterSeq(ctx, state, before, session.EventTypeEnded); err != nil {
 		return err
 	}
 	r.logf("session ended: id=%s", state.sessionID)
@@ -693,7 +696,7 @@ func (r *Runner) runCharacterStep(ctx context.Context, state *scenarioState, ste
 			r.logf("character ownership: name=%s owner=unassigned", name)
 		}
 	}
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeCharacterCreated)
+	return r.requireEventTypesAfterSeq(ctx, state, before, character.EventTypeCreated)
 }
 
 func (r *Runner) runPrefabStep(ctx context.Context, state *scenarioState, step Step) error {

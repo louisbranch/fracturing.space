@@ -1,6 +1,7 @@
 package charactertransport
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -71,7 +72,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID(context.Background(), "member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("Renamed"),
@@ -130,7 +131,7 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("owner-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		OwnerParticipantId: wrapperspb.String("member-1"),

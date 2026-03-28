@@ -10,9 +10,9 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
@@ -74,7 +74,7 @@ func TestPatchCharacterProfile_CompletedCampaignDisallowed(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 
 	svc := NewService(ts.build())
-	ctx := requestctx.WithParticipantID("manager-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "manager-1")
 	_, err := svc.PatchCharacterProfile(ctx, &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -92,7 +92,7 @@ func TestPatchCharacterProfile_DeniesMissingIdentity(t *testing.T) {
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		handler.CommandTypeDaggerheartCharacterProfileReplace: {
+		commandids.DaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -148,7 +148,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	ts.Event.NextSeq["c1"] = 2
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		handler.CommandTypeDaggerheartCharacterProfileReplace: {
+		commandids.DaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -164,7 +164,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("member-1"), &statev1.PatchCharacterProfileRequest{
+	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID(context.Background(), "member-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{
@@ -204,7 +204,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		handler.CommandTypeDaggerheartCharacterProfileReplace: {
+		commandids.DaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -221,7 +221,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 0}},
@@ -249,7 +249,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		handler.CommandTypeDaggerheartCharacterProfileReplace: {
+		commandids.DaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -269,7 +269,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10, StressMax: wrapperspb.Int32(8)}},
@@ -307,7 +307,7 @@ func TestPatchCharacterProfile_SynthesizesDefaultsWhenProfileMissing(t *testing.
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		handler.CommandTypeDaggerheartCharacterProfileReplace: {
+		commandids.DaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -323,7 +323,7 @@ func TestPatchCharacterProfile_SynthesizesDefaultsWhenProfileMissing(t *testing.
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10}},
@@ -352,7 +352,7 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		handler.CommandTypeDaggerheartCharacterProfileReplace: {
+		commandids.DaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -372,7 +372,7 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	resp, err := svc.PatchCharacterProfile(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10, StressMax: wrapperspb.Int32(8)}},
@@ -389,8 +389,8 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != handler.CommandTypeDaggerheartCharacterProfileReplace {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeDaggerheartCharacterProfileReplace)
+	if domain.commands[0].Type != commandids.DaggerheartCharacterProfileReplace {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandids.DaggerheartCharacterProfileReplace)
 	}
 	if got := len(ts.Event.Events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
@@ -416,7 +416,7 @@ func TestPatchCharacterProfile_RejectsCreationWorkflowFields(t *testing.T) {
 
 	svc := NewService(ts.withDomain(domain).build())
 
-	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
@@ -550,7 +550,7 @@ func TestPatchCharacterProfile_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+	_, err := svc.PatchCharacterProfile(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10}},

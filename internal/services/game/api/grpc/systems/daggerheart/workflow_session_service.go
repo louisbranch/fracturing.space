@@ -40,27 +40,6 @@ func (s *DaggerheartService) requireSessionFlowStores() error {
 	}
 }
 
-func (s *DaggerheartService) requireSessionAdversaryFlowStores() error {
-	switch {
-	case s.stores.Campaign == nil:
-		return status.Error(codes.Internal, "campaign store is not configured")
-	case s.stores.Session == nil:
-		return status.Error(codes.Internal, "session store is not configured")
-	case s.stores.Daggerheart == nil:
-		return status.Error(codes.Internal, "daggerheart store is not configured")
-	case s.stores.Event == nil:
-		return status.Error(codes.Internal, "event store is not configured")
-	case s.stores.Content == nil:
-		return status.Error(codes.Internal, "daggerheart content store is not configured")
-	case s.seedFunc == nil:
-		return status.Error(codes.Internal, "seed generator is not configured")
-	case s.stores.Write.Executor == nil:
-		return status.Error(codes.Internal, "domain engine is not configured")
-	default:
-		return nil
-	}
-}
-
 func (s *DaggerheartService) sessionFlowHandler() *sessionflowtransport.Handler {
 	rolls := s.sessionRollHandler()
 	return sessionflowtransport.NewHandler(sessionflowtransport.Dependencies{
@@ -278,7 +257,7 @@ func (s *DaggerheartService) SessionAdversaryAttackFlow(ctx context.Context, in 
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session adversary attack flow request is required")
 	}
-	if err := s.requireSessionAdversaryFlowStores(); err != nil {
+	if err := s.requireSessionFlowStores(); err != nil {
 		return nil, err
 	}
 	return s.sessionFlowHandler().SessionAdversaryAttackFlow(ctx, in)

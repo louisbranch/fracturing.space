@@ -1,3 +1,8 @@
+// This file re-exports types from the session/gate sub-package to provide a
+// stable import surface at the session package level. The gate/ sub-package
+// owns workflow types, progress computation, and projection helpers consumed
+// by transport and projection layers.
+
 package session
 
 import "github.com/louisbranch/fracturing.space/internal/services/game/domain/session/gate"

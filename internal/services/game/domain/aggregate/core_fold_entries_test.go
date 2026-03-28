@@ -7,6 +7,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -129,14 +130,20 @@ func TestExtractSceneID_EmptySceneID(t *testing.T) {
 	}
 }
 
-func TestFoldScene_InitializesMap(t *testing.T) {
+func TestFoldKeyedState_Scene_InitializesMap(t *testing.T) {
 	state := &State{}
 	evt := event.Event{
 		Type:        scene.EventTypeCreated,
 		PayloadJSON: []byte(`{"scene_id":"sc-1","name":"Test"}`),
 	}
-	if err := foldScene(state, evt); err != nil {
-		t.Fatalf("foldScene: %v", err)
+	if err := foldKeyedState(
+		state,
+		func(state *State) *map[ids.SceneID]scene.State { return &state.Scenes },
+		extractSceneID,
+		evt,
+		scene.Fold,
+	); err != nil {
+		t.Fatalf("foldKeyedState scene: %v", err)
 	}
 	if state.Scenes == nil {
 		t.Fatal("expected Scenes map to be initialized")

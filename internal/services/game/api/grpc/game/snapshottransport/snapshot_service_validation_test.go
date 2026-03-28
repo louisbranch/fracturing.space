@@ -60,7 +60,7 @@ func TestPatchCharacterState_InvalidHope(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
 	})
-	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 15, Hope: 7, Stress: 1}},
@@ -84,7 +84,7 @@ func TestPatchCharacterState_InvalidStress(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
 	})
-	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 15, Hope: 3, Stress: 10}},
@@ -108,7 +108,7 @@ func TestPatchCharacterState_InvalidHp(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: dhStore,
 	})
-	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 25, Hope: 3, Stress: 1}},

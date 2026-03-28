@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"google.golang.org/grpc/codes"
@@ -56,7 +57,7 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneSpotlightSet,
+			Type:         commandids.SceneSpotlightSet,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -102,7 +103,7 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneSpotlightClear,
+			Type:         commandids.SceneSpotlightClear,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,

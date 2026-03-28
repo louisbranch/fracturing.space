@@ -57,38 +57,83 @@ func (r sourceCampaignRequest) GetSessionId() string {
 }
 
 func TestClassifyMethodKind(t *testing.T) {
+	// Every previously enumerated read method must still classify as "read"
+	// under the convention-based implementation.
 	readMethods := []string{
-		campaignv1.CampaignService_GetCampaign_FullMethodName,
-		campaignv1.CampaignService_GetCampaignSessionReadiness_FullMethodName,
-		campaignv1.CharacterService_GetCharacterCreationProgress_FullMethodName,
-		campaignv1.CharacterService_ListCharacterProfiles_FullMethodName,
-		campaignv1.SessionService_GetSessionSpotlight_FullMethodName,
-		campaignv1.SessionService_ListActiveSessionsForUser_FullMethodName,
-		campaignv1.SceneService_GetScene_FullMethodName,
-		campaignv1.SceneService_ListScenes_FullMethodName,
-		campaignv1.InteractionService_GetInteractionState_FullMethodName,
-		campaignv1.CampaignAIService_GetCampaignAIBindingUsage_FullMethodName,
-		campaignv1.CampaignAIService_GetCampaignAIAuthState_FullMethodName,
-		campaignv1.EventService_ListTimelineEntries_FullMethodName,
-		campaignv1.SystemService_ListGameSystems_FullMethodName,
-		campaignv1.StatisticsService_GetGameStatistics_FullMethodName,
-		campaignv1.AuthorizationService_BatchCan_FullMethodName,
+		// CampaignService
+		"/game.v1.CampaignService/ListCampaigns",
+		"/game.v1.CampaignService/GetCampaign",
+		"/game.v1.CampaignService/GetCampaignSessionReadiness",
+		// ParticipantService
+		"/game.v1.ParticipantService/ListParticipants",
+		"/game.v1.ParticipantService/GetParticipant",
+		// CharacterService
+		"/game.v1.CharacterService/ListCharacters",
+		"/game.v1.CharacterService/ListCharacterProfiles",
+		"/game.v1.CharacterService/GetCharacterSheet",
+		"/game.v1.CharacterService/GetCharacterCreationProgress",
+		// SessionService
+		"/game.v1.SessionService/ListSessions",
+		"/game.v1.SessionService/ListActiveSessionsForUser",
+		"/game.v1.SessionService/GetSession",
+		"/game.v1.SessionService/GetSessionSpotlight",
+		// SceneService
+		"/game.v1.SceneService/GetScene",
+		"/game.v1.SceneService/ListScenes",
+		// SnapshotService
+		"/game.v1.SnapshotService/GetSnapshot",
+		// EventService
+		"/game.v1.EventService/ListEvents",
+		"/game.v1.EventService/ListTimelineEntries",
+		"/game.v1.EventService/SubscribeCampaignUpdates",
+		// ForkService
+		"/game.v1.ForkService/GetLineage",
+		"/game.v1.ForkService/ListForks",
+		// InteractionService
+		"/game.v1.InteractionService/GetInteractionState",
+		// CampaignAIService
+		"/game.v1.CampaignAIService/GetCampaignAIBindingUsage",
+		"/game.v1.CampaignAIService/GetCampaignAIAuthState",
+		// InviteService
+		"/invite.v1.InviteService/GetInvite",
+		"/invite.v1.InviteService/GetPublicInvite",
+		"/invite.v1.InviteService/ListInvites",
+		"/invite.v1.InviteService/ListPendingInvites",
+		"/invite.v1.InviteService/ListPendingInvitesForUser",
+		// SystemService
+		"/game.v1.SystemService/ListGameSystems",
+		"/game.v1.SystemService/GetGameSystem",
+		// StatisticsService
+		"/game.v1.StatisticsService/GetGameStatistics",
+		// AuthorizationService
+		"/game.v1.AuthorizationService/Can",
+		"/game.v1.AuthorizationService/BatchCan",
 	}
 	for _, method := range readMethods {
 		if got := classifyMethodKind(method); got != "read" {
-			t.Fatalf("expected %s to be read method, got %s", method, got)
+			t.Errorf("expected %s to be read, got %s", method, got)
 		}
 	}
 
 	writeMethods := []string{
-		campaignv1.CampaignService_CreateCampaign_FullMethodName,
-		campaignv1.CampaignAIService_IssueCampaignAISessionGrant_FullMethodName,
-		campaignv1.SessionService_StartSession_FullMethodName,
+		"/game.v1.CampaignService/CreateCampaign",
+		"/game.v1.CampaignAIService/IssueCampaignAISessionGrant",
+		"/game.v1.SessionService/StartSession",
+		"/game.v1.SceneService/CreateScene",
+		"/game.v1.CharacterService/UpdateCharacter",
+		"/invite.v1.InviteService/CreateInvite",
+		"/invite.v1.InviteService/ClaimInvite",
+		"/game.v1.ForkService/ForkCampaign",
 	}
 	for _, method := range writeMethods {
 		if got := classifyMethodKind(method); got != "write" {
-			t.Fatalf("expected %s to be write method, got %s", method, got)
+			t.Errorf("expected %s to be write, got %s", method, got)
 		}
+	}
+
+	// Edge case: malformed method without slash defaults to write.
+	if got := classifyMethodKind("NoSlash"); got != "write" {
+		t.Errorf("expected malformed method to be write, got %s", got)
 	}
 }
 
@@ -370,11 +415,5 @@ func TestStreamAuditInterceptorErrorSeverity(t *testing.T) {
 	}
 	if store.last.Attributes["code"] != codes.Unavailable.String() {
 		t.Fatalf("expected code Unavailable, got %v", store.last.Attributes["code"])
-	}
-}
-
-func TestClassifyMethodKind_SubscribeIsRead(t *testing.T) {
-	if got := classifyMethodKind(campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName); got != "read" {
-		t.Fatalf("expected SubscribeCampaignUpdates to be read, got %s", got)
 	}
 }

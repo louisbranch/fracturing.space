@@ -11,8 +11,8 @@ func TestContentAndAssetStoreHelpers(t *testing.T) {
 	}
 
 	assetService := &DaggerheartAssetService{store: contentStore}
-	if _, err := assetService.assetStore(); err != nil {
-		t.Fatalf("assetStore configured: %v", err)
+	if got := assetService.storeOrNil(); got == nil {
+		t.Fatal("storeOrNil returned nil for configured service")
 	}
 }
 

@@ -30,7 +30,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down play-ui-dist play-ui-check play-ui-check-live ai-eval-promptfoo ai-eval-promptfoo-core ai-eval-promptfoo-decision ai-eval-promptfoo-view cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod prod-env setup-hooks
+.PHONY: all proto clean up down play-ui-dist play-ui-check play-ui-check-live ai-eval-promptfoo ai-eval-promptfoo-core ai-eval-promptfoo-decision ai-eval-promptfoo-view cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check play-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod prod-env setup-hooks sqlc
 
 all: proto
 
@@ -48,6 +48,10 @@ templ-generate:
 	mkdir -p .tmp/go-build .tmp/go-cache
 	go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
 	goimports -w $$(rg --files -g '*_templ.go')
+
+sqlc: ## Generate sqlc query code and format imports
+	sqlc generate
+	goimports -w internal/services/game/storage/sqlite/queries/
 
 fmt:
 	@bash -euo pipefail -c '\

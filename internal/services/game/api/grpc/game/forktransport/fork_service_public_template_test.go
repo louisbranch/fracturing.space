@@ -1,6 +1,7 @@
 package forktransport
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -27,7 +28,7 @@ import (
 )
 
 func TestForkCampaign_AllowsPublicStarterTemplateForkAndReassignsOwnerSeat(t *testing.T) {
-	ctx := requestctx.WithUserID("user-launcher")
+	ctx := requestctx.WithUserID(context.Background(), "user-launcher")
 	now := time.Date(2025, 2, 4, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -287,7 +288,7 @@ func TestForkCampaign_RejectsPublicCampaignForkWithoutParticipantCopy(t *testing
 		Participant:  gametest.NewFakeParticipantStore(),
 	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(requestctx.WithUserID("user-launcher"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithUserID(context.Background(), "user-launcher"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Starter",
 		CopyParticipants: false,
@@ -296,7 +297,7 @@ func TestForkCampaign_RejectsPublicCampaignForkWithoutParticipantCopy(t *testing
 }
 
 func TestForkCampaign_PublicSeatClaimResyncsControlledCharacterAvatar(t *testing.T) {
-	ctx := requestctx.WithUserID("user-launcher")
+	ctx := requestctx.WithUserID(context.Background(), "user-launcher")
 	now := time.Date(2025, 2, 4, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -580,7 +581,7 @@ func TestForkCampaign_RejectsInvalidPublicStarterTemplateShape(t *testing.T) {
 		Participant:  participantStore,
 	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(requestctx.WithUserID("user-launcher"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithUserID(context.Background(), "user-launcher"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Starter",
 		CopyParticipants: true,

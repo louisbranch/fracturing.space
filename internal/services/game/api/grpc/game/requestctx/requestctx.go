@@ -9,25 +9,25 @@ import (
 )
 
 // WithParticipantID injects a participant ID into incoming gRPC metadata.
-func WithParticipantID(participantID string) context.Context {
+func WithParticipantID(ctx context.Context, participantID string) context.Context {
 	if participantID == "" {
-		return context.Background()
+		return ctx
 	}
 	md := metadata.Pairs(grpcmeta.ParticipantIDHeader, participantID)
-	return metadata.NewIncomingContext(context.Background(), md)
+	return metadata.NewIncomingContext(ctx, md)
 }
 
 // WithUserID injects a user ID into incoming gRPC metadata.
-func WithUserID(userID string) context.Context {
+func WithUserID(ctx context.Context, userID string) context.Context {
 	if userID == "" {
-		return context.Background()
+		return ctx
 	}
 	md := metadata.Pairs(grpcmeta.UserIDHeader, userID)
-	return metadata.NewIncomingContext(context.Background(), md)
+	return metadata.NewIncomingContext(ctx, md)
 }
 
 // WithAdminOverride injects admin override metadata for transport tests.
-func WithAdminOverride(reason string) context.Context {
+func WithAdminOverride(ctx context.Context, reason string) context.Context {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		reason = "test-override"
@@ -37,5 +37,5 @@ func WithAdminOverride(reason string) context.Context {
 		grpcmeta.AuthzOverrideReasonHeader, reason,
 		grpcmeta.UserIDHeader, "user-admin-test",
 	)
-	return metadata.NewIncomingContext(context.Background(), md)
+	return metadata.NewIncomingContext(ctx, md)
 }

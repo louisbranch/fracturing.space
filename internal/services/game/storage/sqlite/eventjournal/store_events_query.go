@@ -32,7 +32,7 @@ func (s *Store) GetEventByHash(ctx context.Context, hash string) (event.Event, e
 		return event.Event{}, fmt.Errorf("get event by hash: %w", err)
 	}
 
-	return eventRowDataToDomain(eventRowDataFromGetEventByHashRow(row))
+	return eventRowDataToDomain(eventRowDataFromGetEventByHashRow(row)), nil
 }
 
 // GetEventBySeq retrieves a specific event by sequence number.
@@ -58,7 +58,7 @@ func (s *Store) GetEventBySeq(ctx context.Context, campaignID string, seq uint64
 		return event.Event{}, fmt.Errorf("get event by seq: %w", err)
 	}
 
-	return eventRowDataToDomain(eventRowDataFromGetEventBySeqRow(row))
+	return eventRowDataToDomain(eventRowDataFromGetEventBySeqRow(row)), nil
 }
 
 // ListEvents returns events ordered by sequence ascending.
@@ -85,7 +85,7 @@ func (s *Store) ListEvents(ctx context.Context, campaignID string, afterSeq uint
 		return nil, fmt.Errorf("list events: %w", err)
 	}
 
-	return eventRowsToDomain(rows)
+	return eventRowsToDomain(rows), nil
 }
 
 // ListEventsBySession returns events for a specific session.
@@ -116,7 +116,7 @@ func (s *Store) ListEventsBySession(ctx context.Context, campaignID, sessionID s
 		return nil, fmt.Errorf("list events by session: %w", err)
 	}
 
-	return eventRowsBySessionToDomain(rows)
+	return eventRowsBySessionToDomain(rows), nil
 }
 
 // GetLatestEventSeq returns the latest event sequence number for a campaign.
@@ -166,7 +166,11 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 		return storage.ListEventsPageResult{}, fmt.Errorf("build list events query plan: %w", err)
 	}
 
-	// Build and execute the query
+	// Build and execute the query.
+	//
+	// All user-supplied values are parameterized as ? placeholders. The
+	// fmt.Sprintf only composes structural WHERE/ORDER/LIMIT clauses, not
+	// data values.
 	query := fmt.Sprintf(
 		"SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type, session_id, scene_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json FROM events WHERE %s %s %s",
 		plan.whereClause,
@@ -210,11 +214,7 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 			return storage.ListEventsPageResult{}, fmt.Errorf("scan event: %w", err)
 		}
 
-		evt, err := eventRowDataToDomain(eventRowDataFromEvent(row))
-		if err != nil {
-			return storage.ListEventsPageResult{}, err
-		}
-		events = append(events, evt)
+		events = append(events, eventRowDataToDomain(eventRowDataFromEvent(row)))
 	}
 	if err := rows.Err(); err != nil {
 		return storage.ListEventsPageResult{}, fmt.Errorf("iterate events: %w", err)

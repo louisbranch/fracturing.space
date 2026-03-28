@@ -122,6 +122,9 @@ func marshalResolutionPayload(decision string, resolution map[string]any) ([]byt
 		combined["decision"] = strings.TrimSpace(decision)
 	}
 	for key, value := range resolution {
+		if key == "decision" {
+			continue
+		}
 		combined[key] = value
 	}
 	return json.Marshal(combined)

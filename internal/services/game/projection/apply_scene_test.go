@@ -119,7 +119,10 @@ func TestApplySceneUpdated(t *testing.T) {
 	}
 	applier := Applier{Scene: sceneStore}
 
-	payload := scene.UpdatePayload{SceneID: "sc-1", Name: "New", Description: "New desc"}
+	payload := scene.UpdatePayload{
+		SceneID: "sc-1", Name: "New", Description: "New desc",
+		Fields: map[string]string{"name": "New", "description": "New desc"},
+	}
 	data, _ := json.Marshal(payload)
 	later := sceneStamp.Add(time.Hour)
 	evt := sceneEvent(scene.EventTypeUpdated, "camp-1", "sess-1", "sc-1", data, later)
@@ -139,8 +142,35 @@ func TestApplySceneUpdated(t *testing.T) {
 	}
 }
 
+func TestApplySceneUpdated_ClearDescription(t *testing.T) {
+	ctx := context.Background()
+	sceneStore := newFakeSceneStore()
+	sceneStore.scenes["camp-1:sc-1"] = storage.SceneRecord{
+		CampaignID: "camp-1", SceneID: "sc-1", SessionID: "sess-1",
+		Name: "Old", Description: "Old desc", Open: true,
+		CreatedAt: sceneStamp, UpdatedAt: sceneStamp,
+	}
+	applier := Applier{Scene: sceneStore}
+
+	payload := scene.UpdatePayload{
+		SceneID: "sc-1", Name: "Old", Description: "",
+		Fields: map[string]string{"name": "Old", "description": ""},
+	}
+	data, _ := json.Marshal(payload)
+	later := sceneStamp.Add(time.Hour)
+	evt := sceneEvent(scene.EventTypeUpdated, "camp-1", "sess-1", "sc-1", data, later)
+
+	if err := applier.Apply(ctx, evt); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	rec, _ := sceneStore.GetScene(ctx, "camp-1", "sc-1")
+	if rec.Description != "" {
+		t.Errorf("description = %q, want empty (cleared)", rec.Description)
+	}
+}
+
 func TestApplySceneUpdated_MissingStore(t *testing.T) {
-	data, _ := json.Marshal(scene.UpdatePayload{SceneID: "sc-1", Name: "X"})
+	data, _ := json.Marshal(scene.UpdatePayload{SceneID: "sc-1", Name: "X", Fields: map[string]string{"name": "X"}})
 	evt := sceneEvent(scene.EventTypeUpdated, "camp-1", "sess-1", "sc-1", data, sceneStamp)
 	if err := (Applier{}).Apply(context.Background(), evt); err == nil {
 		t.Fatal("expected error for missing scene store")

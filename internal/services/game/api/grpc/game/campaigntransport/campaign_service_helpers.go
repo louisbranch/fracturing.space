@@ -17,8 +17,9 @@ func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, camp
 	if err == nil {
 		return grpcerror.HandleDomainErrorContext(ctx, storage.ErrActiveSessionExists)
 	}
-	if grpcerror.OptionalLookupErrorContext(ctx, err, "check active session") == nil {
+	lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "check active session")
+	if lookupErr == nil {
 		return nil
 	}
-	return grpcerror.OptionalLookupErrorContext(ctx, err, "check active session")
+	return lookupErr
 }

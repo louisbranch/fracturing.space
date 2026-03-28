@@ -107,8 +107,8 @@ func TestDecisionGateCheckSceneRejectsWhenSceneGateOpen(t *testing.T) {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
 	rejection := decision.Rejections[0]
-	if rejection.Code != rejectionCodeSceneGateOpen {
-		t.Fatalf("rejection code = %s, want %s", rejection.Code, rejectionCodeSceneGateOpen)
+	if rejection.Code != RejectionCodeSceneGateOpen {
+		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSceneGateOpen)
 	}
 	if !strings.Contains(rejection.Message, "sg-1") {
 		t.Fatalf("expected rejection message to include gate id, got %q", rejection.Message)

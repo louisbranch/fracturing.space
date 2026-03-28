@@ -1,6 +1,7 @@
 package sessiontransport
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -55,7 +56,7 @@ func TestOpenSessionGate_UsesDomainEngine(t *testing.T) {
 		nil,
 	)
 
-	_, err := svc.OpenSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.OpenSessionGateRequest{
+	_, err := svc.OpenSessionGate(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.OpenSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateType:   "spotlight",

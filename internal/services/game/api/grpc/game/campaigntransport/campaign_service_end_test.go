@@ -48,7 +48,7 @@ func TestEndCampaign_ActiveSessionBlocks(t *testing.T) {
 	ts.Session.ActiveSession["c1"] = "s1"
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.EndCampaign(requestctx.WithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	_, err := svc.EndCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -59,7 +59,7 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.TestCampaignRecordWithStatus(campaign.StatusDraft)
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.EndCampaign(requestctx.WithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	_, err := svc.EndCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -84,7 +84,7 @@ func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.EndCampaign(requestctx.WithParticipantID("manager-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.EndCampaign(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("EndCampaign returned error: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestEndCampaign_RequiresDomainEngine(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.EndCampaign(requestctx.WithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	_, err := svc.EndCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -123,7 +123,7 @@ func TestEndCampaign_Success(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("campaign-123"))
 
-	resp, err := svc.EndCampaign(requestctx.WithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.EndCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("EndCampaign returned error: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	_, err := svc.EndCampaign(requestctx.WithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	_, err := svc.EndCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("EndCampaign returned error: %v", err)
 	}

@@ -121,6 +121,19 @@ func CoreDomainRegistrations() []CoreDomainRegistration {
 	return append([]CoreDomainRegistration(nil), builtInCoreDomainRegistrations...)
 }
 
+// builtInCoreDomainRegistrations is the canonical inventory of core domain
+// registrations used by aggregate replay and engine startup validation.
+//
+// Three registration patterns are used:
+//   - directCoreDomainRegistration: for domains that own one direct field on
+//     aggregate State (e.g. campaign, session, action). Use when the domain has
+//     exactly one state instance per campaign aggregate.
+//   - entityKeyedCoreDomainRegistration: for domains keyed by the event envelope
+//     EntityID (e.g. participant, character). Use when each entity instance is
+//     identified by the event's EntityID field.
+//   - keyedCoreDomainRegistration: for domains keyed by a payload-derived value
+//     rather than EntityID (e.g. scene, keyed by SceneID extracted from the
+//     event payload). Use when the state map key differs from EntityID.
 var builtInCoreDomainRegistrations = []CoreDomainRegistration{
 	directCoreDomainRegistration(campaign.CoreDomainContracts(), func(state *State) *campaign.State { return &state.Campaign }, campaign.Fold),
 	directCoreDomainRegistration(session.CoreDomainContracts(), func(state *State) *session.State { return &state.Session }, session.Fold),

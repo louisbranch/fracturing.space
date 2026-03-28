@@ -7,8 +7,6 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/contenttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // DaggerheartAssetService implements the Daggerheart asset-map gRPC API.
@@ -28,14 +26,6 @@ func NewDaggerheartAssetService(store contentstore.DaggerheartContentReadStore) 
 // GetAssetMap returns resolved content-image selectors for Daggerheart entities.
 func (s *DaggerheartAssetService) GetAssetMap(ctx context.Context, in *pb.GetDaggerheartAssetMapRequest) (*pb.GetDaggerheartAssetMapResponse, error) {
 	return contenttransport.NewHandler(s.storeOrNil()).GetAssetMap(ctx, in)
-}
-
-func (s *DaggerheartAssetService) assetStore() (contentstore.DaggerheartContentReadStore, error) {
-	store := s.storeOrNil()
-	if store == nil {
-		return nil, status.Error(codes.Internal, "content store is not configured")
-	}
-	return store, nil
 }
 
 func (s *DaggerheartAssetService) storeOrNil() contentstore.DaggerheartContentReadStore {

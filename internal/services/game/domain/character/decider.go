@@ -52,7 +52,7 @@ func RejectionCodes() []string {
 // Character changes are intentionally event-driven so ownership and profile edits
 // can be replayed and projected consistently across tools and clients.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 
 	switch cmd.Type {
 	case CommandTypeCreate:

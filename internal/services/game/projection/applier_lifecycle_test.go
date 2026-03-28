@@ -27,7 +27,7 @@ func TestApplyCampaignUpdated_StatusAndName(t *testing.T) {
 	}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -55,7 +55,7 @@ func TestApplySessionStarted_UsesEntityID(t *testing.T) {
 	payload := testevent.SessionStartedPayload{SessionID: "", SessionName: "Session 1"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 10, 14, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "sess-1", Type: testevent.TypeSessionStarted, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "sess-1", Type: session.EventTypeStarted, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -76,7 +76,7 @@ func TestApplySessionEnded(t *testing.T) {
 	payload := testevent.SessionEndedPayload{SessionID: "sess-1"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 14, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "sess-1", Type: testevent.TypeSessionEnded, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "sess-1", Type: session.EventTypeEnded, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -86,7 +86,7 @@ func TestApplySessionEnded(t *testing.T) {
 func TestApplySessionEnded_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionEndedPayload{SessionID: "sess-1"})
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeSessionEnded, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: session.EventTypeEnded, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session store")
 	}
@@ -95,7 +95,7 @@ func TestApplySessionEnded_MissingStore(t *testing.T) {
 func TestApplySessionEnded_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionEndedPayload{SessionID: "sess-1"})
-	evt := testevent.Event{CampaignID: "", Type: testevent.TypeSessionEnded, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", Type: session.EventTypeEnded, PayloadJSON: data}
 	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -194,7 +194,7 @@ func TestApplyCampaignForked(t *testing.T) {
 		OriginCampaignID: "origin-1",
 	}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignForked, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeForked, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -217,7 +217,7 @@ func TestApplyCampaignForked(t *testing.T) {
 func TestApplyCampaignForked_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignForkedPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignForked, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeForked, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing fork store")
 	}
@@ -226,7 +226,7 @@ func TestApplyCampaignForked_MissingStore(t *testing.T) {
 func TestApplyCampaignForked_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignForkedPayload{})
-	evt := testevent.Event{CampaignID: "", Type: testevent.TypeCampaignForked, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", Type: campaign.EventTypeForked, PayloadJSON: data}
 	applier := Applier{CampaignFork: newFakeCampaignForkStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -248,7 +248,7 @@ func TestApplyCampaignCreated(t *testing.T) {
 	}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 10, 0, 0, 0, time.UTC)
-	evt := testevent.Event{EntityID: "camp-1", Type: testevent.TypeCampaignCreated, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{EntityID: "camp-1", Type: campaign.EventTypeCreated, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -271,7 +271,7 @@ func TestApplyCampaignCreated(t *testing.T) {
 func TestApplyCampaignCreated_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignCreatedPayload{Name: "X", GameSystem: "GAME_SYSTEM_DAGGERHEART", GmMode: "human"})
-	evt := testevent.Event{EntityID: "camp-1", Type: testevent.TypeCampaignCreated, PayloadJSON: data}
+	evt := testevent.Event{EntityID: "camp-1", Type: campaign.EventTypeCreated, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign store")
 	}
@@ -280,7 +280,7 @@ func TestApplyCampaignCreated_MissingStore(t *testing.T) {
 func TestApplyCampaignCreated_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignCreatedPayload{Name: "X", GameSystem: "GAME_SYSTEM_DAGGERHEART", GmMode: "human"})
-	evt := testevent.Event{EntityID: "", Type: testevent.TypeCampaignCreated, PayloadJSON: data}
+	evt := testevent.Event{EntityID: "", Type: campaign.EventTypeCreated, PayloadJSON: data}
 	applier := Applier{Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity ID")
@@ -289,7 +289,7 @@ func TestApplyCampaignCreated_MissingEntityID(t *testing.T) {
 
 func TestApplyCampaignCreated_InvalidJSON(t *testing.T) {
 	ctx := context.Background()
-	evt := testevent.Event{EntityID: "camp-1", Type: testevent.TypeCampaignCreated, PayloadJSON: []byte("{")}
+	evt := testevent.Event{EntityID: "camp-1", Type: campaign.EventTypeCreated, PayloadJSON: []byte("{")}
 	applier := Applier{Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
@@ -299,7 +299,7 @@ func TestApplyCampaignCreated_InvalidJSON(t *testing.T) {
 func TestApplyCampaignCreated_InvalidGameSystem(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignCreatedPayload{Name: "X", GameSystem: "", GmMode: "human"})
-	evt := testevent.Event{EntityID: "camp-1", Type: testevent.TypeCampaignCreated, PayloadJSON: data}
+	evt := testevent.Event{EntityID: "camp-1", Type: campaign.EventTypeCreated, PayloadJSON: data}
 	applier := Applier{Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid game system")
@@ -309,7 +309,7 @@ func TestApplyCampaignCreated_InvalidGameSystem(t *testing.T) {
 func TestApplyCampaignCreated_InvalidGmMode(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignCreatedPayload{Name: "X", GameSystem: "DAGGERHEART", GmMode: ""})
-	evt := testevent.Event{EntityID: "camp-1", Type: testevent.TypeCampaignCreated, PayloadJSON: data}
+	evt := testevent.Event{EntityID: "camp-1", Type: campaign.EventTypeCreated, PayloadJSON: data}
 	applier := Applier{Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid gm mode")
@@ -326,7 +326,7 @@ func TestApplyCampaignUpdated_ThemePrompt(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"theme_prompt": "  new theme  "}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data, Timestamp: time.Now()}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data, Timestamp: time.Now()}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -349,7 +349,7 @@ func TestApplyCampaignUpdated_Locale(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"locale": "pt-BR"}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data, Timestamp: time.Now()}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data, Timestamp: time.Now()}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -368,7 +368,7 @@ func TestApplyCampaignUpdated_EmptyFields(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -378,7 +378,7 @@ func TestApplyCampaignUpdated_EmptyFields(t *testing.T) {
 func TestApplyCampaignUpdated_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignUpdatedPayload{Fields: map[string]any{"name": "X"}})
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign store")
 	}
@@ -387,7 +387,7 @@ func TestApplyCampaignUpdated_MissingStore(t *testing.T) {
 func TestApplyCampaignUpdated_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CampaignUpdatedPayload{Fields: map[string]any{"name": "X"}})
-	evt := testevent.Event{CampaignID: "", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 	applier := Applier{Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -402,7 +402,7 @@ func TestApplyCampaignUpdated_InvalidNameType(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"name": 42}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid name type")
@@ -417,7 +417,7 @@ func TestApplyCampaignUpdated_EmptyName(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"name": "  "}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for empty name")
@@ -432,7 +432,7 @@ func TestApplyCampaignUpdated_InvalidStatusType(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"status": 42}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid status type")
@@ -447,7 +447,7 @@ func TestApplyCampaignUpdated_InvalidThemePromptType(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"theme_prompt": 42}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid theme_prompt type")
@@ -462,7 +462,7 @@ func TestApplyCampaignUpdated_InvalidLocaleValue(t *testing.T) {
 
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"locale": "es-ES"}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid locale value")
@@ -474,7 +474,7 @@ func TestApplyCampaignUpdated_InvalidLocaleValue(t *testing.T) {
 func TestApplySessionStarted_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionStartedPayload{SessionID: "sess-1"})
-	evt := testevent.Event{CampaignID: "", Type: testevent.TypeSessionStarted, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", Type: session.EventTypeStarted, PayloadJSON: data}
 	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -484,7 +484,7 @@ func TestApplySessionStarted_MissingCampaignID(t *testing.T) {
 func TestApplySessionStarted_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionStartedPayload{SessionID: "sess-1"})
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeSessionStarted, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: session.EventTypeStarted, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session store")
 	}
@@ -493,7 +493,7 @@ func TestApplySessionStarted_MissingStore(t *testing.T) {
 func TestApplySessionStarted_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionStartedPayload{SessionID: ""})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeSessionStarted, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: session.EventTypeStarted, PayloadJSON: data}
 	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
@@ -509,7 +509,7 @@ func TestApplySessionEnded_EntityIDFallback(t *testing.T) {
 
 	payload := testevent.SessionEndedPayload{SessionID: ""}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "sess-fallback", Type: testevent.TypeSessionEnded, PayloadJSON: data, Timestamp: time.Now()}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "sess-fallback", Type: session.EventTypeEnded, PayloadJSON: data, Timestamp: time.Now()}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -519,7 +519,7 @@ func TestApplySessionEnded_EntityIDFallback(t *testing.T) {
 func TestApplySessionEnded_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionEndedPayload{SessionID: ""})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeSessionEnded, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: session.EventTypeEnded, PayloadJSON: data}
 	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
@@ -530,7 +530,7 @@ func TestApplySessionEnded_MissingSessionID(t *testing.T) {
 
 func TestApplyCampaignForked_InvalidJSON(t *testing.T) {
 	applier := Applier{CampaignFork: newFakeCampaignForkStore()}
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignForked, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeForked, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -540,7 +540,7 @@ func TestApplyCampaignForked_InvalidJSON(t *testing.T) {
 
 func TestApplySessionStarted_InvalidJSON(t *testing.T) {
 	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeSessionStarted, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", Type: session.EventTypeStarted, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -550,7 +550,7 @@ func TestApplySessionStarted_InvalidJSON(t *testing.T) {
 
 func TestApplySessionEnded_InvalidJSON(t *testing.T) {
 	applier := Applier{Session: &fakeSessionStore{}, SessionInteraction: newFakeSessionInteractionStore()}
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeSessionEnded, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", Type: session.EventTypeEnded, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -560,7 +560,7 @@ func TestApplySessionEnded_InvalidJSON(t *testing.T) {
 
 func TestApplyCampaignUpdated_InvalidJSON(t *testing.T) {
 	applier := Applier{Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -572,7 +572,7 @@ func TestApplyCampaignUpdated_InvalidStatus(t *testing.T) {
 	applier := Applier{Campaign: campaignStore}
 	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"status": "INVALID"}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", Type: campaign.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid status value")
 	}

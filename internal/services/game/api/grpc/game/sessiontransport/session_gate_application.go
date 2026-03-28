@@ -7,6 +7,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
@@ -118,7 +120,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	}
 	if err := a.gateCommands.Execute(
 		ctx,
-		handler.CommandTypeSessionGateOpen,
+		commandids.SessionGateOpen,
 		campaignID,
 		sessionID,
 		gateID,
@@ -174,7 +176,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	}
 	if err := a.gateCommands.Execute(
 		ctx,
-		handler.CommandTypeSessionGateResolve,
+		commandids.SessionGateResolve,
 		campaignID,
 		sessionID,
 		gateID,
@@ -224,7 +226,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	}
 	if err := a.gateCommands.Execute(
 		ctx,
-		handler.CommandTypeSessionGateAbandon,
+		commandids.SessionGateAbandon,
 		campaignID,
 		sessionID,
 		gateID,

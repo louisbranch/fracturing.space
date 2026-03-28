@@ -1,14 +1,15 @@
 package scenetransport
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -39,14 +40,14 @@ func TestTransitionScene_UsesSourceSceneSessionID(t *testing.T) {
 		},
 	})
 
-	_, _ = svc.TransitionScene(requestctx.WithParticipantID("manager-1"), &statev1.TransitionSceneRequest{
+	_, _ = svc.TransitionScene(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.TransitionSceneRequest{
 		CampaignId:    "c1",
 		SourceSceneId: "sc-1",
 		Name:          "Room B",
 	})
 
-	if domain.lastCommand.Type != handler.CommandTypeSceneTransition {
-		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, handler.CommandTypeSceneTransition)
+	if domain.lastCommand.Type != commandids.SceneTransition {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandids.SceneTransition)
 	}
 	if domain.lastCommand.SessionID != "sess-1" {
 		t.Fatalf("command session id = %q, want %q", domain.lastCommand.SessionID, "sess-1")

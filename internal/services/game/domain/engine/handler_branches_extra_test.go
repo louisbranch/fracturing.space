@@ -240,3 +240,57 @@ func TestExecute_PropagatesSnapshotSaveError(t *testing.T) {
 		t.Fatalf("checkpoint calls = %d, want 0 when snapshot save fails", checkpoints.calls)
 	}
 }
+
+func TestExecute_CheckpointFailsAfterSnapshotSucceeds(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{Type: command.Type("action.test"), Owner: command.OwnerCore}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	journal := &fakeJournal{}
+	checkpointErr := errors.New("checkpoint save boom")
+	snapshots := &trackingSnapshotStore{}
+	handler := Handler{
+		Commands:    cmdRegistry,
+		Decider:     fixedDecider{decision: command.Accept(event.Event{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{}`)})},
+		Journal:     journal,
+		Snapshots:   snapshots,
+		Checkpoints: &failingCheckpointStore{err: checkpointErr},
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{CampaignID: "camp-1", Type: command.Type("action.test"), ActorType: command.ActorTypeSystem})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Invariant: checkpoint failure must surface as PostPersistStageCheckpoint.
+	if !errors.Is(err, ErrPostPersistCheckpointFailed) {
+		t.Fatalf("expected ErrPostPersistCheckpointFailed, got %v", err)
+	}
+	if !errors.Is(err, checkpointErr) {
+		t.Fatalf("expected checkpoint root error in chain, got %v", err)
+	}
+	if !IsNonRetryable(err) {
+		t.Fatal("expected checkpoint failure to be non-retryable")
+	}
+	meta, ok := AsPostPersistError(err)
+	if !ok {
+		t.Fatal("expected post-persist metadata")
+	}
+	if meta.Stage != PostPersistStageCheckpoint {
+		t.Fatalf("stage = %q, want %q", meta.Stage, PostPersistStageCheckpoint)
+	}
+	if meta.LastSeq != 1 {
+		t.Fatalf("last seq = %d, want 1", meta.LastSeq)
+	}
+
+	// Invariant: events must still be persisted to the journal even when
+	// checkpoint fails, because checkpoint is a post-persist optimization.
+	if journal.nextSeq != 1 {
+		t.Fatalf("journal seq = %d, want 1 (events should be persisted)", journal.nextSeq)
+	}
+
+	// Invariant: snapshot must have succeeded before checkpoint was attempted.
+	if snapshots.calls != 1 {
+		t.Fatalf("snapshot calls = %d, want 1", snapshots.calls)
+	}
+}

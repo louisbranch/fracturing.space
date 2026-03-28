@@ -37,6 +37,7 @@ Exact runtime and contributor-facing contracts.
 - Icon catalog: [icon-catalog.md](icon-catalog.md)
 - I18n status artifact: [i18n-status.md](i18n-status.md)
 - Rejection codes: [rejection-codes.md](rejection-codes.md)
+- Scenario API reference: [scenario-api-reference.md](scenario-api-reference.md)
 - SQLC workflow: [sqlc-process.md](sqlc-process.md)
 - Generated command/event contracts: [events/index.md](../events/index.md)
 

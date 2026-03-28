@@ -17,7 +17,8 @@ type keyringEnv struct {
 // KeyringFromEnv loads campaign event integrity keys from environment variables.
 //
 // It supports both a single legacy key and rotating multi-key maps so operators
-// can roll keys with minimal deployment churn.
+// can roll keys with minimal deployment churn. For production use, keys should
+// be at least 32 bytes of cryptographically random data.
 func KeyringFromEnv() (*Keyring, error) {
 	var raw keyringEnv
 	if err := env.Parse(&raw); err != nil {

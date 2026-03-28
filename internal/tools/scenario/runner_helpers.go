@@ -14,7 +14,8 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
-	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/coreevent"
+	domainevent "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -465,7 +466,7 @@ func (r *Runner) latestSeq(ctx context.Context, state *scenarioState) (uint64, e
 	return response.GetEvents()[0].GetSeq(), nil
 }
 
-func (r *Runner) requireEventTypesAfterSeq(ctx context.Context, state *scenarioState, before uint64, types ...event.Type) error {
+func (r *Runner) requireEventTypesAfterSeq(ctx context.Context, state *scenarioState, before uint64, types ...domainevent.Type) error {
 	eventCtx := withParticipantID(ctx, state.ownerParticipantID)
 	for _, eventType := range types {
 		filter := fmt.Sprintf("type = \"%s\"", eventType)
@@ -504,22 +505,22 @@ func (r *Runner) requireDaggerheartEventTypesAfterSeq(ctx context.Context, state
 	return r.requireEventTypesAfterSeq(ctx, state, before, eventTypes...)
 }
 
-func convertDaggerheartEventTypes(types ...any) ([]event.Type, error) {
+func convertDaggerheartEventTypes(types ...any) ([]domainevent.Type, error) {
 	if len(types) == 0 {
 		return nil, nil
 	}
-	converted := make([]event.Type, 0, len(types))
+	converted := make([]domainevent.Type, 0, len(types))
 	for _, eventType := range types {
 		value := reflect.ValueOf(eventType)
 		if !value.IsValid() || value.Kind() != reflect.String {
 			return nil, fmt.Errorf("unsupported event type %T", eventType)
 		}
-		converted = append(converted, event.Type(value.String()))
+		converted = append(converted, domainevent.Type(value.String()))
 	}
 	return converted, nil
 }
 
-func (r *Runner) requireAnyEventTypesAfterSeq(ctx context.Context, state *scenarioState, before uint64, types ...event.Type) error {
+func (r *Runner) requireAnyEventTypesAfterSeq(ctx context.Context, state *scenarioState, before uint64, types ...domainevent.Type) error {
 	for _, eventType := range types {
 		ok, err := r.hasEventTypeAfterSeq(ctx, state, before, eventType)
 		if err != nil {
@@ -563,7 +564,7 @@ func (r *Runner) requireNoSessionEventsAfterSeq(ctx context.Context, state *scen
 }
 
 func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioState, before uint64) error {
-	filter := fmt.Sprintf("type = \"%s\"", event.TypeSessionGateOpened)
+	filter := fmt.Sprintf("type = \"%s\"", session.EventTypeGateOpened)
 	if state.sessionID != "" {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
 	}
@@ -575,7 +576,7 @@ func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioStat
 		Filter:     filter,
 	})
 	if err != nil {
-		return fmt.Errorf("list events for %s: %w", event.TypeSessionGateOpened, err)
+		return fmt.Errorf("list events for %s: %w", session.EventTypeGateOpened, err)
 	}
 	gateID := ""
 	for _, evt := range response.GetEvents() {
@@ -585,7 +586,7 @@ func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioStat
 		if len(strings.TrimSpace(string(evt.GetPayloadJson()))) == 0 {
 			continue
 		}
-		var payload event.SessionGateOpenedPayload
+		var payload session.GateOpenedPayload
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return fmt.Errorf("decode session gate payload: %w", err)
 		}
@@ -607,10 +608,10 @@ func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return fmt.Errorf("resolve session gate: %w", err)
 	}
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSessionGateResolved)
+	return r.requireEventTypesAfterSeq(ctx, state, before, session.EventTypeGateResolved)
 }
 
-func (r *Runner) hasEventTypeAfterSeq(ctx context.Context, state *scenarioState, before uint64, eventType event.Type) (bool, error) {
+func (r *Runner) hasEventTypeAfterSeq(ctx context.Context, state *scenarioState, before uint64, eventType domainevent.Type) (bool, error) {
 	filter := fmt.Sprintf("type = \"%s\"", eventType)
 	if state.sessionID != "" && isSessionEvent(string(eventType)) {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)

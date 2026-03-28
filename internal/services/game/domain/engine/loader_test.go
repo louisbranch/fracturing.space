@@ -373,8 +373,8 @@ func TestReplayGateStateLoader_LoadSessionErrorBranches(t *testing.T) {
 			},
 		}
 		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
-		if err == nil || err.Error() != "state is required" {
-			t.Fatalf("LoadSession() error = %v, want state is required", err)
+		if !errors.Is(err, ErrStateRequired) {
+			t.Fatalf("LoadSession() error = %v, want %v", err, ErrStateRequired)
 		}
 	})
 
@@ -391,8 +391,8 @@ func TestReplayGateStateLoader_LoadSessionErrorBranches(t *testing.T) {
 			},
 		}
 		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
-		if err == nil || err.Error() != "state is required" {
-			t.Fatalf("LoadSession() error = %v, want state is required", err)
+		if !errors.Is(err, ErrStateRequired) {
+			t.Fatalf("LoadSession() error = %v, want %v", err, ErrStateRequired)
 		}
 	})
 
@@ -408,8 +408,8 @@ func TestReplayGateStateLoader_LoadSessionErrorBranches(t *testing.T) {
 			},
 		}
 		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
-		if err == nil || err.Error() != "unsupported state type" {
-			t.Fatalf("LoadSession() error = %v, want unsupported state type", err)
+		if !errors.Is(err, ErrUnsupportedStateType) {
+			t.Fatalf("LoadSession() error = %v, want %v", err, ErrUnsupportedStateType)
 		}
 	})
 
@@ -553,8 +553,8 @@ func TestReplayGateStateLoader_LoadScene(t *testing.T) {
 			},
 		}
 		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
-		if err == nil || err.Error() != "state is required" {
-			t.Fatalf("LoadScene() error = %v, want state is required", err)
+		if !errors.Is(err, ErrStateRequired) {
+			t.Fatalf("LoadScene() error = %v, want %v", err, ErrStateRequired)
 		}
 	})
 
@@ -571,8 +571,8 @@ func TestReplayGateStateLoader_LoadScene(t *testing.T) {
 			},
 		}
 		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
-		if err == nil || err.Error() != "state is required" {
-			t.Fatalf("LoadScene() error = %v, want state is required", err)
+		if !errors.Is(err, ErrStateRequired) {
+			t.Fatalf("LoadScene() error = %v, want %v", err, ErrStateRequired)
 		}
 	})
 
@@ -588,8 +588,8 @@ func TestReplayGateStateLoader_LoadScene(t *testing.T) {
 			},
 		}
 		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
-		if err == nil || err.Error() != "unsupported state type" {
-			t.Fatalf("LoadScene() error = %v, want unsupported state type", err)
+		if !errors.Is(err, ErrUnsupportedStateType) {
+			t.Fatalf("LoadScene() error = %v, want %v", err, ErrUnsupportedStateType)
 		}
 	})
 

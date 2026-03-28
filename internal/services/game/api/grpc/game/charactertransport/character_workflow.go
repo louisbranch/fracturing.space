@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/characterworkflow"
@@ -159,7 +161,7 @@ func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Conte
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignContext.ID,
-				Type:         handler.CommandTypeDaggerheartCharacterProfileReplace,
+				Type:         commandids.DaggerheartCharacterProfileReplace,
 				ActorType:    actorType,
 				ActorID:      actorID,
 				RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -205,7 +207,7 @@ func (c characterApplication) executeDaggerheartProfileDelete(ctx context.Contex
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignContext.ID,
-				Type:         handler.CommandTypeDaggerheartCharacterProfileDelete,
+				Type:         commandids.DaggerheartCharacterProfileDelete,
 				ActorType:    actorType,
 				ActorID:      actorID,
 				RequestID:    grpcmeta.RequestIDFromContext(ctx),

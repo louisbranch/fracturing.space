@@ -11,6 +11,11 @@ import (
 // Aggregate replay composes these contracts with aggregate-owned fold adapters
 // so the built-in inventory can be authored from package-owned descriptors
 // without making domain packages depend on aggregate state types.
+//
+// Required fields: DomainName, RegisterCommands, RegisterEvents.
+// Optional-nil fields: EmittableEventTypes, FoldHandledTypes,
+// DeciderHandledCommands, ProjectionHandledTypes, RejectionCodes. When nil,
+// startup validators skip the corresponding coverage check for that domain.
 type Contracts struct {
 	DomainName             string
 	RegisterCommands       func(*command.Registry) error

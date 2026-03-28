@@ -144,7 +144,7 @@ func TestListEvents_TokenWithChangedOrderBy(t *testing.T) {
 
 func TestListEvents_TokenWithChangedAfterSeq(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := requestctx.WithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride(context.Background(), "events-test")
 	now := time.Now().UTC()
 	eventStore.Events["c1"] = []event.Event{
 		{CampaignID: "c1", Seq: 1, Type: event.Type("e1"), Timestamp: now},

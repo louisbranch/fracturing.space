@@ -18,12 +18,12 @@ const (
 	EventTypeOutcomeRejected event.Type = "action.outcome_rejected"
 	EventTypeNoteAdded       event.Type = "story.note_added"
 
-	rejectionCodeRequestIDRequired                 = "REQUEST_ID_REQUIRED"
-	rejectionCodeRollSeqRequired                   = "ROLL_SEQ_REQUIRED"
-	rejectionCodeOutcomeAlreadyApplied             = "OUTCOME_ALREADY_APPLIED"
-	rejectionCodeOutcomeEffectSystemOwnedForbidden = "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN"
-	rejectionCodeOutcomeEffectTypeForbidden        = "OUTCOME_EFFECT_TYPE_FORBIDDEN"
-	rejectionCodeNoteContentRequired               = "NOTE_CONTENT_REQUIRED"
+	rejectionCodeRequestIDRequired                 = "ACTION_REQUEST_ID_REQUIRED"
+	rejectionCodeRollSeqRequired                   = "ACTION_ROLL_SEQ_REQUIRED"
+	rejectionCodeOutcomeAlreadyApplied             = "ACTION_OUTCOME_ALREADY_APPLIED"
+	rejectionCodeOutcomeEffectSystemOwnedForbidden = "ACTION_OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN"
+	rejectionCodeOutcomeEffectTypeForbidden        = "ACTION_OUTCOME_EFFECT_TYPE_FORBIDDEN"
+	rejectionCodeNoteContentRequired               = "ACTION_NOTE_CONTENT_REQUIRED"
 )
 
 var coreOutcomeEffectPolicy = newOutcomeEffectPolicy("session.gate_opened", "session.spotlight_set")
@@ -47,7 +47,7 @@ func RejectionCodes() []string {
 // becomes a typed domain event, keeping roll outcome logic and note-taking in one
 // replayable stream.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 	switch cmd.Type {
 	case CommandTypeRollResolve:
 		return decideRollResolve(cmd, now)
@@ -59,7 +59,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		return decideNoteAdd(cmd, now)
 	default:
 		return command.Reject(command.Rejection{
-			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Code:    command.RejectionCodeCommandTypeUnsupported,
 			Message: "command type is not supported by action decider",
 		})
 	}

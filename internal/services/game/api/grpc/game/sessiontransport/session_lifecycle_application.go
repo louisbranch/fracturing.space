@@ -66,7 +66,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		CharacterControllers: characterControllers,
 	}
 	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
-		CommandType: handler.CommandTypeSessionStart,
+		CommandType: commandids.SessionStart,
 		CampaignID:  campaignID,
 		SessionID:   sessionID,
 		Payload:     payload,
@@ -211,7 +211,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	}
 	payload := session.EndPayload{SessionID: ids.SessionID(sessionID)}
 	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
-		CommandType: handler.CommandTypeSessionEnd,
+		CommandType: commandids.SessionEnd,
 		CampaignID:  campaignID,
 		SessionID:   sessionID,
 		Payload:     payload,

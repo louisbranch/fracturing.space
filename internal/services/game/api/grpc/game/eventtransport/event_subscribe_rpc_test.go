@@ -53,7 +53,7 @@ func TestSubscribeCampaignUpdates_StreamsCommittedAndProjectionUpdates(t *testin
 	}
 
 	svc := NewService(Deps{Event: eventStore})
-	ctx, cancel := context.WithCancel(requestctx.WithAdminOverride("events-test"))
+	ctx, cancel := context.WithCancel(requestctx.WithAdminOverride(context.Background(), "events-test"))
 	stream := &fakeCampaignUpdateStream{ctx: ctx}
 	stream.onSend = func() {
 		if len(stream.updates) >= 2 {

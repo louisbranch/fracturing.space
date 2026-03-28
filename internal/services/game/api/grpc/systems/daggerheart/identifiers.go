@@ -20,9 +20,9 @@ const (
 	commandTypeDaggerheartCharacterStatePatch  = commandids.DaggerheartCharacterStatePatch
 	commandTypeDaggerheartTemporaryArmorApply  = commandids.DaggerheartCharacterTemporaryArmorApply
 	commandTypeDaggerheartConditionChange      = commandids.DaggerheartConditionChange
-	commandTypeDaggerheartCountdownCreate      = commandids.DaggerheartCountdownCreate
-	commandTypeDaggerheartCountdownDelete      = commandids.DaggerheartCountdownDelete
-	commandTypeDaggerheartCountdownUpdate      = commandids.DaggerheartCountdownUpdate
+	commandTypeDaggerheartCountdownCreate      = commandids.DaggerheartSceneCountdownCreate
+	commandTypeDaggerheartCountdownDelete      = commandids.DaggerheartSceneCountdownDelete
+	commandTypeDaggerheartCountdownUpdate      = commandids.DaggerheartSceneCountdownAdvance
 	commandTypeDaggerheartDamageApply          = commandids.DaggerheartDamageApply
 	commandTypeDaggerheartGMFearSet            = commandids.DaggerheartGMFearSet
 	commandTypeDaggerheartHopeSpend            = commandids.DaggerheartHopeSpend

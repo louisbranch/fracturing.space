@@ -90,7 +90,7 @@ func TestCreateParticipant_EmptyName(t *testing.T) {
 	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Role:       statev1.ParticipantRole_PLAYER,
@@ -107,7 +107,7 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Name:       "Player 1",
@@ -133,7 +133,7 @@ func TestCreateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Name:       "AI Seat",
@@ -155,7 +155,7 @@ func TestCreateParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Name:       "Game Master",
@@ -197,7 +197,7 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 		nil,
 	)
 
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Name:       "Game Master",
@@ -274,7 +274,7 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 		nil,
 	)
 
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Name:       "Player One",
@@ -330,7 +330,7 @@ func TestCreateParticipant_Success_ManagerAccess(t *testing.T) {
 		nil,
 	)
 
-	resp, err := svc.CreateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+	resp, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId:     "c1",
 		Name:           "Quartermaster",
 		Role:           statev1.ParticipantRole_PLAYER,
@@ -355,7 +355,7 @@ func TestCreateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.CreateParticipant(requestctx.WithParticipantID("manager-1"), &statev1.CreateParticipantRequest{
+	_, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.CreateParticipantRequest{
 		CampaignId:     "c1",
 		Name:           "Pending Owner",
 		Role:           statev1.ParticipantRole_PLAYER,
@@ -378,7 +378,7 @@ func TestCreateParticipant_DeniesHumanGMForAIGMCampaign(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.CreateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+	_, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Name:       "Human GM",
 		Role:       statev1.ParticipantRole_GM,
@@ -425,7 +425,7 @@ func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 		nil,
 	)
 
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Name:       "Player One",
@@ -502,7 +502,7 @@ func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *te
 		nil,
 	)
 
-	_, err := svc.CreateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+	_, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId:    "c1",
 		UserId:        "user-123",
 		Name:          "Request Name",
@@ -586,7 +586,7 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 		nil,
 	)
 
-	_, err := svc.CreateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+	_, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		UserId:     "user-123",
 		Role:       statev1.ParticipantRole_PLAYER,
@@ -653,7 +653,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsername(t *testi
 		authClient,
 	)
 
-	_, err := svc.CreateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+	_, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		UserId:     "user-123",
 		Role:       statev1.ParticipantRole_PLAYER,
@@ -728,7 +728,7 @@ func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testi
 		nil,
 	)
 
-	_, err := svc.CreateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+	_, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		UserId:     "user-123",
 		Name:       "Player One",
@@ -800,7 +800,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsernameForLocale
 		authClient,
 	)
 
-	_, err := svc.CreateParticipant(requestctx.WithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+	_, err := svc.CreateParticipant(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		UserId:     "user-123",
 		Role:       statev1.ParticipantRole_PLAYER,

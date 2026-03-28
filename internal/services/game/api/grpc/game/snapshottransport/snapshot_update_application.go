@@ -15,6 +15,7 @@ import (
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
@@ -76,7 +77,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			commandbuild.System(commandbuild.SystemInput{
 				CoreInput: commandbuild.CoreInput{
 					CampaignID:   campaignID,
-					Type:         handler.CommandTypeDaggerheartGMFearSet,
+					Type:         commandids.DaggerheartGMFearSet,
 					ActorType:    actorTypeForCommand,
 					ActorID:      actorID,
 					SessionID:    grpcmeta.SessionIDFromContext(ctx),

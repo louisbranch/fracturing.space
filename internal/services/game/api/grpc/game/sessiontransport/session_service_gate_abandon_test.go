@@ -104,7 +104,7 @@ func TestAbandonSessionGate_DeniesMemberAccess(t *testing.T) {
 		SessionGate: gateStore,
 		Participant: participantStore,
 	})
-	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID("member-1"), &statev1.AbandonSessionGateRequest{
+	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID(context.Background(), "member-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	assertStatusCode(t, err, codes.PermissionDenied)
@@ -139,7 +139,7 @@ func TestAbandonSessionGate_AlreadyAbandoned(t *testing.T) {
 		nil,
 	)
 
-	resp, err := svc.AbandonSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
+	resp, err := svc.AbandonSessionGate(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	if err != nil {
@@ -206,7 +206,7 @@ func TestAbandonSessionGate_Success(t *testing.T) {
 		nil,
 	)
 
-	ctx := requestctx.WithParticipantID("part-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "part-1")
 	resp, err := svc.AbandonSessionGate(ctx, &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1", Reason: "timeout",
 	})
@@ -251,7 +251,7 @@ func TestAbandonSessionGate_RequiresDomainEngine(t *testing.T) {
 		nil,
 		nil,
 	)
-	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
+	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -300,7 +300,7 @@ func TestAbandonSessionGate_UsesDomainEngine(t *testing.T) {
 		nil,
 	)
 
-	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
+	_, err := svc.AbandonSessionGate(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateId:     "g1",

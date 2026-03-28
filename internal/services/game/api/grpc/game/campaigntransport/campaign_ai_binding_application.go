@@ -15,6 +15,7 @@ import (
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -50,7 +51,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCampaignAIBind,
+			Type:         commandids.CampaignAIBind,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -151,7 +152,7 @@ func clearCampaignAIBindingByCommand(
 		deps.Applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCampaignAIUnbind,
+			Type:         commandids.CampaignAIUnbind,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,

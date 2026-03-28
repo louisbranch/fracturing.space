@@ -1,4 +1,4 @@
-package handler
+package social
 
 import (
 	"context"
@@ -9,35 +9,35 @@ import (
 	"google.golang.org/grpc"
 )
 
-// SocialProfileSnapshot carries the profile fields create flows can safely
+// ProfileSnapshot carries the profile fields create flows can safely
 // snapshot without coupling participant payloads to the social transport type.
-type SocialProfileSnapshot struct {
+type ProfileSnapshot struct {
 	Name          string
 	Pronouns      string
 	AvatarSetID   string
 	AvatarAssetID string
 }
 
-// SocialProfileClient is the narrow social dependency needed by game transport.
-type SocialProfileClient interface {
+// ProfileClient is the narrow social dependency needed by game transport.
+type ProfileClient interface {
 	GetUserProfile(ctx context.Context, req *socialv1.GetUserProfileRequest, opts ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error)
 }
 
-// LoadSocialProfileSnapshot returns best-effort profile data for user-linked
+// LoadProfileSnapshot returns best-effort profile data for user-linked
 // create flows so callers can fill missing fields while keeping request values authoritative.
-func LoadSocialProfileSnapshot(ctx context.Context, socialClient SocialProfileClient, userID string) SocialProfileSnapshot {
+func LoadProfileSnapshot(ctx context.Context, socialClient ProfileClient, userID string) ProfileSnapshot {
 	userID = strings.TrimSpace(userID)
 	if userID == "" || socialClient == nil {
-		return SocialProfileSnapshot{}
+		return ProfileSnapshot{}
 	}
 
 	resp, err := socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
 	if err != nil || resp == nil || resp.GetUserProfile() == nil {
-		return SocialProfileSnapshot{}
+		return ProfileSnapshot{}
 	}
 
 	profile := resp.GetUserProfile()
-	return SocialProfileSnapshot{
+	return ProfileSnapshot{
 		Name:          strings.TrimSpace(profile.GetName()),
 		Pronouns:      sharedpronouns.FromProto(profile.GetPronouns()),
 		AvatarSetID:   strings.TrimSpace(profile.GetAvatarSetId()),

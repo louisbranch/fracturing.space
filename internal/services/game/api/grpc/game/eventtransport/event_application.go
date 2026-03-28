@@ -12,7 +12,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -165,14 +167,14 @@ func appendEventScopeAllowed(ctx context.Context) bool {
 
 func domainCommandTypeForEvent(eventType event.Type) (command.Type, bool) {
 	switch eventType {
-	case handler.EventTypeStoryNoteAdded:
-		return handler.CommandTypeStoryNoteAdd, true
-	case handler.EventTypeActionRollResolved:
-		return handler.CommandTypeActionRollResolve, true
-	case handler.EventTypeActionOutcomeApplied:
-		return handler.CommandTypeActionOutcomeApply, true
-	case handler.EventTypeActionOutcomeRejected:
-		return handler.CommandTypeActionOutcomeReject, true
+	case action.EventTypeNoteAdded:
+		return commandids.StoryNoteAdd, true
+	case action.EventTypeRollResolved:
+		return commandids.ActionRollResolve, true
+	case action.EventTypeOutcomeApplied:
+		return commandids.ActionOutcomeApply, true
+	case action.EventTypeOutcomeRejected:
+		return commandids.ActionOutcomeReject, true
 	default:
 		return "", false
 	}

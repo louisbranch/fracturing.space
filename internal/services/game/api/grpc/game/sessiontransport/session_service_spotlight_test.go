@@ -56,7 +56,7 @@ func TestSetSessionSpotlight_Success(t *testing.T) {
 		nil,
 	)
 
-	resp, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	resp, err := svc.SetSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -101,7 +101,7 @@ func TestSetSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		nil,
 		nil,
 	)
-	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -148,7 +148,7 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 		nil,
 	)
 
-	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -191,7 +191,7 @@ func TestGetSessionSpotlight_Success(t *testing.T) {
 		Participant:      participantStore,
 	})
 
-	resp, err := svc.GetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.GetSessionSpotlightRequest{
+	resp, err := svc.GetSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.GetSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 	})
@@ -249,7 +249,7 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 	deps.Applier = testApplier(deps)
 	svc := NewSessionService(deps)
 
-	resp, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
+	resp, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		Reason:     "scene change",
@@ -296,7 +296,7 @@ func TestClearSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		nil,
 		nil,
 	)
-	_, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
+	_, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1", SessionId: "s1", Reason: "break",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -348,7 +348,7 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 		nil,
 	)
 
-	_, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
+	_, err := svc.ClearSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		Reason:     "scene change",
@@ -490,7 +490,7 @@ func TestSetSessionSpotlight_SessionNotActive(t *testing.T) {
 		SessionSpotlight: gametest.NewFakeSessionSpotlightStore(),
 		Participant:      participantStore,
 	})
-	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId: "c1", SessionId: "s1",
 		Type: statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
 	})

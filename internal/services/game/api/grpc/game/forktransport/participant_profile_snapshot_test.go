@@ -8,11 +8,11 @@ import (
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/testclients"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	participantdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -56,8 +56,8 @@ func TestApplyParticipantProfileSnapshot_AvatarlessSnapshotSkipsCharacterSync(t 
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != handler.CommandTypeParticipantUpdate {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeParticipantUpdate)
+	if domain.commands[0].Type != commandids.ParticipantUpdate {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandids.ParticipantUpdate)
 	}
 
 	var payload participantdomain.UpdatePayload
@@ -126,8 +126,8 @@ func TestSyncOwnedCharacterAvatars_UpdatesOnlyMismatchedCharacters(t *testing.T)
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != handler.CommandTypeCharacterUpdate {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeCharacterUpdate)
+	if domain.commands[0].Type != commandids.CharacterUpdate {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandids.CharacterUpdate)
 	}
 	if domain.commands[0].EntityID != "char-stale" {
 		t.Fatalf("entity id = %q, want %q", domain.commands[0].EntityID, "char-stale")
@@ -176,10 +176,10 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenParticipantUpdate
 	domain := &fakeDomainEngine{
 		store: eventStore,
 		resultsByType: map[command.Type]engine.Result{
-			handler.CommandTypeParticipantUpdate: {
+			commandids.ParticipantUpdate: {
 				Decision: command.Accept(event.Event{
 					CampaignID: "camp-1",
-					Type:       handler.EventTypeParticipantUpdated,
+					Type:       participantdomain.EventTypeUpdated,
 					EntityType: "participant",
 					EntityID:   "seat-1",
 				}),
@@ -219,8 +219,8 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenParticipantUpdate
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != handler.CommandTypeParticipantUpdate {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeParticipantUpdate)
+	if domain.commands[0].Type != commandids.ParticipantUpdate {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandids.ParticipantUpdate)
 	}
 }
 

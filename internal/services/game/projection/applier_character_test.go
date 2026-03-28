@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 	daggerheartstate "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection/testevent"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -52,7 +53,7 @@ func TestApplyCharacterCreated(t *testing.T) {
 	payload := testevent.CharacterCreatedPayload{Name: "Aragorn", Kind: "PC", Notes: "A ranger"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 17, 30, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeCreated, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -84,7 +85,7 @@ func TestApplyCharacterCreated_IdempotentCount(t *testing.T) {
 	payload := testevent.CharacterCreatedPayload{Name: "Aragorn", Kind: "PC"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 17, 30, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeCreated, PayloadJSON: data, Timestamp: stamp}
 
 	// Apply the same event twice (idempotent replay).
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
@@ -103,7 +104,7 @@ func TestApplyCharacterCreated_IdempotentCount(t *testing.T) {
 func TestApplyCharacterCreated_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CharacterCreatedPayload{Name: "A", Kind: "PC"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeCreated, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -112,7 +113,7 @@ func TestApplyCharacterCreated_MissingStore(t *testing.T) {
 func TestApplyCharacterCreated_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CharacterCreatedPayload{Name: "A", Kind: "PC"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeCharacterCreated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: character.EventTypeCreated, PayloadJSON: data}
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity ID")
@@ -139,7 +140,7 @@ func TestApplyCharacterUpdated(t *testing.T) {
 	}}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 18, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -167,7 +168,7 @@ func TestApplyCharacterUpdated_EmptyFields(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
 	payload := testevent.CharacterUpdatedPayload{Fields: map[string]any{}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply with empty fields should succeed: %v", err)
@@ -177,7 +178,7 @@ func TestApplyCharacterUpdated_EmptyFields(t *testing.T) {
 func TestApplyCharacterUpdated_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"name": "x"}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -195,7 +196,7 @@ func TestApplyCharacterDeleted(t *testing.T) {
 
 	data, _ := json.Marshal(testevent.CharacterDeletedPayload{})
 	stamp := time.Date(2026, 2, 11, 18, 30, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterDeleted, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeDeleted, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -213,7 +214,7 @@ func TestApplyCharacterDeleted(t *testing.T) {
 func TestApplyCharacterDeleted_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CharacterDeletedPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterDeleted, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeDeleted, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -222,7 +223,7 @@ func TestApplyCharacterDeleted_MissingStore(t *testing.T) {
 func TestApplyCharacterDeleted_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.CharacterDeletedPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeCharacterDeleted, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: character.EventTypeDeleted, PayloadJSON: data}
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity ID")
@@ -266,7 +267,7 @@ func TestApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
 		EntityID:      "char-1",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   data,
@@ -326,7 +327,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_RoutedThroughAdapter(t *testin
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
 		EntityID:      "char-1",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   data,
@@ -353,7 +354,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_MissingStore(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
 		EntityID:      "char-1",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   data,
@@ -372,7 +373,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_MissingEntityID(t *testing.T) 
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
 		EntityID:      "",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   data,
@@ -396,7 +397,7 @@ func TestApplyCharacterUpdated_InvalidNameType(t *testing.T) {
 	applier := Applier{Character: charStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"name": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid name type")
 	}
@@ -411,7 +412,7 @@ func TestApplyCharacterUpdated_EmptyName(t *testing.T) {
 	applier := Applier{Character: charStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"name": "  "}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for empty character name")
 	}
@@ -426,7 +427,7 @@ func TestApplyCharacterUpdated_InvalidKindType(t *testing.T) {
 	applier := Applier{Character: charStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"kind": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid kind type")
 	}
@@ -441,7 +442,7 @@ func TestApplyCharacterUpdated_InvalidNotesType(t *testing.T) {
 	applier := Applier{Character: charStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"notes": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid notes type")
 	}
@@ -456,7 +457,7 @@ func TestApplyCharacterUpdated_InvalidOwnerParticipantIDType(t *testing.T) {
 	applier := Applier{Character: charStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.CharacterUpdatedPayload{Fields: map[string]any{"owner_participant_id": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid owner_participant_id type")
 	}
@@ -470,7 +471,7 @@ func TestApplyCharacterCreated_MissingCampaignStore(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore()}
 	payload := testevent.CharacterCreatedPayload{Name: "Hero", Kind: "PC"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeCreated, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign store")
 	}
@@ -480,7 +481,7 @@ func TestApplyCharacterCreated_MissingCampaignID(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
 	payload := testevent.CharacterCreatedPayload{Name: "Hero", Kind: "PC"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "  ", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "  ", EntityID: "char-1", Type: character.EventTypeCreated, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign id")
 	}
@@ -488,7 +489,7 @@ func TestApplyCharacterCreated_MissingCampaignID(t *testing.T) {
 
 func TestApplyCharacterCreated_InvalidJSON(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeCreated, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -498,7 +499,7 @@ func TestApplyCharacterCreated_InvalidKind(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
 	payload := testevent.CharacterCreatedPayload{Name: "Hero", Kind: "ALIEN"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeCreated, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid kind")
 	}
@@ -508,7 +509,7 @@ func TestApplyCharacterCreated_InvalidKind(t *testing.T) {
 
 func TestApplyCharacterDeleted_MissingCampaignStore(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterDeleted, PayloadJSON: []byte("{}")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeDeleted, PayloadJSON: []byte("{}")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign store")
 	}
@@ -516,7 +517,7 @@ func TestApplyCharacterDeleted_MissingCampaignStore(t *testing.T) {
 
 func TestApplyCharacterDeleted_MissingCampaignID(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "  ", EntityID: "char-1", Type: testevent.TypeCharacterDeleted, PayloadJSON: []byte("{}")}
+	evt := testevent.Event{CampaignID: "  ", EntityID: "char-1", Type: character.EventTypeDeleted, PayloadJSON: []byte("{}")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign id")
 	}
@@ -529,7 +530,7 @@ func TestApplyCharacterDeleted_ZeroCount(t *testing.T) {
 	campaignStore := newProjectionCampaignStore()
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", CharacterCount: 0}
 	applier := Applier{Character: charStore, Campaign: campaignStore}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterDeleted, PayloadJSON: []byte("{}"), Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeDeleted, PayloadJSON: []byte("{}"), Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -548,7 +549,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_MissingCampaignID(t *testing.T
 	evt := testevent.Event{
 		CampaignID:    "  ",
 		EntityID:      "char-1",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   []byte("{}"),
@@ -565,7 +566,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_InvalidJSON(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
 		EntityID:      "char-1",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   []byte("{"),
@@ -579,7 +580,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_InvalidJSON(t *testing.T) {
 
 func TestApplyCharacterUpdated_InvalidJSON(t *testing.T) {
 	applier := Applier{Character: newFakeCharacterStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -594,7 +595,7 @@ func TestApplyCharacterUpdated_InvalidKind(t *testing.T) {
 	applier := Applier{Character: charStore, Campaign: campaignStore}
 	payload := testevent.CharacterUpdatedPayload{Fields: map[string]any{"kind": "ALIEN"}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: character.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid kind")
 	}
@@ -611,7 +612,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_InvalidProfileData(t *testing.
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
 		EntityID:      "char-1",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   data,
@@ -651,7 +652,7 @@ func TestApplyDaggerheartCharacterProfileReplaced_DefaultLevel(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:    "camp-1",
 		EntityID:      "char-1",
-		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		Type:          daggerheartpayload.EventTypeCharacterProfileReplaced,
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		PayloadJSON:   data,

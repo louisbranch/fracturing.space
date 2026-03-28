@@ -1,54 +1,14 @@
 package testevent
 
-import "time"
+import (
+	"time"
 
-// Type identifies the type of a campaign event.
-type Type string
-
-// Campaign lifecycle events.
-const (
-	TypeCampaignCreated Type = "campaign.created"
-	TypeCampaignForked  Type = "campaign.forked"
-	TypeCampaignUpdated Type = "campaign.updated"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// Participant events.
-const (
-	TypeParticipantJoined         Type = "participant.joined"
-	TypeParticipantLeft           Type = "participant.left"
-	TypeParticipantUpdated        Type = "participant.updated"
-	TypeParticipantBound          Type = "participant.bound"
-	TypeParticipantUnbound        Type = "participant.unbound"
-	TypeParticipantSeatReassigned Type = "participant.seat_reassigned"
-)
-
-// Invite events.
-const (
-	TypeInviteCreated Type = "invite.created"
-	TypeInviteClaimed Type = "invite.claimed"
-	TypeInviteRevoked Type = "invite.revoked"
-	TypeInviteUpdated Type = "invite.updated"
-)
-
-// Character events.
-const (
-	TypeCharacterCreated                    Type = "character.created"
-	TypeCharacterDeleted                    Type = "character.deleted"
-	TypeCharacterUpdated                    Type = "character.updated"
-	TypeDaggerheartCharacterProfileReplaced Type = "sys.daggerheart.character_profile_replaced"
-)
-
-// Session events.
-const (
-	TypeSessionStarted              Type = "session.started"
-	TypeSessionEnded                Type = "session.ended"
-	TypeSessionGateOpened           Type = "session.gate_opened"
-	TypeSessionGateResponseRecorded Type = "session.gate_response_recorded"
-	TypeSessionGateResolved         Type = "session.gate_resolved"
-	TypeSessionGateAbandoned        Type = "session.gate_abandoned"
-	TypeSessionSpotlightSet         Type = "session.spotlight_set"
-	TypeSessionSpotlightCleared     Type = "session.spotlight_cleared"
-)
+// Type aliases the domain event type so test fixtures are type-compatible
+// with domain constants from campaign, participant, session, character, etc.
+type Type = event.Type
 
 // ActorType identifies who or what triggered an event.
 type ActorType string

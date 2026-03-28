@@ -6,16 +6,11 @@ import (
 	"strings"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	grpcstatus "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcstatus"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
-	grpcmetadata "google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-)
-
-const (
-	localeHeader  = "x-fracturing-space-locale"
-	defaultLocale = "en-US"
 )
 
 // Internal logs the full error server-side and returns a sanitized gRPC
@@ -34,7 +29,7 @@ func HandleDomainError(err error) error {
 // HandleDomainErrorContext maps domain errors through the structured app error
 // system using the caller locale extracted from the request context.
 func HandleDomainErrorContext(ctx context.Context, err error) error {
-	return HandleDomainErrorLocale(err, localeFromContext(ctx))
+	return HandleDomainErrorLocale(err, grpcmeta.LocaleFromContext(ctx))
 }
 
 // HandleDomainErrorLocale maps domain errors through the structured app error
@@ -71,28 +66,6 @@ func OptionalLookupError(err error, internalMessage string) error {
 // available so structured domain errors keep the caller locale.
 func OptionalLookupErrorContext(ctx context.Context, err error, internalMessage string) error {
 	return optionalLookupError(ctx, err, internalMessage)
-}
-
-func localeFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return defaultLocale
-	}
-	md, ok := grpcmetadata.FromIncomingContext(ctx)
-	if !ok {
-		return defaultLocale
-	}
-	for key, values := range md {
-		if !strings.EqualFold(key, localeHeader) {
-			continue
-		}
-		for _, value := range values {
-			trimmed := strings.TrimSpace(value)
-			if trimmed != "" {
-				return trimmed
-			}
-		}
-	}
-	return defaultLocale
 }
 
 func lookupError(ctx context.Context, err error, internalMessage, notFoundMessage string) error {

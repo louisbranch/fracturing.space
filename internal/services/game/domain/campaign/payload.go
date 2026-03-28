@@ -1,9 +1,6 @@
 package campaign
 
-import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-)
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 
 // CreatePayload captures the payload for campaign.create commands and campaign.created events.
 type CreatePayload struct {
@@ -18,11 +15,26 @@ type CreatePayload struct {
 	CoverSetID   string `json:"cover_set_id,omitempty"`
 }
 
+// BootstrapParticipant captures participant data for the campaign bootstrap
+// workflow. This is a campaign-owned type that mirrors participant join fields
+// without importing the participant aggregate package.
+type BootstrapParticipant struct {
+	ParticipantID  ids.ParticipantID `json:"participant_id"`
+	UserID         ids.UserID        `json:"user_id"`
+	Name           string            `json:"name"`
+	Role           string            `json:"role"`
+	Controller     string            `json:"controller"`
+	CampaignAccess string            `json:"campaign_access"`
+	AvatarSetID    string            `json:"avatar_set_id,omitempty"`
+	AvatarAssetID  string            `json:"avatar_asset_id,omitempty"`
+	Pronouns       string            `json:"pronouns,omitempty"`
+}
+
 // CreateWithParticipantsPayload captures campaign bootstrap workflow input.
 // It emits one campaign.created event and one participant.joined event per participant.
 type CreateWithParticipantsPayload struct {
-	Campaign     CreatePayload             `json:"campaign"`
-	Participants []participant.JoinPayload `json:"participants"`
+	Campaign     CreatePayload          `json:"campaign"`
+	Participants []BootstrapParticipant `json:"participants"`
 }
 
 // UpdatePayload captures the payload for campaign.update commands and campaign.updated events.

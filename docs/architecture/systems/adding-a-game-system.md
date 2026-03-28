@@ -104,7 +104,17 @@ That descriptor is the built-in source of truth used by `manifest.Modules()`,
 `manifest.MetadataSystems()`, and `manifest.AdapterRegistry(...)`. Do not add
 separate system registration lists in app or engine startup code.
 
-## Step 6: Add Storage
+## Step 6: Transport Layer
+
+If the system exposes gRPC endpoints, add a transport package under
+`internal/services/game/api/grpc/systems/<system>/`. Handlers validate input,
+build a `command.Command` via `internal/commandbuild`, and call
+`domainwrite.Execute` — they must not contain domain logic. Register service
+descriptors in `app/bootstrap_service_builders.go` and wire dependencies in
+`app/bootstrap_registration_assembly.go`. Add architecture tests to prevent
+boundary violations (see Daggerheart's `write_path_arch_test.go`).
+
+## Step 7: Add Storage
 
 If your system requires projection storage:
 
@@ -119,26 +129,9 @@ small amount of extraction logic it needs.
 
 ## Verification
 
-After all steps:
-```bash
-make test                    # Unit tests pass
-make smoke                   # Quick runtime confidence
-make check                   # Final local guard
-make game-architecture-check # Parity validation passes
-make docs-check              # Authoring docs stay aligned
-```
+Run `make check` as the final guard. Common parity failures: module registered
+without metadata/adapter, version mismatches, adapter handling undeclared types,
+or missing fold/projection coverage for profile events.
 
-Common parity failures:
-
-- module registered without metadata or adapter
-- version mismatch across module, metadata, and adapter
-- adapter handles types not declared emittable
-- profile events missing folder or adapter coverage
-- payload validation missing for registered events
-
-Key files:
-
-- `internal/services/game/domain/systems/manifest/manifest.go`
-- `internal/services/game/domain/module/testkit/`
-- `internal/services/game/app/system_registration.go`
-- `internal/services/game/app/bootstrap_systems.go`
+Key files: `domain/systems/manifest/manifest.go`, `domain/module/testkit/`,
+`app/system_registration.go`, `app/bootstrap_systems.go`.

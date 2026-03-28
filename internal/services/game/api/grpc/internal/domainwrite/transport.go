@@ -17,8 +17,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Deps provides the domain execution/runtime dependencies consumed by
-// transport write helpers.
+// Deps is the narrow dependency surface for write helpers. Entity transport
+// packages that embed WritePath satisfy it automatically. Implement Deps
+// directly only when the transport package needs to customize executor
+// resolution.
 type Deps interface {
 	DomainExecutor() Executor
 	DomainWriteRuntime() *Runtime
@@ -169,33 +171,25 @@ func setDefaultOnRejection(options *Options, deps Deps) {
 		}
 	}
 	options.OnRejection = func(ctx context.Context, info OnRejectionInfo) {
-		if emitter != nil {
-			var traceID, spanID string
-			if sc := trace.SpanFromContext(ctx).SpanContext(); sc.IsValid() {
-				traceID = sc.TraceID().String()
-				spanID = sc.SpanID().String()
-			}
-			if err := emitter.Emit(ctx, storage.AuditEvent{
-				EventName:  auditevents.DomainRejection,
-				Severity:   string(audit.SeverityWarn),
-				CampaignID: info.CampaignID,
-				RequestID:  grpcmeta.RequestIDFromContext(ctx),
-				TraceID:    traceID,
-				SpanID:     spanID,
-				Attributes: map[string]any{
-					"command_type":   string(info.CommandType),
-					"rejection_code": info.Code,
-					"message":        info.Message,
-				},
-			}); err != nil {
-				slog.Error("audit emit domain rejection", "error", err)
-			}
-			return
+		var traceID, spanID string
+		if sc := trace.SpanFromContext(ctx).SpanContext(); sc.IsValid() {
+			traceID = sc.TraceID().String()
+			spanID = sc.SpanID().String()
 		}
-		slog.Warn("domain rejection",
-			"campaign_id", info.CampaignID,
-			"command_type", info.CommandType,
-			"rejection_code", info.Code,
-		)
+		if err := emitter.Emit(ctx, storage.AuditEvent{
+			EventName:  auditevents.DomainRejection,
+			Severity:   string(audit.SeverityWarn),
+			CampaignID: info.CampaignID,
+			RequestID:  grpcmeta.RequestIDFromContext(ctx),
+			TraceID:    traceID,
+			SpanID:     spanID,
+			Attributes: map[string]any{
+				"command_type":   string(info.CommandType),
+				"rejection_code": info.Code,
+				"message":        info.Message,
+			},
+		}); err != nil {
+			slog.Error("audit emit domain rejection", "error", err)
+		}
 	}
 }

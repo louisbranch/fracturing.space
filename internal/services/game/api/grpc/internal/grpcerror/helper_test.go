@@ -7,6 +7,7 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	errori18n "github.com/louisbranch/fracturing.space/internal/platform/errors/i18n"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -44,7 +45,7 @@ func TestHandleDomainErrorContextUsesLocaleFromContext(t *testing.T) {
 	}))
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
-		localeHeader, locale,
+		grpcmeta.LocaleHeader, locale,
 	))
 	err := apperrors.New(apperrors.CodeCharacterEmptyName, "character name is required")
 

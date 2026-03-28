@@ -1,36 +1,13 @@
 package workflowwrite
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+import "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
 
-// DomainCommandInput describes one Daggerheart domain command emitted by
-// sibling transport packages that share the workflow write path.
-type DomainCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+// CommandInput re-exports the unified struct from workflowruntime so callers
+// in the write path do not need to import the runtime package directly.
+type CommandInput = workflowruntime.CommandInput
 
-// CoreCommandInput describes one core-domain command emitted by Daggerheart
-// transport helpers that still flow through the shared workflow write path.
-type CoreCommandInput struct {
-	CampaignID      string
-	CommandType     command.Type
-	SessionID       string
-	SceneID         string
-	RequestID       string
-	InvocationID    string
-	CorrelationID   string
-	EntityType      string
-	EntityID        string
-	PayloadJSON     []byte
-	MissingEventMsg string
-	ApplyErrMessage string
-}
+// DomainCommandInput is a type alias kept for call-site compatibility.
+type DomainCommandInput = CommandInput
+
+// CoreCommandInput is a type alias kept for call-site compatibility.
+type CoreCommandInput = CommandInput

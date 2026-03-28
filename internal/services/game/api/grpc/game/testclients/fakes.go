@@ -6,6 +6,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 	"google.golang.org/grpc"
 )
 
@@ -25,8 +26,8 @@ type FakeSocialClient struct {
 }
 
 var (
-	_ handler.AuthUserClient      = (*FakeAuthClient)(nil)
-	_ handler.SocialProfileClient = (*FakeSocialClient)(nil)
+	_ handler.AuthUserClient = (*FakeAuthClient)(nil)
+	_ social.ProfileClient   = (*FakeSocialClient)(nil)
 )
 
 func (f *FakeAuthClient) GetUser(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {

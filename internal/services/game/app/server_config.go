@@ -40,8 +40,9 @@ func loadServerEnv() (serverEnv, error) {
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
 	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
 	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
-	// Status address is not defaulted — the status service is optional/advisory.
-	// When unset, the reporter starts with a nil client and accumulates locally.
+	// Status address is normalized here when explicitly set. When unset, the
+	// dependency dialer applies a default address and dials with ModeOptional,
+	// so the status connection is always attempted but failures are non-fatal.
 	if cfg.StatusAddr != "" {
 		cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 	}

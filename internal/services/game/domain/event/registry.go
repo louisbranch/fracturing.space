@@ -91,7 +91,11 @@ const (
 // The envelope is immutable metadata + business payload: storage appends
 // integrity hashes and chain fields after validation, preserving replay order.
 type Event struct {
-	CampaignID     ids.CampaignID
+	CampaignID ids.CampaignID
+
+	// --- Storage-assigned fields ---
+	// Seq through SignatureKeyID are populated by the journal at append time.
+	// They must be zero/empty when constructing events for ValidateForAppend.
 	Seq            uint64
 	Hash           string
 	PrevHash       string

@@ -21,7 +21,7 @@ func TestApplyParticipantUnbound_RejectsMismatch(t *testing.T) {
 
 	payload := testevent.ParticipantUnboundPayload{UserID: "user-2"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUnbound, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected mismatch error")
@@ -40,7 +40,7 @@ func TestApplySeatReassigned_UpdatesClaims(t *testing.T) {
 	payload := testevent.SeatReassignedPayload{UserID: "user-new", PriorUserID: "user-old"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 10, 12, 30, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeSeatReassigned, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -126,7 +126,7 @@ func TestApplyParticipantUpdated(t *testing.T) {
 	}}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 15, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -160,7 +160,7 @@ func TestApplyParticipantUpdated_EmptyFields(t *testing.T) {
 
 	payload := testevent.ParticipantUpdatedPayload{Fields: map[string]any{}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply with empty fields should succeed: %v", err)
@@ -170,7 +170,7 @@ func TestApplyParticipantUpdated_EmptyFields(t *testing.T) {
 func TestApplyParticipantUpdated_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"name": "x"}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing participant store")
 	}
@@ -188,7 +188,7 @@ func TestApplyParticipantLeft(t *testing.T) {
 
 	data, _ := json.Marshal(testevent.ParticipantLeftPayload{})
 	stamp := time.Date(2026, 2, 11, 15, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantLeft, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeLeft, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -206,7 +206,7 @@ func TestApplyParticipantLeft(t *testing.T) {
 func TestApplyParticipantLeft_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantLeftPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantLeft, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeLeft, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -215,7 +215,7 @@ func TestApplyParticipantLeft_MissingStore(t *testing.T) {
 func TestApplyParticipantLeft_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantLeftPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeParticipantLeft, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: participant.EventTypeLeft, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity ID")
@@ -236,7 +236,7 @@ func TestApplyParticipantBound(t *testing.T) {
 	payload := testevent.ParticipantBoundPayload{UserID: "user-1"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 16, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeBound, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -262,7 +262,7 @@ func TestApplyParticipantBound_MissingUserID(t *testing.T) {
 
 	payload := testevent.ParticipantBoundPayload{UserID: ""}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeBound, PayloadJSON: data}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing user ID")
@@ -272,7 +272,7 @@ func TestApplyParticipantBound_MissingUserID(t *testing.T) {
 func TestApplyParticipantBound_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantBoundPayload{UserID: "u1"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeBound, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -292,7 +292,7 @@ func TestApplyParticipantUnbound_Success(t *testing.T) {
 	payload := testevent.ParticipantUnboundPayload{UserID: "user-1"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 16, 30, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUnbound, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -312,7 +312,7 @@ func TestApplyParticipantUnbound_Success(t *testing.T) {
 func TestApplyParticipantUnbound_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantUnboundPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUnbound, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -321,7 +321,7 @@ func TestApplyParticipantUnbound_MissingStore(t *testing.T) {
 func TestApplyParticipantUnbound_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantUnboundPayload{})
-	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: participant.EventTypeUnbound, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -346,7 +346,7 @@ func TestApplyParticipantJoined(t *testing.T) {
 	}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 10, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -377,7 +377,7 @@ func TestApplyParticipantJoined_IdempotentCount(t *testing.T) {
 	}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 11, 10, 0, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: data, Timestamp: stamp}
 
 	// Apply the same event twice (idempotent replay).
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
@@ -396,7 +396,7 @@ func TestApplyParticipantJoined_IdempotentCount(t *testing.T) {
 func TestApplyParticipantJoined_MissingStores(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", Name: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: data}
 
 	if err := (Applier{Campaign: newProjectionCampaignStore()}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing participant store")
@@ -409,7 +409,7 @@ func TestApplyParticipantJoined_MissingStores(t *testing.T) {
 func TestApplyParticipantJoined_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", Name: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: participant.EventTypeJoined, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity ID")
@@ -419,7 +419,7 @@ func TestApplyParticipantJoined_MissingEntityID(t *testing.T) {
 func TestApplyParticipantJoined_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", Name: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
-	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -431,7 +431,7 @@ func TestApplyParticipantJoined_MissingCampaignID(t *testing.T) {
 func TestApplySeatReassigned_MissingStores(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeSeatReassigned, PayloadJSON: data}
 
 	if err := (Applier{Campaign: newProjectionCampaignStore()}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing participant store")
@@ -444,7 +444,7 @@ func TestApplySeatReassigned_MissingStores(t *testing.T) {
 func TestApplySeatReassigned_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: participant.EventTypeSeatReassigned, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -454,7 +454,7 @@ func TestApplySeatReassigned_MissingCampaignID(t *testing.T) {
 func TestApplySeatReassigned_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: participant.EventTypeSeatReassigned, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity ID")
@@ -470,7 +470,7 @@ func TestApplySeatReassigned_MissingUserID(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "", PriorUserID: "user-old"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeSeatReassigned, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing user ID")
 	}
@@ -485,7 +485,7 @@ func TestApplySeatReassigned_PriorUserMismatch(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new", PriorUserID: "user-wrong"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeSeatReassigned, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for prior user mismatch")
 	}
@@ -500,7 +500,7 @@ func TestApplySeatReassigned_NoClaims(t *testing.T) {
 	applier := Applier{Events: testEventRegistry(t), Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data, Timestamp: time.Now()}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeSeatReassigned, PayloadJSON: data, Timestamp: time.Now()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -521,7 +521,7 @@ func TestApplyParticipantUpdated_InvalidUserIDType(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"user_id": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid user_id type")
 	}
@@ -536,7 +536,7 @@ func TestApplyParticipantUpdated_InvalidNameType(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"name": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid display_name type")
 	}
@@ -551,7 +551,7 @@ func TestApplyParticipantUpdated_EmptyName(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"name": "  "}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for empty display name")
 	}
@@ -566,7 +566,7 @@ func TestApplyParticipantUpdated_InvalidRoleType(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"role": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid role type")
 	}
@@ -581,7 +581,7 @@ func TestApplyParticipantUpdated_InvalidControllerType(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"controller": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid controller type")
 	}
@@ -596,7 +596,7 @@ func TestApplyParticipantUpdated_InvalidAccessType(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"campaign_access": 42}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid campaign_access type")
 	}
@@ -606,7 +606,7 @@ func TestApplyParticipantUpdated_InvalidAccessType(t *testing.T) {
 
 func TestApplyParticipantLeft_MissingCampaignStore(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantLeft, PayloadJSON: []byte("{}")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeLeft, PayloadJSON: []byte("{}")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign store")
 	}
@@ -614,7 +614,7 @@ func TestApplyParticipantLeft_MissingCampaignStore(t *testing.T) {
 
 func TestApplyParticipantLeft_MissingCampaignID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: testevent.TypeParticipantLeft, PayloadJSON: []byte("{}")}
+	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: participant.EventTypeLeft, PayloadJSON: []byte("{}")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign id")
 	}
@@ -627,7 +627,7 @@ func TestApplyParticipantLeft_ZeroCount(t *testing.T) {
 	campaignStore := newProjectionCampaignStore()
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", ParticipantCount: 0}
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantLeft, PayloadJSON: []byte("{}"), Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeLeft, PayloadJSON: []byte("{}"), Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -641,7 +641,7 @@ func TestApplyParticipantLeft_ZeroCount(t *testing.T) {
 
 func TestApplyParticipantBound_MissingCampaignStore(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeBound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign store")
 	}
@@ -649,7 +649,7 @@ func TestApplyParticipantBound_MissingCampaignStore(t *testing.T) {
 
 func TestApplyParticipantBound_MissingCampaignID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
+	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: participant.EventTypeBound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign id")
 	}
@@ -657,7 +657,7 @@ func TestApplyParticipantBound_MissingCampaignID(t *testing.T) {
 
 func TestApplyParticipantBound_MissingEntityID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: testevent.TypeParticipantBound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: participant.EventTypeBound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity id")
 	}
@@ -665,7 +665,7 @@ func TestApplyParticipantBound_MissingEntityID(t *testing.T) {
 
 func TestApplyParticipantBound_InvalidJSON(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeBound, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -675,7 +675,7 @@ func TestApplyParticipantBound_InvalidJSON(t *testing.T) {
 
 func TestApplyParticipantUnbound_MissingEntityID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: testevent.TypeParticipantUnbound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: participant.EventTypeUnbound, PayloadJSON: []byte(`{"user_id":"u1"}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity id")
 	}
@@ -683,7 +683,7 @@ func TestApplyParticipantUnbound_MissingEntityID(t *testing.T) {
 
 func TestApplyParticipantUnbound_InvalidJSON(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUnbound, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -698,7 +698,7 @@ func TestApplyParticipantUnbound_NilClaimIndex(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 	payload := testevent.ParticipantUnboundPayload{}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUnbound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -712,7 +712,7 @@ func TestApplyParticipantUnbound_NilClaimIndex(t *testing.T) {
 
 func TestApplyParticipantJoined_InvalidJSON(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -722,7 +722,7 @@ func TestApplyParticipantJoined_InvalidJSON(t *testing.T) {
 
 func TestApplyParticipantUpdated_MissingCampaignID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: []byte(`{"fields":{"name":"X"}}`)}
+	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: []byte(`{"fields":{"name":"X"}}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign id")
 	}
@@ -730,7 +730,7 @@ func TestApplyParticipantUpdated_MissingCampaignID(t *testing.T) {
 
 func TestApplyParticipantUpdated_MissingEntityID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: testevent.TypeParticipantUpdated, PayloadJSON: []byte(`{"fields":{"name":"X"}}`)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: participant.EventTypeUpdated, PayloadJSON: []byte(`{"fields":{"name":"X"}}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity id")
 	}
@@ -738,7 +738,7 @@ func TestApplyParticipantUpdated_MissingEntityID(t *testing.T) {
 
 func TestApplyParticipantUpdated_InvalidJSON(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -753,7 +753,7 @@ func TestApplyParticipantUpdated_InvalidRole(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 	payload := testevent.ParticipantUpdatedPayload{Fields: map[string]any{"role": "ALIEN"}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid role")
 	}
@@ -768,7 +768,7 @@ func TestApplyParticipantUpdated_InvalidController(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 	payload := testevent.ParticipantUpdatedPayload{Fields: map[string]any{"controller": "ALIEN"}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid controller")
 	}
@@ -783,7 +783,7 @@ func TestApplyParticipantUpdated_InvalidAccess(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 	payload := testevent.ParticipantUpdatedPayload{Fields: map[string]any{"campaign_access": "ALIEN"}}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid access")
 	}
@@ -795,7 +795,7 @@ func TestApplyParticipantJoined_InvalidRole(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	payload := testevent.ParticipantJoinedPayload{Name: "A", Role: "ALIEN", Controller: "HUMAN", CampaignAccess: "READ_ONLY"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid role")
 	}
@@ -805,7 +805,7 @@ func TestApplyParticipantJoined_InvalidController(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	payload := testevent.ParticipantJoinedPayload{Name: "A", Role: "PLAYER", Controller: "ALIEN", CampaignAccess: "READ_ONLY"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid controller")
 	}
@@ -815,7 +815,7 @@ func TestApplyParticipantJoined_InvalidAccess(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	payload := testevent.ParticipantJoinedPayload{Name: "A", Role: "PLAYER", Controller: "HUMAN", CampaignAccess: "ALIEN"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeJoined, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid access")
 	}
@@ -833,7 +833,7 @@ func TestApplyParticipantBound_WithClaimIndex(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore, ClaimIndex: claimStore}
 	payload := testevent.ParticipantBoundPayload{UserID: "u1"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeBound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -854,7 +854,7 @@ func TestApplyParticipantUnbound_WithClaimIndex(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore, ClaimIndex: claimStore}
 	payload := testevent.ParticipantUnboundPayload{UserID: "u1"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: participant.EventTypeUnbound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}

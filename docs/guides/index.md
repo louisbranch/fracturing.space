@@ -15,3 +15,5 @@ How-to documentation and operational workflows.
 - Web module playbook: [web-module-playbook.md](web-module-playbook.md)
 - Admin module playbook: [admin-module-playbook.md](admin-module-playbook.md)
 - Add a developer tool: [add-new-developer-tool.md](add-new-developer-tool.md)
+- Error handling for contributors: [error-handling-contributor-guide.md](error-handling-contributor-guide.md)
+- Minimal game system skeleton: [minimal-game-system-skeleton.md](minimal-game-system-skeleton.md)

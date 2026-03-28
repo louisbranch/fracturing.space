@@ -43,7 +43,7 @@ func TestStoresValidate(t *testing.T) {
 			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
 			"SessionSpotlight", "SessionInteraction", "Scene", "SceneCharacter",
 			"SceneGate", "SceneSpotlight", "SceneInteraction", "SceneGMInteraction",
-			"Event", "Audit", "Statistics",
+			"Event", "Watermarks", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
 			"Write.Executor", "Write.Runtime",
 		} {
@@ -214,6 +214,7 @@ func validRootStoreGroups() rootStoreGroupsFixture {
 		system: SystemStores{Daggerheart: &daggerhearttestkit.FakeDaggerheartStore{}},
 		infrastructure: InfrastructureStores{
 			Event:      gametest.NewFakeEventStore(),
+			Watermarks: stubProjectionWatermarkStore{},
 			Audit:      stubAudit{},
 			Statistics: &gametest.FakeStatisticsStore{},
 			Snapshot:   stubSnapshot{},

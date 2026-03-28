@@ -71,7 +71,7 @@ func TestPatchCharacterState_StateNotFound(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
-	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
 		CharacterId: "nonexistent",
 	})

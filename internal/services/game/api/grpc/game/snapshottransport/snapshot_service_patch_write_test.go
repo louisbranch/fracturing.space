@@ -72,7 +72,7 @@ func TestPatchCharacterState_Success(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	resp, err := svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 10, Hope: 5, Stress: 3}},
@@ -160,7 +160,7 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	resp, err := svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 0, Hope: 0, Stress: 0}},
@@ -235,7 +235,7 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	_, err = svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err = svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{

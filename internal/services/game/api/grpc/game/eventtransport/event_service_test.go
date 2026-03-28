@@ -1,6 +1,7 @@
 package eventtransport
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 
 func TestListEvents_EmptyResult(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := requestctx.WithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride(context.Background(), "events-test")
 	svc := NewService(Deps{Event: eventStore})
 
 	resp, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
@@ -32,7 +33,7 @@ func TestListEvents_EmptyResult(t *testing.T) {
 
 func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := requestctx.WithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride(context.Background(), "events-test")
 	now := time.Now().UTC()
 
 	eventStore.Events["c1"] = []event.Event{
@@ -61,7 +62,7 @@ func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
 
 func TestListEvents_ASC_Pagination(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := requestctx.WithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride(context.Background(), "events-test")
 	now := time.Now().UTC()
 
 	// Add 5 events
@@ -137,7 +138,7 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 
 func TestListEvents_DESC_Pagination(t *testing.T) {
 	eventStore := gametest.NewFakeEventStore()
-	authzCtx := requestctx.WithAdminOverride("events-test")
+	authzCtx := requestctx.WithAdminOverride(context.Background(), "events-test")
 	now := time.Now().UTC()
 
 	// Add 5 events

@@ -369,6 +369,15 @@ func TestDecideGateResolve_GateNotOpen_Rejects(t *testing.T) {
 	requireRejected(t, d, rejectionCodeSceneGateNotOpen)
 }
 
+func TestDecideGateResolve_GateIDMismatch_Rejects(t *testing.T) {
+	s := activeScene("s1")
+	s.GateOpen = true
+	s.GateID = "gate-1"
+	scenes := scenesMap(s)
+	d := Decide(scenes, cmd(CommandTypeGateResolve, `{"scene_id":"s1","gate_id":"gate-other","decision":"proceed"}`), nowFunc)
+	requireRejected(t, d, rejectionCodeSceneGateIDMismatch)
+}
+
 // --- Gate Abandon ---
 
 func TestDecideGateAbandon_EmitsGateAbandonedEvent(t *testing.T) {
@@ -387,6 +396,15 @@ func TestDecideGateAbandon_GateNotOpen_Rejects(t *testing.T) {
 	scenes := scenesMap(activeScene("s1"))
 	d := Decide(scenes, cmd(CommandTypeGateAbandon, `{"scene_id":"s1","gate_id":"gate-1"}`), nowFunc)
 	requireRejected(t, d, rejectionCodeSceneGateNotOpen)
+}
+
+func TestDecideGateAbandon_GateIDMismatch_Rejects(t *testing.T) {
+	s := activeScene("s1")
+	s.GateOpen = true
+	s.GateID = "gate-1"
+	scenes := scenesMap(s)
+	d := Decide(scenes, cmd(CommandTypeGateAbandon, `{"scene_id":"s1","gate_id":"gate-other","reason":"timeout"}`), nowFunc)
+	requireRejected(t, d, rejectionCodeSceneGateIDMismatch)
 }
 
 // --- Spotlight Set ---

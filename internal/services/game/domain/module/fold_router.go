@@ -11,6 +11,8 @@ import (
 // It eliminates the per-case unmarshal boilerplate that system folders
 // otherwise repeat for every event type.
 //
+// For core-owned event folding, see fold.CoreFoldRouter in domain/fold/fold.go.
+//
 // S must be a pointer type so handlers can mutate state in place. The assert
 // callback converts the untyped state (any) to *S, handling nil initialization
 // when the state is first created.

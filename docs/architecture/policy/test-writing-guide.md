@@ -41,14 +41,13 @@ Use fakes for unit tests that need store interactions without a real database.
 
 ### Integration fixtures
 
-Integration tests use `gametest` helpers for common setup patterns:
+Integration tests use `gametest` helpers (`internal/services/game/api/grpc/game/gametest/`) for
+common record construction and fake stores:
 
 ```go
-scenario := gametest.NewCampaignScenario(t).
-    WithParticipant("gm", participant.RoleGM).
-    WithCharacter("char-1").
-    WithActiveSession().
-    Build()
+campaign := gametest.ActiveCampaignRecord("campaign-1")
+participant := gametest.OwnerParticipantRecord("campaign-1", "participant-1")
+fakeStore := gametest.NewFakeCampaignStore()
 ```
 
 When `gametest` does not cover your setup needs, write imperative setup but
@@ -123,9 +122,9 @@ for _, tt := range tests {
 |---------|---------|
 | `foo_test.go` | Unit tests for `foo.go`, same package |
 | `foo_integration_test.go` | Integration tests requiring real dependencies |
-| `gametest/` | Shared test fixtures and builders |
+| `internal/services/game/api/grpc/game/gametest/` | Core store fakes and record fixtures |
 | `internal/test/game/scenarios/` | End-to-end scenario tests |
-| `internal/test/mock/gamefakes/` | Fake store implementations |
+| `internal/test/mock/gamefakes/` | Service-level in-memory store fakes |
 | `testkit/` (per system) | System-specific test utilities |
 
 ## Coverage

@@ -8,10 +8,12 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -96,7 +98,7 @@ func (c participantApplication) BindParticipant(ctx context.Context, campaignID,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeParticipantBind,
+			Type:         commandids.ParticipantBind,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -115,7 +117,7 @@ func (c participantApplication) BindParticipant(ctx context.Context, campaignID,
 
 	// Best-effort: hydrate the seat with the user's social profile so the
 	// participant immediately displays the claimer's name, pronouns, and avatar.
-	handler.ApplyParticipantProfileSnapshot(
+	social.ApplyParticipantProfileSnapshot(
 		ctx,
 		c.write,
 		c.applier,

@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -41,11 +42,9 @@ func TestEvaluatorEvaluate_NilRequest(t *testing.T) {
 
 func TestEvaluatorEvaluate_DeniedActorReturnsCanResponse(t *testing.T) {
 	evaluator := NewEvaluator(EvaluatorStores{
-		Campaign: testCampaignStore{record: storage.CampaignRecord{ID: "camp-1"}},
-		Participant: testParticipantStore{get: func(context.Context, string, string) (storage.ParticipantRecord, error) {
-			return storage.ParticipantRecord{}, storage.ErrNotFound
-		}},
-		Audit: &testAuditStore{},
+		Campaign:    testCampaignStore{record: storage.CampaignRecord{ID: "camp-1"}},
+		Participant: gametest.NewFakeParticipantStore(),
+		Audit:       &testAuditStore{},
 	})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "missing-seat"))
 

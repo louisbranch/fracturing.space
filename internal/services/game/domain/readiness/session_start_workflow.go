@@ -32,7 +32,7 @@ func NewSessionStartWorkflow(systems *module.Registry) SessionStartWorkflow {
 }
 
 func (w sessionStartWorkflow) Start(current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 	decisionTime := now().UTC()
 	fixedNow := func() time.Time { return decisionTime }
 

@@ -10,7 +10,7 @@ import (
 )
 
 func decideUpdate(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)

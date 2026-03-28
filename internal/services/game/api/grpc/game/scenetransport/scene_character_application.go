@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 )
@@ -53,7 +54,7 @@ func (a sceneApplication) AddCharacterToScene(ctx context.Context, campaignID st
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneCharacterAdd,
+			Type:         commandids.SceneCharacterAdd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -103,7 +104,7 @@ func (a sceneApplication) RemoveCharacterFromScene(ctx context.Context, campaign
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneCharacterRemove,
+			Type:         commandids.SceneCharacterRemove,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -161,7 +162,7 @@ func (a sceneApplication) TransferCharacter(ctx context.Context, campaignID stri
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneCharacterTransfer,
+			Type:         commandids.SceneCharacterTransfer,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sourceSceneID,

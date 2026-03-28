@@ -297,7 +297,7 @@ func (seededSystemDecider) Decide(state any, cmd command.Command, now func() tim
 		"system_entity",
 		"system-1",
 		[]byte(`{}`),
-		command.NowFunc(now)().UTC(),
+		command.RequireNowFunc(now)().UTC(),
 	))
 }
 

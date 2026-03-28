@@ -26,6 +26,8 @@ type Folder interface {
 //
 // S is the value type of the domain state (e.g., campaign.State). Handlers
 // receive and return a value, matching the existing core domain fold signature.
+//
+// For system-owned event folding, see module.FoldRouter in domain/module/fold_router.go.
 type CoreFoldRouter[S any] struct {
 	handlers map[event.Type]func(S, event.Event) (S, error)
 	types    []event.Type

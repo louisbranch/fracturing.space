@@ -1,12 +1,18 @@
 package aggregate
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/replay"
 )
+
+// Compile-time check: Folder satisfies the replay.Folder contract used by the
+// engine's state loader and replay infrastructure.
+var _ replay.Folder = (*Folder)(nil)
 
 // Folder folds events into aggregate state.
 //
@@ -30,6 +36,19 @@ type Folder struct {
 	// functions that cannot possibly handle the event type.
 	foldOnce  sync.Once
 	foldIndex map[event.Type]func(*State, event.Event) error
+}
+
+// NewFolder constructs a Folder with validated required dependencies.
+// Events must not be nil — a nil registry silently changes fold behavior
+// by skipping alias resolution and audit-only filtering.
+func NewFolder(events *event.Registry, systems *module.Registry) (*Folder, error) {
+	if events == nil {
+		return nil, errors.New("aggregate.NewFolder: event registry is required")
+	}
+	return &Folder{
+		Events:         events,
+		SystemRegistry: systems,
+	}, nil
 }
 
 // initFoldIndex builds a type-to-handler lookup from the declarative fold entries.
