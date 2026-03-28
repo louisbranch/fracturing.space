@@ -250,6 +250,28 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}
 }
 
+func TestParticipantMutationGatewayDeleteParticipant(t *testing.T) {
+	t.Parallel()
+
+	client := &contractParticipantClient{}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Participant: client}}
+
+	if err := gateway.DeleteParticipant(context.Background(), "c1", "p1"); err != nil {
+		t.Fatalf("DeleteParticipant() error = %v", err)
+	}
+	if client.deleteReq == nil {
+		t.Fatalf("expected delete request capture")
+	}
+	if client.deleteReq.GetCampaignId() != "c1" || client.deleteReq.GetParticipantId() != "p1" {
+		t.Fatalf("delete request = %#v", client.deleteReq)
+	}
+
+	client.deleteErr = status.Error(codes.Internal, "boom")
+	if err := gateway.DeleteParticipant(context.Background(), "c1", "p1"); err == nil {
+		t.Fatalf("expected delete transport error")
+	}
+}
+
 func TestCampaignCharactersMarksViewerOwnedCharactersFromControllerParticipant(t *testing.T) {
 	t.Parallel()
 
@@ -1434,6 +1456,8 @@ type contractParticipantClient struct {
 	createErr error
 	updateReq *statev1.UpdateParticipantRequest
 	updateErr error
+	deleteReq *statev1.DeleteParticipantRequest
+	deleteErr error
 }
 
 type contractAgentClient struct {
@@ -1487,6 +1511,14 @@ func (c *contractParticipantClient) UpdateParticipant(_ context.Context, req *st
 		return nil, c.updateErr
 	}
 	return &statev1.UpdateParticipantResponse{Participant: &statev1.Participant{Id: strings.TrimSpace(req.GetParticipantId())}}, nil
+}
+
+func (c *contractParticipantClient) DeleteParticipant(_ context.Context, req *statev1.DeleteParticipantRequest, _ ...grpc.CallOption) (*statev1.DeleteParticipantResponse, error) {
+	c.deleteReq = req
+	if c.deleteErr != nil {
+		return nil, c.deleteErr
+	}
+	return &statev1.DeleteParticipantResponse{}, nil
 }
 
 type contractSessionClient struct {
@@ -1822,5 +1854,16 @@ func TestAuthorizationProtoMappers(t *testing.T) {
 	}
 	if target.GetParticipantOperation() != statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE {
 		t.Fatalf("participant operation = %v, want %v", target.GetParticipantOperation(), statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE)
+	}
+	deleteTarget := mapCampaignAuthorizationTargetToProto(&campaignapp.AuthorizationTarget{
+		TargetParticipantID:  " part-2 ",
+		TargetCampaignAccess: "manager",
+		ParticipantOperation: campaignapp.ParticipantGovernanceOperationRemove,
+	})
+	if deleteTarget == nil {
+		t.Fatalf("mapCampaignAuthorizationTargetToProto(remove) = nil")
+	}
+	if deleteTarget.GetParticipantOperation() != statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_REMOVE {
+		t.Fatalf("remove participant operation = %v, want %v", deleteTarget.GetParticipantOperation(), statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_REMOVE)
 	}
 }

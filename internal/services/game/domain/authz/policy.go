@@ -143,8 +143,12 @@ const (
 	ReasonDenyLastOwnerGuard = "AUTHZ_DENY_LAST_OWNER_GUARD"
 	// ReasonDenyManagerOwnerMutationForbidden indicates manager attempted owner assignment.
 	ReasonDenyManagerOwnerMutationForbidden = "AUTHZ_DENY_MANAGER_OWNER_MUTATION_FORBIDDEN"
+	// ReasonDenyTargetIsAIParticipant indicates participant removal target is AI-controlled.
+	ReasonDenyTargetIsAIParticipant = "AUTHZ_DENY_TARGET_IS_AI_PARTICIPANT"
 	// ReasonDenyTargetOwnsActiveCharacters indicates participant removal target still owns active characters.
 	ReasonDenyTargetOwnsActiveCharacters = "AUTHZ_DENY_TARGET_OWNS_ACTIVE_CHARACTERS"
+	// ReasonDenyTargetControlsActiveCharacters indicates participant removal target still controls active characters.
+	ReasonDenyTargetControlsActiveCharacters = "AUTHZ_DENY_TARGET_CONTROLS_ACTIVE_CHARACTERS"
 
 	// ReasonDenyMissingIdentity indicates no participant-id/user-id identity was provided.
 	ReasonDenyMissingIdentity = "AUTHZ_DENY_MISSING_IDENTITY"
@@ -344,10 +348,14 @@ func CanParticipantRemoval(
 	actorAccess participant.CampaignAccess,
 	targetAccess participant.CampaignAccess,
 	ownerCount int,
+	targetController participant.Controller,
 ) PolicyDecision {
 	decision := CanParticipantMutation(actorAccess, targetAccess)
 	if !decision.Allowed {
 		return decision
+	}
+	if targetController == participant.ControllerAI {
+		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyTargetIsAIParticipant}
 	}
 	if targetAccess == participant.CampaignAccessOwner && ownerCount <= 1 {
 		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyLastOwnerGuard}
@@ -355,20 +363,25 @@ func CanParticipantRemoval(
 	return decision
 }
 
-// CanParticipantRemovalWithOwnedResources evaluates participant removal and
-// enforces the active-owned-character guard after role-based invariants pass.
-func CanParticipantRemovalWithOwnedResources(
+// CanParticipantRemovalEligibility evaluates participant removal and enforces
+// active character ownership/control guards after role-based invariants pass.
+func CanParticipantRemovalEligibility(
 	actorAccess participant.CampaignAccess,
 	targetAccess participant.CampaignAccess,
 	ownerCount int,
+	targetController participant.Controller,
 	targetOwnsActiveCharacters bool,
+	targetControlsActiveCharacters bool,
 ) PolicyDecision {
-	decision := CanParticipantRemoval(actorAccess, targetAccess, ownerCount)
+	decision := CanParticipantRemoval(actorAccess, targetAccess, ownerCount, targetController)
 	if !decision.Allowed {
 		return decision
 	}
 	if targetOwnsActiveCharacters {
 		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyTargetOwnsActiveCharacters}
+	}
+	if targetControlsActiveCharacters {
+		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyTargetControlsActiveCharacters}
 	}
 	return decision
 }

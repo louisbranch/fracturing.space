@@ -51,11 +51,17 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	decision := domainauthz.CanParticipantRemovalWithOwnedResources(
+	targetControlsActiveCharacters, err := authz.ParticipantControlsActiveCharacters(ctx, c.stores.Character, campaignID, participantID)
+	if err != nil {
+		return storage.ParticipantRecord{}, err
+	}
+	decision := domainauthz.CanParticipantRemovalEligibility(
 		policyActor.CampaignAccess,
 		current.CampaignAccess,
 		ownerCount,
+		current.Controller,
 		targetOwnsActiveCharacters,
+		targetControlsActiveCharacters,
 	)
 	if !decision.Allowed {
 		authErr := participantPolicyDecisionError(decision.ReasonCode)
@@ -68,9 +74,10 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 			Actor:      policyActor,
 			Err:        authErr,
 			ExtraAttributes: map[string]any{
-				"target_participant_id":         participantID,
-				"target_campaign_access":        strings.TrimSpace(string(current.CampaignAccess)),
-				"target_owns_active_characters": targetOwnsActiveCharacters,
+				"target_participant_id":             participantID,
+				"target_campaign_access":            strings.TrimSpace(string(current.CampaignAccess)),
+				"target_owns_active_characters":     targetOwnsActiveCharacters,
+				"target_controls_active_characters": targetControlsActiveCharacters,
 			},
 		})
 		return storage.ParticipantRecord{}, authErr

@@ -598,6 +598,88 @@ func TestCampaignParticipantEditorAllowsSelfOwnedParticipant(t *testing.T) {
 	if len(editor.AccessOptions) != 1 || editor.AccessOptions[0].Value != "member" {
 		t.Fatalf("editor.AccessOptions = %#v, want single member option", editor.AccessOptions)
 	}
+	if editor.Delete.Visible {
+		t.Fatalf("editor.Delete.Visible = %v, want false", editor.Delete.Visible)
+	}
+}
+
+func TestCampaignParticipantEditorShowsDeleteDangerZoneForAllowedRemoval(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "human"},
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-a",
+			UserID:         "user-2",
+			Name:           "Aria",
+			Role:           "player",
+			CampaignAccess: "member",
+		},
+		authorize: func(_ AuthorizationAction, _ AuthorizationResource, target *AuthorizationTarget) (AuthorizationDecision, error, bool) {
+			if target != nil && target.ParticipantOperation == ParticipantGovernanceOperationRemove {
+				return AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil, true
+			}
+			return AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil, true
+		},
+		batchAuthorizationDecisions: []AuthorizationDecision{
+			{CheckID: "member", Evaluated: true, Allowed: true},
+			{CheckID: "manager", Evaluated: true, Allowed: true},
+			{CheckID: "owner", Evaluated: true, Allowed: true},
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignParticipantEditor(context.Background(), "c-1", "p-a")
+	if err != nil {
+		t.Fatalf("campaignParticipantEditor() error = %v", err)
+	}
+	if !editor.Delete.Visible || !editor.Delete.Enabled {
+		t.Fatalf("editor.Delete = %#v, want visible enabled danger zone", editor.Delete)
+	}
+	if !editor.Delete.HasAssociatedUser {
+		t.Fatalf("editor.Delete.HasAssociatedUser = %v, want true", editor.Delete.HasAssociatedUser)
+	}
+}
+
+func TestCampaignParticipantEditorShowsDeleteBlockersForSelfOwnedParticipant(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "human"},
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-a",
+			UserID:         "user-1",
+			Name:           "Aria",
+			Role:           "player",
+			CampaignAccess: "member",
+		},
+		authorize: func(_ AuthorizationAction, _ AuthorizationResource, target *AuthorizationTarget) (AuthorizationDecision, error, bool) {
+			if target != nil && target.ParticipantOperation == ParticipantGovernanceOperationRemove {
+				return AuthorizationDecision{
+					Evaluated:  true,
+					Allowed:    false,
+					ReasonCode: "AUTHZ_DENY_TARGET_CONTROLS_ACTIVE_CHARACTERS",
+				}, nil, true
+			}
+			return AuthorizationDecision{
+				Evaluated:  true,
+				Allowed:    false,
+				ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+			}, nil, true
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignParticipantEditor(contextWithResolvedUserID("user-1"), "c-1", "p-a")
+	if err != nil {
+		t.Fatalf("campaignParticipantEditor() error = %v", err)
+	}
+	if !editor.Delete.Visible || editor.Delete.Enabled {
+		t.Fatalf("editor.Delete = %#v, want visible disabled danger zone", editor.Delete)
+	}
+	if !editor.Delete.BlockedByControlledCharacters {
+		t.Fatalf("editor.Delete.BlockedByControlledCharacters = %v, want true", editor.Delete.BlockedByControlledCharacters)
+	}
 }
 
 func TestCampaignCharactersSortByName(t *testing.T) {

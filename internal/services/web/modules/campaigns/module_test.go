@@ -748,6 +748,7 @@ type fakeGateway struct {
 	characterCreationProfileErr       error
 	authorizationDecision             campaignapp.AuthorizationDecision
 	authorizationErr                  error
+	authorize                         func(campaignapp.AuthorizationAction, campaignapp.AuthorizationResource, *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error, bool)
 	batchAuthorizationDecisions       []campaignapp.AuthorizationDecision
 	batchAuthorizationErr             error
 	applyCharacterCreationStepErr     error
@@ -768,6 +769,7 @@ type fakeGateway struct {
 	lastCreateInviteInput             campaignapp.CreateInviteInput
 	lastRevokeInviteInput             campaignapp.RevokeInviteInput
 	updateParticipantErr              error
+	deleteParticipantErr              error
 	err                               error
 	createErr                         error
 	createdCampaignID                 string
@@ -1050,6 +1052,9 @@ func (f fakeGateway) ReleaseCharacterControl(context.Context, string, string) er
 func (f fakeGateway) UpdateParticipant(context.Context, string, campaignapp.UpdateParticipantInput) error {
 	return f.updateParticipantErr
 }
+func (f fakeGateway) DeleteParticipant(context.Context, string, string) error {
+	return f.deleteParticipantErr
+}
 func (f fakeGateway) CreateInvite(_ context.Context, _ string, input campaignapp.CreateInviteInput) error {
 	if f.createInviteErr != nil {
 		return f.createInviteErr
@@ -1070,7 +1075,12 @@ func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string,
 func (f fakeGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
 	return f.resetCharacterCreationWorkflowErr
 }
-func (f fakeGateway) CanCampaignAction(context.Context, string, campaignapp.AuthorizationAction, campaignapp.AuthorizationResource, *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error) {
+func (f fakeGateway) CanCampaignAction(_ context.Context, _ string, action campaignapp.AuthorizationAction, resource campaignapp.AuthorizationResource, target *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error) {
+	if f.authorize != nil {
+		if decision, err, ok := f.authorize(action, resource, target); ok {
+			return decision, err
+		}
+	}
 	if f.authorizationErr != nil {
 		return campaignapp.AuthorizationDecision{}, f.authorizationErr
 	}
@@ -1535,6 +1545,10 @@ func (fakeParticipantClient) CreateParticipant(context.Context, *statev1.CreateP
 
 func (fakeParticipantClient) UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
 	return &statev1.UpdateParticipantResponse{}, nil
+}
+
+func (fakeParticipantClient) DeleteParticipant(context.Context, *statev1.DeleteParticipantRequest, ...grpc.CallOption) (*statev1.DeleteParticipantResponse, error) {
+	return &statev1.DeleteParticipantResponse{}, nil
 }
 
 func (fakeSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {

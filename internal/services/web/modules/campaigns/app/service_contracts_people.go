@@ -13,6 +13,7 @@ type CampaignParticipantReadService interface {
 type CampaignParticipantMutationService interface {
 	CreateParticipant(context.Context, string, CreateParticipantInput) (CreateParticipantResult, error)
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
+	DeleteParticipant(context.Context, string, string) error
 }
 
 // CampaignAutomationReadService exposes campaign-level AI automation reads.

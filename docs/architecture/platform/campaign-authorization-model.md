@@ -54,9 +54,11 @@ invariants.
 2. Managers cannot assign or remove owner access.
 3. Members cannot self-escalate campaign access.
 4. Ownership transfer is explicit and audited.
-5. Participant removal is blocked when active owned resources exist.
+5. Participant removal is blocked when the target still owns characters or still
+   controls characters.
 6. AI-controlled participants are restricted to `GM` + `MEMBER`, must not have a
-   bound user identity, and cannot be rebound or seat-reassigned.
+   bound user identity, cannot currently be removed, and cannot be rebound or
+   seat-reassigned.
 
 ## Active-session mutation lock
 

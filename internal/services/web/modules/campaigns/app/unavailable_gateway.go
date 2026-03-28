@@ -156,6 +156,11 @@ func (unavailableGateway) UpdateParticipant(context.Context, string, UpdateParti
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// DeleteParticipant applies this package workflow transition.
+func (unavailableGateway) DeleteParticipant(context.Context, string, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // CreateInvite executes package-scoped creation behavior for this flow.
 func (unavailableGateway) CreateInvite(context.Context, string, CreateInviteInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")

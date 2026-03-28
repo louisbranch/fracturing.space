@@ -1,7 +1,7 @@
 locale: "en-US"
 namespace: "game"
 messages:
-  "game.participant.default_ai_name": "Oracle"
+  "game.participant.default_ai_name": "Narrator"
   "game.participant.default_unknown_name": "Mysterious Person"
   "game.session.default_name": "Session %d"
   "game.session_readiness.active_session_exists": "Campaign readiness requires no active session"

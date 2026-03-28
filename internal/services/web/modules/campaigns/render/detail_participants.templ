@@ -187,5 +187,46 @@ templ participantEditFragment(view ParticipantEditPageView, loc webtemplates.Loc
 				</form>
 			</div>
 		</div>
+		if view.ParticipantEditor.Delete.Visible {
+			<div class="card bg-base-100 border border-error/30 shadow-sm" data-campaign-participant-danger-zone="true">
+				<div class="card-body gap-4">
+					<div class="space-y-1">
+						<h3 class="text-lg font-semibold text-error">{ webtemplates.T(loc, "game.participants.danger.title") }</h3>
+						<p class="text-sm opacity-70">{ webtemplates.T(loc, "game.participants.danger.description") }</p>
+					</div>
+					<div class="space-y-2 text-sm opacity-80">
+						if view.ParticipantEditor.Delete.HasAssociatedUser {
+							<p data-campaign-participant-delete-user-warning="true">{ webtemplates.T(loc, "game.participants.danger.user_access_warning") }</p>
+						}
+						<p data-campaign-participant-delete-controller-warning="true">{ webtemplates.T(loc, "game.participants.danger.controller_warning") }</p>
+						if view.ParticipantEditor.Delete.BlockedByOwnedCharacters {
+							<p data-campaign-participant-delete-owned-blocker="true">{ webtemplates.T(loc, "game.participants.danger.owned_character_blocker") }</p>
+						}
+						if view.ParticipantEditor.Delete.BlockedByControlledCharacters {
+							<p data-campaign-participant-delete-controlled-blocker="true">{ webtemplates.T(loc, "game.participants.danger.controlled_character_blocker") }</p>
+						}
+					</div>
+					<div class="flex justify-end">
+						<form
+							method="post"
+							action={ routepath.AppCampaignParticipantDelete(view.CampaignID, view.ParticipantID) }
+							data-campaign-participant-delete-form="true"
+							onsubmit="return confirm(this.dataset.confirmText);"
+							data-confirm-text={ webtemplates.T(loc, "game.participants.confirm_delete") }
+						>
+							if campaignActionsLocked(view.ActionsLocked) {
+								<div class="tooltip tooltip-left" data-tip={ webtemplates.T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-outline btn-error btn-sm" type="submit" disabled data-campaign-participant-delete-disabled="true">{ webtemplates.T(loc, "game.participants.action_delete") }</button>
+								</div>
+							} else if !view.ParticipantEditor.Delete.Enabled {
+								<button class="btn btn-outline btn-error btn-sm" type="submit" disabled data-campaign-participant-delete-disabled="true">{ webtemplates.T(loc, "game.participants.action_delete") }</button>
+							} else {
+								<button class="btn btn-outline btn-error btn-sm" type="submit">{ webtemplates.T(loc, "game.participants.action_delete") }</button>
+							}
+						</form>
+					</div>
+				</div>
+			</div>
+		}
 	</section>
 }

@@ -93,7 +93,7 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 						ActorType:   event.ActorTypeSystem,
 						EntityType:  "participant",
 						EntityID:    "participant-ai",
-						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
+						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Narrator","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 					},
 				),
 			},
@@ -181,7 +181,7 @@ func TestCreateCampaign_AllowsOwnerlessPublicStarterTemplate(t *testing.T) {
 						ActorType:   event.ActorTypeSystem,
 						EntityType:  "participant",
 						EntityID:    "participant-ai",
-						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
+						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Narrator","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 					},
 				),
 			},
@@ -470,7 +470,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 								ActorType:   event.ActorTypeSystem,
 								EntityType:  "participant",
 								EntityID:    "participant-ai",
-								PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
+								PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Narrator","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 							},
 						),
 					},
@@ -541,8 +541,8 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 			if aiPayload.UserID != "" {
 				t.Fatalf("ai payload user_id = %q, want empty", aiPayload.UserID)
 			}
-			if aiPayload.Name != "Oracle" {
-				t.Fatalf("ai payload name = %q, want %q", aiPayload.Name, "Oracle")
+			if aiPayload.Name != "Narrator" {
+				t.Fatalf("ai payload name = %q, want %q", aiPayload.Name, "Narrator")
 			}
 			if aiPayload.Role != "GM" {
 				t.Fatalf("ai payload role = %q, want %q", aiPayload.Role, "GM")
@@ -875,7 +875,7 @@ func TestCreateCampaign_AIUsesLocalizedNameAndOwnerFallsBackToAuthUsernameForLoc
 					ActorType:   event.ActorTypeSystem,
 					EntityType:  "participant",
 					EntityID:    "participant-ai",
-					PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oráculo","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
+					PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Narrador","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 				},
 			),
 		},
@@ -918,8 +918,8 @@ func TestCreateCampaign_AIUsesLocalizedNameAndOwnerFallsBackToAuthUsernameForLoc
 	}
 
 	aiPayload := workflowPayload.Participants[1]
-	if aiPayload.Name != "Oráculo" {
-		t.Fatalf("ai payload name = %q, want %q", aiPayload.Name, "Oráculo")
+	if aiPayload.Name != "Narrador" {
+		t.Fatalf("ai payload name = %q, want %q", aiPayload.Name, "Narrador")
 	}
 	if aiPayload.Controller != "AI" {
 		t.Fatalf("ai payload controller = %q, want %q", aiPayload.Controller, "AI")

@@ -193,6 +193,76 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 	}
 }
 
+func TestDeleteParticipant_DeniesWhenParticipantControlsCharacter(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 2, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 2)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember, Controller: participant.ControllerHuman},
+	}
+	characterStore.Characters["c1"] = map[string]storage.CharacterRecord{
+		"ch-1": {ID: "ch-1", CampaignID: "c1", OwnerParticipantID: "owner-1", ParticipantID: "p1", Name: "Hero", Kind: character.KindPC},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	ctx := requestctx.WithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 0 {
+		t.Fatalf("domain calls = %d, want 0", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_DeniesAIParticipant(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 2)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"ai-1": {
+			ID:             "ai-1",
+			CampaignID:     "c1",
+			Name:           "Narrator",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+			Controller:     participant.ControllerAI,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore})
+	ctx := requestctx.WithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "ai-1",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
 func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
 	participantStore := gametest.NewFakeParticipantStore()

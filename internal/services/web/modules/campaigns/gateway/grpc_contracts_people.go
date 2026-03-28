@@ -18,6 +18,7 @@ type ParticipantReadClient interface {
 type ParticipantMutationClient interface {
 	CreateParticipant(context.Context, *statev1.CreateParticipantRequest, ...grpc.CallOption) (*statev1.CreateParticipantResponse, error)
 	UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error)
+	DeleteParticipant(context.Context, *statev1.DeleteParticipantRequest, ...grpc.CallOption) (*statev1.DeleteParticipantResponse, error)
 }
 
 // CharacterReadClient exposes character query operations for campaign workspace pages.

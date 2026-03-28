@@ -82,6 +82,17 @@ type ParticipantEditorView struct {
 	RoleReadOnly   bool
 	AccessOptions  []ParticipantAccessOptionView
 	AccessReadOnly bool
+	Delete         ParticipantDeleteView
+}
+
+// ParticipantDeleteView carries participant delete danger-zone state for
+// campaign detail pages.
+type ParticipantDeleteView struct {
+	Visible                       bool
+	Enabled                       bool
+	HasAssociatedUser             bool
+	BlockedByOwnedCharacters      bool
+	BlockedByControlledCharacters bool
 }
 
 // ParticipantCreatorView carries participant creation form state for campaign

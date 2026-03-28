@@ -124,6 +124,13 @@ func (f fakeWebParticipantClient) UpdateParticipant(context.Context, *statev1.Up
 	return &statev1.UpdateParticipantResponse{}, nil
 }
 
+func (f fakeWebParticipantClient) DeleteParticipant(context.Context, *statev1.DeleteParticipantRequest, ...grpc.CallOption) (*statev1.DeleteParticipantResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.DeleteParticipantResponse{}, nil
+}
+
 type fakeWebCharacterClient struct {
 	response *statev1.ListCharactersResponse
 	err      error

@@ -287,6 +287,132 @@ func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 		}
 	})
 
+	t.Run("remove operation denies participants who still control active characters", func(t *testing.T) {
+		participants := newTestParticipantStoreWithData()
+		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
+			ID:             "owner-1",
+			CampaignID:     "camp-1",
+			CampaignAccess: participant.CampaignAccessOwner,
+			Controller:     participant.ControllerHuman,
+		}); err != nil {
+			t.Fatalf("put participant owner-1: %v", err)
+		}
+		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
+			ID:             "owner-2",
+			CampaignID:     "camp-1",
+			CampaignAccess: participant.CampaignAccessOwner,
+			Controller:     participant.ControllerHuman,
+		}); err != nil {
+			t.Fatalf("put participant owner-2: %v", err)
+		}
+		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
+			ID:             "member-1",
+			CampaignID:     "camp-1",
+			CampaignAccess: participant.CampaignAccessMember,
+			Controller:     participant.ControllerHuman,
+		}); err != nil {
+			t.Fatalf("put participant member-1: %v", err)
+		}
+
+		characters := newTestCharacterStore()
+		if err := characters.PutCharacter(context.Background(), storage.CharacterRecord{
+			ID:            "char-1",
+			CampaignID:    "camp-1",
+			ParticipantID: "member-1",
+		}); err != nil {
+			t.Fatalf("put character: %v", err)
+		}
+
+		decision, attrs, evaluated, err := EvaluateCanParticipantGovernanceTargetWithStores(
+			context.Background(),
+			participants,
+			characters,
+			"camp-1",
+			storage.ParticipantRecord{
+				ID:             "owner-1",
+				CampaignID:     "camp-1",
+				CampaignAccess: participant.CampaignAccessOwner,
+			},
+			&campaignv1.AuthorizationTarget{
+				TargetParticipantId:  "member-1",
+				TargetCampaignAccess: campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+				ParticipantOperation: campaignv1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_REMOVE,
+			},
+		)
+		if err != nil {
+			t.Fatalf("evaluate target: %v", err)
+		}
+		if !evaluated {
+			t.Fatalf("evaluated = false, want true")
+		}
+		if decision.Allowed {
+			t.Fatalf("decision allowed = true, want false")
+		}
+		if decision.ReasonCode != domainauthz.ReasonDenyTargetControlsActiveCharacters {
+			t.Fatalf("decision reason = %q, want %q", decision.ReasonCode, domainauthz.ReasonDenyTargetControlsActiveCharacters)
+		}
+		if got, ok := attrs["target_controls_active_characters"].(bool); !ok || !got {
+			t.Fatalf("target_controls_active_characters = %#v, want true", attrs["target_controls_active_characters"])
+		}
+	})
+
+	t.Run("remove operation denies AI participants", func(t *testing.T) {
+		participants := newTestParticipantStoreWithData()
+		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
+			ID:             "owner-1",
+			CampaignID:     "camp-1",
+			CampaignAccess: participant.CampaignAccessOwner,
+			Controller:     participant.ControllerHuman,
+		}); err != nil {
+			t.Fatalf("put participant owner-1: %v", err)
+		}
+		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
+			ID:             "owner-2",
+			CampaignID:     "camp-1",
+			CampaignAccess: participant.CampaignAccessOwner,
+			Controller:     participant.ControllerHuman,
+		}); err != nil {
+			t.Fatalf("put participant owner-2: %v", err)
+		}
+		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
+			ID:             "ai-1",
+			CampaignID:     "camp-1",
+			CampaignAccess: participant.CampaignAccessMember,
+			Controller:     participant.ControllerAI,
+		}); err != nil {
+			t.Fatalf("put participant ai-1: %v", err)
+		}
+
+		decision, _, evaluated, err := EvaluateCanParticipantGovernanceTargetWithStores(
+			context.Background(),
+			participants,
+			newTestCharacterStore(),
+			"camp-1",
+			storage.ParticipantRecord{
+				ID:             "owner-1",
+				CampaignID:     "camp-1",
+				CampaignAccess: participant.CampaignAccessOwner,
+			},
+			&campaignv1.AuthorizationTarget{
+				TargetParticipantId:  "ai-1",
+				TargetCampaignAccess: campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+				ParticipantOperation: campaignv1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_REMOVE,
+			},
+		)
+		if err != nil {
+			t.Fatalf("evaluate target: %v", err)
+		}
+		if !evaluated {
+			t.Fatalf("evaluated = false, want true")
+		}
+		if decision.Allowed {
+			t.Fatalf("decision allowed = true, want false")
+		}
+		if decision.ReasonCode != domainauthz.ReasonDenyTargetIsAIParticipant {
+			t.Fatalf("decision reason = %q, want %q", decision.ReasonCode, domainauthz.ReasonDenyTargetIsAIParticipant)
+		}
+	})
+
 	t.Run("returns internal error when participant store lookup fails", func(t *testing.T) {
 		participants := newTestParticipantStoreWithData()
 		participants.getErr = errors.New("boom")

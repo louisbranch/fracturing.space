@@ -1789,6 +1789,156 @@ func TestMountCampaignParticipantEditOmitsAIBindingControlsForAIGMSeats(t *testi
 	}
 }
 
+func TestMountCampaignParticipantEditShowsDeleteDangerZoneWhenAllowed(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "Human",
+		participant: campaignapp.CampaignParticipant{
+			ID:             "p-a",
+			UserID:         "user-2",
+			Name:           "Aria",
+			Role:           "GM",
+			CampaignAccess: "Owner",
+			Pronouns:       "she/her",
+		},
+		authorize: func(_ campaignapp.AuthorizationAction, _ campaignapp.AuthorizationResource, target *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error, bool) {
+			if target != nil && target.ParticipantOperation == campaignapp.ParticipantGovernanceOperationRemove {
+				return campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil, true
+			}
+			return campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil, true
+		},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "member", Evaluated: true, Allowed: true},
+			{CheckID: "manager", Evaluated: true, Allowed: true},
+			{CheckID: "owner", Evaluated: true, Allowed: true},
+		},
+	}, modulehandlertest.NewBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p-a"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-participant-danger-zone="true"`,
+		`data-campaign-participant-delete-form="true"`,
+		`data-campaign-participant-delete-user-warning="true"`,
+		`data-campaign-participant-delete-controller-warning="true"`,
+		`action="/app/campaigns/c1/participants/p-a/delete"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing participant delete marker %q: %q", marker, body)
+		}
+	}
+	if strings.Contains(body, `data-campaign-participant-delete-disabled="true"`) {
+		t.Fatalf("body unexpectedly disabled delete button: %q", body)
+	}
+}
+
+func TestMountCampaignParticipantEditDisablesDeleteDangerZoneForControllerBlocker(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "Human",
+		participant: campaignapp.CampaignParticipant{
+			ID:             "p-a",
+			UserID:         "user-1",
+			Name:           "Aria",
+			Role:           "Player",
+			CampaignAccess: "Member",
+			Pronouns:       "she/her",
+		},
+		authorize: func(_ campaignapp.AuthorizationAction, _ campaignapp.AuthorizationResource, target *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error, bool) {
+			if target != nil && target.ParticipantOperation == campaignapp.ParticipantGovernanceOperationRemove {
+				return campaignapp.AuthorizationDecision{
+					Evaluated:  true,
+					Allowed:    false,
+					ReasonCode: "AUTHZ_DENY_TARGET_CONTROLS_ACTIVE_CHARACTERS",
+				}, nil, true
+			}
+			return campaignapp.AuthorizationDecision{
+				Evaluated:  true,
+				Allowed:    false,
+				ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+			}, nil, true
+		},
+	}, modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p-a"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-participant-danger-zone="true"`,
+		`data-campaign-participant-delete-controlled-blocker="true"`,
+		`data-campaign-participant-delete-disabled="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing participant delete blocker marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignParticipantEditHidesDeleteDangerZoneForAIParticipant(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "Human",
+		participant: campaignapp.CampaignParticipant{
+			ID:             "p-ai",
+			Name:           "Caretaker",
+			Role:           "GM",
+			CampaignAccess: "Member",
+			Controller:     "AI",
+		},
+		authorize: func(_ campaignapp.AuthorizationAction, _ campaignapp.AuthorizationResource, target *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error, bool) {
+			if target != nil && target.ParticipantOperation == campaignapp.ParticipantGovernanceOperationRemove {
+				return campaignapp.AuthorizationDecision{
+					Evaluated:  true,
+					Allowed:    false,
+					ReasonCode: "AUTHZ_DENY_TARGET_IS_AI_PARTICIPANT",
+				}, nil, true
+			}
+			return campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil, true
+		},
+	}, modulehandlertest.NewBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p-ai"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `data-campaign-participant-danger-zone="true"`) {
+		t.Fatalf("body unexpectedly rendered participant delete danger zone: %q", body)
+	}
+}
+
 func TestMountCampaignAIBindingPageRendersForOwner(t *testing.T) {
 	t.Parallel()
 

@@ -170,6 +170,10 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 					ParticipantEditor: ParticipantEditorView{
 						ID:   "p-1",
 						Name: "Rook",
+						Delete: ParticipantDeleteView{
+							Visible: true,
+							Enabled: true,
+						},
 					},
 				}, nil)
 			},

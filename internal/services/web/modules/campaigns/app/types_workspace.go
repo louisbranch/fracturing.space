@@ -59,6 +59,16 @@ type CampaignParticipantEditor struct {
 	RoleReadOnly   bool                              `json:"roleReadOnly"`
 	AccessOptions  []CampaignParticipantAccessOption `json:"accessOptions"`
 	AccessReadOnly bool                              `json:"accessReadOnly"`
+	Delete         CampaignParticipantDeleteState    `json:"delete"`
+}
+
+// CampaignParticipantDeleteState stores participant delete danger-zone state.
+type CampaignParticipantDeleteState struct {
+	Visible                       bool `json:"visible"`
+	Enabled                       bool `json:"enabled"`
+	HasAssociatedUser             bool `json:"hasAssociatedUser"`
+	BlockedByOwnedCharacters      bool `json:"blockedByOwnedCharacters"`
+	BlockedByControlledCharacters bool `json:"blockedByControlledCharacters"`
 }
 
 // CampaignParticipantCreator stores participant create page data.

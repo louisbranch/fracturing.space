@@ -53,6 +53,12 @@ func TestParticipantViewsMapWorkspaceState(t *testing.T) {
 		},
 		AllowGMRole:   true,
 		AccessOptions: []campaignapp.CampaignParticipantAccessOption{{Value: "owner", Allowed: true}},
+		Delete: campaignapp.CampaignParticipantDeleteState{
+			Visible:                       true,
+			Enabled:                       false,
+			HasAssociatedUser:             true,
+			BlockedByControlledCharacters: true,
+		},
 	}
 
 	list := participantsView(page, "camp-1", []campaignapp.CampaignParticipant{
@@ -70,6 +76,9 @@ func TestParticipantViewsMapWorkspaceState(t *testing.T) {
 	editView := participantEditView(page, "camp-1", "part-1", editor)
 	if editView.ParticipantID != "part-1" || editView.ParticipantEditor.Name != "Mira" {
 		t.Fatalf("participantEditView() = %#v", editView)
+	}
+	if !editView.ParticipantEditor.Delete.Visible || editView.ParticipantEditor.Delete.Enabled {
+		t.Fatalf("participantEditView delete state = %#v", editView.ParticipantEditor.Delete)
 	}
 
 	if got := participantsBreadcrumbs(page); len(got) != 1 || got[0].Label != "Participants" {
@@ -105,6 +114,7 @@ func TestParseCreateParticipantInputAndRoutes(t *testing.T) {
 		{method: http.MethodGet, path: routepath.AppCampaignParticipantCreate("camp-1")},
 		{method: http.MethodPost, path: routepath.AppCampaignParticipantCreate("camp-1")},
 		{method: http.MethodPost, path: routepath.AppCampaignParticipantEdit("camp-1", "part-1")},
+		{method: http.MethodPost, path: routepath.AppCampaignParticipantDelete("camp-1", "part-1")},
 	} {
 		req := httptest.NewRequest(tc.method, tc.path, nil)
 		if _, pattern := mux.Handler(req); pattern == "" {
