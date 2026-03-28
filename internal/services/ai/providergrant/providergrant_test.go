@@ -1,6 +1,7 @@
 package providergrant
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -37,6 +38,33 @@ func TestNormalizeCreateInput(t *testing.T) {
 	}
 }
 
+func TestNormalizeCreateInputRejectsInvalidFields(t *testing.T) {
+	_, err := NormalizeCreateInput(CreateInput{
+		Provider:        provider.OpenAI,
+		TokenCiphertext: "enc:abc",
+	})
+	if !errors.Is(err, ErrEmptyOwnerUserID) {
+		t.Fatalf("NormalizeCreateInput() error = %v, want %v", err, ErrEmptyOwnerUserID)
+	}
+
+	_, err = NormalizeCreateInput(CreateInput{
+		OwnerUserID:     "user-1",
+		Provider:        provider.Provider("invalid"),
+		TokenCiphertext: "enc:abc",
+	})
+	if err == nil {
+		t.Fatal("expected provider normalization error")
+	}
+
+	_, err = NormalizeCreateInput(CreateInput{
+		OwnerUserID: "user-1",
+		Provider:    provider.OpenAI,
+	})
+	if !errors.Is(err, ErrEmptyTokenCiphertext) {
+		t.Fatalf("NormalizeCreateInput() error = %v, want %v", err, ErrEmptyTokenCiphertext)
+	}
+}
+
 func TestCreateProviderGrant(t *testing.T) {
 	nowTime := time.Date(2026, 2, 15, 23, 20, 0, 0, time.UTC)
 	now := func() time.Time { return nowTime }
@@ -60,6 +88,20 @@ func TestCreateProviderGrant(t *testing.T) {
 	}
 	if !got.CreatedAt.Equal(nowTime) || !got.UpdatedAt.Equal(nowTime) {
 		t.Fatalf("timestamps = (%v, %v), want (%v, %v)", got.CreatedAt, got.UpdatedAt, nowTime, nowTime)
+	}
+}
+
+func TestCreateProviderGrantReturnsIDGenerationError(t *testing.T) {
+	wantErr := errors.New("boom")
+	_, err := Create(CreateInput{
+		OwnerUserID:     "user-1",
+		Provider:        provider.OpenAI,
+		TokenCiphertext: "enc:token",
+	}, func() time.Time { return time.Date(2026, 2, 15, 23, 20, 0, 0, time.UTC) }, func() (string, error) {
+		return "", wantErr
+	})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("Create() error = %v, want wrapped %v", err, wantErr)
 	}
 }
 
@@ -91,6 +133,18 @@ func TestRevokeProviderGrant(t *testing.T) {
 	}
 }
 
+func TestRevokeProviderGrantRejectsMissingFields(t *testing.T) {
+	_, err := Revoke(ProviderGrant{OwnerUserID: "user-1"}, nil)
+	if !errors.Is(err, ErrEmptyID) {
+		t.Fatalf("Revoke() error = %v, want %v", err, ErrEmptyID)
+	}
+
+	_, err = Revoke(ProviderGrant{ID: "grant-1"}, nil)
+	if !errors.Is(err, ErrEmptyOwnerUserID) {
+		t.Fatalf("Revoke() error = %v, want %v", err, ErrEmptyOwnerUserID)
+	}
+}
+
 func TestStatusAndGrantHelpers(t *testing.T) {
 	expiresAt := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
 	grant := ProviderGrant{
@@ -119,8 +173,29 @@ func TestStatusAndGrantHelpers(t *testing.T) {
 	if !grant.IsUsableBy("user-1", provider.OpenAI) {
 		t.Fatal("expected grant to be usable by matching owner/provider")
 	}
+	if !grant.IsUsableBy("user-1", "") {
+		t.Fatal("expected empty provider filter to allow the active grant")
+	}
 	if grant.IsUsableBy("user-2", provider.OpenAI) {
 		t.Fatal("expected grant usability to reject wrong owner")
+	}
+	if (ProviderGrant{OwnerUserID: "user-1", Provider: provider.Provider(" invalid "), Status: StatusActive}).IsUsableBy("user-1", provider.OpenAI) {
+		t.Fatal("expected invalid grant provider to reject usability")
+	}
+	if (ProviderGrant{OwnerUserID: "user-1", Provider: provider.OpenAI, Status: StatusRevoked}).IsUsableBy("user-1", provider.OpenAI) {
+		t.Fatal("expected revoked grant to be unusable")
+	}
+	if (ProviderGrant{OwnerUserID: "user-1", Provider: provider.OpenAI, ExpiresAt: &expiresAt}).ShouldRefresh(expiresAt.Add(-time.Minute), time.Minute/2) {
+		t.Fatal("expected grant without refresh support to skip refresh")
+	}
+	if got := ParseStatus(" refresh_failed "); got != StatusRefreshFailed {
+		t.Fatalf("ParseStatus(refresh_failed) = %q, want %q", got, StatusRefreshFailed)
+	}
+	if got := ParseStatus(" expired "); got != StatusExpired {
+		t.Fatalf("ParseStatus(expired) = %q, want %q", got, StatusExpired)
+	}
+	if got := ParseStatus("unknown"); got != "" {
+		t.Fatalf("ParseStatus(unknown) = %q, want empty", got)
 	}
 }
 
@@ -156,6 +231,25 @@ func TestRecordRefreshSuccess(t *testing.T) {
 	}
 }
 
+func TestRecordRefreshSuccessRejectsInvalidFields(t *testing.T) {
+	refreshedAt := time.Date(2026, 3, 18, 23, 10, 0, 0, time.UTC)
+
+	_, err := RecordRefreshSuccess(ProviderGrant{OwnerUserID: "user-1"}, "enc:new", nil, refreshedAt)
+	if !errors.Is(err, ErrEmptyID) {
+		t.Fatalf("RecordRefreshSuccess() error = %v, want %v", err, ErrEmptyID)
+	}
+
+	_, err = RecordRefreshSuccess(ProviderGrant{ID: "grant-1"}, "enc:new", nil, refreshedAt)
+	if !errors.Is(err, ErrEmptyOwnerUserID) {
+		t.Fatalf("RecordRefreshSuccess() error = %v, want %v", err, ErrEmptyOwnerUserID)
+	}
+
+	_, err = RecordRefreshSuccess(ProviderGrant{ID: "grant-1", OwnerUserID: "user-1"}, " ", nil, refreshedAt)
+	if !errors.Is(err, ErrEmptyTokenCiphertext) {
+		t.Fatalf("RecordRefreshSuccess() error = %v, want %v", err, ErrEmptyTokenCiphertext)
+	}
+}
+
 func TestRecordRefreshFailure(t *testing.T) {
 	refreshedAt := time.Date(2026, 3, 18, 23, 12, 0, 0, time.UTC)
 	got, err := RecordRefreshFailure(ProviderGrant{
@@ -176,5 +270,24 @@ func TestRecordRefreshFailure(t *testing.T) {
 	}
 	if got.RefreshedAt == nil || !got.RefreshedAt.Equal(refreshedAt) {
 		t.Fatalf("refreshed_at = %v, want %v", got.RefreshedAt, refreshedAt)
+	}
+}
+
+func TestRecordRefreshFailureRejectsInvalidFields(t *testing.T) {
+	refreshedAt := time.Date(2026, 3, 18, 23, 12, 0, 0, time.UTC)
+
+	_, err := RecordRefreshFailure(ProviderGrant{OwnerUserID: "user-1"}, "provider error", refreshedAt)
+	if !errors.Is(err, ErrEmptyID) {
+		t.Fatalf("RecordRefreshFailure() error = %v, want %v", err, ErrEmptyID)
+	}
+
+	_, err = RecordRefreshFailure(ProviderGrant{ID: "grant-1"}, "provider error", refreshedAt)
+	if !errors.Is(err, ErrEmptyOwnerUserID) {
+		t.Fatalf("RecordRefreshFailure() error = %v, want %v", err, ErrEmptyOwnerUserID)
+	}
+
+	_, err = RecordRefreshFailure(ProviderGrant{ID: "grant-1", OwnerUserID: "user-1"}, " ", refreshedAt)
+	if !errors.Is(err, ErrEmptyRefreshError) {
+		t.Fatalf("RecordRefreshFailure() error = %v, want %v", err, ErrEmptyRefreshError)
 	}
 }

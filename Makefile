@@ -14,8 +14,8 @@ TEST_PROGRESS_HEARTBEAT ?= 10s
 INTEGRATION_COVERAGE_SHARDS ?= 4
 INTEGRATION_COVERAGE_PARALLELISM ?= 1
 SCENARIO_COVERAGE_PARALLELISM ?= 4
-INTEGRATION_SMOKE_FULL_PATTERN := ^TestGameEndToEnd$$
-INTEGRATION_SMOKE_PR_PATTERN := ^TestGameEndToEnd$$
+INTEGRATION_SMOKE_FULL_PATTERN := ^(TestGameEndToEnd|TestInviteNotificationDeliveryIntegration|TestUserhubDashboardIntegration|TestPlayLaunchAndRealtimeIntegration|TestWebAuthenticatedShellIntegration)$$
+INTEGRATION_SMOKE_PR_PATTERN := ^(TestGameEndToEnd|TestInviteNotificationDeliveryIntegration|TestUserhubDashboardIntegration|TestPlayLaunchAndRealtimeIntegration|TestWebAuthenticatedShellIntegration)$$
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
@@ -182,7 +182,6 @@ smoke-integration:
 			--label smoke-integration \
 			--status-dir "$(TEST_PROGRESS_DIR)/smoke/integration" \
 			-- \
-			env INTEGRATION_SHARED_FIXTURE="$${INTEGRATION_SHARED_FIXTURE:-true}" \
 			go test -json -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_PR_PATTERN)'
 
 smoke-scenario:
@@ -231,7 +230,7 @@ check-runtime:
 			go test -json -parallel="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}" -tags=scenario ./internal/test/game
 
 ci-integration-shard:
-	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} INTEGRATION_SHARD_TOTAL=$${INTEGRATION_SHARD_TOTAL:?set INTEGRATION_SHARD_TOTAL} INTEGRATION_SHARD_INDEX=$${INTEGRATION_SHARD_INDEX:?set INTEGRATION_SHARD_INDEX} bash ./scripts/integration-shard.sh
+	INTEGRATION_SHARD_TOTAL=$${INTEGRATION_SHARD_TOTAL:?set INTEGRATION_SHARD_TOTAL} INTEGRATION_SHARD_INDEX=$${INTEGRATION_SHARD_INDEX:?set INTEGRATION_SHARD_INDEX} bash ./scripts/integration-shard.sh
 
 ci-integration-shard-check:
 	INTEGRATION_VERIFY_SHARDS_TOTAL=$${INTEGRATION_VERIFY_SHARDS_TOTAL:?set INTEGRATION_VERIFY_SHARDS_TOTAL} bash ./scripts/integration-shard.sh --check

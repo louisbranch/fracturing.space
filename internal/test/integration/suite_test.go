@@ -4,7 +4,7 @@ package integration
 
 import "testing"
 
-// TestGameEndToEnd validates game gRPC behavior end-to-end against the shared fixture stack.
+// TestGameEndToEnd validates game gRPC behavior end-to-end against the suite mesh.
 func TestGameEndToEnd(t *testing.T) {
 	fixture := newSuiteFixture(t)
 	newSuite := func(t *testing.T, label string) *integrationSuite {

@@ -249,7 +249,7 @@ func TestLoadPromptInstructionsAllowsPartialInstructionLoad(t *testing.T) {
 
 func TestBuildRuntimeDepsWithoutGameAddrBuildsDegradedGateway(t *testing.T) {
 	logger := newDiscardLogger()
-	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger)
+	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger, defaultServerDependencies())
 	if err != nil {
 		t.Fatalf("buildRuntimeDeps() error = %v", err)
 	}
@@ -267,19 +267,15 @@ func TestBuildRuntimeDepsWithoutGameAddrBuildsDegradedGateway(t *testing.T) {
 }
 
 func TestBuildRuntimeDepsWhenGameConnUnavailableStillBuildsGateway(t *testing.T) {
-	original := newManagedConn
-	newManagedConn = func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
-		return nil, errors.New("dial failed")
-	}
-	t.Cleanup(func() {
-		newManagedConn = original
-	})
-
 	cfg := testRuntimeConfig(t)
 	cfg.GameAddr = "127.0.0.1:7777"
 
 	logger := newDiscardLogger()
-	deps, err := buildRuntimeDeps(context.Background(), cfg, logger)
+	serverDeps := defaultServerDependencies()
+	serverDeps.newManagedConn = func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+		return nil, errors.New("dial failed")
+	}
+	deps, err := buildRuntimeDeps(context.Background(), cfg, logger, serverDeps)
 	if err != nil {
 		t.Fatalf("buildRuntimeDeps() error = %v", err)
 	}
@@ -298,7 +294,7 @@ func TestBuildRuntimeDepsWhenGameConnUnavailableStillBuildsGateway(t *testing.T)
 
 func TestBuildRuntimeDepsRegistersAnthropicWithoutToolRuntime(t *testing.T) {
 	logger := newDiscardLogger()
-	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger)
+	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger, defaultServerDependencies())
 	if err != nil {
 		t.Fatalf("buildRuntimeDeps() error = %v", err)
 	}
@@ -325,7 +321,7 @@ func TestBuildRuntimeDepsRegistersAnthropicWithoutToolRuntime(t *testing.T) {
 
 func TestRegisterServicesSetsHealthForAllRegistrations(t *testing.T) {
 	logger := newDiscardLogger()
-	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger)
+	deps, err := buildRuntimeDeps(context.Background(), testRuntimeConfig(t), logger, defaultServerDependencies())
 	if err != nil {
 		t.Fatalf("buildRuntimeDeps() error = %v", err)
 	}
