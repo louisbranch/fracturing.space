@@ -1,5 +1,33 @@
 [
   {
+    "scenario": "ai_gm_campaign_context_bootstrap",
+    "label": "Bootstrap",
+    "required_tools": [
+      "scene_create",
+      "interaction_open_scene_player_phase"
+    ],
+    "required_tool_order_prefix": [
+      "scene_create",
+      "interaction_open_scene_player_phase"
+    ],
+    "required_beat_types": [
+      "fiction",
+      "prompt"
+    ],
+    "forbidden_beat_types": [
+      "resolution",
+      "consequence"
+    ],
+    "forbidden_prompt_phrases": [
+      "what does the stranger say",
+      "how does the story unfold"
+    ],
+    "expect_player_phase_open": true,
+    "expect_skills_read_only": true,
+    "max_reference_searches": 1,
+    "max_reference_reads": 1
+  },
+  {
     "scenario": "ai_gm_campaign_context_hope_experience",
     "label": "HopeExperience",
     "required_tools": [

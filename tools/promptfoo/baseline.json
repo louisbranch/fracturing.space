@@ -1,0 +1,75 @@
+{
+  "updated_at": "2026-03-27T03:53:00.883Z",
+  "entries": [
+    {
+      "scenario": "Bootstrap",
+      "model": "gpt-5.4-mini",
+      "prompt_profile": "baseline",
+      "pass": true,
+      "score": 1,
+      "failure_class": "pass",
+      "dominant_reason": "gm contract satisfied",
+      "recorded_at": "2026-03-27T00:07:47Z"
+    },
+    {
+      "scenario": "CapabilityLookup",
+      "model": "gpt-5.4-mini",
+      "prompt_profile": "baseline",
+      "pass": true,
+      "score": 1,
+      "failure_class": "pass",
+      "dominant_reason": "gm contract satisfied",
+      "recorded_at": "2026-03-27T03:53:00.874Z"
+    },
+    {
+      "scenario": "HopeExperience",
+      "model": "gpt-5.4-mini",
+      "prompt_profile": "baseline",
+      "pass": false,
+      "score": 0.92,
+      "failure_class": "resource_accounting",
+      "dominant_reason": "hope=2 expected 1",
+      "recorded_at": "2026-03-26T23:08:39Z"
+    },
+    {
+      "scenario": "IntentAmbiguousAction",
+      "model": "gpt-5.4-mini",
+      "prompt_profile": "baseline",
+      "pass": true,
+      "score": 1,
+      "failure_class": "pass",
+      "dominant_reason": "gm contract satisfied",
+      "recorded_at": "2026-03-26T23:42:10Z"
+    },
+    {
+      "scenario": "IntentHopeSpend",
+      "model": "gpt-5.4-mini",
+      "prompt_profile": "baseline",
+      "pass": false,
+      "score": 0,
+      "failure_class": "over_research",
+      "dominant_reason": "reference_search_count=2 exceeded 0; reference_read_count=2 exceeded 0",
+      "recorded_at": "2026-03-26T23:44:28Z"
+    },
+    {
+      "scenario": "IntentImpossibleAction",
+      "model": "gpt-5.4-mini",
+      "prompt_profile": "baseline",
+      "pass": false,
+      "score": 0.85,
+      "failure_class": "harness_error",
+      "dominant_reason": "missing required beat types from [\"prompt\"]",
+      "recorded_at": "2026-03-26T23:35:32Z"
+    },
+    {
+      "scenario": "OOCReplace",
+      "model": "gpt-5.4-mini",
+      "prompt_profile": "baseline",
+      "pass": true,
+      "score": 1,
+      "failure_class": "pass",
+      "dominant_reason": "gm contract satisfied",
+      "recorded_at": "2026-03-26T23:45:20Z"
+    }
+  ]
+}

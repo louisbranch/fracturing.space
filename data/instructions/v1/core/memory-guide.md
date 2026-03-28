@@ -18,6 +18,7 @@ Recommended section headings:
 - **World State** — locations, factions, and environmental conditions.
 - **Session Notes** — key events and decisions from the current and recent sessions.
 - **Player Decisions** — significant choices players have made and their consequences.
+- **Campaign Progress** — current act or phase, which story beats have been reached, and any remaining victory conditions or unresolved threads.
 
 You may create additional headings as needed. Section matching is case-insensitive.
 

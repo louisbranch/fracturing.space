@@ -31,7 +31,7 @@ func TestContextSourcesProduceExpectedSections(t *testing.T) {
 		"daggerheart://rules/version":                                `{"system":"Daggerheart","module":"duality","rules_version":"1.0","dice_model":"2d12","total_formula":"hope+fear+modifier","crit_rule":"doubles","difficulty_rule":"total >= difficulty","outcomes":["CRITICAL_SUCCESS","SUCCESS_WITH_HOPE","SUCCESS_WITH_FEAR","FAILURE"]}`,
 		"campaign://camp-1/interaction":                              `{"active_scene":{"scene_id":"scene-1"}}`,
 		"campaign://camp-1/sessions/sess-1/scenes":                   `{"scenes":[{"scene_id":"scene-1","character_ids":["char-1"]}]}`,
-		"campaign://camp-1/characters/char-1/sheet":                  `{"character":{"id":"char-1","name":"Aria"},"daggerheart":{"level":1,"class":{"name":"Guardian"},"subclass":{"name":"Stalwart"},"heritage":{"ancestry":"Human","community":"Highborne"},"traits":{"agility":2,"strength":1},"resources":{"hp":10,"hp_max":10,"hope":3,"hope_max":6,"stress":2,"armor":1,"life_state":"ALIVE"},"equipment":{"primary_weapon":{"name":"Longsword","trait":"Strength","damage_dice":"1d10"},"active_armor":{"name":"Gambeson Armor"}},"domain_cards":[{"name":"Shield Wall","domain":"Valor"}],"active_class_features":[{"name":"Hold the Line"}],"active_subclass_features":[{"name":"Bulwark"}],"conditions":[{"label":"Vulnerable"}]}}`,
+		"campaign://camp-1/characters/char-1/sheet":                  `{"character":{"id":"char-1","name":"Aria"},"daggerheart":{"level":1,"class":{"name":"Guardian"},"subclass":{"name":"Stalwart"},"heritage":{"ancestry":"Human","community":"Highborne"},"traits":{"agility":2,"strength":1},"resources":{"hp":10,"hp_max":10,"hope":3,"hope_max":6,"stress":2,"armor":1,"life_state":"ALIVE"},"experiences":[{"name":"Tracking Smugglers","modifier":2}],"equipment":{"primary_weapon":{"name":"Longsword","trait":"Strength","damage_dice":"1d10"},"active_armor":{"name":"Gambeson Armor"}},"domain_cards":[{"name":"Shield Wall","domain":"Valor"}],"active_class_features":[{"name":"Hold the Line"}],"active_subclass_features":[{"name":"Bulwark"}],"conditions":[{"label":"Vulnerable"}]}}`,
 		"daggerheart://campaign/camp-1/sessions/sess-1/combat_board": `{"gm_fear":3,"session_id":"sess-1","scene_id":"scene-1","spotlight":{"type":"CHARACTER","character_id":"char-1"},"countdowns":[{"id":"cd-1","name":"Breach","kind":"CONSEQUENCE","current":2,"max":4,"direction":"INCREASE"}],"adversaries":[{"id":"adv-1","name":"Bandit","scene_id":"scene-1","hp":5,"spotlight_count":1}]}`,
 		"daggerheart://campaign/camp-1/snapshot":                     `{"gm_fear":3,"consecutive_short_rests":0,"characters":[{"character_id":"char-1","hp":10,"hope":3,"hope_max":6,"stress":2,"armor":1,"life_state":"ALIVE"}]}`,
 	}}
@@ -81,6 +81,9 @@ func TestContextSourcesProduceExpectedSections(t *testing.T) {
 	}
 	if !strings.Contains(capabilities.Content, "Longsword") {
 		t.Fatalf("capabilities content missing weapon: %q", capabilities.Content)
+	}
+	if !strings.Contains(capabilities.Content, "Tracking Smugglers") {
+		t.Fatalf("capabilities content missing experience: %q", capabilities.Content)
 	}
 
 	board, ok := ids["daggerheart_combat_board"]

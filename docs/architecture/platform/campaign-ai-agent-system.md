@@ -144,7 +144,7 @@ take effect on the next turn without recompilation when using
 `FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT`, or on next deploy when using the
 embedded default instruction set.
 ## Relationship to Other Docs
-- [Campaign AI Orchestration](campaign-ai-orchestration.md) — grant, tool policy, turn-loop mechanics
-- [Campaign AI Mechanics Quality](campaign-ai-mechanics-quality.md) — follow-on design guidance for mechanics-heavy AI GM turns
-- [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md) — session start readiness and bootstrap behavior
-- [AI service contributor map](../../reference/ai-service-contributor-map.md) — package routing for contributors
+- [Campaign AI Orchestration](campaign-ai-orchestration.md) — turn-loop mechanics
+- [Campaign AI GM Guardrails](campaign-ai-gm-guardrails.md) — behavioral guardrails
+- [Campaign AI Evaluation Strategy](campaign-ai-evaluation-strategy.md) — eval framework
+- [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md) — session readiness

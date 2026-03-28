@@ -21,6 +21,11 @@ type Scenario struct {
 
 var pilotScenarios = []Scenario{
 	{
+		ID:           "ai_gm_campaign_context_bootstrap",
+		Label:        "Bootstrap",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureBootstrap",
+	},
+	{
 		ID:           "ai_gm_campaign_context_hope_experience",
 		Label:        "HopeExperience",
 		LiveTestName: "TestAIGMCampaignContextLiveCaptureHopeExperience",
@@ -50,6 +55,67 @@ var pilotScenarios = []Scenario{
 		Label:        "SpotlightBoardReview",
 		LiveTestName: "TestAIGMCampaignContextLiveCaptureSpotlightBoardReview",
 	},
+	{
+		ID:           "ai_gm_campaign_context_ooc_replace",
+		Label:        "OOCReplace",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureOOCReplace",
+	},
+	{
+		ID:           "ai_gm_campaign_context_scene_switch",
+		Label:        "SceneSwitch",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureSceneSwitch",
+	},
+	{
+		ID:           "ai_gm_campaign_context_group_action_review_live",
+		Label:        "GroupActionReview",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureGroupActionReview",
+	},
+	{
+		ID:           "ai_gm_campaign_context_tag_team_review_live",
+		Label:        "TagTeamReview",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureTagTeamReview",
+	},
+	{
+		ID:           "ai_gm_campaign_context_capability_lookup_live",
+		Label:        "CapabilityLookup",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureCapabilityLookup",
+	},
+	{
+		ID:           "ai_gm_intent_hope_spend",
+		Label:        "IntentHopeSpend",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureIntentHopeSpend",
+	},
+	{
+		ID:           "ai_gm_intent_equipment_action",
+		Label:        "IntentEquipmentAction",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureIntentEquipmentAction",
+	},
+	{
+		ID:           "ai_gm_intent_impossible_action",
+		Label:        "IntentImpossibleAction",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureIntentImpossibleAction",
+	},
+	{
+		ID:           "ai_gm_intent_ambiguous_action",
+		Label:        "IntentAmbiguousAction",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureIntentAmbiguousAction",
+	},
+	{
+		ID:           "ai_gm_intent_domain_card",
+		Label:        "IntentDomainCard",
+		LiveTestName: "TestAIGMCampaignContextLiveCaptureIntentDomainCard",
+	},
+	{ID: "ai_gm_redteam_prompt_injection", Label: "RedTeamPromptInjection", LiveTestName: "TestAIGMCampaignContextLiveCaptureRedTeamPromptInjection"},
+	{ID: "ai_gm_redteam_jailbreak", Label: "RedTeamJailbreak", LiveTestName: "TestAIGMCampaignContextLiveCaptureRedTeamJailbreak"},
+	{ID: "ai_gm_redteam_hallucination", Label: "RedTeamHallucination", LiveTestName: "TestAIGMCampaignContextLiveCaptureRedTeamHallucination"},
+	{ID: "ai_gm_redteam_hijacking", Label: "RedTeamHijacking", LiveTestName: "TestAIGMCampaignContextLiveCaptureRedTeamHijacking"},
+	{ID: "ai_gm_redteam_overreliance", Label: "RedTeamOverreliance", LiveTestName: "TestAIGMCampaignContextLiveCaptureRedTeamOverreliance"},
+	{ID: "ai_gm_redteam_excessive_agency", Label: "RedTeamExcessiveAgency", LiveTestName: "TestAIGMCampaignContextLiveCaptureRedTeamExcessiveAgency"},
+	{ID: "ai_gm_multiturn_narrative_continuity", Label: "MultiTurnNarrativeContinuity", LiveTestName: "TestAIGMCampaignContextLiveCaptureMultiTurnNarrativeContinuity"},
+	{ID: "ai_gm_multiturn_memory_recall", Label: "MultiTurnMemoryRecall", LiveTestName: "TestAIGMCampaignContextLiveCaptureMultiTurnMemoryRecall"},
+	{ID: "ai_gm_multiturn_session_pacing", Label: "MultiTurnSessionPacing", LiveTestName: "TestAIGMCampaignContextLiveCaptureMultiTurnSessionPacing"},
+	{ID: "ai_gm_starter_act_progression", Label: "StarterActProgression", LiveTestName: "TestAIGMCampaignContextLiveCaptureStarterActProgression"},
+	{ID: "ai_gm_starter_conclusion", Label: "StarterConclusion", LiveTestName: "TestAIGMCampaignContextLiveCaptureStarterConclusion"},
 }
 
 // PilotScenarios returns the current Promptfoo pilot lane registry in a stable order.

@@ -15,6 +15,7 @@ type scenarioEnv struct {
 	characterClient                    gamev1.CharacterServiceClient
 	participantClient                  gamev1.ParticipantServiceClient
 	interactionClient                  gamev1.InteractionServiceClient
+	aiOrchestrationClient              gamev1.CampaignAIOrchestrationServiceClient
 	snapshotClient                     gamev1.SnapshotServiceClient
 	eventClient                        gamev1.EventServiceClient
 	daggerheartClient                  daggerheartv1.DaggerheartServiceClient

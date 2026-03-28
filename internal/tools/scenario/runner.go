@@ -12,6 +12,8 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -64,6 +66,19 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 		return nil, fmt.Errorf("dial gRPC: %w", err)
 	}
 
+	// Service-identity connection for AI orchestration RPCs that require
+	// internal service auth (x-fracturing-space-service-id: ai).
+	internalConn, err := grpc.NewClient(
+		cfg.GRPCAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+		grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
+	)
+	if err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("dial gRPC (internal): %w", err)
+	}
+
 	auth := newRunnerAuthProvider()
 	contentClient := daggerheartv1.NewDaggerheartContentServiceClient(conn)
 	env := scenarioEnv{
@@ -73,6 +88,7 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 		sceneClient:                        gamev1.NewSceneServiceClient(conn),
 		characterClient:                    gamev1.NewCharacterServiceClient(conn),
 		interactionClient:                  gamev1.NewInteractionServiceClient(conn),
+		aiOrchestrationClient:              gamev1.NewCampaignAIOrchestrationServiceClient(internalConn),
 		snapshotClient:                     gamev1.NewSnapshotServiceClient(conn),
 		eventClient:                        gamev1.NewEventServiceClient(conn),
 		daggerheartClient:                  daggerheartv1.NewDaggerheartServiceClient(conn),

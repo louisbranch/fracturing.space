@@ -286,6 +286,25 @@ func replayFixtureToolCalls(fixture openAIReplayFixture) []openAIReplayToolCall 
 	return calls
 }
 
+// lastReplayFixtureToolCall returns the last call to the named tool. The model
+// may retry a tool call with corrected arguments after an initial error, so the
+// last call typically carries the most accurate arguments.
+func lastReplayFixtureToolCall(t *testing.T, fixture openAIReplayFixture, name string) openAIReplayToolCall {
+	t.Helper()
+	var last *openAIReplayToolCall
+	for _, call := range replayFixtureToolCalls(fixture) {
+		if strings.TrimSpace(call.Name) != strings.TrimSpace(name) {
+			continue
+		}
+		c := call
+		last = &c
+	}
+	if last == nil {
+		t.Fatalf("no tool call %q found in replay fixture", name)
+	}
+	return *last
+}
+
 func mustReplayFixtureToolCall(t *testing.T, fixture openAIReplayFixture, name string, ordinal int) openAIReplayToolCall {
 	t.Helper()
 	if ordinal < 1 {

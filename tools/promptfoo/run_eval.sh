@@ -73,6 +73,15 @@ if [[ -f "${results_path}" ]]; then
     --output "${scorecard_path}"
 fi
 
+baseline_path="tools/promptfoo/baseline.json"
+regression_path="${out_dir}/regression.md"
+if [[ -f "${results_path}" && -f "${baseline_path}" ]]; then
+  node tools/promptfoo/scripts/compare_baseline.js \
+    --results "${results_path}" \
+    --baseline "${baseline_path}" \
+    --output "${regression_path}"
+fi
+
 echo "Promptfoo artifacts: ${out_dir}"
 
 exit "${status}"

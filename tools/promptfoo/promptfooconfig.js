@@ -37,6 +37,10 @@ function buildPromptProfilePrompt(profile) {
   };
 }
 
+function narrativeRubricEnabled() {
+  return String(process.env.PROMPTFOO_NARRATIVE_RUBRIC || '').trim().toLowerCase() !== 'false';
+}
+
 function selectedScenarioSet() {
   const requested = String(process.env.PROMPTFOO_SCENARIO_SET || 'core').trim().toLowerCase();
   if (requested === 'extended') {
@@ -67,6 +71,20 @@ function buildTests(scenarios, count) {
   for (const scenario of scenarios) {
     for (let i = 0; i < count; i += 1) {
       const suffix = count > 1 ? ` [run ${i + 1}]` : '';
+      const assertions = [
+        {
+          type: 'javascript',
+          value: 'file://assertions/gm_contract.js',
+          metric: 'gm_contract',
+        },
+      ];
+      if (narrativeRubricEnabled()) {
+        assertions.push({
+          type: 'javascript',
+          value: 'file://assertions/narrative_rubric.js',
+          metric: 'narrative_quality',
+        });
+      }
       tests.push({
         description: `${scenario.label}${suffix}`,
         vars: encodeScenarioVars({
@@ -75,12 +93,7 @@ function buildTests(scenarios, count) {
           repeat_count: count,
           scenario_set: selectedScenarioSet(),
         }),
-        assert: [
-          {
-            type: 'javascript',
-            value: 'file://assertions/gm_contract.js',
-          },
-        ],
+        assert: assertions,
       });
     }
   }
