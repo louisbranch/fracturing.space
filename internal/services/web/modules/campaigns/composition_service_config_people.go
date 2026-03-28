@@ -2,13 +2,16 @@ package campaigns
 
 import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigncharacters "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/characters"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
+	campaignoverview "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/overview"
+	campaignparticipants "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/participants"
 )
 
 // newOverviewSurfaceConfig keeps overview/configuration/automation composition
 // local to the overview route surface.
-func newOverviewSurfaceConfig(config CompositionConfig) overviewServiceConfig {
-	return overviewServiceConfig{
+func newOverviewSurfaceConfig(config CompositionConfig) campaignoverview.ServiceConfig {
+	return campaignoverview.ServiceConfig{
 		AutomationRead:     newAutomationReadServiceConfig(config),
 		AutomationMutation: newAutomationMutationServiceConfig(config),
 		Configuration:      newConfigurationServiceConfig(config),
@@ -18,8 +21,8 @@ func newOverviewSurfaceConfig(config CompositionConfig) overviewServiceConfig {
 
 // newParticipantSurfaceConfig keeps participant composition local to the
 // participant route surface.
-func newParticipantSurfaceConfig(config CompositionConfig) participantServiceConfig {
-	return participantServiceConfig{
+func newParticipantSurfaceConfig(config CompositionConfig) campaignparticipants.ServiceConfig {
+	return campaignparticipants.ServiceConfig{
 		Read:          newParticipantReadServiceConfig(config),
 		Mutation:      newParticipantMutationServiceConfig(config),
 		Authorization: campaigngateway.NewAuthorizationGateway(config.Gateway.Participants.Authorization),
@@ -28,8 +31,8 @@ func newParticipantSurfaceConfig(config CompositionConfig) participantServiceCon
 
 // newCharacterSurfaceConfig keeps character/ownership/creation composition local
 // to the character route surface.
-func newCharacterSurfaceConfig(config CompositionConfig) characterServiceConfig {
-	return characterServiceConfig{
+func newCharacterSurfaceConfig(config CompositionConfig) campaigncharacters.ServiceConfig {
+	return campaigncharacters.ServiceConfig{
 		Read:          newCharacterReadServiceConfig(config),
 		Ownership:     newCharacterOwnershipServiceConfig(config),
 		Mutation:      newCharacterMutationServiceConfig(config),

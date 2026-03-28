@@ -6,7 +6,7 @@
 //     authenticated app shell. Requires a principal.PageResolver for viewer
 //     and locale resolution. Use this from module handlers.
 //
-//   - WriteAppError: protected routes where only the HTTP status code is
+//   - WriteAppStatusError: protected routes where only the HTTP status code is
 //     known and no domain error is available. Same app-shell chrome as
 //     WriteModuleError but without a rich user-safe message.
 //
@@ -14,7 +14,7 @@
 //     (e.g. login, invite accept, profile). Renders with public page chrome
 //     and does not require a PageResolver.
 //
-//   - WritePublicAppError: public routes where only the HTTP status code is
+//   - WritePublicStatusError: public routes where only the HTTP status code is
 //     known (no domain error). Same public chrome as WritePublicError.
 //
 // All writers resolve locale state via principal.ResolveLocalizedPage and
@@ -65,8 +65,8 @@ func PublicMessage(loc webi18n.Localizer, err error, locale ...string) string {
 	return http.StatusText(http.StatusInternalServerError)
 }
 
-// WriteAppError writes a localized app-shell error response for full-page and HTMX requests.
-func WriteAppError(w http.ResponseWriter, r *http.Request, statusCode int, resolver principal.PageResolver) {
+// WriteAppStatusError writes a localized app-shell error response for full-page and HTMX requests.
+func WriteAppStatusError(w http.ResponseWriter, r *http.Request, statusCode int, resolver principal.PageResolver) {
 	writeAppError(w, r, statusCode, resolver, "")
 }
 
@@ -106,9 +106,9 @@ func writeAppError(w http.ResponseWriter, r *http.Request, statusCode int, resol
 	}
 }
 
-// WritePublicAppError writes a localized public-shell error page for routes
+// WritePublicStatusError writes a localized public-shell error page for routes
 // outside the authenticated app chrome.
-func WritePublicAppError(w http.ResponseWriter, r *http.Request, statusCode int) {
+func WritePublicStatusError(w http.ResponseWriter, r *http.Request, statusCode int) {
 	writePublicAppError(w, r, statusCode, "")
 }
 
@@ -119,15 +119,13 @@ func writePublicAppError(w http.ResponseWriter, r *http.Request, statusCode int,
 		return
 	}
 	pageState := principal.ResolveLocalizedPage(w, r, nil)
-	pagerender.WritePublicPage(
-		w,
-		r,
-		webtemplates.AppErrorPageTitle(statusCode, pageState.Localizer),
-		webtemplates.T(pageState.Localizer, "layout.meta_description"),
-		pageState.Language,
-		statusCode,
-		webtemplates.AppErrorState(statusCode, publicMessage, pageState.Localizer),
-	)
+	pagerender.WritePublicPage(w, r, pagerender.PublicPage{
+		Title:      webtemplates.AppErrorPageTitle(statusCode, pageState.Localizer),
+		MetaDesc:   webtemplates.T(pageState.Localizer, "layout.meta_description"),
+		Language:   pageState.Language,
+		StatusCode: statusCode,
+		Body:       webtemplates.AppErrorState(statusCode, publicMessage, pageState.Localizer),
+	})
 }
 
 // WritePublicError writes a public-route-safe localized error response.

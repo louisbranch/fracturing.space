@@ -6,6 +6,9 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
@@ -57,7 +60,7 @@ func (b Base) WriteError(w http.ResponseWriter, r *http.Request, err error) {
 
 // WriteNotFound renders a 404 error page within the app shell.
 func (b Base) WriteNotFound(w http.ResponseWriter, r *http.Request) {
-	weberror.WriteAppError(w, r, http.StatusNotFound, &b)
+	weberror.WriteAppStatusError(w, r, http.StatusNotFound, &b)
 }
 
 // RequestUserID extracts the authenticated user ID from the request.
@@ -101,5 +104,50 @@ func (b Base) WritePage(
 		Fragment:   fragment,
 	}); err != nil {
 		b.WriteError(w, r, err)
+	}
+}
+
+// WriteMutationError writes a flash error notice and redirects back to the
+// originating page so the user stays in context and can retry.
+func (b Base) WriteMutationError(w http.ResponseWriter, r *http.Request, err error, fallbackKey, redirectURL string) {
+	notice := flash.Notice{Kind: flash.KindError}
+	if key := apperrors.LocalizationKey(err); key != "" {
+		notice.Key = key
+	} else {
+		notice.Key = fallbackKey
+	}
+	flash.Write(w, r, notice)
+	httpx.WriteRedirect(w, r, redirectURL)
+}
+
+// WriteMutationSuccess writes a success flash notice and redirects to the
+// target page so the user sees confirmation feedback.
+func (b Base) WriteMutationSuccess(w http.ResponseWriter, r *http.Request, key, redirectURL string) {
+	flash.Write(w, r, flash.NoticeSuccess(key))
+	httpx.WriteRedirect(w, r, redirectURL)
+}
+
+// RouteParam extracts a named route parameter from a request.
+type RouteParam func(*http.Request) (string, bool)
+
+// WithParams extracts all required route params or returns 404, then passes
+// the extracted values positionally to the handler function. This replaces
+// per-combination wrapper functions like WithCampaignAndCharacterID.
+func WithParams(
+	notFound func(http.ResponseWriter, *http.Request),
+	fn func(http.ResponseWriter, *http.Request, ...string),
+	extractors ...RouteParam,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		values := make([]string, 0, len(extractors))
+		for _, extract := range extractors {
+			v, ok := extract(r)
+			if !ok {
+				notFound(w, r)
+				return
+			}
+			values = append(values, v)
+		}
+		fn(w, r, values...)
 	}
 }

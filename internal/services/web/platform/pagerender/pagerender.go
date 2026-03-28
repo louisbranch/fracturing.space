@@ -105,14 +105,25 @@ func resolveFlashToast(w http.ResponseWriter, r *http.Request, loc webi18n.Local
 	}
 }
 
+// PublicPage describes a public page response.
+type PublicPage struct {
+	Title      string
+	MetaDesc   string
+	Language   string
+	StatusCode int
+	Body       templ.Component
+}
+
 // WritePublicPage writes a public (unauthenticated) page using the auth layout.
-func WritePublicPage(w http.ResponseWriter, r *http.Request, title string, metaDesc string, lang string, statusCode int, body templ.Component) {
+func WritePublicPage(w http.ResponseWriter, r *http.Request, page PublicPage) {
 	if w == nil {
 		return
 	}
+	statusCode := page.StatusCode
 	if statusCode <= 0 {
 		statusCode = http.StatusOK
 	}
+	body := page.Body
 	if body == nil {
 		body = emptyComponent{}
 	}
@@ -128,6 +139,7 @@ func WritePublicPage(w http.ResponseWriter, r *http.Request, title string, metaD
 		})
 	}
 
+	lang := page.Language
 	ctx := templ.WithChildren(httpx.RequestContext(r), body)
 	path := ""
 	query := ""
@@ -136,7 +148,7 @@ func WritePublicPage(w http.ResponseWriter, r *http.Request, title string, metaD
 		query = r.URL.RawQuery
 	}
 	var rendered bytes.Buffer
-	if err := webtemplates.AuthLayout(title, metaDesc, lang, path, query).Render(ctx, &rendered); err != nil {
+	if err := webtemplates.AuthLayout(page.Title, page.MetaDesc, lang, path, query).Render(ctx, &rendered); err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

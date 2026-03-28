@@ -125,13 +125,13 @@ func TestPublicMessageUsesRichPlatformReasonWhenAvailable(t *testing.T) {
 	}
 }
 
-func TestWriteAppErrorHTMXRendersFragment(t *testing.T) {
+func TestWriteAppStatusErrorHTMXRendersFragment(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/missing", nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
-	WriteAppError(rr, req, http.StatusNotFound, nil)
+	WriteAppStatusError(rr, req, http.StatusNotFound, nil)
 
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
@@ -146,12 +146,12 @@ func TestWriteAppErrorHTMXRendersFragment(t *testing.T) {
 	}
 }
 
-func TestWriteAppErrorPreservesBadRequestStatus(t *testing.T) {
+func TestWriteAppStatusErrorPreservesBadRequestStatus(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 	rr := httptest.NewRecorder()
-	WriteAppError(rr, req, http.StatusBadRequest, nil)
+	WriteAppStatusError(rr, req, http.StatusBadRequest, nil)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
@@ -162,13 +162,13 @@ func TestWriteAppErrorPreservesBadRequestStatus(t *testing.T) {
 	}
 }
 
-func TestWriteAppErrorUsesResolverForViewerAndLanguage(t *testing.T) {
+func TestWriteAppStatusErrorUsesResolverForViewerAndLanguage(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 	rr := httptest.NewRecorder()
 	resolver := &stubResolver{}
-	WriteAppError(rr, req, http.StatusInternalServerError, resolver)
+	WriteAppStatusError(rr, req, http.StatusInternalServerError, resolver)
 
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
@@ -185,19 +185,19 @@ func TestWriteAppErrorUsesResolverForViewerAndLanguage(t *testing.T) {
 	}
 }
 
-func TestWriteAppErrorAllowsNilWriter(t *testing.T) {
+func TestWriteAppStatusErrorAllowsNilWriter(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
-	WriteAppError(nil, req, http.StatusInternalServerError, nil)
+	WriteAppStatusError(nil, req, http.StatusInternalServerError, nil)
 }
 
-func TestWritePublicAppErrorRendersPublicShell(t *testing.T) {
+func TestWritePublicStatusErrorRendersPublicShell(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
 	rr := httptest.NewRecorder()
-	WritePublicAppError(rr, req, http.StatusNotFound)
+	WritePublicStatusError(rr, req, http.StatusNotFound)
 
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
@@ -211,12 +211,12 @@ func TestWritePublicAppErrorRendersPublicShell(t *testing.T) {
 	}
 }
 
-func TestWritePublicAppErrorPreservesBadRequestStatus(t *testing.T) {
+func TestWritePublicStatusErrorPreservesBadRequestStatus(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
 	rr := httptest.NewRecorder()
-	WritePublicAppError(rr, req, http.StatusBadRequest)
+	WritePublicStatusError(rr, req, http.StatusBadRequest)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
@@ -227,11 +227,11 @@ func TestWritePublicAppErrorPreservesBadRequestStatus(t *testing.T) {
 	}
 }
 
-func TestWritePublicAppErrorAllowsNilWriter(t *testing.T) {
+func TestWritePublicStatusErrorAllowsNilWriter(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
-	WritePublicAppError(nil, req, http.StatusNotFound)
+	WritePublicStatusError(nil, req, http.StatusNotFound)
 }
 
 func TestWritePublicErrorRendersAppErrorForNotFound(t *testing.T) {

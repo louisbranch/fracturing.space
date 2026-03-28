@@ -27,7 +27,6 @@ Canonical implementation path: `internal/services/web/`.
 
 - `internal/services/web/principal`: request-scoped session validation, viewer chrome, locale resolution, grouped principal callbacks, and the middleware-owned principal snapshot. Start here when changing app-shell request resolution flow.
 - `internal/services/web/module`: canonical module contract types only. Shared request-state callback contracts belong in `principal`, not here.
-- `internal/services/web/composition`: turns resolved principal callbacks and module dependencies into the app handler.
 - `internal/services/web/app`: root mux composition, auth wrapping, and same-origin protections.
 - `internal/services/web/modules`: registry builder plus module dependency bundles. Registry files call area-owned `Compose(...)` entrypoints instead of constructing feature gateways inline, and shared runtime helpers such as dashboard sync are built here once and passed into owning areas.
 - `internal/services/web/modules/<area>`: route owner for one feature area.

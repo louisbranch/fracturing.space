@@ -315,6 +315,102 @@ func TestWritePageFallsBackToWriteErrorWhenRenderFails(t *testing.T) {
 	}
 }
 
+func TestWriteMutationErrorSetsFlashAndRedirects(t *testing.T) {
+	t.Parallel()
+
+	base := newTestBase()
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/c1/edit", nil)
+	rr := httptest.NewRecorder()
+
+	err := apperrors.EK(apperrors.KindInvalidInput, "error.web.message.invalid_name", "bad name")
+	base.WriteMutationError(rr, req, err, "error.web.message.fallback", "/app/campaigns/c1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != "/app/campaigns/c1" {
+		t.Fatalf("Location = %q, want %q", got, "/app/campaigns/c1")
+	}
+}
+
+func TestWriteMutationErrorUsesFallbackKeyWhenNoLocalizationKey(t *testing.T) {
+	t.Parallel()
+
+	base := newTestBase()
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/c1/edit", nil)
+	rr := httptest.NewRecorder()
+
+	err := apperrors.E(apperrors.KindInvalidInput, "bad name")
+	base.WriteMutationError(rr, req, err, "error.web.message.fallback", "/app/campaigns/c1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+}
+
+func TestWriteMutationSuccessSetsFlashAndRedirects(t *testing.T) {
+	t.Parallel()
+
+	base := newTestBase()
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/c1/edit", nil)
+	rr := httptest.NewRecorder()
+
+	base.WriteMutationSuccess(rr, req, "web.campaigns.notice_updated", "/app/campaigns/c1")
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != "/app/campaigns/c1" {
+		t.Fatalf("Location = %q, want %q", got, "/app/campaigns/c1")
+	}
+}
+
+func TestWithParamsExtractsAllParamsAndDelegates(t *testing.T) {
+	t.Parallel()
+
+	var gotValues []string
+	handler := WithParams(
+		func(http.ResponseWriter, *http.Request) { t.Fatal("unexpected not found") },
+		func(_ http.ResponseWriter, _ *http.Request, vals ...string) { gotValues = vals },
+		func(*http.Request) (string, bool) { return "campaign-1", true },
+		func(*http.Request) (string, bool) { return "char-2", true },
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if len(gotValues) != 2 || gotValues[0] != "campaign-1" || gotValues[1] != "char-2" {
+		t.Fatalf("WithParams values = %v, want [campaign-1 char-2]", gotValues)
+	}
+}
+
+func TestWithParamsCallsNotFoundOnMissingParam(t *testing.T) {
+	t.Parallel()
+
+	notFoundCalled := false
+	handler := WithParams(
+		func(w http.ResponseWriter, _ *http.Request) {
+			notFoundCalled = true
+			w.WriteHeader(http.StatusNotFound)
+		},
+		func(http.ResponseWriter, *http.Request, ...string) { t.Fatal("should not be called") },
+		func(*http.Request) (string, bool) { return "campaign-1", true },
+		func(*http.Request) (string, bool) { return "", false },
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if !notFoundCalled {
+		t.Fatal("expected notFound to be called")
+	}
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
 type staticComponent string
 
 func (c staticComponent) Render(_ context.Context, w io.Writer) error {

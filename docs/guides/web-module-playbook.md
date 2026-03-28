@@ -37,16 +37,18 @@ Supported module archetypes:
 
 Default composition guidance:
 
-- For one-surface modules with one app service, keep `composition.go` on one
-  direct `Compose(...) module.Module` entrypoint that accepts the exact
-  gateway clients and shared runtime helpers the area needs.
+- Every module defines a `CompositionConfig` struct and a
+  `Compose(config CompositionConfig) module.Module` entrypoint in
+  `composition.go`. Struct parameters make call sites self-documenting and
+  prevent positional-arg transposition.
+- Modules that may be unconfigured at startup use
+  `ComposeProtected(options, deps) (module.Module, bool)` so the registry
+  can skip them.
 - Keep optional mounting checks in the central registry. Small modules should
-  not wrap that direct constructor in area-local `*SurfaceOptions`,
-  `CompositionConfig`, or `configured()` boilerplate just to restate the same
-  nil checks.
-- Reserve heavier composition shapes for modules that genuinely need them:
-  multiple route surfaces, per-surface availability policy, or route-owned
-  service graphs that benefit from an area-local config struct.
+  not replicate `configured()` boilerplate just to restate the same nil checks.
+- Reserve heavier composition shapes (multiple surface configs, sub-surface
+  service builders) for modules that genuinely need them: multiple route
+  surfaces, per-surface availability policy, or route-owned service graphs.
 
 When a module needs explicit orchestration/adapter boundaries (campaigns/
 settings/notifications/dashboard/profile/publicauth are references), split

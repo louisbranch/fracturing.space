@@ -92,7 +92,12 @@ func TestStatusHealthProviderReturnsNilOnErrorOrEmptyResponse(t *testing.T) {
 func TestComposeBuildsDashboardModule(t *testing.T) {
 	t.Parallel()
 
-	module := Compose(fakeUserHubClient{}, &fakeStatusClient{}, modulehandler.NewBase(nil, nil, nil), slog.Default())
+	module := Compose(CompositionConfig{
+		UserHubClient: fakeUserHubClient{},
+		StatusClient:  &fakeStatusClient{},
+		Base:          modulehandler.NewBase(nil, nil, nil),
+		Logger:        slog.Default(),
+	})
 	mount, err := module.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

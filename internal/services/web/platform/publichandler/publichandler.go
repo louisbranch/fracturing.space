@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/a-h/templ"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
@@ -89,13 +88,13 @@ func (b Base) PageLocalizer(w http.ResponseWriter, r *http.Request) (webtemplate
 }
 
 // WritePublicPage renders a full public page using the auth layout.
-func (Base) WritePublicPage(w http.ResponseWriter, r *http.Request, title string, metaDesc string, lang string, statusCode int, body templ.Component) {
-	pagerender.WritePublicPage(w, r, title, metaDesc, lang, statusCode, body)
+func (Base) WritePublicPage(w http.ResponseWriter, r *http.Request, page pagerender.PublicPage) {
+	pagerender.WritePublicPage(w, r, page)
 }
 
 // WriteNotFound renders a localized 404 error page using the public layout.
 func (Base) WriteNotFound(w http.ResponseWriter, r *http.Request) {
-	weberror.WritePublicAppError(w, r, http.StatusNotFound)
+	weberror.WritePublicStatusError(w, r, http.StatusNotFound)
 }
 
 // WriteError renders a user-safe error response: app error pages for not-found

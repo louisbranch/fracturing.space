@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/redirectpath"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"golang.org/x/text/language"
 )
@@ -59,7 +60,13 @@ func (h handlers) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 // writeAuthPage centralizes this web behavior in one helper seam.
 func (h handlers) writeAuthPage(w http.ResponseWriter, r *http.Request, title string, metaDesc string, lang string, body templ.Component) {
-	h.WritePublicPage(w, r, title, metaDesc, lang, http.StatusOK, body)
+	h.WritePublicPage(w, r, pagerender.PublicPage{
+		Title:      title,
+		MetaDesc:   metaDesc,
+		Language:   lang,
+		StatusCode: http.StatusOK,
+		Body:       body,
+	})
 }
 
 // writeNotFoundPage centralizes this web behavior in one helper seam.

@@ -11,7 +11,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	sharedhttpx "github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
-	"github.com/louisbranch/fracturing.space/internal/services/web/composition"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
+	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/observability"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
@@ -34,6 +36,11 @@ type Config struct {
 	// Dependencies carries startup dependencies in one place for principal resolution
 	// and module registry construction.
 	Dependencies *DependencyBundle
+
+	// RegistryBuilder overrides the default module registry builder. Nil uses
+	// the production default. Tests inject custom builders to control module
+	// composition.
+	RegistryBuilder modules.RegistryBuilder
 }
 
 // Server hosts the web HTTP surface and lifecycle.
@@ -54,14 +61,7 @@ func composeHandler(cfg Config, deps DependencyBundle) (http.Handler, error) {
 	}
 
 	principalResolver := principal.New(deps.Principal)
-	h, err := composition.ComposeAppHandler(composition.ComposeInput{
-		Principal:           principalResolver,
-		Logger:              logger,
-		ModuleDependencies:  deps.Modules,
-		PlayHTTPAddr:        cfg.PlayHTTPAddr,
-		PlayLaunchGrant:     cfg.PlayLaunchGrant,
-		RequestSchemePolicy: cfg.RequestSchemePolicy,
-	})
+	h, err := composeAppHandler(principalResolver, logger, cfg, deps)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +74,47 @@ func composeHandler(cfg Config, deps DependencyBundle) (http.Handler, error) {
 		principalResolver.Middleware(),
 		observability.RequestLogger(logger),
 	), nil
+}
+
+// composeAppHandler builds the web app handler by assembling the module
+// registry and passing the resulting module sets to the root mux composer.
+// This replaces the former composition/ package indirection.
+func composeAppHandler(
+	resolver principal.PrincipalResolver,
+	logger *slog.Logger,
+	cfg Config,
+	deps DependencyBundle,
+) (http.Handler, error) {
+	registryBuilder := cfg.RegistryBuilder
+	if registryBuilder == nil {
+		registryBuilder = modules.NewRegistryBuilder()
+	}
+	var authRequired func(*http.Request) bool
+	if resolver != nil {
+		authRequired = resolver.AuthRequired
+	}
+
+	built := registryBuilder.Build(modules.RegistryInput{
+		Dependencies: deps.Modules,
+		Principal:    resolver,
+		PublicOptions: modules.PublicModuleOptions{
+			RequestSchemePolicy: cfg.RequestSchemePolicy,
+			Logger:              logger,
+		},
+		ProtectedOptions: modules.ProtectedModuleOptions{
+			PlayFallbackPort:    websupport.ResolveHTTPFallbackPort(cfg.PlayHTTPAddr),
+			PlayLaunchGrant:     cfg.PlayLaunchGrant,
+			RequestSchemePolicy: cfg.RequestSchemePolicy,
+			Logger:              logger,
+		},
+	})
+
+	return webapp.Compose(webapp.ComposeInput{
+		AuthRequired:        authRequired,
+		PublicModules:       built.Public,
+		ProtectedModules:    built.Protected,
+		RequestSchemePolicy: cfg.RequestSchemePolicy,
+	})
 }
 
 // newServer wraps an already-composed root handler in an HTTP server with

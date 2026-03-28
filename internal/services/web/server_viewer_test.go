@@ -15,6 +15,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"google.golang.org/grpc"
 )
@@ -291,7 +295,7 @@ func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 	h, err := newTestHandler(Config{
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{},
-			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
+			modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})
 	if err != nil {
@@ -324,7 +328,7 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	h, err := newTestHandler(Config{
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{},
-			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
+			modules.Dependencies{PublicAuth: publicauth.Dependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})
 	if err != nil {
@@ -526,15 +530,15 @@ func TestAppPageUserDropdownProfileUsesAuthUsernameWhenSocialProfileHasNoUsernam
 			},
 			modules.Dependencies{
 				AssetBaseURL: "https://cdn.example.com/avatars",
-				PublicAuth:   modules.PublicAuthDependencies{AuthClient: auth},
-				Profile:      modules.ProfileDependencies{SocialClient: social},
-				Settings: modules.SettingsDependencies{
+				PublicAuth:   publicauth.Dependencies{AuthClient: auth},
+				Profile:      profile.Dependencies{SocialClient: social},
+				Settings: settings.Dependencies{
 					SocialClient:     social,
 					AccountClient:    account,
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
+				Campaigns: campaigns.Dependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})
@@ -570,15 +574,15 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 			},
 			modules.Dependencies{
 				AssetBaseURL: assetBaseURL,
-				PublicAuth:   modules.PublicAuthDependencies{AuthClient: auth},
-				Profile:      modules.ProfileDependencies{SocialClient: social},
-				Settings: modules.SettingsDependencies{
+				PublicAuth:   publicauth.Dependencies{AuthClient: auth},
+				Profile:      profile.Dependencies{SocialClient: social},
+				Settings: settings.Dependencies{
 					SocialClient:     social,
 					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
+				Campaigns: campaigns.Dependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})

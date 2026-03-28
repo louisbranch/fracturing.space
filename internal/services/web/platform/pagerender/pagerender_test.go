@@ -208,7 +208,7 @@ func TestWritePublicPageHandlesNilRequest(t *testing.T) {
 	t.Parallel()
 
 	rr := httptest.NewRecorder()
-	WritePublicPage(rr, nil, "Sign In", "desc", "en", 0, textComponent(`<section id="public-fragment">ok</section>`))
+	WritePublicPage(rr, nil, PublicPage{Title: "Sign In", MetaDesc: "desc", Language: "en", StatusCode: 0, Body: textComponent(`<section id="public-fragment">ok</section>`)})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -223,7 +223,7 @@ func TestWritePublicPageDefaultsStatusAndNilBody(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
 	rr := httptest.NewRecorder()
-	WritePublicPage(rr, req, "Discover", "desc", "en", 0, nil)
+	WritePublicPage(rr, req, PublicPage{Title: "Discover", MetaDesc: "desc", Language: "en", StatusCode: 0, Body: nil})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -239,7 +239,7 @@ func TestWritePublicPageRendersToastFromFlashNotice(t *testing.T) {
 	setFlashCookie(t, req, flashnotice.Notice{Kind: flashnotice.KindError, Key: "recovery_code.signup_expired"})
 	rr := httptest.NewRecorder()
 
-	WritePublicPage(rr, req, "Sign In", "desc", "en", http.StatusAccepted, textComponent(`<section id="public-fragment">ok</section>`))
+	WritePublicPage(rr, req, PublicPage{Title: "Sign In", MetaDesc: "desc", Language: "en", StatusCode: http.StatusAccepted, Body: textComponent(`<section id="public-fragment">ok</section>`)})
 
 	if rr.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusAccepted)
@@ -260,7 +260,7 @@ func TestWritePublicPageFallsBackToInternalServerErrorOnRenderFailure(t *testing
 
 	req := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
 	rr := httptest.NewRecorder()
-	WritePublicPage(rr, req, "Discover", "desc", "en", http.StatusCreated, brokenComponent{})
+	WritePublicPage(rr, req, PublicPage{Title: "Discover", MetaDesc: "desc", Language: "en", StatusCode: http.StatusCreated, Body: brokenComponent{}})
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
 	}
@@ -273,7 +273,7 @@ func TestWritePublicPageAllowsNilWriter(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
-	WritePublicPage(nil, req, "Discover", "desc", "en", http.StatusCreated, textComponent(`<section>ok</section>`))
+	WritePublicPage(nil, req, PublicPage{Title: "Discover", MetaDesc: "desc", Language: "en", StatusCode: http.StatusCreated, Body: textComponent(`<section>ok</section>`)})
 }
 
 func TestResolveFlashToastReturnsNilWhenNoNoticeExists(t *testing.T) {

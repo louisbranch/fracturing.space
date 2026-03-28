@@ -29,7 +29,7 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update status reporting and overrides | `internal/services/status/api/grpc/status/`, `internal/services/status/domain/`, `internal/services/status/storage/sqlite/` |
 | Add/update shared service infrastructure | `internal/services/shared/` |
 | Add/update web module routes/handlers | `internal/services/web/modules/<area>/` |
-| Add/update web module composition | `internal/services/web/modules/registry_*.go`, `internal/services/web/composition/compose.go` |
+| Add/update web module composition | `internal/services/web/modules/registry_*.go`, `internal/services/web/server.go` |
 | Add/update game transport handlers or game-domain workflows | [Game service contributor map](game-service-contributor-map.md) |
 | Add/update campaign reads, campaign list behavior, or campaign protobuf mapping | `internal/services/game/api/grpc/game/campaigntransport/` |
 | Add/update participant reads, roster listing/get flows, or participant protobuf mapping | `internal/services/game/api/grpc/game/participanttransport/` |

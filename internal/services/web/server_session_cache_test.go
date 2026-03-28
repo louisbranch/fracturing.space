@@ -9,6 +9,9 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
@@ -21,9 +24,9 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{SessionClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}},
 			modules.Dependencies{
-				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
-				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
-				Settings: modules.SettingsDependencies{
+				PublicAuth: publicauth.Dependencies{AuthClient: auth},
+				Profile:    profile.Dependencies{SocialClient: defaultSocialClient()},
+				Settings: settings.Dependencies{
 					SocialClient:     defaultSocialClient(),
 					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 					CredentialClient: fakeCredentialClient{},

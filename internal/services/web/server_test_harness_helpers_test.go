@@ -1,3 +1,22 @@
+// Test harness helpers for the web service root package.
+//
+// # When to use this harness vs webtest.Runtime
+//
+// Use the server_test_harness_* files (this harness) when you need:
+//   - Fast unit-level tests that run in-process with fake gRPC clients
+//   - Fine-grained control over which dependencies are present/absent
+//   - Testing specific handler behavior, routing, or error paths
+//
+// Use webtest.Runtime (webtest/runtime.go) when you need:
+//   - Integration tests against real downstream gRPC services
+//   - Full HTTP server lifecycle with actual network connections
+//   - Cross-service workflow validation
+//
+// # Harness file layout
+//
+//   - server_test_harness_helpers_test.go: shared test utilities (this file)
+//   - server_test_harness_defaults_test.go: default config builders with realistic fakes
+//   - server_test_harness_fakes_*_test.go: fake gRPC client implementations per service
 package web
 
 import (

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -44,13 +45,11 @@ func (h handlers) writeDiscoveryPage(
 	lang string,
 	view DiscoveryPageView,
 ) {
-	h.WritePublicPage(
-		w,
-		r,
-		webtemplates.T(loc, "web.discovery.title"),
-		webtemplates.T(loc, "layout.meta_description"),
-		lang,
-		http.StatusOK,
-		DiscoveryFragment(view, loc),
-	)
+	h.WritePublicPage(w, r, pagerender.PublicPage{
+		Title:      webtemplates.T(loc, "web.discovery.title"),
+		MetaDesc:   webtemplates.T(loc, "layout.meta_description"),
+		Language:   lang,
+		StatusCode: http.StatusOK,
+		Body:       DiscoveryFragment(view, loc),
+	})
 }

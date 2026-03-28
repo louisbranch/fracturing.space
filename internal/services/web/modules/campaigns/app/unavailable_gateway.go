@@ -7,7 +7,14 @@ import (
 	"golang.org/x/text/language"
 )
 
-// unavailableGateway defines an internal contract used at this web package boundary.
+// unavailableGateway is the fail-closed stub for all campaign gateway interfaces.
+// It satisfies every gateway contract with an "unavailable" error so that the
+// app layer degrades safely when a required backend is not configured.
+//
+// This struct intentionally implements all gateway interfaces in one place.
+// When a gateway interface changes, update the matching method here. Tests use
+// NewUnavailableGateway() as a default testGatewayBundle to avoid constructing
+// per-surface stubs.
 type unavailableGateway struct{}
 
 // NewUnavailableGateway returns a gateway implementation that fails closed with
