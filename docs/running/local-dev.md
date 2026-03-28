@@ -50,6 +50,12 @@ make up    # start devcontainer + watchers (or re-start watchers if already insi
 make down  # stop watchers + stop devcontainer (or just stop watchers if run inside container)
 ```
 
+When removing a worktree with `ofsht rm`, the repo-local delete hook now runs
+`scripts/worktree-pre-delete.sh` first. That hook best-effort stops the
+watcher/devcontainer stack for the target worktree and removes disposable local
+state such as `data/` and `.tmp/` before the worktree is deleted. Use
+`make down` when you want to stop the runtime without deleting the worktree.
+
 Ownership note:
 
 - `make up` forwards your host UID/GID to compose (`DEVCONTAINER_UID`/`DEVCONTAINER_GID`) so files created under `.tmp/` and `data/` stay removable without `sudo`.
