@@ -36,7 +36,7 @@ func Decide(current campaign.State, cmd command.Command, now func() time.Time) c
 		})
 	}
 
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 	decisionTime := now().UTC()
 	fixedNow := func() time.Time { return decisionTime }
 
@@ -84,8 +84,8 @@ func bootstrapCampaignCreateCommand(cmd command.Command, payload campaign.Create
 	}
 }
 
-func participantBootstrapDecision(cmd command.Command, joinPayload participant.JoinPayload, now func() time.Time, seenParticipantIDs map[string]struct{}) command.Decision {
-	participantID := strings.TrimSpace(joinPayload.ParticipantID.String())
+func participantBootstrapDecision(cmd command.Command, bp campaign.BootstrapParticipant, now func() time.Time, seenParticipantIDs map[string]struct{}) command.Decision {
+	participantID := strings.TrimSpace(bp.ParticipantID.String())
 	if _, exists := seenParticipantIDs[participantID]; exists {
 		return command.Reject(command.Rejection{
 			Code:    "CAMPAIGN_PARTICIPANT_DUPLICATE",
@@ -94,6 +94,17 @@ func participantBootstrapDecision(cmd command.Command, joinPayload participant.J
 	}
 	seenParticipantIDs[participantID] = struct{}{}
 
+	joinPayload := participant.JoinPayload{
+		ParticipantID:  bp.ParticipantID,
+		UserID:         bp.UserID,
+		Name:           bp.Name,
+		Role:           bp.Role,
+		Controller:     bp.Controller,
+		CampaignAccess: bp.CampaignAccess,
+		AvatarSetID:    bp.AvatarSetID,
+		AvatarAssetID:  bp.AvatarAssetID,
+		Pronouns:       bp.Pronouns,
+	}
 	joinPayloadJSON, _ := json.Marshal(joinPayload)
 	joinDecision := participant.Decide(
 		participant.State{},

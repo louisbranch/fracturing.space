@@ -77,7 +77,7 @@ func TestListActiveSessionsForUser_ReturnsSortedPage(t *testing.T) {
 		Session:     sessionStore,
 	})
 
-	resp, err := svc.ListActiveSessionsForUser(requestctx.WithUserID("user-1"), &statev1.ListActiveSessionsForUserRequest{PageSize: 2})
+	resp, err := svc.ListActiveSessionsForUser(requestctx.WithUserID(context.Background(), "user-1"), &statev1.ListActiveSessionsForUserRequest{PageSize: 2})
 	if err != nil {
 		t.Fatalf("ListActiveSessionsForUser() error = %v", err)
 	}
@@ -114,6 +114,6 @@ func TestListActiveSessionsForUser_PropagatesParticipantLookupFailure(t *testing
 		Session:     gametest.NewFakeSessionStore(),
 	})
 
-	_, err := svc.ListActiveSessionsForUser(requestctx.WithUserID("user-1"), &statev1.ListActiveSessionsForUserRequest{})
+	_, err := svc.ListActiveSessionsForUser(requestctx.WithUserID(context.Background(), "user-1"), &statev1.ListActiveSessionsForUserRequest{})
 	assertStatusCode(t, err, codes.Internal)
 }

@@ -7,19 +7,33 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+type fakeHandlerExecutor struct {
+	execute  func(context.Context, command.Command) (engine.Result, error)
+	commands []command.Command
+}
+
+func (f *fakeHandlerExecutor) Execute(ctx context.Context, cmd command.Command) (engine.Result, error) {
+	f.commands = append(f.commands, cmd)
+	if f.execute != nil {
+		return f.execute(ctx, cmd)
+	}
+	return engine.Result{}, nil
+}
+
 func TestExecuteAndApplyDomainCommand(t *testing.T) {
 	t.Parallel()
 
 	executor := &fakeHandlerExecutor{
 		execute: func(_ context.Context, cmd command.Command) (engine.Result, error) {
-			if cmd.Type != CommandTypeCampaignUpdate {
-				t.Fatalf("command type = %q, want %q", cmd.Type, CommandTypeCampaignUpdate)
+			if cmd.Type != commandids.CampaignUpdate {
+				t.Fatalf("command type = %q, want %q", cmd.Type, commandids.CampaignUpdate)
 			}
 			return engine.Result{Decision: command.Decision{}}, nil
 		},
@@ -29,7 +43,7 @@ func TestExecuteAndApplyDomainCommand(t *testing.T) {
 		context.Background(),
 		domainwrite.WritePath{Executor: executor, Runtime: domainwrite.NewRuntime()},
 		projection.Applier{},
-		command.Command{CampaignID: "camp-1", Type: CommandTypeCampaignUpdate},
+		command.Command{CampaignID: "camp-1", Type: commandids.CampaignUpdate},
 		domainwrite.Options{},
 	)
 	if err != nil {
@@ -59,7 +73,7 @@ func TestExecuteWithoutInlineApplyMapsErrorsToStatus(t *testing.T) {
 				},
 				Runtime: domainwrite.NewRuntime(),
 			},
-			command.Command{CampaignID: "camp-1", Type: CommandTypeCampaignUpdate},
+			command.Command{CampaignID: "camp-1", Type: commandids.CampaignUpdate},
 			domainwrite.Options{},
 		)
 		if status.Code(err) != codes.Internal {
@@ -80,7 +94,7 @@ func TestExecuteWithoutInlineApplyMapsErrorsToStatus(t *testing.T) {
 				},
 				Runtime: domainwrite.NewRuntime(),
 			},
-			command.Command{CampaignID: "camp-1", Type: CommandTypeCampaignUpdate},
+			command.Command{CampaignID: "camp-1", Type: commandids.CampaignUpdate},
 			domainwrite.Options{
 				ExecuteErr: func(err error) error { return err },
 			},

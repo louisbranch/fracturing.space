@@ -131,7 +131,7 @@ func RejectionCodes() []string {
 // events, and leaves status checks to replayable state transitions rather than
 // imperative side effects.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 
 	switch cmd.Type {
 	case CommandTypeStart:

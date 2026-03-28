@@ -60,7 +60,7 @@ func TestListTimelineEntries_MissingParticipantStoreFailsFast(t *testing.T) {
 
 	service := NewService(Deps{Event: eventStore})
 
-	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride(context.Background(), "timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -80,7 +80,7 @@ func TestListTimelineEntries_MissingCampaignStoreFailsFast(t *testing.T) {
 
 	service := NewService(Deps{Event: eventStore})
 
-	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride(context.Background(), "timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -100,7 +100,7 @@ func TestListTimelineEntries_MissingCharacterStoreFailsFast(t *testing.T) {
 
 	service := NewService(Deps{Event: eventStore})
 
-	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride(context.Background(), "timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -120,7 +120,7 @@ func TestListTimelineEntries_MissingSessionStoreFailsFast(t *testing.T) {
 
 	service := NewService(Deps{Event: eventStore})
 
-	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(requestctx.WithAdminOverride(context.Background(), "timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)

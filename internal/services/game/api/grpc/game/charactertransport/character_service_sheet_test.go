@@ -69,7 +69,7 @@ func TestGetCharacterSheet_CharacterNotFound(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.GetCharacterSheet(requestctx.WithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
+	_, err := svc.GetCharacterSheet(requestctx.WithParticipantID(context.Background(), "p1"), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
 		CharacterId: "nonexistent",
 	})
@@ -143,7 +143,7 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 
 	svc := NewService(ts.build())
 
-	resp, err := svc.GetCharacterSheet(requestctx.WithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
+	resp, err := svc.GetCharacterSheet(requestctx.WithParticipantID(context.Background(), "p1"), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})

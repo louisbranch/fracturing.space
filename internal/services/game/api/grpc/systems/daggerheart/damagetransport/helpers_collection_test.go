@@ -12,18 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestContainsString(t *testing.T) {
-	if containsString([]string{"a", "b"}, "c") {
-		t.Fatal("containsString reported missing value as present")
-	}
-	if !containsString([]string{"a", "b"}, "b") {
-		t.Fatal("containsString did not find expected value")
-	}
-	if containsString([]string{"a"}, "") {
-		t.Fatal("containsString matched empty target")
-	}
-}
-
 func TestStringsToCharacterIDs(t *testing.T) {
 	if got := stringsToCharacterIDs(nil); got != nil {
 		t.Fatalf("stringsToCharacterIDs(nil) = %v, want nil", got)

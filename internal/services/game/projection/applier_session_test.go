@@ -24,7 +24,7 @@ func TestApplySessionGateAbandoned(t *testing.T) {
 	stamp := time.Date(2026, 2, 11, 12, 0, 0, 0, time.UTC)
 	evt := testevent.Event{
 		CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1",
-		Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data, Timestamp: stamp,
+		Type: session.EventTypeGateAbandoned, PayloadJSON: data, Timestamp: stamp,
 	}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
@@ -45,7 +45,7 @@ func TestApplySessionGateAbandoned(t *testing.T) {
 func TestApplySessionGateAbandoned_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateAbandonedPayload{GateID: "gate-1"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeGateAbandoned, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session gate store")
 	}
@@ -54,7 +54,7 @@ func TestApplySessionGateAbandoned_MissingStore(t *testing.T) {
 func TestApplySessionGateAbandoned_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateAbandonedPayload{GateID: "gate-1"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: session.EventTypeGateAbandoned, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
@@ -71,7 +71,7 @@ func TestApplySessionSpotlightSet(t *testing.T) {
 	stamp := time.Date(2026, 2, 11, 13, 0, 0, 0, time.UTC)
 	evt := testevent.Event{
 		CampaignID: "camp-1", SessionID: "sess-1",
-		Type: testevent.TypeSessionSpotlightSet, PayloadJSON: data, Timestamp: stamp,
+		Type: session.EventTypeSpotlightSet, PayloadJSON: data, Timestamp: stamp,
 	}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
@@ -89,7 +89,7 @@ func TestApplySessionSpotlightSet(t *testing.T) {
 func TestApplySessionSpotlightSet_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionSpotlightSetPayload{SpotlightType: "character", CharacterID: "c1"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionSpotlightSet, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeSpotlightSet, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing spotlight store")
 	}
@@ -98,7 +98,7 @@ func TestApplySessionSpotlightSet_MissingStore(t *testing.T) {
 func TestApplySessionSpotlightSet_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionSpotlightSetPayload{SpotlightType: "character", CharacterID: "c1"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: testevent.TypeSessionSpotlightSet, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: session.EventTypeSpotlightSet, PayloadJSON: data}
 	applier := Applier{SessionSpotlight: newFakeSessionSpotlightStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
@@ -113,7 +113,7 @@ func TestApplySessionSpotlightCleared(t *testing.T) {
 	data, _ := json.Marshal(testevent.SessionSpotlightClearedPayload{})
 	evt := testevent.Event{
 		CampaignID: "camp-1", SessionID: "sess-1",
-		Type: testevent.TypeSessionSpotlightCleared, PayloadJSON: data,
+		Type: session.EventTypeSpotlightCleared, PayloadJSON: data,
 	}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
@@ -127,7 +127,7 @@ func TestApplySessionSpotlightCleared(t *testing.T) {
 func TestApplySessionSpotlightCleared_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionSpotlightClearedPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionSpotlightCleared, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeSpotlightCleared, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing spotlight store")
 	}
@@ -136,7 +136,7 @@ func TestApplySessionSpotlightCleared_MissingStore(t *testing.T) {
 func TestApplySessionSpotlightCleared_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionSpotlightClearedPayload{})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: testevent.TypeSessionSpotlightCleared, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: session.EventTypeSpotlightCleared, PayloadJSON: data}
 	applier := Applier{SessionSpotlight: newFakeSessionSpotlightStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
@@ -158,7 +158,7 @@ func TestApplySessionGateOpened(t *testing.T) {
 	stamp := time.Date(2026, 2, 11, 19, 0, 0, 0, time.UTC)
 	evt := testevent.Event{
 		CampaignID: "camp-1", SessionID: "sess-1",
-		Type: testevent.TypeSessionGateOpened, PayloadJSON: data, Timestamp: stamp,
+		Type: session.EventTypeGateOpened, PayloadJSON: data, Timestamp: stamp,
 		ActorType: testevent.ActorTypeGM, ActorID: "gm-1",
 	}
 
@@ -189,7 +189,7 @@ func TestApplySessionGateOpened_FallbackEntityID(t *testing.T) {
 	data, _ := json.Marshal(payload)
 	evt := testevent.Event{
 		CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-fallback",
-		Type: testevent.TypeSessionGateOpened, PayloadJSON: data,
+		Type: session.EventTypeGateOpened, PayloadJSON: data,
 		Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 	}
 
@@ -204,7 +204,7 @@ func TestApplySessionGateOpened_FallbackEntityID(t *testing.T) {
 func TestApplySessionGateOpened_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateOpenedPayload{GateID: "g", GateType: "choice"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionGateOpened, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeGateOpened, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -213,7 +213,7 @@ func TestApplySessionGateOpened_MissingStore(t *testing.T) {
 func TestApplySessionGateOpened_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateOpenedPayload{GateID: "g", GateType: "choice"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: testevent.TypeSessionGateOpened, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: session.EventTypeGateOpened, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
@@ -223,7 +223,7 @@ func TestApplySessionGateOpened_MissingSessionID(t *testing.T) {
 func TestApplySessionGateOpened_MissingGateID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateOpenedPayload{GateID: "", GateType: "choice"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "", Type: testevent.TypeSessionGateOpened, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "", Type: session.EventTypeGateOpened, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing gate ID")
@@ -261,7 +261,7 @@ func TestApplySessionGateResponseRecordedUpdatesProgress(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:  "camp-1",
 		SessionID:   "sess-1",
-		Type:        testevent.TypeSessionGateResponseRecorded,
+		Type:        session.EventTypeGateResponseRecorded,
 		PayloadJSON: data,
 		Timestamp:   stamp,
 		ActorType:   testevent.ActorTypeParticipant,
@@ -306,7 +306,7 @@ func TestApplySessionGateResolved(t *testing.T) {
 	stamp := time.Date(2026, 2, 11, 19, 30, 0, 0, time.UTC)
 	evt := testevent.Event{
 		CampaignID: "camp-1", SessionID: "sess-1",
-		Type: testevent.TypeSessionGateResolved, PayloadJSON: data, Timestamp: stamp,
+		Type: session.EventTypeGateResolved, PayloadJSON: data, Timestamp: stamp,
 		ActorType: testevent.ActorTypeGM, ActorID: "gm-1",
 	}
 
@@ -331,7 +331,7 @@ func TestApplySessionGateResolved(t *testing.T) {
 func TestApplySessionGateResolved_MissingStore(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateResolvedPayload{GateID: "g"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionGateResolved, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeGateResolved, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
@@ -340,7 +340,7 @@ func TestApplySessionGateResolved_MissingStore(t *testing.T) {
 func TestApplySessionGateResolved_MissingGateID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateResolvedPayload{GateID: ""})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "", Type: testevent.TypeSessionGateResolved, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "", Type: session.EventTypeGateResolved, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing gate ID")
@@ -352,7 +352,7 @@ func TestApplySessionGateResolved_MissingGateID(t *testing.T) {
 func TestApplySessionGateAbandoned_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateAbandonedPayload{GateID: "gate-1"})
-	evt := testevent.Event{CampaignID: "", SessionID: "sess-1", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", SessionID: "sess-1", Type: session.EventTypeGateAbandoned, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -362,7 +362,7 @@ func TestApplySessionGateAbandoned_MissingCampaignID(t *testing.T) {
 func TestApplySessionGateAbandoned_MissingGateID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateAbandonedPayload{GateID: ""})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "", Type: session.EventTypeGateAbandoned, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing gate ID")
@@ -374,7 +374,7 @@ func TestApplySessionGateAbandoned_MissingGateID(t *testing.T) {
 func TestApplySessionGateResolved_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateResolvedPayload{GateID: "g"})
-	evt := testevent.Event{CampaignID: "", SessionID: "sess-1", Type: testevent.TypeSessionGateResolved, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", SessionID: "sess-1", Type: session.EventTypeGateResolved, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -384,7 +384,7 @@ func TestApplySessionGateResolved_MissingCampaignID(t *testing.T) {
 func TestApplySessionGateResolved_MissingSessionID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateResolvedPayload{GateID: "g"})
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: testevent.TypeSessionGateResolved, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "", Type: session.EventTypeGateResolved, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing session ID")
@@ -396,7 +396,7 @@ func TestApplySessionGateResolved_MissingSessionID(t *testing.T) {
 func TestApplySessionGateOpened_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SessionGateOpenedPayload{GateID: "g", GateType: "choice"})
-	evt := testevent.Event{CampaignID: "", SessionID: "sess-1", Type: testevent.TypeSessionGateOpened, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", SessionID: "sess-1", Type: session.EventTypeGateOpened, PayloadJSON: data}
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -407,7 +407,7 @@ func TestApplySessionGateOpened_MissingCampaignID(t *testing.T) {
 
 func TestApplySessionSpotlightSet_InvalidJSON(t *testing.T) {
 	applier := Applier{SessionSpotlight: newFakeSessionSpotlightStore()}
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionSpotlightSet, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeSpotlightSet, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -417,7 +417,7 @@ func TestApplySessionSpotlightSet_InvalidSpotlightType(t *testing.T) {
 	applier := Applier{SessionSpotlight: newFakeSessionSpotlightStore()}
 	payload := map[string]any{"spotlight_type": "INVALID_TYPE"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionSpotlightSet, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeSpotlightSet, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid spotlight type")
 	}
@@ -427,7 +427,7 @@ func TestApplySessionSpotlightSet_InvalidTarget(t *testing.T) {
 	applier := Applier{SessionSpotlight: newFakeSessionSpotlightStore()}
 	payload := map[string]any{"spotlight_type": "CHARACTER", "character_id": ""}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionSpotlightSet, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeSpotlightSet, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid spotlight target")
 	}
@@ -465,7 +465,7 @@ func TestApplySessionGateOpened_EmptyGateType(t *testing.T) {
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
 	payload := map[string]any{"gate_id": "gate-1", "gate_type": "  "}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionGateOpened, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeGateOpened, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for empty gate type")
 	}
@@ -473,7 +473,7 @@ func TestApplySessionGateOpened_EmptyGateType(t *testing.T) {
 
 func TestApplySessionGateOpened_InvalidJSON(t *testing.T) {
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: testevent.TypeSessionGateOpened, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", Type: session.EventTypeGateOpened, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -490,7 +490,7 @@ func TestApplySessionGateResolved_EntityIDFallback(t *testing.T) {
 	applier := Applier{SessionGate: gateStore}
 	payload := testevent.SessionGateResolvedPayload{Decision: "approve"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateResolved, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: session.EventTypeGateResolved, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -502,7 +502,7 @@ func TestApplySessionGateResolved_EntityIDFallback(t *testing.T) {
 
 func TestApplySessionGateResolved_InvalidJSON(t *testing.T) {
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateResolved, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: session.EventTypeGateResolved, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -519,7 +519,7 @@ func TestApplySessionGateAbandoned_EntityIDFallback(t *testing.T) {
 	applier := Applier{SessionGate: gateStore}
 	payload := testevent.SessionGateAbandonedPayload{Reason: "timeout"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: session.EventTypeGateAbandoned, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -531,7 +531,7 @@ func TestApplySessionGateAbandoned_EntityIDFallback(t *testing.T) {
 
 func TestApplySessionGateAbandoned_InvalidJSON(t *testing.T) {
 	applier := Applier{SessionGate: newFakeSessionGateStore()}
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: []byte("{")}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: session.EventTypeGateAbandoned, PayloadJSON: []byte("{")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}

@@ -11,13 +11,14 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -92,7 +93,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		defaultLocale = platformi18n.DefaultLocale()
 	}
 
-	profile := handler.LoadSocialProfileSnapshot(ctx, c.stores.Social, userID)
+	profile := social.LoadProfileSnapshot(ctx, c.stores.Social, userID)
 	creatorDisplayName := handler.DefaultUnknownParticipantName(defaultLocale)
 	creatorPronouns := handler.DefaultUnknownParticipantPronouns()
 	if !ownerlessStarterTemplate {
@@ -119,7 +120,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		creatorRole = "PLAYER"
 	}
 
-	participantPayloads := []participant.JoinPayload{
+	participantPayloads := []campaign.BootstrapParticipant{
 		{
 			ParticipantID:  ids.ParticipantID(creatorID),
 			UserID:         ids.UserID(userID),
@@ -137,7 +138,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		if err != nil {
 			return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("generate ai participant id", err)
 		}
-		participantPayloads = append(participantPayloads, participant.JoinPayload{
+		participantPayloads = append(participantPayloads, campaign.BootstrapParticipant{
 			ParticipantID:  ids.ParticipantID(aiParticipantID),
 			UserID:         "",
 			Name:           handler.DefaultAIParticipantName(defaultLocale),
@@ -163,7 +164,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCampaignCreateWithParticipants,
+			Type:         commandids.CampaignCreateWithParticipants,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

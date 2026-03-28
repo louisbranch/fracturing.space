@@ -64,7 +64,7 @@ func TestUpdateCampaign_Success(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.UpdateCampaign(requestctx.WithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
+	resp, err := svc.UpdateCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.UpdateCampaignRequest{
 		CampaignId:  "c1",
 		Name:        wrapperspb.String("  New Name  "),
 		ThemePrompt: wrapperspb.String("  New theme  "),
@@ -117,7 +117,7 @@ func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
 	domain := &fakeDomainEngine{store: ts.Event}
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.UpdateCampaign(requestctx.WithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
+	resp, err := svc.UpdateCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.UpdateCampaignRequest{
 		CampaignId:  "c1",
 		Name:        wrapperspb.String("Existing Name"),
 		ThemePrompt: wrapperspb.String("Existing theme"),
@@ -162,7 +162,7 @@ func TestSetCampaignCover_Success(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.SetCampaignCover(requestctx.WithParticipantID("owner-1"), &statev1.SetCampaignCoverRequest{
+	resp, err := svc.SetCampaignCover(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.SetCampaignCoverRequest{
 		CampaignId:   "c1",
 		CoverAssetId: "camp-cover-04",
 	})

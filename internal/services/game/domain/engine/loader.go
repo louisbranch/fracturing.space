@@ -142,18 +142,18 @@ func (l ReplayGateStateLoader) LoadSession(ctx context.Context, campaignID, _ st
 		return session.State{}, err
 	}
 	if state == nil {
-		return session.State{}, errors.New("state is required")
+		return session.State{}, ErrStateRequired
 	}
 	switch typed := state.(type) {
 	case aggregate.State:
 		return typed.Session, nil
 	case *aggregate.State:
 		if typed == nil {
-			return session.State{}, errors.New("state is required")
+			return session.State{}, ErrStateRequired
 		}
 		return typed.Session, nil
 	default:
-		return session.State{}, errors.New("unsupported state type")
+		return session.State{}, ErrUnsupportedStateType
 	}
 }
 
@@ -164,7 +164,7 @@ func (l ReplayGateStateLoader) LoadScene(ctx context.Context, campaignID, sceneI
 		return scene.State{}, err
 	}
 	if state == nil {
-		return scene.State{}, errors.New("state is required")
+		return scene.State{}, ErrStateRequired
 	}
 	switch typed := state.(type) {
 	case aggregate.State:
@@ -174,13 +174,13 @@ func (l ReplayGateStateLoader) LoadScene(ctx context.Context, campaignID, sceneI
 		return scene.State{}, nil
 	case *aggregate.State:
 		if typed == nil {
-			return scene.State{}, errors.New("state is required")
+			return scene.State{}, ErrStateRequired
 		}
 		if s, ok := typed.Scenes[ids.SceneID(sceneID)]; ok {
 			return s, nil
 		}
 		return scene.State{}, nil
 	default:
-		return scene.State{}, errors.New("unsupported state type")
+		return scene.State{}, ErrUnsupportedStateType
 	}
 }

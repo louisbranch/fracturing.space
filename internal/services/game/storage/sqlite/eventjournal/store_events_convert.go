@@ -47,7 +47,7 @@ type eventRowData struct {
 	PayloadJSON    []byte
 }
 
-func eventRowDataToDomain(row eventRowData) (event.Event, error) {
+func eventRowDataToDomain(row eventRowData) event.Event {
 	return event.Event{
 		CampaignID:     ids.CampaignID(row.CampaignID),
 		Seq:            uint64(row.Seq),
@@ -71,7 +71,7 @@ func eventRowDataToDomain(row eventRowData) (event.Event, error) {
 		CorrelationID:  row.CorrelationID,
 		CausationID:    row.CausationID,
 		PayloadJSON:    row.PayloadJSON,
-	}, nil
+	}
 }
 
 func eventRowDataFromEvent(row db.Event) eventRowData {
@@ -209,26 +209,18 @@ func eventRowDataFromListEventsBySessionRow(row db.ListEventsBySessionRow) event
 	}
 }
 
-func eventRowsToDomain(rows []db.ListEventsRow) ([]event.Event, error) {
+func eventRowsToDomain(rows []db.ListEventsRow) []event.Event {
 	events := make([]event.Event, 0, len(rows))
 	for _, row := range rows {
-		evt, err := eventRowDataToDomain(eventRowDataFromListEventsRow(row))
-		if err != nil {
-			return nil, err
-		}
-		events = append(events, evt)
+		events = append(events, eventRowDataToDomain(eventRowDataFromListEventsRow(row)))
 	}
-	return events, nil
+	return events
 }
 
-func eventRowsBySessionToDomain(rows []db.ListEventsBySessionRow) ([]event.Event, error) {
+func eventRowsBySessionToDomain(rows []db.ListEventsBySessionRow) []event.Event {
 	events := make([]event.Event, 0, len(rows))
 	for _, row := range rows {
-		evt, err := eventRowDataToDomain(eventRowDataFromListEventsBySessionRow(row))
-		if err != nil {
-			return nil, err
-		}
-		events = append(events, evt)
+		events = append(events, eventRowDataToDomain(eventRowDataFromListEventsBySessionRow(row)))
 	}
-	return events, nil
+	return events
 }

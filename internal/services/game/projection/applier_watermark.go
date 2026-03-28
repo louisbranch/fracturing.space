@@ -18,6 +18,8 @@ package projection
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -36,6 +38,9 @@ func (a Applier) saveProjectionWatermark(ctx context.Context, evt event.Event) e
 	// A gap means replay or re-projection is needed to fill missing events.
 	cid := string(evt.CampaignID)
 	existing, err := a.Watermarks.GetProjectionWatermark(ctx, cid)
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return fmt.Errorf("load projection watermark for gap detection: %w", err)
+	}
 	expectedNext := evt.Seq + 1
 	if err == nil && existing.ExpectedNextSeq > 0 && evt.Seq > existing.ExpectedNextSeq {
 		// Preserve the gap boundary instead of advancing past it. This keeps

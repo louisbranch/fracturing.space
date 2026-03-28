@@ -199,6 +199,10 @@ var allRoles = []participant.CampaignAccess{
 // Each entry declares which roles are allowed for a specific (action, resource)
 // capability. The exhaustiveness test validates that every recognized capability
 // has exactly one entry and every Capability*() accessor maps to an entry.
+//
+// The matrix evaluates (actor role x target access x operation) tuples. Some
+// intersections are intentionally undefined and fall through to deny-by-default.
+// Admin override (ReasonAllowAdminOverride) bypasses the matrix entirely.
 var policyMatrix = []policyEntry{
 	// Read capabilities — broad access.
 	{ActionRead, ResourceCampaign, roles(participant.CampaignAccessOwner, participant.CampaignAccessManager, participant.CampaignAccessMember)},

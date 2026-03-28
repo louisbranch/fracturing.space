@@ -1,6 +1,7 @@
 package eventtransport
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -117,7 +118,7 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 		Session:     sessionStore,
 	})
 
-	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride(context.Background(), "timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})

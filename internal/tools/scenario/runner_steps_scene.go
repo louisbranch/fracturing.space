@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/coreevent"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 )
 
 func (r *Runner) runCreateSceneStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -56,7 +56,7 @@ func (r *Runner) runCreateSceneStep(ctx context.Context, state *scenarioState, s
 		r.logf("scene created: name=%s id=%s", name, sceneID)
 	}
 
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneCreated)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeCreated)
 }
 
 func (r *Runner) runEndSceneStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -91,7 +91,7 @@ func (r *Runner) runEndSceneStep(ctx context.Context, state *scenarioState, step
 		state.activeSceneID = ""
 	}
 	r.logf("scene ended: name=%s id=%s", name, sceneID)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneEnded)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeEnded)
 }
 
 func (r *Runner) runSceneAddCharacterStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -132,7 +132,7 @@ func (r *Runner) runSceneAddCharacterStep(ctx context.Context, state *scenarioSt
 	}
 
 	r.logf("character %s added to scene %s", charName, sceneName)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneCharacterAdded)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeCharacterAdded)
 }
 
 func (r *Runner) runSceneRemoveCharacterStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -173,7 +173,7 @@ func (r *Runner) runSceneRemoveCharacterStep(ctx context.Context, state *scenari
 	}
 
 	r.logf("character %s removed from scene %s", charName, sceneName)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneCharacterRemoved)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeCharacterRemoved)
 }
 
 func (r *Runner) runSceneTransferCharacterStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -226,7 +226,7 @@ func (r *Runner) runSceneTransferCharacterStep(ctx context.Context, state *scena
 	r.logf("character %s transferred from %s to %s", charName, fromName, toName)
 	// Transfer emits a remove + add pair.
 	return r.requireEventTypesAfterSeq(ctx, state, before,
-		event.TypeSceneCharacterRemoved, event.TypeSceneCharacterAdded)
+		scene.EventTypeCharacterRemoved, scene.EventTypeCharacterAdded)
 }
 
 func (r *Runner) runSceneTransitionStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -269,7 +269,7 @@ func (r *Runner) runSceneTransitionStep(ctx context.Context, state *scenarioStat
 	r.logf("scene transitioned: %s -> %s (id=%s, active)", sceneName, newName, newSceneID)
 
 	// Transition emits: scene.created (new) + character_added per char + scene.ended (source).
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneCreated, event.TypeSceneEnded)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeCreated, scene.EventTypeEnded)
 }
 
 func (r *Runner) runSceneGateOpenStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -303,7 +303,7 @@ func (r *Runner) runSceneGateOpenStep(ctx context.Context, state *scenarioState,
 	}
 
 	r.logf("scene gate opened: scene=%s", sceneName)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneGateOpened)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeGateOpened)
 }
 
 func (r *Runner) runSceneGateResolveStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -341,7 +341,7 @@ func (r *Runner) runSceneGateResolveStep(ctx context.Context, state *scenarioSta
 	}
 
 	r.logf("scene gate resolved: scene=%s gate=%s", sceneName, gateID)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneGateResolved)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeGateResolved)
 }
 
 func (r *Runner) runSceneGateAbandonStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -379,7 +379,7 @@ func (r *Runner) runSceneGateAbandonStep(ctx context.Context, state *scenarioSta
 	}
 
 	r.logf("scene gate abandoned: scene=%s gate=%s", sceneName, gateID)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneGateAbandoned)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeGateAbandoned)
 }
 
 func (r *Runner) runSceneSetSpotlightStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -426,7 +426,7 @@ func (r *Runner) runSceneSetSpotlightStep(ctx context.Context, state *scenarioSt
 	}
 
 	r.logf("scene spotlight set: scene=%s type=%s", sceneName, spotlightType)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneSpotlightSet)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeSpotlightSet)
 }
 
 func (r *Runner) runSceneClearSpotlightStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -458,7 +458,7 @@ func (r *Runner) runSceneClearSpotlightStep(ctx context.Context, state *scenario
 	}
 
 	r.logf("scene spotlight cleared: scene=%s", sceneName)
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneSpotlightCleared)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeSpotlightCleared)
 }
 
 func (r *Runner) runUpdateSceneStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -504,5 +504,5 @@ func (r *Runner) runUpdateSceneStep(ctx context.Context, state *scenarioState, s
 		r.logf("scene updated: %s", name)
 	}
 
-	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSceneUpdated)
+	return r.requireEventTypesAfterSeq(ctx, state, before, scene.EventTypeUpdated)
 }

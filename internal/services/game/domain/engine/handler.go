@@ -43,6 +43,10 @@ var (
 	ErrPostPersistCheckpointFailed = errors.New("post-persist checkpoint save failed")
 	// ErrStateFactoryRequired indicates a missing state factory.
 	ErrStateFactoryRequired = errors.New("state factory is required")
+	// ErrStateRequired indicates a nil state was provided where state is required.
+	ErrStateRequired = errors.New("state is required")
+	// ErrUnsupportedStateType indicates an unknown state type was provided.
+	ErrUnsupportedStateType = errors.New("unsupported state type")
 )
 
 // GateStateLoader loads session state for gate checks.
@@ -105,6 +109,9 @@ type Decider interface {
 //  5. append events to the journal,
 //  6. apply events to in-memory state,
 //  7. checkpoint and snapshot state for fast future replays.
+//
+// Handler is safe for concurrent use after construction assuming its
+// dependencies are thread-safe.
 //
 // Required fields (validated by [NewHandler]):
 //   - Commands, Events, Journal, Decider
@@ -410,6 +417,8 @@ func (h Handler) appendDecisionEvents(ctx context.Context, decision command.Deci
 	if err != nil {
 		return command.Decision{}, err
 	}
+	// decision.Events carry journal-assigned sequences from BatchAppend at
+	// this point.
 	decision.Events = stored
 	return decision, nil
 }

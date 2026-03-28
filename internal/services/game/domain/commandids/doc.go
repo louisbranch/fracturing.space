@@ -1,2 +1,3 @@
-// Package commandids generates and validates stable command and invocation identifiers.
+// Package commandids declares the canonical command type identifiers shared
+// across transport, domain deciders, and engine validation.
 package commandids

@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -38,7 +39,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCampaignEnd,
+			Type:         commandids.CampaignEnd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -81,7 +82,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCampaignArchive,
+			Type:         commandids.CampaignArchive,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -120,7 +121,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCampaignRestore,
+			Type:         commandids.CampaignRestore,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

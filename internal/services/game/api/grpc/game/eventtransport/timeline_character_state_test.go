@@ -1,6 +1,7 @@
 package eventtransport
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -55,7 +56,7 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Event: eventStore, Character: characterStore})
-	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride(context.Background(), "timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})
@@ -128,7 +129,7 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Event: eventStore, Character: characterStore})
-	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(requestctx.WithAdminOverride(context.Background(), "timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})

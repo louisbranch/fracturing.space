@@ -66,6 +66,9 @@ func decideGateResolve(scenes map[ids.SceneID]State, cmd command.Command, now fu
 	if !scene.GateOpen {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateNotOpen, Message: "scene gate is not open"})
 	}
+	if scene.GateID != "" && scene.GateID != ids.GateID(gateID) {
+		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateIDMismatch, Message: "gate id does not match active gate"})
+	}
 
 	normalized := GateResolvedPayload{
 		SceneID:    ids.SceneID(sceneID),
@@ -97,6 +100,9 @@ func decideGateAbandon(scenes map[ids.SceneID]State, cmd command.Command, now fu
 	scene := scenes[ids.SceneID(sceneID)]
 	if !scene.GateOpen {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateNotOpen, Message: "scene gate is not open"})
+	}
+	if scene.GateID != "" && scene.GateID != ids.GateID(gateID) {
+		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateIDMismatch, Message: "gate id does not match active gate"})
 	}
 
 	normalized := GateAbandonedPayload{

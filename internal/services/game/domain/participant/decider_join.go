@@ -10,7 +10,7 @@ import (
 )
 
 func decideJoin(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 
 	if state.Joined {
 		return command.Reject(command.Rejection{

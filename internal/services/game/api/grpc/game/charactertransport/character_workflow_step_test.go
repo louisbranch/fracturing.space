@@ -1,6 +1,7 @@
 package charactertransport
 
 import (
+	"context"
 	"testing"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -21,7 +22,7 @@ func TestApplyCharacterCreationStep_RequiresNextStep(t *testing.T) {
 		Evasion:     10,
 	})
 
-	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
+	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ApplyCharacterCreationStepRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStep: &statev1.ApplyCharacterCreationStepRequest_Daggerheart{
@@ -45,7 +46,7 @@ func TestApplyCharacterCreationStep_ClassStepSuccess(t *testing.T) {
 		Evasion:     10,
 	})
 
-	resp, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
+	resp, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ApplyCharacterCreationStepRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStep: &statev1.ApplyCharacterCreationStepRequest_Daggerheart{
@@ -83,7 +84,7 @@ func TestApplyCharacterCreationStep_TraitsRejectsInvalidDistribution(t *testing.
 		Heritage:    testProjectionHeritage(),
 	})
 
-	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
+	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ApplyCharacterCreationStepRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStep: &statev1.ApplyCharacterCreationStepRequest_Daggerheart{
@@ -120,7 +121,7 @@ func TestApplyCharacterCreationStep_EquipmentRejectsInvalidPotion(t *testing.T) 
 		Knowledge:       -1,
 	})
 
-	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
+	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ApplyCharacterCreationStepRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStep: &statev1.ApplyCharacterCreationStepRequest_Daggerheart{
@@ -170,7 +171,7 @@ func TestApplyCharacterCreationStep_DomainCardsRejectsClassDomainMismatch(t *tes
 		Experiences:          []projectionstore.DaggerheartExperience{{Name: "Shield wall", Modifier: 2}, {Name: "Patrol routes", Modifier: 2}},
 	})
 
-	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
+	_, err := svc.ApplyCharacterCreationStep(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ApplyCharacterCreationStepRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStep: &statev1.ApplyCharacterCreationStepRequest_Daggerheart{

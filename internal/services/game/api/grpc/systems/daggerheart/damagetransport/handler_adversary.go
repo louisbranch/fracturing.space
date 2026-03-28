@@ -3,6 +3,7 @@ package damagetransport
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -121,7 +122,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 		}
 		if len(sourceCharacterIDs) > 0 {
 			rollCharacterID := strings.TrimSpace(rollMetadata.CharacterID)
-			if !containsString(sourceCharacterIDs, rollCharacterID) {
+			if !slices.Contains(sourceCharacterIDs, rollCharacterID) {
 				return AdversaryDamageResult{}, status.Error(codes.InvalidArgument, "roll_seq does not match source character")
 			}
 		}

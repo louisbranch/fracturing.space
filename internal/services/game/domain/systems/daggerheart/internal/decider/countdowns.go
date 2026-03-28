@@ -32,7 +32,7 @@ func decideRestTake(snapshotState daggerheartstate.SnapshotState, cmd command.Co
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 	p.RestType = normalize.String(p.RestType)
 	for i := range p.CampaignCountdownAdvances {
 		if rejection := campaignCountdownAdvanceSnapshotRejection(snapshotState, p.CampaignCountdownAdvances[i]); rejection != nil {

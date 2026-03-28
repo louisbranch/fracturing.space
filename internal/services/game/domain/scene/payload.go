@@ -11,10 +11,15 @@ type CreatePayload struct {
 }
 
 // UpdatePayload captures the payload for scene.update commands and scene.updated events.
+//
+// Fields tracks which top-level properties the caller explicitly set, enabling
+// the projection to distinguish "clear to empty" from "not provided". Keys are
+// field names ("name", "description"); values are the new string content.
 type UpdatePayload struct {
-	SceneID     ids.SceneID `json:"scene_id"`
-	Name        string      `json:"name,omitempty"`
-	Description string      `json:"description,omitempty"`
+	SceneID     ids.SceneID       `json:"scene_id"`
+	Name        string            `json:"name,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Fields      map[string]string `json:"fields,omitempty"`
 }
 
 // EndPayload captures the payload for scene.end commands and scene.ended events.

@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
@@ -176,7 +178,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeCharacterUpdate,
+			Type:         commandids.CharacterUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

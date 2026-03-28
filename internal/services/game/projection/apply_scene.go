@@ -98,11 +98,23 @@ func (a Applier) applySceneUpdated(ctx context.Context, evt event.Event, payload
 		return fmt.Errorf("get scene for update: %w", err)
 	}
 
-	if name := strings.TrimSpace(payload.Name); name != "" {
-		existing.Name = name
-	}
-	if desc := strings.TrimSpace(payload.Description); desc != "" {
-		existing.Description = desc
+	// When Fields is populated (new events), use field-presence checks to allow
+	// clearing values to empty. When Fields is nil (legacy events without the
+	// field map), fall back to non-empty assignment for replay compatibility.
+	if payload.Fields != nil {
+		if _, ok := payload.Fields["name"]; ok {
+			existing.Name = strings.TrimSpace(payload.Name)
+		}
+		if _, ok := payload.Fields["description"]; ok {
+			existing.Description = strings.TrimSpace(payload.Description)
+		}
+	} else {
+		if name := strings.TrimSpace(payload.Name); name != "" {
+			existing.Name = name
+		}
+		if desc := strings.TrimSpace(payload.Description); desc != "" {
+			existing.Description = desc
+		}
 	}
 	existing.UpdatedAt = updatedAt
 

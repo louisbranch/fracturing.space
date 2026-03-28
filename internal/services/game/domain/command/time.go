@@ -2,11 +2,11 @@ package command
 
 import "time"
 
-// NowFunc validates and returns the provided time function.
+// RequireNowFunc validates and returns the provided time function.
 // It panics on nil because a missing clock is always a programming error:
 // the engine handler boundary is responsible for providing a valid clock to
 // all downstream deciders.
-func NowFunc(now func() time.Time) func() time.Time {
+func RequireNowFunc(now func() time.Time) func() time.Time {
 	if now == nil {
 		panic("command: now function must not be nil")
 	}

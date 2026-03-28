@@ -1,6 +1,7 @@
 package snapshottransport
 
 import (
+	"context"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
@@ -30,7 +31,7 @@ func TestPatchCharacterState_RequiresDomainEngine(t *testing.T) {
 		Daggerheart: dhStore,
 	})
 
-	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{

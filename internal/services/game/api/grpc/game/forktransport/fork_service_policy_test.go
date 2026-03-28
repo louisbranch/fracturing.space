@@ -62,7 +62,7 @@ func TestForkCampaign_AllowsManagerManagePolicy(t *testing.T) {
 		Participant:  participantStore,
 	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(requestctx.WithParticipantID("manager-1"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Campaign",
 	})
@@ -90,7 +90,7 @@ func TestForkCampaign_DeniesMemberManagePolicy(t *testing.T) {
 		Participant:  participantStore,
 	}, runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("fork-1"))
 
-	_, err := svc.ForkCampaign(requestctx.WithParticipantID("member-1"), &statev1.ForkCampaignRequest{
+	_, err := svc.ForkCampaign(requestctx.WithParticipantID(context.Background(), "member-1"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Campaign",
 	})

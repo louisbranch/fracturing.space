@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/platform/grpcmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
@@ -15,11 +16,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
-
-type testParticipantStore struct {
-	get            func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error)
-	listByCampaign func(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error)
-}
 
 type testAuditStore struct {
 	events []storage.AuditEvent
@@ -30,10 +26,6 @@ func testCampaignRecord() storage.CampaignRecord {
 	return storage.CampaignRecord{}
 }
 
-func testParticipantWithAccess(access participant.CampaignAccess) storage.ParticipantRecord {
-	return storage.ParticipantRecord{CampaignAccess: access}
-}
-
 func (s *testAuditStore) AppendAuditEvent(_ context.Context, evt storage.AuditEvent) error {
 	if s.err != nil {
 		return s.err
@@ -42,106 +34,22 @@ func (s *testAuditStore) AppendAuditEvent(_ context.Context, evt storage.AuditEv
 	return nil
 }
 
-func (f testParticipantStore) PutParticipant(ctx context.Context, p storage.ParticipantRecord) error {
-	return nil
-}
-
-func (f testParticipantStore) GetParticipant(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-	if f.get == nil {
-		return storage.ParticipantRecord{}, errors.New("missing handler")
+// participantStoreWithRecord returns a FakeParticipantStore pre-populated so
+// that GetParticipant("", participantID) returns the given record.
+func participantStoreWithRecord(participantID string, access participant.CampaignAccess) *gametest.FakeParticipantStore {
+	store := gametest.NewFakeParticipantStore()
+	store.Participants[""] = map[string]storage.ParticipantRecord{
+		participantID: {
+			ID:             participantID,
+			CampaignID:     "",
+			CampaignAccess: access,
+		},
 	}
-	return f.get(ctx, campaignID, participantID)
-}
-
-func (f testParticipantStore) DeleteParticipant(ctx context.Context, campaignID, participantID string) error {
-	return nil
-}
-
-func (f testParticipantStore) ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
-	if f.listByCampaign == nil {
-		return nil, nil
-	}
-	return f.listByCampaign(ctx, campaignID)
-}
-
-func (f testParticipantStore) ListCampaignIDsByUser(ctx context.Context, userID string) ([]string, error) {
-	return nil, nil
-}
-
-func (f testParticipantStore) ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error) {
-	return nil, nil
-}
-
-func (f testParticipantStore) CountParticipants(ctx context.Context, campaignID string) (int, error) {
-	return 0, nil
-}
-
-func (f testParticipantStore) ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ParticipantPage, error) {
-	return storage.ParticipantPage{}, nil
-}
-
-// testCharacterStore is a minimal in-memory character store for authz tests.
-type testCharacterStore struct {
-	characters map[string]map[string]storage.CharacterRecord
-}
-
-func newTestCharacterStore() *testCharacterStore {
-	return &testCharacterStore{characters: map[string]map[string]storage.CharacterRecord{}}
-}
-
-func (s *testCharacterStore) PutCharacter(_ context.Context, r storage.CharacterRecord) error {
-	camp := s.characters[r.CampaignID]
-	if camp == nil {
-		camp = map[string]storage.CharacterRecord{}
-		s.characters[r.CampaignID] = camp
-	}
-	camp[r.ID] = r
-	return nil
-}
-
-func (s *testCharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
-	camp := s.characters[campaignID]
-	if camp == nil {
-		return storage.CharacterRecord{}, storage.ErrNotFound
-	}
-	r, ok := camp[characterID]
-	if !ok {
-		return storage.CharacterRecord{}, storage.ErrNotFound
-	}
-	return r, nil
-}
-
-func (s *testCharacterStore) DeleteCharacter(context.Context, string, string) error { return nil }
-
-func (s *testCharacterStore) ListCharacters(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
-	camp := s.characters[campaignID]
-	var chars []storage.CharacterRecord
-	for _, c := range camp {
-		chars = append(chars, c)
-	}
-	return storage.CharacterPage{Characters: chars}, nil
-}
-
-func (s *testCharacterStore) CountCharacters(_ context.Context, campaignID string) (int, error) {
-	return len(s.characters[campaignID]), nil
-}
-
-func (s *testCharacterStore) ListCharactersByOwnerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
-	var result []storage.CharacterRecord
-	for _, c := range s.characters[campaignID] {
-		if c.OwnerParticipantID == participantID {
-			result = append(result, c)
-		}
-	}
-	return result, nil
-}
-
-func (s *testCharacterStore) ListCharactersByControllerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
-	return nil, nil
+	return store
 }
 
 func TestRequirePolicyMissingActor(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{}}
+	deps := PolicyDeps{Participant: gametest.NewFakeParticipantStore()}
 	err := RequirePolicy(context.Background(), deps, domainauthz.CapabilityManageParticipants(), testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
@@ -149,9 +57,7 @@ func TestRequirePolicyMissingActor(t *testing.T) {
 }
 
 func TestRequirePolicyNotFound(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{}, storage.ErrNotFound
-	}}}
+	deps := PolicyDeps{Participant: gametest.NewFakeParticipantStore()}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants(), testCampaignRecord())
@@ -161,9 +67,9 @@ func TestRequirePolicyNotFound(t *testing.T) {
 }
 
 func TestRequirePolicyLoadError(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{}, errors.New("boom")
-	}}}
+	store := gametest.NewFakeParticipantStore()
+	store.GetErr = errors.New("boom")
+	deps := PolicyDeps{Participant: store}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants(), testCampaignRecord())
@@ -173,9 +79,7 @@ func TestRequirePolicyLoadError(t *testing.T) {
 }
 
 func TestRequirePolicyDenied(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return testParticipantWithAccess(participant.CampaignAccessMember), nil
-	}}}
+	deps := PolicyDeps{Participant: participantStoreWithRecord("participant", participant.CampaignAccessMember)}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants(), testCampaignRecord())
@@ -185,9 +89,7 @@ func TestRequirePolicyDenied(t *testing.T) {
 }
 
 func TestRequirePolicyAllowed(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return testParticipantWithAccess(participant.CampaignAccessOwner), nil
-	}}}
+	deps := PolicyDeps{Participant: participantStoreWithRecord("participant", participant.CampaignAccessOwner)}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants(), testCampaignRecord())
@@ -197,9 +99,7 @@ func TestRequirePolicyAllowed(t *testing.T) {
 }
 
 func TestRequirePolicyCampaignManageAllowedForManager(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return testParticipantWithAccess(participant.CampaignAccessManager), nil
-	}}}
+	deps := PolicyDeps{Participant: participantStoreWithRecord("participant", participant.CampaignAccessManager)}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageCampaign(), testCampaignRecord())
@@ -209,9 +109,7 @@ func TestRequirePolicyCampaignManageAllowedForManager(t *testing.T) {
 }
 
 func TestRequirePolicyCampaignManageAllowedForOwner(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return testParticipantWithAccess(participant.CampaignAccessOwner), nil
-	}}}
+	deps := PolicyDeps{Participant: participantStoreWithRecord("participant", participant.CampaignAccessOwner)}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageCampaign(), testCampaignRecord())
@@ -221,9 +119,7 @@ func TestRequirePolicyCampaignManageAllowedForOwner(t *testing.T) {
 }
 
 func TestRequirePolicySessionManageAllowedForManager(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return testParticipantWithAccess(participant.CampaignAccessManager), nil
-	}}}
+	deps := PolicyDeps{Participant: participantStoreWithRecord("participant", participant.CampaignAccessManager)}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageSessions(), testCampaignRecord())
@@ -233,9 +129,7 @@ func TestRequirePolicySessionManageAllowedForManager(t *testing.T) {
 }
 
 func TestRequirePolicySessionManageDeniedForMember(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return testParticipantWithAccess(participant.CampaignAccessMember), nil
-	}}}
+	deps := PolicyDeps{Participant: participantStoreWithRecord("participant", participant.CampaignAccessMember)}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageSessions(), testCampaignRecord())
@@ -245,9 +139,7 @@ func TestRequirePolicySessionManageDeniedForMember(t *testing.T) {
 }
 
 func TestRequirePolicyCharacterManageAllowedForMember(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return testParticipantWithAccess(participant.CampaignAccessMember), nil
-	}}}
+	deps := PolicyDeps{Participant: participantStoreWithRecord("participant", participant.CampaignAccessMember)}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityMutateCharacters(), testCampaignRecord())
@@ -257,20 +149,15 @@ func TestRequirePolicyCharacterManageAllowedForMember(t *testing.T) {
 }
 
 func TestRequirePolicyAllowsOwnerByUserIDFallback(t *testing.T) {
-	deps := PolicyDeps{Participant: testParticipantStore{
-		get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-			return storage.ParticipantRecord{}, storage.ErrNotFound
+	store := gametest.NewFakeParticipantStore()
+	store.Participants[""] = map[string]storage.ParticipantRecord{
+		"owner-1": {
+			ID:             "owner-1",
+			UserID:         "user-1",
+			CampaignAccess: participant.CampaignAccessOwner,
 		},
-		listByCampaign: func(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
-			return []storage.ParticipantRecord{
-				{
-					ID:             "owner-1",
-					UserID:         "user-1",
-					CampaignAccess: participant.CampaignAccessOwner,
-				},
-			}, nil
-		},
-	}}
+	}
+	deps := PolicyDeps{Participant: store}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-1"))
 
 	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageCampaign(), testCampaignRecord())
@@ -282,14 +169,8 @@ func TestRequirePolicyAllowsOwnerByUserIDFallback(t *testing.T) {
 func TestRequirePolicyTelemetryDenied(t *testing.T) {
 	auditStore := &testAuditStore{}
 	deps := PolicyDeps{
-		Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-			return storage.ParticipantRecord{
-				ID:             "member-1",
-				CampaignID:     campaignID,
-				CampaignAccess: participant.CampaignAccessMember,
-			}, nil
-		}},
-		Audit: auditStore,
+		Participant: participantStoreWithRecord("member-1", participant.CampaignAccessMember),
+		Audit:       auditStore,
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
 
@@ -315,14 +196,8 @@ func TestRequirePolicyTelemetryDenied(t *testing.T) {
 func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 	auditStore := &testAuditStore{}
 	deps := PolicyDeps{
-		Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-			return storage.ParticipantRecord{
-				ID:             "owner-1",
-				CampaignID:     campaignID,
-				CampaignAccess: participant.CampaignAccessOwner,
-			}, nil
-		}},
-		Audit: auditStore,
+		Participant: participantStoreWithRecord("owner-1", participant.CampaignAccessOwner),
+		Audit:       auditStore,
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "owner-1"))
 
@@ -343,7 +218,7 @@ func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 
 func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 	auditStore := &testAuditStore{}
-	characterStore := newTestCharacterStore()
+	characterStore := gametest.NewFakeCharacterStore()
 	if err := characterStore.PutCharacter(context.Background(), storage.CharacterRecord{
 		ID:                 "char-1",
 		CampaignID:         "camp",
@@ -354,15 +229,9 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 	}
 
 	deps := PolicyDeps{
-		Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-			return storage.ParticipantRecord{
-				ID:             "member-1",
-				CampaignID:     campaignID,
-				CampaignAccess: participant.CampaignAccessMember,
-			}, nil
-		}},
-		Character: characterStore,
-		Audit:     auditStore,
+		Participant: participantStoreWithRecord("member-1", participant.CampaignAccessMember),
+		Character:   characterStore,
+		Audit:       auditStore,
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
 

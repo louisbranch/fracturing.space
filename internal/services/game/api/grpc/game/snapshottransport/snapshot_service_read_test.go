@@ -72,7 +72,7 @@ func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestGetSnapshot_Success_NoCharacters(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestGetSnapshot_Success_DefaultGmFear(t *testing.T) {
 		Character:   characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}

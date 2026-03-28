@@ -1,6 +1,7 @@
 package charactertransport
 
 import (
+	"context"
 	"testing"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -21,7 +22,7 @@ func TestGetCharacterCreationProgress_Success(t *testing.T) {
 		SubclassID:  "subclass.stalwart",
 	})
 
-	resp, err := svc.GetCharacterCreationProgress(requestctx.WithParticipantID("manager-1"), &statev1.GetCharacterCreationProgressRequest{
+	resp, err := svc.GetCharacterCreationProgress(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.GetCharacterCreationProgressRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -69,7 +70,7 @@ func TestResetCharacterCreationWorkflow_Success(t *testing.T) {
 		SevereThreshold:      12,
 	})
 
-	resp, err := svc.ResetCharacterCreationWorkflow(requestctx.WithParticipantID("manager-1"), &statev1.ResetCharacterCreationWorkflowRequest{
+	resp, err := svc.ResetCharacterCreationWorkflow(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ResetCharacterCreationWorkflowRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})

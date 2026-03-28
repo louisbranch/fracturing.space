@@ -1,6 +1,7 @@
 package forktransport
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 )
 
 func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
-	ctx := requestctx.WithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride(context.Background(), "fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -71,7 +72,7 @@ func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
-	ctx := requestctx.WithAdminOverride("fork-test")
+	ctx := requestctx.WithAdminOverride(context.Background(), "fork-test")
 	now := time.Date(2025, 2, 2, 9, 0, 0, 0, time.UTC)
 
 	campaignStore := gametest.NewFakeCampaignStore()

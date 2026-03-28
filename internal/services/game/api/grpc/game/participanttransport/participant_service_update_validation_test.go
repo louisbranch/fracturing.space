@@ -1,6 +1,7 @@
 package participanttransport
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -64,7 +65,7 @@ func TestUpdateParticipant_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",

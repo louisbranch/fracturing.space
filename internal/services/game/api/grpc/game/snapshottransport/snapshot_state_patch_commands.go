@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
@@ -36,7 +37,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignID,
-				Type:         handler.CommandTypeDaggerheartCharacterStatePatch,
+				Type:         commandids.DaggerheartCharacterStatePatch,
 				ActorType:    handler.CommandActorTypeForEventActor(actorType),
 				ActorID:      actorID,
 				SessionID:    grpcmeta.SessionIDFromContext(ctx),
@@ -84,7 +85,7 @@ func executeDaggerheartConditionChangeCommand(
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignID,
-				Type:         handler.CommandTypeDaggerheartConditionChange,
+				Type:         commandids.DaggerheartConditionChange,
 				ActorType:    handler.CommandActorTypeForEventActor(actorType),
 				ActorID:      actorID,
 				SessionID:    sessionID,

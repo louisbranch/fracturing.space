@@ -7,6 +7,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -27,7 +28,7 @@ type Deps struct {
 	SystemStores       systemmanifest.ProjectionStores
 	SystemMetadata     *bridge.MetadataRegistry
 	SystemModules      *module.Registry
-	Social             handler.SocialProfileClient
+	Social             social.ProfileClient
 	Write              domainwrite.WritePath
 	Applier            projection.Applier
 	AuthClient         handler.AuthUserClient
@@ -51,7 +52,7 @@ type campaignApplicationStores struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Session     storage.SessionStore
-	Social      handler.SocialProfileClient
+	Social      social.ProfileClient
 }
 
 type campaignCommandExecution struct {

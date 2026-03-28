@@ -1,4 +1,4 @@
-package handler
+package social
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	participantdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -51,7 +52,7 @@ func (f *fakeHandlerSocialClient) GetUserProfile(_ context.Context, req *socialv
 	return &socialv1.GetUserProfileResponse{UserProfile: f.profile}, nil
 }
 
-func TestLoadSocialProfileSnapshot(t *testing.T) {
+func TestLoadProfileSnapshot(t *testing.T) {
 	t.Parallel()
 
 	t.Run("success trims fields and maps pronouns", func(t *testing.T) {
@@ -66,7 +67,7 @@ func TestLoadSocialProfileSnapshot(t *testing.T) {
 			},
 		}
 
-		snapshot := LoadSocialProfileSnapshot(context.Background(), client, " user-1 ")
+		snapshot := LoadProfileSnapshot(context.Background(), client, " user-1 ")
 		if client.lastReq.GetUserId() != "user-1" {
 			t.Fatalf("user_id = %q, want user-1", client.lastReq.GetUserId())
 		}
@@ -78,14 +79,14 @@ func TestLoadSocialProfileSnapshot(t *testing.T) {
 	t.Run("missing user or failed lookup returns empty snapshot", func(t *testing.T) {
 		t.Parallel()
 
-		if snapshot := LoadSocialProfileSnapshot(context.Background(), nil, "user-1"); snapshot != (SocialProfileSnapshot{}) {
+		if snapshot := LoadProfileSnapshot(context.Background(), nil, "user-1"); snapshot != (ProfileSnapshot{}) {
 			t.Fatalf("nil client snapshot = %#v", snapshot)
 		}
 		client := &fakeHandlerSocialClient{err: errors.New("boom")}
-		if snapshot := LoadSocialProfileSnapshot(context.Background(), client, ""); snapshot != (SocialProfileSnapshot{}) {
+		if snapshot := LoadProfileSnapshot(context.Background(), client, ""); snapshot != (ProfileSnapshot{}) {
 			t.Fatalf("empty user snapshot = %#v", snapshot)
 		}
-		if snapshot := LoadSocialProfileSnapshot(context.Background(), client, "user-1"); snapshot != (SocialProfileSnapshot{}) {
+		if snapshot := LoadProfileSnapshot(context.Background(), client, "user-1"); snapshot != (ProfileSnapshot{}) {
 			t.Fatalf("error snapshot = %#v", snapshot)
 		}
 	})
@@ -149,7 +150,7 @@ func TestApplyParticipantProfileSnapshot_AppliesProfileAvatarAndCharacterSync(t 
 	if len(executor.commands) != 3 {
 		t.Fatalf("len(commands) = %d, want 3", len(executor.commands))
 	}
-	if executor.commands[0].Type != CommandTypeParticipantUpdate || executor.commands[1].Type != CommandTypeParticipantUpdate || executor.commands[2].Type != CommandTypeCharacterUpdate {
+	if executor.commands[0].Type != commandids.ParticipantUpdate || executor.commands[1].Type != commandids.ParticipantUpdate || executor.commands[2].Type != commandids.CharacterUpdate {
 		t.Fatalf("command types = %#v", []command.Type{executor.commands[0].Type, executor.commands[1].Type, executor.commands[2].Type})
 	}
 
@@ -183,7 +184,7 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenAvatarWriteFails(
 			if len(cmd.PayloadJSON) == 0 {
 				t.Fatal("payload_json = empty")
 			}
-			if cmd.Type == CommandTypeParticipantUpdate {
+			if cmd.Type == commandids.ParticipantUpdate {
 				var payload participantdomain.UpdatePayload
 				if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 					t.Fatalf("decode participant payload: %v", err)
@@ -229,7 +230,7 @@ func TestApplyParticipantProfileSnapshot_SkipsCharacterSyncWhenAvatarWriteFails(
 	if len(executor.commands) != 2 {
 		t.Fatalf("len(commands) = %d, want 2", len(executor.commands))
 	}
-	if executor.commands[0].Type != CommandTypeParticipantUpdate || executor.commands[1].Type != CommandTypeParticipantUpdate {
+	if executor.commands[0].Type != commandids.ParticipantUpdate || executor.commands[1].Type != commandids.ParticipantUpdate {
 		t.Fatalf("command types = %#v", []command.Type{executor.commands[0].Type, executor.commands[1].Type})
 	}
 }

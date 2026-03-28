@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
@@ -50,7 +51,7 @@ func TestParseGameSystem(t *testing.T) {
 
 func TestApplySystemEvent_MissingAdapters(t *testing.T) {
 	ctx := context.Background()
-	evt := testevent.Event{Type: testevent.Type("system.custom"), SystemID: "daggerheart", PayloadJSON: []byte("{}")}
+	evt := testevent.Event{Type: event.Type("system.custom"), SystemID: "daggerheart", PayloadJSON: []byte("{}")}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing adapters")
 	}
@@ -60,7 +61,7 @@ func TestApplySystemEvent_UnknownAdapter(t *testing.T) {
 	ctx := context.Background()
 	registry := bridge.NewAdapterRegistry()
 	applier := Applier{Adapters: registry}
-	evt := testevent.Event{Type: testevent.Type("system.custom"), SystemID: "daggerheart", PayloadJSON: []byte("{}")}
+	evt := testevent.Event{Type: event.Type("system.custom"), SystemID: "daggerheart", PayloadJSON: []byte("{}")}
 	// No adapter registered for daggerheart in this registry, should error
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing adapter")
@@ -98,7 +99,7 @@ func TestApplySystemEvent_UsesAdapter(t *testing.T) {
 	applier := Applier{Adapters: registry}
 
 	evt := testevent.Event{
-		Type:          testevent.Type("system.custom"),
+		Type:          event.Type("system.custom"),
 		SystemID:      "daggerheart",
 		SystemVersion: "v1",
 		PayloadJSON:   []byte("{}"),
@@ -221,7 +222,7 @@ func TestApplySystemEvent_InvalidGameSystem(t *testing.T) {
 		t.Fatalf("register adapter: %v", err)
 	}
 	applier := Applier{Adapters: registry}
-	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.Type("system.custom"), SystemID: "INVALID_SYSTEM", PayloadJSON: []byte("{}")}
+	evt := testevent.Event{CampaignID: "camp-1", Type: event.Type("system.custom"), SystemID: "INVALID_SYSTEM", PayloadJSON: []byte("{}")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid game system")
 	}
@@ -291,7 +292,7 @@ func TestApply_SavesWatermarkOnSuccess(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:  "camp-1",
 		EntityID:    "camp-1",
-		Type:        testevent.TypeCampaignCreated,
+		Type:        campaign.EventTypeCreated,
 		PayloadJSON: data,
 		Timestamp:   stamp,
 		Seq:         5,
@@ -333,7 +334,7 @@ func TestApply_UsesInjectedNowForWatermarkTimestamp(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:  "camp-1",
 		EntityID:    "camp-1",
-		Type:        testevent.TypeCampaignCreated,
+		Type:        campaign.EventTypeCreated,
 		PayloadJSON: data,
 		Timestamp:   time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC),
 		Seq:         5,
@@ -369,7 +370,7 @@ func TestApply_SkipsWatermarkWhenNil(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:  "camp-1",
 		EntityID:    "camp-1",
-		Type:        testevent.TypeCampaignCreated,
+		Type:        campaign.EventTypeCreated,
 		PayloadJSON: data,
 		Timestamp:   stamp,
 		Seq:         5,
@@ -399,7 +400,7 @@ func TestApply_SkipsWatermarkForZeroSeq(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID:  "camp-1",
 		EntityID:    "camp-1",
-		Type:        testevent.TypeCampaignCreated,
+		Type:        campaign.EventTypeCreated,
 		PayloadJSON: data,
 		Timestamp:   time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC),
 		Seq:         0, // no seq — should not save watermark
@@ -436,7 +437,7 @@ func TestApply_TracksExpectedNextSeqForGapDetection(t *testing.T) {
 	evt1 := testevent.Event{
 		CampaignID:  "camp-1",
 		EntityID:    "camp-1",
-		Type:        testevent.TypeCampaignCreated,
+		Type:        campaign.EventTypeCreated,
 		PayloadJSON: data,
 		Timestamp:   time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC),
 		Seq:         1,
@@ -458,7 +459,7 @@ func TestApply_TracksExpectedNextSeqForGapDetection(t *testing.T) {
 	updatePayload, _ := json.Marshal(map[string]any{"name": "Updated"})
 	evt3 := testevent.Event{
 		CampaignID:  "camp-1",
-		Type:        testevent.TypeCampaignUpdated,
+		Type:        campaign.EventTypeUpdated,
 		PayloadJSON: updatePayload,
 		Timestamp:   time.Date(2026, 2, 10, 13, 0, 0, 0, time.UTC),
 		Seq:         3,

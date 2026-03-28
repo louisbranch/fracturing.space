@@ -50,10 +50,11 @@ func ResolvePolicyActor(ctx context.Context, participants storage.ParticipantSto
 	if actorID != "" {
 		actor, err := participants.GetParticipant(ctx, campaignID, actorID)
 		if err != nil {
-			if grpcerror.OptionalLookupErrorContext(ctx, err, "load participant") == nil {
+			lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load participant")
+			if lookupErr == nil {
 				return storage.ParticipantRecord{}, ReasonDenyActorNotFound, status.Error(codes.PermissionDenied, "participant lacks permission")
 			}
-			return storage.ParticipantRecord{}, ReasonErrorActorLoad, grpcerror.OptionalLookupErrorContext(ctx, err, "load participant")
+			return storage.ParticipantRecord{}, ReasonErrorActorLoad, lookupErr
 		}
 		return actor, ReasonAllowAccessLevel, nil
 	}
@@ -129,10 +130,11 @@ func ResolveCharacterMutationOwnerParticipantIDFromStore(
 	}
 	characterRecord, err := characters.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		if grpcerror.OptionalLookupErrorContext(ctx, err, "load character owner") == nil {
+		lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load character owner")
+		if lookupErr == nil {
 			return "", nil
 		}
-		return "", grpcerror.OptionalLookupErrorContext(ctx, err, "load character owner")
+		return "", lookupErr
 	}
 	return strings.TrimSpace(characterRecord.OwnerParticipantID), nil
 }

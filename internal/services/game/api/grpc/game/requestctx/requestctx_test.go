@@ -9,7 +9,7 @@ import (
 )
 
 func TestWithParticipantIDInjectsIncomingMetadata(t *testing.T) {
-	ctx := WithParticipantID("participant-1")
+	ctx := WithParticipantID(context.Background(), "participant-1")
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		t.Fatal("expected incoming metadata")
@@ -20,7 +20,7 @@ func TestWithParticipantIDInjectsIncomingMetadata(t *testing.T) {
 }
 
 func TestWithUserIDInjectsIncomingMetadata(t *testing.T) {
-	ctx := WithUserID("user-1")
+	ctx := WithUserID(context.Background(), "user-1")
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		t.Fatal("expected incoming metadata")
@@ -31,10 +31,10 @@ func TestWithUserIDInjectsIncomingMetadata(t *testing.T) {
 }
 
 func TestEmptyHelpersReturnBackgroundWithoutIncomingMetadata(t *testing.T) {
-	if ctx := WithParticipantID(""); ctx != context.Background() {
+	if ctx := WithParticipantID(context.Background(), ""); ctx != context.Background() {
 		t.Fatal("expected WithParticipantID(\"\") to return context.Background()")
 	}
-	if ctx := WithUserID(""); ctx != context.Background() {
+	if ctx := WithUserID(context.Background(), ""); ctx != context.Background() {
 		t.Fatal("expected WithUserID(\"\") to return context.Background()")
 	}
 	if _, ok := metadata.FromIncomingContext(context.Background()); ok {
@@ -43,7 +43,7 @@ func TestEmptyHelpersReturnBackgroundWithoutIncomingMetadata(t *testing.T) {
 }
 
 func TestWithAdminOverrideInjectsDefaultAndTrimmedMetadata(t *testing.T) {
-	ctx := WithAdminOverride("  reason-1  ")
+	ctx := WithAdminOverride(context.Background(), "  reason-1  ")
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		t.Fatal("expected incoming metadata")
@@ -58,7 +58,7 @@ func TestWithAdminOverrideInjectsDefaultAndTrimmedMetadata(t *testing.T) {
 		t.Fatalf("user header = %v, want [user-admin-test]", got)
 	}
 
-	defaultCtx := WithAdminOverride("   ")
+	defaultCtx := WithAdminOverride(context.Background(), "   ")
 	defaultMD, ok := metadata.FromIncomingContext(defaultCtx)
 	if !ok {
 		t.Fatal("expected incoming metadata for default override")

@@ -29,6 +29,27 @@ type Deps struct {
 	Applier            projection.Applier
 }
 
+// interactionDeps derives the interactiontransport.Deps from the scene
+// dependency set. This centralizes the mapping so callers don't repeat the
+// field-by-field construction.
+func (d Deps) interactionDeps() interactiontransport.Deps {
+	return interactiontransport.Deps{
+		Auth:               d.Auth,
+		Campaign:           d.Campaign,
+		Participant:        d.Participant,
+		Character:          d.Character,
+		Event:              d.Event,
+		Session:            d.Session,
+		SessionInteraction: d.SessionInteraction,
+		Scene:              d.Scene,
+		SceneCharacter:     d.SceneCharacter,
+		SceneInteraction:   d.SceneInteraction,
+		SceneGMInteraction: d.SceneGMInteraction,
+		Write:              d.Write,
+		Applier:            d.Applier,
+	}
+}
+
 // sceneApplication coordinates scene transport use-cases across focused files
 // (lifecycle, character membership, gates, and spotlight operations) while
 // keeping scene-owned reads and write execution explicit.
@@ -61,21 +82,7 @@ func newSceneApplicationWithDependencies(deps Deps, clock func() time.Time, idGe
 			Campaign: deps.Campaign,
 			Scene:    deps.Scene,
 		},
-		interaction: interactiontransport.Deps{
-			Auth:               deps.Auth,
-			Campaign:           deps.Campaign,
-			Participant:        deps.Participant,
-			Character:          deps.Character,
-			Event:              deps.Event,
-			Session:            deps.Session,
-			SessionInteraction: deps.SessionInteraction,
-			Scene:              deps.Scene,
-			SceneCharacter:     deps.SceneCharacter,
-			SceneInteraction:   deps.SceneInteraction,
-			SceneGMInteraction: deps.SceneGMInteraction,
-			Write:              deps.Write,
-			Applier:            deps.Applier,
-		},
+		interaction: deps.interactionDeps(),
 		write:       deps.Write,
 		applier:     deps.Applier,
 		clock:       clock,

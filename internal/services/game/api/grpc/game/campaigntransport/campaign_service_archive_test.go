@@ -48,7 +48,7 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 	ts.Session.ActiveSession["c1"] = "s1"
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.ArchiveCampaign(requestctx.WithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	_, err := svc.ArchiveCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -58,7 +58,7 @@ func TestArchiveCampaign_RequiresDomainEngine(t *testing.T) {
 	ts.Campaign.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
-	_, err := svc.ArchiveCampaign(requestctx.WithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	_, err := svc.ArchiveCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -82,7 +82,7 @@ func TestArchiveCampaign_Success(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), runtimekit.FixedIDGenerator("campaign-123"))
 
-	resp, err := svc.ArchiveCampaign(requestctx.WithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.ArchiveCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ArchiveCampaign returned error: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 
 	svc := newTestCampaignService(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	_, err := svc.ArchiveCampaign(requestctx.WithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	_, err := svc.ArchiveCampaign(requestctx.WithParticipantID(context.Background(), "owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ArchiveCampaign returned error: %v", err)
 	}

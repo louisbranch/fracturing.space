@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -62,7 +63,7 @@ func (r coreCommandRouter) Decide(current aggregate.State, cmd command.Command, 
 	route, ok := routes[cmd.Type]
 	if !ok {
 		return command.Reject(command.Rejection{
-			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Code:    command.RejectionCodeCommandTypeUnsupported,
 			Message: "command type is not supported by core decider",
 		})
 	}
@@ -251,6 +252,7 @@ func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]cor
 		}
 	}
 	if len(stale) > 0 {
+		sort.Strings(stale)
 		return nil, fmt.Errorf("stale static core command routes without registration: %s",
 			strings.Join(stale, ", "))
 	}

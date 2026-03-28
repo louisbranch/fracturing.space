@@ -106,8 +106,8 @@ func TestCoreDeciderDecide_RejectsSystemCommandWhenSystemRegistryMissing(t *test
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != "SYSTEM_COMMAND_REJECTED" {
-		t.Fatalf("rejection code = %q, want %q", decision.Rejections[0].Code, "SYSTEM_COMMAND_REJECTED")
+	if decision.Rejections[0].Code != "SYSTEM_COMMAND_STATE_RESOLVE_FAILED" {
+		t.Fatalf("rejection code = %q, want %q", decision.Rejections[0].Code, "SYSTEM_COMMAND_STATE_RESOLVE_FAILED")
 	}
 }
 

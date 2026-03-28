@@ -143,29 +143,44 @@ const (
 // Commands are normalized and validated before reaching deciders so business
 // rules are applied to stable inputs instead of transport-shaped payloads.
 type Command struct {
-	CampaignID    ids.CampaignID
-	Type          Type
-	ActorType     ActorType
-	ActorID       string
-	SessionID     ids.SessionID
-	SceneID       ids.SceneID
+	// --- Routing fields: identify the aggregate and command intent ---
+	CampaignID ids.CampaignID
+	Type       Type
+
+	// --- Actor fields: who initiated the command ---
+	ActorType ActorType
+	ActorID   string
+
+	// --- Scope fields: narrow the command to a session/scene/entity ---
+	SessionID  ids.SessionID
+	SceneID    ids.SceneID
+	EntityType string
+	EntityID   string
+
+	// --- Tracing fields: correlate commands across request and workflow boundaries ---
 	RequestID     string
 	InvocationID  string
-	EntityType    string
-	EntityID      string
-	SystemID      string
-	SystemVersion string
 	CorrelationID string
 	CausationID   string
-	PayloadJSON   []byte
+
+	// --- System fields: present only for system-owned commands ---
+	SystemID      string
+	SystemVersion string
+
+	// --- Payload: the command-specific data (canonical JSON) ---
+	PayloadJSON []byte
 }
 
 // Definition registers metadata for a command type.
 //
-// The definition is the single place that declares:
-//   - who owns the command (core/system),
-//   - which payload validator runs,
-//   - and whether session gates apply.
+// The definition is the single place that declares all six policy dimensions
+// for a command type:
+//   - Type — the stable command identifier,
+//   - Owner — core vs system ownership,
+//   - ValidatePayload — optional payload schema validator,
+//   - Gate — session/scene gate behavior when a gate is open,
+//   - ActiveSession — whether the command is blocked during active sessions,
+//   - Target — entity-type addressing and payload-field fallback for EntityID.
 type Definition struct {
 	Type            Type
 	Owner           Owner

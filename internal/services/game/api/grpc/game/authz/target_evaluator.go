@@ -62,27 +62,18 @@ func EvaluateCanParticipantGovernanceTargetWithStores(
 	requestedAccess := campaignAccessFromProto(target.GetRequestedCampaignAccess())
 	participantOperation := target.GetParticipantOperation()
 
-	if targetParticipantID != "" && targetAccess == participant.CampaignAccessUnspecified && participants != nil {
+	if targetParticipantID != "" && (targetAccess == participant.CampaignAccessUnspecified || targetController == participant.ControllerUnspecified) && participants != nil {
 		targetRecord, err := participants.GetParticipant(ctx, campaignID, targetParticipantID)
 		if err != nil {
 			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load target participant"); lookupErr != nil {
 				return domainauthz.PolicyDecision{}, nil, false, lookupErr
 			}
 		} else {
-			targetAccess = targetRecord.CampaignAccess
-			targetController = targetRecord.Controller
-		}
-	}
-	if targetParticipantID != "" && targetController == participant.ControllerUnspecified && participants != nil {
-		targetRecord, err := participants.GetParticipant(ctx, campaignID, targetParticipantID)
-		if err != nil {
-			if lookupErr := grpcerror.OptionalLookupErrorContext(ctx, err, "load target participant"); lookupErr != nil {
-				return domainauthz.PolicyDecision{}, nil, false, lookupErr
-			}
-		} else {
-			targetController = targetRecord.Controller
 			if targetAccess == participant.CampaignAccessUnspecified {
 				targetAccess = targetRecord.CampaignAccess
+			}
+			if targetController == participant.ControllerUnspecified {
+				targetController = targetRecord.Controller
 			}
 		}
 	}

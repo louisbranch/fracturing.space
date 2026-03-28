@@ -7,6 +7,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -56,7 +58,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 		CharacterID:   ids.CharacterID(characterID),
 	}
 	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
-		CommandType: handler.CommandTypeSessionSpotlightSet,
+		CommandType: commandids.SessionSpotlightSet,
 		CampaignID:  campaignID,
 		SessionID:   sessionID,
 		Payload:     payload,
@@ -100,7 +102,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	}
 	payload := session.SpotlightClearedPayload{Reason: reason}
 	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
-		CommandType: handler.CommandTypeSessionSpotlightClear,
+		CommandType: commandids.SessionSpotlightClear,
 		CampaignID:  campaignID,
 		SessionID:   sessionID,
 		Payload:     payload,

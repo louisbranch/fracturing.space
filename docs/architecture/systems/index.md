@@ -14,6 +14,7 @@ Mechanics and game-system extension documentation.
 
 - [Game systems architecture](game-systems.md)
 - [Adding a game system](adding-a-game-system.md)
+- [Module interface reference](module-interface-reference.md)
 - Daggerheart reference contracts:
   - [Daggerheart creation workflow](../../reference/daggerheart-creation-workflow.md)
   - [Daggerheart event timeline contract](../../reference/daggerheart-event-timeline-contract.md)

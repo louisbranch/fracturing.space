@@ -163,6 +163,10 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 // All events must belong to the same campaign. Sequence numbers are allocated
 // contiguously, and chain hashes link each event to its predecessor — including
 // the last previously stored event for the first item in the batch.
+//
+// Unlike [Store.AppendEvent], batch append is NOT idempotent on retry.
+// A constraint violation rolls back the entire transaction. Callers must
+// implement their own deduplication or treat partial-commit retries as fatal.
 func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error) {
 	if len(events) == 0 {
 		return nil, nil

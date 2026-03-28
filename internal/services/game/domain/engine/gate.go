@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	rejectionCodeSessionGateOpen = "SESSION_GATE_OPEN"
-	rejectionCodeSceneGateOpen   = "SCENE_GATE_OPEN"
+	// RejectionCodeSessionGateOpen is used when a session gate blocks a command.
+	RejectionCodeSessionGateOpen = "SESSION_GATE_OPEN"
+	// RejectionCodeSceneGateOpen is used when a scene gate blocks a command.
+	RejectionCodeSceneGateOpen = "SCENE_GATE_OPEN"
 )
 
 // DecisionGate enforces gate policy before command decisions run.
@@ -42,7 +44,7 @@ func (g DecisionGate) Check(state session.State, cmd command.Command) command.De
 		message = fmt.Sprintf("session gate is open: %s", gateID)
 	}
 	return command.Reject(command.Rejection{
-		Code:    rejectionCodeSessionGateOpen,
+		Code:    RejectionCodeSessionGateOpen,
 		Message: message,
 	})
 }
@@ -67,7 +69,7 @@ func (g DecisionGate) CheckScene(state scene.State, cmd command.Command) command
 		message = fmt.Sprintf("scene gate is open: %s", gateID)
 	}
 	return command.Reject(command.Rejection{
-		Code:    rejectionCodeSceneGateOpen,
+		Code:    RejectionCodeSceneGateOpen,
 		Message: message,
 	})
 }

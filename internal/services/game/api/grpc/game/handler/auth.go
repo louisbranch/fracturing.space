@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -30,7 +31,8 @@ func AuthUsername(ctx context.Context, authClient AuthUserClient, userID string,
 		if status.Code(err) == codes.NotFound && notFoundErr != nil {
 			return "", notFoundErr
 		}
-		return "", status.Errorf(codes.Internal, "get auth user: %v", err)
+		slog.ErrorContext(ctx, "auth user lookup failed", "user_id", trimmedUserID, "error", err)
+		return "", status.Error(codes.Internal, "auth user lookup failed")
 	}
 	if userResponse == nil || userResponse.GetUser() == nil {
 		return "", status.Error(codes.Internal, "auth user response is missing")

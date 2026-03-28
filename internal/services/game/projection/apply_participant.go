@@ -137,16 +137,29 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event, p
 
 func (a Applier) applyParticipantLeft(ctx context.Context, evt event.Event) error {
 	participantID := strings.TrimSpace(evt.EntityID)
+	campaignID := string(evt.CampaignID)
 
-	if err := a.Participant.DeleteParticipant(ctx, string(evt.CampaignID), participantID); err != nil {
-		return err
-	}
-
-	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
+	// Load participant before deletion to retrieve userID for claim-index cleanup.
+	current, err := a.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
 		return err
 	}
-	pCount, err := a.Participant.CountParticipants(ctx, string(evt.CampaignID))
+
+	if a.ClaimIndex != nil && strings.TrimSpace(current.UserID) != "" {
+		if err := a.ClaimIndex.DeleteParticipantClaim(ctx, campaignID, current.UserID); err != nil {
+			return err
+		}
+	}
+
+	if err := a.Participant.DeleteParticipant(ctx, campaignID, participantID); err != nil {
+		return err
+	}
+
+	campaignRecord, err := a.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return err
+	}
+	pCount, err := a.Participant.CountParticipants(ctx, campaignID)
 	if err != nil {
 		return err
 	}

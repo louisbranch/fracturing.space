@@ -72,6 +72,7 @@ const (
 	rejectionCodeSceneGateTypeRequired                 = "SCENE_GATE_TYPE_REQUIRED"
 	rejectionCodeSceneGateAlreadyOpen                  = "SCENE_GATE_ALREADY_OPEN"
 	rejectionCodeSceneGateNotOpen                      = "SCENE_GATE_NOT_OPEN"
+	rejectionCodeSceneGateIDMismatch                   = "SCENE_GATE_ID_MISMATCH"
 	rejectionCodeCharacterIDRequired                   = "SCENE_CHARACTER_ID_REQUIRED"
 	rejectionCodeCharacterAlreadyInScene               = "SCENE_CHARACTER_ALREADY_IN_SCENE"
 	rejectionCodeCharacterNotInScene                   = "SCENE_CHARACTER_NOT_IN_SCENE"
@@ -109,6 +110,7 @@ func RejectionCodes() []string {
 		rejectionCodeSceneGateTypeRequired,
 		rejectionCodeSceneGateAlreadyOpen,
 		rejectionCodeSceneGateNotOpen,
+		rejectionCodeSceneGateIDMismatch,
 		rejectionCodeCharacterIDRequired,
 		rejectionCodeCharacterAlreadyInScene,
 		rejectionCodeCharacterNotInScene,
@@ -140,7 +142,7 @@ func RejectionCodes() []string {
 // Commands that operate on a single scene look up the target scene by ID.
 // Cross-scene commands (transfer, transition) look up multiple scenes.
 func Decide(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 	switch cmd.Type {
 	case CommandTypeCreate:
 		return decideCreate(cmd, now)

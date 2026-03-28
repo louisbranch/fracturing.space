@@ -1,6 +1,7 @@
 package sessiontransport
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -59,7 +60,7 @@ func TestResolveSessionGate_UsesDomainEngine(t *testing.T) {
 		nil,
 	)
 
-	_, err := svc.ResolveSessionGate(requestctx.WithParticipantID("manager-1"), &statev1.ResolveSessionGateRequest{
+	_, err := svc.ResolveSessionGate(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.ResolveSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateId:     "g1",

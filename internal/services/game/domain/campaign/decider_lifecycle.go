@@ -34,7 +34,7 @@ func decideLifecycleStatus(state State, cmd command.Command, now func() time.Tim
 
 	normalizedPayload := UpdatePayload{Fields: map[string]string{"status": string(targetStatus)}}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, command.RequireNowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 

@@ -6,7 +6,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 )
 
 // foldEntry describes how a set of event types maps to a fold function that
@@ -67,25 +66,6 @@ func coreFoldEntries() []foldEntry {
 		})
 	}
 	return entries
-}
-
-// foldScene routes scene events to the correct scene state entry.
-//
-// Scene events use different EntityID conventions depending on event type:
-// most use the SceneID as EntityID, but gate events use the GateID. To
-// handle both patterns uniformly, foldScene extracts the scene_id from
-// the event payload.
-func foldScene(state *State, evt event.Event) error {
-	if err := foldKeyedState(
-		state,
-		func(state *State) *map[ids.SceneID]scene.State { return &state.Scenes },
-		extractSceneID,
-		evt,
-		scene.Fold,
-	); err != nil {
-		return fmt.Errorf("scene fold: %w", err)
-	}
-	return nil
 }
 
 // extractSceneID reads the scene_id field from any scene event payload.

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -32,7 +31,7 @@ func newAuthorizationServiceFixture(t *testing.T) *AuthorizationService {
 	eventStore := gametest.NewFakeEventStore()
 	if _, err := eventStore.AppendEvent(context.Background(), event.Event{
 		CampaignID:  "c1",
-		Type:        handler.EventTypeCharacterCreated,
+		Type:        character.EventTypeCreated,
 		EntityType:  "character",
 		EntityID:    "char-member-1",
 		ActorType:   event.ActorTypeParticipant,

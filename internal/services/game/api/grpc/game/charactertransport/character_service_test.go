@@ -83,7 +83,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID(context.Background(), "member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("Renamed"),
@@ -123,7 +123,7 @@ func TestUpdateCharacter_Success(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("New Hero"),
@@ -184,7 +184,7 @@ func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
 
 	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
+	resp, err := svc.UpdateCharacter(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("New Hero"),

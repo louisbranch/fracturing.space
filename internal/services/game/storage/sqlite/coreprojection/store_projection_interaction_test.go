@@ -315,3 +315,138 @@ func TestProjectionLookupHelpers(t *testing.T) {
 		t.Fatalf("campaign ids by ai agent = %+v", campaignIDs)
 	}
 }
+
+func TestPutAndGetSessionInteraction_RoundTrip(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 3, 10, 14, 0, 0, 0, time.UTC)
+
+	seedCampaign(t, store, "camp-interact-rt", now)
+	seedSession(t, store, "camp-interact-rt", "sess-1", now)
+
+	postTime := now.Add(5 * time.Minute)
+	interaction := storage.SessionInteraction{
+		CampaignID: "camp-interact-rt",
+		SessionID:  "sess-1",
+		CharacterControllers: []storage.SessionCharacterController{
+			{CharacterID: "char-1", ParticipantID: "part-1"},
+			{CharacterID: "char-2", ParticipantID: "part-2"},
+		},
+		ActiveSceneID:               "scene-1",
+		GMAuthorityParticipantID:    "part-gm",
+		OOCPaused:                   true,
+		OOCRequestedByParticipantID: "part-1",
+		OOCReason:                   "Need a break",
+		OOCInterruptedSceneID:       "scene-1",
+		OOCInterruptedPhaseID:       "phase-1",
+		OOCInterruptedPhaseStatus:   "players",
+		OOCResolutionPending:        true,
+		OOCPosts: []storage.SessionOOCPost{
+			{PostID: "post-1", ParticipantID: "part-1", Body: "Taking five", CreatedAt: postTime},
+		},
+		ReadyToResumeParticipantIDs: []string{"part-2"},
+		AITurn: storage.SessionAITurn{
+			Status:             session.AITurnStatusRunning,
+			TurnToken:          "tok-abc",
+			OwnerParticipantID: "part-gm",
+			SourceEventType:    "scene.player_phase_submitted",
+			SourceSceneID:      "scene-1",
+			SourcePhaseID:      "phase-1",
+		},
+		UpdatedAt: now,
+	}
+
+	if err := store.PutSessionInteraction(ctx, interaction); err != nil {
+		t.Fatalf("put session interaction: %v", err)
+	}
+
+	got, err := store.GetSessionInteraction(ctx, interaction.CampaignID, interaction.SessionID)
+	if err != nil {
+		t.Fatalf("get session interaction: %v", err)
+	}
+
+	if got.CampaignID != interaction.CampaignID {
+		t.Fatalf("campaign_id = %q, want %q", got.CampaignID, interaction.CampaignID)
+	}
+	if !got.OOCPaused {
+		t.Fatal("expected ooc_paused = true")
+	}
+	if len(got.OOCPosts) != 1 || got.OOCPosts[0].PostID != "post-1" {
+		t.Fatalf("ooc_posts = %+v, want 1 post with id post-1", got.OOCPosts)
+	}
+	if len(got.CharacterControllers) != 2 {
+		t.Fatalf("character_controllers length = %d, want 2", len(got.CharacterControllers))
+	}
+	if got.AITurn.Status != session.AITurnStatusRunning {
+		t.Fatalf("ai_turn_status = %q, want %q", got.AITurn.Status, session.AITurnStatusRunning)
+	}
+}
+
+func TestGetSessionInteraction_NotFound(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	_, err := store.GetSessionInteraction(ctx, "no-camp", "no-sess")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestPutAndGetSceneInteraction_RoundTrip(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 3, 10, 17, 0, 0, 0, time.UTC)
+
+	seedCampaign(t, store, "camp-sc-interact", now)
+	if err := store.PutScene(ctx, storage.SceneRecord{
+		CampaignID: "camp-sc-interact", SceneID: "scene-1", SessionID: "sess-1",
+		Name: "Test Scene", Open: true, CreatedAt: now, UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed scene: %v", err)
+	}
+
+	interaction := storage.SceneInteraction{
+		CampaignID:           "camp-sc-interact",
+		SceneID:              "scene-1",
+		SessionID:            "sess-1",
+		PhaseOpen:            true,
+		PhaseID:              "phase-1",
+		PhaseStatus:          scene.PlayerPhaseStatusPlayers,
+		ActingCharacterIDs:   []string{"char-1", "char-2"},
+		ActingParticipantIDs: []string{"part-1", "part-2"},
+		Slots: []storage.ScenePlayerSlot{
+			{ParticipantID: "part-1", SummaryText: "I attack", CharacterIDs: []string{"char-1"},
+				UpdatedAt: now, ReviewStatus: scene.PlayerPhaseSlotReviewStatusOpen},
+		},
+		UpdatedAt: now,
+	}
+
+	if err := store.PutSceneInteraction(ctx, interaction); err != nil {
+		t.Fatalf("put scene interaction: %v", err)
+	}
+
+	got, err := store.GetSceneInteraction(ctx, interaction.CampaignID, interaction.SceneID)
+	if err != nil {
+		t.Fatalf("get scene interaction: %v", err)
+	}
+
+	if !got.PhaseOpen {
+		t.Fatal("expected phase_open = true")
+	}
+	if len(got.ActingCharacterIDs) != 2 {
+		t.Fatalf("acting_character_ids length = %d, want 2", len(got.ActingCharacterIDs))
+	}
+	if len(got.Slots) != 1 || got.Slots[0].ParticipantID != "part-1" {
+		t.Fatalf("slots = %+v, want 1 slot for part-1", got.Slots)
+	}
+}
+
+func TestGetSceneInteraction_NotFound(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	_, err := store.GetSceneInteraction(ctx, "no-camp", "no-scene")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}

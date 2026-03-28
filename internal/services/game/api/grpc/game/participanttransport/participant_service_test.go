@@ -49,7 +49,7 @@ func TestUpdateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -88,7 +88,7 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	}}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwrite.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
@@ -160,7 +160,7 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 		nil,
 	)
 
-	ctx := requestctx.WithParticipantID("owner-1")
+	ctx := requestctx.WithParticipantID(context.Background(), "owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",

@@ -152,8 +152,8 @@ func TestDecideActionCommands_RejectsDuplicateOutcomeApply(t *testing.T) {
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != "OUTCOME_ALREADY_APPLIED" {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_ALREADY_APPLIED")
+	if decision.Rejections[0].Code != "ACTION_OUTCOME_ALREADY_APPLIED" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "ACTION_OUTCOME_ALREADY_APPLIED")
 	}
 }
 
@@ -184,8 +184,8 @@ func TestDecideActionCommands_RejectsSystemOwnedOutcomeEffects(t *testing.T) {
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN" {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN")
+	if decision.Rejections[0].Code != "ACTION_OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "ACTION_OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN")
 	}
 }
 
@@ -214,7 +214,7 @@ func TestDecideActionCommands_RejectsDisallowedCoreOutcomeEffects(t *testing.T) 
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != "OUTCOME_EFFECT_TYPE_FORBIDDEN" {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_EFFECT_TYPE_FORBIDDEN")
+	if decision.Rejections[0].Code != "ACTION_OUTCOME_EFFECT_TYPE_FORBIDDEN" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "ACTION_OUTCOME_EFFECT_TYPE_FORBIDDEN")
 	}
 }

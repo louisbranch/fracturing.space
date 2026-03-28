@@ -29,6 +29,9 @@ func (id SystemID) String() string {
 //
 // Accepted values include canonical IDs like "daggerheart" and transport enum
 // labels like "GAME_SYSTEM_DAGGERHEART".
+//
+// This is an intentional closed-set enumeration. When adding a new game system,
+// add a case here alongside the manifest entry and system package.
 func NormalizeSystemID(value string) (SystemID, bool) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -214,8 +217,8 @@ type OutcomeContext struct {
 	SessionID   string
 	CharacterID string
 	RollSeq     int64
-	Outcome     interface{} // System-specific outcome type
-	Targets     []string    // Target character IDs
+	Outcome     any      // System-specific outcome type
+	Targets     []string // Target character IDs
 }
 
 // OutcomeApplier applies roll outcomes to game state.
@@ -333,15 +336,4 @@ func (r *MetadataRegistry) List() []GameSystem {
 		result = append(result, system)
 	}
 	return result
-}
-
-// RollRequest represents a generic roll request that systems can implement.
-type RollRequest struct {
-	Ctx  context.Context
-	Seed int64
-}
-
-// RollResult represents a generic roll result.
-type RollResult struct {
-	Total int
 }

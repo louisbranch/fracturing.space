@@ -96,9 +96,6 @@ const (
 	DaggerheartCampaignCountdownAdvance        command.Type = "sys.daggerheart.campaign_countdown.advance"
 	DaggerheartCampaignCountdownTriggerResolve command.Type = "sys.daggerheart.campaign_countdown.trigger_resolve"
 	DaggerheartCampaignCountdownDelete         command.Type = "sys.daggerheart.campaign_countdown.delete"
-	DaggerheartCountdownCreate                 command.Type = DaggerheartSceneCountdownCreate
-	DaggerheartCountdownUpdate                 command.Type = DaggerheartSceneCountdownAdvance
-	DaggerheartCountdownDelete                 command.Type = DaggerheartSceneCountdownDelete
 	DaggerheartDamageApply                     command.Type = "sys.daggerheart.damage.apply"
 	DaggerheartAdversaryDamageApply            command.Type = "sys.daggerheart.adversary_damage.apply"
 	DaggerheartCharacterTemporaryArmorApply    command.Type = "sys.daggerheart.character_temporary_armor.apply"

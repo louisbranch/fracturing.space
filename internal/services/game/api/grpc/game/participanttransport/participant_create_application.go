@@ -3,10 +3,13 @@ package participanttransport
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 
 	"context"
 	"encoding/json"
 	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
@@ -39,7 +42,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	}
 
 	userID := strings.TrimSpace(in.GetUserId())
-	profile := handler.LoadSocialProfileSnapshot(ctx, c.stores.Social, userID)
+	profile := social.LoadProfileSnapshot(ctx, c.stores.Social, userID)
 
 	name := strings.TrimSpace(in.GetName())
 	if name == "" {
@@ -137,7 +140,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeParticipantJoin,
+			Type:         commandids.ParticipantJoin,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

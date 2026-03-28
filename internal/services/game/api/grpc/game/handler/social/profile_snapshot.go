@@ -1,4 +1,4 @@
-package handler
+package social
 
 import (
 	"context"
@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -26,7 +28,7 @@ func ApplyParticipantProfileSnapshot(
 	applier projection.Applier,
 	participantStore storage.ParticipantStore,
 	characterStore storage.CharacterStore,
-	socialClient SocialProfileClient,
+	socialClient ProfileClient,
 	campaignID string,
 	participantID string,
 	userID string,
@@ -40,7 +42,7 @@ func ApplyParticipantProfileSnapshot(
 		return
 	}
 
-	snapshot := LoadSocialProfileSnapshot(ctx, socialClient, userID)
+	snapshot := LoadProfileSnapshot(ctx, socialClient, userID)
 	slog.Info("profile snapshot loaded",
 		"user_id", userID,
 		"participant_id", participantID,
@@ -104,13 +106,13 @@ func applyParticipantUpdateFields(
 	if err != nil {
 		return err
 	}
-	if _, err = ExecuteAndApplyDomainCommand(
+	if _, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         CommandTypeParticipantUpdate,
+			Type:         commandids.ParticipantUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -120,7 +122,7 @@ func applyParticipantUpdateFields(
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: ApplyErrorWithCodePreserve("apply participant event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply participant event"),
 		},
 	); err != nil {
 		slog.Error("apply participant profile snapshot", "error", err)
@@ -175,13 +177,13 @@ func SyncOwnedCharacterAvatars(
 		if err != nil {
 			continue
 		}
-		_, _ = ExecuteAndApplyDomainCommand(
+		_, _ = handler.ExecuteAndApplyDomainCommand(
 			ctx,
 			write,
 			applier,
 			commandbuild.Core(commandbuild.CoreInput{
 				CampaignID:   campaignID,
-				Type:         CommandTypeCharacterUpdate,
+				Type:         commandids.CharacterUpdate,
 				ActorType:    actorType,
 				ActorID:      actorID,
 				RequestID:    requestID,
@@ -191,7 +193,7 @@ func SyncOwnedCharacterAvatars(
 				PayloadJSON:  payloadJSON,
 			}),
 			domainwrite.Options{
-				ApplyErr: ApplyErrorWithCodePreserve("apply character avatar event"),
+				ApplyErr: handler.ApplyErrorWithCodePreserve("apply character avatar event"),
 			},
 		)
 	}

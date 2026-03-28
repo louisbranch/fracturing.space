@@ -55,8 +55,8 @@ func TestExecute_RejectsWhenSceneGateOpen(t *testing.T) {
 	if len(result.Decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(result.Decision.Rejections))
 	}
-	if result.Decision.Rejections[0].Code != rejectionCodeSceneGateOpen {
-		t.Errorf("code = %q, want %q", result.Decision.Rejections[0].Code, rejectionCodeSceneGateOpen)
+	if result.Decision.Rejections[0].Code != RejectionCodeSceneGateOpen {
+		t.Errorf("code = %q, want %q", result.Decision.Rejections[0].Code, RejectionCodeSceneGateOpen)
 	}
 }
 

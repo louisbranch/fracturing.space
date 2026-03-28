@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -79,7 +80,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
-			Type:         handler.CommandTypeCampaignCreate,
+			Type:         commandids.CampaignCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -116,7 +117,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
-			Type:         handler.CommandTypeCampaignFork,
+			Type:         commandids.CampaignFork,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,

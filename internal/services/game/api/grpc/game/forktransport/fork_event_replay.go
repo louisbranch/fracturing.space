@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/journalimport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -78,13 +79,13 @@ func (r forkEventReplay) CopyToCampaign(
 
 func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 	switch evt.Type {
-	case handler.EventTypeCampaignCreated, handler.EventTypeCampaignForked:
+	case campaign.EventTypeCreated, campaign.EventTypeForked:
 		return false, nil
-	case handler.EventTypeCampaignAIBound, handler.EventTypeCampaignAIUnbound:
+	case campaign.EventTypeAIBound, campaign.EventTypeAIUnbound:
 		return false, nil
-	case handler.EventTypeParticipantJoined, handler.EventTypeParticipantUpdated, handler.EventTypeParticipantLeft:
+	case participant.EventTypeJoined, participant.EventTypeUpdated, participant.EventTypeLeft:
 		return copyParticipants, nil
-	case handler.EventTypeCharacterUpdated:
+	case character.EventTypeUpdated:
 		if copyParticipants {
 			return true, nil
 		}
@@ -123,7 +124,7 @@ func forkEventForCampaign(evt event.Event, campaignID string, copyParticipants b
 	}
 	if !copyParticipants {
 		switch evt.Type {
-		case handler.EventTypeCharacterCreated:
+		case character.EventTypeCreated:
 			var payload character.CreatePayload
 			if err := json.Unmarshal(forked.PayloadJSON, &payload); err == nil {
 				payload.OwnerParticipantID = ""
@@ -131,7 +132,7 @@ func forkEventForCampaign(evt event.Event, campaignID string, copyParticipants b
 					forked.PayloadJSON = payloadJSON
 				}
 			}
-		case handler.EventTypeCharacterUpdated:
+		case character.EventTypeUpdated:
 			var payload character.UpdatePayload
 			if err := json.Unmarshal(forked.PayloadJSON, &payload); err == nil {
 				if _, ok := payload.Fields["owner_participant_id"]; ok {

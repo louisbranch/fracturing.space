@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"google.golang.org/grpc/codes"
@@ -65,7 +66,7 @@ func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, 
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneGateOpen,
+			Type:         commandids.SceneGateOpen,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -116,7 +117,7 @@ func (a sceneApplication) ResolveSceneGate(ctx context.Context, campaignID strin
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneGateResolve,
+			Type:         commandids.SceneGateResolve,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -167,7 +168,7 @@ func (a sceneApplication) AbandonSceneGate(ctx context.Context, campaignID strin
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneGateAbandon,
+			Type:         commandids.SceneGateAbandon,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,

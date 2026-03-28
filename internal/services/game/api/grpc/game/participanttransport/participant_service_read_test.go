@@ -75,7 +75,7 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	resp, err := svc.ListParticipants(requestctx.WithParticipantID("p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	resp, err := svc.ListParticipants(requestctx.WithParticipantID(context.Background(), "p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListParticipants returned error: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestListParticipants_DeniesNonMember(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.ListParticipants(requestctx.WithParticipantID("outsider-1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	_, err := svc.ListParticipants(requestctx.WithParticipantID(context.Background(), "outsider-1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
@@ -129,7 +129,7 @@ func TestListParticipants_WithParticipants(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	resp, err := svc.ListParticipants(requestctx.WithParticipantID("p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	resp, err := svc.ListParticipants(requestctx.WithParticipantID(context.Background(), "p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListParticipants returned error: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestGetParticipant_ParticipantNotFound(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.GetParticipant(requestctx.WithParticipantID("p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "nonexistent"})
+	_, err := svc.GetParticipant(requestctx.WithParticipantID(context.Background(), "p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
@@ -226,7 +226,7 @@ func TestGetParticipant_Success(t *testing.T) {
 	}
 
 	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
-	resp, err := svc.GetParticipant(requestctx.WithParticipantID("p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
+	resp, err := svc.GetParticipant(requestctx.WithParticipantID(context.Background(), "p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
 	if err != nil {
 		t.Fatalf("GetParticipant returned error: %v", err)
 	}

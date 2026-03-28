@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 )
@@ -75,7 +76,7 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneCreate,
+			Type:         commandids.SceneCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -117,10 +118,19 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 		return err
 	}
 
+	// Populate Fields so the projection can distinguish "clear to empty" from
+	// "not provided". Proto3 scalars collapse both to zero-value, so we record
+	// every field the caller could have set; the projection applies only keys
+	// present in Fields.
+	fields := map[string]string{
+		"name":        strings.TrimSpace(in.GetName()),
+		"description": strings.TrimSpace(in.GetDescription()),
+	}
 	payload := scene.UpdatePayload{
 		SceneID:     ids.SceneID(sceneID),
-		Name:        strings.TrimSpace(in.GetName()),
-		Description: strings.TrimSpace(in.GetDescription()),
+		Name:        fields["name"],
+		Description: fields["description"],
+		Fields:      fields,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -135,7 +145,7 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneUpdate,
+			Type:         commandids.SceneUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -184,7 +194,7 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneEnd,
+			Type:         commandids.SceneEnd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -257,7 +267,7 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         handler.CommandTypeSceneTransition,
+			Type:         commandids.SceneTransition,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,

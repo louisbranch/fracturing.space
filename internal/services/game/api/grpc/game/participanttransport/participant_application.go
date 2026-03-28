@@ -6,6 +6,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -30,7 +31,7 @@ type Deps struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
-	Social      handler.SocialProfileClient
+	Social      social.ProfileClient
 	Write       domainwrite.WritePath
 	Applier     projection.Applier
 
@@ -67,7 +68,7 @@ type participantApplicationStores struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
-	Social      handler.SocialProfileClient
+	Social      social.ProfileClient
 }
 
 func newParticipantApplicationFromDeps(

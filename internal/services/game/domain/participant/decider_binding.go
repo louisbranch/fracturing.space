@@ -10,7 +10,7 @@ import (
 )
 
 func decideBind(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
@@ -54,7 +54,7 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 }
 
 func decideUnbind(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
@@ -93,7 +93,7 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 }
 
 func decideSeatReassign(state State, cmd command.Command, now func() time.Time) command.Decision {
-	now = command.NowFunc(now)
+	now = command.RequireNowFunc(now)
 
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)

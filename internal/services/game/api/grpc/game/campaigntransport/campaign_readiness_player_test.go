@@ -1,6 +1,7 @@
 package campaigntransport
 
 import (
+	"context"
 	"testing"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -28,7 +29,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenCharacterIncompleteIncludesAction
 		Name:               "Aria",
 	}
 
-	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID(context.Background(), "gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {

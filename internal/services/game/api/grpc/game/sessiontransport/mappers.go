@@ -3,9 +3,9 @@ package sessiontransport
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -75,7 +75,7 @@ func GateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, error) {
 		CreatedAt:           timestamppb.New(gate.CreatedAt),
 		CreatedByActorType:  gate.CreatedByActorType,
 		CreatedByActorId:    gate.CreatedByActorID,
-		ResolvedAt:          timestampOrNil(gate.ResolvedAt),
+		ResolvedAt:          handler.TimestampOrNil(gate.ResolvedAt),
 		ResolvedByActorType: gate.ResolvedByActorType,
 		ResolvedByActorId:   gate.ResolvedByActorID,
 		Metadata:            metadata,
@@ -134,13 +134,6 @@ func SpotlightTypeFromProto(value campaignv1.SessionSpotlightType) (session.Spot
 	default:
 		return "", fmt.Errorf("spotlight type is required")
 	}
-}
-
-func timestampOrNil(value *time.Time) *timestamppb.Timestamp {
-	if value == nil {
-		return nil
-	}
-	return timestamppb.New(value.UTC())
 }
 
 func structFromMap(payload map[string]any) (*structpb.Struct, error) {

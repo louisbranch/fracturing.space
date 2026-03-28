@@ -208,7 +208,7 @@ func TestIssueCampaignAISessionGrantSuccess(t *testing.T) {
 		Participant:        participantStore,
 		SessionInteraction: sessionInteractionStore,
 	}, now)
-	resp, err := svc.IssueCampaignAISessionGrant(requestctx.WithUserID("user-7"), &statev1.IssueCampaignAISessionGrantRequest{
+	resp, err := svc.IssueCampaignAISessionGrant(requestctx.WithUserID(context.Background(), "user-7"), &statev1.IssueCampaignAISessionGrantRequest{
 		CampaignId: "camp-1",
 		SessionId:  "session-1",
 	})

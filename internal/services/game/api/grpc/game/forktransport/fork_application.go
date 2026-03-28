@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/journalimport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -21,7 +21,7 @@ type Deps struct {
 	Session       storage.SessionStore
 	CampaignFork  storage.CampaignForkStore
 	Event         storage.EventStore
-	Social        handler.SocialProfileClient
+	Social        social.ProfileClient
 	Write         domainwrite.WritePath
 	Applier       projection.Applier
 	EventRegistry *event.Registry
@@ -45,7 +45,7 @@ type forkApplicationStores struct {
 	Session      storage.SessionStore
 	CampaignFork storage.CampaignForkStore
 	Event        storage.EventStore
-	Social       handler.SocialProfileClient
+	Social       social.ProfileClient
 }
 
 func newForkApplicationWithDependencies(

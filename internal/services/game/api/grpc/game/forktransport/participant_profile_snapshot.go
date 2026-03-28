@@ -3,7 +3,7 @@ package forktransport
 import (
 	"context"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler/social"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -17,7 +17,7 @@ func applyParticipantProfileSnapshot(
 	applier projection.Applier,
 	participantStore storage.ParticipantStore,
 	characterStore storage.CharacterStore,
-	socialClient handler.SocialProfileClient,
+	socialClient social.ProfileClient,
 	campaignID string,
 	participantID string,
 	userID string,
@@ -26,7 +26,7 @@ func applyParticipantProfileSnapshot(
 	actorID string,
 	actorType command.ActorType,
 ) {
-	handler.ApplyParticipantProfileSnapshot(
+	social.ApplyParticipantProfileSnapshot(
 		ctx, write, applier,
 		participantStore, characterStore, socialClient,
 		campaignID, participantID, userID,
@@ -48,7 +48,7 @@ func syncOwnedCharacterAvatars(
 	actorID string,
 	actorType command.ActorType,
 ) {
-	handler.SyncOwnedCharacterAvatars(
+	social.SyncOwnedCharacterAvatars(
 		ctx, write, applier,
 		participantStore, characterStore,
 		campaignID, participantID,

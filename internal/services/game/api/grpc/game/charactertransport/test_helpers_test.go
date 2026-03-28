@@ -17,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -225,7 +226,7 @@ func testCreateCharacterResults(
 ) map[command.Type]engine.Result {
 	t.Helper()
 	return map[command.Type]engine.Result{
-		handler.CommandTypeCharacterCreate: {
+		commandids.CharacterCreate: {
 			Decision: command.Accept(event.Event{
 				CampaignID:  ids.CampaignID(campaignID),
 				Type:        event.Type("character.created"),

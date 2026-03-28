@@ -32,7 +32,7 @@ func decideAIBind(state State, cmd command.Command, now func() time.Time) comman
 
 	normalizedPayload := AIBindPayload{AIAgentID: agentID}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeAIBound, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIBound, "campaign", string(cmd.CampaignID), payloadJSON, command.RequireNowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -44,7 +44,7 @@ func decideAIUnbind(state State, cmd command.Command, now func() time.Time) comm
 		})
 	}
 	payloadJSON, _ := json.Marshal(AIUnbindPayload{})
-	evt := command.NewEvent(cmd, EventTypeAIUnbound, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIUnbound, "campaign", string(cmd.CampaignID), payloadJSON, command.RequireNowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -67,6 +67,6 @@ func decideAIAuthRotate(state State, cmd command.Command, now func() time.Time) 
 	payload.EpochAfter = state.AIAuthEpoch + 1
 	payload.Reason = strings.TrimSpace(payload.Reason)
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeAIAuthRotated, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIAuthRotated, "campaign", string(cmd.CampaignID), payloadJSON, command.RequireNowFunc(now)().UTC())
 	return command.Accept(evt)
 }

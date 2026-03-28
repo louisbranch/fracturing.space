@@ -7,7 +7,6 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	daggerheartpayload "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/payload"
 )
@@ -21,7 +20,7 @@ func TestEventDomainFromType(t *testing.T) {
 		{name: "empty", evtType: "", want: ""},
 		{name: "trimmed", evtType: "  session.started  ", want: "session"},
 		{name: "no dot", evtType: "session", want: "session"},
-		{name: "system prefix", evtType: handler.EventTypeDaggerheartCharacterStatePatched, want: "sys"},
+		{name: "system prefix", evtType: daggerheartpayload.EventTypeCharacterStatePatched, want: "sys"},
 	}
 
 	for _, tc := range tests {
@@ -110,7 +109,7 @@ func TestTimelineEntryFromEventAddsChangeProjectionWithoutResolverDisplay(t *tes
 	resolver := newTimelineProjectionResolver(timelineProjectionStores{})
 	entry, err := timelineEntryFromEvent(context.Background(), resolver, event.Event{
 		Seq:         1,
-		Type:        handler.EventTypeDaggerheartCharacterStatePatched,
+		Type:        daggerheartpayload.EventTypeCharacterStatePatched,
 		Timestamp:   time.Now().UTC(),
 		PayloadJSON: payloadJSON,
 	})

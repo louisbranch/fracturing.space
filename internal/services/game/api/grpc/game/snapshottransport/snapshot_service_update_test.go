@@ -100,7 +100,7 @@ func TestUpdateSnapshotState_NegativeGmFear(t *testing.T) {
 		Campaign:    campaignStore,
 		Daggerheart: daggerhearttestkit.NewFakeDaggerheartStore(),
 	})
-	_, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	_, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: -1},
@@ -120,7 +120,7 @@ func TestUpdateSnapshotState_RequiresDomainEngine(t *testing.T) {
 		Daggerheart: dhStore,
 	})
 
-	_, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	_, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 7},
@@ -165,7 +165,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 7},
@@ -231,7 +231,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 10},
@@ -287,7 +287,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 0},
@@ -337,7 +337,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 		Applier:     testApplier(dhStore),
 	})
 
-	_, err = svc.UpdateSnapshotState(requestctx.WithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
+	_, err = svc.UpdateSnapshotState(requestctx.WithAdminOverride(context.Background(), "snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 5},

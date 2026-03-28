@@ -7,11 +7,43 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
+
+// deterministicState is a minimal aggregate used by the determinism test.
+// It avoids importing domain/aggregate (which imports replay), preventing an
+// import cycle.
+type deterministicState struct {
+	CampaignName string
+	Participants []string
+	Updated      bool
+}
+
+// deterministicFolder folds a small set of core event types into
+// deterministicState. The logic is intentionally self-contained so the test
+// does not depend on the real aggregate.Folder.
+type deterministicFolder struct{}
+
+func (f *deterministicFolder) Fold(state any, evt event.Event) (any, error) {
+	s, _ := state.(deterministicState)
+	switch evt.Type {
+	case "campaign.created":
+		var p struct {
+			Name string `json:"name"`
+		}
+		_ = json.Unmarshal(evt.PayloadJSON, &p)
+		s.CampaignName = p.Name
+	case "participant.joined":
+		var p struct {
+			Name string `json:"name"`
+		}
+		_ = json.Unmarshal(evt.PayloadJSON, &p)
+		s.Participants = append(s.Participants, p.Name)
+	case "campaign.updated":
+		s.Updated = true
+	}
+	return s, nil
+}
 
 // TestReplay_Determinism validates that replaying the same event sequence
 // twice produces identical aggregate state. This is the foundational
@@ -20,7 +52,7 @@ import (
 func TestReplay_Determinism(t *testing.T) {
 	events := deterministicEventSequence(t)
 	store := &fakeEventStore{events: events}
-	folder := &aggregate.Folder{}
+	folder := &deterministicFolder{}
 	fixedClock := func() time.Time { return time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC) }
 
 	// First replay.
@@ -31,7 +63,7 @@ func TestReplay_Determinism(t *testing.T) {
 		checkpointsA,
 		folder,
 		"camp-1",
-		aggregate.NewState(),
+		deterministicState{},
 		Options{Clock: fixedClock},
 	)
 	if err != nil {
@@ -46,7 +78,7 @@ func TestReplay_Determinism(t *testing.T) {
 		checkpointsB,
 		folder,
 		"camp-1",
-		aggregate.NewState(),
+		deterministicState{},
 		Options{Clock: fixedClock},
 	)
 	if err != nil {
@@ -65,15 +97,12 @@ func TestReplay_Determinism(t *testing.T) {
 	}
 
 	// Sanity: state is not zero-valued — the fold actually applied events.
-	stateA, ok := resultA.State.(aggregate.State)
+	stateA, ok := resultA.State.(deterministicState)
 	if !ok {
-		t.Fatalf("expected aggregate.State, got %T", resultA.State)
+		t.Fatalf("expected deterministicState, got %T", resultA.State)
 	}
-	if !stateA.Campaign.Created {
-		t.Fatal("campaign.Created should be true after replay")
-	}
-	if stateA.Campaign.Name != "Determinism Test" {
-		t.Fatalf("campaign name = %q, want %q", stateA.Campaign.Name, "Determinism Test")
+	if stateA.CampaignName != "Determinism Test" {
+		t.Fatalf("campaign name = %q, want %q", stateA.CampaignName, "Determinism Test")
 	}
 	if len(stateA.Participants) != 2 {
 		t.Fatalf("participant count = %d, want 2", len(stateA.Participants))
@@ -81,35 +110,35 @@ func TestReplay_Determinism(t *testing.T) {
 }
 
 // deterministicEventSequence produces a fixed ordered event sequence that
-// exercises multiple core domains (campaign, participant) without requiring
-// system-specific modules.
+// exercises multiple core event types without requiring domain-package imports
+// that would create import cycles.
 func deterministicEventSequence(t *testing.T) []event.Event {
 	t.Helper()
 
-	campaignPayload, _ := json.Marshal(campaign.CreatePayload{
-		Name:       "Determinism Test",
-		Locale:     "en-US",
-		GameSystem: "daggerheart",
-		GmMode:     "human",
+	campaignPayload, _ := json.Marshal(map[string]string{
+		"name":        "Determinism Test",
+		"locale":      "en-US",
+		"game_system": "daggerheart",
+		"gm_mode":     "human",
 	})
-	gmPayload, _ := json.Marshal(participant.JoinPayload{
-		ParticipantID:  "p-gm",
-		UserID:         "user-gm",
-		Name:           "Game Master",
-		Role:           "gm",
-		Controller:     "human",
-		CampaignAccess: "manager",
+	gmPayload, _ := json.Marshal(map[string]string{
+		"participant_id":  "p-gm",
+		"user_id":         "user-gm",
+		"name":            "Game Master",
+		"role":            "gm",
+		"controller":      "human",
+		"campaign_access": "manager",
 	})
-	playerPayload, _ := json.Marshal(participant.JoinPayload{
-		ParticipantID:  "p-player",
-		UserID:         "user-player",
-		Name:           "Player One",
-		Role:           "player",
-		Controller:     "human",
-		CampaignAccess: "member",
+	playerPayload, _ := json.Marshal(map[string]string{
+		"participant_id":  "p-player",
+		"user_id":         "user-player",
+		"name":            "Player One",
+		"role":            "player",
+		"controller":      "human",
+		"campaign_access": "member",
 	})
-	updatePayload, _ := json.Marshal(campaign.UpdatePayload{
-		Fields: map[string]string{"status": "active"},
+	updatePayload, _ := json.Marshal(map[string]string{
+		"status": "active",
 	})
 
 	return []event.Event{

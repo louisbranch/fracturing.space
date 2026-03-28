@@ -32,11 +32,11 @@ func (d systemCommandDispatcher) Decide(current aggregate.State, cmd command.Com
 		current.Systems[key],
 	)
 	if err != nil {
-		return command.Reject(command.Rejection{Code: "SYSTEM_COMMAND_REJECTED", Message: err.Error()})
+		return command.Reject(command.Rejection{Code: "SYSTEM_COMMAND_STATE_RESOLVE_FAILED", Message: err.Error()})
 	}
 	decision, err := module.RouteCommand(d.systems, systemState, cmd, now)
 	if err != nil {
-		return command.Reject(command.Rejection{Code: "SYSTEM_COMMAND_REJECTED", Message: err.Error()})
+		return command.Reject(command.Rejection{Code: "SYSTEM_COMMAND_ROUTE_FAILED", Message: err.Error()})
 	}
 	return decision
 }

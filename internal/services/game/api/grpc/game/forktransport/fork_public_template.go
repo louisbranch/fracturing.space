@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -87,7 +88,7 @@ func (a forkApplication) reassignForkedPublicOwnerSeat(
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   forkCampaignID,
-			Type:         handler.CommandTypeParticipantSeatReassign,
+			Type:         commandids.ParticipantSeatReassign,
 			ActorType:    command.ActorTypeSystem,
 			ActorID:      "",
 			RequestID:    requestID,

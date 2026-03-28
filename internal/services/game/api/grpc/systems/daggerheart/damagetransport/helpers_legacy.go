@@ -6,16 +6,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
 )
 
-// containsString reports whether the slice contains the target string.
-func containsString(haystack []string, needle string) bool {
-	for _, v := range haystack {
-		if v == needle {
-			return true
-		}
-	}
-	return false
-}
-
 // stringsToCharacterIDs converts a string slice to character ID values.
 func stringsToCharacterIDs(values []string) []ids.CharacterID {
 	if len(values) == 0 {

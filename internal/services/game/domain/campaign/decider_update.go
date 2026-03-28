@@ -98,6 +98,6 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 
 	normalizedPayload := UpdatePayload{Fields: normalizedFields}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, command.RequireNowFunc(now)().UTC())
 	return command.Accept(evt)
 }

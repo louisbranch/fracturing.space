@@ -5,6 +5,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -75,11 +76,11 @@ func TestActiveUserSessionToProto(t *testing.T) {
 }
 
 func TestTimestampOrNil(t *testing.T) {
-	if timestampOrNil(nil) != nil {
+	if handler.TimestampOrNil(nil) != nil {
 		t.Fatal("expected nil timestamp for nil time")
 	}
 	value := time.Date(2026, 2, 1, 10, 0, 0, 0, time.FixedZone("offset", 3600))
-	stamp := timestampOrNil(&value)
+	stamp := handler.TimestampOrNil(&value)
 	if stamp.AsTime().UTC() != value.UTC() {
 		t.Fatal("expected timestamp to be UTC")
 	}

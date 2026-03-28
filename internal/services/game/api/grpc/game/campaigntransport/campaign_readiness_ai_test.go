@@ -1,6 +1,7 @@
 package campaigntransport
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenAIAgentMissing(t *testing.T) {
 		includePlayerSeat: true,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("ai-gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID(context.Background(), "ai-gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -38,7 +39,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenAIAgentMissingIncludesAction(t *t
 		includePlayerSeat: true,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID(context.Background(), "gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -70,7 +71,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenAIGMParticipantMissing(t *testing
 		includeAIGM: false,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID(context.Background(), "gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -86,7 +87,7 @@ func TestGetCampaignSessionReadiness_UsesRequestedLocale(t *testing.T) {
 		includeAIGM: false,
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID(context.Background(), "gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 		Locale:     commonv1.Locale_LOCALE_PT_BR,
 	})
@@ -107,7 +108,7 @@ func TestGetCampaignSessionReadiness_FallsBackToCampaignLocale(t *testing.T) {
 		locale:      "pt-BR",
 	})
 
-	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := svc.GetCampaignSessionReadiness(requestctx.WithParticipantID(context.Background(), "gm-1"), &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {

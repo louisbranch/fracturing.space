@@ -42,7 +42,7 @@ func TestDeleteCharacter_Success(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	resp, err := svc.DeleteCharacter(requestctx.WithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
+	resp, err := svc.DeleteCharacter(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Reason:      "retired",
@@ -114,7 +114,7 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 	}}
 
 	svc := NewService(ts.withDomain(domain).build())
-	_, err := svc.DeleteCharacter(requestctx.WithParticipantID("member-1"), &statev1.DeleteCharacterRequest{
+	_, err := svc.DeleteCharacter(requestctx.WithParticipantID(context.Background(), "member-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Reason:      "retired",
@@ -134,7 +134,7 @@ func TestDeleteCharacter_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc := NewService(ts.build())
-	_, err := svc.DeleteCharacter(requestctx.WithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
+	_, err := svc.DeleteCharacter(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -167,7 +167,7 @@ func TestDeleteCharacter_UsesDomainEngine(t *testing.T) {
 
 	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), runtimekit.FixedClock(now), nil)
 
-	resp, err := svc.DeleteCharacter(requestctx.WithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
+	resp, err := svc.DeleteCharacter(requestctx.WithParticipantID(context.Background(), "manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Reason:      "retired",

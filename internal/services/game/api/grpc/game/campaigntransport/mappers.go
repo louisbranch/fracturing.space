@@ -1,11 +1,10 @@
 package campaigntransport
 
 import (
-	"time"
-
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -32,9 +31,9 @@ func CampaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 		AiAgentId:        c.AIAgentID,
 		CreatedAt:        timestamppb.New(c.CreatedAt),
 		UpdatedAt:        timestamppb.New(c.UpdatedAt),
-		CompletedAt:      timestampOrNil(c.CompletedAt),
-		ArchivedAt:       timestampOrNil(c.ArchivedAt),
-		LatestSessionAt:  timestampOrNil(c.LatestSessionAt),
+		CompletedAt:      handler.TimestampOrNil(c.CompletedAt),
+		ArchivedAt:       handler.TimestampOrNil(c.ArchivedAt),
+		LatestSessionAt:  handler.TimestampOrNil(c.LatestSessionAt),
 	}
 }
 
@@ -166,11 +165,4 @@ func GameSystemFromProto(system commonv1.GameSystem) bridge.SystemID {
 func LocaleStringToProto(locale string) commonv1.Locale {
 	parsed, _ := platformi18n.ParseLocale(locale)
 	return platformi18n.NormalizeLocale(parsed)
-}
-
-func timestampOrNil(value *time.Time) *timestamppb.Timestamp {
-	if value == nil {
-		return nil
-	}
-	return timestamppb.New(*value)
 }
