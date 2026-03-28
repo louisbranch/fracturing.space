@@ -64,3 +64,19 @@ func TestSessionActionRoll_RequiresDomainEngine(t *testing.T) {
 	})
 	grpcassert.StatusCode(t, err, codes.Internal)
 }
+
+func TestSessionActionRoll_InvalidHopeSpendRejected(t *testing.T) {
+	svc := newActionTestService()
+	configureNoopDomain(svc)
+	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+		HopeSpends: []*pb.ActionRollHopeSpend{
+			{Source: "experience", Amount: 2},
+		},
+	})
+	grpcassert.StatusCode(t, err, codes.InvalidArgument)
+}

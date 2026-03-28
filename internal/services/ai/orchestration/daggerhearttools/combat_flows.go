@@ -38,6 +38,7 @@ type attackFlowResolveInput struct {
 	CharacterID            string                       `json:"character_id"`
 	Difficulty             int                          `json:"difficulty"`
 	Modifiers              []actionRollModifier         `json:"modifiers,omitempty"`
+	HopeSpends             []actionRollHopeSpend        `json:"hope_spends,omitempty"`
 	Underwater             bool                         `json:"underwater,omitempty"`
 	BreathSceneCountdownID string                       `json:"breath_scene_countdown_id,omitempty"`
 	TargetID               string                       `json:"target_id"`
@@ -105,6 +106,7 @@ type groupActionFlowResolveInput struct {
 	LeaderTrait       string                      `json:"leader_trait"`
 	Difficulty        int                         `json:"difficulty"`
 	LeaderModifiers   []actionRollModifier        `json:"leader_modifiers,omitempty"`
+	LeaderHopeSpends  []actionRollHopeSpend       `json:"leader_hope_spends,omitempty"`
 	Supporters        []groupActionSupporterInput `json:"supporters"`
 	LeaderRng         *rngRequest                 `json:"leader_rng,omitempty"`
 	SceneID           string                      `json:"scene_id,omitempty"`
@@ -112,10 +114,11 @@ type groupActionFlowResolveInput struct {
 }
 
 type tagTeamParticipantInput struct {
-	CharacterID string               `json:"character_id"`
-	Trait       string               `json:"trait"`
-	Modifiers   []actionRollModifier `json:"modifiers,omitempty"`
-	Rng         *rngRequest          `json:"rng,omitempty"`
+	CharacterID string                `json:"character_id"`
+	Trait       string                `json:"trait"`
+	Modifiers   []actionRollModifier  `json:"modifiers,omitempty"`
+	HopeSpends  []actionRollHopeSpend `json:"hope_spends,omitempty"`
+	Rng         *rngRequest           `json:"rng,omitempty"`
 }
 
 type tagTeamFlowResolveInput struct {
@@ -314,6 +317,7 @@ func AttackFlowResolve(runtime Runtime, ctx context.Context, argsJSON []byte) (o
 		CharacterId:            characterID,
 		Difficulty:             int32(input.Difficulty),
 		Modifiers:              actionRollModifiersToProto(input.Modifiers),
+		HopeSpends:             actionRollHopeSpendsToProto(input.HopeSpends),
 		Underwater:             input.Underwater,
 		BreathSceneCountdownId: strings.TrimSpace(input.BreathSceneCountdownID),
 		TargetId:               targetID,
@@ -465,6 +469,7 @@ func GroupActionFlowResolve(runtime Runtime, ctx context.Context, argsJSON []byt
 		LeaderTrait:       leaderTrait,
 		Difficulty:        int32(input.Difficulty),
 		LeaderModifiers:   actionRollModifiersToProto(input.LeaderModifiers),
+		LeaderHopeSpends:  actionRollHopeSpendsToProto(input.LeaderHopeSpends),
 		Supporters:        supporters,
 		LeaderRng:         rngRequestToProto(input.LeaderRng),
 		LeaderContext:     actionRollContextToProto(input.LeaderContext),
@@ -931,6 +936,7 @@ func tagTeamParticipantToProto(label string, input *tagTeamParticipantInput) (*p
 		CharacterId: characterID,
 		Trait:       trait,
 		Modifiers:   actionRollModifiersToProto(input.Modifiers),
+		HopeSpends:  actionRollHopeSpendsToProto(input.HopeSpends),
 		Rng:         rngRequestToProto(input.Rng),
 	}, nil
 }

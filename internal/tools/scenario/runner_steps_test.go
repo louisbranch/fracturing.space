@@ -3738,13 +3738,28 @@ func TestHelperFunctions(t *testing.T) {
 		mods := buildActionRollModifiers(map[string]any{
 			"mods": []any{
 				map[string]any{"source": "trait", "value": 2},
-				map[string]any{"source": "experience"}, // hope spend, value 0
+				map[string]any{"source": "experience"}, // missing value, skip
 				map[string]any{"source": "x"},          // missing value, skip
 				"not-a-map",                            // skip
 			},
 		}, "mods")
-		if len(mods) != 2 {
-			t.Fatalf("got %d modifiers, want 2", len(mods))
+		if len(mods) != 1 {
+			t.Fatalf("got %d modifiers, want 1", len(mods))
+		}
+	})
+	t.Run("buildActionRollHopeSpends", func(t *testing.T) {
+		spends := buildActionRollHopeSpends(map[string]any{
+			"hope_spends": []any{
+				map[string]any{"source": "experience", "amount": 1},
+				map[string]any{"source": "hope_feature"},
+				"not-a-map",
+			},
+		}, "hope_spends")
+		if len(spends) != 2 {
+			t.Fatalf("got %d spends, want 2", len(spends))
+		}
+		if spends[1].GetAmount() != 3 {
+			t.Fatalf("second amount = %d, want 3", spends[1].GetAmount())
 		}
 	})
 	t.Run("buildActionRollModifiers missing", func(t *testing.T) {

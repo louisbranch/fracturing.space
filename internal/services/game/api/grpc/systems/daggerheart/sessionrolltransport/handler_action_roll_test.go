@@ -40,6 +40,9 @@ func TestHandlerSessionActionRollSuccess(t *testing.T) {
 		Modifiers: []*pb.ActionRollModifier{
 			{Value: 2, Source: "experience"},
 		},
+		HopeSpends: []*pb.ActionRollHopeSpend{
+			{Amount: 1, Source: "experience"},
+		},
 	})
 	if err != nil {
 		t.Fatalf("SessionActionRoll returned error: %v", err)

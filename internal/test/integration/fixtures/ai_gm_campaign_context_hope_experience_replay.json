@@ -49,6 +49,12 @@
                 "value": 2
               }
             ],
+            "hope_spends": [
+              {
+                "source": "experience",
+                "amount": 1
+              }
+            ],
             "advantage": 0,
             "disadvantage": 0,
             "underwater": false,

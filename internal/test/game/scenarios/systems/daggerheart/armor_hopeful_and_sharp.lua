@@ -31,7 +31,7 @@ dh:action_roll{
   difficulty = 10,
   outcome = "success_hope",
   replace_hope_with_armor = true,
-  modifiers = {
+  hope_spends = {
     Modifiers.hope("experience"),
   },
   expect_hope_delta = 0,

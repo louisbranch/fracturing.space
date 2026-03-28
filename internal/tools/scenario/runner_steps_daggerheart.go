@@ -849,6 +849,7 @@ func (r *Runner) runGroupActionStep(ctx context.Context, state *scenarioState, s
 		LeaderTrait:       leaderTrait,
 		Difficulty:        int32(difficulty),
 		LeaderModifiers:   leaderModifiers,
+		LeaderHopeSpends:  buildActionRollHopeSpends(step.Args, "leader_hope_spends"),
 		LeaderContext:     leaderContext,
 		LeaderRng: &commonv1.RngRequest{
 			Seed:     &leaderSeed,
@@ -934,6 +935,7 @@ func (r *Runner) runTagTeamStep(ctx context.Context, state *scenarioState, step 
 			CharacterId: firstID,
 			Trait:       firstTrait,
 			Modifiers:   buildActionRollModifiers(step.Args, "first_modifiers"),
+			HopeSpends:  buildActionRollHopeSpends(step.Args, "first_hope_spends"),
 			Rng: &commonv1.RngRequest{
 				Seed:     &firstSeed,
 				RollMode: commonv1.RollMode_REPLAY,
@@ -943,6 +945,7 @@ func (r *Runner) runTagTeamStep(ctx context.Context, state *scenarioState, step 
 			CharacterId: secondID,
 			Trait:       secondTrait,
 			Modifiers:   buildActionRollModifiers(step.Args, "second_modifiers"),
+			HopeSpends:  buildActionRollHopeSpends(step.Args, "second_hope_spends"),
 			Rng: &commonv1.RngRequest{
 				Seed:     &secondSeed,
 				RollMode: commonv1.RollMode_REPLAY,
@@ -1631,6 +1634,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 			CharacterId:          attackerID,
 			Difficulty:           int32(difficulty),
 			Modifiers:            buildActionRollModifiers(step.Args, "modifiers"),
+			HopeSpends:           buildActionRollHopeSpends(step.Args, "hope_spends"),
 			TargetId:             targetID,
 			Damage:               buildDamageSpec(step.Args, attackerID, "attack"),
 			RequireDamageRoll:    true,
@@ -1694,6 +1698,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 		Advantage:    int32(optionalInt(step.Args, "advantage", 0)),
 		Disadvantage: int32(optionalInt(step.Args, "disadvantage", 0)),
 		Modifiers:    buildActionRollModifiers(step.Args, "modifiers"),
+		HopeSpends:   buildActionRollHopeSpends(step.Args, "hope_spends"),
 		Rng: &commonv1.RngRequest{
 			Seed:     &actionSeed,
 			RollMode: commonv1.RollMode_REPLAY,
@@ -1824,6 +1829,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 		RollKind:    daggerheartv1.RollKind_ROLL_KIND_ACTION,
 		Difficulty:  int32(difficulty),
 		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		HopeSpends:  buildActionRollHopeSpends(step.Args, "hope_spends"),
 		Rng: &commonv1.RngRequest{
 			Seed:     &actionSeed,
 			RollMode: commonv1.RollMode_REPLAY,
@@ -2941,6 +2947,7 @@ func (r *Runner) runActionRollStep(ctx context.Context, state *scenarioState, st
 		Advantage:            int32(optionalInt(step.Args, "advantage", 0)),
 		Disadvantage:         int32(optionalInt(step.Args, "disadvantage", 0)),
 		Modifiers:            buildActionRollModifiers(step.Args, "modifiers"),
+		HopeSpends:           buildActionRollHopeSpends(step.Args, "hope_spends"),
 		ReplaceHopeWithArmor: optionalBool(step.Args, "replace_hope_with_armor", false),
 		Context:              contextValue,
 		Rng: &commonv1.RngRequest{

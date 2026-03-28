@@ -81,6 +81,13 @@ message ActionRollModifier {
   int32 value = 2;
 }
 
+// ActionRollHopeSpend represents an explicit Hope spend declared as part of an
+// action-roll workflow.
+message ActionRollHopeSpend {
+  string source = 1;
+  int32 amount = 2;
+}
+
 // OutcomeCharacterState represents the state updates for a character after outcome application.
 message OutcomeCharacterState {
   string character_id = 1;

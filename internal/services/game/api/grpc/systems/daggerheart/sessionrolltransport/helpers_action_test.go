@@ -93,17 +93,24 @@ func TestNormalizeHopeSpendSource(t *testing.T) {
 	}
 }
 
-func TestHopeSpendsFromModifiers(t *testing.T) {
+func TestNormalizeHopeSpends(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		if got := hopeSpendsFromModifiers(nil); got != nil {
+		got, err := normalizeHopeSpends(nil)
+		if err != nil {
+			t.Fatalf("normalizeHopeSpends(nil) error = %v", err)
+		}
+		if got != nil {
 			t.Errorf("expected nil, got %v", got)
 		}
 	})
 
 	t.Run("experience source", func(t *testing.T) {
-		spends := hopeSpendsFromModifiers([]*pb.ActionRollModifier{
-			{Value: 2, Source: "experience"},
+		spends, err := normalizeHopeSpends([]*pb.ActionRollHopeSpend{
+			{Amount: 1, Source: "experience"},
 		})
+		if err != nil {
+			t.Fatalf("normalizeHopeSpends() error = %v", err)
+		}
 		if len(spends) != 1 {
 			t.Fatalf("expected 1 spend, got %d", len(spends))
 		}
@@ -112,10 +119,27 @@ func TestHopeSpendsFromModifiers(t *testing.T) {
 		}
 	})
 
-	t.Run("nil modifier skipped", func(t *testing.T) {
-		spends := hopeSpendsFromModifiers([]*pb.ActionRollModifier{nil})
+	t.Run("nil entry skipped", func(t *testing.T) {
+		spends, err := normalizeHopeSpends([]*pb.ActionRollHopeSpend{nil})
+		if err != nil {
+			t.Fatalf("normalizeHopeSpends() error = %v", err)
+		}
 		if len(spends) != 0 {
 			t.Errorf("expected 0 spends, got %d", len(spends))
+		}
+	})
+
+	t.Run("invalid source rejected", func(t *testing.T) {
+		_, err := normalizeHopeSpends([]*pb.ActionRollHopeSpend{{Source: "random", Amount: 1}})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("mismatched amount rejected", func(t *testing.T) {
+		_, err := normalizeHopeSpends([]*pb.ActionRollHopeSpend{{Source: "help", Amount: 2}})
+		if err == nil {
+			t.Fatal("expected error")
 		}
 	})
 }

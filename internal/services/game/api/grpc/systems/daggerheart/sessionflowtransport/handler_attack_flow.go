@@ -133,6 +133,7 @@ func (h *Handler) SessionAttackFlow(ctx context.Context, in *pb.SessionAttackFlo
 		RollKind:               pb.RollKind_ROLL_KIND_ACTION,
 		Difficulty:             in.GetDifficulty(),
 		Modifiers:              actionModifiers,
+		HopeSpends:             in.GetHopeSpends(),
 		Advantage:              attackAdvantage,
 		Underwater:             in.GetUnderwater(),
 		BreathSceneCountdownId: in.GetBreathSceneCountdownId(),

@@ -61,6 +61,24 @@ function hasModifierSource(toolCalls, source) {
   );
 }
 
+function hasHopeSpend(toolCalls, source, amount) {
+  if (!source) {
+    return true;
+  }
+  const resolveCall = (toolCalls || []).find((call) => call.name === 'daggerheart_action_roll_resolve');
+  if (!resolveCall || !Array.isArray(resolveCall.arguments && resolveCall.arguments.hope_spends)) {
+    return false;
+  }
+  return resolveCall.arguments.hope_spends.some((spend) => {
+    const spendSource = String((spend && spend.source) || '').toLowerCase();
+    const spendAmount = Number(spend && spend.amount);
+    return (
+      spendSource.includes(String(source).toLowerCase()) &&
+      (typeof amount !== 'number' || spendAmount === amount)
+    );
+  });
+}
+
 module.exports = function gmContract(output, context) {
   const data = parseOutput(output);
   const rawVars = (context && context.vars) || {};
@@ -138,6 +156,11 @@ module.exports = function gmContract(output, context) {
   }
   if (!hasModifierSource(data.tool_calls, vars.expect_action_roll_modifier_source)) {
     failures.push(`missing modifier source ${vars.expect_action_roll_modifier_source}`);
+  }
+  if (!hasHopeSpend(data.tool_calls, vars.expect_action_roll_hope_spend_source, vars.expect_action_roll_hope_spend_amount)) {
+    failures.push(
+      `missing hope spend ${vars.expect_action_roll_hope_spend_source} amount=${vars.expect_action_roll_hope_spend_amount}`,
+    );
   }
 
   return {

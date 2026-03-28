@@ -22,8 +22,10 @@ dh:action_roll{
   difficulty = 10,
   outcome = "fear",
   advantage = 1,
-  modifiers = {
+  hope_spends = {
     Modifiers.hope("help"),
+  },
+  modifiers = {
     Modifiers.mod("training", 3),
   }
 }

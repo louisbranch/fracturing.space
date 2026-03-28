@@ -308,6 +308,24 @@ var (
 			if got := strings.ToLower(strings.TrimSpace(asString(modifier["source"]))); !strings.Contains(got, "experience") {
 				t.Fatalf("modifier source = %q, want an experience-backed modifier", got)
 			}
+			hopeSpends, ok := call.Arguments["hope_spends"].([]any)
+			if !ok || len(hopeSpends) == 0 {
+				t.Fatalf("action roll hope_spends = %#v, want experience spend", call.Arguments["hope_spends"])
+			}
+			spend, ok := hopeSpends[0].(map[string]any)
+			if !ok {
+				t.Fatalf("first hope spend = %#v, want object", hopeSpends[0])
+			}
+			if got := strings.ToLower(strings.TrimSpace(asString(spend["source"]))); !strings.Contains(got, "experience") {
+				t.Fatalf("hope spend source = %q, want experience", got)
+			}
+			gotAmount, ok := spend["amount"].(float64)
+			if !ok {
+				t.Fatalf("hope spend amount = %#v, want number", spend["amount"])
+			}
+			if got := int(gotAmount); got != 1 {
+				t.Fatalf("hope spend amount = %d, want 1", got)
+			}
 		},
 	}
 	aiGMStanceCapabilityScenario = aiGMCampaignScenarioSpec{

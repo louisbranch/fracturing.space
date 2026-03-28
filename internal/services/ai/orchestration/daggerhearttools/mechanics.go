@@ -12,25 +12,31 @@ import (
 )
 
 type actionRollResolveInput struct {
-	CharacterID            string               `json:"character_id"`
-	Trait                  string               `json:"trait"`
-	Difficulty             int                  `json:"difficulty"`
-	Modifiers              []actionRollModifier `json:"modifiers"`
-	Advantage              int                  `json:"advantage"`
-	Disadvantage           int                  `json:"disadvantage"`
-	Underwater             bool                 `json:"underwater"`
-	BreathSceneCountdownID string               `json:"breath_scene_countdown_id,omitempty"`
-	SceneID                string               `json:"scene_id,omitempty"`
-	ReplaceHopeWithArmor   bool                 `json:"replace_hope_with_armor,omitempty"`
-	Context                string               `json:"context,omitempty"`
-	Targets                []string             `json:"targets,omitempty"`
-	SwapHopeFear           bool                 `json:"swap_hope_fear,omitempty"`
-	Rng                    *rngRequest          `json:"rng,omitempty"`
+	CharacterID            string                `json:"character_id"`
+	Trait                  string                `json:"trait"`
+	Difficulty             int                   `json:"difficulty"`
+	Modifiers              []actionRollModifier  `json:"modifiers"`
+	HopeSpends             []actionRollHopeSpend `json:"hope_spends,omitempty"`
+	Advantage              int                   `json:"advantage"`
+	Disadvantage           int                   `json:"disadvantage"`
+	Underwater             bool                  `json:"underwater"`
+	BreathSceneCountdownID string                `json:"breath_scene_countdown_id,omitempty"`
+	SceneID                string                `json:"scene_id,omitempty"`
+	ReplaceHopeWithArmor   bool                  `json:"replace_hope_with_armor,omitempty"`
+	Context                string                `json:"context,omitempty"`
+	Targets                []string              `json:"targets,omitempty"`
+	SwapHopeFear           bool                  `json:"swap_hope_fear,omitempty"`
+	Rng                    *rngRequest           `json:"rng,omitempty"`
 }
 
 type actionRollModifier struct {
 	Source string `json:"source,omitempty"`
 	Value  int    `json:"value"`
+}
+
+type actionRollHopeSpend struct {
+	Source string `json:"source,omitempty"`
+	Amount int    `json:"amount"`
 }
 
 type gmMoveApplyInput struct {
@@ -211,6 +217,7 @@ func ActionRollResolve(runtime Runtime, ctx context.Context, argsJSON []byte) (o
 		RollKind:               pb.RollKind_ROLL_KIND_ACTION,
 		Difficulty:             int32(input.Difficulty),
 		Modifiers:              actionRollModifiersToProto(input.Modifiers),
+		HopeSpends:             actionRollHopeSpendsToProto(input.HopeSpends),
 		Advantage:              int32(input.Advantage),
 		Disadvantage:           int32(input.Disadvantage),
 		Underwater:             input.Underwater,
@@ -621,6 +628,20 @@ func actionRollModifiersToProto(values []actionRollModifier) []*pb.ActionRollMod
 		result = append(result, &pb.ActionRollModifier{
 			Source: strings.TrimSpace(value.Source),
 			Value:  int32(value.Value),
+		})
+	}
+	return result
+}
+
+func actionRollHopeSpendsToProto(values []actionRollHopeSpend) []*pb.ActionRollHopeSpend {
+	result := make([]*pb.ActionRollHopeSpend, 0, len(values))
+	for _, value := range values {
+		if value.Amount == 0 && strings.TrimSpace(value.Source) == "" {
+			continue
+		}
+		result = append(result, &pb.ActionRollHopeSpend{
+			Source: strings.TrimSpace(value.Source),
+			Amount: int32(value.Amount),
 		})
 	}
 	return result

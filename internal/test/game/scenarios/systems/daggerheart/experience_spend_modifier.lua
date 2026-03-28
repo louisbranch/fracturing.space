@@ -19,8 +19,10 @@ dh:action_roll{
   trait = "presence",
   difficulty = 12,
   outcome = "hope",
-  modifiers = {
+  hope_spends = {
     Modifiers.hope("experience"),
+  },
+  modifiers = {
     Modifiers.mod("training", 3),
   }
 }

@@ -1050,19 +1050,14 @@ func actionRollModifierTotal(args map[string]any, key string) int {
 		return 0
 	}
 	total := 0
-	for index, entry := range list {
+	for _, entry := range list {
 		item, ok := entry.(map[string]any)
 		if !ok {
 			continue
 		}
-		source := optionalString(item, "source", fmt.Sprintf("modifier_%d", index))
 		value, ok := readInt(item, "value")
 		if !ok {
-			if isHopeSpendSource(source) {
-				value = 0
-			} else {
-				continue
-			}
+			continue
 		}
 		total += value
 	}
@@ -1284,11 +1279,7 @@ func buildActionRollModifiers(args map[string]any, key string) []*daggerheartv1.
 			source := optionalString(item, "source", fmt.Sprintf("modifier_%d", index))
 			value, ok := readInt(item, "value")
 			if !ok {
-				if isHopeSpendSource(source) {
-					value = 0
-				} else {
-					continue
-				}
+				continue
 			}
 			modifiers = append(modifiers, &daggerheartv1.ActionRollModifier{
 				Source: source,
@@ -1310,6 +1301,39 @@ func buildActionRollModifiers(args map[string]any, key string) []*daggerheartv1.
 		return nil
 	}
 	return modifiers
+}
+
+func buildActionRollHopeSpends(args map[string]any, key string) []*daggerheartv1.ActionRollHopeSpend {
+	value, ok := args[key]
+	list, hasList := value.([]any)
+	if !ok || !hasList || len(list) == 0 {
+		return nil
+	}
+
+	spends := make([]*daggerheartv1.ActionRollHopeSpend, 0, len(list))
+	for index, entry := range list {
+		item, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		source := optionalString(item, "source", fmt.Sprintf("hope_spend_%d", index))
+		amount, ok := readInt(item, "amount")
+		if !ok {
+			defaultAmount, known := hopeSpendAmountForScenarioSource(source)
+			if !known {
+				continue
+			}
+			amount = defaultAmount
+		}
+		spends = append(spends, &daggerheartv1.ActionRollHopeSpend{
+			Source: source,
+			Amount: int32(amount),
+		})
+	}
+	if len(spends) == 0 {
+		return nil
+	}
+	return spends
 }
 
 func buildAdversaryRollModifiers(args map[string]any) []*daggerheartv1.ActionRollModifier {
@@ -2385,12 +2409,18 @@ func (r *Runner) assertDamageFlags(
 }
 
 func isHopeSpendSource(source string) bool {
-	normalized := normalizeModifierSource(source)
-	switch normalized {
-	case "experience", "help", "tag_team", "hope_feature":
-		return true
+	_, ok := hopeSpendAmountForScenarioSource(source)
+	return ok
+}
+
+func hopeSpendAmountForScenarioSource(source string) (int, bool) {
+	switch normalizeModifierSource(source) {
+	case "experience", "help":
+		return 1, true
+	case "tag_team", "hope_feature":
+		return 3, true
 	default:
-		return false
+		return 0, false
 	}
 }
 
