@@ -8,13 +8,23 @@ import (
 // InvitesPageView carries invite-management page state only.
 type InvitesPageView struct {
 	CampaignDetailBaseView
-	Invites           []InviteView
+	Invites []InviteView
+}
+
+// InviteCreatePageView carries invite-create page state only.
+type InviteCreatePageView struct {
+	CampaignDetailBaseView
 	InviteSeatOptions []InviteSeatOptionView
 }
 
 // InvitesFragment renders the invite-management page.
 func InvitesFragment(view InvitesPageView, loc webtemplates.Localizer) templ.Component {
 	return invitesFragment(view, loc)
+}
+
+// InviteCreateFragment renders the invite-create page.
+func InviteCreateFragment(view InviteCreatePageView, loc webtemplates.Localizer) templ.Component {
+	return inviteCreateFragment(view, loc)
 }
 
 // InviteView carries invite rows for the invites detail page.

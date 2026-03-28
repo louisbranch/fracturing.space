@@ -29,3 +29,8 @@ func campaignInviteStatusLabel(loc webtemplates.Localizer, value string) string 
 func campaignInviteCanRevoke(status string) bool {
 	return strings.EqualFold(strings.TrimSpace(status), "pending")
 }
+
+// campaignInviteCreateReady reports whether the invite-create form can submit.
+func campaignInviteCreateReady(view InviteCreatePageView) bool {
+	return !campaignActionsLocked(view.ActionsLocked) && len(view.InviteSeatOptions) > 0
+}

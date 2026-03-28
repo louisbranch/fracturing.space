@@ -104,6 +104,11 @@ func TestStaticUsernameInputScriptPreservesSignupAvailabilityDuringBusyState(t *
 		`form.getAttribute("data-passkey-busy") === "true"`,
 		`syncButtonEnabledState()`,
 		`button.setAttribute("data-passkey-register-allowed", enabled ? "true" : "false")`,
+		`input.setAttribute("aria-controls", resultsEl.id)`,
+		`resultsEl.setAttribute("role", "listbox")`,
+		`input.addEventListener("keydown"`,
+		`data-campaign-invite-search-result-active`,
+		`document.addEventListener("mousedown"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("username-input.js missing signup busy-state marker %q", marker)

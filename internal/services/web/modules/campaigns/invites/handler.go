@@ -70,27 +70,53 @@ func (h Handler) HandleInvites(w http.ResponseWriter, r *http.Request, campaignI
 		h.WriteError(w, r, err)
 		return
 	}
-	var participants []campaignapp.CampaignParticipant
-	if page.CanManageInvites {
-		participants, err = h.invites.participantReads.CampaignParticipants(ctx, campaignID)
-		if err != nil {
-			h.WriteError(w, r, err)
-			return
-		}
-	}
-	view := invitesView(page, campaignID, participants, items, r)
+	view := invitesView(page, campaignID, items, r)
 	h.WriteCampaignDetailPage(w, r, page, campaignID, campaignrender.InvitesFragment(view, page.Loc), invitesBreadcrumbs(page)...)
+}
+
+// HandleInviteCreatePage renders the dedicated invite creation page.
+func (h Handler) HandleInviteCreatePage(w http.ResponseWriter, r *http.Request, campaignID string) {
+	ctx, page, ok := h.LoadCampaignPageOrWriteError(w, r, campaignID)
+	if !ok {
+		return
+	}
+	if err := h.Pages.Authorization.RequireManageInvites(ctx, campaignID); err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+
+	participants, err := h.invites.participantReads.CampaignParticipants(ctx, campaignID)
+	if err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	items, err := h.invites.reads.CampaignInvites(ctx, campaignID)
+	if err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+
+	view := inviteCreateView(page, campaignID, participants, items)
+	h.WriteCampaignDetailPage(
+		w,
+		r,
+		page,
+		campaignID,
+		campaignrender.InviteCreateFragment(view, page.Loc),
+		inviteCreateBreadcrumbs(page, campaignID)...,
+	)
 }
 
 // HandleInviteCreate creates a new invite.
 func (h Handler) HandleInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
-	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_invite_create_form", routepath.AppCampaignInvites(campaignID)) {
+	redirectURL := routepath.AppCampaignInviteCreate(campaignID)
+	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_invite_create_form", redirectURL) {
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
 	input := parseCreateInviteInput(r.Form)
 	if err := h.invites.mutation.CreateInvite(ctx, campaignID, input); err != nil {
-		h.WriteMutationError(w, r, err, "error.web.message.failed_to_create_invite", routepath.AppCampaignInvites(campaignID))
+		h.WriteMutationError(w, r, err, "error.web.message.failed_to_create_invite", redirectURL)
 		return
 	}
 	h.Sync().InviteChanged(ctx, []string{userID}, campaignID)

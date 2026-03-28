@@ -174,30 +174,88 @@
     var requestSequence = 0;
     var emptyMessage = emptyEl.textContent || "No users found.";
     var errorMessage = form.getAttribute("data-campaign-invite-search-error") || "Unable to search users right now.";
+    var resultButtons = [];
+    var activeIndex = -1;
+    var resultIDPrefix = "campaign-invite-search-result-";
+
+    if (!resultsEl.id) {
+      resultsEl.id = "campaign-invite-search-results";
+    }
+    resultsEl.setAttribute("role", "listbox");
+    input.setAttribute("aria-controls", resultsEl.id);
+    input.setAttribute("aria-expanded", "false");
+
+    function syncExpandedState(expanded) {
+      input.setAttribute("aria-expanded", expanded ? "true" : "false");
+      if (!expanded) {
+        input.removeAttribute("aria-activedescendant");
+      }
+    }
 
     function clearResults() {
       resultsEl.innerHTML = "";
       resultsEl.hidden = true;
       emptyEl.hidden = true;
+      resultButtons = [];
+      activeIndex = -1;
+      syncExpandedState(false);
+    }
+
+    function setActiveIndex(index) {
+      if (resultButtons.length === 0) {
+        activeIndex = -1;
+        syncExpandedState(false);
+        return;
+      }
+      if (index < 0) {
+        index = resultButtons.length - 1;
+      }
+      if (index >= resultButtons.length) {
+        index = 0;
+      }
+      activeIndex = index;
+      resultButtons.forEach(function (button, buttonIndex) {
+        var isActive = buttonIndex === activeIndex;
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+        button.setAttribute("data-campaign-invite-search-result-active", isActive ? "true" : "false");
+        button.classList.toggle("border-primary", isActive);
+        button.classList.toggle("bg-base-200", isActive);
+        button.classList.toggle("shadow-sm", isActive);
+      });
+      syncExpandedState(true);
+      input.setAttribute("aria-activedescendant", resultButtons[activeIndex].id);
+      resultButtons[activeIndex].scrollIntoView({ block: "nearest" });
+    }
+
+    function chooseUser(user) {
+      input.value = user && user.username ? user.username : "";
+      clearResults();
+      input.focus();
     }
 
     function renderResults(users) {
       resultsEl.innerHTML = "";
+      resultButtons = [];
+      activeIndex = -1;
       if (!Array.isArray(users) || users.length === 0) {
         resultsEl.hidden = true;
         emptyEl.textContent = emptyMessage;
         emptyEl.hidden = false;
+        syncExpandedState(false);
         return;
       }
       emptyEl.hidden = true;
       users.forEach(function (user) {
         var button = document.createElement("button");
         button.type = "button";
-        button.className = "flex w-full items-center justify-between gap-3 rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-left";
-        button.addEventListener("click", function () {
-          input.value = user.username || "";
-          clearResults();
-          input.focus();
+        button.id = resultIDPrefix + requestSequence + "-" + resultButtons.length;
+        button.className = "flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg border border-base-300 bg-base-100 px-4 py-3 text-left transition hover:border-base-content/20 hover:bg-base-200/40";
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", "false");
+        button.setAttribute("data-campaign-invite-search-username", user.username || "");
+        button.addEventListener("mousedown", function (event) {
+          event.preventDefault();
+          chooseUser(user);
         });
 
         var label = document.createElement("div");
@@ -223,8 +281,10 @@
         }
 
         resultsEl.appendChild(button);
+        resultButtons.push(button);
       });
       resultsEl.hidden = false;
+      setActiveIndex(0);
     }
 
     var searchUsers = debounce(async function (value, sequence) {
@@ -254,8 +314,39 @@
       searchUsers(input.value.trim(), requestSequence);
     });
 
-    input.addEventListener("blur", function () {
-      window.setTimeout(clearResults, 150);
+    input.addEventListener("keydown", function (event) {
+      if (resultButtons.length === 0 || resultsEl.hidden) {
+        if (event.key === "Escape") {
+          clearResults();
+        }
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex(activeIndex + 1);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex(activeIndex - 1);
+        return;
+      }
+      if (event.key === "Enter" && activeIndex >= 0) {
+        event.preventDefault();
+        chooseUser({ username: resultButtons[activeIndex].getAttribute("data-campaign-invite-search-username") || "" });
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        clearResults();
+      }
+    });
+
+    document.addEventListener("mousedown", function (event) {
+      if (form.contains(event.target)) {
+        return;
+      }
+      clearResults();
     });
   }
 

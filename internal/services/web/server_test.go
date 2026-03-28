@@ -145,6 +145,7 @@ func TestDefaultCampaignSurfaceExposesDetailAndMutationRoutes(t *testing.T) {
 		{path: "/app/campaigns/c1/sessions", wantStatus: http.StatusOK},
 		{path: "/app/campaigns/c1/sessions/sess-1", wantStatus: http.StatusOK},
 		{path: "/app/campaigns/c1/invites", wantStatus: http.StatusOK},
+		{path: "/app/campaigns/c1/invites/create", wantStatus: http.StatusOK},
 		{path: "/app/campaigns/c1/game", wantStatus: http.StatusSeeOther},
 		{path: "/app/campaigns/c1/characters/char-1", wantStatus: http.StatusOK},
 	} {

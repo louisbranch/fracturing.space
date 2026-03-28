@@ -320,7 +320,7 @@ func TestInviteCreateRichErrorRendersSpecificToastAfterRedirect(t *testing.T) {
 		t.Fatalf("flash key = %q, want fallback key", notice.Key)
 	}
 
-	getReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
+	getReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInviteCreate("c1"), nil)
 	for _, cookie := range postRR.Result().Cookies() {
 		getReq.AddCookie(cookie)
 	}

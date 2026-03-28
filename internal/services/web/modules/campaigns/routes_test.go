@@ -177,6 +177,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "session create", method: http.MethodGet, path: routepath.AppCampaignSessionCreate("c1"), wantStatus: http.StatusOK},
 		{name: "session detail", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
 		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
+		{name: "invite create", method: http.MethodGet, path: routepath.AppCampaignInviteCreate("c1"), wantStatus: http.StatusOK},
 		{name: "invite search", method: http.MethodPost, path: routepath.AppCampaignInviteSearch("c1"), body: `{"query":"al"}`, wantStatus: http.StatusOK},
 		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusSeeOther},
 		{name: "participant update", method: http.MethodPost, path: routepath.AppCampaignParticipantEdit("c1", "p-1"), body: "name=Owner&role=gm&pronouns=they%2Fthem", wantStatus: http.StatusFound},
@@ -187,7 +188,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "campaign update", method: http.MethodPost, path: routepath.AppCampaignEdit("c1"), body: "name=Updated&theme_prompt=Theme&locale=en-US", wantStatus: http.StatusFound},
 		{name: "session create submit", method: http.MethodPost, path: routepath.AppCampaignSessionCreate("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
 		{name: "session end", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), body: "session_id=sess-1", wantStatus: http.StatusFound},
-		{name: "invite create", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&username=alice", wantStatus: http.StatusFound},
+		{name: "invite create submit", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&username=alice", wantStatus: http.StatusFound},
 		{name: "invite revoke", method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("c1"), body: "invite_id=inv-1", wantStatus: http.StatusFound},
 		{name: "rest route", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/rest", wantStatus: http.StatusNotFound},
 	}

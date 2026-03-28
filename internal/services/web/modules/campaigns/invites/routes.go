@@ -12,6 +12,7 @@ func RegisterStableRoutes(mux *http.ServeMux, h Handler) {
 		return
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignInvitesPattern, h.WithCampaignID(h.HandleInvites))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignInviteCreatePattern, h.WithCampaignID(h.HandleInviteCreatePage))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteSearchPattern, h.WithCampaignID(h.HandleInviteSearch))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteCreatePattern, h.WithCampaignID(h.HandleInviteCreate))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteRevokePattern, h.WithCampaignID(h.HandleInviteRevoke))

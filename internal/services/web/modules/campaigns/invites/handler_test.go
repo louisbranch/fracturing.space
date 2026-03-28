@@ -143,10 +143,35 @@ func TestHandleInvitesRendersOwnedInvitesPage(t *testing.T) {
 	for _, marker := range []string{
 		`data-campaign-invites-header="true"`,
 		`data-campaign-invite-card-id="inv-1"`,
-		`data-campaign-invite-create-option-id="p-2"`,
+		`data-campaign-invite-create-link="true"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing invite marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestHandleInviteCreatePageRendersOwnedCreatePage(t *testing.T) {
+	t.Parallel()
+
+	h, _, _ := newInviteHandler(t)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInviteCreate("camp-1"), nil)
+	rr := httptest.NewRecorder()
+
+	h.HandleInviteCreatePage(rr, req, "camp-1")
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-invite-create-page="true"`,
+		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-create-option-id="p-2"`,
+		`<script defer src="/static/username-input.js"></script>`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing invite create marker %q: %q", marker, body)
 		}
 	}
 }

@@ -27,8 +27,7 @@ Quick regression coverage for web route and shell contracts:
 - OAuth client ID configured so the Sign in link and `/login` route are registered
 - Optional authenticated coverage:
   - export `WEB_SMOKE_SESSION_ID` with a valid `web_session` value plus
-    `WEB_SMOKE_RECIPIENT_USER_ID` (or legacy `WEB_SMOKE_USER_ID`) for invite
-    mutation assertions, or
+    `WEB_SMOKE_RECIPIENT_USERNAME` for invite mutation assertions, or
   - export `WEB_SMOKE_AUTH_ADDR` together with `WEB_SMOKE_AUTH_USERNAME` and
     `WEB_SMOKE_AUTH_RECIPIENT_USERNAME` so `scripts/playwright-web-smoke.sh`
     can resolve existing accounts and mint a valid web session automatically.
@@ -493,7 +492,8 @@ async page => {
     { path: "/app/campaigns/" + campaignID + "/characters/create", selectors: ["#campaign-character-create", '[data-campaign-character-create-page="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/sessions", selectors: ["#campaign-sessions", '[data-campaign-sessions-header="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/sessions/create", selectors: ["#campaign-session-create", '[data-campaign-session-create-form="true"]'] },
-    { path: "/app/campaigns/" + campaignID + "/invites", selectors: ["#campaign-invites", '[data-campaign-invite-create-form="true"]'] },
+    { path: "/app/campaigns/" + campaignID + "/invites", selectors: ["#campaign-invites", '[data-campaign-invite-create-link="true"]'] },
+    { path: "/app/campaigns/" + campaignID + "/invites/create", selectors: ["#campaign-invite-create", '[data-campaign-invite-create-page="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/game", selectors: ["#root"] },
   ];
 
@@ -562,13 +562,14 @@ async page => {
   if (!participantID || !participantID.trim()) {
     throw new Error("Missing campaign participant id for mutation checks");
   }
-  const recipientUserID = "${WEB_SMOKE_RECIPIENT_USER_ID:-${WEB_SMOKE_USER_ID:-}}".trim();
-  if (!recipientUserID) {
-    throw new Error("Missing WEB_SMOKE_RECIPIENT_USER_ID (or WEB_SMOKE_USER_ID fallback) for deterministic invite checks");
+  const recipientUsername = "${WEB_SMOKE_RECIPIENT_USERNAME:-${WEB_SMOKE_AUTH_RECIPIENT_USERNAME:-}}".trim();
+  if (!recipientUsername) {
+    throw new Error("Missing WEB_SMOKE_RECIPIENT_USERNAME (or WEB_SMOKE_AUTH_RECIPIENT_USERNAME fallback) for deterministic invite checks");
   }
 
   const sessionsPath = "/app/campaigns/" + campaignID + "/sessions";
   const invitesPath = "/app/campaigns/" + campaignID + "/invites";
+  const inviteCreatePath = invitesPath + "/create";
 
   const sessionStartResp = await page.request.post(origin + "/app/campaigns/" + campaignID + "/sessions/create", {
     maxRedirects: 0,
@@ -636,9 +637,9 @@ async page => {
     maxRedirects: 0,
     headers: {
       ...mutationHeaders,
-      Referer: origin + invitesPath,
+      Referer: origin + inviteCreatePath,
     },
-    form: { participant_id: participantID.trim(), recipient_user_id: recipientUserID },
+    form: { participant_id: participantID.trim(), username: recipientUsername },
   });
   if (inviteCreateResp.status() !== 302) {
     throw new Error("Expected invite create status 302, got: " + inviteCreateResp.status());
@@ -655,9 +656,9 @@ async page => {
   if (invitesResp.status() !== 200) {
     throw new Error("Expected invites list status 200 after create, got: " + invitesResp.status());
   }
-  const inviteID = (await page.locator('[data-campaign-invite-card-id]:has([data-campaign-invite-recipient="' + recipientUserID + '"])').first().getAttribute("data-campaign-invite-card-id") || "").trim();
+  const inviteID = (await page.locator('[data-campaign-invite-card-id]:has([data-campaign-invite-recipient="' + recipientUsername + '"])').first().getAttribute("data-campaign-invite-card-id") || "").trim();
   if (!inviteID) {
-    throw new Error("Missing invite id for recipient " + recipientUserID + " after invite create");
+    throw new Error("Missing invite id for recipient @" + recipientUsername + " after invite create");
   }
 
   const inviteRevokeResp = await page.request.post(origin + "/app/campaigns/" + campaignID + "/invites/revoke", {

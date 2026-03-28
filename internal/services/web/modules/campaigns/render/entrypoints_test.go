@@ -138,7 +138,6 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 						CampaignID:       "camp-1",
 						CanManageInvites: true,
 					},
-					InviteSeatOptions: []InviteSeatOptionView{{ParticipantID: "p-1", Label: "Rook"}},
 					Invites: []InviteView{{
 						ID:              "invite-1",
 						ParticipantID:   "p-1",
@@ -148,6 +147,16 @@ func TestExportedSectionFragmentsRenderOwnedMarkers(t *testing.T) {
 				}, nil)
 			},
 			marker: `data-campaign-invite-card-id="invite-1"`,
+		},
+		{
+			name: "invite create",
+			component: func() templ.Component {
+				return InviteCreateFragment(InviteCreatePageView{
+					CampaignDetailBaseView: CampaignDetailBaseView{CampaignID: "camp-1"},
+					InviteSeatOptions:      []InviteSeatOptionView{{ParticipantID: "p-1", Label: "Rook"}},
+				}, nil)
+			},
+			marker: `data-campaign-invite-create-page="true"`,
 		},
 		{
 			name: "participant create",

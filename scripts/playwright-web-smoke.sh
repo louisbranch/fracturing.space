@@ -30,10 +30,10 @@ EOF
   exit 1
 fi
 
-if [[ "${WEB_SMOKE_REQUIRE_AUTH}" == "1" ]] && [[ -z "${WEB_SMOKE_RECIPIENT_USER_ID:-}" ]] && [[ -z "${WEB_SMOKE_USER_ID:-}" ]]; then
+if [[ "${WEB_SMOKE_REQUIRE_AUTH}" == "1" ]] && [[ -z "${WEB_SMOKE_RECIPIENT_USERNAME:-}" ]] && [[ -z "${WEB_SMOKE_AUTH_RECIPIENT_USERNAME:-}" ]]; then
   cat >&2 <<'EOF'
 web smoke requires invite recipient identity for deterministic mutation checks.
-Set WEB_SMOKE_AUTH_ADDR with WEB_SMOKE_AUTH_USERNAME and WEB_SMOKE_AUTH_RECIPIENT_USERNAME, or set WEB_SMOKE_RECIPIENT_USER_ID (or legacy WEB_SMOKE_USER_ID) directly.
+Set WEB_SMOKE_AUTH_ADDR with WEB_SMOKE_AUTH_USERNAME and WEB_SMOKE_AUTH_RECIPIENT_USERNAME, or set WEB_SMOKE_RECIPIENT_USERNAME directly.
 EOF
   exit 1
 fi
