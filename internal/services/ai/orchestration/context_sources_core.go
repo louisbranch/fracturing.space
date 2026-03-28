@@ -10,8 +10,9 @@ import (
 // CoreContextSourceConfig controls which optional core prompt sections are
 // always-on during campaign-turn prompt assembly.
 type CoreContextSourceConfig struct {
-	IncludeStory  bool
-	IncludeMemory bool
+	IncludeStory      bool
+	IncludeStoryIndex bool
+	IncludeMemory     bool
 }
 
 // CoreContextSources returns the standard context sources for campaign turns.
@@ -19,8 +20,9 @@ type CoreContextSourceConfig struct {
 // sections at the appropriate priority tiers.
 func CoreContextSources() []ContextSource {
 	return CoreContextSourcesWithConfig(CoreContextSourceConfig{
-		IncludeStory:  true,
-		IncludeMemory: true,
+		IncludeStory:      true,
+		IncludeStoryIndex: false,
+		IncludeMemory:     true,
 	})
 }
 
@@ -36,6 +38,9 @@ func CoreContextSourcesWithConfig(cfg CoreContextSourceConfig) []ContextSource {
 		ContextSourceFunc(currentContextSource),
 		ContextSourceFunc(interactionStateContextSource),
 	}
+	if cfg.IncludeStoryIndex {
+		sources = append(sources, ContextSourceFunc(storyIndexContextSource))
+	}
 	if cfg.IncludeStory {
 		sources = append(sources, ContextSourceFunc(storyContextSource))
 	}
@@ -49,8 +54,9 @@ func CoreContextSourcesWithConfig(cfg CoreContextSourceConfig) []ContextSource {
 // builders before any game-system-specific sources are appended.
 func NewCoreContextSourceRegistry() *ContextSourceRegistry {
 	return NewCoreContextSourceRegistryWithConfig(CoreContextSourceConfig{
-		IncludeStory:  true,
-		IncludeMemory: true,
+		IncludeStory:      true,
+		IncludeStoryIndex: false,
+		IncludeMemory:     true,
 	})
 }
 
@@ -156,6 +162,23 @@ func storyContextSource(ctx context.Context, sess Session, input PromptInput) (B
 	return BriefContribution{}, nil
 }
 
+func storyIndexContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
+	story, err := readOptionalResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/story.md", input.CampaignID))
+	if err != nil {
+		return BriefContribution{}, fmt.Errorf("read story artifact for index: %w", err)
+	}
+	index := strings.TrimSpace(BuildStoryContextIndex(input.CampaignID, story))
+	if index == "" {
+		return BriefContribution{}, nil
+	}
+	return SectionContribution(BriefSection{
+		ID:       "story_index",
+		Priority: 280,
+		Label:    "Story index",
+		Content:  index,
+	}), nil
+}
+
 func memoryContextSource(ctx context.Context, sess Session, input PromptInput) (BriefContribution, error) {
 	memory, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/artifacts/memory.md", input.CampaignID))
 	if err != nil {
@@ -181,13 +204,30 @@ func interactionStateContextSource(ctx context.Context, sess Session, input Prom
 	if err != nil {
 		return BriefContribution{}, fmt.Errorf("decode interaction state: %w", err)
 	}
+	sections := []BriefSection{{
+		ID:       "interaction_state",
+		Priority: 200,
+		Label:    "Current interaction state",
+		Content:  interaction,
+	}}
+	if guide := strings.TrimSpace(BuildPhaseGuide(snapshot.TurnMode(), input)); guide != "" {
+		sections = append(sections, BriefSection{
+			ID:       "phase_guide",
+			Priority: 150,
+			Label:    "Current phase guide",
+			Content:  guide,
+		})
+	}
+	if accessMap := strings.TrimSpace(BuildContextAccessMap(snapshot.TurnMode(), input)); accessMap != "" {
+		sections = append(sections, BriefSection{
+			ID:       "context_access_map",
+			Priority: 210,
+			Label:    "Context access map",
+			Content:  accessMap,
+		})
+	}
 	return BriefContribution{
-		Sections: []BriefSection{{
-			ID:       "interaction_state",
-			Priority: 200,
-			Label:    "Current interaction state",
-			Content:  interaction,
-		}},
+		Sections:         sections,
 		InteractionState: &snapshot,
 	}, nil
 }

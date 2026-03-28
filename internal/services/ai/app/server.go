@@ -283,8 +283,9 @@ func promptContextPolicyFor(mode openviking.IntegrationMode, openVikingEnabled b
 
 func buildPromptContextSources(policy promptContextPolicy) *orchestration.ContextSourceRegistry {
 	reg := orchestration.NewCoreContextSourceRegistryWithConfig(orchestration.CoreContextSourceConfig{
-		IncludeStory:  policy.IncludeStory,
-		IncludeMemory: policy.IncludeMemory,
+		IncludeStory:      policy.IncludeStory,
+		IncludeStoryIndex: !policy.IncludeStory,
+		IncludeMemory:     policy.IncludeMemory,
 	})
 	reg.RegisterAll(orchdaggerheart.ContextSources()...)
 	return reg

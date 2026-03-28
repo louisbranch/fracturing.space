@@ -274,6 +274,7 @@ func TestBuildPromptContextSourcesKeepsMemoryWhenDocsAlignedModeIsEnabled(t *tes
 		t.Fatalf("CollectSections() error = %v", err)
 	}
 	foundMemory := false
+	foundStoryIndex := false
 	for _, section := range sections {
 		if section.ID == "story" {
 			t.Fatalf("unexpected story section in docs-aligned mode")
@@ -281,9 +282,15 @@ func TestBuildPromptContextSourcesKeepsMemoryWhenDocsAlignedModeIsEnabled(t *tes
 		if section.ID == "memory" {
 			foundMemory = true
 		}
+		if section.ID == "story_index" {
+			foundStoryIndex = true
+		}
 	}
 	if !foundMemory {
 		t.Fatal("expected memory section to remain in docs-aligned mode")
+	}
+	if !foundStoryIndex {
+		t.Fatal("expected story index section when raw story is suppressed")
 	}
 }
 
@@ -377,6 +384,17 @@ func TestBuildRuntimeDepsCanDisableOpenVikingSessionSync(t *testing.T) {
 	}
 	if deps.openVikingSessionSync != nil {
 		t.Fatal("expected openviking session sync to remain disabled")
+	}
+}
+
+func TestEffectiveOpenVikingHTTPTimeoutKeepsBufferOverResourceSync(t *testing.T) {
+	cfg := runtimeConfig{
+		OpenVikingTimeout:      15 * time.Second,
+		OpenVikingResourceSync: 20 * time.Second,
+	}
+
+	if got := effectiveOpenVikingHTTPTimeout(cfg); got != 25*time.Second {
+		t.Fatalf("effectiveOpenVikingHTTPTimeout() = %v, want 25s", got)
 	}
 }
 

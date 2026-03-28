@@ -159,7 +159,6 @@ var (
 			"end that interaction with a prompt beat before opening the first player phase",
 		},
 		RequiredToolSet: []string{
-			"system_reference_search",
 			"scene_create",
 			"interaction_open_scene_player_phase",
 		},
