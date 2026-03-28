@@ -25,7 +25,7 @@ type realtimeHubDeps struct {
 	logger        *slog.Logger
 	aiDebug       aiDebugClient
 	transcripts   transcript.Store
-	events        eventClient
+	events        campaignUpdateClient
 }
 
 type realtimeHub struct {
@@ -44,7 +44,7 @@ func newRealtimeHub(server *Server) *realtimeHub {
 		logger:        server.logger,
 		aiDebug:       server.deps.AIDebug,
 		transcripts:   server.deps.Transcripts,
-		events:        server.deps.Events,
+		events:        server.deps.CampaignUpdates,
 	}, defaultRealtimeRuntime())
 }
 
@@ -138,35 +138,35 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 				return
 			}
 			decodeErrors++
-			_ = session.peer.writeError(frame.RequestID, "invalid_argument", "invalid frame payload", nil)
+			_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "invalid frame payload", nil)
 			if decodeErrors >= maxDecodeErrorsPerConn {
 				return
 			}
 			continue
 		}
 		if len(frame.Payload) > maxFramePayloadBytes {
-			_ = session.peer.writeError(frame.RequestID, "invalid_argument", "payload too large", nil)
+			_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "payload too large", nil)
 			continue
 		}
 		if !rateLimiter.allow() {
-			_ = session.peer.writeError(frame.RequestID, "resource_exhausted", "rate limit exceeded", nil)
+			_ = session.peer.writeError(frame.RequestID, WSErrorResourceExhausted, "rate limit exceeded", nil)
 			return
 		}
 		switch frame.Type {
-		case "play.connect":
+		case FrameConnect:
 			h.handleConnect(conn.Request().Context(), session, frame)
-		case "play.chat.send":
+		case FrameChatSend:
 			h.handleChatSend(conn.Request().Context(), session, frame)
-		case "play.typing":
+		case FrameTyping:
 			h.handleTyping(session, frame)
-		case "play.ping":
+		case FramePing:
 			_ = session.peer.writeFrame(wsFrame{
-				Type:      "play.pong",
+				Type:      FramePong,
 				RequestID: frame.RequestID,
 				Payload:   mustJSON(playprotocol.Pong{Timestamp: h.runtime.nowTime().Format(time.RFC3339Nano)}),
 			})
 		default:
-			_ = session.peer.writeError(frame.RequestID, "invalid_argument", "unsupported frame type", nil)
+			_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "unsupported frame type", nil)
 		}
 	}
 }
@@ -174,17 +174,17 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSession, frame wsFrame) {
 	var payload playprotocol.ConnectRequest
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
-		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "invalid connect payload", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "invalid connect payload", nil)
 		return
 	}
 	campaignID := strings.TrimSpace(payload.CampaignID)
 	if campaignID == "" {
-		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "campaign_id is required", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "campaign_id is required", nil)
 		return
 	}
 	room := h.room(campaignID)
 	if room == nil {
-		_ = session.peer.writeError(frame.RequestID, "unavailable", "service is shutting down", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorUnavailable, "service is shutting down", nil)
 		return
 	}
 	app := h.deps.application()
@@ -194,18 +194,18 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 	}
 	state, err := app.interactionState(ctx, req)
 	if err != nil {
-		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to load interaction state", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorUnavailable, "failed to load interaction state", nil)
 		return
 	}
 	snapshot, err := app.roomSnapshotFromState(ctx, req, state, room.latestGameSequence())
 	if err != nil {
-		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to build play snapshot", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorUnavailable, "failed to build play snapshot", nil)
 		return
 	}
 	session.attach(room, snapshot.InteractionState)
 	room.add(session)
 	_ = session.peer.writeFrame(wsFrame{
-		Type:      "play.ready",
+		Type:      FrameReady,
 		RequestID: frame.RequestID,
 		Payload:   mustJSON(snapshot),
 	})
@@ -215,12 +215,12 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 	if sessionID := session.activeSession(); sessionID != "" && payload.LastChatSeq < snapshot.Chat.LatestSequenceID {
 		messages, err := app.incrementalChatMessages(ctx, transcript.Scope{CampaignID: campaignID, SessionID: sessionID}, payload.LastChatSeq)
 		if err != nil {
-			_ = session.peer.writeFrame(wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "chat history drifted; reload required"})})
+			_ = session.peer.writeFrame(wsFrame{Type: FrameResync, Payload: mustJSON(map[string]string{"reason": "chat history drifted; reload required"})})
 			return
 		}
 		for _, message := range messages {
 			_ = session.peer.writeFrame(wsFrame{
-				Type:    "play.chat.message",
+				Type:    FrameChatMessage,
 				Payload: mustJSON(playprotocol.ChatMessageEnvelope{Message: message}),
 			})
 		}
@@ -230,27 +230,27 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSession, frame wsFrame) {
 	var payload playprotocol.ChatSendRequest
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
-		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "invalid chat payload", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "invalid chat payload", nil)
 		return
 	}
 	body := strings.TrimSpace(payload.Body)
 	if body == "" {
-		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "body is required", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "body is required", nil)
 		return
 	}
 	if len([]rune(body)) > maxMessageBodyRunes {
-		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "body is too long", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "body is too long", nil)
 		return
 	}
 	clientMessageID := strings.TrimSpace(payload.ClientMessageID)
 	if len(clientMessageID) > maxClientMessageIDLen {
-		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "client_message_id is too long", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "client_message_id is too long", nil)
 		return
 	}
 
 	identity, ok := session.chatIdentity()
 	if !ok {
-		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "join an active session before sending chat", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorFailedPrecondition, "join an active session before sending chat", nil)
 		return
 	}
 	result, err := h.deps.transcripts.AppendMessage(ctx, transcript.AppendRequest{
@@ -266,7 +266,7 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 		ClientMessageID: clientMessageID,
 	})
 	if err != nil {
-		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to persist chat message", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorUnavailable, "failed to persist chat message", nil)
 		return
 	}
 	chatRoom := session.currentRoom()
@@ -274,7 +274,7 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 		return
 	}
 	chatRoom.broadcastFrame(wsFrame{
-		Type:      "play.chat.message",
+		Type:      FrameChatMessage,
 		RequestID: frame.RequestID,
 		Payload:   mustJSON(playprotocol.ChatMessageEnvelope{Message: playprotocol.TranscriptMessage(result.Message)}),
 	})
@@ -283,20 +283,20 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 func (h *realtimeHub) handleTyping(session *realtimeSession, frame wsFrame) {
 	var payload typingPayload
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
-		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "invalid typing payload", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorInvalidArgument, "invalid typing payload", nil)
 		return
 	}
 	room := session.currentRoom()
 	if room == nil {
-		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "join a campaign before sending typing", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorFailedPrecondition, "join a campaign before sending typing", nil)
 		return
 	}
 	identity, ok := session.chatIdentity()
 	if !ok {
-		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "participant identity unavailable", nil)
+		_ = session.peer.writeError(frame.RequestID, WSErrorFailedPrecondition, "participant identity unavailable", nil)
 		return
 	}
-	room.broadcastFrame(wsFrame{Type: "play.typing", Payload: mustJSON(playprotocol.TypingEvent{
+	room.broadcastFrame(wsFrame{Type: FrameTyping, Payload: mustJSON(playprotocol.TypingEvent{
 		SessionID:     identity.SessionID,
 		ParticipantID: identity.ParticipantID,
 		Name:          identity.ParticipantName,
@@ -350,7 +350,7 @@ func (h *realtimeHub) unregisterSession(session *realtimeSession) {
 	session.mu.Unlock()
 	if room != nil {
 		if typingActive {
-			room.broadcastFrame(wsFrame{Type: "play.typing", Payload: mustJSON(playprotocol.TypingEvent{
+			room.broadcastFrame(wsFrame{Type: FrameTyping, Payload: mustJSON(playprotocol.TypingEvent{
 				SessionID:     sessionID,
 				ParticipantID: participantID,
 				Name:          participantName,

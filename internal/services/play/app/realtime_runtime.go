@@ -18,6 +18,29 @@ const (
 	projectionBackoffMultiplier = 2.0
 )
 
+// WebSocket frame types define the play realtime protocol messages.
+const (
+	FrameConnect            = "play.connect"
+	FrameReady              = "play.ready"
+	FrameChatSend           = "play.chat.send"
+	FrameChatMessage        = "play.chat.message"
+	FrameTyping             = "play.typing"
+	FramePing               = "play.ping"
+	FramePong               = "play.pong"
+	FrameError              = "play.error"
+	FrameInteractionUpdated = "play.interaction.updated"
+	FrameResync             = "play.resync"
+	FrameAIDebugTurnUpdated = "play.ai_debug.turn.updated"
+)
+
+// WebSocket error codes sent in play.error frames.
+const (
+	WSErrorInvalidArgument    = "invalid_argument"
+	WSErrorResourceExhausted  = "resource_exhausted"
+	WSErrorFailedPrecondition = "failed_precondition"
+	WSErrorUnavailable        = "unavailable"
+)
+
 // wsRateLimiter enforces a fixed-window frame rate per WebSocket connection.
 type wsRateLimiter struct {
 	now         func() time.Time

@@ -8,12 +8,12 @@ import (
 	gogrpc "google.golang.org/grpc"
 )
 
-type interactionRoute struct {
+type route struct {
 	pattern string
 	handler http.Handler
 }
 
-func (r interactionRoute) register(rootMux *http.ServeMux) {
+func (r route) register(rootMux *http.ServeMux) {
 	rootMux.Handle(r.pattern, r.handler)
 }
 
@@ -23,8 +23,8 @@ func (r interactionRoute) register(rootMux *http.ServeMux) {
 // shared interface for setting CampaignId. The repetition is deliberate:
 // reflection would obscure the type-safe wiring that the generics factories
 // already provide.
-func interactionRoutes(server *Server) []interactionRoute {
-	return []interactionRoute{
+func interactionRoutes(server *Server) []route {
+	return []route{
 		jsonInteractionRoute(server, "POST /api/campaigns/{campaignID}/interaction/activate-scene", func() *gamev1.ActivateSceneRequest {
 			return &gamev1.ActivateSceneRequest{}
 		}, func(req *gamev1.ActivateSceneRequest, campaignID string) {
@@ -105,8 +105,8 @@ func jsonInteractionRoute[TReq any, TResp interactionStateResponse](
 	newRequest func() *TReq,
 	setCampaignID func(*TReq, string),
 	call func(context.Context, *TReq, ...gogrpc.CallOption) (TResp, error),
-) interactionRoute {
-	return interactionRoute{
+) route {
+	return route{
 		pattern: pattern,
 		handler: rpcInteractionMutationHandler(server, newRequest, setCampaignID, call),
 	}
@@ -117,8 +117,8 @@ func scopeOnlyInteractionRoute[TReq any, TResp interactionStateResponse](
 	pattern string,
 	buildRequest func(string) *TReq,
 	call func(context.Context, *TReq, ...gogrpc.CallOption) (TResp, error),
-) interactionRoute {
-	return interactionRoute{
+) route {
+	return route{
 		pattern: pattern,
 		handler: rpcInteractionMutationHandlerWithoutBody(server, buildRequest, call),
 	}

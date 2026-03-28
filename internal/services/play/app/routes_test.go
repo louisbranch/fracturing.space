@@ -9,7 +9,7 @@ import (
 func TestPlayRoutesExposeExpectedSurface(t *testing.T) {
 	t.Parallel()
 
-	server := &Server{deps: Dependencies{Interaction: fakePlayInteractionClient{}}}
+	server := &Server{deps: Dependencies{Interaction: stubInteractionClient{}}}
 	server.realtime = newRealtimeHub(server)
 
 	routes := server.playRoutes(testPlayLaunchGrantConfig(t))
@@ -65,7 +65,7 @@ func TestPlayRoutesExposeExpectedSurface(t *testing.T) {
 func TestPlayRoutesDoNotServeRetiredPreviewPath(t *testing.T) {
 	t.Parallel()
 
-	server := &Server{deps: Dependencies{Interaction: fakePlayInteractionClient{}}}
+	server := &Server{deps: Dependencies{Interaction: stubInteractionClient{}}}
 	server.realtime = newRealtimeHub(server)
 
 	mux := http.NewServeMux()

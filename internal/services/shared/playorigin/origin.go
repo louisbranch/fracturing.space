@@ -6,18 +6,18 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 )
 
 const playHostPrefix = "play."
 
 // PlayURL resolves the play-host absolute URL for the provided request host.
-func PlayURL(r *http.Request, policy requestmeta.SchemePolicy, playFallbackPort string, path string) string {
+func PlayURL(r *http.Request, policy httpx.SchemePolicy, playFallbackPort string, path string) string {
 	return absoluteURL(derivePlayHost(requestHost(r), playFallbackPort), requestScheme(r, policy), path)
 }
 
 // WebURL resolves the apex-web absolute URL for the provided request host.
-func WebURL(r *http.Request, policy requestmeta.SchemePolicy, webFallbackPort string, path string) string {
+func WebURL(r *http.Request, policy httpx.SchemePolicy, webFallbackPort string, path string) string {
 	return absoluteURL(deriveWebHost(requestHost(r), webFallbackPort), requestScheme(r, policy), path)
 }
 
@@ -64,8 +64,8 @@ func absoluteURL(host, scheme, path string) string {
 	return scheme + "://" + host + path
 }
 
-func requestScheme(r *http.Request, policy requestmeta.SchemePolicy) string {
-	if requestmeta.IsHTTPSWithPolicy(r, policy) {
+func requestScheme(r *http.Request, policy httpx.SchemePolicy) string {
+	if httpx.IsHTTPSWithPolicy(r, policy) {
 		return "https"
 	}
 	return "http"

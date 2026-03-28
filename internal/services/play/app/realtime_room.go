@@ -303,7 +303,7 @@ func (r *campaignRoom) broadcastCurrent() {
 	payload := mustJSON(snapshot)
 	for _, session := range sessions {
 		session.refreshCampaignState(snapshot.InteractionState)
-		_ = session.peer.writeFrame(wsFrame{Type: "play.interaction.updated", Payload: payload})
+		_ = session.peer.writeFrame(wsFrame{Type: FrameInteractionUpdated, Payload: payload})
 	}
 }
 
@@ -312,7 +312,7 @@ func (r *campaignRoom) broadcastResync(sessions []*realtimeSession) {
 		"campaign_id", r.campaignID,
 		"sessions", len(sessions),
 	)
-	frame := wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "interaction state changed; reload required"})}
+	frame := wsFrame{Type: FrameResync, Payload: mustJSON(map[string]string{"reason": "interaction state changed; reload required"})}
 	for _, session := range sessions {
 		_ = session.peer.writeFrame(frame)
 	}
@@ -410,6 +410,6 @@ func (r *campaignRoom) consumeAIDebugStream(
 			"status", payload.Turn.Status,
 			"appended_entries", len(payload.AppendedEntries),
 		)
-		r.broadcastFrame(wsFrame{Type: "play.ai_debug.turn.updated", Payload: mustJSON(payload)})
+		r.broadcastFrame(wsFrame{Type: FrameAIDebugTurnUpdated, Payload: mustJSON(payload)})
 	}
 }

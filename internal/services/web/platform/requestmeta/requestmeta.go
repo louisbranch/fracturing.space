@@ -4,25 +4,23 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 )
 
-// SchemePolicy controls how request metadata resolves request scheme.
-//
-// TrustForwardedProto must be explicitly enabled for X-Forwarded-Proto to be
-// considered. Keeping this explicit avoids trusting headers from untrusted clients.
-type SchemePolicy struct {
-	TrustForwardedProto bool
-}
+// SchemePolicy is an alias for the shared httpx.SchemePolicy type so existing
+// importers continue to compile without changes.
+type SchemePolicy = httpx.SchemePolicy
 
 // IsHTTPS reports whether a request should be treated as HTTPS.
 func IsHTTPS(r *http.Request) bool {
-	return IsHTTPSWithPolicy(r, SchemePolicy{})
+	return httpx.IsHTTPSWithPolicy(r, SchemePolicy{})
 }
 
 // IsHTTPSWithPolicy reports whether a request should be treated as HTTPS using
 // the provided scheme policy.
 func IsHTTPSWithPolicy(r *http.Request, policy SchemePolicy) bool {
-	return requestScheme(r, policy) == "https"
+	return httpx.IsHTTPSWithPolicy(r, policy)
 }
 
 // HasSameOriginProof reports whether Origin or Referer proves same-origin.
@@ -95,25 +93,9 @@ func requestOriginParts(r *http.Request, policy SchemePolicy) (string, string, s
 	return scheme, host, port
 }
 
-// requestScheme centralizes this web behavior in one helper seam.
+// requestScheme delegates to the shared httpx.RequestScheme implementation.
 func requestScheme(r *http.Request, policy SchemePolicy) string {
-	if r == nil {
-		return ""
-	}
-	if policy.TrustForwardedProto {
-		if forwarded := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))); forwarded == "http" || forwarded == "https" {
-			return forwarded
-		}
-	}
-	if r.URL != nil {
-		if scheme := strings.ToLower(strings.TrimSpace(r.URL.Scheme)); scheme == "http" || scheme == "https" {
-			return scheme
-		}
-	}
-	if r.TLS != nil {
-		return "https"
-	}
-	return "http"
+	return httpx.RequestScheme(r, policy)
 }
 
 // defaultPortForScheme centralizes this web behavior in one helper seam.

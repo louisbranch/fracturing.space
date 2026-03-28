@@ -21,11 +21,13 @@ func TestAppPackageDoesNotConstructRuntimeInfrastructure(t *testing.T) {
 		}
 		for _, imp := range parsed.Imports {
 			path := strings.Trim(imp.Path.Value, "\"")
-			switch path {
-			case "github.com/louisbranch/fracturing.space/internal/platform/grpc":
+			switch {
+			case path == "github.com/louisbranch/fracturing.space/internal/platform/grpc":
 				t.Fatalf("%s imports %q; keep connection construction in internal/cmd/play", entry, path)
-			case "github.com/louisbranch/fracturing.space/internal/services/play/storage/sqlite":
+			case path == "github.com/louisbranch/fracturing.space/internal/services/play/storage/sqlite":
 				t.Fatalf("%s imports %q; keep storage construction in internal/cmd/play", entry, path)
+			case strings.HasPrefix(path, "github.com/louisbranch/fracturing.space/internal/services/web/"):
+				t.Fatalf("%s imports %q; play/app must not depend on the web service — use shared/ packages instead", entry, path)
 			}
 		}
 	}

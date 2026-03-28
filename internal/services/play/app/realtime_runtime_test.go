@@ -93,7 +93,7 @@ func TestCampaignRoomProjectionSubscriptionUsesConfiguredRetryDelay(t *testing.T
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
 	events := &failingEventClient{err: errors.New("subscribe failed")}
-	server.deps.Events = events
+	server.deps.CampaignUpdates = events
 	hub := newRealtimeHubWithRuntime(hubDepsFromServer(server), runtime)
 	server.realtime = hub
 
@@ -124,7 +124,7 @@ func TestCampaignRoomEnsureProjectionSubscriptionUsesAuthenticatedCursor(t *test
 		stream:      &fakeCampaignUpdateStream{},
 		subscribeCh: make(chan struct{}, 1),
 	}
-	server.deps.Events = events
+	server.deps.CampaignUpdates = events
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 
