@@ -1,21 +1,177 @@
 {
   "version": 1,
   "allow_drop": 0.1,
+  "updated_at": "2026-03-24T04:45:10Z",
   "packages": [
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog",
+      "floor": 75.1,
+      "description": "Asset catalog for avatar, system-specific, and Cloudinary path management."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/platform/grpc",
+      "floor": 90.4,
+      "description": "Shared gRPC platform utilities including managed connections and health polling."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin",
+      "floor": 78.8,
+      "description": "Admin service root including auth middleware and route composition."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/campaigns",
+      "floor": 87.9,
+      "description": "Admin campaigns module with campaign/participant/session detail handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/catalog",
+      "floor": 63.4,
+      "description": "Admin catalog module with content catalog browsing handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/dashboard",
+      "floor": 88.8,
+      "description": "Admin dashboard module with activity and system health endpoints."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/scenarios",
+      "floor": 70.4,
+      "description": "Admin scenarios module with scenario execution and result handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest",
+      "floor": 76.5,
+      "description": "Access-request domain lifecycle, normalization, and review invariants."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/agent",
+      "floor": 93.9,
+      "description": "Agent domain model, auth reference dispatch, and status transitions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai",
+      "floor": 75,
+      "description": "AI gRPC transport handlers covering RPC validation and error mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/credential",
+      "floor": 88.7,
+      "description": "Credential domain lifecycle, revocation, and status invariants."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration",
+      "floor": 83.5,
+      "description": "Campaign turn runner, prompt builder, and context source registration."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools",
+      "floor": 57.7,
+      "description": "AI gametools session shell including enum converters, URI parsers, and resource/tool handlers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/providergrant",
+      "floor": 77,
+      "description": "Provider-grant domain lifecycle, refresh logic, and expiry predicates."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite",
+      "floor": 71.2,
+      "description": "SQLite persistence layer for all AI entity CRUD and pagination."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth",
+      "floor": 65,
+      "description": "Auth gRPC transport handlers including account, passkey, and session RPCs."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/oauth",
+      "floor": 81.6,
+      "description": "OAuth configuration, PKCE flow, and provider lifecycle."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
-      "floor": 94.7,
+      "floor": 95.7,
       "description": "Core action command and outcome behavior."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate",
-      "floor": 91.4,
+      "floor": 93.7,
       "description": "Aggregate fold routing and typed state reconstruction."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz",
-      "floor": 93.4,
+      "floor": 95.3,
       "description": "Campaign authorization capability and policy decisions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign",
+      "floor": 94.4,
+      "description": "Campaign lifecycle domain behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/character",
+      "floor": 95.5,
+      "description": "Character domain invariants and state transitions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint",
+      "floor": 98.4,
+      "description": "Checkpoint persistence and snapshot cloning behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/command",
+      "floor": 96.3,
+      "description": "Command envelope normalization and registry validation."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/engine",
+      "floor": 93.3,
+      "description": "Core domain engine orchestration and routing."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/event",
+      "floor": 99.5,
+      "description": "Event envelope validation, aliasing, and integrity contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/fork",
+      "floor": 100,
+      "description": "Fork lineage value objects and constructor logic."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/journal",
+      "floor": 93.1,
+      "description": "Journal append/list ordering and hash-chain guarantees."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/module",
+      "floor": 100,
+      "description": "System module registry and command/event routing contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant",
+      "floor": 96.8,
+      "description": "Participant lifecycle, access labels, and seat control behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness",
+      "floor": 98.3,
+      "description": "Session-start readiness invariants from aggregate state."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/replay",
+      "floor": 98.4,
+      "description": "Deterministic replay sequencing and checkpoint persistence."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session",
+      "floor": 97.1,
+      "description": "Session start/end, gate aggregate behavior, and lifecycle state."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session/gate",
+      "floor": 90.8,
+      "description": "Gate workflow engine, progress computation, and projection helpers."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems",
@@ -28,24 +184,19 @@
       "description": "Daggerheart system module, fold, and projection adapter path."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules",
-      "floor": 79.0,
-      "description": "Pure Daggerheart game-rule types and functions extracted from root."
-    },
-    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain",
-      "floor": 94.8,
+      "floor": 96.9,
       "description": "Pure Daggerheart mechanics helpers."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile",
-      "floor": 97.7,
-      "description": "Daggerheart profile defaults and validation policy seams."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter",
+      "floor": 93.2,
+      "description": "Daggerheart event projection adapter for persistent storage."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics",
-      "floor": 95.5,
-      "description": "Pure Daggerheart mechanics seam used by folder and adapter paths."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider",
+      "floor": 88.8,
+      "description": "Daggerheart command decision handlers and rejection logic."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/reducer",
@@ -53,24 +204,29 @@
       "description": "Pure Daggerheart reducer seam for deterministic state mutations."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state",
-      "floor": 89.7,
-      "description": "Daggerheart campaign snapshot state and supporting runtime value types."
-    },
-    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/validator",
-      "floor": 90.0,
+      "floor": 92.2,
       "description": "Daggerheart payload validation functions."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/adapter",
-      "floor": 93.0,
-      "description": "Daggerheart event projection adapter for persistent storage."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics",
+      "floor": 97.3,
+      "description": "Pure Daggerheart mechanics seam used by folder and adapter paths."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/internal/decider",
-      "floor": 86.0,
-      "description": "Daggerheart command decision handlers and rejection logic."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/profile",
+      "floor": 97.7,
+      "description": "Daggerheart profile defaults and validation policy seams."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules",
+      "floor": 90.2,
+      "description": "Pure Daggerheart game-rule types and functions extracted from root."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/state",
+      "floor": 92,
+      "description": "Daggerheart campaign snapshot state and supporting runtime value types."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest",
@@ -78,124 +234,29 @@
       "description": "Built-in system descriptor and adapter wiring contracts."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign",
-      "floor": 93.5,
-      "description": "Campaign lifecycle domain behavior."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/invite/api/grpc/invite",
+      "floor": 89.6,
+      "description": "Invite gRPC transport handlers covering validation, status transitions, and cross-service enrichment."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/character",
-      "floor": 95.2,
-      "description": "Character domain invariants and state transitions."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/invite/storage/sqlite",
+      "floor": 79.6,
+      "description": "Invite SQLite persistence layer covering CRUD, pagination, and outbox lifecycle."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint",
-      "floor": 97.8,
-      "description": "Checkpoint persistence and snapshot cloning behavior."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/app",
+      "floor": 71,
+      "description": "Notifications application layer with worker runtime and email delivery."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/command",
-      "floor": 91.8,
-      "description": "Command envelope normalization and registry validation."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/play/app",
+      "floor": 76.3,
+      "description": "Play service application layer including realtime rooms and launch grant flow."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/engine",
-      "floor": 93.1,
-      "description": "Core domain engine orchestration and routing."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/event",
-      "floor": 99.5,
-      "description": "Event envelope validation, aliasing, and integrity contracts."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/fork",
-      "floor": 94.1,
-      "description": "Fork lineage value objects and constructor logic."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/journal",
-      "floor": 93.1,
-      "description": "Journal append/list ordering and hash-chain guarantees."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/module",
-      "floor": 99.2,
-      "description": "System module registry and command/event routing contracts."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant",
-      "floor": 96.2,
-      "description": "Participant lifecycle, access labels, and seat control behavior."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness",
-      "floor": 96.9,
-      "description": "Session-start readiness invariants from aggregate state."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/replay",
-      "floor": 98.3,
-      "description": "Deterministic replay sequencing and checkpoint persistence."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session",
-      "floor": 96.8,
-      "description": "Session start/end, gate aggregate behavior, and lifecycle state."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session/gate",
-      "floor": 89.5,
-      "description": "Gate workflow engine, progress computation, and projection helpers."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/app",
-      "floor": 83.5,
-      "description": "Web app composition and auth/csrf wrapper routing behavior."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/composition",
-      "floor": 79.0,
-      "description": "Web startup composition contract from resolvers/dependencies to module sets."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules",
-      "floor": 100.0,
-      "description": "Web registry boundary guardrails and module-set composition invariants."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx",
-      "floor": 88.5,
-      "description": "Shared web HTTP middleware and redirect/method helper contracts."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler",
-      "floor": 80.0,
-      "description": "Protected-module base resolver, locale/page rendering, and fail-safe error contracts."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender",
-      "floor": 80.0,
-      "description": "App-shell/public-page rendering contracts, including HTMX and flash-notice fallback behavior."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler",
-      "floor": 87.0,
-      "description": "Public-module base viewer-resolution, rendering, and safe transport-error contracts."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta",
-      "floor": 80.5,
-      "description": "Scheme/origin request metadata and same-origin proof checks."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror",
-      "floor": 78.0,
-      "description": "User-safe localized app/module error rendering and fallback message contracts."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/templates",
-      "floor": 85.0,
-      "description": "Template helper contracts for fallback localization and app-error copy mapping."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/play/protocol",
+      "floor": 85.2,
+      "description": "Play protocol handlers for AI debug and Daggerheart session messages."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/shared/joingrant",
@@ -203,119 +264,59 @@
       "description": "Join-grant verifier used by invite claim boundary."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest",
-      "floor": 75.0,
-      "description": "Access-request domain lifecycle, normalization, and review invariants."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/agent",
-      "floor": 88.0,
-      "description": "Agent domain model, auth reference dispatch, and status transitions."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/credential",
-      "floor": 87.0,
-      "description": "Credential domain lifecycle, revocation, and status invariants."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/providergrant",
-      "floor": 77.0,
-      "description": "Provider-grant domain lifecycle, refresh logic, and expiry predicates."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration",
-      "floor": 81.0,
-      "description": "Campaign turn runner, prompt builder, and context source registration."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools",
-      "floor": 27.0,
-      "description": "AI gametools session shell including enum converters, URI parsers, and resource/tool handlers."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite",
-      "floor": 57.0,
-      "description": "SQLite persistence layer for all AI entity CRUD and pagination."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai",
-      "floor": 75.0,
-      "description": "AI gRPC transport handlers covering RPC validation and error mapping."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/invite/api/grpc/invite",
-      "floor": 50.0,
-      "description": "Invite gRPC transport handlers covering validation, status transitions, and cross-service enrichment."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/invite/storage/sqlite",
-      "floor": 50.0,
-      "description": "Invite SQLite persistence layer covering CRUD, pagination, and outbox lifecycle."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/play/app",
-      "floor": 73.0,
-      "description": "Play service application layer including realtime rooms and launch grant flow."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/play/protocol",
-      "floor": 83.0,
-      "description": "Play protocol handlers for AI debug and Daggerheart session messages."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth",
-      "floor": 58.0,
-      "description": "Auth gRPC transport handlers including account, passkey, and session RPCs."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/auth/oauth",
-      "floor": 79.0,
-      "description": "OAuth configuration, PKCE flow, and provider lifecycle."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/notifications/app",
-      "floor": 69.0,
-      "description": "Notifications application layer with worker runtime and email delivery."
-    },
-    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/userhub/app",
-      "floor": 66.0,
+      "floor": 68.1,
       "description": "UserHub application layer for user profile aggregation."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/admin",
-      "floor": 67.0,
-      "description": "Admin service root including auth middleware and route composition."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/app",
+      "floor": 94,
+      "description": "Web app composition and auth/csrf wrapper routing behavior."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/campaigns",
-      "floor": 77.0,
-      "description": "Admin campaigns module with campaign/participant/session detail handlers."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/composition",
+      "floor": 100,
+      "description": "Web startup composition contract from resolvers/dependencies to module sets."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/dashboard",
-      "floor": 74.0,
-      "description": "Admin dashboard module with activity and system health endpoints."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules",
+      "floor": 100,
+      "description": "Web registry boundary guardrails and module-set composition invariants."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/catalog",
-      "floor": 61.0,
-      "description": "Admin catalog module with content catalog browsing handlers."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx",
+      "floor": 97.1,
+      "description": "Shared web HTTP middleware and redirect/method helper contracts."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/admin/modules/scenarios",
-      "floor": 68.0,
-      "description": "Admin scenarios module with scenario execution and result handlers."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler",
+      "floor": 100,
+      "description": "Protected-module base resolver, locale/page rendering, and fail-safe error contracts."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/platform/grpc",
-      "floor": 73.0,
-      "description": "Shared gRPC platform utilities including managed connections and health polling."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender",
+      "floor": 94.2,
+      "description": "App-shell/public-page rendering contracts, including HTMX and flash-notice fallback behavior."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog",
-      "floor": 73.0,
-      "description": "Asset catalog for avatar, system-specific, and Cloudinary path management."
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler",
+      "floor": 100,
+      "description": "Public-module base viewer-resolution, rendering, and safe transport-error contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta",
+      "floor": 81.7,
+      "description": "Scheme/origin request metadata and same-origin proof checks."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror",
+      "floor": 92,
+      "description": "User-safe localized app/module error rendering and fallback message contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/templates",
+      "floor": 95.8,
+      "description": "Template helper contracts for fallback localization and app-error copy mapping."
     }
   ]
 }
