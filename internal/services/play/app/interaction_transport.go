@@ -77,7 +77,7 @@ func (s *Server) handleInteractionMutation(
 			return
 		}
 		if payloadJSON, err := json.Marshal(target); err == nil {
-			loggerOrDefault(s.logger).Info("play interaction mutation request",
+			loggerOrDefault(s.logger).Debug("play interaction mutation request",
 				"campaign_id", strings.TrimSpace(req.CampaignID),
 				"user_id", strings.TrimSpace(req.UserID),
 				"path", r.URL.Path,

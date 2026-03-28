@@ -22,6 +22,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [GM interactions](gm-interactions.md)
 - [Interaction surfaces](interaction-surfaces.md)
 - [Play architecture](play-architecture.md)
+- [Play realtime protocol](play-realtime-protocol.md)
 - [Identity and OAuth](identity-and-oauth.md)
 - [Web passkey recovery and device enrollment](web-passkey-recovery-and-device-enrollment.md)
 - [Web architecture](web-architecture.md)

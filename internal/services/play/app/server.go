@@ -19,9 +19,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	gogrpc "google.golang.org/grpc"
 )
+
+func loggerOrDefault(logger *slog.Logger) *slog.Logger {
+	if logger == nil {
+		return slog.Default()
+	}
+	return logger
+}
 
 // Config defines startup inputs for the play service.
 type Config struct {
@@ -29,7 +35,7 @@ type Config struct {
 	WebHTTPAddr         string
 	AssetBaseURL        string
 	PlayUIDevServerURL  string
-	RequestSchemePolicy requestmeta.SchemePolicy
+	RequestSchemePolicy httpx.SchemePolicy
 	LaunchGrant         playlaunchgrant.Config
 	Logger              *slog.Logger
 }
@@ -44,7 +50,7 @@ type Dependencies struct {
 	Participants       participantClient
 	Characters         characterClient
 	DaggerheartContent daggerheartContentClient
-	Events             eventClient
+	CampaignUpdates    campaignUpdateClient
 	Transcripts        transcript.Store
 }
 
@@ -104,7 +110,7 @@ type daggerheartContentClient interface {
 	GetDomainCard(context.Context, *daggerheartv1.GetDaggerheartDomainCardRequest, ...gogrpc.CallOption) (*daggerheartv1.GetDaggerheartDomainCardResponse, error)
 }
 
-type eventClient interface {
+type campaignUpdateClient interface {
 	SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...gogrpc.CallOption) (gogrpc.ServerStreamingClient[gamev1.CampaignUpdate], error)
 }
 
@@ -117,7 +123,7 @@ type Server struct {
 	logger              *slog.Logger
 	webFallbackPort     string
 	assetBaseURL        string
-	requestSchemePolicy requestmeta.SchemePolicy
+	requestSchemePolicy httpx.SchemePolicy
 	deps                Dependencies
 	shellAssets         shellAssets
 	realtime            *realtimeHub
@@ -189,8 +195,8 @@ func (d Dependencies) validate() error {
 	if d.DaggerheartContent == nil {
 		return errors.New("daggerheart content dependency is required")
 	}
-	if d.Events == nil {
-		return errors.New("event dependency is required")
+	if d.CampaignUpdates == nil {
+		return errors.New("campaign updates dependency is required")
 	}
 	if d.Transcripts == nil {
 		return errors.New("transcript store is required")

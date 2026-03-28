@@ -19,8 +19,8 @@ import (
 	playsqlite "github.com/louisbranch/fracturing.space/internal/services/play/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	gogrpc "google.golang.org/grpc"
 )
 
@@ -94,7 +94,7 @@ func Run(ctx context.Context, cfg Config) error {
 			WebHTTPAddr:         cfg.WebHTTPAddr,
 			AssetBaseURL:        cfg.AssetBaseURL,
 			PlayUIDevServerURL:  cfg.PlayUIDevServerURL,
-			RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
+			RequestSchemePolicy: httpx.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
 			LaunchGrant:         launchGrantCfg,
 		}, deps)
 		if err != nil {
@@ -229,7 +229,7 @@ func dependenciesFromResources(authMC managedConnResource, aiMC managedConnResou
 		Participants:       gamev1.NewParticipantServiceClient(gameMC.ClientConn()),
 		Characters:         gamev1.NewCharacterServiceClient(gameMC.ClientConn()),
 		DaggerheartContent: daggerheartv1.NewDaggerheartContentServiceClient(gameMC.ClientConn()),
-		Events:             gamev1.NewEventServiceClient(gameMC.ClientConn()),
+		CampaignUpdates:    gamev1.NewEventServiceClient(gameMC.ClientConn()),
 		Transcripts:        store,
 	}
 }

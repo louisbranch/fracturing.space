@@ -3,10 +3,11 @@ package app
 import (
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playorigin"
-	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // shellAccess captures the resolved browser handoff decision for one campaign
@@ -36,7 +37,7 @@ func (s *Server) handleCampaignShell(w http.ResponseWriter, r *http.Request, lau
 		return
 	}
 	if access.RedirectToWeb {
-		http.Redirect(w, r, playorigin.WebURL(r, s.requestSchemePolicy, s.webFallbackPort, routepath.AppCampaign(campaign.CampaignID)), http.StatusSeeOther)
+		http.Redirect(w, r, playorigin.WebURL(r, s.requestSchemePolicy, s.webFallbackPort, webAppCampaignPath(campaign.CampaignID)), http.StatusSeeOther)
 		return
 	}
 	if _, err := s.application().bootstrap(r.Context(), playRequest{
@@ -54,7 +55,7 @@ func (s *Server) handleCampaignShell(w http.ResponseWriter, r *http.Request, lau
 // writeCampaignShell keeps shell rendering isolated from session and bootstrap
 // gating so shell failures stay transport-only.
 func (s *Server) writeCampaignShell(w http.ResponseWriter, r *http.Request, campaignID string) error {
-	backURL := playorigin.WebURL(r, s.requestSchemePolicy, s.webFallbackPort, routepath.AppCampaign(campaignID))
+	backURL := playorigin.WebURL(r, s.requestSchemePolicy, s.webFallbackPort, webAppCampaignPath(campaignID))
 	slog.InfoContext(r.Context(), "play: render campaign shell",
 		"campaign_id", campaignID,
 		"back_url", backURL,
@@ -65,6 +66,12 @@ func (s *Server) writeCampaignShell(w http.ResponseWriter, r *http.Request, camp
 		RealtimePath:  "/realtime",
 		BackURL:       backURL,
 	})
+}
+
+// webAppCampaignPath returns the web service campaign overview path so the play
+// service can build fallback URLs without importing the web routing table.
+func webAppCampaignPath(campaignID string) string {
+	return "/app/campaigns/" + url.PathEscape(strings.TrimSpace(campaignID))
 }
 
 // writeShell keeps shell rendering isolated from transport-specific gating so

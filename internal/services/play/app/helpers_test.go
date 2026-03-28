@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	gogrpccodes "google.golang.org/grpc/codes"
 	gogrpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -162,14 +162,14 @@ func TestPlaySessionCookieHelpers(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	writePlaySessionCookie(rr, req, " ps-2 ", requestmeta.SchemePolicy{})
+	writePlaySessionCookie(rr, req, " ps-2 ", httpx.SchemePolicy{})
 	cookies := rr.Result().Cookies()
 	if len(cookies) != 1 || cookies[0].Value != "ps-2" || !cookies[0].Secure {
 		t.Fatalf("writePlaySessionCookie() cookies = %#v", cookies)
 	}
 
 	rr = httptest.NewRecorder()
-	clearPlaySessionCookie(rr, req, requestmeta.SchemePolicy{})
+	clearPlaySessionCookie(rr, req, httpx.SchemePolicy{})
 	cookies = rr.Result().Cookies()
 	if len(cookies) != 1 || cookies[0].MaxAge != -1 {
 		t.Fatalf("clearPlaySessionCookie() cookies = %#v", cookies)

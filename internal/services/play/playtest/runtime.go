@@ -18,8 +18,8 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	playapp "github.com/louisbranch/fracturing.space/internal/services/play/app"
 	playsqlite "github.com/louisbranch/fracturing.space/internal/services/play/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -72,7 +72,7 @@ func StartRuntime(t *testing.T, authAddr, gameAddr string) Runtime {
 		HTTPAddr:            httpAddr,
 		WebHTTPAddr:         "127.0.0.1:8080",
 		PlayUIDevServerURL:  "http://localhost:5173",
-		RequestSchemePolicy: requestmeta.SchemePolicy{},
+		RequestSchemePolicy: httpx.SchemePolicy{},
 		LaunchGrant:         launchGrantCfg,
 	}, playapp.Dependencies{
 		Auth:               authv1.NewAuthServiceClient(authConn),
@@ -83,7 +83,7 @@ func StartRuntime(t *testing.T, authAddr, gameAddr string) Runtime {
 		Participants:       gamev1.NewParticipantServiceClient(gameConn),
 		Characters:         gamev1.NewCharacterServiceClient(gameConn),
 		DaggerheartContent: daggerheartv1.NewDaggerheartContentServiceClient(gameConn),
-		Events:             gamev1.NewEventServiceClient(gameConn),
+		CampaignUpdates:    gamev1.NewEventServiceClient(gameConn),
 		Transcripts:        store,
 	})
 	if err != nil {

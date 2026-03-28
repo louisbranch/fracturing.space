@@ -5,7 +5,7 @@ import "testing"
 func TestInteractionRoutesExposeExpectedMutationSurface(t *testing.T) {
 	t.Parallel()
 
-	server := &Server{deps: Dependencies{Interaction: fakePlayInteractionClient{}}}
+	server := &Server{deps: Dependencies{Interaction: stubInteractionClient{}}}
 	routes := interactionRoutes(server)
 	got := make([]string, 0, len(routes))
 	seen := map[string]struct{}{}

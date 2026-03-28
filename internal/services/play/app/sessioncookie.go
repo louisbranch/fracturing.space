@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 )
 
 const playSessionCookieName = "play_session"
@@ -24,7 +24,7 @@ func readPlaySessionCookie(r *http.Request) (string, bool) {
 	return value, true
 }
 
-func writePlaySessionCookie(w http.ResponseWriter, r *http.Request, sessionID string, policy requestmeta.SchemePolicy) {
+func writePlaySessionCookie(w http.ResponseWriter, r *http.Request, sessionID string, policy httpx.SchemePolicy) {
 	if w == nil {
 		return
 	}
@@ -33,12 +33,12 @@ func writePlaySessionCookie(w http.ResponseWriter, r *http.Request, sessionID st
 		Value:    strings.TrimSpace(sessionID),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   requestmeta.IsHTTPSWithPolicy(r, policy),
+		Secure:   httpx.IsHTTPSWithPolicy(r, policy),
 		SameSite: http.SameSiteLaxMode,
 	})
 }
 
-func clearPlaySessionCookie(w http.ResponseWriter, r *http.Request, policy requestmeta.SchemePolicy) {
+func clearPlaySessionCookie(w http.ResponseWriter, r *http.Request, policy httpx.SchemePolicy) {
 	if w == nil {
 		return
 	}
@@ -47,7 +47,7 @@ func clearPlaySessionCookie(w http.ResponseWriter, r *http.Request, policy reque
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   requestmeta.IsHTTPSWithPolicy(r, policy),
+		Secure:   httpx.IsHTTPSWithPolicy(r, policy),
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})

@@ -17,8 +17,8 @@ func (s *Server) registerRoutes(rootMux *http.ServeMux, launchGrantCfg playlaunc
 // playRoutes is the single browser-surface index for the play service. The
 // interaction mutation subset is delegated to interactionRoutes so both the
 // broad route map and the focused mutation inventory stay reader-visible.
-func (s *Server) playRoutes(launchGrantCfg playlaunchgrant.Config) []interactionRoute {
-	routes := []interactionRoute{
+func (s *Server) playRoutes(launchGrantCfg playlaunchgrant.Config) []route {
+	routes := []route{
 		{
 			pattern: "GET /up",
 			handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

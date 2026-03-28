@@ -56,7 +56,7 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 	server.deps.Participants = participants
 	server.deps.Characters = characters
 	events := &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
-	server.deps.Events = events
+	server.deps.CampaignUpdates = events
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 
@@ -135,7 +135,7 @@ func TestRealtimeConnectSubscribesToAIDebugAndBroadcastsUpdates(t *testing.T) {
 	interaction := newRecordingInteractionClient(playTestState())
 	transcripts := &scriptTranscriptStore{}
 	server := newAuthedPlayServer(interaction, transcripts)
-	server.deps.Events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
+	server.deps.CampaignUpdates = &fakeEventClient{stream: &fakeCampaignUpdateStream{}, subscribeCh: make(chan struct{}, 1)}
 	aiDebug := &fakePlayAIDebugClient{
 		subscribeStream: &fakeCampaignDebugUpdateStream{updates: make(chan *aiv1.CampaignDebugTurnUpdate, 1)},
 		subscribeCh:     make(chan struct{}, 1),
@@ -217,7 +217,7 @@ func TestRealtimeChatSendRequiresActiveSession(t *testing.T) {
 	interaction := newRecordingInteractionClient(state)
 	transcripts := &scriptTranscriptStore{}
 	server := newAuthedPlayServer(interaction, transcripts)
-	server.deps.Events = &fakeEventClient{stream: &fakeCampaignUpdateStream{}}
+	server.deps.CampaignUpdates = &fakeEventClient{stream: &fakeCampaignUpdateStream{}}
 	hub := newRealtimeHub(server)
 	server.realtime = hub
 	defer hub.Close()

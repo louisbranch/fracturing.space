@@ -3,10 +3,20 @@ package app
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 )
+
+func pathForCampaignAPI(campaignID string, suffix string) string {
+	campaignID = url.PathEscape(strings.TrimSpace(campaignID))
+	suffix = strings.Trim(strings.TrimSpace(suffix), "/")
+	if suffix == "" {
+		return "/api/campaigns/" + campaignID
+	}
+	return "/api/campaigns/" + campaignID + "/" + suffix
+}
 
 // campaignRequest captures the browser campaign scope after transport-level
 // path validation.

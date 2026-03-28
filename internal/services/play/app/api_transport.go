@@ -3,10 +3,19 @@ package app
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 )
+
+func parseInt64(value string) (int64, error) {
+	return strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+}
+
+func parseInt(value string) (int, error) {
+	return strconv.Atoi(strings.TrimSpace(value))
+}
 
 var (
 	errInvalidBeforeSequence  = errors.New("invalid before_seq")

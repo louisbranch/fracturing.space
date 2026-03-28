@@ -110,7 +110,7 @@ func (s *realtimeSession) resetTypingTimer(active bool) {
 	participantID := s.participantID
 	participantName := s.participantName
 	s.typingTimer = room.hub.runtime.newTimer(room.hub.runtime.typingTTL, func() {
-		room.broadcastFrame(wsFrame{Type: "play.typing", Payload: mustJSON(playprotocol.TypingEvent{
+		room.broadcastFrame(wsFrame{Type: FrameTyping, Payload: mustJSON(playprotocol.TypingEvent{
 			SessionID:     sessionID,
 			ParticipantID: participantID,
 			Name:          participantName,
@@ -127,7 +127,7 @@ func (p *wsPeer) writeFrame(frame wsFrame) error {
 
 func (p *wsPeer) writeError(requestID string, code string, message string, details map[string]any) error {
 	return p.writeFrame(wsFrame{
-		Type:      "play.error",
+		Type:      FrameError,
 		RequestID: requestID,
 		Payload: mustJSON(playprotocol.ErrorEnvelope{Error: playprotocol.ErrorPayload{
 			Code:    code,

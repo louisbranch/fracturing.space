@@ -107,5 +107,6 @@ When changing `internal/services/play/**` or `internal/cmd/play/**`, run:
 ## Related docs
 
 - [Interaction surfaces](interaction-surfaces.md)
+- [Play realtime protocol](play-realtime-protocol.md)
 - [Small services topology](../../reference/small-services-topology.md)
 - [Play contributor map](../../reference/play-contributor-map.md)

@@ -360,8 +360,8 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta",
-      "floor": 83.3,
-      "description": "Scheme/origin request metadata and same-origin proof checks."
+      "floor": 80.0,
+      "description": "Scheme/origin request metadata and same-origin proof checks. Floor lowered after scheme logic moved to shared/httpx."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror",
