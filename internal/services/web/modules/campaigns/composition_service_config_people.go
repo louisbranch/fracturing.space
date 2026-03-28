@@ -26,12 +26,12 @@ func newParticipantSurfaceConfig(config CompositionConfig) participantServiceCon
 	}
 }
 
-// newCharacterSurfaceConfig keeps character/control/creation composition local
+// newCharacterSurfaceConfig keeps character/ownership/creation composition local
 // to the character route surface.
 func newCharacterSurfaceConfig(config CompositionConfig) characterServiceConfig {
 	return characterServiceConfig{
 		Read:          newCharacterReadServiceConfig(config),
-		Control:       newCharacterControlServiceConfig(config),
+		Ownership:     newCharacterOwnershipServiceConfig(config),
 		Mutation:      newCharacterMutationServiceConfig(config),
 		Creation:      newCharacterCreationServiceConfig(config),
 		Authorization: campaigngateway.NewAuthorizationGateway(config.Gateway.Characters.Authorization),
@@ -67,12 +67,12 @@ func newCharacterReadServiceConfig(config CompositionConfig) campaignapp.Charact
 	}
 }
 
-// newCharacterControlServiceConfig keeps character-control composition local
-// to the character control capability.
-func newCharacterControlServiceConfig(config CompositionConfig) campaignapp.CharacterControlServiceConfig {
-	return campaignapp.CharacterControlServiceConfig{
+// newCharacterOwnershipServiceConfig keeps character-owner composition local
+// to the character ownership capability.
+func newCharacterOwnershipServiceConfig(config CompositionConfig) campaignapp.CharacterOwnershipServiceConfig {
+	return campaignapp.CharacterOwnershipServiceConfig{
 		Read:         campaigngateway.NewCharacterReadGateway(config.Gateway.Characters.Read, config.Options.AssetBaseURL),
-		Mutation:     campaigngateway.NewCharacterControlMutationGateway(config.Gateway.Characters.Control),
+		Mutation:     campaigngateway.NewCharacterOwnershipMutationGateway(config.Gateway.Characters.Ownership),
 		Participants: campaigngateway.NewParticipantReadGateway(config.Gateway.Characters.Participants, config.Options.AssetBaseURL),
 		Sessions:     campaigngateway.NewSessionReadGateway(config.Gateway.Characters.Sessions),
 	}
@@ -129,7 +129,7 @@ func newParticipantGatewayDeps(deps Dependencies) campaigngateway.ParticipantGat
 	}
 }
 
-// newCharacterGatewayDeps groups character read/control/mutation clients by
+// newCharacterGatewayDeps groups character read/ownership/mutation clients by
 // the character surface that consumes them.
 func newCharacterGatewayDeps(deps Dependencies) campaigngateway.CharacterGatewayDeps {
 	return campaigngateway.CharacterGatewayDeps{
@@ -138,7 +138,7 @@ func newCharacterGatewayDeps(deps Dependencies) campaigngateway.CharacterGateway
 			Participant:        deps.ParticipantClient,
 			DaggerheartContent: deps.DaggerheartContentClient,
 		},
-		Control:          campaigngateway.CharacterControlMutationDeps{Character: deps.CharacterClient},
+		Ownership:        campaigngateway.CharacterOwnershipMutationDeps{Character: deps.CharacterClient},
 		Mutation:         campaigngateway.CharacterMutationDeps{Character: deps.CharacterClient},
 		Participants:     campaigngateway.ParticipantReadDeps{Participant: deps.ParticipantClient},
 		Sessions:         campaigngateway.SessionReadDeps{Session: deps.SessionClient, Campaign: deps.CampaignClient},

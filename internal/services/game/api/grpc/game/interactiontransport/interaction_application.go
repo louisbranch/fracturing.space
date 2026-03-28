@@ -123,6 +123,7 @@ func (a interactionApplication) GetInteractionState(ctx context.Context, campaig
 		Name:      activeSession.Name,
 	}
 	state.Ooc = sessionInteractionToProto(sessionInteraction)
+	state.CharacterControllers = sessionCharacterControllersToProto(sessionInteraction)
 	state.GmAuthorityParticipantId = sessionInteraction.GMAuthorityParticipantID
 	state.AiTurn = aiTurnToProto(sessionInteraction.AITurn)
 
@@ -138,7 +139,7 @@ func (a interactionApplication) GetInteractionState(ctx context.Context, campaig
 	if err != nil {
 		return state, nil
 	}
-	activeScene, sceneInteraction, err := a.loadSceneState(ctx, campaignID, sceneRecord)
+	activeScene, sceneInteraction, err := a.loadSceneState(ctx, campaignID, sceneRecord, sessionInteraction)
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +234,50 @@ func (a interactionApplication) SetSessionGMAuthority(ctx context.Context, campa
 		ParticipantID: ids.ParticipantID(record.ID),
 	}
 	if err := a.executeSessionCommand(ctx, commandTypeSessionGMAuthoritySet, campaignID, activeSession.ID, payload, "session.gm_authority.set"); err != nil {
+		return nil, err
+	}
+	return a.GetInteractionState(ctx, campaignID)
+}
+
+func (a interactionApplication) SetSessionCharacterController(ctx context.Context, campaignID string, in *campaignv1.SetSessionCharacterControllerRequest) (*campaignv1.InteractionState, error) {
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
+	}
+	participantID, err := validate.RequiredID(in.GetParticipantId(), "participant id")
+	if err != nil {
+		return nil, err
+	}
+	campaignRecord, err := a.requireManageSessions(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpSessionAction); err != nil {
+		return nil, err
+	}
+	activeSession, _, err := a.requireActiveSessionInteraction(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := a.stores.Character.GetCharacter(ctx, campaignID, characterID); err != nil {
+		return nil, err
+	}
+	if _, err := a.stores.Participant.GetParticipant(ctx, campaignID, participantID); err != nil {
+		return nil, err
+	}
+	payload := session.CharacterControllerSetPayload{
+		SessionID:     ids.SessionID(activeSession.ID),
+		CharacterID:   ids.CharacterID(characterID),
+		ParticipantID: ids.ParticipantID(participantID),
+	}
+	if err := a.executeSessionCommand(
+		ctx,
+		commandTypeSessionCharacterControllerSet,
+		campaignID,
+		activeSession.ID,
+		payload,
+		"session.character_controller.set",
+	); err != nil {
 		return nil, err
 	}
 	return a.GetInteractionState(ctx, campaignID)

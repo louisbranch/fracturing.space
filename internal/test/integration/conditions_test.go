@@ -78,13 +78,7 @@ func TestDaggerheartApplyConditions(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, characterID)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Condition Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Condition Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}
@@ -177,13 +171,7 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Condition Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Condition Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

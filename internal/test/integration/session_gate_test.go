@@ -72,13 +72,7 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Gate Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Gate Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

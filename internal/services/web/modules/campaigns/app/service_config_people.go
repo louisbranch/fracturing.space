@@ -34,10 +34,10 @@ type CharacterReadServiceConfig struct {
 	BatchAuthorization BatchAuthorizationGateway
 }
 
-// CharacterControlServiceConfig keeps character-control dependencies explicit.
-type CharacterControlServiceConfig struct {
+// CharacterOwnershipServiceConfig keeps character-owner dependencies explicit.
+type CharacterOwnershipServiceConfig struct {
 	Read         CampaignCharacterReadGateway
-	Mutation     CampaignCharacterControlMutationGateway
+	Mutation     CampaignCharacterOwnershipMutationGateway
 	Participants CampaignParticipantReadGateway
 	Sessions     CampaignSessionReadGateway
 }

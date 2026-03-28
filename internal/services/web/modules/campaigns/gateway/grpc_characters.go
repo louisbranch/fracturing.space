@@ -284,7 +284,7 @@ type characterParticipantLabels struct {
 	viewerParticipantID string
 }
 
-// characterParticipantLabels loads participant labels once so entity and list character reads share viewer/controller mapping.
+// characterParticipantLabels loads participant labels once so entity and list character reads share viewer/owner mapping.
 func (g characterReadGateway) characterParticipantLabels(ctx context.Context, campaignID string, options campaignapp.CharacterReadContext) (characterParticipantLabels, error) {
 	labels := characterParticipantLabels{namesByID: map[string]string{}}
 	if g.read.Participant == nil {
@@ -354,25 +354,25 @@ func (g characterReadGateway) mapCharacter(
 	if avatarEntityID == "" {
 		avatarEntityID = campaignID
 	}
-	controllerParticipantID := strings.TrimSpace(character.GetParticipantId().GetValue())
-	controllerLabel := strings.TrimSpace(participantLabels.namesByID[controllerParticipantID])
-	if controllerLabel == "" {
-		if controllerParticipantID == "" {
-			controllerLabel = "Unassigned"
+	ownerParticipantID := strings.TrimSpace(character.GetOwnerParticipantId().GetValue())
+	ownerLabel := strings.TrimSpace(participantLabels.namesByID[ownerParticipantID])
+	if ownerLabel == "" {
+		if ownerParticipantID == "" {
+			ownerLabel = "Unassigned"
 		} else {
-			controllerLabel = controllerParticipantID
+			ownerLabel = ownerParticipantID
 		}
 	}
 	return campaignapp.CampaignCharacter{
-		ID:                      characterID,
-		Name:                    characterDisplayName(character),
-		Kind:                    characterKindLabel(character.GetKind()),
-		Controller:              controllerLabel,
-		ControllerParticipantID: controllerParticipantID,
-		Pronouns:                pronouns.FromProto(character.GetPronouns()),
-		Aliases:                 append([]string(nil), character.GetAliases()...),
-		OwnedByViewer:           participantLabels.viewerParticipantID != "" && controllerParticipantID == participantLabels.viewerParticipantID,
-		Daggerheart:             daggerheartSummary,
+		ID:                 characterID,
+		Name:               characterDisplayName(character),
+		Kind:               characterKindLabel(character.GetKind()),
+		Owner:              ownerLabel,
+		OwnerParticipantID: ownerParticipantID,
+		Pronouns:           pronouns.FromProto(character.GetPronouns()),
+		Aliases:            append([]string(nil), character.GetAliases()...),
+		OwnedByViewer:      participantLabels.viewerParticipantID != "" && ownerParticipantID == participantLabels.viewerParticipantID,
+		Daggerheart:        daggerheartSummary,
 		AvatarURL: websupport.AvatarImageURL(
 			g.assetBaseURL,
 			catalog.AvatarRoleCharacter,

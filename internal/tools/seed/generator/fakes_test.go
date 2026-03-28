@@ -71,8 +71,8 @@ func (f *fakeInviteManager) ClaimInvite(ctx context.Context, in *invitev1.ClaimI
 
 // fakeCharacterCreator implements characterCreator with injectable functions.
 type fakeCharacterCreator struct {
-	create            func(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
-	setDefaultControl func(context.Context, *statev1.SetDefaultControlRequest, ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error)
+	create func(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
+	update func(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error)
 }
 
 func (f *fakeCharacterCreator) CreateCharacter(ctx context.Context, in *statev1.CreateCharacterRequest, opts ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
@@ -82,11 +82,11 @@ func (f *fakeCharacterCreator) CreateCharacter(ctx context.Context, in *statev1.
 	return nil, fmt.Errorf("CreateCharacter: not implemented")
 }
 
-func (f *fakeCharacterCreator) SetDefaultControl(ctx context.Context, in *statev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
-	if f.setDefaultControl != nil {
-		return f.setDefaultControl(ctx, in, opts...)
+func (f *fakeCharacterCreator) UpdateCharacter(ctx context.Context, in *statev1.UpdateCharacterRequest, opts ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+	if f.update != nil {
+		return f.update(ctx, in, opts...)
 	}
-	return nil, fmt.Errorf("SetDefaultControl: not implemented")
+	return nil, fmt.Errorf("UpdateCharacter: not implemented")
 }
 
 // fakeSessionManager implements sessionManager with injectable functions.

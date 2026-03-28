@@ -29,6 +29,4 @@ type State struct {
 	Aliases []string
 	// OwnerParticipantID is the governance owner participant for mutation authority.
 	OwnerParticipantID ids.ParticipantID
-	// ParticipantID stores controller assignment for operational gameplay control.
-	ParticipantID ids.ParticipantID
 }

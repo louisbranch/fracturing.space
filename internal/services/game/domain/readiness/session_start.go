@@ -15,10 +15,6 @@ const (
 	RejectionCodeSessionReadinessGMRequired = "SESSION_READINESS_GM_REQUIRED"
 	// RejectionCodeSessionReadinessPlayerRequired indicates there is no active player participant.
 	RejectionCodeSessionReadinessPlayerRequired = "SESSION_READINESS_PLAYER_REQUIRED"
-	// RejectionCodeSessionReadinessPlayerCharacterRequired indicates a player controls no active characters.
-	RejectionCodeSessionReadinessPlayerCharacterRequired = "SESSION_READINESS_PLAYER_CHARACTER_REQUIRED"
-	// RejectionCodeSessionReadinessCharacterControllerRequired indicates an active character is unassigned.
-	RejectionCodeSessionReadinessCharacterControllerRequired = "SESSION_READINESS_CHARACTER_CONTROLLER_REQUIRED"
 	// RejectionCodeSessionReadinessCharacterSystemRequired indicates system-specific character readiness failed.
 	RejectionCodeSessionReadinessCharacterSystemRequired = "SESSION_READINESS_CHARACTER_SYSTEM_REQUIRED"
 )
@@ -67,9 +63,7 @@ type CharacterSystemReadiness func(characterID string) (ready bool, reason strin
 // The checks are deterministic and run only against aggregate replay state:
 //  1. at least one active GM participant,
 //  2. at least one active player participant,
-//  3. each active player controls at least one active character,
-//  4. every active character has a controller,
-//  5. optional system-specific readiness for every active character.
+//  3. optional system-specific readiness for every active character.
 func EvaluateSessionStart(state aggregate.State, systemReadiness CharacterSystemReadiness) *Rejection {
 	report := EvaluateSessionStartReport(state, ReportOptions{SystemReadiness: systemReadiness})
 	if report.Ready() {

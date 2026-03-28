@@ -37,10 +37,10 @@ type ParticipantGatewayDeps struct {
 	Authorization AuthorizationDeps
 }
 
-// CharacterGatewayDeps keeps character/control/creation gateway dependencies explicit.
+// CharacterGatewayDeps keeps character/ownership/creation gateway dependencies explicit.
 type CharacterGatewayDeps struct {
 	Read             CharacterReadDeps
-	Control          CharacterControlMutationDeps
+	Ownership        CharacterOwnershipMutationDeps
 	Mutation         CharacterMutationDeps
 	Participants     ParticipantReadDeps
 	Sessions         SessionReadDeps

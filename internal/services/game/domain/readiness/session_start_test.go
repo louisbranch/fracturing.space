@@ -49,39 +49,7 @@ func TestEvaluateSessionStart_MissingPlayerRejected(t *testing.T) {
 	}
 }
 
-func TestEvaluateSessionStart_PlayerWithoutCharacterRejected(t *testing.T) {
-	rejection := EvaluateSessionStart(aggregate.State{
-		Participants: map[ids.ParticipantID]participant.State{
-			"gm-1": {
-				ParticipantID: "gm-1",
-				Joined:        true,
-				Role:          participant.RoleGM,
-			},
-			"player-1": {
-				ParticipantID: "player-1",
-				Joined:        true,
-				Name:          "Avery",
-				Role:          participant.RolePlayer,
-			},
-		},
-		Characters: map[ids.CharacterID]character.State{},
-	}, nil)
-
-	if rejection == nil {
-		t.Fatal("expected rejection")
-	}
-	if rejection.Code != RejectionCodeSessionReadinessPlayerCharacterRequired {
-		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSessionReadinessPlayerCharacterRequired)
-	}
-	if !strings.Contains(rejection.Message, "Avery") {
-		t.Fatalf("rejection message = %q, want participant name", rejection.Message)
-	}
-	if strings.Contains(rejection.Message, "player-1") {
-		t.Fatalf("rejection message = %q, did not expect participant id when name is present", rejection.Message)
-	}
-}
-
-func TestEvaluateSessionStart_CharacterWithoutControllerRejected(t *testing.T) {
+func TestEvaluateSessionStart_UnownedCharacterAcceptedWhenSystemReady(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
 		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
@@ -104,17 +72,8 @@ func TestEvaluateSessionStart_CharacterWithoutControllerRejected(t *testing.T) {
 		},
 	}, nil)
 
-	if rejection == nil {
-		t.Fatal("expected rejection")
-	}
-	if rejection.Code != RejectionCodeSessionReadinessCharacterControllerRequired {
-		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSessionReadinessCharacterControllerRequired)
-	}
-	if !strings.Contains(rejection.Message, "Aria") {
-		t.Fatalf("rejection message = %q, want character name", rejection.Message)
-	}
-	if strings.Contains(rejection.Message, "char-1") {
-		t.Fatalf("rejection message = %q, did not expect character id when name is present", rejection.Message)
+	if rejection != nil {
+		t.Fatalf("rejection = %#v, want nil", rejection)
 	}
 }
 
@@ -134,10 +93,10 @@ func TestEvaluateSessionStart_SystemReadinessRejected(t *testing.T) {
 		},
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
-				CharacterID:   "char-1",
-				Created:       true,
-				Name:          "Aria",
-				ParticipantID: "player-1",
+				CharacterID:        "char-1",
+				Created:            true,
+				Name:               "Aria",
+				OwnerParticipantID: "player-1",
 			},
 		},
 	}, func(string) (bool, string) {
@@ -174,14 +133,14 @@ func TestEvaluateSessionStart_ReadyCampaignAccepted(t *testing.T) {
 		},
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
-				CharacterID:   "char-1",
-				Created:       true,
-				ParticipantID: "player-1",
+				CharacterID:        "char-1",
+				Created:            true,
+				OwnerParticipantID: "player-1",
 			},
 			"char-2": {
-				CharacterID:   "char-2",
-				Created:       true,
-				ParticipantID: "gm-1",
+				CharacterID:        "char-2",
+				Created:            true,
+				OwnerParticipantID: "gm-1",
 			},
 		},
 	}, nil)
@@ -226,9 +185,9 @@ func TestEvaluateSessionStart_AIGMModeWithBoundAgentAccepted(t *testing.T) {
 		},
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
-				CharacterID:   "char-1",
-				Created:       true,
-				ParticipantID: "player-1",
+				CharacterID:        "char-1",
+				Created:            true,
+				OwnerParticipantID: "player-1",
 			},
 		},
 	}, nil)
@@ -258,9 +217,9 @@ func TestEvaluateSessionStart_AIGMModeWithoutAIGMParticipantRejected(t *testing.
 		},
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
-				CharacterID:   "char-1",
-				Created:       true,
-				ParticipantID: "player-1",
+				CharacterID:        "char-1",
+				Created:            true,
+				OwnerParticipantID: "player-1",
 			},
 		},
 	}, nil)

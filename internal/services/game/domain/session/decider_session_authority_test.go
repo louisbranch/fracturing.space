@@ -35,6 +35,13 @@ func TestDecideSessionAuthorityCommandsEmitExpectedEvents(t *testing.T) {
 			payload:   GMAuthoritySetPayload{ParticipantID: "gm-1"},
 			wantEvent: EventTypeGMAuthoritySet,
 		},
+		{
+			name:      "character controller set",
+			state:     State{Started: true},
+			cmdType:   CommandTypeCharacterControllerSet,
+			payload:   CharacterControllerSetPayload{CharacterID: "char-1", ParticipantID: "player-1"},
+			wantEvent: EventTypeCharacterControllerSet,
+		},
 	}
 
 	for _, tc := range tests {
@@ -94,6 +101,15 @@ func TestDecideSessionAuthorityCommandsRejectInvalidState(t *testing.T) {
 			payload: GMAuthoritySetPayload{ParticipantID: "gm-1"},
 			want:    rejectionCodeSessionGMAuthorityUnchanged,
 		},
+		{
+			name: "character controller unchanged",
+			state: State{
+				CharacterControllers: map[ids.CharacterID]ids.ParticipantID{"char-1": "player-1"},
+			},
+			cmdType: CommandTypeCharacterControllerSet,
+			payload: CharacterControllerSetPayload{CharacterID: "char-1", ParticipantID: "player-1"},
+			want:    rejectionCodeSessionCharacterControllerUnchanged,
+		},
 	}
 
 	for _, tc := range tests {
@@ -150,6 +166,20 @@ func TestDecideSessionAuthorityCommandsRejectInvalidPayloadFields(t *testing.T) 
 			payload: GMAuthoritySetPayload{},
 			want:    rejectionCodeSessionGMAuthorityRequired,
 		},
+		{
+			name:    "character controller requires character",
+			state:   State{Started: true},
+			cmdType: CommandTypeCharacterControllerSet,
+			payload: CharacterControllerSetPayload{},
+			want:    rejectionCodeSessionCharacterRequired,
+		},
+		{
+			name:    "character controller requires participant",
+			state:   State{Started: true},
+			cmdType: CommandTypeCharacterControllerSet,
+			payload: CharacterControllerSetPayload{CharacterID: "char-1"},
+			want:    rejectionCodeSessionCharacterControllerRequired,
+		},
 	}
 
 	for _, tc := range tests {
@@ -191,6 +221,7 @@ func TestDecideSessionAuthorityCommandsRejectMalformedPayloadJSON(t *testing.T) 
 	}{
 		{cmdType: CommandTypeSceneActivate, state: State{Started: true}},
 		{cmdType: CommandTypeGMAuthoritySet, state: State{Started: true}},
+		{cmdType: CommandTypeCharacterControllerSet, state: State{Started: true}},
 	}
 
 	for _, tc := range tests {
@@ -217,4 +248,28 @@ func TestDecideSessionAuthorityCommandsRejectMalformedPayloadJSON(t *testing.T) 
 			}
 		})
 	}
+}
+
+func TestRejectionCodesIncludeCharacterControllerCodes(t *testing.T) {
+	t.Parallel()
+
+	codes := RejectionCodes()
+	if !containsString(codes, rejectionCodeSessionCharacterRequired) {
+		t.Fatalf("rejection codes missing %q", rejectionCodeSessionCharacterRequired)
+	}
+	if !containsString(codes, rejectionCodeSessionCharacterControllerRequired) {
+		t.Fatalf("rejection codes missing %q", rejectionCodeSessionCharacterControllerRequired)
+	}
+	if !containsString(codes, rejectionCodeSessionCharacterControllerUnchanged) {
+		t.Fatalf("rejection codes missing %q", rejectionCodeSessionCharacterControllerUnchanged)
+	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

@@ -70,8 +70,8 @@ return scn
 	if character.Args["participant"] != "John" {
 		t.Fatalf("character participant = %v, want John", character.Args["participant"])
 	}
-	if character.Args["control"] != "participant" {
-		t.Fatalf("character control = %v, want participant", character.Args["control"])
+	if character.Args["owner"] != "participant" {
+		t.Fatalf("character owner = %v, want participant", character.Args["owner"])
 	}
 }
 
@@ -81,7 +81,7 @@ local scn = Scenario.new("chain")
 scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Participant + character overrides
-scn:participant({name = "Ada", role = "GM", controller = "AI"}):character({name = "Sam", kind = "NPC", control = "gm"})
+scn:participant({name = "Ada", role = "GM", controller = "AI"}):character({name = "Sam", kind = "NPC", owner = "unassigned"})
 
 return scn
 `)
@@ -118,8 +118,8 @@ return scn
 	if character.Args["kind"] != "NPC" {
 		t.Fatalf("character kind = %v, want NPC", character.Args["kind"])
 	}
-	if character.Args["control"] != "gm" {
-		t.Fatalf("character control = %v, want gm", character.Args["control"])
+	if character.Args["owner"] != "unassigned" {
+		t.Fatalf("character owner = %v, want unassigned", character.Args["owner"])
 	}
 }
 

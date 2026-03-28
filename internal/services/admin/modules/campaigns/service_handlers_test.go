@@ -256,10 +256,10 @@ func TestCampaignServiceHandlersWithFakeClients(t *testing.T) {
 	}
 	characterClient := &fakeCharacterClient{
 		listResp: &statev1.ListCharactersResponse{
-			Characters: []*statev1.Character{{Id: "char-1", CampaignId: "camp-1", Name: "Hero", ParticipantId: wrapperspb.String("part-1")}},
+			Characters: []*statev1.Character{{Id: "char-1", CampaignId: "camp-1", Name: "Hero", OwnerParticipantId: wrapperspb.String("part-1")}},
 		},
 		sheetResp: &statev1.GetCharacterSheetResponse{
-			Character: &statev1.Character{Id: "char-1", CampaignId: "camp-1", Name: "Hero", ParticipantId: wrapperspb.String("part-1"), CreatedAt: now, UpdatedAt: now},
+			Character: &statev1.Character{Id: "char-1", CampaignId: "camp-1", Name: "Hero", OwnerParticipantId: wrapperspb.String("part-1"), CreatedAt: now, UpdatedAt: now},
 		},
 	}
 	participantClient := &fakeParticipantClient{

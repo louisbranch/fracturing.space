@@ -783,11 +783,11 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
-			AvatarURL:  "/static/avatars/aria.png",
+			ID:        "char-1",
+			Name:      "Aria",
+			Kind:      "PC",
+			Owner:     "Ariadne",
+			AvatarURL: "/static/avatars/aria.png",
 		}},
 	}, modulehandlertest.NewBase(), nil))
 
@@ -807,7 +807,7 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 		`data-campaign-character-detail-id="char-1"`,
 		`data-campaign-character-detail-pronouns=`,
 		`data-campaign-character-detail-kind="PC"`,
-		`data-campaign-character-control-current-controller="Ariadne"`,
+		`data-campaign-character-current-owner="Ariadne"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing character detail marker %q: %q", marker, body)
@@ -829,7 +829,7 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 	}
 }
 
-func TestMountCampaignCharacterDetailShowsClaimAndManagerControlsForUnassignedCharacter(t *testing.T) {
+func TestMountCampaignCharacterDetailShowsOwnershipManagerControlsForUnassignedCharacter(t *testing.T) {
 	t.Parallel()
 
 	m := New(configWithGateway(fakeGateway{
@@ -839,11 +839,11 @@ func TestMountCampaignCharacterDetailShowsClaimAndManagerControlsForUnassignedCh
 			{ID: "p-2", UserID: "user-456", Name: "Moss", CampaignAccess: "Member"},
 		},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Unassigned",
-			AvatarURL:  "/static/avatars/aria.png",
+			ID:        "char-1",
+			Name:      "Aria",
+			Kind:      "PC",
+			Owner:     "Unassigned",
+			AvatarURL: "/static/avatars/aria.png",
 		}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
 			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
@@ -864,104 +864,18 @@ func TestMountCampaignCharacterDetailShowsClaimAndManagerControlsForUnassignedCh
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`data-campaign-character-control-card="true"`,
-		`data-campaign-character-control-manager-card="true"`,
-		`data-campaign-character-claim-form="true"`,
-		`data-campaign-character-controller-form="true"`,
+		`data-campaign-character-ownership-card="true"`,
+		`data-campaign-character-ownership-manager-card="true"`,
+		`data-campaign-character-owner-form="true"`,
 		`data-campaign-character-delete-form="true"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing character control marker %q: %q", marker, body)
 		}
 	}
-	if strings.Contains(body, "Signed in as Ariadne.") {
-		t.Fatalf("character detail should not render signed-in participant copy: %q", body)
-	}
-	if strings.Contains(body, `data-campaign-character-release-form="true"`) {
-		t.Fatalf("character detail should not show release action for unassigned character: %q", body)
-	}
 }
 
-func TestMountCampaignCharacterDetailShowsReleaseForCurrentController(t *testing.T) {
-	t.Parallel()
-
-	m := New(configWithGateway(fakeGateway{
-		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []campaignapp.CampaignParticipant{
-			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Member"},
-		},
-		characters: []campaignapp.CampaignCharacter{{
-			ID:                      "char-1",
-			Name:                    "Aria",
-			Kind:                    "PC",
-			Controller:              "Ariadne",
-			ControllerParticipantID: "p-1",
-		}},
-	}, modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), nil))
-
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	body := rr.Body.String()
-	if !strings.Contains(body, `data-campaign-character-release-form="true"`) {
-		t.Fatalf("character detail should show release action for current controller: %q", body)
-	}
-	if strings.Contains(body, `data-campaign-character-claim-form="true"`) {
-		t.Fatalf("character detail should not show claim action for current controller: %q", body)
-	}
-}
-
-func TestMountCampaignCharacterDetailHidesSelfServiceControlsWhenAnotherParticipantControlsCharacter(t *testing.T) {
-	t.Parallel()
-
-	m := New(configWithGateway(fakeGateway{
-		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []campaignapp.CampaignParticipant{
-			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Member"},
-			{ID: "p-2", UserID: "user-456", Name: "Moss", CampaignAccess: "Member"},
-		},
-		characters: []campaignapp.CampaignCharacter{{
-			ID:                      "char-1",
-			Name:                    "Aria",
-			Kind:                    "PC",
-			Controller:              "Moss",
-			ControllerParticipantID: "p-2",
-		}},
-		authorizationDecision: campaignapp.AuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
-	}, modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), nil))
-
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	body := rr.Body.String()
-	for _, marker := range []string{
-		`data-campaign-character-claim-form="true"`,
-		`data-campaign-character-release-form="true"`,
-		`data-campaign-character-controller-form="true"`,
-	} {
-		if strings.Contains(body, marker) {
-			t.Fatalf("character detail unexpectedly rendered %q: %q", marker, body)
-		}
-	}
-}
-
-func TestMountCampaignCharacterDetailDisablesControlAndDeleteActionsDuringActiveSession(t *testing.T) {
+func TestMountCampaignCharacterDetailDisablesOwnershipAndDeleteActionsDuringActiveSession(t *testing.T) {
 	t.Parallel()
 
 	m := New(configWithGateway(fakeGateway{
@@ -970,10 +884,10 @@ func TestMountCampaignCharacterDetailDisablesControlAndDeleteActionsDuringActive
 			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Manager"},
 		},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Unassigned",
+			ID:    "char-1",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Unassigned",
 		}},
 		sessions: []campaignapp.CampaignSession{{ID: "sess-1", Name: "Session One", Status: "Active"}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
@@ -995,8 +909,7 @@ func TestMountCampaignCharacterDetailDisablesControlAndDeleteActionsDuringActive
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`data-campaign-character-claim-disabled="true"`,
-		`data-campaign-character-controller-submit-disabled="true"`,
+		`data-campaign-character-owner-submit-disabled="true"`,
 		`data-campaign-character-delete-disabled="true"`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -1011,10 +924,10 @@ func TestMountCampaignCharacterDetailBreadcrumbUsesCharacterName(t *testing.T) {
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
+			ID:    "char-1",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Ariadne",
 		}},
 	}, modulehandlertest.NewBase(), nil))
 
@@ -1051,10 +964,10 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
+			ID:    "char-1",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Ariadne",
 		}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
 			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
@@ -1103,10 +1016,10 @@ func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *
 		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		workspaceSystem: "Pathfinder",
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
+			ID:    "char-1",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Ariadne",
 		}},
 		characterCreationProgressErr: errors.New("workflow should not be loaded for non-daggerheart systems"),
 	}, modulehandlertest.NewBase(), nil))
@@ -1175,12 +1088,12 @@ func TestMountCampaignCharacterEditPageRendersDedicatedForm(t *testing.T) {
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
-			Pronouns:   "she/her",
-			CanEdit:    true,
+			ID:       "char-1",
+			Name:     "Aria",
+			Kind:     "PC",
+			Owner:    "Ariadne",
+			Pronouns: "she/her",
+			CanEdit:  true,
 		}},
 	}, modulehandlertest.NewBase(), nil))
 
@@ -1208,8 +1121,8 @@ func TestMountCampaignCharacterEditPageRendersDedicatedForm(t *testing.T) {
 			t.Fatalf("body missing character edit marker %q: %q", marker, body)
 		}
 	}
-	if strings.Contains(body, `>Controller</dt>`) || strings.Contains(body, `>Ariadne</dd>`) {
-		t.Fatalf("character edit page should not render controller summary: %q", body)
+	if strings.Contains(body, `>Owner</dt>`) || strings.Contains(body, `>Ariadne</dd>`) {
+		t.Fatalf("character edit page should not render ownership summary: %q", body)
 	}
 }
 
@@ -1219,10 +1132,10 @@ func TestMountCampaignCharactersDisableMutationsDuringActiveSession(t *testing.T
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
+			ID:    "char-1",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Ariadne",
 		}},
 		sessions: []campaignapp.CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
 	}, modulehandlertest.NewBase(), nil))
@@ -1253,11 +1166,11 @@ func TestMountCampaignCharacterDetailDisablesActionsDuringActiveSession(t *testi
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
-			CanEdit:    true,
+			ID:      "char-1",
+			Name:    "Aria",
+			Kind:    "PC",
+			Owner:   "Ariadne",
+			CanEdit: true,
 		}},
 		sessions: []campaignapp.CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
@@ -2178,18 +2091,18 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 		}},
 		characters: []campaignapp.CampaignCharacter{
 			{
-				ID:         "ch-z",
-				Name:       "Zara",
-				Kind:       "NPC",
-				Controller: "Moss",
-				AvatarURL:  "/static/avatars/zara.png",
+				ID:        "ch-z",
+				Name:      "Zara",
+				Kind:      "NPC",
+				Owner:     "Moss",
+				AvatarURL: "/static/avatars/zara.png",
 			},
 			{
-				ID:         "ch-a",
-				Name:       "Aria",
-				Kind:       "PC",
-				Controller: "Ariadne",
-				AvatarURL:  "/static/avatars/aria.png",
+				ID:        "ch-a",
+				Name:      "Aria",
+				Kind:      "PC",
+				Owner:     "Ariadne",
+				AvatarURL: "/static/avatars/aria.png",
 			},
 		},
 	}, modulehandlertest.NewBase(), nil))
@@ -2218,7 +2131,7 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 		`data-campaign-character-detail-link="true"`,
 		`data-campaign-character-view-link="true"`,
 		`data-campaign-character-kind="PC"`,
-		`data-campaign-character-controller="Ariadne"`,
+		`data-campaign-character-owner="Ariadne"`,
 		`src="/static/avatars/aria.png"`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -2282,10 +2195,10 @@ func TestMountCampaignCharactersRendersDaggerheartSummaryRows(t *testing.T) {
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "ch-a",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
+			ID:    "ch-a",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Ariadne",
 			Daggerheart: &campaignapp.CampaignCharacterDaggerheartSummary{
 				Level:         2,
 				ClassName:     "Warrior",
@@ -2326,10 +2239,10 @@ func TestMountCampaignCharactersHidesIncompleteDaggerheartSummaryRows(t *testing
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "ch-a",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
+			ID:    "ch-a",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Ariadne",
 			Daggerheart: &campaignapp.CampaignCharacterDaggerheartSummary{
 				Level:         2,
 				ClassName:     "Warrior",
@@ -2373,10 +2286,10 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForEditableCharacters(t *tes
 			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "ch-a",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
+			ID:    "ch-a",
+			Name:  "Aria",
+			Kind:  "PC",
+			Owner: "Ariadne",
 		}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{{CheckID: "ch-a", Evaluated: true, Allowed: true}},
 	}, modulehandlertest.NewBase(), nil))
@@ -2410,8 +2323,8 @@ func TestMountCampaignCharactersHighlightsViewerOwnedCharacterCard(t *testing.T)
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		characters: []campaignapp.CampaignCharacter{
-			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne", OwnedByViewer: true},
-			{ID: "ch-b", Name: "Bramble", Kind: "PC", Controller: "Scout", OwnedByViewer: false},
+			{ID: "ch-a", Name: "Aria", Kind: "PC", Owner: "Ariadne", OwnedByViewer: true},
+			{ID: "ch-b", Name: "Bramble", Kind: "PC", Owner: "Scout", OwnedByViewer: false},
 		},
 	}, modulehandlertest.NewBase(), nil))
 
@@ -2441,11 +2354,11 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForReadOnlyCharacters(t *tes
 	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "ch-a",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
-			CanEdit:    false,
+			ID:      "ch-a",
+			Name:    "Aria",
+			Kind:    "PC",
+			Owner:   "Ariadne",
+			CanEdit: false,
 		}},
 	}, modulehandlertest.NewBase(), nil))
 
@@ -2478,11 +2391,11 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForNonDaggerheartCampaigns(t
 		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		workspaceSystem: "Pathfinder",
 		characters: []campaignapp.CampaignCharacter{{
-			ID:         "ch-a",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
-			CanEdit:    true,
+			ID:      "ch-a",
+			Name:    "Aria",
+			Kind:    "PC",
+			Owner:   "Ariadne",
+			CanEdit: true,
 		}},
 	}, modulehandlertest.NewBase(), nil))
 

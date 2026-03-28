@@ -74,13 +74,13 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		characterID := characterResp.GetCharacter().GetId()
 		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, lastSeq, "character.created")
 
-		_, err = suite.character.SetDefaultControl(ctxWithUser, &statev1.SetDefaultControlRequest{
-			CampaignId:    campaignID,
-			CharacterId:   characterID,
-			ParticipantId: wrapperspb.String(ownerPID),
+		_, err = suite.character.UpdateCharacter(ctxWithUser, &statev1.UpdateCharacterRequest{
+			CampaignId:         campaignID,
+			CharacterId:        characterID,
+			OwnerParticipantId: wrapperspb.String(ownerPID),
 		})
 		if err != nil {
-			t.Fatalf("set character control: %v", err)
+			t.Fatalf("set character owner: %v", err)
 		}
 		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, lastSeq, "character.updated")
 
@@ -89,13 +89,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 
 		_ = ensureSessionStartReadiness(t, ctxWithUser, suite.participant, suite.character, campaignID, ownerPID, characterID)
 
-		sessionResp, err := suite.session.StartSession(ctxWithUser, &statev1.StartSessionRequest{
-			CampaignId: campaignID,
-			Name:       "Guardrail Session",
-		})
-		if err != nil {
-			t.Fatalf("start session: %v", err)
-		}
+		sessionResp := startSessionWithDefaultControllers(t, ctxWithUser, suite.session, suite.character, campaignID, "Guardrail Session")
 		sessionID := sessionResp.GetSession().GetId()
 		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignID, lastSeq, "campaign.updated", "session.started")
 

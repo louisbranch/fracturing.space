@@ -16,21 +16,21 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-// ServiceConfig groups character read, control, mutation, and creation app
+// ServiceConfig groups character read, ownership, mutation, and creation app
 // config.
 type ServiceConfig struct {
 	Read          campaignapp.CharacterReadServiceConfig
-	Control       campaignapp.CharacterControlServiceConfig
+	Ownership     campaignapp.CharacterOwnershipServiceConfig
 	Mutation      campaignapp.CharacterMutationServiceConfig
 	Creation      campaignapp.CharacterCreationServiceConfig
 	Authorization campaignapp.AuthorizationGateway
 }
 
-// HandlerServices groups character read, control, mutation, and creation
+// HandlerServices groups character read, ownership, mutation, and creation
 // workflow behavior.
 type HandlerServices struct {
 	reads            campaignapp.CampaignCharacterReadService
-	control          campaignapp.CampaignCharacterControlService
+	ownership        campaignapp.CampaignCharacterOwnershipService
 	mutation         campaignapp.CampaignCharacterMutationService
 	creationPages    campaignworkflow.PageService
 	creationMutation campaignworkflow.MutationService
@@ -43,9 +43,9 @@ func NewHandlerServices(config ServiceConfig, workflows campaignworkflow.Registr
 	if err != nil {
 		return HandlerServices{}, fmt.Errorf("character-reads: %w", err)
 	}
-	control, err := campaignapp.NewCharacterControlService(config.Control, config.Authorization)
+	ownership, err := campaignapp.NewCharacterOwnershipService(config.Ownership, config.Authorization)
 	if err != nil {
-		return HandlerServices{}, fmt.Errorf("character-control: %w", err)
+		return HandlerServices{}, fmt.Errorf("character-ownership: %w", err)
 	}
 	mutation, err := campaignapp.NewCharacterMutationService(config.Mutation, config.Authorization)
 	if err != nil {
@@ -71,7 +71,7 @@ func NewHandlerServices(config ServiceConfig, workflows campaignworkflow.Registr
 
 	return HandlerServices{
 		reads:            reads,
-		control:          control,
+		ownership:        ownership,
 		mutation:         mutation,
 		creationPages:    campaignworkflow.NewPageService(pages, workflows),
 		creationMutation: campaignworkflow.NewMutationService(flow, workflows),
@@ -189,7 +189,6 @@ func (h Handler) HandleCharacterEdit(w http.ResponseWriter, r *http.Request, cam
 
 // HandleCharacterDetail renders one campaign character.
 func (h Handler) HandleCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
-	userID := h.RequestUserID(r)
 	ctx, page, ok := h.LoadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -197,14 +196,14 @@ func (h Handler) HandleCharacterDetail(w http.ResponseWriter, r *http.Request, c
 	readContext := campaignapp.CharacterReadContext{
 		System:       page.Workspace.System,
 		Locale:       page.Locale,
-		ViewerUserID: userID,
+		ViewerUserID: h.RequestUserID(r),
 	}
 	characterItem, err := h.characters.reads.CampaignCharacter(ctx, campaignID, characterID, readContext)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	control, err := h.characters.control.CampaignCharacterControl(ctx, campaignID, characterID, userID, readContext)
+	ownership, err := h.characters.ownership.CampaignCharacterOwnership(ctx, campaignID, characterID, readContext)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -219,7 +218,7 @@ func (h Handler) HandleCharacterDetail(w http.ResponseWriter, r *http.Request, c
 		}
 		creation = campaignrender.NewCharacterCreationView(creationPage.Creation)
 	}
-	view := characterDetailView(page, campaignID, characterID, characterItem, control, creationEnabled, creation)
+	view := characterDetailView(page, campaignID, characterID, characterItem, ownership, creationEnabled, creation)
 	h.WriteCampaignDetailPage(
 		w,
 		r,
@@ -243,48 +242,19 @@ func (h Handler) HandleCharacterUpdate(w http.ResponseWriter, r *http.Request, c
 	h.WriteMutationSuccess(w, r, "web.campaigns.notice_character_updated", routepath.AppCampaignCharacter(campaignID, characterID))
 }
 
-// HandleCharacterControlSet updates the character controller from the detail
+// HandleCharacterOwnerSet updates the character owner from the detail
 // page.
-func (h Handler) HandleCharacterControlSet(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h Handler) HandleCharacterOwnerSet(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
-	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
+	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_owner_form", redirectURL) {
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.characters.control.SetCharacterController(ctx, campaignID, characterID, parseSetCharacterControllerInput(r.Form)); err != nil {
-		h.WriteMutationError(w, r, err, "error.web.message.failed_to_set_character_controller", redirectURL)
+	if err := h.characters.ownership.SetCharacterOwner(ctx, campaignID, characterID, parseSetCharacterOwnerInput(r.Form)); err != nil {
+		h.WriteMutationError(w, r, err, "error.web.message.failed_to_set_character_owner", redirectURL)
 		return
 	}
-	h.WriteMutationSuccess(w, r, "web.campaigns.notice_character_controller_updated", redirectURL)
-}
-
-// HandleCharacterControlClaim claims an unassigned character for the current
-// participant.
-func (h Handler) HandleCharacterControlClaim(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
-	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
-	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
-		return
-	}
-	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.characters.control.ClaimCharacterControl(ctx, campaignID, characterID, userID); err != nil {
-		h.WriteMutationError(w, r, err, "error.web.message.failed_to_claim_character_control", redirectURL)
-		return
-	}
-	h.WriteMutationSuccess(w, r, "web.campaigns.notice_character_control_claimed", redirectURL)
-}
-
-// HandleCharacterControlRelease releases the current participant's control.
-func (h Handler) HandleCharacterControlRelease(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
-	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
-	if !httpx.ParseFormOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
-		return
-	}
-	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.characters.control.ReleaseCharacterControl(ctx, campaignID, characterID, userID); err != nil {
-		h.WriteMutationError(w, r, err, "error.web.message.failed_to_release_character_control", redirectURL)
-		return
-	}
-	h.WriteMutationSuccess(w, r, "web.campaigns.notice_character_control_released", redirectURL)
+	h.WriteMutationSuccess(w, r, "web.campaigns.notice_character_owner_updated", redirectURL)
 }
 
 // HandleCharacterDelete removes a character from the campaign.

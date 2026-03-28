@@ -19,12 +19,12 @@ func TestFragmentRendersCharacterDetailState(t *testing.T) {
 		},
 		CharacterID: "char-1",
 		Character: CharacterView{
-			ID:                      "char-1",
-			Name:                    "Mira",
-			Controller:              "human",
-			ControllerParticipantID: "p-1",
-			Aliases:                 []string{"Starling"},
-			CanEdit:                 true,
+			ID:                 "char-1",
+			Name:               "Mira",
+			Owner:              "Rook",
+			OwnerParticipantID: "p-1",
+			Aliases:            []string{"Starling"},
+			CanEdit:            true,
 			Daggerheart: &CharacterDaggerheartSummaryView{
 				Level:         2,
 				ClassName:     "Rogue",
@@ -33,10 +33,10 @@ func TestFragmentRendersCharacterDetailState(t *testing.T) {
 				CommunityName: "Warden",
 			},
 		},
-		CharacterControl: CharacterControlView{
-			CurrentParticipantName: "Rook",
-			CanManageControl:       true,
-			Options:                []CharacterControlOptionView{{ParticipantID: "p-1", Label: "Rook", Selected: true}},
+		CharacterOwnership: CharacterOwnershipView{
+			CurrentOwnerName:   "Rook",
+			CanManageOwnership: true,
+			Options:            []CharacterOwnershipOptionView{{ParticipantID: "p-1", Label: "Rook", Selected: true}},
 		},
 		CharacterCreationEnabled: true,
 		CharacterCreation: CampaignCharacterCreationView{
@@ -53,13 +53,13 @@ func TestFragmentRendersCharacterDetailState(t *testing.T) {
 	if !strings.Contains(body, `data-campaign-character-detail-id="char-1">Mira</h2>`) {
 		t.Fatalf("missing character heading: %s", body)
 	}
-	if !strings.Contains(body, `data-campaign-character-controller-submit-disabled="true"`) {
-		t.Fatalf("missing locked control submit state: %s", body)
+	if !strings.Contains(body, `data-campaign-character-owner-submit-disabled="true"`) {
+		t.Fatalf("missing locked owner submit state: %s", body)
 	}
 	if !strings.Contains(body, `data-character-creation-workflow="true"`) {
 		t.Fatalf("missing character creation panel: %s", body)
 	}
-	if !strings.Contains(body, `data-campaign-character-control-manager-card="true"`) {
-		t.Fatalf("missing control manager card: %s", body)
+	if !strings.Contains(body, `data-campaign-character-ownership-manager-card="true"`) {
+		t.Fatalf("missing ownership manager card: %s", body)
 	}
 }

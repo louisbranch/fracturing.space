@@ -26,9 +26,16 @@ func sessionsBreadcrumbs(page *campaigndetail.PageContext) []sharedtemplates.Bre
 }
 
 // sessionCreateView builds the session-create page view from readiness state.
-func sessionCreateView(page *campaigndetail.PageContext, campaignID string, readiness campaignapp.CampaignSessionReadiness) campaignrender.SessionCreatePageView {
+func sessionCreateView(
+	page *campaigndetail.PageContext,
+	campaignID string,
+	readiness campaignapp.CampaignSessionReadiness,
+	characters []campaignapp.CampaignCharacter,
+	participants []campaignapp.CampaignParticipant,
+) campaignrender.SessionCreatePageView {
 	view := campaignrender.SessionCreatePageView{CampaignDetailBaseView: page.BaseDetailView(campaignID)}
 	view.SessionReadiness = mapSessionReadinessView(readiness)
+	view.CharacterControllers = mapSessionCharacterControllersView(characters, participants)
 	return view
 }
 
@@ -104,4 +111,59 @@ func mapSessionReadinessView(readiness campaignapp.CampaignSessionReadiness) cam
 		})
 	}
 	return result
+}
+
+// mapSessionCharacterControllersView projects characters plus participant
+// choices into the session-start controller form state.
+func mapSessionCharacterControllersView(
+	characters []campaignapp.CampaignCharacter,
+	participants []campaignapp.CampaignParticipant,
+) []campaignrender.SessionCreateCharacterControllerView {
+	result := make([]campaignrender.SessionCreateCharacterControllerView, 0, len(characters))
+	for _, character := range characters {
+		row := campaignrender.SessionCreateCharacterControllerView{
+			CharacterID: strings.TrimSpace(character.ID),
+			Name:        strings.TrimSpace(character.Name),
+			Owner:       strings.TrimSpace(character.Owner),
+			Options:     mapSessionControllerOptionsView(participants, character.OwnerParticipantID),
+		}
+		if row.Name == "" {
+			row.Name = row.CharacterID
+		}
+		if row.Owner == "" {
+			row.Owner = "Unassigned"
+		}
+		result = append(result, row)
+	}
+	return result
+}
+
+// mapSessionControllerOptionsView builds the session-start dropdown model with an
+// explicit unassigned option so the page can show ownerless characters clearly.
+func mapSessionControllerOptionsView(
+	participants []campaignapp.CampaignParticipant,
+	selectedParticipantID string,
+) []campaignrender.SessionCreateControllerOptionView {
+	selectedParticipantID = strings.TrimSpace(selectedParticipantID)
+	options := []campaignrender.SessionCreateControllerOptionView{{
+		ParticipantID: "",
+		Label:         "Unassigned",
+		Selected:      selectedParticipantID == "",
+	}}
+	for _, participant := range participants {
+		participantID := strings.TrimSpace(participant.ID)
+		if participantID == "" {
+			continue
+		}
+		label := strings.TrimSpace(participant.Name)
+		if label == "" {
+			label = participantID
+		}
+		options = append(options, campaignrender.SessionCreateControllerOptionView{
+			ParticipantID: participantID,
+			Label:         label,
+			Selected:      participantID == selectedParticipantID,
+		})
+	}
+	return options
 }

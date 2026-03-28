@@ -5,55 +5,46 @@ import (
 	"strings"
 )
 
-// CampaignCharacterControl centralizes this web behavior in one helper seam.
-func (s characterControlService) CampaignCharacterControl(ctx context.Context, campaignID string, characterID string, userID string, options CharacterReadContext) (CampaignCharacterControl, error) {
-	return s.campaignCharacterControl(ctx, campaignID, characterID, userID, options)
+// CampaignCharacterOwnership centralizes this web behavior in one helper seam.
+func (s characterOwnershipService) CampaignCharacterOwnership(ctx context.Context, campaignID string, characterID string, options CharacterReadContext) (CampaignCharacterOwnership, error) {
+	return s.campaignCharacterOwnership(ctx, campaignID, characterID, options)
 }
 
-// campaignCharacterControl centralizes character-detail control state.
-func (s characterControlService) campaignCharacterControl(ctx context.Context, campaignID string, characterID string, userID string, options CharacterReadContext) (CampaignCharacterControl, error) {
+// campaignCharacterOwnership centralizes character-detail ownership state.
+func (s characterOwnershipService) campaignCharacterOwnership(ctx context.Context, campaignID string, characterID string, options CharacterReadContext) (CampaignCharacterOwnership, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	characterID = strings.TrimSpace(characterID)
 	if campaignID == "" || characterID == "" {
-		return CampaignCharacterControl{}, nil
+		return CampaignCharacterOwnership{}, nil
 	}
 
-	character, err := loadCharacterForControl(ctx, s.read, s.auth.gateway, campaignID, characterID, options)
+	character, err := loadCharacterForOwnership(ctx, s.read, s.auth.gateway, campaignID, characterID, options)
 	if err != nil {
-		return CampaignCharacterControl{}, err
+		return CampaignCharacterOwnership{}, err
 	}
 	if strings.TrimSpace(character.ID) == "" {
-		return CampaignCharacterControl{}, nil
+		return CampaignCharacterOwnership{}, nil
 	}
 
 	participants, err := characterParticipants(ctx, s.participants, campaignID)
 	if err != nil {
-		return CampaignCharacterControl{}, err
+		return CampaignCharacterOwnership{}, err
 	}
 
-	control := CampaignCharacterControl{}
-	currentParticipant := campaignParticipantForUserID(participants, userID)
-	if strings.TrimSpace(currentParticipant.ID) != "" {
-		control.CurrentParticipantName = strings.TrimSpace(currentParticipant.Name)
-		switch controllerID := strings.TrimSpace(character.ControllerParticipantID); {
-		case controllerID == "":
-			control.CanSelfClaim = true
-		case controllerID == strings.TrimSpace(currentParticipant.ID):
-			control.CanSelfRelease = true
-		}
+	ownership := CampaignCharacterOwnership{
+		CurrentOwnerName: strings.TrimSpace(character.Owner),
 	}
-
 	if err := s.auth.requirePolicyWithTarget(ctx, campaignID, policyManageCharacter, characterID); err == nil {
-		control.CanManageControl = true
-		control.Options = campaignCharacterControlOptions(participants, character.ControllerParticipantID)
+		ownership.CanManageOwnership = true
+		ownership.Options = campaignCharacterOwnershipOptions(participants, character.OwnerParticipantID)
 	}
 
-	return control, nil
+	return ownership, nil
 }
 
-// loadCharacterForControl resolves one character plus editability state for
-// detail/control flows without depending on the broader read service type.
-func loadCharacterForControl(
+// loadCharacterForOwnership resolves one character plus editability state for
+// detail/ownership flows without depending on the broader read service type.
+func loadCharacterForOwnership(
 	ctx context.Context,
 	read CampaignCharacterReadGateway,
 	auth AuthorizationGateway,
@@ -90,22 +81,7 @@ func loadCharacterForControl(
 	return normalized, nil
 }
 
-// campaignParticipantForUserID finds the participant seat linked to the
-// current authenticated user for this campaign workspace.
-func campaignParticipantForUserID(participants []CampaignParticipant, userID string) CampaignParticipant {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return CampaignParticipant{}
-	}
-	for _, participant := range participants {
-		if strings.TrimSpace(participant.UserID) == userID {
-			return participant
-		}
-	}
-	return CampaignParticipant{}
-}
-
-// characterParticipants loads the participant roster used by character-control
+// characterParticipants loads the participant roster used by character-owner
 // flows without routing through the participant service seam.
 func characterParticipants(ctx context.Context, participants CampaignParticipantReadGateway, campaignID string) ([]CampaignParticipant, error) {
 	campaignID = strings.TrimSpace(campaignID)
@@ -129,11 +105,11 @@ func characterParticipants(ctx context.Context, participants CampaignParticipant
 	return normalized, nil
 }
 
-// campaignCharacterControlOptions builds the manager override selector state
-// for the character-detail control form.
-func campaignCharacterControlOptions(participants []CampaignParticipant, selectedParticipantID string) []CampaignCharacterControlOption {
+// campaignCharacterOwnershipOptions builds the owner selector state for the
+// character-detail ownership form.
+func campaignCharacterOwnershipOptions(participants []CampaignParticipant, selectedParticipantID string) []CampaignCharacterOwnershipOption {
 	selectedParticipantID = strings.TrimSpace(selectedParticipantID)
-	options := []CampaignCharacterControlOption{{
+	options := []CampaignCharacterOwnershipOption{{
 		ParticipantID: "",
 		Label:         "Unassigned",
 		Selected:      selectedParticipantID == "",
@@ -147,7 +123,7 @@ func campaignCharacterControlOptions(participants []CampaignParticipant, selecte
 		if label == "" {
 			label = participantID
 		}
-		options = append(options, CampaignCharacterControlOption{
+		options = append(options, CampaignCharacterOwnershipOption{
 			ParticipantID: participantID,
 			Label:         label,
 			Selected:      participantID == selectedParticipantID,

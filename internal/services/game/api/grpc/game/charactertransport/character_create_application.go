@@ -21,7 +21,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/grpc/codes"
@@ -71,13 +70,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if actorID == "" {
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
-	defaultParticipantID := ""
-	switch {
-	case policyActor.Role == participant.RolePlayer && kind == character.KindPC:
-		defaultParticipantID = strings.TrimSpace(policyActor.ID)
-	case policyActor.Role == participant.RoleGM && kind == character.KindNPC:
-		defaultParticipantID = strings.TrimSpace(policyActor.ID)
-	}
+	ownerParticipantID := strings.TrimSpace(policyActor.ID)
 	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
 	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
 	pronounsInput := in.GetPronouns()
@@ -87,7 +80,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		pronouns = strings.TrimSpace(sharedpronouns.FromProto(pronounsInput))
 	}
 	if avatarSetID == "" && avatarAssetID == "" {
-		identitySnapshot, err := c.resolveCharacterIdentitySnapshot(ctx, campaignID, defaultParticipantID)
+		identitySnapshot, err := c.resolveCharacterIdentitySnapshot(ctx, campaignID, ownerParticipantID)
 		if err != nil {
 			return storage.CharacterRecord{}, err
 		}
@@ -103,13 +96,12 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 
 	createPayload := character.CreatePayload{
 		CharacterID:        ids.CharacterID(characterID),
-		OwnerParticipantID: ids.ParticipantID(strings.TrimSpace(policyActor.ID)),
+		OwnerParticipantID: ids.ParticipantID(ownerParticipantID),
 		Name:               name,
 		Kind:               in.GetKind().String(),
 		Notes:              notes,
 		AvatarSetID:        avatarSetID,
 		AvatarAssetID:      avatarAssetID,
-		ParticipantID:      ids.ParticipantID(defaultParticipantID),
 		Pronouns:           pronouns,
 		Aliases:            append([]string(nil), in.GetAliases()...),
 	}
@@ -150,8 +142,8 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	return created, nil
 }
 
-// resolveCharacterIdentitySnapshot returns avatar defaults for one controller
-// participant snapshot. Unassigned controllers intentionally use the blank
+// resolveCharacterIdentitySnapshot returns avatar defaults for one owner
+// participant snapshot. Unassigned owners intentionally use the blank
 // avatar set.
 func (c characterApplication) resolveCharacterIdentitySnapshot(
 	ctx context.Context,

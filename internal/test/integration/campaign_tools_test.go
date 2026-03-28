@@ -116,7 +116,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 	})
 
-	t.Run("character control set", func(t *testing.T) {
+	t.Run("character ownership set", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
 		ctx = suite.ctx(ctx)
@@ -141,17 +141,17 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 		characterID := characterResp.GetCharacter().GetId()
 
-		// Set to GM control (empty participant_id)
-		gmControlResp, err := suite.character.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-			CampaignId:    campaignID,
-			CharacterId:   characterID,
-			ParticipantId: wrapperspb.String(""),
+		// Clear ownership.
+		unassignedResp, err := suite.character.UpdateCharacter(ctx, &statev1.UpdateCharacterRequest{
+			CampaignId:         campaignID,
+			CharacterId:        characterID,
+			OwnerParticipantId: wrapperspb.String(""),
 		})
 		if err != nil {
-			t.Fatalf("set GM control: %v", err)
+			t.Fatalf("clear character owner: %v", err)
 		}
-		if gmControlResp.GetParticipantId().GetValue() != "" {
-			t.Fatalf("expected empty participant id, got %q", gmControlResp.GetParticipantId().GetValue())
+		if unassignedResp.GetCharacter().GetOwnerParticipantId().GetValue() != "" {
+			t.Fatalf("expected empty owner participant id, got %q", unassignedResp.GetCharacter().GetOwnerParticipantId().GetValue())
 		}
 
 		// Create a participant for player control
@@ -165,17 +165,17 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 		participantID := participantResp.GetParticipant().GetId()
 
-		// Set to participant control
-		playerControlResp, err := suite.character.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-			CampaignId:    campaignID,
-			CharacterId:   characterID,
-			ParticipantId: wrapperspb.String(participantID),
+		// Transfer ownership to participant.
+		ownedResp, err := suite.character.UpdateCharacter(ctx, &statev1.UpdateCharacterRequest{
+			CampaignId:         campaignID,
+			CharacterId:        characterID,
+			OwnerParticipantId: wrapperspb.String(participantID),
 		})
 		if err != nil {
-			t.Fatalf("set participant control: %v", err)
+			t.Fatalf("set participant owner: %v", err)
 		}
-		if playerControlResp.GetParticipantId().GetValue() != participantID {
-			t.Fatalf("expected participant id %q, got %q", participantID, playerControlResp.GetParticipantId().GetValue())
+		if ownedResp.GetCharacter().GetOwnerParticipantId().GetValue() != participantID {
+			t.Fatalf("expected participant id %q, got %q", participantID, ownedResp.GetCharacter().GetOwnerParticipantId().GetValue())
 		}
 	})
 
@@ -216,19 +216,22 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 		characterID := characterResp.GetCharacter().GetId()
 
-		_, err = suite.character.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-			CampaignId:    campaignID,
-			CharacterId:   characterID,
-			ParticipantId: wrapperspb.String(participantID),
+		_, err = suite.character.UpdateCharacter(ctx, &statev1.UpdateCharacterRequest{
+			CampaignId:         campaignID,
+			CharacterId:        characterID,
+			OwnerParticipantId: wrapperspb.String(participantID),
 		})
 		if err != nil {
-			t.Fatalf("set character control: %v", err)
+			t.Fatalf("set character owner: %v", err)
 		}
 		ensureDaggerheartCreationReadiness(t, ctx, suite.character, campaignID, characterID)
 
 		_ = ensureSessionStartReadiness(t, ctx, suite.participant, suite.character, campaignID, ownerPID, characterID)
 
-		sessionResp, err := suite.session.StartSession(ctx, &statev1.StartSessionRequest{CampaignId: campaignID})
+		sessionResp, err := suite.session.StartSession(ctx, &statev1.StartSessionRequest{
+			CampaignId:           campaignID,
+			CharacterControllers: listCharacterControllersForStart(t, ctx, suite.character, campaignID),
+		})
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}

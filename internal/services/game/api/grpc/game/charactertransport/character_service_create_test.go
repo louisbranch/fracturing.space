@@ -308,7 +308,7 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 	}
 }
 
-func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
+func TestCreateCharacter_PlayerAssignsOwnerInCommandPayload(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
 
@@ -328,7 +328,6 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 			Name:               "Hero",
 			Kind:               "pc",
 			OwnerParticipantID: "player-1",
-			ParticipantID:      "player-1",
 		},
 	)}
 
@@ -349,23 +348,23 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal create payload: %v", err)
 	}
-	if payload.ParticipantID != "player-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "player-1")
+	if payload.OwnerParticipantID != "player-1" {
+		t.Fatalf("owner_participant_id = %q, want %q", payload.OwnerParticipantID, "player-1")
 	}
-	participantIDValue := resp.GetCharacter().GetParticipantId()
+	participantIDValue := resp.GetCharacter().GetOwnerParticipantId()
 	if participantIDValue == nil || participantIDValue.GetValue() != "player-1" {
-		t.Fatalf("response participant_id = %v, want %q", participantIDValue, "player-1")
+		t.Fatalf("response owner_participant_id = %v, want %q", participantIDValue, "player-1")
 	}
 	stored, err := ts.Character.GetCharacter(context.Background(), "c1", "char-123")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
-	if stored.ParticipantID != "player-1" {
-		t.Fatalf("stored participant_id = %q, want %q", stored.ParticipantID, "player-1")
+	if stored.OwnerParticipantID != "player-1" {
+		t.Fatalf("stored owner_participant_id = %q, want %q", stored.OwnerParticipantID, "player-1")
 	}
 }
 
-func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T) {
+func TestCreateCharacter_GMAssignsOwnerForNPCInCommandPayload(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
 
@@ -385,7 +384,6 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 			Name:               "Guide",
 			Kind:               "npc",
 			OwnerParticipantID: "gm-1",
-			ParticipantID:      "gm-1",
 		},
 	)}
 
@@ -406,18 +404,18 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal create payload: %v", err)
 	}
-	if payload.ParticipantID != "gm-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "gm-1")
+	if payload.OwnerParticipantID != "gm-1" {
+		t.Fatalf("owner_participant_id = %q, want %q", payload.OwnerParticipantID, "gm-1")
 	}
-	participantIDValue := resp.GetCharacter().GetParticipantId()
+	participantIDValue := resp.GetCharacter().GetOwnerParticipantId()
 	if participantIDValue == nil || participantIDValue.GetValue() != "gm-1" {
-		t.Fatalf("response participant_id = %v, want %q", participantIDValue, "gm-1")
+		t.Fatalf("response owner_participant_id = %v, want %q", participantIDValue, "gm-1")
 	}
 	stored, err := ts.Character.GetCharacter(context.Background(), "c1", "char-123")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
-	if stored.ParticipantID != "gm-1" {
-		t.Fatalf("stored participant_id = %q, want %q", stored.ParticipantID, "gm-1")
+	if stored.OwnerParticipantID != "gm-1" {
+		t.Fatalf("stored owner_participant_id = %q, want %q", stored.OwnerParticipantID, "gm-1")
 	}
 }

@@ -64,7 +64,7 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 				Participant:        &contractParticipantClient{},
 				DaggerheartContent: &fakeDaggerheartContentClient{},
 			},
-			Control:          CharacterControlMutationDeps{Character: &fakeCharacterWorkflowClient{}},
+			Ownership:        CharacterOwnershipMutationDeps{Character: &fakeCharacterWorkflowClient{}},
 			Mutation:         CharacterMutationDeps{Character: &fakeCharacterWorkflowClient{}},
 			Participants:     ParticipantReadDeps{Participant: &contractParticipantClient{}},
 			Sessions:         SessionReadDeps{Campaign: &contractCampaignClient{}, Session: &contractSessionClient{}},
@@ -190,10 +190,10 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 		Controller:     statev1.Controller_CONTROLLER_HUMAN,
 	}}}}
 	characterClient := &fakeCharacterWorkflowClient{listResp: &statev1.ListCharactersResponse{Characters: []*statev1.Character{{
-		Id:            "char-1",
-		Name:          "Aria",
-		Kind:          statev1.CharacterKind_PC,
-		ParticipantId: wrapperspb.String("p1"),
+		Id:                 "char-1",
+		Name:               "Aria",
+		Kind:               statev1.CharacterKind_PC,
+		OwnerParticipantId: wrapperspb.String("p1"),
 	}}}}
 	sessionClient := &contractSessionClient{listResp: &statev1.ListSessionsResponse{Sessions: []*statev1.Session{{
 		Id:     "sess-1",
@@ -229,7 +229,7 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	if err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}
-	if len(characters) != 1 || characters[0].Controller != "Lead" || characters[0].Kind != "pc" {
+	if len(characters) != 1 || characters[0].Owner != "Lead" || characters[0].Kind != "pc" {
 		t.Fatalf("characters = %#v", characters)
 	}
 
@@ -280,8 +280,8 @@ func TestCampaignCharactersMarksViewerOwnedCharactersFromControllerParticipant(t
 		{Id: "p2", UserId: "user-2", Name: "Scout", Role: statev1.ParticipantRole_PLAYER, Controller: statev1.Controller_CONTROLLER_HUMAN},
 	}}}
 	characterClient := &fakeCharacterWorkflowClient{listResp: &statev1.ListCharactersResponse{Characters: []*statev1.Character{
-		{Id: "char-1", Name: "Aria", Kind: statev1.CharacterKind_PC, ParticipantId: wrapperspb.String("p1")},
-		{Id: "char-2", Name: "Bramble", Kind: statev1.CharacterKind_PC, ParticipantId: wrapperspb.String("p2")},
+		{Id: "char-1", Name: "Aria", Kind: statev1.CharacterKind_PC, OwnerParticipantId: wrapperspb.String("p1")},
+		{Id: "char-2", Name: "Bramble", Kind: statev1.CharacterKind_PC, OwnerParticipantId: wrapperspb.String("p2")},
 	}}}
 
 	gateway := GRPCGateway{
@@ -313,10 +313,10 @@ func TestCampaignCharactersMapsDaggerheartSummaryWhenProfileAndCatalogResolve(t 
 
 	characterClient := &fakeCharacterWorkflowClient{
 		listResp: &statev1.ListCharactersResponse{Characters: []*statev1.Character{{
-			Id:            "char-1",
-			Name:          "Aria",
-			Kind:          statev1.CharacterKind_PC,
-			ParticipantId: wrapperspb.String("p1"),
+			Id:                 "char-1",
+			Name:               "Aria",
+			Kind:               statev1.CharacterKind_PC,
+			OwnerParticipantId: wrapperspb.String("p1"),
 		}}},
 		profilesResp: &statev1.ListCharacterProfilesResponse{Profiles: []*statev1.CharacterProfile{{
 			CampaignId:  "c1",

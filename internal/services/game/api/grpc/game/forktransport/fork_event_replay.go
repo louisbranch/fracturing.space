@@ -63,7 +63,7 @@ func (r forkEventReplay) CopyToCampaign(
 				continue
 			}
 
-			toImport = append(toImport, forkEventForCampaign(evt, forkCampaignID))
+			toImport = append(toImport, forkEventForCampaign(evt, forkCampaignID, copyParticipants))
 			afterSeq = evt.Seq
 		}
 		if err := r.importer.Import(ctx, toImport); err != nil {
@@ -92,7 +92,7 @@ func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return false, fmt.Errorf("decode character.updated payload: %w", err)
 		}
-		participantValue, hasParticipant := payload.Fields["participant_id"]
+		participantValue, hasParticipant := payload.Fields["owner_participant_id"]
 		if !hasParticipant {
 			return true, nil
 		}
@@ -109,7 +109,7 @@ func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 	}
 }
 
-func forkEventForCampaign(evt event.Event, campaignID string) event.Event {
+func forkEventForCampaign(evt event.Event, campaignID string, copyParticipants bool) event.Event {
 	forked := evt
 	forked.CampaignID = ids.CampaignID(campaignID)
 	forked.Seq = 0
@@ -120,6 +120,28 @@ func forkEventForCampaign(evt event.Event, campaignID string) event.Event {
 	forked.SignatureKeyID = ""
 	if strings.EqualFold(evt.EntityType, "campaign") {
 		forked.EntityID = campaignID
+	}
+	if !copyParticipants {
+		switch evt.Type {
+		case handler.EventTypeCharacterCreated:
+			var payload character.CreatePayload
+			if err := json.Unmarshal(forked.PayloadJSON, &payload); err == nil {
+				payload.OwnerParticipantID = ""
+				if payloadJSON, marshalErr := json.Marshal(payload); marshalErr == nil {
+					forked.PayloadJSON = payloadJSON
+				}
+			}
+		case handler.EventTypeCharacterUpdated:
+			var payload character.UpdatePayload
+			if err := json.Unmarshal(forked.PayloadJSON, &payload); err == nil {
+				if _, ok := payload.Fields["owner_participant_id"]; ok {
+					payload.Fields["owner_participant_id"] = ""
+					if payloadJSON, marshalErr := json.Marshal(payload); marshalErr == nil {
+						forked.PayloadJSON = payloadJSON
+					}
+				}
+			}
+		}
 	}
 	return forked
 }

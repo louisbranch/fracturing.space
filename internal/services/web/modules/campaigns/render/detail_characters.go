@@ -31,7 +31,7 @@ type CharacterDetailPageView struct {
 	CampaignDetailBaseView
 	CharacterID              string
 	Character                CharacterView
-	CharacterControl         CharacterControlView
+	CharacterOwnership       CharacterOwnershipView
 	CharacterCreationEnabled bool
 	CharacterCreation        CampaignCharacterCreationView
 }
@@ -58,18 +58,18 @@ func CharacterDetailFragment(view CharacterDetailPageView, loc webtemplates.Loca
 
 // CharacterView carries character summary rows for campaign detail pages.
 type CharacterView struct {
-	ID                      string
-	Name                    string
-	Kind                    string
-	Controller              string
-	ControllerParticipantID string
-	Pronouns                string
-	Aliases                 []string
-	AvatarURL               string
-	OwnedByViewer           bool
-	CanEdit                 bool
-	EditReasonCode          string
-	Daggerheart             *CharacterDaggerheartSummaryView
+	ID                 string
+	Name               string
+	Kind               string
+	Owner              string
+	OwnerParticipantID string
+	Pronouns           string
+	Aliases            []string
+	AvatarURL          string
+	OwnedByViewer      bool
+	CanEdit            bool
+	EditReasonCode     string
+	Daggerheart        *CharacterDaggerheartSummaryView
 }
 
 // CharacterDaggerheartSummaryView keeps optional Daggerheart card metadata
@@ -91,19 +91,17 @@ type CharacterEditorView struct {
 	Kind     string
 }
 
-// CharacterControlOptionView carries control-target options for one character.
-type CharacterControlOptionView struct {
+// CharacterOwnershipOptionView carries owner-target options for one character.
+type CharacterOwnershipOptionView struct {
 	ParticipantID string
 	Label         string
 	Selected      bool
 }
 
-// CharacterControlView carries character control affordances for the selected
+// CharacterOwnershipView carries character ownership affordances for the selected
 // character detail page.
-type CharacterControlView struct {
-	CurrentParticipantName string
-	CanSelfClaim           bool
-	CanSelfRelease         bool
-	CanManageControl       bool
-	Options                []CharacterControlOptionView
+type CharacterOwnershipView struct {
+	CurrentOwnerName   string
+	CanManageOwnership bool
+	Options            []CharacterOwnershipOptionView
 }

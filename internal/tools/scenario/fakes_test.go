@@ -121,6 +121,7 @@ type fakeInteractionClient struct {
 	clearOOCReady       func(context.Context, *gamev1.ClearOOCReadyToResumeRequest, ...grpc.CallOption) (*gamev1.ClearOOCReadyToResumeResponse, error)
 	resolveSessionOOC   func(context.Context, *gamev1.ResolveSessionOOCRequest, ...grpc.CallOption) (*gamev1.ResolveSessionOOCResponse, error)
 	setGMAuthority      func(context.Context, *gamev1.SetSessionGMAuthorityRequest, ...grpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error)
+	setCharacterControl func(context.Context, *gamev1.SetSessionCharacterControllerRequest, ...grpc.CallOption) (*gamev1.SetSessionCharacterControllerResponse, error)
 	retryAITurn         func(context.Context, *gamev1.RetryAIGMTurnRequest, ...grpc.CallOption) (*gamev1.RetryAIGMTurnResponse, error)
 }
 
@@ -229,6 +230,13 @@ func (f *fakeInteractionClient) SetSessionGMAuthority(ctx context.Context, in *g
 	return nil, unimplemented("SetSessionGMAuthority")
 }
 
+func (f *fakeInteractionClient) SetSessionCharacterController(ctx context.Context, in *gamev1.SetSessionCharacterControllerRequest, opts ...grpc.CallOption) (*gamev1.SetSessionCharacterControllerResponse, error) {
+	if f.setCharacterControl != nil {
+		return f.setCharacterControl(ctx, in, opts...)
+	}
+	return nil, unimplemented("SetSessionCharacterController")
+}
+
 func (f *fakeInteractionClient) RetryAIGMTurn(ctx context.Context, in *gamev1.RetryAIGMTurnRequest, opts ...grpc.CallOption) (*gamev1.RetryAIGMTurnResponse, error) {
 	if f.retryAITurn != nil {
 		return f.retryAITurn(ctx, in, opts...)
@@ -237,14 +245,13 @@ func (f *fakeInteractionClient) RetryAIGMTurn(ctx context.Context, in *gamev1.Re
 }
 
 type fakeCharacterClient struct {
-	create            func(context.Context, *gamev1.CreateCharacterRequest, ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error)
-	update            func(context.Context, *gamev1.UpdateCharacterRequest, ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error)
-	listCharacters    func(context.Context, *gamev1.ListCharactersRequest, ...grpc.CallOption) (*gamev1.ListCharactersResponse, error)
-	setDefaultControl func(context.Context, *gamev1.SetDefaultControlRequest, ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error)
-	patchProfile      func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error)
-	patchState        func(context.Context, *gamev1.PatchCharacterStateRequest, ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error)
-	getSheet          func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error)
-	applyWorkflow     func(context.Context, *gamev1.ApplyCharacterCreationWorkflowRequest, ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error)
+	create         func(context.Context, *gamev1.CreateCharacterRequest, ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error)
+	update         func(context.Context, *gamev1.UpdateCharacterRequest, ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error)
+	listCharacters func(context.Context, *gamev1.ListCharactersRequest, ...grpc.CallOption) (*gamev1.ListCharactersResponse, error)
+	patchProfile   func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error)
+	patchState     func(context.Context, *gamev1.PatchCharacterStateRequest, ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error)
+	getSheet       func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error)
+	applyWorkflow  func(context.Context, *gamev1.ApplyCharacterCreationWorkflowRequest, ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error)
 }
 
 func (f *fakeCharacterClient) CreateCharacter(ctx context.Context, in *gamev1.CreateCharacterRequest, opts ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
@@ -274,21 +281,6 @@ func (f *fakeCharacterClient) ListCharacters(ctx context.Context, in *gamev1.Lis
 
 func (f *fakeCharacterClient) ListCharacterProfiles(context.Context, *gamev1.ListCharacterProfilesRequest, ...grpc.CallOption) (*gamev1.ListCharacterProfilesResponse, error) {
 	return nil, unimplemented("ListCharacterProfiles")
-}
-
-func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, in *gamev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
-	if f.setDefaultControl != nil {
-		return f.setDefaultControl(ctx, in, opts...)
-	}
-	return nil, unimplemented("SetDefaultControl")
-}
-
-func (f *fakeCharacterClient) ClaimCharacterControl(context.Context, *gamev1.ClaimCharacterControlRequest, ...grpc.CallOption) (*gamev1.ClaimCharacterControlResponse, error) {
-	return nil, unimplemented("ClaimCharacterControl")
-}
-
-func (f *fakeCharacterClient) ReleaseCharacterControl(context.Context, *gamev1.ReleaseCharacterControlRequest, ...grpc.CallOption) (*gamev1.ReleaseCharacterControlResponse, error) {
-	return nil, unimplemented("ReleaseCharacterControl")
 }
 
 func (f *fakeCharacterClient) GetCharacterSheet(ctx context.Context, in *gamev1.GetCharacterSheetRequest, opts ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {

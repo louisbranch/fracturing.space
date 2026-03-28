@@ -8,10 +8,6 @@ import (
 )
 
 func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
-	participantID := ""
-	if row.ControllerParticipantID.Valid {
-		participantID = row.ControllerParticipantID.String
-	}
 	aliases := make([]string, 0)
 	if err := unmarshalOptionalJSON(row.AliasesJson, &aliases, "character aliases"); err != nil {
 		return storage.CharacterRecord{}, err
@@ -20,7 +16,6 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 		ID:                 row.ID,
 		CampaignID:         row.CampaignID,
 		OwnerParticipantID: row.OwnerParticipantID,
-		ParticipantID:      participantID,
 		Name:               row.Name,
 		Kind:               enumFromStorage(row.Kind, character.NormalizeKind),
 		Notes:              row.Notes,

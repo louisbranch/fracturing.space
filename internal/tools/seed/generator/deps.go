@@ -32,7 +32,7 @@ type inviteManager interface {
 // characterCreator is the subset of CharacterServiceClient used by Generator.
 type characterCreator interface {
 	CreateCharacter(ctx context.Context, in *statev1.CreateCharacterRequest, opts ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
-	SetDefaultControl(ctx context.Context, in *statev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error)
+	UpdateCharacter(ctx context.Context, in *statev1.UpdateCharacterRequest, opts ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error)
 }
 
 // sessionManager is the subset of SessionServiceClient used by Generator.

@@ -88,8 +88,8 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 }
 
 func TestUpdateCharacter_DeniesControllerWhenOwnershipUnresolved(t *testing.T) {
-	// A member whose participant ID matches ParticipantID (controller) but has
-	// no ownership events should be denied; controller is not owner.
+	// A member cannot mutate an ownerless character; ownership remains the
+	// durable authority signal outside sessions.
 	ts := newTestStores().withCharacter()
 
 	ts.Campaign.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
@@ -97,7 +97,7 @@ func TestUpdateCharacter_DeniesControllerWhenOwnershipUnresolved(t *testing.T) {
 		"controller-1": gametest.MemberParticipantRecord("c1", "controller-1"),
 	}
 	ts.Character.Characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, ParticipantID: "controller-1"},
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
 	ts.Event.NextSeq["c1"] = 1
 

@@ -44,7 +44,7 @@ func (a interactionApplication) OpenScenePlayerPhase(ctx context.Context, campai
 	if err != nil {
 		return nil, err
 	}
-	actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, in.GetCharacterIds())
+	actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, sessionInteraction, in.GetCharacterIds())
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (a interactionApplication) SubmitScenePlayerAction(ctx context.Context, cam
 	if !slices.Contains(sceneInteraction.ActingParticipantIDs, actor.ID) {
 		return nil, status.Error(codes.PermissionDenied, "participant is not acting in the current scene phase")
 	}
-	characterIDs, err := a.resolveParticipantPostCharacters(ctx, campaignID, sceneRecord, actor.ID, in.GetCharacterIds(), sceneInteraction.ActingCharacterIDs)
+	characterIDs, err := a.resolveParticipantPostCharacters(ctx, campaignID, sceneRecord, sessionInteraction, actor.ID, in.GetCharacterIds(), sceneInteraction.ActingCharacterIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +285,7 @@ func (a interactionApplication) ResolveScenePlayerReview(ctx context.Context, ca
 		if advance == nil {
 			return nil, status.Error(codes.InvalidArgument, "open_next_player_phase is required")
 		}
-		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, advance.GetNextCharacterIds())
+		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, currentSessionInteraction, advance.GetNextCharacterIds())
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +324,7 @@ func (a interactionApplication) ResolveScenePlayerReview(ctx context.Context, ca
 		if request == nil {
 			return nil, status.Error(codes.InvalidArgument, "request_revisions is required")
 		}
-		revisions, err := a.resolveRevisionRequests(ctx, campaignID, sceneRecord, currentSceneInteraction, request.GetRevisions())
+		revisions, err := a.resolveRevisionRequests(ctx, campaignID, sceneRecord, currentSessionInteraction, currentSceneInteraction, request.GetRevisions())
 		if err != nil {
 			return nil, err
 		}

@@ -21,7 +21,7 @@ type testGatewayBundle interface {
 	campaignapp.CampaignCatalogMutationGateway
 	campaignapp.CampaignConfigurationMutationGateway
 	campaignapp.CampaignAutomationMutationGateway
-	campaignapp.CampaignCharacterControlMutationGateway
+	campaignapp.CampaignCharacterOwnershipMutationGateway
 	campaignapp.CampaignCharacterMutationGateway
 	campaignapp.CampaignParticipantMutationGateway
 	campaignapp.CampaignSessionMutationGateway
@@ -57,13 +57,13 @@ type GRPCGatewayCreationReadDeps struct {
 // express broad mutation fixtures without reintroducing that dependency bag to
 // production.
 type GRPCGatewayMutationDeps struct {
-	Campaign         CampaignMutationClient
-	Participant      ParticipantMutationClient
-	CharacterControl CharacterMutationClient
-	Character        CharacterMutationClient
-	Session          SessionMutationClient
-	Invite           InviteMutationClient
-	Auth             AuthClient
+	Campaign           CampaignMutationClient
+	Participant        ParticipantMutationClient
+	CharacterOwnership CharacterMutationClient
+	Character          CharacterMutationClient
+	Session            SessionMutationClient
+	Invite             InviteMutationClient
+	Auth               AuthClient
 }
 
 // GRPCGatewayCreationMutationDeps exists only in tests for concise workflow-mutation fixtures.
@@ -95,7 +95,7 @@ func NewGRPCGateway(deps GRPCGatewayDeps) testGatewayBundle {
 		deps.Invites.Read.Invite == nil || deps.Invites.Read.Participant == nil || deps.Invites.Read.Social == nil || deps.Invites.Read.Auth == nil ||
 		deps.Overview.AutomationRead.Agent == nil ||
 		deps.Catalog.Mutation.Campaign == nil || deps.Participants.Mutation.Participant == nil ||
-		deps.Characters.Control.Character == nil || deps.Characters.Mutation.Character == nil ||
+		deps.Characters.Ownership.Character == nil || deps.Characters.Mutation.Character == nil ||
 		deps.Sessions.Mutation.Session == nil || deps.Invites.Mutation.Invite == nil || deps.Invites.Mutation.Auth == nil ||
 		deps.Overview.ConfigurationMutation.Campaign == nil || deps.Overview.AutomationMutation.Campaign == nil ||
 		deps.Page.Authorization.Client == nil || deps.Characters.CreationRead.Character == nil ||
@@ -121,13 +121,13 @@ func NewGRPCGateway(deps GRPCGatewayDeps) testGatewayBundle {
 			DaggerheartAsset:   deps.Characters.CreationRead.DaggerheartAsset,
 		},
 		Mutation: GRPCGatewayMutationDeps{
-			Campaign:         deps.Catalog.Mutation.Campaign,
-			Participant:      deps.Participants.Mutation.Participant,
-			CharacterControl: deps.Characters.Control.Character,
-			Character:        deps.Characters.Mutation.Character,
-			Session:          deps.Sessions.Mutation.Session,
-			Invite:           deps.Invites.Mutation.Invite,
-			Auth:             deps.Invites.Mutation.Auth,
+			Campaign:           deps.Catalog.Mutation.Campaign,
+			Participant:        deps.Participants.Mutation.Participant,
+			CharacterOwnership: deps.Characters.Ownership.Character,
+			Character:          deps.Characters.Mutation.Character,
+			Session:            deps.Sessions.Mutation.Session,
+			Invite:             deps.Invites.Mutation.Invite,
+			Auth:               deps.Invites.Mutation.Auth,
 		},
 		CreationMutation: GRPCGatewayCreationMutationDeps{
 			Character: deps.Characters.CreationMutation.Character,
@@ -187,8 +187,8 @@ func (g GRPCGateway) characterMutation() campaignapp.CampaignCharacterMutationGa
 	return characterMutationGateway{mutation: CharacterMutationDeps{Character: g.Mutation.Character}}
 }
 
-func (g GRPCGateway) characterControlMutation() campaignapp.CampaignCharacterControlMutationGateway {
-	return characterControlMutationGateway{mutation: CharacterControlMutationDeps{Character: g.Mutation.CharacterControl}}
+func (g GRPCGateway) characterOwnershipMutation() campaignapp.CampaignCharacterOwnershipMutationGateway {
+	return characterOwnershipMutationGateway{mutation: CharacterOwnershipMutationDeps{Character: g.Mutation.CharacterOwnership}}
 }
 
 func (g GRPCGateway) sessionRead() campaignapp.CampaignSessionReadGateway {
@@ -391,25 +391,11 @@ func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, cha
 	return g.unavailable().DeleteCharacter(ctx, campaignID, characterID)
 }
 
-func (g GRPCGateway) SetCharacterController(ctx context.Context, campaignID string, characterID string, participantID string) error {
-	if gateway := g.characterControlMutation(); gateway != nil {
-		return gateway.SetCharacterController(ctx, campaignID, characterID, participantID)
+func (g GRPCGateway) SetCharacterOwner(ctx context.Context, campaignID string, characterID string, participantID string) error {
+	if gateway := g.characterOwnershipMutation(); gateway != nil {
+		return gateway.SetCharacterOwner(ctx, campaignID, characterID, participantID)
 	}
-	return g.unavailable().SetCharacterController(ctx, campaignID, characterID, participantID)
-}
-
-func (g GRPCGateway) ClaimCharacterControl(ctx context.Context, campaignID string, characterID string) error {
-	if gateway := g.characterControlMutation(); gateway != nil {
-		return gateway.ClaimCharacterControl(ctx, campaignID, characterID)
-	}
-	return g.unavailable().ClaimCharacterControl(ctx, campaignID, characterID)
-}
-
-func (g GRPCGateway) ReleaseCharacterControl(ctx context.Context, campaignID string, characterID string) error {
-	if gateway := g.characterControlMutation(); gateway != nil {
-		return gateway.ReleaseCharacterControl(ctx, campaignID, characterID)
-	}
-	return g.unavailable().ReleaseCharacterControl(ctx, campaignID, characterID)
+	return g.unavailable().SetCharacterOwner(ctx, campaignID, characterID, participantID)
 }
 
 func (g GRPCGateway) CreateParticipant(ctx context.Context, campaignID string, input campaignapp.CreateParticipantInput) (campaignapp.CreateParticipantResult, error) {

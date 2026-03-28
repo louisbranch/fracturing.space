@@ -304,8 +304,8 @@ func formatCharacterController(character *statev1.Character, participantNames ma
 		return loc.Sprintf("label.unassigned")
 	}
 	participantID := ""
-	if character.GetParticipantId() != nil {
-		participantID = strings.TrimSpace(character.GetParticipantId().GetValue())
+	if character.GetOwnerParticipantId() != nil {
+		participantID = strings.TrimSpace(character.GetOwnerParticipantId().GetValue())
 	}
 	if participantID == "" {
 		return loc.Sprintf("label.unassigned")

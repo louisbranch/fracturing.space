@@ -64,6 +64,48 @@ func (m *sessionMutation) EndSession(_ context.Context, _ string, input campaign
 	return nil
 }
 
+type sessionCharacterReads struct {
+	characters []campaignapp.CampaignCharacter
+}
+
+func (r sessionCharacterReads) CampaignCharacters(context.Context, string, campaignapp.CharacterReadContext) ([]campaignapp.CampaignCharacter, error) {
+	return append([]campaignapp.CampaignCharacter(nil), r.characters...), nil
+}
+
+func (r sessionCharacterReads) CampaignCharacter(context.Context, string, string, campaignapp.CharacterReadContext) (campaignapp.CampaignCharacter, error) {
+	if len(r.characters) == 0 {
+		return campaignapp.CampaignCharacter{}, nil
+	}
+	return r.characters[0], nil
+}
+
+func (sessionCharacterReads) CampaignCharacterEditor(context.Context, string, string, campaignapp.CharacterReadContext) (campaignapp.CampaignCharacterEditor, error) {
+	return campaignapp.CampaignCharacterEditor{}, nil
+}
+
+type sessionParticipantReads struct {
+	participants []campaignapp.CampaignParticipant
+}
+
+func (r sessionParticipantReads) CampaignParticipants(context.Context, string) ([]campaignapp.CampaignParticipant, error) {
+	return append([]campaignapp.CampaignParticipant(nil), r.participants...), nil
+}
+
+func (sessionParticipantReads) CampaignParticipantCreator(context.Context, string) (campaignapp.CampaignParticipantCreator, error) {
+	return campaignapp.CampaignParticipantCreator{}, nil
+}
+
+func (r sessionParticipantReads) CampaignParticipant(context.Context, string, string) (campaignapp.CampaignParticipant, error) {
+	if len(r.participants) == 0 {
+		return campaignapp.CampaignParticipant{}, nil
+	}
+	return r.participants[0], nil
+}
+
+func (sessionParticipantReads) CampaignParticipantEditor(context.Context, string, string) (campaignapp.CampaignParticipantEditor, error) {
+	return campaignapp.CampaignParticipantEditor{}, nil
+}
+
 type sessionSync struct {
 	lastStartedCampaign string
 	lastEndedCampaign   string
@@ -123,7 +165,19 @@ func newSessionsHandler(t *testing.T) (Handler, *sessionMutation, *sessionSync) 
 		},
 	)
 	mutation := &sessionMutation{}
-	return NewHandler(detailHandler, HandlerServices{mutation: mutation}, "8094", testPlayLaunchGrantConfig()), mutation, sync
+	return NewHandler(detailHandler, HandlerServices{
+		characters: sessionCharacterReads{characters: []campaignapp.CampaignCharacter{{
+			ID:                 "char-1",
+			Name:               "Aria",
+			Owner:              "Ariadne",
+			OwnerParticipantID: "p-1",
+		}}},
+		mutation: mutation,
+		participants: sessionParticipantReads{participants: []campaignapp.CampaignParticipant{
+			{ID: "p-1", Name: "Ariadne"},
+			{ID: "p-2", Name: "Moss"},
+		}},
+	}, "8094", testPlayLaunchGrantConfig()), mutation, sync
 }
 
 func TestHandleSessionsRendersOwnedSessionsPage(t *testing.T) {
@@ -165,6 +219,7 @@ func TestHandleSessionCreatePageRendersReadinessBlockers(t *testing.T) {
 	for _, marker := range []string{
 		`data-campaign-session-readiness-blocked="true"`,
 		`data-campaign-session-readiness-blocker-code="SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED"`,
+		`data-campaign-session-controller-character-id="char-1"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing readiness marker %q: %q", marker, body)

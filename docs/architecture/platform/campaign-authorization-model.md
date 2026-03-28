@@ -91,8 +91,8 @@ while the source campaign has an active session.
 ## Character ownership contract
 
 - `owner_participant_id` controls governance authority.
-- `controller_participant_id` controls operational gameplay use.
-- Controller assignment does not transfer ownership.
+- Session-scoped controller assignment controls operational gameplay use only while a session is active.
+- Session controller assignment does not transfer ownership.
 - Member mutation rights are ownership-scoped unless elevated.
 
 ## Service boundary contract

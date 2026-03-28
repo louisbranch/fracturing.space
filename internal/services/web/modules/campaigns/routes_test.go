@@ -73,7 +73,7 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		newRouteHandlers(fakeGateway{
 			items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 			participants: []campaignapp.CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
-			characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
+			characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Owner: "user-123"}},
 			sessions:     []campaignapp.CampaignSession{{ID: "start", Name: "Session Start", Status: "Active"}},
 		}, modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil)),
 	)
@@ -169,9 +169,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "character create", method: http.MethodGet, path: routepath.AppCampaignCharacterCreate("c1"), wantStatus: http.StatusOK},
 		{name: "character detail", method: http.MethodGet, path: routepath.AppCampaignCharacter("c1", "char-1"), wantStatus: http.StatusOK},
 		{name: "character edit", method: http.MethodGet, path: routepath.AppCampaignCharacterEdit("c1", "char-1"), wantStatus: http.StatusOK},
-		{name: "character control set", method: http.MethodPost, path: routepath.AppCampaignCharacterControl("c1", "char-1"), body: "participant_id=p-1", wantStatus: http.StatusFound},
-		{name: "character control claim", method: http.MethodPost, path: routepath.AppCampaignCharacterControlClaim("c1", "char-1"), body: "", wantStatus: http.StatusFound},
-		{name: "character control release", method: http.MethodPost, path: routepath.AppCampaignCharacterControlRelease("c1", "char-1"), body: "", wantStatus: http.StatusFound},
+		{name: "character owner set", method: http.MethodPost, path: routepath.AppCampaignCharacterOwner("c1", "char-1"), body: "participant_id=p-1", wantStatus: http.StatusFound},
 		{name: "character delete", method: http.MethodPost, path: routepath.AppCampaignCharacterDelete("c1", "char-1"), body: "", wantStatus: http.StatusFound},
 		{name: "sessions", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusOK},
 		{name: "session create", method: http.MethodGet, path: routepath.AppCampaignSessionCreate("c1"), wantStatus: http.StatusOK},

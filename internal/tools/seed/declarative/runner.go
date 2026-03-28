@@ -47,7 +47,7 @@ type participantClient interface {
 
 type characterClient interface {
 	CreateCharacter(ctx context.Context, in *gamev1.CreateCharacterRequest, opts ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error)
-	SetDefaultControl(ctx context.Context, in *gamev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error)
+	UpdateCharacter(ctx context.Context, in *gamev1.UpdateCharacterRequest, opts ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error)
 	GetCharacterSheet(ctx context.Context, in *gamev1.GetCharacterSheetRequest, opts ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error)
 	ListCharacters(ctx context.Context, in *gamev1.ListCharactersRequest, opts ...grpc.CallOption) (*gamev1.ListCharactersResponse, error)
 }
@@ -564,12 +564,12 @@ func (r *Runner) applyCharacters(ctx context.Context, campaignKey, campaignID st
 			if participantID == "" {
 				return fmt.Errorf("character %q/%q references unknown participant key %q", campaignKey, character.Key, controllerKey)
 			}
-			if _, err := r.deps.characters.SetDefaultControl(gameAdminContext(ctx, ""), &gamev1.SetDefaultControlRequest{
-				CampaignId:    campaignID,
-				CharacterId:   characterID,
-				ParticipantId: stringValue(participantID),
+			if _, err := r.deps.characters.UpdateCharacter(gameAdminContext(ctx, ""), &gamev1.UpdateCharacterRequest{
+				CampaignId:         campaignID,
+				CharacterId:        characterID,
+				OwnerParticipantId: stringValue(participantID),
 			}); err != nil {
-				return fmt.Errorf("set character control %q/%q: %w", campaignKey, character.Key, err)
+				return fmt.Errorf("set character owner %q/%q: %w", campaignKey, character.Key, err)
 			}
 		}
 	}
@@ -651,9 +651,14 @@ func (r *Runner) applySessions(ctx context.Context, campaignKey, campaignID stri
 			}
 		}
 		if sessionID == "" {
+			assignments, err := r.listCampaignCharacterControllers(ctx, campaignID)
+			if err != nil {
+				return err
+			}
 			startResp, err := r.deps.sessions.StartSession(gameAdminContext(ctx, ""), &gamev1.StartSessionRequest{
-				CampaignId: campaignID,
-				Name:       session.Name,
+				CampaignId:           campaignID,
+				Name:                 session.Name,
+				CharacterControllers: assignments,
 			})
 			if err != nil {
 				return fmt.Errorf("start session %q/%q: %w", campaignKey, session.Key, err)
@@ -677,6 +682,40 @@ func (r *Runner) applySessions(ctx context.Context, campaignKey, campaignID stri
 		}
 	}
 	return nil
+}
+
+func (r *Runner) listCampaignCharacterControllers(ctx context.Context, campaignID string) ([]*gamev1.SessionCharacterControllerAssignment, error) {
+	assignments := make([]*gamev1.SessionCharacterControllerAssignment, 0)
+	pageToken := ""
+	for {
+		resp, err := r.deps.characters.ListCharacters(gameAdminContext(ctx, ""), &gamev1.ListCharactersRequest{
+			CampaignId: campaignID,
+			PageSize:   defaultPageSize,
+			PageToken:  pageToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list characters for session start %q: %w", campaignID, err)
+		}
+		for _, character := range resp.GetCharacters() {
+			characterID := strings.TrimSpace(character.GetId())
+			participantID := strings.TrimSpace(character.GetOwnerParticipantId().GetValue())
+			if characterID == "" {
+				continue
+			}
+			if participantID == "" {
+				return nil, fmt.Errorf("character %q has no owner for session start", characterID)
+			}
+			assignments = append(assignments, &gamev1.SessionCharacterControllerAssignment{
+				CharacterId:   characterID,
+				ParticipantId: participantID,
+			})
+		}
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			break
+		}
+	}
+	return assignments, nil
 }
 
 func (r *Runner) getSession(ctx context.Context, campaignID, sessionID string) (*gamev1.Session, error) {

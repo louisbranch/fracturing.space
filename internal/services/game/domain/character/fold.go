@@ -3,7 +3,6 @@ package character
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fold"
@@ -23,10 +22,6 @@ var characterUpdateFieldAppliers = map[string]characterUpdateFieldApplier{
 	},
 	"notes": func(state *State, value string) error {
 		state.Notes = value
-		return nil
-	},
-	"participant_id": func(state *State, value string) error {
-		state.ParticipantID = ids.ParticipantID(value)
 		return nil
 	},
 	"owner_participant_id": func(state *State, value string) error {
@@ -90,7 +85,6 @@ func foldCreated(state State, evt event.Event) (State, error) {
 	}
 	state.CharacterID = ids.CharacterID(payload.CharacterID)
 	state.OwnerParticipantID = ids.ParticipantID(payload.OwnerParticipantID)
-	state.ParticipantID = ids.ParticipantID(strings.TrimSpace(payload.ParticipantID.String()))
 	state.Name = payload.Name
 	state.Kind = Kind(payload.Kind)
 	state.Notes = payload.Notes

@@ -72,13 +72,7 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Spotlight Hero")
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Spotlight Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Spotlight Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}
@@ -185,13 +179,7 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Consequence Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Consequence Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

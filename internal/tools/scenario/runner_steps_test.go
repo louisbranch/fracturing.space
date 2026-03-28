@@ -73,9 +73,6 @@ func testEnv() testEnvFixture {
 			patchProfile: func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
 				return &gamev1.PatchCharacterProfileResponse{}, nil
 			},
-			setDefaultControl: func(_ context.Context, _ *gamev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
-				return &gamev1.SetDefaultControlResponse{}, nil
-			},
 			getSheet: func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
 				return &gamev1.GetCharacterSheetResponse{
 					State: &gamev1.CharacterState{
@@ -212,9 +209,8 @@ func TestRunParticipantStepDefaults(t *testing.T) {
 	}
 }
 
-func TestRunCharacterStepControlParticipant(t *testing.T) {
+func TestRunCharacterStepOwnerParticipant(t *testing.T) {
 	var updateRequest *gamev1.UpdateCharacterRequest
-	var controlRequest *gamev1.SetDefaultControlRequest
 	characterClient := &fakeCharacterClient{
 		create: func(_ context.Context, req *gamev1.CreateCharacterRequest, _ ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
 			return &gamev1.CreateCharacterResponse{
@@ -227,10 +223,6 @@ func TestRunCharacterStepControlParticipant(t *testing.T) {
 		},
 		patchProfile: func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
 			return &gamev1.PatchCharacterProfileResponse{}, nil
-		},
-		setDefaultControl: func(_ context.Context, req *gamev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
-			controlRequest = req
-			return &gamev1.SetDefaultControlResponse{}, nil
 		},
 	}
 
@@ -250,15 +242,12 @@ func TestRunCharacterStepControlParticipant(t *testing.T) {
 	}
 	step := Step{Kind: "character", Args: map[string]any{
 		"name":        "Frodo",
-		"control":     "participant",
+		"owner":       "participant",
 		"participant": "John",
 	}}
 
 	if err := runner.runCharacterStep(context.Background(), state, step); err != nil {
 		t.Fatalf("runCharacterStep: %v", err)
-	}
-	if controlRequest == nil {
-		t.Fatal("expected SetDefaultControl request")
 	}
 	if updateRequest == nil {
 		t.Fatal("expected UpdateCharacter request")
@@ -266,28 +255,22 @@ func TestRunCharacterStepControlParticipant(t *testing.T) {
 	if got := updateRequest.GetOwnerParticipantId(); got == nil || got.GetValue() != "participant-1" {
 		t.Fatalf("owner_participant_id = %v, want participant-1", got)
 	}
-	if got := controlRequest.GetParticipantId(); got == nil || got.GetValue() != "participant-1" {
-		t.Fatalf("participant_id = %v, want participant-1", got)
-	}
 }
 
-func TestRunCharacterStepControlGM(t *testing.T) {
-	var controlRequest *gamev1.SetDefaultControlRequest
+func TestRunCharacterStepOwnerUnassigned(t *testing.T) {
+	var updateRequest *gamev1.UpdateCharacterRequest
 	characterClient := &fakeCharacterClient{
 		create: func(_ context.Context, req *gamev1.CreateCharacterRequest, _ ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
 			return &gamev1.CreateCharacterResponse{
 				Character: &gamev1.Character{Id: "character-1"},
 			}, nil
 		},
-		update: func(_ context.Context, _ *gamev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error) {
+		update: func(_ context.Context, req *gamev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error) {
+			updateRequest = req
 			return &gamev1.UpdateCharacterResponse{}, nil
 		},
 		patchProfile: func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
 			return &gamev1.PatchCharacterProfileResponse{}, nil
-		},
-		setDefaultControl: func(_ context.Context, req *gamev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
-			controlRequest = req
-			return &gamev1.SetDefaultControlResponse{}, nil
 		},
 	}
 
@@ -305,18 +288,18 @@ func TestRunCharacterStepControlGM(t *testing.T) {
 		actors:             map[string]string{},
 	}
 	step := Step{Kind: "character", Args: map[string]any{
-		"name":    "Frodo",
-		"control": "gm",
+		"name":  "Frodo",
+		"owner": "unassigned",
 	}}
 
 	if err := runner.runCharacterStep(context.Background(), state, step); err != nil {
 		t.Fatalf("runCharacterStep: %v", err)
 	}
-	if controlRequest == nil {
-		t.Fatal("expected SetDefaultControl request")
+	if updateRequest == nil {
+		t.Fatal("expected UpdateCharacter request")
 	}
-	if controlRequest.GetParticipantId() != nil {
-		t.Fatalf("participant_id = %v, want nil", controlRequest.GetParticipantId())
+	if got := updateRequest.GetOwnerParticipantId(); got == nil || got.GetValue() != "" {
+		t.Fatalf("owner_participant_id = %v, want empty", got)
 	}
 }
 
@@ -487,8 +470,8 @@ func TestRunCampaignStepRequiresOwnerParticipant(t *testing.T) {
 	}
 }
 
-func TestParseControlInvalid(t *testing.T) {
-	_, err := parseControl("invalid")
+func TestParseOwnershipInvalid(t *testing.T) {
+	_, err := parseOwnership("invalid")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -511,14 +494,14 @@ func TestParseParticipantRoleController(t *testing.T) {
 	}
 }
 
-func TestSetDefaultControlRequestWithoutParticipant(t *testing.T) {
-	request := &gamev1.SetDefaultControlRequest{}
-	if request.GetParticipantId() != nil {
-		t.Fatalf("participant_id = %v, want nil", request.GetParticipantId())
+func TestUpdateCharacterRequestWithoutOwner(t *testing.T) {
+	request := &gamev1.UpdateCharacterRequest{}
+	if request.GetOwnerParticipantId() != nil {
+		t.Fatalf("owner_participant_id = %v, want nil", request.GetOwnerParticipantId())
 	}
-	request.ParticipantId = wrapperspb.String("participant-1")
-	if got := request.GetParticipantId().GetValue(); got != "participant-1" {
-		t.Fatalf("participant_id = %s, want participant-1", got)
+	request.OwnerParticipantId = wrapperspb.String("participant-1")
+	if got := request.GetOwnerParticipantId().GetValue(); got != "participant-1" {
+		t.Fatalf("owner_participant_id = %s, want participant-1", got)
 	}
 }
 

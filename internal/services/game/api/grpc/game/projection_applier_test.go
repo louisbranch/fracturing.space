@@ -892,10 +892,10 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 	updatePayload := character.UpdatePayload{
 		CharacterID: "char-1",
 		Fields: map[string]string{
-			"name":           "Hero Updated",
-			"kind":           "NPC",
-			"notes":          "New Notes",
-			"participant_id": "part-1",
+			"name":                 "Hero Updated",
+			"kind":                 "NPC",
+			"notes":                "New Notes",
+			"owner_participant_id": "part-1",
 		},
 	}
 	updateJSON, err := json.Marshal(updatePayload)
@@ -925,8 +925,8 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 	if updated.Kind != character.KindNPC {
 		t.Fatalf("updated kind = %v, want %v", updated.Kind, character.KindNPC)
 	}
-	if updated.ParticipantID != "part-1" {
-		t.Fatalf("updated participant_id = %q, want %q", updated.ParticipantID, "part-1")
+	if updated.OwnerParticipantID != "part-1" {
+		t.Fatalf("updated owner_participant_id = %q, want %q", updated.OwnerParticipantID, "part-1")
 	}
 
 	deletePayload := character.DeletePayload{CharacterID: "char-1", Reason: "gone"}

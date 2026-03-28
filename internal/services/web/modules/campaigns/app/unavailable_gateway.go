@@ -131,18 +131,8 @@ func (unavailableGateway) DeleteCharacter(context.Context, string, string) error
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
-// SetCharacterController applies this package workflow transition.
-func (unavailableGateway) SetCharacterController(context.Context, string, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-// ClaimCharacterControl applies this package workflow transition.
-func (unavailableGateway) ClaimCharacterControl(context.Context, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-// ReleaseCharacterControl applies this package workflow transition.
-func (unavailableGateway) ReleaseCharacterControl(context.Context, string, string) error {
+// SetCharacterOwner applies this package workflow transition.
+func (unavailableGateway) SetCharacterOwner(context.Context, string, string, string) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 

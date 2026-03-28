@@ -36,8 +36,8 @@ func CharacterToProto(record storage.CharacterRecord) *campaignv1.Character {
 		CreatedAt:     timestamppb.New(record.CreatedAt),
 		UpdatedAt:     timestamppb.New(record.UpdatedAt),
 	}
-	if strings.TrimSpace(record.ParticipantID) != "" {
-		pb.ParticipantId = wrapperspb.String(record.ParticipantID)
+	if strings.TrimSpace(record.OwnerParticipantID) != "" {
+		pb.OwnerParticipantId = wrapperspb.String(record.OwnerParticipantID)
 	}
 	return pb
 }

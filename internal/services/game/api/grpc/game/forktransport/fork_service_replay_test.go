@@ -83,9 +83,10 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		EntityType: "character",
 		EntityID:   "char-1",
 		PayloadJSON: mustJSON(t, character.CreatePayload{
-			CharacterID: "char-1",
-			Name:        "Hero",
-			Kind:        "PC",
+			CharacterID:        "char-1",
+			OwnerParticipantID: "part-1",
+			Name:               "Hero",
+			Kind:               "PC",
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
@@ -122,7 +123,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		PayloadJSON: mustJSON(t, character.UpdatePayload{
 			CharacterID: "char-1",
 			Fields: map[string]string{
-				"participant_id": "part-1",
+				"owner_participant_id": "part-1",
 			},
 		}),
 	})
@@ -235,8 +236,8 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected character in forked campaign: %v", err)
 	}
-	if forkedCharacter.ParticipantID != "" {
-		t.Fatalf("ParticipantID = %q, want empty", forkedCharacter.ParticipantID)
+	if forkedCharacter.OwnerParticipantID != "" {
+		t.Fatalf("OwnerParticipantID = %q, want empty", forkedCharacter.OwnerParticipantID)
 	}
 
 	forkedEvents := eventStore.Events["fork-1"]
@@ -467,9 +468,10 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		EntityType: "character",
 		EntityID:   "char-1",
 		PayloadJSON: mustJSON(t, character.CreatePayload{
-			CharacterID: "char-1",
-			Name:        "Hero",
-			Kind:        "PC",
+			CharacterID:        "char-1",
+			OwnerParticipantID: "part-1",
+			Name:               "Hero",
+			Kind:               "PC",
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
@@ -506,7 +508,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		PayloadJSON: mustJSON(t, character.UpdatePayload{
 			CharacterID: "char-1",
 			Fields: map[string]string{
-				"participant_id": "part-1",
+				"owner_participant_id": "part-1",
 			},
 		}),
 	})

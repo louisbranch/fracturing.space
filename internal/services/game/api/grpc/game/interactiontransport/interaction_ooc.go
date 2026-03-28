@@ -199,7 +199,7 @@ func (a interactionApplication) ResolveSessionOOC(ctx context.Context, campaignI
 		if err != nil {
 			return nil, err
 		}
-		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, replace.GetNextCharacterIds())
+		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, sessionInteraction, replace.GetNextCharacterIds())
 		if err != nil {
 			return nil, err
 		}

@@ -50,21 +50,21 @@ func (s characterReadService) campaignCharacters(ctx context.Context, campaignID
 		if kind == "" {
 			kind = "Unspecified"
 		}
-		controller := strings.TrimSpace(character.Controller)
-		if controller == "" {
-			controller = "Unassigned"
+		owner := strings.TrimSpace(character.Owner)
+		if owner == "" {
+			owner = "Unassigned"
 		}
 		normalized = append(normalized, CampaignCharacter{
-			ID:                      characterID,
-			Name:                    characterName,
-			Kind:                    kind,
-			Controller:              controller,
-			ControllerParticipantID: strings.TrimSpace(character.ControllerParticipantID),
-			Pronouns:                strings.TrimSpace(character.Pronouns),
-			Aliases:                 append([]string(nil), character.Aliases...),
-			AvatarURL:               strings.TrimSpace(character.AvatarURL),
-			OwnedByViewer:           character.OwnedByViewer,
-			Daggerheart:             normalizeCampaignCharacterDaggerheartSummary(character.Daggerheart),
+			ID:                 characterID,
+			Name:               characterName,
+			Kind:               kind,
+			Owner:              owner,
+			OwnerParticipantID: strings.TrimSpace(character.OwnerParticipantID),
+			Pronouns:           strings.TrimSpace(character.Pronouns),
+			Aliases:            append([]string(nil), character.Aliases...),
+			AvatarURL:          strings.TrimSpace(character.AvatarURL),
+			OwnedByViewer:      character.OwnedByViewer,
+			Daggerheart:        normalizeCampaignCharacterDaggerheartSummary(character.Daggerheart),
 		})
 	}
 
@@ -205,22 +205,22 @@ func normalizeCampaignCharacter(character CampaignCharacter) CampaignCharacter {
 	if kind == "" {
 		kind = "Unspecified"
 	}
-	controller := strings.TrimSpace(character.Controller)
-	if controller == "" {
-		controller = "Unassigned"
+	owner := strings.TrimSpace(character.Owner)
+	if owner == "" {
+		owner = "Unassigned"
 	}
 	return CampaignCharacter{
-		ID:                      characterID,
-		Name:                    characterName,
-		Kind:                    kind,
-		Controller:              controller,
-		ControllerParticipantID: strings.TrimSpace(character.ControllerParticipantID),
-		Pronouns:                strings.TrimSpace(character.Pronouns),
-		Aliases:                 append([]string(nil), character.Aliases...),
-		AvatarURL:               strings.TrimSpace(character.AvatarURL),
-		OwnedByViewer:           character.OwnedByViewer,
-		CanEdit:                 character.CanEdit,
-		EditReasonCode:          strings.TrimSpace(character.EditReasonCode),
-		Daggerheart:             normalizeCampaignCharacterDaggerheartSummary(character.Daggerheart),
+		ID:                 characterID,
+		Name:               characterName,
+		Kind:               kind,
+		Owner:              owner,
+		OwnerParticipantID: strings.TrimSpace(character.OwnerParticipantID),
+		Pronouns:           strings.TrimSpace(character.Pronouns),
+		Aliases:            append([]string(nil), character.Aliases...),
+		AvatarURL:          strings.TrimSpace(character.AvatarURL),
+		OwnedByViewer:      character.OwnedByViewer,
+		CanEdit:            character.CanEdit,
+		EditReasonCode:     strings.TrimSpace(character.EditReasonCode),
+		Daggerheart:        normalizeCampaignCharacterDaggerheartSummary(character.Daggerheart),
 	}
 }

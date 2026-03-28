@@ -75,7 +75,7 @@ func ApplyParticipantProfileSnapshot(
 	if len(avatarFields) > 0 {
 		if err := applyParticipantUpdateFields(ctx, write, applier, campaignID, participantID,
 			requestID, invocationID, actorID, actorType, avatarFields); err == nil {
-			SyncControlledCharacterAvatars(
+			SyncOwnedCharacterAvatars(
 				ctx, write, applier, participantStore, characterStore,
 				campaignID, participantID, requestID, invocationID, actorID, actorType,
 			)
@@ -129,9 +129,9 @@ func applyParticipantUpdateFields(
 	return nil
 }
 
-// SyncControlledCharacterAvatars best-effort synchronizes controlled character
-// avatars after a seat claim updates the participant avatar snapshot.
-func SyncControlledCharacterAvatars(
+// SyncOwnedCharacterAvatars best-effort synchronizes owned character avatars
+// after a seat profile snapshot updates the participant avatar snapshot.
+func SyncOwnedCharacterAvatars(
 	ctx context.Context,
 	write domainwrite.WritePath,
 	applier projection.Applier,
@@ -152,21 +152,21 @@ func SyncControlledCharacterAvatars(
 	if err != nil {
 		return
 	}
-	controlledCharacters, err := characterStore.ListCharactersByControllerParticipant(ctx, campaignID, participantID)
+	ownedCharacters, err := characterStore.ListCharactersByOwnerParticipant(ctx, campaignID, participantID)
 	if err != nil {
 		return
 	}
 
 	avatarSetID := strings.TrimSpace(participantRecord.AvatarSetID)
 	avatarAssetID := strings.TrimSpace(participantRecord.AvatarAssetID)
-	for _, controlledCharacter := range controlledCharacters {
-		if strings.TrimSpace(controlledCharacter.AvatarSetID) == avatarSetID &&
-			strings.TrimSpace(controlledCharacter.AvatarAssetID) == avatarAssetID {
+	for _, ownedCharacter := range ownedCharacters {
+		if strings.TrimSpace(ownedCharacter.AvatarSetID) == avatarSetID &&
+			strings.TrimSpace(ownedCharacter.AvatarAssetID) == avatarAssetID {
 			continue
 		}
 
 		payloadJSON, err := json.Marshal(character.UpdatePayload{
-			CharacterID: ids.CharacterID(controlledCharacter.ID),
+			CharacterID: ids.CharacterID(ownedCharacter.ID),
 			Fields: map[string]string{
 				"avatar_set_id":   avatarSetID,
 				"avatar_asset_id": avatarAssetID,
@@ -187,7 +187,7 @@ func SyncControlledCharacterAvatars(
 				RequestID:    requestID,
 				InvocationID: invocationID,
 				EntityType:   "character",
-				EntityID:     controlledCharacter.ID,
+				EntityID:     ownedCharacter.ID,
 				PayloadJSON:  payloadJSON,
 			}),
 			domainwrite.Options{

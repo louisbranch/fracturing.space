@@ -91,24 +91,6 @@ func (s *FakeCharacterStore) ListCharactersByOwnerParticipant(_ context.Context,
 	return result, nil
 }
 
-func (s *FakeCharacterStore) ListCharactersByControllerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
-	if s.ListErr != nil {
-		return nil, s.ListErr
-	}
-
-	byID, ok := s.Characters[campaignID]
-	if !ok {
-		return nil, nil
-	}
-	result := make([]storage.CharacterRecord, 0, len(byID))
-	for _, c := range byID {
-		if c.ParticipantID == participantID {
-			result = append(result, c)
-		}
-	}
-	return result, nil
-}
-
 func (s *FakeCharacterStore) ListCharacters(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
 	if s.ListErr != nil {
 		return storage.CharacterPage{}, s.ListErr

@@ -92,13 +92,7 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "GM Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "GM Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}
@@ -213,13 +207,7 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Countdown Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Countdown Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}
@@ -544,13 +532,7 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
 	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Adversary Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctx, sessionClient, characterClient, campaignID, "Adversary Session")
 	if startSession.GetSession() == nil {
 		t.Fatal("expected session")
 	}

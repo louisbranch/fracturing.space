@@ -2,10 +2,18 @@ package session
 
 import "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 
+// CharacterControllerAssignment captures one session-scoped character control
+// assignment.
+type CharacterControllerAssignment struct {
+	CharacterID   ids.CharacterID   `json:"character_id"`
+	ParticipantID ids.ParticipantID `json:"participant_id"`
+}
+
 // StartPayload captures the payload for session.start commands and session.started events.
 type StartPayload struct {
-	SessionID   ids.SessionID `json:"session_id"`
-	SessionName string        `json:"session_name,omitempty"`
+	SessionID            ids.SessionID                   `json:"session_id"`
+	SessionName          string                          `json:"session_name,omitempty"`
+	CharacterControllers []CharacterControllerAssignment `json:"character_controllers,omitempty"`
 }
 
 // EndPayload captures the payload for session.end commands and session.ended events.
@@ -33,6 +41,14 @@ type SceneActivatedPayload struct {
 // GMAuthoritySetPayload captures the payload for session.gm_authority_set events.
 type GMAuthoritySetPayload struct {
 	SessionID     ids.SessionID     `json:"session_id"`
+	ParticipantID ids.ParticipantID `json:"participant_id"`
+}
+
+// CharacterControllerSetPayload captures the payload for
+// session.character_controller_set events.
+type CharacterControllerSetPayload struct {
+	SessionID     ids.SessionID     `json:"session_id"`
+	CharacterID   ids.CharacterID   `json:"character_id"`
 	ParticipantID ids.ParticipantID `json:"participant_id"`
 }
 

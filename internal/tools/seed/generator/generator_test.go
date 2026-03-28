@@ -96,8 +96,8 @@ func fullFakeDeps() generatorDeps {
 					Character: &statev1.Character{Id: fmt.Sprintf("char-%d", charSeq)},
 				}, nil
 			},
-			setDefaultControl: func(context.Context, *statev1.SetDefaultControlRequest, ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
-				return &statev1.SetDefaultControlResponse{}, nil
+			update: func(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+				return &statev1.UpdateCharacterResponse{}, nil
 			},
 		},
 		sessions: &fakeSessionManager{

@@ -186,8 +186,6 @@ rejections -- they describe blockers for session start:
 | `SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED` | AI GM mode but no AI participant |
 | `SESSION_READINESS_GM_REQUIRED` | No GM participant |
 | `SESSION_READINESS_PLAYER_REQUIRED` | No player participants |
-| `SESSION_READINESS_PLAYER_CHARACTER_REQUIRED` | Player has no character |
-| `SESSION_READINESS_CHARACTER_CONTROLLER_REQUIRED` | Character has no controller |
 | `SESSION_READINESS_CHARACTER_SYSTEM_REQUIRED` | Character missing system data |
 
 ## Daggerheart System

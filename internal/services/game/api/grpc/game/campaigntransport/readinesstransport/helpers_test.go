@@ -152,10 +152,10 @@ func TestCampaignReadinessAggregateState_MapsCoreState(t *testing.T) {
 		},
 		[]storage.CharacterRecord{
 			{
-				ID:            "char-1",
-				CampaignID:    "c1",
-				Name:          "Aria",
-				ParticipantID: "player-1",
+				ID:                 "char-1",
+				CampaignID:         "c1",
+				Name:               "Aria",
+				OwnerParticipantID: "player-1",
 			},
 		},
 	)
@@ -300,34 +300,6 @@ func TestReadinessBlockerToProto_CopiesMetadataAndTrimsCode(t *testing.T) {
 	}
 }
 
-func TestLocalizeReadinessBlockerMessage_CharacterControllerUsesCharacterName(t *testing.T) {
-	msg := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessCharacterControllerRequired,
-		Metadata: map[string]string{
-			"character_id":   "char-1",
-			"character_name": "Aria",
-		},
-	})
-	if !strings.Contains(msg, "Aria") {
-		t.Fatalf("message = %q, want character name in localized message", msg)
-	}
-	if strings.Contains(msg, "char-1") {
-		t.Fatalf("message = %q, did not expect character id when name is present", msg)
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_CharacterControllerFallsBackToCharacterID(t *testing.T) {
-	msg := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessCharacterControllerRequired,
-		Metadata: map[string]string{
-			"character_id": "char-1",
-		},
-	})
-	if !strings.Contains(msg, "char-1") {
-		t.Fatalf("message = %q, want character id fallback in localized message", msg)
-	}
-}
-
 func TestLocalizeReadinessBlockerMessage_CharacterSystemWithoutReason(t *testing.T) {
 	msg := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
 		Code: readiness.RejectionCodeSessionReadinessCharacterSystemRequired,
@@ -401,34 +373,6 @@ func (m *readinessModuleStub) BindCharacterReadiness(ids.CampaignID, map[module.
 
 var _ module.Module = (*readinessModuleStub)(nil)
 var _ module.CharacterReadinessProvider = (*readinessModuleStub)(nil)
-
-func TestLocalizeReadinessBlockerMessage_PlayerCharacterUsesParticipantName(t *testing.T) {
-	msg := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessPlayerCharacterRequired,
-		Metadata: map[string]string{
-			"participant_id":   "player-2",
-			"participant_name": "Player Two",
-		},
-	})
-	if !strings.Contains(msg, "Player Two") {
-		t.Fatalf("message = %q, want participant name in localized message", msg)
-	}
-	if strings.Contains(msg, "player-2") {
-		t.Fatalf("message = %q, did not expect participant id when name is present", msg)
-	}
-}
-
-func TestLocalizeReadinessBlockerMessage_PlayerCharacterFallsBackToParticipantID(t *testing.T) {
-	msg := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
-		Code: readiness.RejectionCodeSessionReadinessPlayerCharacterRequired,
-		Metadata: map[string]string{
-			"participant_id": "player-2",
-		},
-	})
-	if !strings.Contains(msg, "player-2") {
-		t.Fatalf("message = %q, want participant id fallback in localized message", msg)
-	}
-}
 
 type readinessCharacterPagingStore struct {
 	pages     map[string]storage.CharacterPage

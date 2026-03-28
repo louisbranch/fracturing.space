@@ -63,13 +63,7 @@ func TestSceneGateBlocksSceneActions(t *testing.T) {
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, charID)
 
 	// Start session.
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "Gate Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "Gate Session")
 	sessionID := startSession.GetSession().GetId()
 
 	// Create scene with the character.

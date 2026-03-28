@@ -221,9 +221,9 @@ func readySessionStartAggregateState(status campaign.Status) aggregate.State {
 		},
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
-				CharacterID:   "char-1",
-				Created:       true,
-				ParticipantID: "player-1",
+				CharacterID:        "char-1",
+				Created:            true,
+				OwnerParticipantID: "player-1",
 			},
 		},
 	}

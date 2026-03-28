@@ -100,10 +100,10 @@ func campaignReadinessAggregateState(
 			continue
 		}
 		state.Characters[ids.CharacterID(characterID)] = character.State{
-			Created:       true,
-			CharacterID:   ids.CharacterID(characterID),
-			Name:          strings.TrimSpace(characterRecord.Name),
-			ParticipantID: ids.ParticipantID(strings.TrimSpace(characterRecord.ParticipantID)),
+			Created:            true,
+			CharacterID:        ids.CharacterID(characterID),
+			Name:               strings.TrimSpace(characterRecord.Name),
+			OwnerParticipantID: ids.ParticipantID(strings.TrimSpace(characterRecord.OwnerParticipantID)),
 		}
 	}
 

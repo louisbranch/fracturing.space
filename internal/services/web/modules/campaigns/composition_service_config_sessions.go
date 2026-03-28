@@ -9,7 +9,9 @@ import (
 // game-launch surface.
 func newSessionSurfaceConfig(config CompositionConfig) sessionServiceConfig {
 	return sessionServiceConfig{
+		Characters:    newCharacterReadServiceConfig(config),
 		Mutation:      newSessionMutationServiceConfig(config),
+		Participants:  newParticipantReadServiceConfig(config),
 		Authorization: newPageAuthorizationGateway(config),
 	}
 }

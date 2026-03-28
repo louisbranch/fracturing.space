@@ -34,12 +34,10 @@ type CampaignCharacterReadService interface {
 	CampaignCharacterEditor(context.Context, string, string, CharacterReadContext) (CampaignCharacterEditor, error)
 }
 
-// CampaignCharacterControlService exposes character-control detail state and control mutations.
-type CampaignCharacterControlService interface {
-	CampaignCharacterControl(context.Context, string, string, string, CharacterReadContext) (CampaignCharacterControl, error)
-	SetCharacterController(context.Context, string, string, string) error
-	ClaimCharacterControl(context.Context, string, string, string) error
-	ReleaseCharacterControl(context.Context, string, string, string) error
+// CampaignCharacterOwnershipService exposes character-owner detail state and ownership mutations.
+type CampaignCharacterOwnershipService interface {
+	CampaignCharacterOwnership(context.Context, string, string, CharacterReadContext) (CampaignCharacterOwnership, error)
+	SetCharacterOwner(context.Context, string, string, string) error
 }
 
 // CampaignCharacterMutationService exposes character create/update/delete mutations.

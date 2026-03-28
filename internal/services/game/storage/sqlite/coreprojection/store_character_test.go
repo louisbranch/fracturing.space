@@ -17,14 +17,14 @@ func TestCharacterCRUD(t *testing.T) {
 	seedParticipant(t, store, "camp-char", "part-1", "user-1", now)
 
 	expected := storage.CharacterRecord{
-		ID:            "char-1",
-		CampaignID:    "camp-char",
-		ParticipantID: "part-1",
-		Name:          "Aria Starweaver",
-		Kind:          character.KindPC,
-		Notes:         "Brave adventurer",
-		CreatedAt:     now,
-		UpdatedAt:     now.Add(5 * time.Minute),
+		ID:                 "char-1",
+		CampaignID:         "camp-char",
+		OwnerParticipantID: "part-1",
+		Name:               "Aria Starweaver",
+		Kind:               character.KindPC,
+		Notes:              "Brave adventurer",
+		CreatedAt:          now,
+		UpdatedAt:          now.Add(5 * time.Minute),
 	}
 
 	if err := store.PutCharacter(context.Background(), expected); err != nil {
@@ -38,8 +38,8 @@ func TestCharacterCRUD(t *testing.T) {
 	if got.ID != expected.ID || got.CampaignID != expected.CampaignID {
 		t.Fatalf("expected character identity to match")
 	}
-	if got.ParticipantID != expected.ParticipantID {
-		t.Fatalf("expected participant id %q, got %q", expected.ParticipantID, got.ParticipantID)
+	if got.OwnerParticipantID != expected.OwnerParticipantID {
+		t.Fatalf("expected owner participant id %q, got %q", expected.OwnerParticipantID, got.OwnerParticipantID)
 	}
 	if got.Name != expected.Name {
 		t.Fatalf("expected name %q, got %q", expected.Name, got.Name)
@@ -54,7 +54,7 @@ func TestCharacterCRUD(t *testing.T) {
 		t.Fatalf("expected timestamps to match")
 	}
 
-	// Test with empty ParticipantID (NPC without owner)
+	// Test with empty OwnerParticipantID (NPC without owner)
 	npc := storage.CharacterRecord{
 		ID:         "char-npc",
 		CampaignID: "camp-char",
@@ -70,8 +70,8 @@ func TestCharacterCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get NPC: %v", err)
 	}
-	if gotNPC.ParticipantID != "" {
-		t.Fatalf("expected empty participant id for NPC, got %q", gotNPC.ParticipantID)
+	if gotNPC.OwnerParticipantID != "" {
+		t.Fatalf("expected empty owner participant id for NPC, got %q", gotNPC.OwnerParticipantID)
 	}
 
 	// Delete
@@ -177,61 +177,5 @@ func TestCharacterListByOwnerParticipant(t *testing.T) {
 	}
 	if characters[0].ID != "char-a" || characters[1].ID != "char-b" {
 		t.Fatalf("unexpected owner character order: %#v", characters)
-	}
-}
-
-func TestCharacterListByControllerParticipant(t *testing.T) {
-	store := openTestStore(t)
-	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
-	seedCampaign(t, store, "camp-controlled", now)
-	seedParticipant(t, store, "camp-controlled", "part-1", "user-1", now)
-	seedParticipant(t, store, "camp-controlled", "part-2", "user-2", now)
-
-	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
-		ID:                 "char-b",
-		CampaignID:         "camp-controlled",
-		OwnerParticipantID: "owner-1",
-		ParticipantID:      "part-1",
-		Name:               "Second",
-		Kind:               character.KindPC,
-		CreatedAt:          now,
-		UpdatedAt:          now,
-	}); err != nil {
-		t.Fatalf("put character b: %v", err)
-	}
-	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
-		ID:                 "char-a",
-		CampaignID:         "camp-controlled",
-		OwnerParticipantID: "owner-2",
-		ParticipantID:      "part-1",
-		Name:               "First",
-		Kind:               character.KindPC,
-		CreatedAt:          now,
-		UpdatedAt:          now,
-	}); err != nil {
-		t.Fatalf("put character a: %v", err)
-	}
-	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
-		ID:                 "char-c",
-		CampaignID:         "camp-controlled",
-		OwnerParticipantID: "owner-3",
-		ParticipantID:      "part-2",
-		Name:               "Other",
-		Kind:               character.KindPC,
-		CreatedAt:          now,
-		UpdatedAt:          now,
-	}); err != nil {
-		t.Fatalf("put character c: %v", err)
-	}
-
-	characters, err := store.ListCharactersByControllerParticipant(context.Background(), "camp-controlled", "part-1")
-	if err != nil {
-		t.Fatalf("list characters by controller: %v", err)
-	}
-	if len(characters) != 2 {
-		t.Fatalf("expected 2 controlled characters, got %d", len(characters))
-	}
-	if characters[0].ID != "char-a" || characters[1].ID != "char-b" {
-		t.Fatalf("unexpected controlled character order: %#v", characters)
 	}
 }

@@ -44,17 +44,17 @@ func TestCharacterViewsMapWorkspaceState(t *testing.T) {
 		},
 	}
 	character := campaignapp.CampaignCharacter{
-		ID:                      "char-1",
-		Name:                    "Aria",
-		Kind:                    "pc",
-		Controller:              "human",
-		ControllerParticipantID: "part-1",
-		Pronouns:                "she/her",
-		Aliases:                 []string{"Starseer"},
-		AvatarURL:               "/avatar.png",
-		OwnedByViewer:           true,
-		CanEdit:                 true,
-		EditReasonCode:          "allowed",
+		ID:                 "char-1",
+		Name:               "Aria",
+		Kind:               "pc",
+		Owner:              "Mira",
+		OwnerParticipantID: "part-1",
+		Pronouns:           "she/her",
+		Aliases:            []string{"Starseer"},
+		AvatarURL:          "/avatar.png",
+		OwnedByViewer:      true,
+		CanEdit:            true,
+		EditReasonCode:     "allowed",
 		Daggerheart: &campaignapp.CampaignCharacterDaggerheartSummary{
 			Level:         2,
 			ClassName:     "Wizard",
@@ -63,12 +63,10 @@ func TestCharacterViewsMapWorkspaceState(t *testing.T) {
 			CommunityName: "Port City",
 		},
 	}
-	control := campaignapp.CampaignCharacterControl{
-		CurrentParticipantName: "Mira",
-		CanSelfClaim:           true,
-		CanSelfRelease:         true,
-		CanManageControl:       true,
-		Options: []campaignapp.CampaignCharacterControlOption{
+	ownership := campaignapp.CampaignCharacterOwnership{
+		CurrentOwnerName:   "Mira",
+		CanManageOwnership: true,
+		Options: []campaignapp.CampaignCharacterOwnershipOption{
 			{ParticipantID: "part-1", Label: "Mira", Selected: true},
 		},
 	}
@@ -89,8 +87,8 @@ func TestCharacterViewsMapWorkspaceState(t *testing.T) {
 		t.Fatalf("characterEditView() = %#v", editView)
 	}
 
-	detailView := characterDetailView(page, "camp-1", "char-1", character, control, true, campaignrender.CampaignCharacterCreationView{})
-	if detailView.CharacterID != "char-1" || detailView.CharacterControl.CurrentParticipantName != "Mira" || !detailView.CharacterCreationEnabled {
+	detailView := characterDetailView(page, "camp-1", "char-1", character, ownership, true, campaignrender.CampaignCharacterCreationView{})
+	if detailView.CharacterID != "char-1" || detailView.CharacterOwnership.CurrentOwnerName != "Mira" || !detailView.CharacterCreationEnabled {
 		t.Fatalf("characterDetailView() = %#v", detailView)
 	}
 

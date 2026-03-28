@@ -23,7 +23,7 @@ func TestCreateCharacters_CountLessThanOne(t *testing.T) {
 
 func TestCreateCharacters_PCsAssignedToPlayers_NPCsToGM(t *testing.T) {
 	var kinds []statev1.CharacterKind
-	var controllerParticipants []string
+	var ownerParticipants []string
 	charSeq := 0
 	char := &fakeCharacterCreator{
 		create: func(_ context.Context, in *statev1.CreateCharacterRequest, _ ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
@@ -33,9 +33,9 @@ func TestCreateCharacters_PCsAssignedToPlayers_NPCsToGM(t *testing.T) {
 				Character: &statev1.Character{Id: fmt.Sprintf("char-%d", charSeq)},
 			}, nil
 		},
-		setDefaultControl: func(_ context.Context, in *statev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
-			controllerParticipants = append(controllerParticipants, in.ParticipantId.GetValue())
-			return &statev1.SetDefaultControlResponse{}, nil
+		update: func(_ context.Context, in *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+			ownerParticipants = append(ownerParticipants, in.GetOwnerParticipantId().GetValue())
+			return &statev1.UpdateCharacterResponse{Character: &statev1.Character{Id: in.CharacterId}}, nil
 		},
 	}
 
@@ -64,17 +64,17 @@ func TestCreateCharacters_PCsAssignedToPlayers_NPCsToGM(t *testing.T) {
 	}
 
 	// PCs assigned to players, NPCs to GM
-	if controllerParticipants[0] != "player-1" || controllerParticipants[1] != "player-2" {
-		t.Fatalf("PCs should be assigned to players: %v", controllerParticipants)
+	if ownerParticipants[0] != "player-1" || ownerParticipants[1] != "player-2" {
+		t.Fatalf("PCs should be assigned to players: %v", ownerParticipants)
 	}
-	if controllerParticipants[2] != "gm-1" || controllerParticipants[3] != "gm-1" {
-		t.Fatalf("NPCs should be assigned to GM: %v", controllerParticipants)
+	if ownerParticipants[2] != "gm-1" || ownerParticipants[3] != "gm-1" {
+		t.Fatalf("NPCs should be assigned to GM: %v", ownerParticipants)
 	}
 }
 
 func TestCreateCharacters_FallbackParticipant(t *testing.T) {
 	// Only a GM participant (no players) — all characters are NPCs assigned to the GM.
-	var controllerParticipants []string
+	var ownerParticipants []string
 	charSeq := 0
 	char := &fakeCharacterCreator{
 		create: func(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
@@ -83,9 +83,9 @@ func TestCreateCharacters_FallbackParticipant(t *testing.T) {
 				Character: &statev1.Character{Id: fmt.Sprintf("char-%d", charSeq)},
 			}, nil
 		},
-		setDefaultControl: func(_ context.Context, in *statev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
-			controllerParticipants = append(controllerParticipants, in.ParticipantId.GetValue())
-			return &statev1.SetDefaultControlResponse{}, nil
+		update: func(_ context.Context, in *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+			ownerParticipants = append(ownerParticipants, in.GetOwnerParticipantId().GetValue())
+			return &statev1.UpdateCharacterResponse{Character: &statev1.Character{Id: in.CharacterId}}, nil
 		},
 	}
 
@@ -102,7 +102,7 @@ func TestCreateCharacters_FallbackParticipant(t *testing.T) {
 	if len(chars) != 2 {
 		t.Fatalf("expected 2 characters, got %d", len(chars))
 	}
-	for i, cp := range controllerParticipants {
+	for i, cp := range ownerParticipants {
 		if cp != "gm-1" {
 			t.Fatalf("character %d: expected gm-1, got %s", i, cp)
 		}
@@ -147,15 +147,15 @@ func TestCreateCharacters_CreateError(t *testing.T) {
 	}
 }
 
-func TestCreateCharacters_SetDefaultControlError(t *testing.T) {
+func TestCreateCharacters_UpdateCharacterOwnerError(t *testing.T) {
 	char := &fakeCharacterCreator{
 		create: func(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
 			return &statev1.CreateCharacterResponse{
 				Character: &statev1.Character{Id: "char-1"},
 			}, nil
 		},
-		setDefaultControl: func(context.Context, *statev1.SetDefaultControlRequest, ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
-			return nil, fmt.Errorf("set control failed")
+		update: func(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+			return nil, fmt.Errorf("update character failed")
 		},
 	}
 
@@ -167,7 +167,7 @@ func TestCreateCharacters_SetDefaultControlError(t *testing.T) {
 
 	_, err := g.createCharacters(context.Background(), "camp-1", 1, participants)
 	if err == nil {
-		t.Fatal("expected error from SetDefaultControl failure")
+		t.Fatal("expected error from UpdateCharacter failure")
 	}
 }
 
@@ -181,8 +181,8 @@ func TestCreateCharacters_NilParticipantSkipped(t *testing.T) {
 				Character: &statev1.Character{Id: fmt.Sprintf("char-%d", charSeq)},
 			}, nil
 		},
-		setDefaultControl: func(context.Context, *statev1.SetDefaultControlRequest, ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
-			return &statev1.SetDefaultControlResponse{}, nil
+		update: func(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+			return &statev1.UpdateCharacterResponse{}, nil
 		},
 	}
 

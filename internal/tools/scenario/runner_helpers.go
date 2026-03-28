@@ -62,8 +62,9 @@ func (r *Runner) ensureSession(ctx context.Context, state *scenarioState) error 
 		return err
 	}
 	response, err := r.env.sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
-		CampaignId: state.campaignID,
-		Name:       "Scenario Session",
+		CampaignId:           state.campaignID,
+		Name:                 "Scenario Session",
+		CharacterControllers: r.sessionCharacterControllers(ctx, state),
 	})
 	if err != nil {
 		return fmt.Errorf("auto start session: %w", err)
@@ -80,7 +81,7 @@ func (r *Runner) ensureSessionStartReadiness(ctx context.Context, state *scenari
 	if err := r.ensureCampaign(state); err != nil {
 		return err
 	}
-	if state.ownerParticipantID == "" || r.env.participantClient == nil || r.env.characterClient == nil {
+	if state.ownerParticipantID == "" || r.env.characterClient == nil {
 		// Unit tests may construct partial state/env and call helpers directly.
 		return nil
 	}
@@ -90,54 +91,41 @@ func (r *Runner) ensureSessionStartReadiness(ctx context.Context, state *scenari
 	}
 
 	participantCtx := withParticipantID(ctx, state.ownerParticipantID)
-	participantsResp, err := r.env.participantClient.ListParticipants(participantCtx, &gamev1.ListParticipantsRequest{
-		CampaignId: state.campaignID,
-		PageSize:   200,
-	})
-	if err != nil {
-		if status.Code(err) == codes.Unimplemented {
-			return nil
-		}
-		return fmt.Errorf("list participants: %w", err)
-	}
-
-	playerParticipantIDs := make([]string, 0, len(participantsResp.GetParticipants()))
-	for _, participant := range participantsResp.GetParticipants() {
-		if participant.GetRole() != gamev1.ParticipantRole_PLAYER {
-			continue
-		}
-		id := strings.TrimSpace(participant.GetId())
-		if id != "" {
-			playerParticipantIDs = append(playerParticipantIDs, id)
-		}
-	}
-	if len(playerParticipantIDs) == 0 {
-		response, createErr := r.env.participantClient.CreateParticipant(participantCtx, &gamev1.CreateParticipantRequest{
+	if r.env.participantClient != nil {
+		participantsResp, err := r.env.participantClient.ListParticipants(participantCtx, &gamev1.ListParticipantsRequest{
 			CampaignId: state.campaignID,
-			Name:       "Scenario Player",
-			Role:       gamev1.ParticipantRole_PLAYER,
-			Controller: gamev1.Controller_CONTROLLER_HUMAN,
+			PageSize:   200,
 		})
-		if createErr != nil {
-			return fmt.Errorf("create readiness participant: %w", createErr)
+		if err != nil {
+			if status.Code(err) != codes.Unimplemented {
+				return fmt.Errorf("list participants: %w", err)
+			}
+		} else {
+			hasPlayerParticipant := false
+			for _, participant := range participantsResp.GetParticipants() {
+				if participant.GetRole() == gamev1.ParticipantRole_PLAYER && strings.TrimSpace(participant.GetId()) != "" {
+					hasPlayerParticipant = true
+					break
+				}
+			}
+			if !hasPlayerParticipant {
+				response, createErr := r.env.participantClient.CreateParticipant(participantCtx, &gamev1.CreateParticipantRequest{
+					CampaignId: state.campaignID,
+					Name:       "Scenario Player",
+					Role:       gamev1.ParticipantRole_PLAYER,
+					Controller: gamev1.Controller_CONTROLLER_HUMAN,
+				})
+				if createErr != nil {
+					return fmt.Errorf("create readiness participant: %w", createErr)
+				}
+				if response.GetParticipant() == nil || strings.TrimSpace(response.GetParticipant().GetId()) == "" {
+					return r.failf("create readiness participant returned empty participant")
+				}
+			}
 		}
-		if response.GetParticipant() == nil {
-			return r.failf("create readiness participant returned empty participant")
-		}
-		playerParticipantID := strings.TrimSpace(response.GetParticipant().GetId())
-		if playerParticipantID == "" {
-			return r.failf("create readiness participant returned empty id")
-		}
-		playerParticipantIDs = append(playerParticipantIDs, playerParticipantID)
-	}
-
-	playerCharacterCounts := make(map[string]int, len(playerParticipantIDs))
-	for _, participantID := range playerParticipantIDs {
-		playerCharacterCounts[participantID] = 0
 	}
 
 	pageToken := ""
-	characterCount := 0
 	for {
 		charactersResp, listErr := r.env.characterClient.ListCharacters(participantCtx, &gamev1.ListCharactersRequest{
 			CampaignId: state.campaignID,
@@ -154,26 +142,6 @@ func (r *Runner) ensureSessionStartReadiness(ctx context.Context, state *scenari
 			characterID := strings.TrimSpace(character.GetId())
 			if characterID == "" {
 				continue
-			}
-			characterCount++
-			characterParticipantID := strings.TrimSpace(character.GetParticipantId().GetValue())
-			if characterParticipantID == "" {
-				targetParticipantID := firstPlayerWithoutCharacter(playerParticipantIDs, playerCharacterCounts)
-				if targetParticipantID == "" {
-					targetParticipantID = playerParticipantIDs[0]
-				}
-				_, setErr := r.env.characterClient.SetDefaultControl(participantCtx, &gamev1.SetDefaultControlRequest{
-					CampaignId:    state.campaignID,
-					CharacterId:   characterID,
-					ParticipantId: wrapperspb.String(targetParticipantID),
-				})
-				if setErr != nil {
-					return fmt.Errorf("set readiness character control for %s: %w", characterID, setErr)
-				}
-				characterParticipantID = targetParticipantID
-			}
-			if _, ok := playerCharacterCounts[characterParticipantID]; ok {
-				playerCharacterCounts[characterParticipantID]++
 			}
 			if hasSystem && registration.characterNeedsReadiness != nil {
 				needsReadiness, readinessErr := registration.characterNeedsReadiness(r, participantCtx, state, characterID)
@@ -193,62 +161,48 @@ func (r *Runner) ensureSessionStartReadiness(ctx context.Context, state *scenari
 		}
 		pageToken = next
 	}
-
-	missingPlayerIDs := make([]string, 0, len(playerParticipantIDs))
-	for _, participantID := range playerParticipantIDs {
-		if playerCharacterCounts[participantID] == 0 {
-			missingPlayerIDs = append(missingPlayerIDs, participantID)
-		}
-	}
-	if characterCount == 0 || len(missingPlayerIDs) > 0 {
-		if len(missingPlayerIDs) == 0 {
-			missingPlayerIDs = append(missingPlayerIDs, playerParticipantIDs[0])
-		}
-		for index, participantID := range missingPlayerIDs {
-			characterName := "Scenario Readiness Character"
-			if len(missingPlayerIDs) > 1 {
-				characterName = fmt.Sprintf("Scenario Readiness Character %d", index+1)
-			}
-			createResp, createErr := r.env.characterClient.CreateCharacter(participantCtx, &gamev1.CreateCharacterRequest{
-				CampaignId: state.campaignID,
-				Name:       characterName,
-				Kind:       gamev1.CharacterKind_PC,
-			})
-			if createErr != nil {
-				return fmt.Errorf("create readiness character: %w", createErr)
-			}
-			if createResp.GetCharacter() == nil {
-				return r.failf("create readiness character returned empty character")
-			}
-			characterID := strings.TrimSpace(createResp.GetCharacter().GetId())
-			if characterID == "" {
-				return r.failf("create readiness character returned empty id")
-			}
-			_, setErr := r.env.characterClient.SetDefaultControl(participantCtx, &gamev1.SetDefaultControlRequest{
-				CampaignId:    state.campaignID,
-				CharacterId:   characterID,
-				ParticipantId: wrapperspb.String(participantID),
-			})
-			if setErr != nil {
-				return fmt.Errorf("set readiness character control for %s: %w", characterID, setErr)
-			}
-			if hasSystem && registration.ensureCharacterReadiness != nil {
-				if readinessErr := registration.ensureCharacterReadiness(r, participantCtx, state, characterID, nil); readinessErr != nil {
-					return readinessErr
-				}
-			}
-		}
-	}
 	return nil
 }
 
-func firstPlayerWithoutCharacter(playerParticipantIDs []string, playerCharacterCounts map[string]int) string {
-	for _, participantID := range playerParticipantIDs {
-		if playerCharacterCounts[participantID] == 0 {
-			return participantID
-		}
+func (r *Runner) sessionCharacterControllers(ctx context.Context, state *scenarioState) []*gamev1.SessionCharacterControllerAssignment {
+	if state == nil || state.campaignID == "" || r.env.characterClient == nil {
+		return nil
 	}
-	return ""
+	resp, err := r.env.characterClient.ListCharacters(withParticipantID(ctx, state.ownerParticipantID), &gamev1.ListCharactersRequest{
+		CampaignId: state.campaignID,
+		PageSize:   200,
+	})
+	if err != nil || resp == nil {
+		return nil
+	}
+	assignments := make([]*gamev1.SessionCharacterControllerAssignment, 0, len(resp.GetCharacters()))
+	fallbackParticipantID := ""
+	for _, participantID := range state.participants {
+		trimmed := strings.TrimSpace(participantID)
+		if trimmed == "" {
+			continue
+		}
+		fallbackParticipantID = trimmed
+		break
+	}
+	for _, character := range resp.GetCharacters() {
+		characterID := strings.TrimSpace(character.GetId())
+		if characterID == "" {
+			continue
+		}
+		participantID := strings.TrimSpace(character.GetOwnerParticipantId().GetValue())
+		if participantID == "" {
+			participantID = fallbackParticipantID
+		}
+		if participantID == "" {
+			continue
+		}
+		assignments = append(assignments, &gamev1.SessionCharacterControllerAssignment{
+			CharacterId:   characterID,
+			ParticipantId: participantID,
+		})
+	}
+	return assignments
 }
 
 func (r *Runner) ensureScenarioCharacterReadiness(
@@ -1808,16 +1762,16 @@ func parseController(value string) (gamev1.Controller, error) {
 	}
 }
 
-func parseControl(value string) (string, error) {
+func parseOwnership(value string) (string, error) {
 	trimmed := strings.ToLower(strings.TrimSpace(value))
 	if trimmed == "" {
 		return "", nil
 	}
 	switch trimmed {
-	case "participant", "gm", "none":
+	case "participant", "unassigned":
 		return trimmed, nil
 	default:
-		return "", fmt.Errorf("unsupported control %q", value)
+		return "", fmt.Errorf("unsupported owner %q", value)
 	}
 }
 

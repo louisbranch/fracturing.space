@@ -31,7 +31,14 @@ type CreateCampaignResult struct {
 
 // StartSessionInput stores start-session form values.
 type StartSessionInput struct {
-	Name string
+	Name                 string
+	CharacterControllers []SessionCharacterControllerAssignment
+}
+
+// SessionCharacterControllerAssignment stores one session-scoped character controller choice.
+type SessionCharacterControllerAssignment struct {
+	CharacterID   string
+	ParticipantID string
 }
 
 // EndSessionInput stores end-session form values.

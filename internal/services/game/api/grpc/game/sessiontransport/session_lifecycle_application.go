@@ -22,6 +22,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func (a sessionApplication) StartSession(ctx context.Context, campaignID string, in *campaignv1.StartSessionRequest) (storage.SessionRecord, error) {
@@ -45,10 +47,23 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
+	participants, err := a.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
+	if err != nil {
+		return storage.SessionRecord{}, grpcerror.Internal("list campaign participants", err)
+	}
+	characters, err := a.stores.Character.ListCharacters(ctx, campaignID, handler.PageLarge, "")
+	if err != nil {
+		return storage.SessionRecord{}, grpcerror.Internal("list campaign characters", err)
+	}
+	characterControllers, err := resolveStartSessionCharacterControllers(characters.Characters, participants, in.GetCharacterControllers())
+	if err != nil {
+		return storage.SessionRecord{}, err
+	}
 
 	payload := session.StartPayload{
-		SessionID:   ids.SessionID(sessionID),
-		SessionName: sessionName,
+		SessionID:            ids.SessionID(sessionID),
+		SessionName:          sessionName,
+		CharacterControllers: characterControllers,
 	}
 	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
 		CommandType: handler.CommandTypeSessionStart,
@@ -60,10 +75,6 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		return storage.SessionRecord{}, err
 	}
 
-	participants, err := a.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
-	if err != nil {
-		return storage.SessionRecord{}, grpcerror.Internal("list campaign participants", err)
-	}
 	defaultAuthority, err := defaultGMAuthorityParticipant(c, participants)
 	if err != nil {
 		return storage.SessionRecord{}, grpcerror.Internal("resolve default gm authority", err)
@@ -86,6 +97,65 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		return storage.SessionRecord{}, grpcerror.Internal("load session", err)
 	}
 	return sess, nil
+}
+
+func resolveStartSessionCharacterControllers(
+	characters []storage.CharacterRecord,
+	participants []storage.ParticipantRecord,
+	requested []*campaignv1.SessionCharacterControllerAssignment,
+) ([]session.CharacterControllerAssignment, error) {
+	participantIDs := make(map[string]struct{}, len(participants))
+	for _, participant := range participants {
+		participantID := strings.TrimSpace(participant.ID)
+		if participantID == "" {
+			continue
+		}
+		participantIDs[participantID] = struct{}{}
+	}
+	characterIDs := make(map[string]storage.CharacterRecord, len(characters))
+	for _, character := range characters {
+		characterID := strings.TrimSpace(character.ID)
+		if characterID == "" {
+			continue
+		}
+		characterIDs[characterID] = character
+	}
+	assignments := make([]session.CharacterControllerAssignment, 0, len(requested))
+	seenCharacters := make(map[string]struct{}, len(requested))
+	for _, requestedAssignment := range requested {
+		if requestedAssignment == nil {
+			return nil, status.Error(codes.InvalidArgument, "session character controller assignment is required")
+		}
+		characterID := strings.TrimSpace(requestedAssignment.GetCharacterId())
+		if characterID == "" {
+			return nil, status.Error(codes.InvalidArgument, "session character controller character_id is required")
+		}
+		participantID := strings.TrimSpace(requestedAssignment.GetParticipantId())
+		if participantID == "" {
+			return nil, status.Error(codes.InvalidArgument, "session character controller participant_id is required")
+		}
+		if _, ok := characterIDs[characterID]; !ok {
+			return nil, status.Error(codes.NotFound, "character not found")
+		}
+		if _, ok := participantIDs[participantID]; !ok {
+			return nil, status.Error(codes.NotFound, "participant not found")
+		}
+		if _, exists := seenCharacters[characterID]; exists {
+			return nil, status.Error(codes.InvalidArgument, "session character controllers must be unique by character")
+		}
+		seenCharacters[characterID] = struct{}{}
+		assignments = append(assignments, session.CharacterControllerAssignment{
+			CharacterID:   ids.CharacterID(characterID),
+			ParticipantID: ids.ParticipantID(participantID),
+		})
+	}
+	if len(assignments) != len(characterIDs) {
+		return nil, status.Error(codes.InvalidArgument, "session character controllers are required for every character")
+	}
+	sort.SliceStable(assignments, func(i, j int) bool {
+		return assignments[i].CharacterID.String() < assignments[j].CharacterID.String()
+	})
+	return assignments, nil
 }
 
 // defaultGMAuthorityParticipant resolves the default GM authority participant

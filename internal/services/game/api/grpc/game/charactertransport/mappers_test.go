@@ -20,18 +20,18 @@ import (
 func TestCharacterToProto(t *testing.T) {
 	now := time.Unix(1700000000, 0).UTC()
 	got := CharacterToProto(storage.CharacterRecord{
-		ID:            "char-1",
-		CampaignID:    "camp-1",
-		ParticipantID: "part-1",
-		Name:          "Rook",
-		Kind:          character.KindPC,
-		Notes:         "note",
-		AvatarSetID:   "set-1",
-		AvatarAssetID: "asset-1",
-		Pronouns:      sharedpronouns.PronounSheHer,
-		Aliases:       []string{"Alias"},
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:                 "char-1",
+		CampaignID:         "camp-1",
+		OwnerParticipantID: "part-1",
+		Name:               "Rook",
+		Kind:               character.KindPC,
+		Notes:              "note",
+		AvatarSetID:        "set-1",
+		AvatarAssetID:      "asset-1",
+		Pronouns:           sharedpronouns.PronounSheHer,
+		Aliases:            []string{"Alias"},
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	})
 
 	if got.GetId() != "char-1" || got.GetCampaignId() != "camp-1" || got.GetName() != "Rook" {
@@ -40,8 +40,8 @@ func TestCharacterToProto(t *testing.T) {
 	if got.GetKind() != campaignv1.CharacterKind_PC {
 		t.Fatalf("kind = %v", got.GetKind())
 	}
-	if got.GetParticipantId().GetValue() != "part-1" {
-		t.Fatalf("participant id = %q", got.GetParticipantId().GetValue())
+	if got.GetOwnerParticipantId().GetValue() != "part-1" {
+		t.Fatalf("owner participant id = %q", got.GetOwnerParticipantId().GetValue())
 	}
 	if len(got.GetAliases()) != 1 || got.GetAliases()[0] != "Alias" {
 		t.Fatalf("aliases = %#v", got.GetAliases())

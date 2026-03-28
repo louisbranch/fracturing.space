@@ -586,7 +586,7 @@ func TestDeleteCharacterUsesTargetScopedAuthorizationAndDelegates(t *testing.T) 
 	}
 }
 
-func TestSetCharacterControllerUsesManageAuthorizationAndDelegates(t *testing.T) {
+func TestSetCharacterOwnerUsesManageAuthorizationAndDelegates(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
@@ -594,8 +594,8 @@ func TestSetCharacterControllerUsesManageAuthorizationAndDelegates(t *testing.T)
 	}
 	svc := newService(gateway)
 
-	if err := svc.setCharacterController(contextWithResolvedUserID("user-1"), "c1", "char-1", "p-2"); err != nil {
-		t.Fatalf("setCharacterController() error = %v", err)
+	if err := svc.setCharacterOwner(contextWithResolvedUserID("user-1"), "c1", "char-1", "p-2"); err != nil {
+		t.Fatalf("setCharacterOwner() error = %v", err)
 	}
 	if len(gateway.authorizationRequests) != 1 {
 		t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
@@ -607,54 +607,11 @@ func TestSetCharacterControllerUsesManageAuthorizationAndDelegates(t *testing.T)
 	if req.Target == nil || req.Target.ResourceID != "char-1" {
 		t.Fatalf("authorization target = %#v, want char-1", req.Target)
 	}
-	if gateway.lastSetCharacterControllerParticipantID != "p-2" {
-		t.Fatalf("participant id = %q, want %q", gateway.lastSetCharacterControllerParticipantID, "p-2")
+	if gateway.lastSetCharacterOwnerParticipantID != "p-2" {
+		t.Fatalf("participant id = %q, want %q", gateway.lastSetCharacterOwnerParticipantID, "p-2")
 	}
-	if len(gateway.calls) != 1 || gateway.calls[0] != "set-character-controller" {
-		t.Fatalf("mutation gateway calls = %v, want [set-character-controller]", gateway.calls)
-	}
-}
-
-func TestClaimCharacterControlRequiresViewerParticipantAndDelegates(t *testing.T) {
-	t.Parallel()
-
-	gateway := &campaignGatewayStub{
-		campaignParticipants: []CampaignParticipant{
-			{ID: "p-1", UserID: "user-1", Name: "Ariadne"},
-		},
-	}
-	svc := newService(gateway)
-
-	if err := svc.claimCharacterControl(contextWithResolvedUserID("user-1"), "c1", "char-1", "user-1"); err != nil {
-		t.Fatalf("claimCharacterControl() error = %v", err)
-	}
-	if len(gateway.calls) != 1 || gateway.calls[0] != "claim-character-control" {
-		t.Fatalf("mutation gateway calls = %v, want [claim-character-control]", gateway.calls)
-	}
-	if gateway.authorizationCalls != 0 {
-		t.Fatalf("authorization calls = %d, want 0", gateway.authorizationCalls)
-	}
-}
-
-func TestReleaseCharacterControlRejectsUserWithoutParticipantSeat(t *testing.T) {
-	t.Parallel()
-
-	gateway := &campaignGatewayStub{
-		campaignParticipants: []CampaignParticipant{
-			{ID: "p-2", UserID: "user-2", Name: "Moss"},
-		},
-	}
-	svc := newService(gateway)
-
-	err := svc.releaseCharacterControl(contextWithResolvedUserID("user-1"), "c1", "char-1", "user-1")
-	if err == nil {
-		t.Fatal("expected forbidden error")
-	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
-	}
-	if len(gateway.calls) != 0 {
-		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	if len(gateway.calls) != 1 || gateway.calls[0] != "set-character-owner" {
+		t.Fatalf("mutation gateway calls = %v, want [set-character-owner]", gateway.calls)
 	}
 }
 

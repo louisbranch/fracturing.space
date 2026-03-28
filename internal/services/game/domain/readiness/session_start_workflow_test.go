@@ -48,14 +48,6 @@ func TestSessionStartWorkflowStart(t *testing.T) {
 						Joined:        true,
 						Role:          participant.RoleGM,
 					},
-					"player-1": {
-						ParticipantID: "player-1",
-						Joined:        true,
-						Role:          participant.RolePlayer,
-					},
-				},
-				Characters: map[ids.CharacterID]character.State{
-					"char-1": {CharacterID: "char-1", Created: true},
 				},
 			},
 			startCommand,
@@ -68,8 +60,8 @@ func TestSessionStartWorkflowStart(t *testing.T) {
 		if len(decision.Rejections) != 1 {
 			t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
 		}
-		if decision.Rejections[0].Code != RejectionCodeSessionReadinessCharacterControllerRequired {
-			t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, RejectionCodeSessionReadinessCharacterControllerRequired)
+		if decision.Rejections[0].Code != RejectionCodeSessionReadinessPlayerRequired {
+			t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, RejectionCodeSessionReadinessPlayerRequired)
 		}
 	})
 
@@ -440,9 +432,9 @@ func readyWorkflowState(status campaign.Status) aggregate.State {
 		},
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
-				CharacterID:   "char-1",
-				Created:       true,
-				ParticipantID: "player-1",
+				CharacterID:        "char-1",
+				Created:            true,
+				OwnerParticipantID: "player-1",
 			},
 		},
 	}

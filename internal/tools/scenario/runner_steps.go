@@ -556,7 +556,11 @@ func (r *Runner) runStartSessionStep(ctx context.Context, state *scenarioState, 
 		return err
 	}
 	name := optionalString(step.Args, "name", "Scenario Session")
-	request := &gamev1.StartSessionRequest{CampaignId: state.campaignID, Name: name}
+	request := &gamev1.StartSessionRequest{
+		CampaignId:           state.campaignID,
+		Name:                 name,
+		CharacterControllers: r.sessionCharacterControllers(ctx, state),
+	}
 
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
@@ -653,8 +657,8 @@ func (r *Runner) runCharacterStep(ctx context.Context, state *scenarioState, ste
 		}
 	}
 
-	if control := optionalString(step.Args, "control", ""); control != "" {
-		mode, err := parseControl(control)
+	if owner := optionalString(step.Args, "owner", ""); owner != "" {
+		mode, err := parseOwnership(owner)
 		if err != nil {
 			return err
 		}
@@ -662,7 +666,7 @@ func (r *Runner) runCharacterStep(ctx context.Context, state *scenarioState, ste
 		case "participant":
 			participantName := optionalString(step.Args, "participant", "")
 			if participantName == "" {
-				return r.failf("character control participant is required")
+				return r.failf("character owner participant is required")
 			}
 			participantID, ok := state.participants[participantName]
 			if !ok {
@@ -676,24 +680,17 @@ func (r *Runner) runCharacterStep(ctx context.Context, state *scenarioState, ste
 			if err != nil {
 				return fmt.Errorf("set character owner participant: %w", err)
 			}
-			_, err = r.env.characterClient.SetDefaultControl(withParticipantID(ctx, state.ownerParticipantID), &gamev1.SetDefaultControlRequest{
-				CampaignId:    state.campaignID,
-				CharacterId:   characterID,
-				ParticipantId: wrapperspb.String(participantID),
+			r.logf("character ownership: name=%s owner=%s", name, participantName)
+		case "unassigned":
+			_, err := r.env.characterClient.UpdateCharacter(withParticipantID(ctx, state.ownerParticipantID), &gamev1.UpdateCharacterRequest{
+				CampaignId:         state.campaignID,
+				CharacterId:        characterID,
+				OwnerParticipantId: wrapperspb.String(""),
 			})
 			if err != nil {
-				return fmt.Errorf("set default control: %w", err)
+				return fmt.Errorf("clear character owner: %w", err)
 			}
-			r.logf("character control: name=%s control=participant participant=%s", name, participantName)
-		case "gm", "none":
-			_, err := r.env.characterClient.SetDefaultControl(withParticipantID(ctx, state.ownerParticipantID), &gamev1.SetDefaultControlRequest{
-				CampaignId:  state.campaignID,
-				CharacterId: characterID,
-			})
-			if err != nil {
-				return fmt.Errorf("clear default control: %w", err)
-			}
-			r.logf("character control: name=%s control=%s", name, mode)
+			r.logf("character ownership: name=%s owner=unassigned", name)
 		}
 	}
 	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeCharacterCreated)

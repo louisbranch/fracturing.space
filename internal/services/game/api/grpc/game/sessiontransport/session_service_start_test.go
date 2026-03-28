@@ -72,6 +72,7 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
 	sessionStore := gametest.NewFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	characterStore := gametest.NewFakeCharacterStore()
 	domain := &fakeDomainEngine{result: engine.Result{
 		Decision: command.Reject(command.Rejection{
 			Code:    "SESSION_READINESS_CAMPAIGN_STATUS_DISALLOWS_START",
@@ -84,6 +85,7 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 		Campaign:    campaignStore,
 		Session:     sessionStore,
 		Participant: participantStore,
+		Character:   characterStore,
 		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	})
 	_, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
@@ -94,6 +96,7 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
 	sessionStore := gametest.NewFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	characterStore := gametest.NewFakeCharacterStore()
 	domain := &fakeDomainEngine{result: engine.Result{
 		Decision: command.Reject(command.Rejection{
 			Code:    "SESSION_READINESS_ACTIVE_SESSION_EXISTS",
@@ -112,6 +115,7 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 		Campaign:    campaignStore,
 		Session:     sessionStore,
 		Participant: participantStore,
+		Character:   characterStore,
 		Write:       domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 	})
 	_, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
@@ -122,10 +126,11 @@ func TestStartSession_RequiresDomainEngine(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
 	sessionStore := gametest.NewFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	characterStore := gametest.NewFakeCharacterStore()
 
 	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
 
-	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
+	svc := NewSessionService(Deps{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Character: characterStore})
 	_, err := svc.StartSession(requestctx.WithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -134,6 +139,7 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
 	sessionStore := gametest.NewFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	characterStore := gametest.NewFakeCharacterStore()
 	eventStore := gametest.NewFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -189,6 +195,7 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 			Campaign:           campaignStore,
 			Session:            sessionStore,
 			Participant:        participantStore,
+			Character:          characterStore,
 			SessionInteraction: &fakeSessionInteractionStore{},
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
@@ -238,6 +245,7 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
 	sessionStore := gametest.NewFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	characterStore := gametest.NewFakeCharacterStore()
 	eventStore := gametest.NewFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -276,6 +284,7 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 			Campaign:           campaignStore,
 			Session:            sessionStore,
 			Participant:        participantStore,
+			Character:          characterStore,
 			SessionInteraction: &fakeSessionInteractionStore{},
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},
@@ -341,6 +350,7 @@ func TestStartSession_BlankNameDefaultsToCampaignLocaleSequence(t *testing.T) {
 			campaignStore := gametest.NewFakeCampaignStore()
 			sessionStore := gametest.NewFakeSessionStore()
 			participantStore := sessionManagerParticipantStore("c1")
+			characterStore := gametest.NewFakeCharacterStore()
 			eventStore := gametest.NewFakeEventStore()
 			now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -400,6 +410,7 @@ func TestStartSession_BlankNameDefaultsToCampaignLocaleSequence(t *testing.T) {
 					Campaign:           campaignStore,
 					Session:            sessionStore,
 					Participant:        participantStore,
+					Character:          characterStore,
 					SessionInteraction: &fakeSessionInteractionStore{},
 					Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 				},
@@ -439,6 +450,7 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 	campaignStore := gametest.NewFakeCampaignStore()
 	sessionStore := gametest.NewFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	characterStore := gametest.NewFakeCharacterStore()
 	eventStore := gametest.NewFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -478,6 +490,7 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 			Campaign:           campaignStore,
 			Session:            sessionStore,
 			Participant:        participantStore,
+			Character:          characterStore,
 			SessionInteraction: &fakeSessionInteractionStore{},
 			Write:              domainwrite.WritePath{Executor: domain, Runtime: testRuntime},
 		},

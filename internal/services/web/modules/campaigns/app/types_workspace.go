@@ -115,18 +115,18 @@ type CampaignAIBindingSettings struct {
 
 // CampaignCharacter stores character details used by campaign characters pages.
 type CampaignCharacter struct {
-	ID                      string                               `json:"id"`
-	Name                    string                               `json:"name"`
-	Kind                    string                               `json:"kind"`
-	Controller              string                               `json:"controller"`
-	ControllerParticipantID string                               `json:"controllerParticipantId"`
-	Pronouns                string                               `json:"pronouns"`
-	Aliases                 []string                             `json:"aliases"`
-	AvatarURL               string                               `json:"avatarUrl"`
-	OwnedByViewer           bool                                 `json:"ownedByViewer"`
-	CanEdit                 bool                                 `json:"canEdit"`
-	EditReasonCode          string                               `json:"editReasonCode"`
-	Daggerheart             *CampaignCharacterDaggerheartSummary `json:"daggerheart,omitempty"`
+	ID                 string                               `json:"id"`
+	Name               string                               `json:"name"`
+	Kind               string                               `json:"kind"`
+	Owner              string                               `json:"owner"`
+	OwnerParticipantID string                               `json:"ownerParticipantId"`
+	Pronouns           string                               `json:"pronouns"`
+	Aliases            []string                             `json:"aliases"`
+	AvatarURL          string                               `json:"avatarUrl"`
+	OwnedByViewer      bool                                 `json:"ownedByViewer"`
+	CanEdit            bool                                 `json:"canEdit"`
+	EditReasonCode     string                               `json:"editReasonCode"`
+	Daggerheart        *CampaignCharacterDaggerheartSummary `json:"daggerheart,omitempty"`
 }
 
 // CampaignCharacterDaggerheartSummary stores Daggerheart-specific card summary fields.
@@ -150,20 +150,18 @@ type CampaignCharacterEditor struct {
 	Character CampaignCharacter `json:"character"`
 }
 
-// CampaignCharacterControlOption stores one selectable character-controller option.
-type CampaignCharacterControlOption struct {
+// CampaignCharacterOwnershipOption stores one selectable character-owner option.
+type CampaignCharacterOwnershipOption struct {
 	ParticipantID string `json:"participantId"`
 	Label         string `json:"label"`
 	Selected      bool   `json:"selected"`
 }
 
-// CampaignCharacterControl stores character-detail control state.
-type CampaignCharacterControl struct {
-	CurrentParticipantName string                           `json:"currentParticipantName"`
-	CanSelfClaim           bool                             `json:"canSelfClaim"`
-	CanSelfRelease         bool                             `json:"canSelfRelease"`
-	CanManageControl       bool                             `json:"canManageControl"`
-	Options                []CampaignCharacterControlOption `json:"options"`
+// CampaignCharacterOwnership stores character-detail ownership state.
+type CampaignCharacterOwnership struct {
+	CurrentOwnerName   string                             `json:"currentOwnerName"`
+	CanManageOwnership bool                               `json:"canManageOwnership"`
+	Options            []CampaignCharacterOwnershipOption `json:"options"`
 }
 
 // CampaignSession stores session details used by campaign sessions pages.

@@ -76,13 +76,7 @@ func TestAIDirectSessionDaggerheartMechanicsTools(t *testing.T) {
 		t.Fatalf("patch character state: %v", err)
 	}
 
-	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
-		CampaignId: campaignID,
-		Name:       "AI Mechanics Session",
-	})
-	if err != nil {
-		t.Fatalf("start session: %v", err)
-	}
+	startSession := startSessionWithDefaultControllers(t, ctxWithUser, sessionClient, characterClient, campaignID, "AI Mechanics Session")
 	sessionID := startSession.GetSession().GetId()
 
 	createSceneResp, err := sceneClient.CreateScene(ctxWithUser, &gamev1.CreateSceneRequest{

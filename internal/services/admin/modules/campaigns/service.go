@@ -236,8 +236,8 @@ func (s *handlers) renderCharacterSheet(w http.ResponseWriter, r *http.Request, 
 
 	controller := loc.Sprintf("label.unassigned")
 	participantID := ""
-	if character.GetParticipantId() != nil {
-		participantID = strings.TrimSpace(character.GetParticipantId().GetValue())
+	if character.GetOwnerParticipantId() != nil {
+		participantID = strings.TrimSpace(character.GetOwnerParticipantId().GetValue())
 	}
 	if participantID != "" {
 		participantResp, err := s.participantClient.GetParticipant(ctx, &statev1.GetParticipantRequest{
