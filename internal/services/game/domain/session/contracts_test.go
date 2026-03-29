@@ -180,3 +180,13 @@ func TestValidateGateResponseRecordedPayload_MatchesShape(t *testing.T) {
 		t.Fatal("expected invalid payload error")
 	}
 }
+
+func TestCoreDomainContracts_ExportsSessionSurface(t *testing.T) {
+	contracts := CoreDomainContracts()
+	if contracts.DomainName != "session" {
+		t.Fatalf("DomainName = %q, want %q", contracts.DomainName, "session")
+	}
+	if contracts.RegisterCommands == nil || contracts.RegisterEvents == nil || contracts.FoldHandledTypes == nil {
+		t.Fatalf("CoreDomainContracts() = %#v, want populated registration surface", contracts)
+	}
+}

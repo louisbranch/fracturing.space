@@ -54,8 +54,12 @@ func IsBusyOrLockedError(err error) bool {
 	if !errors.As(err, &sqliteErr) {
 		return false
 	}
-	code := sqliteErr.Code()
-	return code == sqlite3.SQLITE_BUSY || code == sqlite3.SQLITE_LOCKED
+	switch sqliteErr.Code() & 0xff {
+	case sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED:
+		return true
+	default:
+		return false
+	}
 }
 
 func verifyPragmas(sqlDB *sql.DB) error {

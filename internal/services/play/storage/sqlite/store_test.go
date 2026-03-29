@@ -106,6 +106,72 @@ func TestOpenWith(t *testing.T) {
 			t.Fatalf("close calls = %d, want 1", db.closeCalls)
 		}
 	})
+
+	t.Run("rejects blank path before side effects", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := openWith("   ", storeOpeners{
+			mkdirAll: func(string, os.FileMode) error {
+				t.Fatal("mkdirAll should not be called for blank path")
+				return nil
+			},
+			openDB: func(string) (databaseHandle, error) {
+				t.Fatal("openDB should not be called for blank path")
+				return nil, nil
+			},
+			applyMigrations: func(databaseHandle, func() time.Time) error {
+				t.Fatal("applyMigrations should not be called for blank path")
+				return nil
+			},
+			now: time.Now,
+		})
+		if err == nil || err.Error() != "storage path is required" {
+			t.Fatalf("error = %v, want %q", err, "storage path is required")
+		}
+	})
+
+	t.Run("open db failure is wrapped", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := openWith("play.sqlite", storeOpeners{
+			mkdirAll: func(string, os.FileMode) error { return nil },
+			openDB: func(string) (databaseHandle, error) {
+				return nil, errors.New("open failed")
+			},
+			applyMigrations: func(databaseHandle, func() time.Time) error {
+				t.Fatal("applyMigrations should not run after open failure")
+				return nil
+			},
+			now: time.Now,
+		})
+		if err == nil || err.Error() != "open sqlite store: open failed" {
+			t.Fatalf("error = %v, want %q", err, "open sqlite store: open failed")
+		}
+	})
+}
+
+func TestStoreGuardPaths(t *testing.T) {
+	t.Parallel()
+
+	var nilStore *Store
+	if err := nilStore.Close(); err != nil {
+		t.Fatalf("nil Close() error = %v", err)
+	}
+
+	store := &Store{}
+
+	if _, err := store.LatestSequence(context.Background(), transcript.Scope{}); err == nil || err.Error() != "store is required" {
+		t.Fatalf("LatestSequence() error = %v, want %q", err, "store is required")
+	}
+	if _, err := store.AppendMessage(context.Background(), transcript.AppendRequest{}); err == nil || err.Error() != "store is required" {
+		t.Fatalf("AppendMessage() error = %v, want %q", err, "store is required")
+	}
+	if _, err := store.HistoryAfter(context.Background(), transcript.HistoryAfterQuery{}); err == nil || err.Error() != "store is required" {
+		t.Fatalf("HistoryAfter() error = %v, want %q", err, "store is required")
+	}
+	if _, err := store.HistoryBefore(context.Background(), transcript.HistoryBeforeQuery{}); err == nil || err.Error() != "store is required" {
+		t.Fatalf("HistoryBefore() error = %v, want %q", err, "store is required")
+	}
 }
 
 func TestStoreBuildMessageUsesFallbackActorFields(t *testing.T) {
