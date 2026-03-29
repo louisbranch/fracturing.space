@@ -1,9 +1,0 @@
-# ofsht project configuration for this repository.
-#
-# The config is loaded from the main repository root for all worktrees, so keep
-# behavior shared and deterministic.
-
-[hooks.delete]
-run = [
-    "bash ./scripts/worktree-pre-delete.sh",
-]
