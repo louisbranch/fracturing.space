@@ -1,0 +1,6 @@
+# Worktrunk project configuration for this repository.
+#
+# Keep behavior shared and deterministic across worktrees.
+
+[pre-remove]
+cleanup = "bash ./scripts/worktree-pre-delete.sh"

@@ -9,7 +9,8 @@ data/*
 .env
 .env.local
 .tmp/
-.config/
+.config/*
+!.config/wt.toml
 docker/openviking/ov.conf
 
 .agents/plans/*.md
